@@ -1,0 +1,70 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using NihomeBackend.Models;
+using NihomeBackend.Services;
+
+namespace NihomeBackend.Extensions;
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddOpenApiServices(this IServiceCollection services)
+    {
+        services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+                options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            });
+
+        return services;
+    }
+
+    public static IServiceCollection AddAuthAndEmail(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddMemoryCache();
+
+        services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
+        services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+
+        var jwtSection = configuration.GetSection("Jwt");
+        var activeKeyId = jwtSection["ActiveKeyId"];
+        var activeKey = jwtSection.GetSection("Keys")[activeKeyId ?? string.Empty];
+        var issuer = jwtSection["Issuer"];
+        var audience = jwtSection["Audience"];
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false;
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = issuer,
+                ValidAudience = audience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(activeKey ?? "development-fallback-key-change-me"))
+            };
+        });
+
+        services.AddAuthorization();
+        services.AddScoped<PasswordService>();
+        services.AddScoped<JwtService>();
+        services.AddScoped<RefreshTokenService>();
+        services.AddScoped<OtpService>();
+        services.AddScoped<IEmailService, EmailService>();
+
+        return services;
+    }
+}

@@ -1,21 +1,23 @@
+using NihomeBackend.Extensions;
+using NihomeBackend.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorPages();
+builder.Services.AddOpenApiServices();
+builder.Services.AddFrontendCors(builder.Configuration);
+builder.Services.AddAuthAndEmail(builder.Configuration);
+builder.Services.AddSingleton<AuthStore>();
+builder.Services.AddScoped<TimeService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error");
-}
+app.UseDefaultFiles();
 app.UseStaticFiles();
-
 app.UseRouting();
-
+app.UseCors(FrontendCorsExtensions.PolicyName);
+app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapRazorPages();
+app.MapControllers();
 
 app.Run();

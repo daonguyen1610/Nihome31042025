@@ -3,27 +3,21 @@ services:
     image: nihome31042025-backend:latest
     container_name: nihome31042025-backend
     build:
-      context: ./nihomebackend
-      dockerfile: Dockerfile
-    stdin_open: true
-    tty: true
+      context: .
+      dockerfile: ./nihomebackend/Dockerfile
     ports:
       - "5043:5043"
     restart: always
     depends_on:
       sqlserver:
         condition: service_healthy
-    volumes:
-      - ./nihomebackend:/app
-      - ./nihomeweb:/NihomeWeb
-      - /app/bin
-      - /app/obj
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://0.0.0.0:5043
       - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@12092025;TrustServerCertificate=True;
     networks:
       - nihome-network
-  
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     platform: linux/amd64

@@ -1,0 +1,25 @@
+{
+  "Files": [
+    {
+      "Id": "/Users/datran/workspace/Nihome31042025/nihomebackend/wwwroot/.gitkeep",
+      "PackagePath": "staticwebassets/.gitkeep"
+    },
+    {
+      "Id": "obj/Release/net8.0/staticwebassets/msbuild.build.nihomebackend.props",
+      "PackagePath": "build\\nihomebackend.props"
+    },
+    {
+      "Id": "obj/Release/net8.0/staticwebassets/msbuild.buildMultiTargeting.nihomebackend.props",
+      "PackagePath": "buildMultiTargeting\\nihomebackend.props"
+    },
+    {
+      "Id": "obj/Release/net8.0/staticwebassets/msbuild.buildTransitive.nihomebackend.props",
+      "PackagePath": "buildTransitive\\nihomebackend.props"
+    },
+    {
+      "Id": "obj/Release/net8.0/staticwebassets/msbuild.nihomebackend.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

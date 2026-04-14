@@ -1,65 +1,162 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+
+type HealthResponse = {
+  name: string;
+  environment: string;
+  status: string;
+  timestampUtc: string;
+};
+
+const highlights = [
+  "Tenant records and contracts",
+  "Apartment inventory and availability",
+  "Operations dashboard for staff",
+];
 
 export default function Home() {
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadHealth = async () => {
+      try {
+        const response = await fetch("/api/system/health", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Backend returned ${response.status}`);
+        }
+
+        const data = (await response.json()) as HealthResponse;
+
+        if (active) {
+          setHealth(data);
+        }
+      } catch (loadError) {
+        if (active) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to reach the backend",
+          );
+        }
+      }
+    };
+
+    void loadHealth();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="relative isolate overflow-hidden">
+      <div className="hero-mesh absolute inset-0 -z-20" />
+      <div className="hero-glow absolute inset-x-0 top-0 -z-10 h-[32rem]" />
+
+      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center px-6 py-16 sm:px-10 lg:px-12">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div className="space-y-8">
+            <p className="w-fit rounded-full border border-white/60 bg-white/70 px-4 py-2 text-sm font-semibold tracking-[0.18em] text-[#8b5e3c] uppercase shadow-sm backdrop-blur">
+              Nihome Platform
+            </p>
+
+            <div className="space-y-5">
+              <h1 className="max-w-3xl font-display text-5xl leading-tight text-[#1f2933] sm:text-6xl">
+                Property operations that feel calm, premium, and connected.
+              </h1>
+              <p className="max-w-2xl text-lg leading-8 text-[#52606d] sm:text-xl">
+                <code>nihomeweb/</code> is now set up as a real Next.js
+                frontend, ready to grow alongside the ASP.NET backend instead
+                of living as static HTML.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <a className="button-primary" href="http://localhost:3000">
+                Open Web App
+              </a>
+              <a className="button-secondary" href="http://localhost:5067/api/system/health">
+                Test API Health
+              </a>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {highlights.map((item) => (
+                <article className="feature-card" key={item}>
+                  <span className="feature-dot" />
+                  <p>{item}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <aside className="status-panel">
+            <div>
+              <p className="eyebrow">Backend handshake</p>
+              <h2 className="mt-3 font-display text-3xl text-[#1f2933]">
+                Frontend and API are wired to work together.
+              </h2>
+            </div>
+
+            <div className="status-card">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9c6b46]">
+                API status
+              </p>
+
+              {health ? (
+                <div className="space-y-3">
+                  <p className="text-3xl font-semibold text-[#1f2933]">
+                    {health.status}
+                  </p>
+                  <dl className="space-y-2 text-sm text-[#52606d]">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>Name</dt>
+                      <dd>{health.name}</dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>Environment</dt>
+                      <dd>{health.environment}</dd>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <dt>UTC time</dt>
+                      <dd>{new Date(health.timestampUtc).toLocaleString()}</dd>
+                    </div>
+                  </dl>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-lg font-medium text-[#1f2933]">
+                    {error ? "Backend not reachable yet" : "Checking backend..."}
+                  </p>
+                  <p className="text-sm leading-7 text-[#52606d]">
+                    {error ??
+                      "Start the ASP.NET app and this panel will show live API health information."}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-[28px] bg-[#1f2933] px-6 py-5 text-[#f8f1e7] shadow-xl">
+              <p className="text-sm uppercase tracking-[0.2em] text-[#f3c892]">
+                Next step
+              </p>
+              <p className="mt-3 text-base leading-7">
+                Build your tenant, apartment, and billing screens inside
+                <code> nihomeweb/app/ </code>
+                then connect them to the controllers in
+                <code> nihomebackend/Controllers/</code>.
+              </p>
+            </div>
+          </aside>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }

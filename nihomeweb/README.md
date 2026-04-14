@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Nihome Web
 
-## Getting Started
+This is the Next.js frontend for the Nihome platform.
 
-First, run the development server:
+## Development
+
+Create your local environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Then run the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Backend proxy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app proxies `/api/*` requests to the ASP.NET backend using `BACKEND_URL`.
 
-## Learn More
+Default local value:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+BACKEND_URL=http://localhost:5067
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Example:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```ts
+await fetch("/api/system/health");
+```
 
-## Deploy on Vercel
+## Main files
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `app/page.tsx`: landing page and backend status check
+- `app/layout.tsx`: app metadata and fonts
+- `next.config.ts`: API rewrite to the backend
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+From here, you can start adding dashboard, auth, tenant, and property screens under `app/`.

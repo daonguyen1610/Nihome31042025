@@ -1,0 +1,9 @@
+.git
+.next
+node_modules
+**/node_modules
+**/.next
+**/bin
+**/obj
+**/out
+**/.DS_Store

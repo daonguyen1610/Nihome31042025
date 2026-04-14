@@ -4,6 +4,25 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <SkipNihomeWebBuild Condition="'$(SkipNihomeWebBuild)' == ''">false</SkipNihomeWebBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.15.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+  </ItemGroup>
+
+  <Target Name="BuildNihomeWeb" BeforeTargets="ComputeFilesToPublish" Condition="'$(SkipNihomeWebBuild)' != 'true' and Exists('$(MSBuildProjectDirectory)/../nihomeweb/package.json')">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../nihomeweb" Command="npm run build" />
+
+    <ItemGroup>
+      <NihomeWebFiles Include="$(MSBuildProjectDirectory)/../nihomeweb/out/**" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(NihomeWebFiles)"
+      DestinationFiles="@(NihomeWebFiles->'$(PublishDir)wwwroot/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

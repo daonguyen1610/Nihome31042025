@@ -1,0 +1,39 @@
+{
+  "Version": 1,
+  "Hash": "h5Jq4jAo43AZ5nUkZ5d4NT/sezJKtJLA7pbPHQREQk4=",
+  "Source": "nihomebackend",
+  "BasePath": "_content/nihomebackend",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "nihomebackend/wwwroot",
+      "Source": "nihomebackend",
+      "ContentRoot": "/Users/datran/workspace/Nihome31042025/nihomebackend/wwwroot/",
+      "BasePath": "_content/nihomebackend",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "/Users/datran/workspace/Nihome31042025/nihomebackend/wwwroot/.gitkeep",
+      "SourceId": "nihomebackend",
+      "SourceType": "Discovered",
+      "ContentRoot": "/Users/datran/workspace/Nihome31042025/nihomebackend/wwwroot/",
+      "BasePath": "_content/nihomebackend",
+      "RelativePath": ".gitkeep",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/.gitkeep"
+    }
+  ]
+}
