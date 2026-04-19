@@ -141,7 +141,16 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "OTP verification is disabled for registration." });
         }
 
-        var otp = await _otpService.ResendOtp(request.PhoneNumber);
+        string? otp;
+        try
+        {
+            otp = await _otpService.ResendOtp(request.PhoneNumber);
+        }
+        catch (InvalidOperationException)
+        {
+            return BadRequest(new { message = "OTP request limit exceeded." });
+        }
+
         if (otp == null)
         {
             return BadRequest(new { message = "Please wait before requesting a new OTP." });
@@ -302,7 +311,16 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Account not found." });
         }
 
-        var otp = await _otpService.ResendOtp(request.PhoneNumber);
+        string? otp;
+        try
+        {
+            otp = await _otpService.ResendOtp(request.PhoneNumber);
+        }
+        catch (InvalidOperationException)
+        {
+            return BadRequest(new { message = "OTP request limit exceeded." });
+        }
+
         if (otp == null)
         {
             return BadRequest(new { message = "Please wait before requesting a new OTP." });

@@ -1,10 +1,12 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs.Requests.Auth;
 using NihomeBackend.Services;
 
 namespace nihomebackend.tests.Infrastructure;
@@ -123,6 +125,63 @@ public sealed class AuthTestHost : IDisposable
 
     public ApplicationUser? FindUser(string phoneNumber) =>
         Db.Users.SingleOrDefault(user => user.PhoneNumber == phoneNumber);
+
+    public RegistrationOtp AddOtp(
+        string phoneNumber,
+        string otpCode = "123456",
+        bool isUsed = false,
+        DateTime? createdAt = null,
+        DateTime? expiresAt = null,
+        string? fullName = "OTP User",
+        string? email = "otp@example.com")
+    {
+        var otp = new RegistrationOtp
+        {
+            PhoneNumber = phoneNumber,
+            OtpCode = otpCode,
+            IsUsed = isUsed,
+            FullName = fullName,
+            Email = email,
+            CreatedAt = createdAt ?? DateTime.UtcNow,
+            ExpiresAt = expiresAt ?? DateTime.UtcNow.AddMinutes(5)
+        };
+
+        Db.RegistrationOtps.Add(otp);
+        Db.SaveChanges();
+        return otp;
+    }
+
+    public Task<IActionResult> StartRegister(
+        string phoneNumber,
+        string fullName = "Test User",
+        string email = "test@example.com",
+        string password = "secret123") =>
+        Controller.StartRegister(new RegisterStartRequest
+        {
+            PhoneNumber = phoneNumber,
+            FullName = fullName,
+            Email = email,
+            Password = password
+        });
+
+    public void SeedOtpRateLimit(
+        string phoneNumber,
+        int count = 5,
+        string? fullName = "OTP User",
+        string? email = "otp@example.com")
+    {
+        for (var index = 0; index < count; index++)
+        {
+            AddOtp(
+                phoneNumber,
+                otpCode: $"{123450 + index}",
+                isUsed: true,
+                createdAt: DateTime.UtcNow.AddMinutes(-10).AddSeconds(-index),
+                expiresAt: DateTime.UtcNow.AddMinutes(-5),
+                fullName: fullName,
+                email: email);
+        }
+    }
 
     public void Dispose()
     {

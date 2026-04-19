@@ -16,6 +16,18 @@ internal static class ActionResultAssert
         return Message(ok.Value);
     }
 
+    public static string BadRequestMessage(IActionResult result)
+    {
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        return Message(badRequest.Value);
+    }
+
+    public static string UnauthorizedMessage(IActionResult result)
+    {
+        var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
+        return Message(unauthorized.Value);
+    }
+
     public static string Message(object? value)
     {
         var message = value?.GetType().GetProperty("message")?.GetValue(value)?.ToString()

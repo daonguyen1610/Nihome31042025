@@ -38,8 +38,7 @@ public sealed class SessionTests
             Password = "pass1234"
         });
 
-        var unauthorized = Assert.IsType<UnauthorizedObjectResult>(result);
-        Assert.Equal("Account is inactive.", ActionResultAssert.Message(unauthorized.Value));
+        Assert.Equal("Account is inactive.", ActionResultAssert.UnauthorizedMessage(result));
     }
 
     [Fact]
@@ -59,6 +58,49 @@ public sealed class SessionTests
         Assert.True(refreshToken.IsRevoked);
         Assert.NotEqual(refreshToken.Token, response.RefreshToken);
         Assert.NotEmpty(response.AccessToken);
+    }
+
+    [Fact]
+    public async Task Login_WithInvalidPassword_ReturnsUnauthorized()
+    {
+        using var host = AuthTestHost.Create();
+        var user = host.CreateUser("0900000025", "pass1234");
+
+        var result = await host.Controller.Login(new LoginRequest
+        {
+            PhoneNumber = user.PhoneNumber,
+            Password = "wrong-password"
+        });
+
+        Assert.Equal("Invalid credentials.", ActionResultAssert.UnauthorizedMessage(result));
+    }
+
+    [Fact]
+    public async Task Refresh_WithInvalidToken_ReturnsUnauthorized()
+    {
+        using var host = AuthTestHost.Create();
+
+        var result = await host.Controller.Refresh(new RefreshRequest
+        {
+            RefreshToken = "not-a-real-token"
+        });
+
+        Assert.Equal("Refresh token is invalid.", ActionResultAssert.UnauthorizedMessage(result));
+    }
+
+    [Fact]
+    public async Task Refresh_WithInactiveUser_ReturnsUnauthorized()
+    {
+        using var host = AuthTestHost.Create();
+        var user = host.CreateUser("0900000026", "pass1234", isActive: false);
+        var refreshToken = await host.RefreshTokens.IssueAsync(user);
+
+        var result = await host.Controller.Refresh(new RefreshRequest
+        {
+            RefreshToken = refreshToken.Token
+        });
+
+        Assert.Equal("User not found.", ActionResultAssert.UnauthorizedMessage(result));
     }
 
     [Fact]
