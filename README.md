@@ -96,3 +96,7 @@ https://endava-team-nawxok20.atlassian.net/jira/software/projects/NIH/boards/3
 1. Create the merge request, write clear commit message before push.
 2. For the backend, need to wait for the workflow CI passed before merge.
 3. Resolve all conflicts, review requests before merge.
+
+
+## SQL Schema
+![Nicon DB Schema](./nicon_sql_schema.png)
