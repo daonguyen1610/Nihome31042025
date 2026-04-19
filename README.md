@@ -88,3 +88,11 @@ dotnet ef database update
 ```
 
 Migrations/ folder stores schema history. You only delete the folder if intentionally want to recreate the database from scratch.
+
+## JIRA ticket
+https://endava-team-nawxok20.atlassian.net/jira/software/projects/NIH/boards/3
+
+## WoW
+1. Create the merge request, write clear commit message before push.
+2. For the backend, need to wait for the workflow CI passed before merge.
+3. Resolve all conflicts, review requests before merge.
