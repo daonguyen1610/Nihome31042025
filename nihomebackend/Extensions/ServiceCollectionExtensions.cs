@@ -1,6 +1,9 @@
 using System.Text;
+using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 
@@ -26,6 +29,15 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.AddMemoryCache();
+
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseSqlServer(
+                configuration.GetConnectionString("DefaultConnection"),
+                sql =>
+                {
+                    sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    sql.CommandTimeout(60);
+                }));
 
         services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
@@ -59,6 +71,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddAuthorization();
+        services.AddAutoMapper(typeof(Mappings.AutoMapperProfile));
         services.AddScoped<PasswordService>();
         services.AddScoped<JwtService>();
         services.AddScoped<RefreshTokenService>();

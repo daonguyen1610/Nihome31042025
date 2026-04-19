@@ -1,20 +1,22 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using NihomeBackend.Data;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.Services;
 
 public class RefreshTokenService
 {
-    private readonly AuthStore _authStore;
+    private readonly AppDbContext _db;
     private readonly JwtOptions _jwt;
 
-    public RefreshTokenService(AuthStore authStore, IOptions<JwtOptions> jwt)
+    public RefreshTokenService(AppDbContext db, IOptions<JwtOptions> jwt)
     {
-        _authStore = authStore;
+        _db = db;
         _jwt = jwt.Value;
     }
 
-    public Task<RefreshToken> IssueAsync(ApplicationUser user)
+    public async Task<RefreshToken> IssueAsync(ApplicationUser user)
     {
         var refreshToken = new RefreshToken
         {
@@ -23,24 +25,27 @@ public class RefreshTokenService
             ExpiresAt = DateTime.UtcNow.AddDays(_jwt.RefreshTokenDays)
         };
 
-        _authStore.SaveRefreshToken(refreshToken);
-        return Task.FromResult(refreshToken);
+        _db.RefreshTokens.Add(refreshToken);
+        await _db.SaveChangesAsync();
+        return refreshToken;
     }
 
-    public Task<RefreshToken?> ValidateAsync(string token)
+    public async Task<RefreshToken?> ValidateAsync(string token)
     {
-        var refreshToken = _authStore.GetRefreshToken(token);
+        var refreshToken = await _db.RefreshTokens
+            .Include(r => r.User)
+            .FirstOrDefaultAsync(r => r.Token == token);
         if (refreshToken == null || refreshToken.IsRevoked || refreshToken.ExpiresAt <= DateTime.UtcNow)
         {
-            return Task.FromResult<RefreshToken?>(null);
+            return null;
         }
 
-        return Task.FromResult<RefreshToken?>(refreshToken);
+        return refreshToken;
     }
 
-    public Task RevokeAsync(RefreshToken refreshToken)
+    public async Task RevokeAsync(RefreshToken refreshToken)
     {
         refreshToken.IsRevoked = true;
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync();
     }
 }

@@ -1,22 +1,24 @@
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Data;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.Services;
 
 public class OtpService
 {
-    private readonly AuthStore _authStore;
+    private readonly AppDbContext _db;
     private readonly ILogger<OtpService> _logger;
     private readonly IEmailService _emailService;
 
-    public OtpService(AuthStore authStore, ILogger<OtpService> logger, IEmailService emailService)
+    public OtpService(AppDbContext db, ILogger<OtpService> logger, IEmailService emailService)
     {
-        _authStore = authStore;
+        _db = db;
         _logger = logger;
         _emailService = emailService;
     }
 
-    public async Task<string> GenerateOtp(string phoneNumber, string fullName, string? email)
+    public async Task<string> GenerateOtp(string phoneNumber, string? fullName, string? email)
     {
         var otp = GenerateSecureOtp();
         var entry = new RegistrationOtp
@@ -25,19 +27,31 @@ public class OtpService
             FullName = fullName,
             Email = email,
             OtpCode = otp,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5)
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            IsUsed = false
         };
 
-        _authStore.SaveOtp(entry);
+        _db.RegistrationOtps.Add(entry);
+        await _db.SaveChangesAsync();
 
         if (!string.IsNullOrWhiteSpace(email))
         {
             try
             {
+                var settings = await _db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
+                var siteName = settings?.SiteName ?? "Nihome";
+                var subject = (settings?.OtpEmailSubjectTemplate ?? "[{{siteName}}] Your verification code")
+                    .Replace("{{siteName}}", siteName, StringComparison.OrdinalIgnoreCase);
+                var body = (settings?.OtpEmailBodyTemplate
+                        ?? "<p>Your OTP code is <strong>{{otpCode}}</strong>. It expires in {{otpExpireMinutes}} minutes.</p>")
+                    .Replace("{{siteName}}", siteName, StringComparison.OrdinalIgnoreCase)
+                    .Replace("{{otpCode}}", otp, StringComparison.OrdinalIgnoreCase)
+                    .Replace("{{otpExpireMinutes}}", "5", StringComparison.OrdinalIgnoreCase);
+
                 await _emailService.SendEmailAsync(
                     email,
-                    "[Nihome] Your verification code",
-                    $"<p>Your OTP code is <strong>{otp}</strong>. It expires in 5 minutes.</p>");
+                    subject,
+                    body);
             }
             catch (Exception ex)
             {
@@ -49,25 +63,28 @@ public class OtpService
         return otp;
     }
 
-    public Task<RegistrationOtp?> VerifyOtp(string phoneNumber, string otp)
+    public async Task<RegistrationOtp?> VerifyOtp(string phoneNumber, string otp)
     {
-        var entry = _authStore.GetLatestOtp(phoneNumber);
-        if (entry == null || entry.IsUsed || entry.ExpiresAt < DateTime.UtcNow || entry.OtpCode != otp)
-        {
-            return Task.FromResult<RegistrationOtp?>(null);
-        }
-
-        return Task.FromResult<RegistrationOtp?>(entry);
+        return await _db.RegistrationOtps
+            .Where(x => x.PhoneNumber == phoneNumber &&
+                x.OtpCode == otp &&
+                !x.IsUsed &&
+                x.ExpiresAt >= DateTime.UtcNow)
+            .OrderByDescending(x => x.Id)
+            .FirstOrDefaultAsync();
     }
 
-    public Task MarkAsUsed(RegistrationOtp entry)
+    public async Task MarkAsUsed(RegistrationOtp entry)
     {
         entry.IsUsed = true;
-        return Task.CompletedTask;
+        await _db.SaveChangesAsync();
     }
 
-    public Task<RegistrationOtp?> GetLatestOtp(string phoneNumber) =>
-        Task.FromResult(_authStore.GetLatestOtp(phoneNumber));
+    public async Task<RegistrationOtp?> GetLatestOtp(string phoneNumber) =>
+        await _db.RegistrationOtps
+            .Where(o => o.PhoneNumber == phoneNumber)
+            .OrderByDescending(o => o.Id)
+            .FirstOrDefaultAsync();
 
     public async Task<string?> ResendOtp(string phoneNumber)
     {
@@ -76,30 +93,44 @@ public class OtpService
             return null;
         }
 
+        var requestCount = await CountOtpLastHour(phoneNumber);
+        if (requestCount >= 5)
+        {
+            throw new InvalidOperationException("OTP request limit exceeded.");
+        }
+
         var latest = await GetLatestOtp(phoneNumber);
         return await GenerateOtp(phoneNumber, latest?.FullName ?? string.Empty, latest?.Email);
     }
 
-    public Task<bool> CanRequestOtp(string phoneNumber)
+    public async Task<bool> CanRequestOtp(string phoneNumber)
     {
-        var lastOtp = _authStore.GetLatestOtp(phoneNumber);
+        var lastOtp = await GetLatestOtp(phoneNumber);
         if (lastOtp == null)
         {
-            return Task.FromResult(true);
+            return true;
         }
 
         var secondsSinceLastOtp = (DateTime.UtcNow - lastOtp.CreatedAt).TotalSeconds;
         if (secondsSinceLastOtp < 60)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
         if (!lastOtp.IsUsed && lastOtp.ExpiresAt > DateTime.UtcNow)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        return Task.FromResult(true);
+        return true;
+    }
+
+    public async Task<int> CountOtpLastHour(string phoneNumber)
+    {
+        var oneHourAgo = DateTime.UtcNow.AddHours(-1);
+        return await _db.RegistrationOtps
+            .Where(o => o.PhoneNumber == phoneNumber && o.CreatedAt >= oneHourAgo)
+            .CountAsync();
     }
 
     private static string GenerateSecureOtp()
