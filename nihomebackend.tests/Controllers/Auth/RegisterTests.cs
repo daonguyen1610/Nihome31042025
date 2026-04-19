@@ -52,17 +52,9 @@ public sealed class RegisterTests
         var otp = await host.Otps.GetLatestOtp(phoneNumber);
         Assert.NotNull(otp);
 
-        await host.Controller.VerifyOtp(new VerifyOtpRequest
-        {
-            PhoneNumber = phoneNumber,
-            OtpCode = otp!.OtpCode
-        });
+        await host.VerifyRegisterOtp(phoneNumber, otp!.OtpCode);
 
-        var result = await host.Controller.CompleteRegister(new RegistrationCompleteRequest
-        {
-            PhoneNumber = phoneNumber,
-            Password = "secret123"
-        });
+        var result = await host.CompleteRegister(phoneNumber, "secret123");
 
         var response = ActionResultAssert.Ok<AuthResponse>(result);
 
@@ -89,11 +81,7 @@ public sealed class RegisterTests
     {
         using var host = AuthTestHost.Create();
 
-        var result = await host.Controller.VerifyOtp(new VerifyOtpRequest
-        {
-            PhoneNumber = "0900000005",
-            OtpCode = "000000"
-        });
+        var result = await host.VerifyRegisterOtp("0900000005", "000000");
 
         Assert.Equal("Invalid OTP.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -103,11 +91,7 @@ public sealed class RegisterTests
     {
         using var host = AuthTestHost.Create(enableOtpForRegistration: false);
 
-        var result = await host.Controller.CompleteRegister(new RegistrationCompleteRequest
-        {
-            PhoneNumber = "0900000006",
-            Password = "secret123"
-        });
+        var result = await host.CompleteRegister("0900000006", "secret123");
 
         Assert.Equal(
             "OTP verification is disabled. Complete registration from register/start.",
@@ -119,11 +103,7 @@ public sealed class RegisterTests
     {
         using var host = AuthTestHost.Create();
 
-        var result = await host.Controller.CompleteRegister(new RegistrationCompleteRequest
-        {
-            PhoneNumber = "0900000007",
-            Password = "secret123"
-        });
+        var result = await host.CompleteRegister("0900000007", "secret123");
 
         Assert.Equal("OTP session not found or expired.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -134,11 +114,7 @@ public sealed class RegisterTests
         using var host = AuthTestHost.Create();
         host.AddOtp("0900000008", isUsed: true);
 
-        var result = await host.Controller.CompleteRegister(new RegistrationCompleteRequest
-        {
-            PhoneNumber = "0900000008",
-            Password = "secret123"
-        });
+        var result = await host.CompleteRegister("0900000008", "secret123");
 
         Assert.Equal("OTP session not found or expired.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -148,10 +124,7 @@ public sealed class RegisterTests
     {
         using var host = AuthTestHost.Create(enableOtpForRegistration: false);
 
-        var result = await host.Controller.ResendRegisterOtp(new ResendOtpRequest
-        {
-            PhoneNumber = "0900000009"
-        });
+        var result = await host.ResendRegisterOtp("0900000009");
 
         Assert.Equal("OTP verification is disabled for registration.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -162,10 +135,7 @@ public sealed class RegisterTests
         using var host = AuthTestHost.Create();
         host.CreateUser("0900000013", "secret123");
 
-        var result = await host.Controller.ResendRegisterOtp(new ResendOtpRequest
-        {
-            PhoneNumber = "0900000013"
-        });
+        var result = await host.ResendRegisterOtp("0900000013");
 
         Assert.Equal("Phone number already registered.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -177,10 +147,7 @@ public sealed class RegisterTests
         const string phoneNumber = "0900000014";
         await host.StartRegister(phoneNumber, "OTP User", "register.resend@example.com");
 
-        var result = await host.Controller.ResendRegisterOtp(new ResendOtpRequest
-        {
-            PhoneNumber = phoneNumber
-        });
+        var result = await host.ResendRegisterOtp(phoneNumber);
 
         Assert.Equal("Please wait before requesting a new OTP.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -192,10 +159,7 @@ public sealed class RegisterTests
         const string phoneNumber = "0900000015";
         host.SeedOtpRateLimit(phoneNumber, email: "register.limit@example.com");
 
-        var result = await host.Controller.ResendRegisterOtp(new ResendOtpRequest
-        {
-            PhoneNumber = phoneNumber
-        });
+        var result = await host.ResendRegisterOtp(phoneNumber);
 
         Assert.Equal("OTP request limit exceeded.", ActionResultAssert.BadRequestMessage(result));
     }

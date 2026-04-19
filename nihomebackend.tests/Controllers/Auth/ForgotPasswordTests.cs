@@ -11,10 +11,7 @@ public sealed class ForgotPasswordTests
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000010", "oldpass123", email: "forgot@example.com");
 
-        var result = await host.Controller.ForgotPasswordStart(new ForgotPasswordStartRequest
-        {
-            PhoneNumber = user.PhoneNumber
-        });
+        var result = await host.StartForgotPassword(user.PhoneNumber);
 
         Assert.Equal("OTP code sent to email.", ActionResultAssert.OkMessage(result));
 
@@ -32,11 +29,7 @@ public sealed class ForgotPasswordTests
         using var host = AuthTestHost.Create(enableOtpForForgotPassword: false);
         var user = host.CreateUser("0900000011", "oldpass123");
 
-        var result = await host.Controller.ForgotPasswordResetDirect(new ForgotPasswordCompleteRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            NewPassword = "newpass123"
-        });
+        var result = await host.ResetForgotPasswordDirect(user.PhoneNumber, "newpass123");
 
         Assert.Equal("Password reset completed.", ActionResultAssert.OkMessage(result));
         Assert.True(host.Passwords.Verify(user, "newpass123"));
@@ -48,25 +41,14 @@ public sealed class ForgotPasswordTests
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000012", "oldpass123");
 
-        await host.Controller.ForgotPasswordStart(new ForgotPasswordStartRequest
-        {
-            PhoneNumber = user.PhoneNumber
-        });
+        await host.StartForgotPassword(user.PhoneNumber);
 
         var otp = await host.Otps.GetLatestOtp(user.PhoneNumber);
         Assert.NotNull(otp);
 
-        await host.Controller.ForgotPasswordVerifyOtp(new VerifyOtpRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            OtpCode = otp!.OtpCode
-        });
+        await host.VerifyForgotPasswordOtp(user.PhoneNumber, otp!.OtpCode);
 
-        var result = await host.Controller.ForgotPasswordComplete(new ForgotPasswordCompleteRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            NewPassword = "newpass123"
-        });
+        var result = await host.CompleteForgotPassword(user.PhoneNumber, "newpass123");
 
         Assert.Equal("Password reset completed.", ActionResultAssert.OkMessage(result));
         Assert.True(otp.IsUsed);
@@ -78,10 +60,7 @@ public sealed class ForgotPasswordTests
     {
         using var host = AuthTestHost.Create();
 
-        var result = await host.Controller.ForgotPasswordStart(new ForgotPasswordStartRequest
-        {
-            PhoneNumber = "0900000013"
-        });
+        var result = await host.StartForgotPassword("0900000013");
 
         Assert.Equal("Account not found.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -92,11 +71,7 @@ public sealed class ForgotPasswordTests
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000014", "oldpass123");
 
-        var result = await host.Controller.ForgotPasswordResetDirect(new ForgotPasswordCompleteRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            NewPassword = "newpass123"
-        });
+        var result = await host.ResetForgotPasswordDirect(user.PhoneNumber, "newpass123");
 
         Assert.Equal(
             "OTP verification is required. Please use the standard forgot password flow.",
@@ -108,11 +83,7 @@ public sealed class ForgotPasswordTests
     {
         using var host = AuthTestHost.Create();
 
-        var result = await host.Controller.ForgotPasswordVerifyOtp(new VerifyOtpRequest
-        {
-            PhoneNumber = "0900000015",
-            OtpCode = "000000"
-        });
+        var result = await host.VerifyForgotPasswordOtp("0900000015", "000000");
 
         Assert.Equal("Invalid OTP.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -122,11 +93,7 @@ public sealed class ForgotPasswordTests
     {
         using var host = AuthTestHost.Create();
 
-        var result = await host.Controller.ForgotPasswordComplete(new ForgotPasswordCompleteRequest
-        {
-            PhoneNumber = "0900000016",
-            NewPassword = "newpass123"
-        });
+        var result = await host.CompleteForgotPassword("0900000016", "newpass123");
 
         Assert.Equal("Account not found.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -137,11 +104,7 @@ public sealed class ForgotPasswordTests
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000017", "oldpass123");
 
-        var result = await host.Controller.ForgotPasswordComplete(new ForgotPasswordCompleteRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            NewPassword = "newpass123"
-        });
+        var result = await host.CompleteForgotPassword(user.PhoneNumber, "newpass123");
 
         Assert.Equal("OTP session not found or expired.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -151,10 +114,7 @@ public sealed class ForgotPasswordTests
     {
         using var host = AuthTestHost.Create(enableOtpForForgotPassword: false);
 
-        var result = await host.Controller.ResendForgotOtp(new ResendOtpRequest
-        {
-            PhoneNumber = "0900000018"
-        });
+        var result = await host.ResendForgotOtp("0900000018");
 
         Assert.Equal("OTP verification is disabled for forgot password.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -164,10 +124,7 @@ public sealed class ForgotPasswordTests
     {
         using var host = AuthTestHost.Create();
 
-        var result = await host.Controller.ResendForgotOtp(new ResendOtpRequest
-        {
-            PhoneNumber = "0900000019"
-        });
+        var result = await host.ResendForgotOtp("0900000019");
 
         Assert.Equal("Account not found.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -177,15 +134,9 @@ public sealed class ForgotPasswordTests
     {
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000024", "oldpass123", email: "forgot.resend@example.com");
-        await host.Controller.ForgotPasswordStart(new ForgotPasswordStartRequest
-        {
-            PhoneNumber = user.PhoneNumber
-        });
+        await host.StartForgotPassword(user.PhoneNumber);
 
-        var result = await host.Controller.ResendForgotOtp(new ResendOtpRequest
-        {
-            PhoneNumber = user.PhoneNumber
-        });
+        var result = await host.ResendForgotOtp(user.PhoneNumber);
 
         Assert.Equal("Please wait before requesting a new OTP.", ActionResultAssert.BadRequestMessage(result));
     }
@@ -197,10 +148,7 @@ public sealed class ForgotPasswordTests
         var user = host.CreateUser("0900000027", "oldpass123", email: "forgot.limit@example.com");
         host.SeedOtpRateLimit(user.PhoneNumber, email: user.Email);
 
-        var result = await host.Controller.ResendForgotOtp(new ResendOtpRequest
-        {
-            PhoneNumber = user.PhoneNumber
-        });
+        var result = await host.ResendForgotOtp(user.PhoneNumber);
 
         Assert.Equal("OTP request limit exceeded.", ActionResultAssert.BadRequestMessage(result));
     }

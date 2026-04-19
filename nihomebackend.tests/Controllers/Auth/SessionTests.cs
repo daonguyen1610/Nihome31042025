@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
-using NihomeBackend.Models.DTOs.Requests.Auth;
 using NihomeBackend.Models.DTOs.Responses;
 using nihomebackend.tests.Infrastructure;
 
@@ -13,11 +11,7 @@ public sealed class SessionTests
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000020", "pass1234");
 
-        var result = await host.Controller.Login(new LoginRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            Password = "pass1234"
-        });
+        var result = await host.Login(user.PhoneNumber, "pass1234");
 
         var response = ActionResultAssert.Ok<AuthResponse>(result);
 
@@ -32,11 +26,7 @@ public sealed class SessionTests
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000021", "pass1234", isActive: false);
 
-        var result = await host.Controller.Login(new LoginRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            Password = "pass1234"
-        });
+        var result = await host.Login(user.PhoneNumber, "pass1234");
 
         Assert.Equal("Account is inactive.", ActionResultAssert.UnauthorizedMessage(result));
     }
@@ -48,10 +38,7 @@ public sealed class SessionTests
         var user = host.CreateUser("0900000022", "pass1234");
         var refreshToken = await host.RefreshTokens.IssueAsync(user);
 
-        var result = await host.Controller.Refresh(new RefreshRequest
-        {
-            RefreshToken = refreshToken.Token
-        });
+        var result = await host.Refresh(refreshToken.Token);
 
         var response = ActionResultAssert.Ok<AuthResponse>(result);
 
@@ -66,11 +53,7 @@ public sealed class SessionTests
         using var host = AuthTestHost.Create();
         var user = host.CreateUser("0900000025", "pass1234");
 
-        var result = await host.Controller.Login(new LoginRequest
-        {
-            PhoneNumber = user.PhoneNumber,
-            Password = "wrong-password"
-        });
+        var result = await host.Login(user.PhoneNumber, "wrong-password");
 
         Assert.Equal("Invalid credentials.", ActionResultAssert.UnauthorizedMessage(result));
     }
@@ -80,10 +63,7 @@ public sealed class SessionTests
     {
         using var host = AuthTestHost.Create();
 
-        var result = await host.Controller.Refresh(new RefreshRequest
-        {
-            RefreshToken = "not-a-real-token"
-        });
+        var result = await host.Refresh("not-a-real-token");
 
         Assert.Equal("Refresh token is invalid.", ActionResultAssert.UnauthorizedMessage(result));
     }
@@ -95,10 +75,7 @@ public sealed class SessionTests
         var user = host.CreateUser("0900000026", "pass1234", isActive: false);
         var refreshToken = await host.RefreshTokens.IssueAsync(user);
 
-        var result = await host.Controller.Refresh(new RefreshRequest
-        {
-            RefreshToken = refreshToken.Token
-        });
+        var result = await host.Refresh(refreshToken.Token);
 
         Assert.Equal("User not found.", ActionResultAssert.UnauthorizedMessage(result));
     }
@@ -110,10 +87,7 @@ public sealed class SessionTests
         var user = host.CreateUser("0900000023", "pass1234");
         var refreshToken = await host.RefreshTokens.IssueAsync(user);
 
-        var result = await host.Controller.Logout(new RefreshRequest
-        {
-            RefreshToken = refreshToken.Token
-        });
+        var result = await host.Logout(refreshToken.Token);
 
         Assert.Equal("Logout successful.", ActionResultAssert.OkMessage(result));
         Assert.True(refreshToken.IsRevoked);

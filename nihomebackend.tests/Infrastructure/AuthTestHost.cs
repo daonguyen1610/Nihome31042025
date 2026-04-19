@@ -1,7 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
@@ -20,6 +19,7 @@ public sealed class AuthTestHost : IDisposable
         RefreshTokenService refreshTokenService,
         OtpService otpService,
         RecordingEmailService emailService,
+        ScenarioLogSink logSink,
         AuthController controller)
     {
         Db = db;
@@ -28,6 +28,7 @@ public sealed class AuthTestHost : IDisposable
         RefreshTokens = refreshTokenService;
         Otps = otpService;
         Email = emailService;
+        Logs = logSink;
         Controller = controller;
     }
 
@@ -43,12 +44,19 @@ public sealed class AuthTestHost : IDisposable
 
     public RecordingEmailService Email { get; }
 
+    internal ScenarioLogSink Logs { get; }
+
     public AuthController Controller { get; }
 
     public static AuthTestHost Create(
         bool enableOtpForRegistration = true,
-        bool enableOtpForForgotPassword = true)
+        bool enableOtpForForgotPassword = true,
+        [System.Runtime.CompilerServices.CallerMemberName] string scenario = "")
     {
+        var logSink = new ScenarioLogSink(scenario);
+        logSink.Step(
+            $"Creating auth test host with registrationOtp={enableOtpForRegistration}, forgotOtp={enableOtpForForgotPassword}");
+
         var dbOptions = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString("N"))
             .Options;
@@ -74,10 +82,10 @@ public sealed class AuthTestHost : IDisposable
             }
         });
 
-        var jwtService = new JwtService(jwtOptions, NullLogger<JwtService>.Instance);
+        var jwtService = new JwtService(jwtOptions, new ScenarioLogger<JwtService>(logSink));
         var refreshTokenService = new RefreshTokenService(db, jwtOptions);
         var emailService = new RecordingEmailService();
-        var otpService = new OtpService(db, NullLogger<OtpService>.Instance, emailService);
+        var otpService = new OtpService(db, new ScenarioLogger<OtpService>(logSink), emailService);
         var mapper = new MapperConfiguration(cfg => cfg.AddProfile(new NihomeBackend.Mappings.AutoMapperProfile()))
             .CreateMapper();
         var controller = new AuthController(
@@ -88,7 +96,7 @@ public sealed class AuthTestHost : IDisposable
             otpService,
             mapper,
             jwtOptions,
-            NullLogger<AuthController>.Instance);
+            new ScenarioLogger<AuthController>(logSink));
 
         return new AuthTestHost(
             db,
@@ -97,6 +105,7 @@ public sealed class AuthTestHost : IDisposable
             refreshTokenService,
             otpService,
             emailService,
+            logSink,
             controller);
     }
 
@@ -118,6 +127,7 @@ public sealed class AuthTestHost : IDisposable
         };
         user.PasswordHash = Passwords.Hash(user, password);
 
+        Logs.Step($"Seeding user {phoneNumber} with role {role} and active={isActive}");
         Db.Users.Add(user);
         Db.SaveChanges();
         return user;
@@ -146,6 +156,7 @@ public sealed class AuthTestHost : IDisposable
             ExpiresAt = expiresAt ?? DateTime.UtcNow.AddMinutes(5)
         };
 
+        Logs.Step($"Seeding OTP for {phoneNumber} used={isUsed} expiresAt={otp.ExpiresAt:O}");
         Db.RegistrationOtps.Add(otp);
         Db.SaveChanges();
         return otp;
@@ -155,14 +166,122 @@ public sealed class AuthTestHost : IDisposable
         string phoneNumber,
         string fullName = "Test User",
         string email = "test@example.com",
-        string password = "secret123") =>
-        Controller.StartRegister(new RegisterStartRequest
+        string password = "secret123")
+    {
+        Logs.Step($"Calling register/start for {phoneNumber}");
+        return Controller.StartRegister(new RegisterStartRequest
         {
             PhoneNumber = phoneNumber,
             FullName = fullName,
             Email = email,
             Password = password
         });
+    }
+
+    public Task<IActionResult> VerifyRegisterOtp(string phoneNumber, string otpCode)
+    {
+        Logs.Step($"Calling register/verify-otp for {phoneNumber}");
+        return Controller.VerifyOtp(new VerifyOtpRequest
+        {
+            PhoneNumber = phoneNumber,
+            OtpCode = otpCode
+        });
+    }
+
+    public Task<IActionResult> CompleteRegister(string phoneNumber, string password = "secret123")
+    {
+        Logs.Step($"Calling register/complete for {phoneNumber}");
+        return Controller.CompleteRegister(new RegistrationCompleteRequest
+        {
+            PhoneNumber = phoneNumber,
+            Password = password
+        });
+    }
+
+    public Task<IActionResult> ResendRegisterOtp(string phoneNumber)
+    {
+        Logs.Step($"Calling register/resend-otp for {phoneNumber}");
+        return Controller.ResendRegisterOtp(new ResendOtpRequest
+        {
+            PhoneNumber = phoneNumber
+        });
+    }
+
+    public Task<IActionResult> StartForgotPassword(string phoneNumber)
+    {
+        Logs.Step($"Calling forgot/start for {phoneNumber}");
+        return Controller.ForgotPasswordStart(new ForgotPasswordStartRequest
+        {
+            PhoneNumber = phoneNumber
+        });
+    }
+
+    public Task<IActionResult> VerifyForgotPasswordOtp(string phoneNumber, string otpCode)
+    {
+        Logs.Step($"Calling forgot/verify-otp for {phoneNumber}");
+        return Controller.ForgotPasswordVerifyOtp(new VerifyOtpRequest
+        {
+            PhoneNumber = phoneNumber,
+            OtpCode = otpCode
+        });
+    }
+
+    public Task<IActionResult> CompleteForgotPassword(string phoneNumber, string newPassword)
+    {
+        Logs.Step($"Calling forgot/complete for {phoneNumber}");
+        return Controller.ForgotPasswordComplete(new ForgotPasswordCompleteRequest
+        {
+            PhoneNumber = phoneNumber,
+            NewPassword = newPassword
+        });
+    }
+
+    public Task<IActionResult> ResetForgotPasswordDirect(string phoneNumber, string newPassword)
+    {
+        Logs.Step($"Calling forgot/reset-direct for {phoneNumber}");
+        return Controller.ForgotPasswordResetDirect(new ForgotPasswordCompleteRequest
+        {
+            PhoneNumber = phoneNumber,
+            NewPassword = newPassword
+        });
+    }
+
+    public Task<IActionResult> ResendForgotOtp(string phoneNumber)
+    {
+        Logs.Step($"Calling forgot/resend-otp for {phoneNumber}");
+        return Controller.ResendForgotOtp(new ResendOtpRequest
+        {
+            PhoneNumber = phoneNumber
+        });
+    }
+
+    public Task<IActionResult> Login(string phoneNumber, string password)
+    {
+        Logs.Step($"Calling login for {phoneNumber}");
+        return Controller.Login(new LoginRequest
+        {
+            PhoneNumber = phoneNumber,
+            Password = password
+        });
+    }
+
+    public Task<IActionResult> Refresh(string refreshToken)
+    {
+        Logs.Step("Calling refresh");
+        return Controller.Refresh(new RefreshRequest
+        {
+            RefreshToken = refreshToken
+        });
+    }
+
+    public Task<IActionResult> Logout(string refreshToken)
+    {
+        Logs.Step("Calling logout");
+        return Controller.Logout(new RefreshRequest
+        {
+            RefreshToken = refreshToken
+        });
+    }
 
     public void SeedOtpRateLimit(
         string phoneNumber,
@@ -185,6 +304,7 @@ public sealed class AuthTestHost : IDisposable
 
     public void Dispose()
     {
+        Logs.Step("Disposing auth test host");
         Db.Dispose();
     }
 }
