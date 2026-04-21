@@ -15,8 +15,9 @@ Read in this order:
 1. `AGENTS.md`
 2. `docs/ai/working-procedure.md`
 3. `docs/ai/frontend-playbook.md`
-4. `docs/ai/memory-bank/README.md`
-5. The relevant memory-bank files for the task
+4. `docs/ai/project-brief.md`
+5. `docs/ai/memory-bank/README.md`
+6. The relevant memory-bank files for the task
 
 Treat this as mandatory for work that changes routes, layouts, UI patterns, architecture, API assumptions, or shared components.
 

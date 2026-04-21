@@ -1,6 +1,6 @@
 # UI System
 
-Last reviewed: 2026-04-20
+Last reviewed: 2026-04-21
 
 ## Visual Direction
 
@@ -26,6 +26,7 @@ New work should preserve that direction unless the team explicitly chooses a reb
 - Introduce shared primitives when the same pattern appears across multiple screens or states.
 - Prefer composition over large monolithic page-specific components.
 - Keep visual wrappers, content logic, and data-loading concerns reasonably separated.
+- Phase 1 uses a small shared shell layer: sidebar, header, navbar, page container, page header, empty state, loading state, and status badge.
 
 ## Responsiveness and Accessibility
 

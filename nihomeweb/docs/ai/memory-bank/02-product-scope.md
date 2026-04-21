@@ -1,40 +1,36 @@
 # Product Scope
 
-Last reviewed: 2026-04-20
+Last reviewed: 2026-04-21
 
 ## Product Intent
 
-`nihomeweb/` is intended to be the Next.js frontend for the Nihome platform.
-It should eventually support a calm, premium property-operations experience for staff and related users.
+`nihomeweb/` is the Next.js frontend for the Nihome platform.
+It is intended to support both an internal admin portal and a client-facing portal for a design-and-build business.
 
 ## Intended Surface Areas
 
 Planned frontend surface areas include:
 
-- marketing or landing entry points
-- staff-facing dashboard views
+- client portal home, projects, and notifications
+- admin portal shell and dashboard views
 - authentication flows
-- tenant-related records and workflows
-- apartment or inventory management
-- billing or payment-oriented screens
+- future design-and-build business modules such as CRM, design, construction, procurement, and finance
 
 These are product intent categories, not a promise that the routes already exist.
 
 ## In Scope Right Now
 
-- establishing shared agent workflow and durable repo memory
-- preserving a coherent frontend direction while the app is still early-stage
-- preparing for future App Router expansion under `app/`
-- documenting the current gap between intended backend integration and actual committed config
+- Phase 1 shell work
+- shared AI workflow and durable repo memory
+- route groups, layouts, placeholder pages, and a small shared component layer
+- preserving the branded client-home direction while introducing the portal skeleton
 
 ## Not Yet Implemented
 
 - production-ready auth flows
-- dashboard information architecture
-- concrete tenant management screens
-- apartment management flows
-- billing UX and payment handling
-- finalized backend integration contract for the frontend
+- finalized API integration contract
+- state-management strategy
+- deep feature modules beyond the admin dashboard shell and client placeholders
 
 ## Scope Discipline
 

@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-Last reviewed: 2026-04-20
+Last reviewed: 2026-04-21
 
 ## Core Direction
 
@@ -8,6 +8,7 @@ Last reviewed: 2026-04-20
 - Treat Server Components as the default.
 - Add Client Components only for interactivity, browser APIs, or hooks that require them.
 - Keep architecture choices compatible with Next.js 16 behavior.
+- Build by phase instead of scaffolding every future module at once.
 
 ## Route and Component Boundaries
 
@@ -19,6 +20,7 @@ Last reviewed: 2026-04-20
 ## Data Fetching Defaults
 
 - Match the data-fetching approach to the rendering model instead of defaulting to client-side `useEffect`.
+- Phase 1 avoids API calls entirely and keeps placeholder pages static.
 - Prefer server-side data access when the route can benefit from it and the deployment model supports it.
 - Use client-side fetching for interactive or browser-owned state when that is the right fit.
 - If client-side server state becomes widespread, standardize it rather than creating many custom fetch effects.
@@ -30,16 +32,15 @@ Last reviewed: 2026-04-20
 - Do not hardcode backend base URLs in presentational UI.
 - If the frontend depends on backend proxying, rewrites, or route handlers, commit that configuration and document it in the same task.
 
-## Static Export Caveat
+## Runtime Direction
 
-The repo currently sets `output: "export"` in `next.config.ts`.
-That choice limits or complicates features that expect a Next.js server runtime, such as route handlers, runtime proxy behavior, and some server-driven integration patterns.
+The repo no longer uses `output: "export"` in `next.config.ts`.
+The app should be treated as a runtime Next.js application so later phases can add auth, protected routes, and runtime-aware integration without reversing static-export assumptions.
 
-Until the team deliberately revisits output strategy:
+Until those later phases are opened:
 
-- do not assume server runtime features are available
-- do not document proxy behavior that is not committed
-- flag any task that depends on runtime-only Next.js features as an architecture decision, not a routine implementation detail
+- do not document auth or proxy behavior that is not committed
+- do not introduce route protection or API client layers before the team decides those interfaces
 
 ## Documentation Rule
 

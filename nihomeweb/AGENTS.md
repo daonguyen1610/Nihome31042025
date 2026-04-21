@@ -16,8 +16,9 @@ Before doing non-trivial work, read these in order:
 1. `AGENTS.md`
 2. `docs/ai/working-procedure.md`
 3. `docs/ai/frontend-playbook.md`
-4. `docs/ai/memory-bank/README.md`
-5. The memory-bank files relevant to the task
+4. `docs/ai/project-brief.md`
+5. `docs/ai/memory-bank/README.md`
+6. The memory-bank files relevant to the task
 
 Examples of non-trivial work:
 
@@ -41,6 +42,7 @@ For any non-trivial task:
 5. review the result against `docs/ai/frontend-playbook.md` before considering it done
 
 `docs/ai/working-procedure.md` is the practical day-to-day guide for humans and agents following this contract.
+`docs/ai/project-brief.md` is the repo-local product and phase brief for execution work.
 
 ## Frontend Skill Routing
 

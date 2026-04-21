@@ -1,7 +1,7 @@
 # Frontend Playbook
 
 This document explains how AI agents should approach frontend work in `nihomeweb/`.
-Use it together with `AGENTS.md` and the memory bank.
+Use it together with `AGENTS.md`, `docs/ai/project-brief.md`, and the memory bank.
 
 ## Purpose
 
@@ -75,6 +75,7 @@ Do not quietly replace the current visual direction with Geist just because the 
 - Client Components only when interactivity requires them
 - Route handlers only when the frontend truly owns the server-side behavior
 - Avoid direct backend URLs inside presentational components
+- Keep phase work aligned with the current repo brief instead of jumping ahead to future modules or dependencies
 
 ### Data Fetching
 

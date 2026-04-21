@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-04-20
+Last reviewed: 2026-04-21
 
 ## Decisions
 
@@ -28,19 +28,35 @@ Rationale: Clear ownership prevents Claude, Codex, and human collaborators from 
 
 Rationale: Important context must remain discoverable in the repository even when chat sessions, tools, or agents change.
 
+### 2026-04-21 — `docs/ai/project-brief.md` is the repo-local execution brief
+
+Rationale: Future agents should use a stable brief inside the repository instead of depending on a file from `Downloads`.
+
+### 2026-04-21 — Static export was removed from `next.config.ts`
+
+Rationale: The planned multi-portal app needs a normal runtime Next.js shape for future auth, protected pages, and server-aware integrations.
+
+### 2026-04-21 — Phase 1 keeps the branded client home while adding the portal skeleton
+
+Rationale: The existing visual direction is worth preserving, and it can serve as the client-home shell without pretending deeper product features already exist.
+
 ## Open Questions
 
-### Should `output: "export"` remain the frontend deployment strategy?
+### Which auth strategy should Nihome use after Phase 1?
 
-Why it matters: planned backend integration, route handlers, or runtime proxy behavior may require a Next.js server runtime instead of static export.
+Why it matters: route protection, login flows, and session ownership all depend on it.
 
-### What is the intended backend integration shape for web-to-API traffic?
+### What API access pattern should the frontend adopt after Phase 1?
 
-Why it matters: the current landing page fetches `/api/system/health`, but the repo does not yet commit the rewrite, proxy, or route-handler strategy that would make that path reliable.
+Why it matters: future modules need a clear decision on native fetch, a wrapper layer, or another client approach before real data work begins.
 
-### When should a shared component system be introduced?
+### What state-management approach is justified once modules become interactive?
 
-Why it matters: the app is still small, but repeated route-local patterns should not grow unchecked before a reusable layer appears.
+Why it matters: Phase 1 intentionally avoids TanStack Query, SWR, and Zustand until there is a real need and a shared decision.
+
+### Should the UI layer stay custom or adopt a shared component library later?
+
+Why it matters: Phase 1 uses hand-built shared primitives, but later modules may justify a broader UI system choice.
 
 ## Handoff Notes
 

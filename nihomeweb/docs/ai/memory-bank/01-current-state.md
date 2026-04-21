@@ -1,6 +1,6 @@
 # Current State
 
-Last reviewed: 2026-04-20
+Last reviewed: 2026-04-21
 
 ## Stack
 
@@ -13,37 +13,47 @@ Last reviewed: 2026-04-20
 
 ## Current App Structure
 
-The committed `app/` tree is currently minimal:
+The committed app shell now includes:
 
 - `app/layout.tsx`
-- `app/page.tsx`
+- `app/not-found.tsx`
+- `app/(auth)/layout.tsx`
+- `app/(auth)/login/page.tsx`
+- `app/(auth)/forgot-password/page.tsx`
+- `app/(client)/layout.tsx`
+- `app/(client)/page.tsx`
+- `app/(client)/projects/page.tsx`
+- `app/(client)/notifications/page.tsx`
+- `app/(admin)/admin/layout.tsx`
+- `app/(admin)/admin/page.tsx`
+- `app/(admin)/admin/dashboard/page.tsx`
 - `app/globals.css`
 - `app/favicon.ico`
 
-There are no committed route groups, no nested pages, no route handlers, and no shared component library in the current tree.
+There is also a small shared component and utility layer under `components/`, `lib/utils/`, and `types/`.
 
-## Current Landing Page Behavior
+## Current Portal Shell Behavior
 
-- `app/page.tsx` is a client component.
-- It fetches `/api/system/health` in `useEffect`.
-- The page renders a branded landing screen plus a backend status panel.
-- The UI currently uses custom classes defined in `app/globals.css`.
-- Styling direction is warm, premium, and editorial rather than default starter styling.
+- `/` is served by `app/(client)/page.tsx`.
+- The client home keeps the warm branded landing direction and acts as the Phase 1 client portal shell.
+- `/projects` and `/notifications` are placeholder pages inside the client layout.
+- `/admin` redirects to `/admin/dashboard`.
+- `/login` and `/forgot-password` are placeholder auth pages with no real auth flow yet.
 
 ## Current Config Reality
 
-- `next.config.ts` currently sets only `output: "export"`.
-- No rewrite, proxy, or route handler is committed for `/api/system/health`.
+- `next.config.ts` no longer sets `output: "export"`.
+- There is no rewrite, proxy, route protection, or route handler committed yet.
 - No `.env.example` is committed in this repo.
-- `README.md` previously described backend proxy behavior that does not exist in the current config; this mismatch was corrected when the shared AI docs were set up.
+- The repo now includes repo-local AI docs, a project brief, and a memory bank under `docs/ai/`.
 
 ## Current Gaps
 
-- No dashboard, auth, tenant, apartment, or billing routes are implemented yet.
-- No shared data layer or server-state strategy is established yet.
-- No reusable design-system primitives are committed yet.
+- No real auth layer is implemented yet.
+- No API client or server-state strategy is established yet.
+- No deep business modules such as CRM, design, construction, procurement, or finance are implemented yet.
 - No frontend test suite is committed yet.
-- No repo-local memory bank existed before 2026-04-20.
+- No route protection is implemented yet.
 
 ## Agent Notes
 

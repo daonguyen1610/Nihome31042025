@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nihome",
-  description: "Modern property management for owners, staff, and tenants.",
+  title: {
+    default: "Nihome",
+    template: "%s | Nihome",
+  },
+  description: "Phase 1 portal shell for the Nihome design and build platform.",
 };
 
 export default function RootLayout({
