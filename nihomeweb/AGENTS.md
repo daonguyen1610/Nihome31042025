@@ -50,7 +50,7 @@ For Codex environments with Vercel skills available, `docs/ai/frontend-playbook.
 
 Use these skills intentionally:
 
-- `vercel:nextjs` for work touching `app/`, `next.config.*`, metadata, layouts, rendering, route handlers, or caching
+- `vercel:nextjs` for work touching `src/pages/`, `_app`, `_document`, `next.config.*`, layouts, routing, auth guards, rendering, or caching
 - `vercel:react-best-practices` after multi-component TSX edits and for React code review
 - `vercel:shadcn` when introducing or standardizing reusable UI primitives
 - `vercel:swr` when client-side server-state handling becomes more than a simple one-off fetch

@@ -4,25 +4,26 @@ Last reviewed: 2026-04-21
 
 ## Core Direction
 
-- Use the Next.js App Router.
-- Treat Server Components as the default.
-- Add Client Components only for interactivity, browser APIs, or hooks that require them.
-- Keep architecture choices compatible with Next.js 16 behavior.
+- Use the Next.js Pages Router.
+- Keep the starter-kit layout, theme, and settings system as the active frontend baseline.
+- Centralize app-level providers, guards, and theme wiring in `_app.tsx`.
+- Keep architecture choices compatible with the installed Next.js version.
 - Build by phase instead of scaffolding every future module at once.
 
 ## Route and Component Boundaries
 
-- Route files should stay focused on page, layout, loading, error, and metadata concerns.
-- Push reusable UI into shared components only after repetition becomes real.
+- Route files live under `src/pages/` and should stay focused on page behavior, redirects, and page-level presentation.
+- `_document.tsx` handles document markup and Emotion SSR setup.
+- Shared layout behavior belongs in `src/layouts/` and `src/@core/layouts/`.
 - Avoid placing backend-specific assumptions directly inside presentational components.
 - If multiple routes need the same backend access pattern, centralize that pattern instead of copying fetch logic.
 
 ## Data Fetching Defaults
 
 - Match the data-fetching approach to the rendering model instead of defaulting to client-side `useEffect`.
-- Phase 1 avoids API calls entirely and keeps placeholder pages static.
-- Prefer server-side data access when the route can benefit from it and the deployment model supports it.
-- Use client-side fetching for interactive or browser-owned state when that is the right fit.
+- The current baseline avoids real API calls and keeps placeholder pages static.
+- Mock auth is allowed because it is an explicit baseline placeholder, not because it represents the future production architecture.
+- Prefer simple page-level or guard-level behavior until the real API contract is decided.
 - If client-side server state becomes widespread, standardize it rather than creating many custom fetch effects.
 
 ## Environment and Integration Rules
@@ -34,13 +35,14 @@ Last reviewed: 2026-04-21
 
 ## Runtime Direction
 
-The repo no longer uses `output: "export"` in `next.config.ts`.
-The app should be treated as a runtime Next.js application so later phases can add auth, protected routes, and runtime-aware integration without reversing static-export assumptions.
+The app should be treated as a runtime Next.js application on top of the starter-kit baseline.
+The current baseline intentionally favors immediate productivity over framework modernization.
 
 Until those later phases are opened:
 
 - do not document auth or proxy behavior that is not committed
-- do not introduce route protection or API client layers before the team decides those interfaces
+- do not introduce real auth or API client layers before the team decides those interfaces
+- do not reintroduce a second active App Router shell without a documented migration plan
 
 ## Documentation Rule
 

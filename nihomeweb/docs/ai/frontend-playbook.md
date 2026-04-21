@@ -7,15 +7,15 @@ Use it together with `AGENTS.md`, `docs/ai/project-brief.md`, and the memory ban
 
 - align Claude and Codex on the same frontend workflow
 - route Codex to the right Vercel skill for the task
-- keep Next.js 16 decisions consistent across the repo
+- keep the starter-kit baseline decisions consistent across the repo
 - reduce styling and architecture drift when multiple agents contribute
 
 ## Required Baseline
 
-- Treat Next.js 16 behavior as authoritative, not older framework habits.
+- Treat the installed Next.js version in this repo as authoritative.
 - Before changing app code, read the relevant local Next.js docs under `node_modules/next/dist/docs/` when dependencies are installed.
-- Prefer App Router conventions everywhere in this frontend.
-- Prefer Server Components by default and add `"use client"` only when a component genuinely needs browser-only interactivity or hooks.
+- Prefer the current Pages Router architecture instead of mixing in a second active routing model.
+- Preserve the starter-kit layout, theme, and settings system unless the team explicitly documents a replacement.
 
 ## Vercel Skill Routing
 
@@ -25,11 +25,12 @@ Use these skills intentionally in Codex environments:
 
 Use for any task touching:
 
-- `app/`
+- `src/pages/`
+- `_app.tsx`, `_document.tsx`, `next.d.ts`
 - `next.config.*`
-- metadata, layouts, routing, rendering mode, or route handlers
+- layouts, routing, rendering mode, auth guards, or page-level redirects
 - cache behavior, revalidation, or fetch strategy
-- server and client boundaries in the App Router
+- migration work that affects the current Pages Router baseline
 
 This is the default skill for most work in this repo.
 
@@ -49,7 +50,7 @@ Use when:
 - moving repeated UI patterns into reusable building blocks
 - standardizing composition instead of continuing ad hoc styled sections
 
-Do not introduce `shadcn/ui` just for one isolated element with no reuse value.
+Do not introduce `shadcn/ui` just for one isolated element with no reuse value, and do not let it silently replace the current MUI baseline.
 
 ### `vercel:swr`
 
@@ -70,10 +71,10 @@ Do not quietly replace the current visual direction with Geist just because the 
 
 ### Architecture
 
-- App Router first
-- Server Components by default
-- Client Components only when interactivity requires them
-- Route handlers only when the frontend truly owns the server-side behavior
+- Pages Router first
+- `src/pages/` is the active route surface
+- `_app.tsx` owns app-level providers, guards, theme setup, and head defaults
+- `_document.tsx` owns document-level markup and Emotion server integration
 - Avoid direct backend URLs inside presentational components
 - Keep phase work aligned with the current repo brief instead of jumping ahead to future modules or dependencies
 
@@ -81,14 +82,15 @@ Do not quietly replace the current visual direction with Geist just because the 
 
 - Start with the simplest approach that matches the rendering model.
 - Keep backend access patterns explicit and easy to centralize later.
+- The current baseline uses mock auth only and does not commit to a real API layer yet.
 - If client-side data fetching grows, move toward a shared server-state strategy instead of repeating `useEffect` fetch blocks everywhere.
 
 ### UI System
 
-- Prefer shared tokens and composition over repeated hard-coded values.
-- Preserve the current warm, premium visual direction unless the team explicitly changes brand direction.
-- Promote repeated styles into reusable classes, utilities, or shared components before drift accumulates.
-- Avoid mixing multiple unrelated design languages in the same pass.
+- MUI 5 and Emotion are the official admin UI system in the current repo state.
+- Preserve the starter-kit layout system while replacing vendor/demo language with Nihome language.
+- Promote repeated UI into shared MUI-aware components or theme overrides before drift accumulates.
+- Avoid mixing the retired Tailwind shell and the active MUI shell in the same implementation pass.
 
 ### Documentation
 
@@ -101,8 +103,8 @@ Do not quietly replace the current visual direction with Geist just because the 
 Before closing a non-trivial frontend task, verify:
 
 - the assigned owner and task boundary stayed clear
-- the chosen rendering model matches Next.js 16 expectations
-- server/client boundaries are intentional
+- the chosen rendering model matches the installed Next.js version and current Pages Router baseline
+- no second active routing architecture was introduced by accident
 - no new convention conflicts with the memory bank
 - presentational components do not hide infrastructure assumptions
 - any new library or reusable pattern was intentionally chosen

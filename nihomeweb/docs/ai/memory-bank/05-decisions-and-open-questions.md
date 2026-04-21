@@ -32,31 +32,35 @@ Rationale: Important context must remain discoverable in the repository even whe
 
 Rationale: Future agents should use a stable brief inside the repository instead of depending on a file from `Downloads`.
 
-### 2026-04-21 — Static export was removed from `next.config.ts`
+### 2026-04-21 — `nihomeweb` officially shifted to the starter-kit baseline
 
-Rationale: The planned multi-portal app needs a normal runtime Next.js shape for future auth, protected pages, and server-aware integrations.
+Rationale: The team prioritized speed and a working admin template over a risky forward-port from an older template into the retired Next 16 App Router shell.
 
-### 2026-04-21 — Phase 1 keeps the branded client home while adding the portal skeleton
+### 2026-04-21 — MUI and Emotion are now the active admin UI system
 
-Rationale: The existing visual direction is worth preserving, and it can serve as the client-home shell without pretending deeper product features already exist.
+Rationale: The imported starter-kit provides the official layout, theme, and shared shell until a later redesign or framework migration is documented.
+
+### 2026-04-21 — The larger full template stays deferred
+
+Rationale: Pulling in the full template now would increase scope and dependency risk; future work should mine it selectively for page-specific components.
 
 ## Open Questions
 
-### Which auth strategy should Nihome use after Phase 1?
+### Which auth strategy should Nihome use after the starter baseline reset?
 
 Why it matters: route protection, login flows, and session ownership all depend on it.
 
-### What API access pattern should the frontend adopt after Phase 1?
+### What API access pattern should the frontend adopt after the starter baseline reset?
 
 Why it matters: future modules need a clear decision on native fetch, a wrapper layer, or another client approach before real data work begins.
 
 ### What state-management approach is justified once modules become interactive?
 
-Why it matters: Phase 1 intentionally avoids TanStack Query, SWR, and Zustand until there is a real need and a shared decision.
+Why it matters: the current baseline intentionally avoids SWR, TanStack Query, and Zustand until there is a real need and a shared decision.
 
-### Should the UI layer stay custom or adopt a shared component library later?
+### Should the UI layer stay on the imported MUI starter baseline long term?
 
-Why it matters: Phase 1 uses hand-built shared primitives, but later modules may justify a broader UI system choice.
+Why it matters: the repo now uses the starter-kit MUI baseline, but later work may still decide to deepen that direction or replace parts of it.
 
 ## Handoff Notes
 

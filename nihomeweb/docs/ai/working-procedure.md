@@ -77,8 +77,8 @@ Run a review pass against the frontend playbook and confirm:
 
 - the owner was clear
 - the task boundary stayed clear
-- the result is still aligned with Next.js 16
-- Server and Client Component boundaries are intentional
+- the result is aligned with the installed Next.js version and the active starter-kit baseline
+- the chosen routing model matches the current Pages Router architecture
 - no undocumented convention was introduced
 - the UI still fits the current visual direction
 - any changed backend assumptions were written into the memory bank

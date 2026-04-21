@@ -9,46 +9,42 @@ Agents should read it before any non-trivial implementation task together with `
 - Repo name: `nihomeweb`
 - Product name: Nihome
 - Product shape: internal admin portal plus client portal for a design-and-build business
-- Current phase: Phase 1 shell
+- Current phase: starter-kit baseline reset
 
 ## Current Technical Baseline
 
-- Next.js `16.2.3`
-- React `19.2.4`
-- TypeScript `5.x`
-- Tailwind CSS `4.x`
-- App Router
+- Next.js `13.0.0`
+- React `18.2.0`
+- TypeScript `4.8.x`
+- MUI `5.x`
+- Emotion `11.x`
+- Pages Router
 
 Current repo reality:
 
-- no auth layer
-- no API client
-- no route protection
-- no server-state library
+- starter-kit layout, theme, and settings system are the active frontend baseline
+- mock JWT auth is still present as a placeholder
+- no real API client
+- no production auth provider or route ownership decision beyond the current mock baseline
 - no deep feature modules yet
 
 ## Architectural Defaults
 
-- Server Components are the default.
-- Add `"use client"` only when hooks, browser APIs, or active-state UI truly require it.
-- Do not install unresolved dependencies just because older prompts mentioned them.
-- Do not use outdated Next.js 14 or 15 conventions in this repo.
+- Pages Router is the active routing model.
+- Route files live under `src/pages/`.
+- `_app.tsx` owns providers, guards, theme setup, and page defaults.
+- `_document.tsx` owns document markup and Emotion SSR integration.
 - Build by phase instead of scaffolding every future module at once.
 
-## Phase 1 Scope
+## Current Scope
 
-Phase 1 creates the app shell and shared scaffolding only.
+Included in the current baseline reset:
 
-Included in Phase 1:
-
-- remove static export from `next.config.ts`
-- route groups for `(auth)`, `(client)`, and `(admin)`
-- auth placeholder pages for `/login` and `/forgot-password`
-- client home, projects, and notifications placeholders
-- admin shell and dashboard placeholder
-- root `not-found.tsx`
-- minimal shared layout and common components
-- repo-local AI docs and memory aligned to the implementation
+- replace the retired Next 16 App Router shell with the imported starter-kit baseline
+- personalize the starter-kit for Nihome and remove vendor-facing template language
+- preserve these routes: `/`, `/projects`, `/notifications`, `/login`, `/forgot-password`, `/admin`, `/admin/dashboard`
+- keep mock auth only as an explicit placeholder
+- align repo-local AI docs and memory to the active baseline
 
 Explicitly deferred:
 
@@ -56,8 +52,9 @@ Explicitly deferred:
 - route protection
 - API client layer
 - state-management libraries
-- business-logic feature components
-- deep admin modules such as CRM, design, construction, procurement, and finance
+- deep business-logic feature components
+- broad `full-template` imports
+- framework modernization back to a newer Next.js baseline
 
 ## AI Working Rules
 
@@ -74,14 +71,13 @@ Update the memory bank in the same task when a durable decision changes architec
 
 ## Acceptance Criteria
 
-Phase 1 is only complete when:
+The starter baseline reset is only complete when:
 
 - `npm run build` passes
 - `npx tsc --noEmit` passes
-- route groups and layouts render cleanly
-- static export is no longer configured
-- no file is empty
-- no unresolved dependency is introduced
+- the official route surface renders cleanly
+- visible legacy vendor references are gone from the shipped UI
+- no second active frontend architecture remains in normal use
 - repo docs and memory reflect the same implementation reality
 
 ## Future Phases
@@ -93,5 +89,6 @@ Future work may introduce:
 - state management
 - deeper admin modules
 - richer client portal flows
+- selective component imports from the larger full template
 
 Those phases should only start after the relevant decisions are documented in the memory bank.

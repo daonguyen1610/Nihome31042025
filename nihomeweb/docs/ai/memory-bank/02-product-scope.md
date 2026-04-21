@@ -11,19 +11,19 @@ It is intended to support both an internal admin portal and a client-facing port
 
 Planned frontend surface areas include:
 
-- client portal home, projects, and notifications
+- client portal overview, projects, and notifications
 - admin portal shell and dashboard views
 - authentication flows
 - future design-and-build business modules such as CRM, design, construction, procurement, and finance
 
-These are product intent categories, not a promise that the routes already exist.
+These are product intent categories, not a promise that every route already exists with production behavior.
 
 ## In Scope Right Now
 
-- Phase 1 shell work
+- starter-kit baseline adoption
 - shared AI workflow and durable repo memory
-- route groups, layouts, placeholder pages, and a small shared component layer
-- preserving the branded client-home direction while introducing the portal skeleton
+- Nihome personalization of the imported admin template
+- the official route surface under the current Pages Router baseline
 
 ## Not Yet Implemented
 
@@ -31,6 +31,7 @@ These are product intent categories, not a promise that the routes already exist
 - finalized API integration contract
 - state-management strategy
 - deep feature modules beyond the admin dashboard shell and client placeholders
+- broad imports from the larger full template
 
 ## Scope Discipline
 

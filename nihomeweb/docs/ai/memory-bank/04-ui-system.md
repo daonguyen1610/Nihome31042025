@@ -4,29 +4,28 @@ Last reviewed: 2026-04-21
 
 ## Visual Direction
 
-The current UI direction is warm, premium, calm, and slightly editorial.
-New work should preserve that direction unless the team explicitly chooses a rebrand.
+The current UI direction comes from the imported starter-kit and is now the official admin baseline for Nihome.
+New work should preserve that baseline while replacing demo and vendor-facing copy with Nihome-specific language.
 
 ## Tokens and Styling Ownership
 
-- Global theme tokens should live in CSS variables first.
-- `app/globals.css` is the current home for shared tokens and global styling rules.
-- Before repeating the same raw color, radius, spacing, or shadow values in multiple places, promote them into a shared token or reusable pattern.
+- Global theme ownership lives primarily in the MUI theme, `themeConfig`, and the starter-kit styling layer.
+- `styles/globals.css` is the current home for shared global CSS used by `_app.tsx`.
+- Before repeating raw color, spacing, or shadow values across screens, promote them into the theme or a reusable MUI-aware pattern.
 - Avoid mixing unrelated token systems without a deliberate migration plan.
 
 ## Typography
 
-- The current app uses custom serif and sans-serif stacks defined in CSS.
+- The current baseline uses the starter-kit typography system and a Google Fonts import through `_document.tsx`.
 - Do not switch to Geist by default.
-- If the team chooses Geist later, treat that as a documented visual-system decision and update the playbook plus memory bank together.
+- If the team changes typography later, treat that as a documented visual-system decision and update the playbook plus memory bank together.
 
 ## Component Strategy
 
 - Start simple while the app is small, but do not let repeated route-local UI harden into inconsistent one-off patterns.
-- Introduce shared primitives when the same pattern appears across multiple screens or states.
-- Prefer composition over large monolithic page-specific components.
+- Prefer starter-kit layout primitives, theme overrides, and shared MUI composition over ad hoc route-local styling.
 - Keep visual wrappers, content logic, and data-loading concerns reasonably separated.
-- Phase 1 uses a small shared shell layer: sidebar, header, navbar, page container, page header, empty state, loading state, and status badge.
+- The current baseline ships with a shared shell layer based on `UserLayout`, navigation config, dropdowns, footer, and page cards.
 
 ## Responsiveness and Accessibility
 

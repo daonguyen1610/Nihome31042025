@@ -20,21 +20,20 @@ Open `http://localhost:3000`.
 
 ## Current status
 
-- The app is a Next.js 16 App Router project.
-- The app now uses route groups for `(auth)`, `(client)`, and `(admin)`.
-- The client home at `/` keeps the branded Nihome visual direction while acting as the Phase 1 portal shell.
-- `next.config.ts` no longer uses `output: "export"`.
-- There is no committed `.env.example` in this repo.
-- There is no auth layer, API client, route protection, or server-state library yet.
+- The app now follows the imported starter-kit baseline: Next.js 13 Pages Router, MUI 5, and Emotion.
+- Core routes live under `src/pages/`.
+- The official round-1 route surface is `/`, `/projects`, `/notifications`, `/login`, `/forgot-password`, `/admin`, and `/admin/dashboard`.
+- Mock JWT auth is still in place as a placeholder until a real auth strategy is chosen.
+- The larger `full-template` is intentionally deferred; future screens can adopt its compatible components selectively.
 
 ## Main files
 
-- `app/(client)/page.tsx`: branded client home shell
-- `app/(admin)/admin/dashboard/page.tsx`: admin dashboard placeholder
-- `app/(auth)/login/page.tsx`: auth placeholder shell
-- `app/layout.tsx`: app metadata and root layout
-- `app/globals.css`: shared visual tokens and landing page styles
-- `next.config.ts`: current Next.js config
+- `src/pages/index.tsx`: Nihome workspace overview
+- `src/pages/admin/dashboard/index.tsx`: admin dashboard baseline
+- `src/pages/login/index.tsx`: starter-kit auth screen, Nihome-personalized
+- `src/layouts/UserLayout.tsx`: shared workspace layout
+- `styles/globals.css`: global styles imported by `_app.tsx`
+- `next.config.js`: current Next.js config
 
 ## Shared AI docs
 
