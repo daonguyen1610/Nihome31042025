@@ -356,11 +356,11 @@ const RegisterPage = () => {
                   render={({ field: { value, onChange } }) => (
                     <FormControlLabel
                       sx={{
-                        ...(errors.terms ? { color: 'error.main' } : null),
+                        ...(errors.terms ? { color: 'error.main' } : {}),
                         '& .MuiFormControlLabel-label': { fontSize: '0.875rem' }
                       }}
                       control={
-                        <Checkbox checked={value} onChange={onChange} sx={errors.terms ? { color: 'error.main' } : null} />
+                        <Checkbox checked={value} onChange={onChange} sx={errors.terms ? { color: 'error.main' } : undefined} />
                       }
                       label={
                         <Fragment>
