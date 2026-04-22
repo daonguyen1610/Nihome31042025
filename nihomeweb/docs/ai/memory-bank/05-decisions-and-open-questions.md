@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-04-21
+Last reviewed: 2026-04-23
 
 ## Decisions
 
@@ -43,6 +43,10 @@ Rationale: The imported starter-kit provides the official layout, theme, and sha
 ### 2026-04-21 — The larger full template stays deferred
 
 Rationale: Pulling in the full template now would increase scope and dependency risk; future work should mine it selectively for page-specific components.
+
+### 2026-04-23 — Login and register screens were selectively imported from `full-version`
+
+Rationale: The team needed auth entry screens ready for backend API wiring, but still wanted to preserve the Pages Router starter baseline and avoid a broad template merge.
 
 ## Open Questions
 

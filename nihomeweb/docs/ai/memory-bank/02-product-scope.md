@@ -1,6 +1,6 @@
 # Product Scope
 
-Last reviewed: 2026-04-21
+Last reviewed: 2026-04-23
 
 ## Product Intent
 
@@ -24,6 +24,7 @@ These are product intent categories, not a promise that every route already exis
 - shared AI workflow and durable repo memory
 - Nihome personalization of the imported admin template
 - the official route surface under the current Pages Router baseline
+- starter auth entry screens for login, register, and forgot-password so backend integration can proceed
 
 ## Not Yet Implemented
 

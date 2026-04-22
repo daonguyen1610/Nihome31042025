@@ -42,7 +42,7 @@ Included in the current baseline reset:
 
 - replace the retired Next 16 App Router shell with the imported starter-kit baseline
 - personalize the starter-kit for Nihome and remove vendor-facing template language
-- preserve these routes: `/`, `/projects`, `/notifications`, `/login`, `/forgot-password`, `/admin`, `/admin/dashboard`
+- preserve these routes: `/`, `/projects`, `/notifications`, `/login`, `/register`, `/forgot-password`, `/admin`, `/admin/dashboard`
 - keep mock auth only as an explicit placeholder
 - align repo-local AI docs and memory to the active baseline
 

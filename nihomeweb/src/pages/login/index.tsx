@@ -127,7 +127,7 @@ const LoginPage = () => {
     setError,
     handleSubmit,
     formState: { errors }
-  } = useForm({
+  } = useForm<FormData>({
     defaultValues,
     mode: 'onBlur',
     resolver: yupResolver(schema)
@@ -341,9 +341,15 @@ const LoginPage = () => {
                   Forgot Password?
                 </Typography>
               </Box>
-              <Button fullWidth size='large' type='submit' variant='contained'>
+              <Button fullWidth size='large' type='submit' variant='contained' sx={{ mb: 6 }}>
                 Sign in
               </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <Typography sx={{ mr: 2, color: 'text.secondary' }}>Need a new workspace account?</Typography>
+                <Typography href='/register' component={Link} sx={{ color: 'primary.main', textDecoration: 'none' }}>
+                  Create one here
+                </Typography>
+              </Box>
             </form>
           </BoxWrapper>
         </Box>

@@ -1,6 +1,6 @@
 # Current State
 
-Last reviewed: 2026-04-21
+Last reviewed: 2026-04-23
 
 ## Stack
 
@@ -22,6 +22,7 @@ The active frontend now includes:
 - `src/pages/projects/index.tsx`
 - `src/pages/notifications/index.tsx`
 - `src/pages/login/index.tsx`
+- `src/pages/register/index.tsx`
 - `src/pages/forgot-password/index.tsx`
 - `src/pages/admin/index.tsx`
 - `src/pages/admin/dashboard/index.tsx`
@@ -36,7 +37,7 @@ The retired Next 16 App Router shell has been moved under `legacy/next16-shell/`
 - `/` is the MUI-based workspace overview page.
 - `/projects` and `/notifications` are Nihome placeholder pages on top of the starter-kit layout system.
 - `/admin` redirects to `/admin/dashboard`.
-- `/login` and `/forgot-password` are starter-kit auth screens rewritten for Nihome.
+- `/login`, `/register`, and `/forgot-password` are starter-kit auth entry screens adapted from the template baseline for Nihome.
 - Pages are protected by the mock auth guard unless they are explicitly marked as guest routes.
 
 ## Current Config Reality
@@ -44,6 +45,7 @@ The retired Next 16 App Router shell has been moved under `legacy/next16-shell/`
 - `next.config.js` follows the starter-kit baseline.
 - The active route surface is Pages Router under `src/pages/`.
 - Mock JWT auth runs through `src/@fake-db/auth/jwt.ts`.
+- The current auth entry screens selectively reuse full-template auth layouts without importing the larger template wholesale.
 - There is still no committed `.env.example`; the mock auth now has safe local fallbacks so the baseline can boot without local env setup.
 - The repo includes repo-local AI docs, a project brief, and a memory bank under `docs/ai/`.
 
