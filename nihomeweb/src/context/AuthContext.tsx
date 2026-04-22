@@ -108,7 +108,7 @@ const AuthProvider = ({ children }: Props) => {
         if (res.data.error) {
           if (errorCallback) errorCallback(res.data.error)
         } else {
-          handleLogin({ email: params.email, password: params.password })
+          handleLogin({ email: params.email, password: params.password, rememberMe: true })
         }
       })
       .catch((err: { [key: string]: string }) => (errorCallback ? errorCallback(err) : null))
