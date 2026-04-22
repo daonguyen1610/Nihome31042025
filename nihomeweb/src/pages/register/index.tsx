@@ -1,5 +1,5 @@
 // ** React Imports
-import { Fragment, MouseEvent, ReactNode, useState } from 'react'
+import { Fragment, ReactNode, useState } from 'react'
 
 // ** Next Import
 import Link from 'next/link'
@@ -371,13 +371,7 @@ const RegisterPage = () => {
                           >
                             I agree to the{' '}
                           </Typography>
-                          <Typography
-                            href='/'
-                            variant='body2'
-                            component={Link}
-                            sx={{ color: 'primary.main', textDecoration: 'none' }}
-                            onClick={(event: MouseEvent<HTMLElement>) => event.preventDefault()}
-                          >
+                          <Typography variant='body2' component='span' sx={{ color: 'primary.main' }}>
                             placeholder privacy policy & terms
                           </Typography>
                         </Fragment>

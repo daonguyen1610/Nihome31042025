@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/datran/workspace/Nihome31042025/nihomebackend/nihomebackend.csproj": {}
+    "/home/runner/work/Nihome31042025/Nihome31042025/nihomebackend/nihomebackend.csproj": {}
   },
   "projects": {
-    "/Users/datran/workspace/Nihome31042025/nihomebackend/nihomebackend.csproj": {
+    "/home/runner/work/Nihome31042025/Nihome31042025/nihomebackend/nihomebackend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/datran/workspace/Nihome31042025/nihomebackend/nihomebackend.csproj",
+        "projectUniqueName": "/home/runner/work/Nihome31042025/Nihome31042025/nihomebackend/nihomebackend.csproj",
         "projectName": "nihomebackend",
-        "projectPath": "/Users/datran/workspace/Nihome31042025/nihomebackend/nihomebackend.csproj",
-        "packagesPath": "/Users/datran/.nuget/packages/",
-        "outputPath": "/Users/datran/workspace/Nihome31042025/nihomebackend/obj/",
+        "projectPath": "/home/runner/work/Nihome31042025/Nihome31042025/nihomebackend/nihomebackend.csproj",
+        "packagesPath": "/home/runner/.nuget/packages/",
+        "outputPath": "/home/runner/work/Nihome31042025/Nihome31042025/nihomebackend/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/datran/.nuget/NuGet/NuGet.Config"
+          "/home/runner/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -37,7 +37,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "10.0.200"
       },
       "frameworks": {
         "net8.0": {
@@ -85,7 +86,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.416/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.201/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
