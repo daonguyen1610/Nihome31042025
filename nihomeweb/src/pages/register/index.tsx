@@ -372,7 +372,7 @@ const RegisterPage = () => {
                             I agree to the{' '}
                           </Typography>
                           <Typography variant='body2' component='span' sx={{ color: 'primary.main' }}>
-                            placeholder privacy policy & terms
+                            placeholder privacy policy & terms (coming soon)
                           </Typography>
                         </Fragment>
                       }
