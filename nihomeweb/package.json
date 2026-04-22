@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "rm -rf ../nihomebackend/wwwroot && mkdir -p ../nihomebackend/wwwroot && next build && next export -o ../nihomebackend/wwwroot && touch ../nihomebackend/wwwroot/.gitkeep",
     "start": "next start",
     "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\"",
     "typecheck": "tsc --noEmit"

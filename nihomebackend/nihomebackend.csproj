@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <SkipNihomeWebBuild Condition="'$(SkipNihomeWebBuild)' == ''">false</SkipNihomeWebBuild>
+    <NihomeWebDirectory>$(MSBuildProjectDirectory)/../nihomeweb</NihomeWebDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,17 +19,37 @@
     </PackageReference>
   </ItemGroup>
 
-  <Target Name="BuildNihomeWeb" BeforeTargets="ComputeFilesToPublish" Condition="'$(SkipNihomeWebBuild)' != 'true' and Exists('$(MSBuildProjectDirectory)/../nihomeweb/package.json')">
-    <Exec WorkingDirectory="$(MSBuildProjectDirectory)/../nihomeweb" Command="npm run build" />
+  <ItemGroup Condition="Exists('$(NihomeWebDirectory)/package.json')">
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/package.json" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/package-lock.json" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/next.config.js" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/next.d.ts" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/tsconfig.json" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/declaration.d.ts" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/public/**" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/src/**" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/styles/**" />
 
-    <ItemGroup>
-      <NihomeWebFiles Include="$(MSBuildProjectDirectory)/../nihomeweb/out/**" />
-    </ItemGroup>
+    <Watch Remove="wwwroot/**" />
+    <Watch Include="@(NihomeWebBuildInputs)" />
+  </ItemGroup>
 
-    <Copy
-      SourceFiles="@(NihomeWebFiles)"
-      DestinationFiles="@(NihomeWebFiles->'$(PublishDir)wwwroot/%(RecursiveDir)%(Filename)%(Extension)')"
-      SkipUnchangedFiles="true" />
+  <Target
+    Name="RestoreNihomeWeb"
+    BeforeTargets="BuildNihomeWeb"
+    Condition="'$(SkipNihomeWebBuild)' != 'true' and Exists('$(NihomeWebDirectory)/package.json')"
+    Inputs="$(NihomeWebDirectory)/package.json;$(NihomeWebDirectory)/package-lock.json"
+    Outputs="$(NihomeWebDirectory)/node_modules/.package-lock.json">
+    <Exec WorkingDirectory="$(NihomeWebDirectory)" Command="npm install" />
+  </Target>
+
+  <Target
+    Name="BuildNihomeWeb"
+    BeforeTargets="Build"
+    Condition="'$(SkipNihomeWebBuild)' != 'true' and Exists('$(NihomeWebDirectory)/package.json')"
+    Inputs="@(NihomeWebBuildInputs)"
+    Outputs="$(MSBuildProjectDirectory)/wwwroot/index.html">
+    <Exec WorkingDirectory="$(NihomeWebDirectory)" Command="npm run build" />
   </Target>
 
 </Project>

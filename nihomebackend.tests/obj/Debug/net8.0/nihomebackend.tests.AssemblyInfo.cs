@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("nihomebackend.tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a7481188b5e8863aad875c98d89b9c2cd0f1c975")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+513bcabe567dcc7bd258106734e8580de3513d01")]
 [assembly: System.Reflection.AssemblyProductAttribute("nihomebackend.tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("nihomebackend.tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
