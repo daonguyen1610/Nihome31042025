@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("nihomebackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+513bcabe567dcc7bd258106734e8580de3513d01")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a7b3afb288bcc2375019a91e150bafe1e7df8bc5")]
 [assembly: System.Reflection.AssemblyProductAttribute("nihomebackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("nihomebackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
