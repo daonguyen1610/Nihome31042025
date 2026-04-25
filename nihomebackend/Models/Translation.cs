@@ -12,10 +12,12 @@ public class Translation
 {
     public int TranslationId { get; set; }
 
-    [Required][MaxLength(200)]
+    [Required]
+    [MaxLength(200)]
     public string Key { get; set; } = "";
 
-    [Required][MaxLength(10)]
+    [Required]
+    [MaxLength(10)]
     public string LanguageCode { get; set; } = "vi";
 
     [Required]

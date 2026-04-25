@@ -329,8 +329,13 @@ public static class ContentSeeder
         {
             translations.Add(new EntityTranslation
             {
-                EntityType = entityType, EntityId = entityId, FieldName = field,
-                LanguageCode = lang, Value = value, CreatedAt = now, UpdatedAt = now,
+                EntityType = entityType,
+                EntityId = entityId,
+                FieldName = field,
+                LanguageCode = lang,
+                Value = value,
+                CreatedAt = now,
+                UpdatedAt = now,
             });
         }
 

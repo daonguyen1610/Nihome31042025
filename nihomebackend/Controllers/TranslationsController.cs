@@ -102,29 +102,41 @@ public class TranslationsController(
         object? items = entityType switch
         {
             EntityTypes.Activity => (await db.Activities.AsNoTracking().OrderByDescending(a => a.CreatedAt).ToListAsync())
-                .Select(a => new {
-                    id = a.Id, title = a.Title, description = a.Excerpt,
+                .Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Title,
+                    description = a.Excerpt,
                     hasTranslation = translationCounts.ContainsKey(a.Id),
                     translationCount = translationCounts.GetValueOrDefault(a.Id, 0),
                     expectedFields = 3
                 }),
             EntityTypes.News => (await db.NewsArticles.AsNoTracking().OrderByDescending(n => n.CreatedAt).ToListAsync())
-                .Select(n => new {
-                    id = n.Id, title = n.Title, description = n.Excerpt,
+                .Select(n => new
+                {
+                    id = n.Id,
+                    title = n.Title,
+                    description = n.Excerpt,
                     hasTranslation = translationCounts.ContainsKey(n.Id),
                     translationCount = translationCounts.GetValueOrDefault(n.Id, 0),
                     expectedFields = 3
                 }),
             EntityTypes.Project => (await db.Projects.AsNoTracking().OrderByDescending(p => p.CreatedAt).ToListAsync())
-                .Select(p => new {
-                    id = p.Id, title = p.Name, description = p.Description ?? "",
+                .Select(p => new
+                {
+                    id = p.Id,
+                    title = p.Name,
+                    description = p.Description ?? "",
                     hasTranslation = translationCounts.ContainsKey(p.Id),
                     translationCount = translationCounts.GetValueOrDefault(p.Id, 0),
                     expectedFields = 4
                 }),
             EntityTypes.Service => (await db.ServiceItems.AsNoTracking().OrderBy(s => s.SortOrder).ToListAsync())
-                .Select(s => new {
-                    id = s.Id, title = s.Title, description = s.Tagline,
+                .Select(s => new
+                {
+                    id = s.Id,
+                    title = s.Title,
+                    description = s.Tagline,
                     hasTranslation = translationCounts.ContainsKey(s.Id),
                     translationCount = translationCounts.GetValueOrDefault(s.Id, 0),
                     expectedFields = 5

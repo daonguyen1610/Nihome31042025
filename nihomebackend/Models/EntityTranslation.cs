@@ -12,15 +12,18 @@ public class EntityTranslation
 {
     public int Id { get; set; }
 
-    [Required][MaxLength(50)]
+    [Required]
+    [MaxLength(50)]
     public string EntityType { get; set; } = "";
 
     public int EntityId { get; set; }
 
-    [Required][MaxLength(50)]
+    [Required]
+    [MaxLength(50)]
     public string FieldName { get; set; } = "";
 
-    [Required][MaxLength(10)]
+    [Required]
+    [MaxLength(10)]
     public string LanguageCode { get; set; } = "";
 
     [Required]

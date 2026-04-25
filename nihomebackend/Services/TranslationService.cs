@@ -113,8 +113,12 @@ public class TranslationService(AppDbContext db, IMemoryCache cache)
             {
                 db.Translations.Add(new Translation
                 {
-                    Key = item.Key, LanguageCode = item.LanguageCode, Value = item.Value,
-                    Category = item.Category, CreatedAt = now, UpdatedAt = now,
+                    Key = item.Key,
+                    LanguageCode = item.LanguageCode,
+                    Value = item.Value,
+                    Category = item.Category,
+                    CreatedAt = now,
+                    UpdatedAt = now,
                 });
                 existingKeys.Add(compositeKey);
             }
