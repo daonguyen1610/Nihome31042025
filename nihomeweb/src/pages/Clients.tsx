@@ -2,16 +2,18 @@ import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/PageHeader";
 import { Quote, Building2, Globe2, Handshake, ExternalLink } from "lucide-react";
-import { clientLogos, partnerLogos, supplierLogos, type LogoItem } from "@/data/clients";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useLogos } from "@/hooks/useContentApi";
+import { PageLoading, PageError } from "@/components/PageState";
+import type { LogoResponse } from "@/services/contentApi";
 
-const LogoCard = ({ item }: { item: LogoItem }) => {
+const LogoCard = ({ item }: { item: LogoResponse }) => {
   const inner = (
     <div className="bg-card rounded-2xl border border-border h-44 md:h-48 flex flex-col items-center justify-center p-6 hover-lift transition-all relative group">
       <div className="flex-1 flex items-center justify-center w-full">
         <img
-          src={item.img}
+          src={item.imageUrl}
           alt={item.name}
           className="max-h-24 max-w-full object-contain group-hover:scale-105 transition-transform"
           loading="lazy"
@@ -36,11 +38,12 @@ const LogoCard = ({ item }: { item: LogoItem }) => {
 
 const Clients = () => {
   const { t } = useI18n();
+  const { data: logos, loading, error, refetch } = useLogos();
   const tabs = [
-    { id: "clients", label: t("cli.tab.clients"), data: clientLogos },
-    { id: "partners", label: t("cli.tab.partners"), data: partnerLogos },
-    { id: "suppliers", label: t("cli.tab.suppliers"), data: supplierLogos },
-  ] as const;
+    { id: "clients" as const, label: t("cli.tab.clients"), data: logos?.clients ?? [] },
+    { id: "partners" as const, label: t("cli.tab.partners"), data: logos?.partners ?? [] },
+    { id: "suppliers" as const, label: t("cli.tab.suppliers"), data: logos?.suppliers ?? [] },
+  ];
 
   const stats = [
     { icon: Building2, num: "80+", label: t("cli.stat.clients") },
@@ -54,8 +57,11 @@ const Clients = () => {
     { quote: t("cli.testi.q3"), author: "Mr. Lâm Quốc Hùng", role: t("cli.testi.r3") },
   ];
 
-  const [active, setActive] = useState<(typeof tabs)[number]["id"]>("clients");
+  const [active, setActive] = useState<"clients" | "partners" | "suppliers">("clients");
   const current = tabs.find((tab) => tab.id === active)!;
+
+  if (loading) return <Layout><PageLoading /></Layout>;
+  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
 
   return (
     <Layout>

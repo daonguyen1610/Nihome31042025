@@ -48,6 +48,7 @@ import EmailAccountsPage from "./pages/admin/settings/EmailAccounts.tsx";
 import StoresPage from "./pages/admin/settings/Stores.tsx";
 import CountriesPage from "./pages/admin/settings/Countries.tsx";
 import LanguagesPage from "./pages/admin/settings/Languages.tsx";
+import TranslationsPage from "./pages/admin/settings/Translations.tsx";
 import SystemLog from "./pages/admin/system/SystemLog.tsx";
 import WarningsPage from "./pages/admin/system/Warnings.tsx";
 import MaintenancePage from "./pages/admin/system/Maintenance.tsx";
@@ -55,16 +56,6 @@ import MessageQueue from "./pages/admin/system/MessageQueue.tsx";
 import ScheduleTasks from "./pages/admin/system/ScheduleTasks.tsx";
 import SeNamesPage from "./pages/admin/system/SeNames.tsx";
 import HelpPage from "./pages/admin/Help.tsx";
-import {
-  generalProcesses,
-  ptcskhProcesses,
-  dtProcesses,
-  tkProcesses,
-  tcProcesses,
-  ttqtctProcesses,
-  qlnsProcesses,
-  mhdgncuProcesses,
-} from "./data/processes.ts";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -83,11 +74,11 @@ const App = () => (
             <Route path="/services" element={<Services />} />
             <Route path="/services/:slug" element={<ServiceDetail />} />
             <Route path="/projects" element={<Projects />} />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/projects/:slug" element={<ProjectDetail />} />
             <Route path="/news" element={<News />} />
-            <Route path="/news/:id" element={<NewsDetail />} />
+            <Route path="/news/:slug" element={<NewsDetail />} />
             <Route path="/activities" element={<Activities />} />
-            <Route path="/activities/:id" element={<ActivityDetail />} />
+            <Route path="/activities/:slug" element={<ActivityDetail />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/recruitment" element={<Recruitment />} />
             <Route path="/contact" element={<Contact />} />
@@ -97,12 +88,12 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/posts" element={<AdminPosts />} />
             <Route path="/admin/posts/new" element={<PostForm mode="create" />} />
-            <Route path="/admin/posts/:id" element={<PostView />} />
-            <Route path="/admin/posts/:id/edit" element={<PostForm mode="edit" />} />
+            <Route path="/admin/posts/:slug" element={<PostView />} />
+            <Route path="/admin/posts/:slug/edit" element={<PostForm mode="edit" />} />
             <Route path="/admin/projects" element={<AdminProjects />} />
             <Route path="/admin/projects/new" element={<ProjectForm mode="create" />} />
-            <Route path="/admin/projects/:id" element={<ProjectView />} />
-            <Route path="/admin/projects/:id/edit" element={<ProjectForm mode="edit" />} />
+            <Route path="/admin/projects/:slug" element={<ProjectView />} />
+            <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
             <Route path="/admin/contacts" element={<AdminContacts />} />
             <Route path="/admin/recruitment" element={<AdminRecruitment />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
@@ -114,6 +105,7 @@ const App = () => (
             <Route path="/admin/stores" element={<StoresPage />} />
             <Route path="/admin/countries" element={<CountriesPage />} />
             <Route path="/admin/languages" element={<LanguagesPage />} />
+            <Route path="/admin/translations" element={<TranslationsPage />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/admin/customer-roles" element={<AdminCustomerRoles />} />
@@ -135,35 +127,35 @@ const App = () => (
             <Route path="/admin/system/se-names" element={<SeNamesPage />} />
             <Route
               path="/admin/processes/general"
-              element={<ProcessList storageKey="nicon_admin_proc_general_v1" titleKey="proc.general" seed={generalProcesses} />}
+              element={<ProcessList groupKey="general" titleKey="proc.general" />}
             />
             <Route
               path="/admin/processes/ptcskh"
-              element={<ProcessList storageKey="nicon_admin_proc_ptcskh_v1" titleKey="proc.ptcskh" seed={ptcskhProcesses} />}
+              element={<ProcessList groupKey="ptcskh" titleKey="proc.ptcskh" />}
             />
             <Route
               path="/admin/processes/dt"
-              element={<ProcessList storageKey="nicon_admin_proc_dt_v1" titleKey="proc.dt" seed={dtProcesses} />}
+              element={<ProcessList groupKey="dt" titleKey="proc.dt" />}
             />
             <Route
               path="/admin/processes/tk"
-              element={<ProcessList storageKey="nicon_admin_proc_tk_v1" titleKey="proc.tk" seed={tkProcesses} />}
+              element={<ProcessList groupKey="tk" titleKey="proc.tk" />}
             />
             <Route
               path="/admin/processes/tc"
-              element={<ProcessList storageKey="nicon_admin_proc_tc_v1" titleKey="proc.tc" seed={tcProcesses} />}
+              element={<ProcessList groupKey="tc" titleKey="proc.tc" />}
             />
             <Route
               path="/admin/processes/ttqtct"
-              element={<ProcessList storageKey="nicon_admin_proc_ttqtct_v1" titleKey="proc.ttqtct" seed={ttqtctProcesses} />}
+              element={<ProcessList groupKey="ttqtct" titleKey="proc.ttqtct" />}
             />
             <Route
               path="/admin/processes/qlns"
-              element={<ProcessList storageKey="nicon_admin_proc_qlns_v1" titleKey="proc.qlns" seed={qlnsProcesses} />}
+              element={<ProcessList groupKey="qlns" titleKey="proc.qlns" />}
             />
             <Route
               path="/admin/processes/mhdgncu"
-              element={<ProcessList storageKey="nicon_admin_proc_mhdgncu_v1" titleKey="proc.mhdgncu" seed={mhdgncuProcesses} />}
+              element={<ProcessList groupKey="mhdgncu" titleKey="proc.mhdgncu" />}
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

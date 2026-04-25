@@ -1,16 +1,31 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { getPost, upsertPost, slugify } from "@/lib/adminStore";
-import type { Activity } from "@/data/activities";
+import { adminApi, slugify } from "@/services/adminApi";
+import type { UpsertActivityRequest } from "@/services/adminApi";
+import { useActivity } from "@/hooks/useContentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
-const empty: Activity = {
-  id: "",
+interface FormData {
+  id: number;
+  slug: string;
+  date: string;
+  imageUrl: string;
+  category: string;
+  title: string;
+  excerpt: string;
+  content: string[];
+  author: string;
+}
+
+const empty: FormData = {
+  id: 0,
+  slug: "",
   date: new Date().toLocaleDateString("vi-VN").split("/").join("."),
-  img: "",
+  imageUrl: "",
   category: "",
   title: "",
   excerpt: "",
@@ -19,37 +34,68 @@ const empty: Activity = {
 };
 
 const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
-  const [data, setData] = useState<Activity>(empty);
+  const { data: existing, loading, error, refetch } = useActivity(mode === "edit" ? (slug ?? "") : "");
+  const [data, setData] = useState<FormData>(empty);
+  const [initialized, setInitialized] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (mode === "edit" && id) {
-      const found = getPost(id);
-      if (found) setData(found);
-    }
-  }, [mode, id]);
+  // Sync fetched data into form state once
+  if (mode === "edit" && existing && !initialized) {
+    setData({
+      id: existing.id,
+      slug: existing.slug,
+      date: existing.date,
+      imageUrl: existing.imageUrl,
+      category: existing.category,
+      title: existing.title,
+      excerpt: existing.excerpt,
+      content: existing.content ?? [],
+      author: existing.author ?? "",
+    });
+    setInitialized(true);
+  }
 
-  const update = <K extends keyof Activity>(key: K, value: Activity[K]) =>
+  const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.title.trim()) {
       toast({ title: t("form.required"), description: t("posts.field.title"), variant: "destructive" });
       return;
     }
-    const final: Activity = {
-      ...data,
-      id: data.id || slugify(data.title),
-      img: data.img || "/placeholder.svg",
+    const payload: UpsertActivityRequest = {
+      slug: data.slug || slugify(data.title),
+      date: data.date,
+      imageUrl: data.imageUrl || "/placeholder.svg",
+      category: data.category,
+      author: data.author || undefined,
+      title: data.title,
+      excerpt: data.excerpt,
+      content: data.content,
     };
-    upsertPost(final);
-    toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: final.title });
-    navigate("/admin/posts");
+    setSubmitting(true);
+    try {
+      if (mode === "create") {
+        await adminApi.createActivity(payload);
+      } else {
+        await adminApi.updateActivity(data.id, payload);
+      }
+      toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: data.title });
+      navigate("/admin/posts");
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (mode === "edit" && loading) return <AdminLayout><PageLoading /></AdminLayout>;
+  if (mode === "edit" && error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
 
   return (
     <AdminLayout>
@@ -65,7 +111,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
           <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
             {mode === "create" ? t("posts.addTitle") : t("posts.editTitle")}
           </h1>
-          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{mode === "edit" && data.id}</p>
+          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{mode === "edit" && data.slug}</p>
         </div>
       </div>
 
@@ -110,16 +156,16 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.media")}</h2>
             <Field label={t("posts.field.image")}>
-              <input className="admin-input" value={data.img} onChange={(e) => update("img", e.target.value)} placeholder="https://..." />
+              <input className="admin-input" value={data.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="https://..." />
             </Field>
-            {data.img && (
+            {data.imageUrl && (
               <div className="mt-4 aspect-[16/10] rounded-xl overflow-hidden bg-muted">
-                <img src={data.img} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
+                <img src={data.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
               </div>
             )}
           </div>
 
-          <button type="submit" className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
+          <button type="submit" disabled={submitting} className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50">
             <Save className="w-4 h-4" />
             {mode === "create" ? t("form.create") : t("form.update")}
           </button>

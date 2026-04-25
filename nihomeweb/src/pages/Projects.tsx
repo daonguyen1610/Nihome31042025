@@ -3,15 +3,17 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, MapPin, Maximize2, Search } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/PageHeader";
-import { projects } from "@/data/projects";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useProjects } from "@/hooks/useContentApi";
+import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 
 const filterIds = ["all", "ongoing", "completed"] as const;
 type FilterId = (typeof filterIds)[number];
 
 const Projects = () => {
   const { t } = useI18n();
+  const { data: projects, loading, error, refetch } = useProjects();
   const [searchParams, setSearchParams] = useSearchParams();
   const initial = (searchParams.get("status") as FilterId) || "all";
   const [filter, setFilter] = useState<FilterId>(
@@ -42,7 +44,7 @@ const Projects = () => {
 
   const filtered = useMemo(
     () =>
-      projects.filter((p) => {
+      (projects ?? []).filter((p) => {
         const matchStatus = filter === "all" || p.status === filter;
         const matchQ =
           !q ||
@@ -51,7 +53,7 @@ const Projects = () => {
           p.location.toLowerCase().includes(q.toLowerCase());
         return matchStatus && matchQ;
       }),
-    [filter, q]
+    [projects, filter, q]
   );
 
   return (
@@ -98,18 +100,22 @@ const Projects = () => {
       {/* Grid */}
       <section className="py-16 lg:py-20 bg-background">
         <div className="container-custom">
-          {filtered.length === 0 ? (
-            <p className="text-center py-20 text-muted-foreground">{t("projectsPage.empty")}</p>
+          {loading ? (
+            <PageLoading />
+          ) : error ? (
+            <PageError message={error} onRetry={refetch} />
+          ) : filtered.length === 0 ? (
+            <PageEmpty message={t("projectsPage.empty")} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
               {filtered.map((p) => (
                 <Link
                   key={p.id}
-                  to={`/projects/${p.id}`}
+                  to={`/projects/${p.slug}`}
                   className="group block card-hover bg-card rounded-3xl overflow-hidden border border-border"
                 >
                   <div className="image-zoom relative aspect-[4/3] overflow-hidden bg-muted">
-                    <img src={p.img} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+                    <img src={p.imageUrl} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
                     <div className="absolute top-5 left-5 flex gap-2">
                       <span className={cn("chip", p.status === "ongoing" ? "chip-orange" : "chip-success", "bg-white/95 backdrop-blur")}>
                         {p.status === "ongoing" ? t("projectsPage.filter.ongoing") : t("projectsPage.filter.completed")}

@@ -1,14 +1,18 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, Calendar, User } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { activities, activityCategoryI18n, getActivityById } from "@/data/activities";
 import { useI18n } from "@/lib/i18n";
-import { localizeCategory, pickLocalized } from "@/lib/localize";
+import { useActivity, useActivities } from "@/hooks/useContentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const ActivityDetail = () => {
-  const { t, lang } = useI18n();
-  const { id } = useParams();
-  const a = id ? getActivityById(id) : undefined;
+  const { t } = useI18n();
+  const { slug } = useParams();
+  const { data: a, loading, error, refetch } = useActivity(slug ?? "");
+  const { data: allActivities } = useActivities();
+
+  if (loading) return <Layout><PageLoading /></Layout>;
+  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
 
   if (!a) {
     return (
@@ -23,20 +27,20 @@ const ActivityDetail = () => {
     );
   }
 
-  const related = activities.filter((x) => x.id !== a.id).slice(0, 3);
+  const related = (allActivities ?? []).filter((x) => x.slug !== a.slug).slice(0, 3);
 
   return (
     <Layout>
       <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
-        <img src={a.img} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={a.imageUrl} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/85" />
         <div className="relative z-10 h-full container-custom flex flex-col justify-end pb-14 pt-32">
           <Link to="/activities" className="inline-flex items-center gap-2 text-white/80 hover:text-white text-xs uppercase tracking-[0.22em] font-bold mb-5 w-fit">
             <ArrowLeft className="w-4 h-4" /> {t("actPage.backToList")}
           </Link>
-          <span className="chip chip-orange bg-white/95 mb-5 w-fit">{localizeCategory(a.category, lang, activityCategoryI18n)}</span>
+          <span className="chip chip-orange bg-white/95 mb-5 w-fit">{a.category}</span>
           <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.05] tracking-tight max-w-4xl text-balance">
-            {pickLocalized(a, "title", lang)}
+            {a.title}
           </h1>
           <div className="mt-6 flex items-center gap-5 text-white/80 text-sm">
             <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {a.date}</span>
@@ -48,13 +52,11 @@ const ActivityDetail = () => {
       <article className="py-16 lg:py-24 bg-background">
         <div className="container-custom max-w-3xl">
           <p className="text-xl leading-relaxed text-foreground/85 font-medium mb-10 first-letter:font-display first-letter:text-6xl first-letter:font-extrabold first-letter:text-gradient-primary first-letter:mr-2 first-letter:float-left first-letter:leading-none">
-            {pickLocalized(a, "excerpt", lang)}
+            {a.excerpt}
           </p>
           <div className="prose prose-lg max-w-none space-y-6">
-            {(pickLocalized(a, "content", lang) as string[]).map((p, i) => (
-              <p key={i} className="text-foreground/85 leading-relaxed">
-                {p}
-              </p>
+            {a.content.map((p, i) => (
+              <p key={i} className="text-foreground/85 leading-relaxed">{p}</p>
             ))}
           </div>
         </div>
@@ -70,13 +72,13 @@ const ActivityDetail = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {related.map((r) => (
-              <Link key={r.id} to={`/activities/${r.id}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
+              <Link key={r.id} to={`/activities/${r.slug}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
                 <div className="image-zoom aspect-[4/3] bg-muted">
-                  <img src={r.img} alt="" loading="lazy" className="w-full h-full object-cover" />
+                  <img src={r.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
                 </div>
                 <div className="p-5">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-1.5">{r.date}</p>
-                  <h3 className="font-display text-lg font-extrabold group-hover:text-primary transition-colors line-clamp-2">{pickLocalized(r, "title", lang)}</h3>
+                  <h3 className="font-display text-lg font-extrabold group-hover:text-primary transition-colors line-clamp-2">{r.title}</h3>
                 </div>
               </Link>
             ))}

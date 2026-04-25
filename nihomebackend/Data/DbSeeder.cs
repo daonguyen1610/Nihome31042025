@@ -58,7 +58,7 @@ public static class DbSeeder
             {
                 new ApplicationUser
                 {
-                    PhoneNumber = "84911111111",
+                    PhoneNumber = "0911111111",
                     FullName = "Lê Thảo Vy",
                     Email = "ops.admin@nihome.vn",
                     Role = UserRole.ADMIN,
@@ -66,7 +66,7 @@ public static class DbSeeder
                 },
                 new ApplicationUser
                 {
-                    PhoneNumber = "84922222222",
+                    PhoneNumber = "0922222222",
                     FullName = "Nguyễn Quốc Bảo",
                     Email = "leasing.admin@nihome.vn",
                     Role = UserRole.ADMIN,
@@ -127,5 +127,8 @@ public static class DbSeeder
                 db.SaveChanges();
             }
         }
+
+        ContentSeeder.Seed(db);
+        TranslationSeeder.Seed(db);
     }
 }

@@ -1,13 +1,18 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { getProjectById, projects } from "@/data/projects";
 import { useI18n } from "@/lib/i18n";
+import { useProject, useProjects } from "@/hooks/useContentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const ProjectDetail = () => {
   const { t } = useI18n();
-  const { id } = useParams();
-  const project = id ? getProjectById(id) : undefined;
+  const { slug } = useParams();
+  const { data: project, loading, error, refetch } = useProject(slug ?? "");
+  const { data: allProjects } = useProjects();
+
+  if (loading) return <Layout><PageLoading /></Layout>;
+  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
 
   if (!project) {
     return (
@@ -22,13 +27,13 @@ const ProjectDetail = () => {
     );
   }
 
-  const related = projects.filter((p) => p.id !== project.id).slice(0, 3);
+  const related = (allProjects ?? []).filter((p) => p.slug !== project.slug).slice(0, 3);
 
   return (
     <Layout>
       {/* Hero */}
       <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
-        <img src={project.img} alt={project.name} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={project.imageUrl} alt={project.name} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/85" />
         <div className="relative z-10 h-full container-custom flex flex-col justify-end pb-16 pt-32">
           <Link to="/projects" className="inline-flex items-center gap-2 text-white/80 hover:text-white text-xs uppercase tracking-[0.22em] font-bold mb-6 w-fit">
@@ -155,9 +160,9 @@ const ProjectDetail = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {related.map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
+              <Link key={p.id} to={`/projects/${p.slug}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
                 <div className="image-zoom aspect-[4/3] bg-muted">
-                  <img src={p.img} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
+                  <img src={p.imageUrl} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
                 </div>
                 <div className="p-5">
                   <h3 className="font-display text-lg font-extrabold group-hover:text-primary transition-colors">{p.name}</h3>

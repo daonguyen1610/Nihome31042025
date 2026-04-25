@@ -1,60 +1,67 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
-import { clientLogos, partnerLogos, supplierLogos, type LogoItem } from "@/data/clients";
+import { useLogos } from "@/hooks/useContentApi";
+import { adminApi } from "@/services/adminApi";
+import type { LogoResponse } from "@/services/contentApi";
+import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 
 type Kind = "clients" | "partners" | "suppliers";
 
-const seedFor = (k: Kind): LogoItem[] =>
-  k === "clients" ? clientLogos : k === "partners" ? partnerLogos : supplierLogos;
-
-const keyFor = (k: Kind) => `nicon_admin_logos_${k}_v1`;
+const kindMap: Record<Kind, string> = {
+  clients: "Client",
+  partners: "Partner",
+  suppliers: "Supplier",
+};
 
 const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const { t } = useI18n();
-  const [items, setItems] = useState<LogoItem[]>([]);
+  const { data: logos, loading, error, refetch } = useLogos();
+  const items: LogoResponse[] = logos?.[kind] ?? [];
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(keyFor(kind));
-      setItems(raw ? JSON.parse(raw) : seedFor(kind));
-    } catch {
-      setItems(seedFor(kind));
-    }
-  }, [kind]);
-
-  const persist = (list: LogoItem[]) => {
-    setItems(list);
-    localStorage.setItem(keyFor(kind), JSON.stringify(list));
-  };
-
-  const add = () => {
+  const add = async () => {
     const name = window.prompt("Tên")?.trim();
     if (!name) return;
-    const img = window.prompt("URL hình ảnh")?.trim() ?? "";
+    const imageUrl = window.prompt("URL hình ảnh")?.trim() ?? "";
     const href = window.prompt("Liên kết (tuỳ chọn)")?.trim() || undefined;
-    persist([{ name, img, href }, ...items]);
-    toast.success(t("form.created"));
+    try {
+      await adminApi.createLogo({ name, imageUrl, href, kind: kindMap[kind] });
+      toast.success(t("form.created"));
+      refetch();
+    } catch {
+      toast.error(t("common.error"));
+    }
   };
 
-  const edit = (item: LogoItem, idx: number) => {
+  const edit = async (item: LogoResponse) => {
     const name = window.prompt("Tên", item.name)?.trim();
     if (!name) return;
-    const img = window.prompt("URL hình ảnh", item.img)?.trim() ?? item.img;
+    const imageUrl = window.prompt("URL hình ảnh", item.imageUrl)?.trim() ?? item.imageUrl;
     const href = window.prompt("Liên kết (tuỳ chọn)", item.href ?? "")?.trim() || undefined;
-    const next = [...items];
-    next[idx] = { name, img, href };
-    persist(next);
-    toast.success(t("form.updated"));
+    try {
+      await adminApi.updateLogo(item.id, { name, imageUrl, href, kind: kindMap[kind] });
+      toast.success(t("form.updated"));
+      refetch();
+    } catch {
+      toast.error(t("common.error"));
+    }
   };
 
-  const remove = (idx: number) => {
+  const remove = async (item: LogoResponse) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
-    persist(items.filter((_, i) => i !== idx));
-    toast.success(t("form.deleted"));
+    try {
+      await adminApi.deleteLogo(item.id);
+      toast.success(t("form.deleted"));
+      refetch();
+    } catch {
+      toast.error(t("common.error"));
+    }
   };
+
+  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
+  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
 
   return (
     <AdminLayout>
@@ -71,10 +78,12 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {items.map((item, i) => (
-          <div key={`${item.name}-${i}`} className="admin-card p-4 group">
+        {items.length === 0 ? (
+          <div className="col-span-full"><PageEmpty message={t("common.noData")} /></div>
+        ) : items.map((item) => (
+          <div key={item.id} className="admin-card p-4 group">
             <div className="aspect-[4/3] rounded-xl bg-white border flex items-center justify-center overflow-hidden mb-3" style={{ borderColor: "hsl(var(--admin-border))" }}>
-              <img src={item.img} alt={item.name} className="max-w-full max-h-full object-contain" />
+              <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
             </div>
             <p className="font-semibold text-sm truncate">{item.name}</p>
             {item.href && (
@@ -83,10 +92,10 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
               </a>
             )}
             <div className="flex gap-1 mt-3">
-              <button onClick={() => edit(item, i)} className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2 py-1.5 rounded-lg hover:bg-muted">
+              <button onClick={() => edit(item)} className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2 py-1.5 rounded-lg hover:bg-muted">
                 <Pencil className="w-3 h-3" /> {t("common.edit")}
               </button>
-              <button onClick={() => remove(i)} className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2 py-1.5 rounded-lg hover:bg-muted" style={{ color: "hsl(var(--admin-danger))" }}>
+              <button onClick={() => remove(item)} className="flex-1 inline-flex items-center justify-center gap-1 text-xs font-bold px-2 py-1.5 rounded-lg hover:bg-muted" style={{ color: "hsl(var(--admin-danger))" }}>
                 <Trash2 className="w-3 h-3" /> {t("common.delete")}
               </button>
             </div>

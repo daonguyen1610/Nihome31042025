@@ -1,13 +1,18 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { getServiceBySlug, services } from "@/data/services";
 import { useI18n } from "@/lib/i18n";
+import { useService, useServices } from "@/hooks/useContentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const ServiceDetail = () => {
   const { t } = useI18n();
   const { slug } = useParams();
-  const svc = slug ? getServiceBySlug(slug) : undefined;
+  const { data: svc, loading, error, refetch } = useService(slug ?? "");
+  const { data: allServices } = useServices();
+
+  if (loading) return <Layout><PageLoading /></Layout>;
+  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
 
   if (!svc) {
     return (
@@ -20,7 +25,7 @@ const ServiceDetail = () => {
     );
   }
 
-  const others = services.filter((s) => s.slug !== svc.slug);
+  const others = (allServices ?? []).filter((s) => s.slug !== svc.slug);
 
   return (
     <Layout>

@@ -1,45 +1,90 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, ArrowUpRight, Award, Building2, Users, Calendar, Search, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import heroImg from "@/assets/hero-factory.jpg";
-import bma from "@/assets/project-bma.jpg";
-import nbdc from "@/assets/project-nbdc.jpg";
-import lhh from "@/assets/project-lhh.jpg";
-import sports from "@/assets/project-sports.jpg";
-import office from "@/assets/project-office.jpg";
-import ceremony from "@/assets/activity-ceremony.jpg";
-import handover from "@/assets/activity-handover.jpg";
 import { useI18n } from "@/lib/i18n";
-
-const heroSlides = [heroImg, bma, lhh, nbdc, sports];
+import { useActivities, useProjects, useSlideshow } from "@/hooks/useContentApi";
 
 const Index = () => {
   const { t } = useI18n();
   const [slide, setSlide] = useState(0);
+  const { data: projectsData } = useProjects();
+  const { data: activitiesData } = useActivities();
+  const { data: slideshowData } = useSlideshow();
 
-  const goTo = (i: number) => setSlide((i + heroSlides.length) % heroSlides.length);
+  const projects = projectsData ?? [];
+  const activities = activitiesData ?? [];
+  const slides = slideshowData ?? [];
+
+  const heroSlides = useMemo(() => {
+    if (slides.length > 0) return slides;
+    // Fallback: derive from projects/activities if no slideshow data
+    const projectImages = projects.slice(0, 4).map((p) => ({
+      imageUrl: p.imageUrl,
+      title: p.name,
+      subtitle: p.description || p.location,
+      linkUrl: `/projects/${p.slug}`,
+      linkText: undefined as string | undefined,
+    }));
+    const activityImages = activities.slice(0, 2).map((a) => ({
+      imageUrl: a.imageUrl,
+      title: a.title,
+      subtitle: a.excerpt,
+      linkUrl: `/activities/${a.slug}`,
+      linkText: undefined as string | undefined,
+    }));
+    const merged = [...projectImages, ...activityImages].filter((s) => s.imageUrl);
+    return merged.length > 0
+      ? merged
+      : [{ imageUrl: "/images/projects/project-bma.jpg", title: "", subtitle: undefined, linkUrl: undefined, linkText: undefined }];
+  }, [slides, projects, activities]);
+
+  const slideCount = heroSlides.length;
+
+  const goTo = (i: number) => setSlide((i + slideCount) % slideCount);
   const next = () => goTo(slide + 1);
   const prev = () => goTo(slide - 1);
 
   useEffect(() => {
-    const id = setInterval(() => setSlide((s) => (s + 1) % heroSlides.length), 10000);
+    if (slideCount <= 1) return;
+    const id = setInterval(() => setSlide((s) => (s + 1) % slideCount), 10000);
     return () => clearInterval(id);
-  }, [slide]);
+  }, [slideCount]);
 
-  const ongoingProjects = [
-    { img: bma, name: t("home.proj.bma.name"), location: t("home.proj.bma.loc"), scale: "15.000 m²", category: t("home.cat.industrial") },
-    { img: nbdc, name: t("home.proj.nbdc.name"), location: t("home.proj.nbdc.loc"), scale: t("home.proj.scaleDesign"), category: t("home.cat.manufacturing") },
-    { img: lhh, name: t("home.proj.lhh.name"), location: t("home.proj.lhh.loc"), scale: "250.000 m²", category: t("home.cat.industrial") },
-    { img: sports, name: t("home.proj.sports.name"), location: t("home.proj.sports.loc"), scale: t("home.proj.scaleDesign"), category: t("home.cat.public") },
-  ];
+  useEffect(() => {
+    if (slide >= slideCount) setSlide(0);
+  }, [slide, slideCount]);
 
-  const completedProjects = [
-    { img: bma, name: t("home.proj.trimas.name"), location: t("home.proj.trimas.loc"), scale: "10.000 m²", category: t("home.cat.industrial"), year: "2022" },
-    { img: lhh, name: t("home.proj.apm.name"), location: t("home.proj.apm.loc"), scale: "6.500 m²", category: t("home.cat.logistics"), year: "2022" },
-    { img: office, name: t("home.proj.b37.name"), location: t("home.proj.b37.loc"), scale: "1.200 m²", category: t("home.cat.interior"), year: "2024" },
-    { img: nbdc, name: t("home.proj.stfm.name"), location: t("home.proj.stfm.loc"), scale: "12.000 m²", category: t("home.cat.fnb"), year: "2022" },
-  ];
+  const ongoingProjects = useMemo(
+    () =>
+      projects
+        .filter((p) => p.status === "ongoing")
+        .slice(0, 4)
+        .map((p) => ({
+          img: p.imageUrl,
+          name: p.name,
+          location: p.location,
+          scale: p.scale,
+          category: p.category || t("home.cat.industrial"),
+        })),
+    [projects, t],
+  );
+
+  const completedProjects = useMemo(
+    () =>
+      projects
+        .filter((p) => p.status === "completed")
+        .slice(0, 4)
+        .map((p) => ({
+          img: p.imageUrl,
+          name: p.name,
+          location: p.location,
+          scale: p.scale,
+          category: p.category || t("home.cat.industrial"),
+          year: p.year || "",
+        })),
+    [projects, t],
+  );
 
   const stats = [
     { num: "20+", label: t("home.stats.years"), icon: Calendar, gradient: "bg-gradient-primary" },
@@ -48,16 +93,27 @@ const Index = () => {
     { num: "ISO", label: t("home.stats.iso"), icon: Award, gradient: "bg-gradient-primary" },
   ];
 
-  const recentActivities = [
-    { img: ceremony, date: "19.10.2025", cat: t("home.act.bma.cat"), title: t("home.act.bma.title"), desc: t("home.act.bma.desc") },
-    { img: handover, date: "15.12.2025", cat: t("home.act.turnkey.cat"), title: t("home.act.turnkey.title"), desc: t("home.act.turnkey.desc") },
-  ];
+  const recentActivities = useMemo(
+    () =>
+      activities.slice(0, 2).map((a) => ({
+        img: a.imageUrl,
+        date: a.date,
+        cat: a.category,
+        title: a.title,
+        desc: a.excerpt,
+      })),
+    [activities],
+  );
+
+  const ctaBgImage = recentActivities[0]?.img || heroSlides[0]?.imageUrl;
+
+  const currentSlide = heroSlides[slide] ?? heroSlides[0];
 
   return (
     <Layout>
       {/* HERO */}
       <section className="relative min-h-screen w-full overflow-hidden">
-        {heroSlides.map((src, i) => {
+        {heroSlides.map((s, i) => {
           const offset = i - slide;
           return (
             <div
@@ -65,7 +121,7 @@ const Index = () => {
               className="absolute inset-0 overflow-hidden transition-transform duration-1000 ease-[cubic-bezier(0.7,0,0.3,1)]"
               style={{ transform: `translateX(${offset * 100}%)` }}
             >
-              <img src={src} alt="NICON industrial factory" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={s.imageUrl} alt={s.title || "NICON industrial factory"} className="absolute inset-0 w-full h-full object-cover" />
             </div>
           );
         })}
@@ -104,29 +160,69 @@ const Index = () => {
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs uppercase tracking-[0.22em] text-white font-bold fade-in-up">
                 <Sparkles className="w-3.5 h-3.5 text-primary-glow" /> {t("home.hero.tag")}
               </span>
-              <h1 className="font-display mt-6 text-5xl md:text-7xl lg:text-[88px] font-extrabold text-white leading-[1.02] tracking-tight text-balance fade-in-up" style={{ animationDelay: "0.15s" }}>
-                {t("home.hero.title1")}<br />
-                <span className="text-gradient-primary">{t("home.hero.title2")}</span><br />
-                {t("home.hero.title3")}
-              </h1>
-              <p className="mt-8 text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed fade-in-up" style={{ animationDelay: "0.3s" }}>
-                {t("home.hero.desc")}
-              </p>
-              <div className="mt-10 flex flex-wrap gap-4 fade-in-up" style={{ animationDelay: "0.45s" }}>
-                <Link
-                  to="/projects"
-                  className="btn-pill btn-gradient text-white px-8 py-4 text-sm uppercase tracking-wider"
-                >
-                  {t("home.hero.cta1")}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  to="/contact"
-                  className="btn-pill bg-white/10 backdrop-blur-md border border-white/25 text-white px-8 py-4 text-sm uppercase tracking-wider hover:bg-white hover:text-foreground transition-all"
-                >
-                  {t("home.hero.cta2")}
-                </Link>
-              </div>
+              {currentSlide?.title ? (
+                <>
+                  <h1 className="font-display mt-6 text-5xl md:text-7xl lg:text-[88px] font-extrabold text-white leading-[1.02] tracking-tight text-balance fade-in-up" style={{ animationDelay: "0.15s" }} key={`title-${slide}`}>
+                    {currentSlide.title}
+                  </h1>
+                  {currentSlide.subtitle && (
+                    <p className="mt-8 text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed fade-in-up" style={{ animationDelay: "0.3s" }} key={`sub-${slide}`}>
+                      {currentSlide.subtitle}
+                    </p>
+                  )}
+                  <div className="mt-10 flex flex-wrap gap-4 fade-in-up" style={{ animationDelay: "0.45s" }}>
+                    {currentSlide.linkUrl ? (
+                      <Link
+                        to={currentSlide.linkUrl}
+                        className="btn-pill btn-gradient text-white px-8 py-4 text-sm uppercase tracking-wider"
+                      >
+                        {currentSlide.linkText || t("home.hero.cta1")}
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/projects"
+                        className="btn-pill btn-gradient text-white px-8 py-4 text-sm uppercase tracking-wider"
+                      >
+                        {t("home.hero.cta1")}
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    )}
+                    <Link
+                      to="/contact"
+                      className="btn-pill bg-white/10 backdrop-blur-md border border-white/25 text-white px-8 py-4 text-sm uppercase tracking-wider hover:bg-white hover:text-foreground transition-all"
+                    >
+                      {t("home.hero.cta2")}
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h1 className="font-display mt-6 text-5xl md:text-7xl lg:text-[88px] font-extrabold text-white leading-[1.02] tracking-tight text-balance fade-in-up" style={{ animationDelay: "0.15s" }}>
+                    {t("home.hero.title1")}<br />
+                    <span className="text-gradient-primary">{t("home.hero.title2")}</span><br />
+                    {t("home.hero.title3")}
+                  </h1>
+                  <p className="mt-8 text-lg md:text-xl text-white/85 max-w-2xl leading-relaxed fade-in-up" style={{ animationDelay: "0.3s" }}>
+                    {t("home.hero.desc")}
+                  </p>
+                  <div className="mt-10 flex flex-wrap gap-4 fade-in-up" style={{ animationDelay: "0.45s" }}>
+                    <Link
+                      to="/projects"
+                      className="btn-pill btn-gradient text-white px-8 py-4 text-sm uppercase tracking-wider"
+                    >
+                      {t("home.hero.cta1")}
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <Link
+                      to="/contact"
+                      className="btn-pill bg-white/10 backdrop-blur-md border border-white/25 text-white px-8 py-4 text-sm uppercase tracking-wider hover:bg-white hover:text-foreground transition-all"
+                    >
+                      {t("home.hero.cta2")}
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Floating search pill */}
@@ -312,7 +408,7 @@ const Index = () => {
       {/* SERVICE BIG CTA */}
       <section className="relative py-24 lg:py-36 bg-surface-dark text-surface-dark-foreground overflow-hidden">
         <div className="absolute inset-0 opacity-25">
-          <img src={ceremony} alt="" className="w-full h-full object-cover" loading="lazy" />
+          <img src={ctaBgImage} alt="" className="w-full h-full object-cover" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-r from-surface-dark via-surface-dark/95 to-surface-dark/40" />
         </div>
         <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/30 blur-3xl" />

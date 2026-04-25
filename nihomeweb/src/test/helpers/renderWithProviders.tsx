@@ -29,7 +29,7 @@ export function renderWithProviders(ui: ReactNode, options: RenderWithProvidersO
         <I18nProvider>
           <TooltipProvider>
             <Toaster />
-            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+            <MemoryRouter initialEntries={[route]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>{children}</MemoryRouter>
           </TooltipProvider>
         </I18nProvider>
       </Provider>

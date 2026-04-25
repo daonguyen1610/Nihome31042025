@@ -1,0 +1,378 @@
+[
+  {
+    "key": "common.search",
+    "category": "common",
+    "vi": "Tìm kiếm...",
+    "en": "Search...",
+    "zh": "搜索...",
+    "ja": "検索..."
+  },
+  {
+    "key": "common.save",
+    "category": "common",
+    "vi": "Lưu thay đổi",
+    "en": "Save changes",
+    "zh": "保存更改",
+    "ja": "変更を保存"
+  },
+  {
+    "key": "common.cancel",
+    "category": "common",
+    "vi": "Huỷ",
+    "en": "Cancel",
+    "zh": "取消",
+    "ja": "キャンセル"
+  },
+  {
+    "key": "common.edit",
+    "category": "common",
+    "vi": "Sửa",
+    "en": "Edit",
+    "zh": "编辑",
+    "ja": "編集"
+  },
+  {
+    "key": "common.delete",
+    "category": "common",
+    "vi": "Xoá",
+    "en": "Delete",
+    "zh": "删除",
+    "ja": "削除"
+  },
+  {
+    "key": "common.view",
+    "category": "common",
+    "vi": "Xem",
+    "en": "View",
+    "zh": "查看",
+    "ja": "表示"
+  },
+  {
+    "key": "common.all",
+    "category": "common",
+    "vi": "Tất cả",
+    "en": "All",
+    "zh": "全部",
+    "ja": "すべて"
+  },
+  {
+    "key": "common.new",
+    "category": "common",
+    "vi": "Mới",
+    "en": "New",
+    "zh": "新",
+    "ja": "新規"
+  },
+  {
+    "key": "common.actions",
+    "category": "common",
+    "vi": "Thao tác",
+    "en": "Actions",
+    "zh": "操作",
+    "ja": "操作"
+  },
+  {
+    "key": "common.status",
+    "category": "common",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "状態"
+  },
+  {
+    "key": "common.date",
+    "category": "common",
+    "vi": "Ngày",
+    "en": "Date",
+    "zh": "日期",
+    "ja": "日付"
+  },
+  {
+    "key": "common.showing",
+    "category": "common",
+    "vi": "Hiển thị",
+    "en": "Showing",
+    "zh": "显示",
+    "ja": "表示中"
+  },
+  {
+    "key": "common.readMore",
+    "category": "common",
+    "vi": "Đọc tiếp",
+    "en": "Read more",
+    "zh": "阅读更多",
+    "ja": "続きを読む"
+  },
+  {
+    "key": "common.viewAll",
+    "category": "common",
+    "vi": "Xem tất cả",
+    "en": "View all",
+    "zh": "查看全部",
+    "ja": "すべて表示"
+  },
+  {
+    "key": "common.viewDetail",
+    "category": "common",
+    "vi": "Xem chi tiết",
+    "en": "View details",
+    "zh": "查看详情",
+    "ja": "詳細を見る"
+  },
+  {
+    "key": "common.back",
+    "category": "common",
+    "vi": "Quay lại",
+    "en": "Back",
+    "zh": "返回",
+    "ja": "戻る"
+  },
+  {
+    "key": "common.notFound",
+    "category": "common",
+    "vi": "Không tìm thấy",
+    "en": "Not found",
+    "zh": "未找到",
+    "ja": "見つかりません"
+  },
+  {
+    "key": "common.noResults",
+    "category": "common",
+    "vi": "Không có kết quả phù hợp.",
+    "en": "No matching results.",
+    "zh": "没有匹配的结果。",
+    "ja": "一致する結果がありません。"
+  },
+  {
+    "key": "common.contactNow",
+    "category": "common",
+    "vi": "Liên hệ ngay",
+    "en": "Contact us",
+    "zh": "立即联系",
+    "ja": "お問い合わせ"
+  },
+  {
+    "key": "common.retry",
+    "category": "common",
+    "vi": "Thử lại",
+    "en": "Retry",
+    "zh": "重试",
+    "ja": "再試行"
+  },
+  {
+    "key": "site.nav.home",
+    "category": "site",
+    "vi": "Trang chủ",
+    "en": "Home",
+    "zh": "首页",
+    "ja": "ホーム"
+  },
+  {
+    "key": "site.nav.profile",
+    "category": "site",
+    "vi": "Giới thiệu",
+    "en": "About",
+    "zh": "关于我们",
+    "ja": "会社概要"
+  },
+  {
+    "key": "site.nav.services",
+    "category": "site",
+    "vi": "Dịch vụ",
+    "en": "Services",
+    "zh": "服务",
+    "ja": "サービス"
+  },
+  {
+    "key": "site.nav.projects",
+    "category": "site",
+    "vi": "Dự án",
+    "en": "Projects",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "site.nav.news",
+    "category": "site",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
+  },
+  {
+    "key": "site.nav.activities",
+    "category": "site",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "活動"
+  },
+  {
+    "key": "site.nav.clients",
+    "category": "site",
+    "vi": "Khách hàng",
+    "en": "Clients",
+    "zh": "客户",
+    "ja": "クライアント"
+  },
+  {
+    "key": "site.nav.recruitment",
+    "category": "site",
+    "vi": "Tuyển dụng",
+    "en": "Careers",
+    "zh": "招聘",
+    "ja": "採用情報"
+  },
+  {
+    "key": "site.nav.contact",
+    "category": "site",
+    "vi": "Liên hệ",
+    "en": "Contact",
+    "zh": "联系",
+    "ja": "お問い合わせ"
+  },
+  {
+    "key": "site.nav.search",
+    "category": "site",
+    "vi": "Tìm kiếm",
+    "en": "Search",
+    "zh": "搜索",
+    "ja": "検索"
+  },
+  {
+    "key": "site.nav.login",
+    "category": "site",
+    "vi": "Đăng nhập",
+    "en": "Login",
+    "zh": "登录",
+    "ja": "ログイン"
+  },
+  {
+    "key": "site.nav.menu",
+    "category": "site",
+    "vi": "Menu",
+    "en": "Menu",
+    "zh": "菜单",
+    "ja": "メニュー"
+  },
+  {
+    "key": "nf.title",
+    "category": "nf",
+    "vi": "Không tìm thấy trang",
+    "en": "Page not found",
+    "zh": "页面未找到",
+    "ja": "ページが見つかりません"
+  },
+  {
+    "key": "nf.home",
+    "category": "nf",
+    "vi": "Về trang chủ",
+    "en": "Return to home",
+    "zh": "返回首页",
+    "ja": "ホームに戻る"
+  },
+  {
+    "key": "nf.oops",
+    "category": "nf",
+    "vi": "Rất tiếc! Không tìm thấy trang bạn yêu cầu.",
+    "en": "Oops! Page not found.",
+    "zh": "哎呀!找不到该页面。",
+    "ja": "申し訳ございません。ページが見つかりません。"
+  },
+  {
+    "key": "form.back",
+    "category": "form",
+    "vi": "Quay lại",
+    "en": "Back",
+    "zh": "返回",
+    "ja": "戻る"
+  },
+  {
+    "key": "form.create",
+    "category": "form",
+    "vi": "Tạo mới",
+    "en": "Create",
+    "zh": "新建",
+    "ja": "新規作成"
+  },
+  {
+    "key": "form.update",
+    "category": "form",
+    "vi": "Cập nhật",
+    "en": "Update",
+    "zh": "更新",
+    "ja": "更新"
+  },
+  {
+    "key": "form.created",
+    "category": "form",
+    "vi": "Đã tạo thành công",
+    "en": "Created successfully",
+    "zh": "创建成功",
+    "ja": "作成しました"
+  },
+  {
+    "key": "form.updated",
+    "category": "form",
+    "vi": "Đã cập nhật thành công",
+    "en": "Updated successfully",
+    "zh": "更新成功",
+    "ja": "更新しました"
+  },
+  {
+    "key": "form.deleted",
+    "category": "form",
+    "vi": "Đã xoá",
+    "en": "Deleted",
+    "zh": "已删除",
+    "ja": "削除しました"
+  },
+  {
+    "key": "form.confirmDelete",
+    "category": "form",
+    "vi": "Bạn có chắc muốn xoá mục này?",
+    "en": "Are you sure you want to delete this?",
+    "zh": "确定要删除此项吗？",
+    "ja": "このアイテムを削除してもよろしいですか？"
+  },
+  {
+    "key": "form.required",
+    "category": "form",
+    "vi": "Bắt buộc",
+    "en": "Required",
+    "zh": "必填",
+    "ja": "必須"
+  },
+  {
+    "key": "form.basicInfo",
+    "category": "form",
+    "vi": "Thông tin cơ bản",
+    "en": "Basic information",
+    "zh": "基本信息",
+    "ja": "基本情報"
+  },
+  {
+    "key": "form.media",
+    "category": "form",
+    "vi": "Hình ảnh & Media",
+    "en": "Image & Media",
+    "zh": "图片与媒体",
+    "ja": "画像とメディア"
+  },
+  {
+    "key": "form.content",
+    "category": "form",
+    "vi": "Nội dung chi tiết",
+    "en": "Detailed content",
+    "zh": "详细内容",
+    "ja": "詳細内容"
+  },
+  {
+    "key": "form.preview",
+    "category": "form",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  }
+]

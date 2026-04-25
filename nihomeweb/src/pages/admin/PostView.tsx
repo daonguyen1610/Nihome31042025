@@ -3,14 +3,19 @@ import { ArrowLeft, Edit, Trash2, Calendar, Tag, User } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { deletePost, getPost } from "@/lib/adminStore";
+import { useActivity } from "@/hooks/useContentApi";
+import { adminApi } from "@/services/adminApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const PostView = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
-  const post = id ? getPost(id) : undefined;
+  const { data: post, loading, error, refetch } = useActivity(slug ?? "");
+
+  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
+  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
 
   if (!post) {
     return (
@@ -25,11 +30,15 @@ const PostView = () => {
     );
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirm(t("form.confirmDelete"))) return;
-    deletePost(post.id);
-    toast({ title: t("form.deleted"), description: post.title });
-    navigate("/admin/posts");
+    try {
+      await adminApi.deleteActivity(post.id);
+      toast({ title: t("form.deleted"), description: post.title });
+      navigate("/admin/posts");
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
   };
 
   return (
@@ -52,7 +61,7 @@ const PostView = () => {
         </div>
         <div className="flex gap-2 shrink-0">
           <Link
-            to={`/admin/posts/${post.id}/edit`}
+            to={`/admin/posts/${post.slug}/edit`}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border bg-white hover:bg-muted transition"
             style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-primary))" }}
           >
@@ -72,7 +81,7 @@ const PostView = () => {
         <div className="lg:col-span-2 space-y-5">
           <div className="admin-card overflow-hidden">
             <div className="aspect-[16/9] bg-muted">
-              <img src={post.img} alt={post.title} className="w-full h-full object-cover" />
+              <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="admin-card p-6">

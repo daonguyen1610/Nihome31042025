@@ -3,14 +3,19 @@ import { ArrowLeft, Edit, Trash2, MapPin, Maximize2, Calendar, Building, Tag } f
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { deleteProject, getProject } from "@/lib/adminStore";
+import { useProject } from "@/hooks/useContentApi";
+import { adminApi } from "@/services/adminApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const ProjectView = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
-  const project = id ? getProject(id) : undefined;
+  const { data: project, loading, error, refetch } = useProject(slug ?? "");
+
+  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
+  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
 
   if (!project) {
     return (
@@ -25,11 +30,15 @@ const ProjectView = () => {
     );
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!confirm(t("form.confirmDelete"))) return;
-    deleteProject(project.id);
-    toast({ title: t("form.deleted"), description: project.name });
-    navigate("/admin/projects");
+    try {
+      await adminApi.deleteProject(project.id);
+      toast({ title: t("form.deleted"), description: project.name });
+      navigate("/admin/projects");
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
   };
 
   return (
@@ -52,7 +61,7 @@ const ProjectView = () => {
         </div>
         <div className="flex gap-2">
           <Link
-            to={`/admin/projects/${project.id}/edit`}
+            to={`/admin/projects/${project.slug}/edit`}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border bg-white hover:bg-muted transition"
             style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-primary))" }}
           >
@@ -72,7 +81,7 @@ const ProjectView = () => {
         <div className="lg:col-span-2 space-y-5">
           <div className="admin-card overflow-hidden">
             <div className="aspect-[16/9] bg-muted">
-              <img src={project.img} alt={project.name} className="w-full h-full object-cover" />
+              <img src={project.imageUrl} alt={project.name} className="w-full h-full object-cover" />
             </div>
           </div>
 
