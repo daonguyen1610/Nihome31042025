@@ -28,7 +28,6 @@ Current repo reality:
 - The app is a client-rendered SPA, not a Next.js app.
 - Public website pages and an admin shell already exist.
 - Demo auth, admin CRUD, and settings behavior are localStorage-backed placeholders.
-- Legacy Next.js and Materialize code remains under `legacy/` only as reference material.
 - No production API client, auth provider, or backend session model is committed yet.
 
 ## Architectural Defaults
@@ -45,13 +44,13 @@ Current repo reality:
 
 ## Current Scope
 
-Included in the current refactor:
+Completed in the baseline refactor:
 
-- make the Vite/Lovable source tree the active frontend inside `nihomeweb/`
-- retire the Materialize starter-kit and Next.js shells to `legacy/`
-- rewrite AI docs and memory around Vite, React Router, Tailwind, shadcn, and the current source tree
-- preserve the existing public and admin route surfaces in `src/App.tsx`
-- keep demo auth and localStorage stores only as explicit placeholders
+- made the Vite/Lovable source tree the active frontend inside `nihomeweb/`
+- removed the Materialize starter-kit and Next.js shells entirely
+- rewrote AI docs and memory around Vite, React Router, Tailwind, shadcn, and the current source tree
+- preserved the existing public and admin route surfaces in `src/App.tsx`
+- kept demo auth and localStorage stores as explicit placeholders
 
 Explicitly deferred:
 
@@ -83,9 +82,7 @@ The refactor documentation baseline is only complete when:
 - `npm run lint` passes or any existing lint baseline issues are documented
 - `npm run test` passes when tests are present and dependencies are installed
 - the official public and admin route surfaces render cleanly
-- visible legacy Materialize, Next.js, and stale starter-kit assumptions are gone from active repo docs
-- legacy directories are clearly marked as reference-only
-- no second active frontend architecture remains in normal use
+- no Materialize, Next.js, or stale starter-kit assumptions remain in active repo docs
 - repo docs and memory reflect the same implementation reality
 
 ## Future Phases

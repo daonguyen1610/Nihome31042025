@@ -19,7 +19,6 @@ Use it together with `AGENTS.md`, `docs/ai/project-brief.md`, and the memory ban
 - `src/components/ui/` contains shadcn/ui primitives configured by `components.json`.
 - `src/index.css` and `tailwind.config.ts` own design tokens and global utilities.
 - The app currently uses local seed data and localStorage-backed demo stores.
-- `legacy/materialize-starter-kit/` and `legacy/next16-shell/` are archived references, not active app code.
 - Do not reintroduce the old Materialize starter-kit, full admin template, or Next.js assumptions without a dated decision and migration plan.
 
 ## Vercel Skill Routing

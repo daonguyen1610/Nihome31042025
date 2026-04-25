@@ -21,7 +21,6 @@ Authoritative source-code facts:
 - design tokens and global utilities: `src/index.css` and `tailwind.config.ts`
 - static seed data: `src/data/`
 - demo client-side stores: `src/lib/`
-- legacy reference code: `legacy/materialize-starter-kit/` and `legacy/next16-shell/`
 
 ## Required Read Order
 
