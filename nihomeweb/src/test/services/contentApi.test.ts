@@ -43,6 +43,11 @@ describe("contentApi", () => {
     expect(mockApi.get).toHaveBeenCalledWith("/news?lang=vi");
   });
 
+  it("getNews calls correct route with custom lang", async () => {
+    await contentApi.getNews("en");
+    expect(mockApi.get).toHaveBeenCalledWith("/news?lang=en");
+  });
+
   it("getNewsItem calls correct route with slug and lang", async () => {
     mockApi.get.mockResolvedValueOnce({ data: { id: 1, slug: "n", imageUrl: "" } });
     await contentApi.getNewsItem("gmp-standards", "en");
@@ -114,6 +119,34 @@ describe("contentApi", () => {
     const result = await contentApi.getActivities();
     // In test environment window.location.origin is '' so resolveImageUrl keeps the path
     expect(result.data[0].imageUrl).toContain("/images/test.jpg");
+  });
+
+  it("resolves relative imageUrl on news items", async () => {
+    mockApi.get.mockResolvedValueOnce({
+      data: [{ id: 1, slug: "n", imageUrl: "/images/news.jpg", category: "", title: "", excerpt: "", content: [] }],
+    });
+    const result = await contentApi.getNews();
+    expect(result.data[0].imageUrl).toContain("/images/news.jpg");
+  });
+
+  it("resolves imageUrl on slideshow items", async () => {
+    mockApi.get.mockResolvedValueOnce({
+      data: [{ id: 1, slug: "s", imageUrl: "/images/hero.jpg", title: "", isActive: true, sortOrder: 0 }],
+    });
+    const result = await contentApi.getSlideshow();
+    expect(result.data[0].imageUrl).toContain("/images/hero.jpg");
+  });
+
+  it("resolves imageUrl on logos", async () => {
+    mockApi.get.mockResolvedValueOnce({
+      data: {
+        clients: [{ id: 1, name: "C", imageUrl: "/images/logo.png", kind: "client" }],
+        partners: [],
+        suppliers: [],
+      },
+    });
+    const result = await contentApi.getLogos();
+    expect(result.data.clients[0].imageUrl).toContain("/images/logo.png");
   });
 
   it("keeps absolute imageUrl unchanged on projects", async () => {

@@ -31,6 +31,8 @@ vi.mock("@/components/PageState", () => ({
   PageError: ({ message }: { message: string }) => <div>error-state:{message}</div>,
 }));
 
+const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
+
 describe("Admin Posts page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,7 +50,7 @@ describe("Admin Posts page", () => {
     });
 
     render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE}>
         <I18nProvider>
           <AdminPosts />
         </I18nProvider>
@@ -78,7 +80,7 @@ describe("Admin Posts page", () => {
     });
 
     render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE}>
         <I18nProvider>
           <AdminPosts />
         </I18nProvider>
@@ -113,7 +115,7 @@ describe("Admin Posts page", () => {
     });
 
     const { container } = render(
-      <MemoryRouter>
+      <MemoryRouter future={ROUTER_FUTURE}>
         <I18nProvider>
           <AdminPosts />
         </I18nProvider>
