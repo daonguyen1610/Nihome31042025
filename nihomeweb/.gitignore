@@ -27,5 +27,5 @@ dist-ssr
 .next/
 
 # Local environment files
-.env
-.env*.local
+# .env
+# .env*.local
