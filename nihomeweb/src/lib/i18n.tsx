@@ -26,6 +26,7 @@ const dict: Dict = {
   "common.notFound": { vi: "Không tìm thấy", en: "Not found", zh: "未找到", ja: "見つかりません" },
   "common.noResults": { vi: "Không có kết quả phù hợp.", en: "No matching results.", zh: "没有匹配的结果。", ja: "一致する結果がありません。" },
   "common.contactNow": { vi: "Liên hệ ngay", en: "Contact us", zh: "立即联系", ja: "お問い合わせ" },
+  "common.retry": { vi: "Thử lại", en: "Retry", zh: "重试", ja: "再試行" },
 
   // ========== HEADER / NAV (CLIENT) ==========
   "site.nav.home": { vi: "Trang chủ", en: "Home", zh: "首页", ja: "ホーム" },
@@ -666,9 +667,11 @@ const dict: Dict = {
   "nav.map": { vi: "Bản đồ", en: "Map" },
   "nav.about": { vi: "Về chúng tôi", en: "About us" },
   "nav.config": { vi: "Cấu hình", en: "Configuration" },
-  "nav.system": { vi: "Hệ thống", en: "System" },
-  "nav.help": { vi: "Trợ giúp", en: "Help" },
-  "nav.processes": { vi: "Quy trình quản lý công việc", en: "Work processes" },
+  "nav.system": { vi: "Hệ thống", en: "System", zh: "系统", ja: "システム" },
+  "nav.help": { vi: "Trợ giúp", en: "Help", zh: "帮助", ja: "ヘルプ" },
+  "nav.processes": { vi: "Quy trình quản lý công việc", en: "Work processes", zh: "工作流程管理", ja: "業務プロセス管理" },
+  "nav.branding": { vi: "Thương hiệu & Logo", en: "Branding & Logos", zh: "品牌与标识", ja: "ブランド＆ロゴ" },
+  "nav.translations": { vi: "Bản dịch", en: "Translations", zh: "翻译管理", ja: "翻訳管理" },
 
   "proc.general": { vi: "Quy trình chung", en: "General processes" },
   "proc.ptcskh": { vi: "Quy trình phát triển và chăm sóc khách hàng", en: "Customer development & care" },

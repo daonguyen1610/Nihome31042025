@@ -2,13 +2,15 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, HardHat, Wrench, Building2, Zap } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/PageHeader";
-import { services } from "@/data/services";
 import { useI18n } from "@/lib/i18n";
+import { useServices } from "@/hooks/useContentApi";
+import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 
 const icons = [Building2, HardHat, Wrench, Zap];
 
 const Services = () => {
   const { t } = useI18n();
+  const { data: services, loading, error, refetch } = useServices();
   return (
     <Layout>
       <PageHeader
@@ -19,6 +21,13 @@ const Services = () => {
 
       <section className="py-20 lg:py-28 bg-background">
         <div className="container-custom">
+          {loading ? (
+            <PageLoading />
+          ) : error ? (
+            <PageError message={error} onRetry={refetch} />
+          ) : !services || services.length === 0 ? (
+            <PageEmpty message={t("common.noData")} />
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
             {services.map((s, i) => {
               const Icon = icons[i % icons.length];
@@ -51,6 +60,7 @@ const Services = () => {
               );
             })}
           </div>
+          )}
         </div>
       </section>
 

@@ -152,6 +152,14 @@
     "ja": "お問い合わせ"
   },
   {
+    "key": "common.retry",
+    "category": "common",
+    "vi": "Thử lại",
+    "en": "Retry",
+    "zh": "重试",
+    "ja": "再試行"
+  },
+  {
     "key": "site.nav.home",
     "category": "site",
     "vi": "Trang chủ",

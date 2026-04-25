@@ -302,5 +302,21 @@
     "en": "Work processes",
     "zh": "工作流程管理",
     "ja": "業務プロセス管理"
+  },
+  {
+    "key": "nav.branding",
+    "category": "nav",
+    "vi": "Thương hiệu & Logo",
+    "en": "Branding & Logos",
+    "zh": "品牌与标识",
+    "ja": "ブランド＆ロゴ"
+  },
+  {
+    "key": "nav.translations",
+    "category": "nav",
+    "vi": "Bản dịch",
+    "en": "Translations",
+    "zh": "翻译管理",
+    "ja": "翻訳管理"
   }
 ]

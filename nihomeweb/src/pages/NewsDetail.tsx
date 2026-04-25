@@ -1,14 +1,18 @@
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Calendar, Tag } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { getNewsById, news, newsCategoryI18n } from "@/data/news";
 import { useI18n } from "@/lib/i18n";
-import { localizeCategory, pickLocalized } from "@/lib/localize";
+import { useNewsItem, useNews } from "@/hooks/useContentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const NewsDetail = () => {
-  const { t, lang } = useI18n();
-  const { id } = useParams();
-  const item = id ? getNewsById(id) : undefined;
+  const { t } = useI18n();
+  const { slug } = useParams();
+  const { data: item, loading, error, refetch } = useNewsItem(slug ?? "");
+  const { data: allNews } = useNews();
+
+  if (loading) return <Layout><PageLoading /></Layout>;
+  if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
 
   if (!item) {
     return (
@@ -21,7 +25,7 @@ const NewsDetail = () => {
     );
   }
 
-  const related = news.filter((n) => n.id !== item.id).slice(0, 3);
+  const related = (allNews ?? []).filter((n) => n.slug !== item.slug).slice(0, 3);
 
   return (
     <Layout>
@@ -32,13 +36,13 @@ const NewsDetail = () => {
             <ArrowLeft className="w-4 h-4" /> {t("newsPage.backToList")}
           </Link>
           <div className="flex items-center gap-3 mb-5">
-            <span className="chip chip-primary">{localizeCategory(item.category, lang, newsCategoryI18n)}</span>
+            <span className="chip chip-primary">{item.category}</span>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
               <Calendar className="w-3 h-3" /> {item.date}
             </span>
           </div>
           <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight max-w-4xl text-balance">
-            {pickLocalized(item, "title", lang)}
+            {item.title}
           </h1>
         </div>
       </section>
@@ -47,7 +51,7 @@ const NewsDetail = () => {
       <section className="bg-background pb-12">
         <div className="container-custom">
           <div className="rounded-3xl overflow-hidden -mt-4 aspect-[16/9] bg-muted">
-            <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
+            <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
           </div>
         </div>
       </section>
@@ -56,7 +60,7 @@ const NewsDetail = () => {
       <section className="pb-20 bg-background">
         <div className="container-custom max-w-3xl">
           <div className="space-y-6 text-lg text-foreground/85 leading-relaxed">
-            {(pickLocalized(item, "content", lang) as string[]).map((p, i) => (
+            {item.content.map((p, i) => (
               <p key={i}>{p}</p>
             ))}
           </div>
@@ -71,15 +75,15 @@ const NewsDetail = () => {
             <h2 className="font-display text-3xl md:text-4xl font-extrabold mb-10 tracking-tight">{t("newsDetail.readMore")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {related.map((n) => (
-                <Link key={n.id} to={`/news/${n.id}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
+                <Link key={n.id} to={`/news/${n.slug}`} className="group card-hover bg-card rounded-3xl overflow-hidden border border-border">
                   <div className="image-zoom aspect-[4/3] bg-muted">
-                    <img src={n.img} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    <img src={n.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
                   </div>
                   <div className="p-6">
                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2 inline-flex items-center gap-1.5">
-                      <Tag className="w-3 h-3" /> {localizeCategory(n.category, lang, newsCategoryI18n)}
+                      <Tag className="w-3 h-3" /> {n.category}
                     </p>
-                    <h3 className="font-display text-lg font-extrabold leading-tight group-hover:text-primary transition-colors line-clamp-2">{pickLocalized(n, "title", lang)}</h3>
+                    <h3 className="font-display text-lg font-extrabold leading-tight group-hover:text-primary transition-colors line-clamp-2">{n.title}</h3>
                   </div>
                 </Link>
               ))}
