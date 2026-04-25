@@ -1,27 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Phone, Lock, ArrowRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
-import { ADMIN_HINT, login } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { loginThunk, clearError } from "@/store/authSlice";
 
 const Login = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { toast } = useToast();
   const { t } = useI18n();
-  const [email, setEmail] = useState("");
+  const { user, loading, error } = useAppSelector((s) => s.auth);
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      toast({ title: t("auth.login.toast.title"), description: `${t("auth.login.toast.hello")} ${user.fullName}` });
+      navigate(user.role === "admin" ? "/admin" : "/profile");
+    }
+  }, [user, navigate, toast, t]);
+
+  useEffect(() => {
+    if (error) {
+      toast({ title: t("auth.error"), description: error, variant: "destructive" });
+      dispatch(clearError());
+    }
+  }, [error, toast, t, dispatch]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      const u = login(email, password);
-      toast({ title: t("auth.login.toast.title"), description: `${t("auth.login.toast.hello")} ${u.name}` });
-      navigate(u.role === "admin" ? "/admin" : "/profile");
-    }, 500);
+    dispatch(loginThunk({ phone, password }));
   };
 
   return (
@@ -40,13 +51,13 @@ const Login = () => {
 
             <form onSubmit={submit} className="space-y-4">
               <div className="relative">
-                <Mail className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   required
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder={t("auth.email")}
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={t("auth.phone")}
                   className="w-full bg-secondary rounded-full pl-12 pr-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
                 />
               </div>
@@ -70,9 +81,11 @@ const Login = () => {
               </button>
             </form>
 
-            <p className="text-xs text-center text-muted-foreground mt-6">
-              {t("auth.login.demo")}: <span className="font-bold text-foreground">{ADMIN_HINT}</span> / {t("auth.login.anyPwd")}
-            </p>
+            <div className="text-center mt-4">
+              <Link to="/forgot-password" className="text-sm text-primary link-underline">
+                {t("auth.login.forgot")}
+              </Link>
+            </div>
 
             <div className="text-center mt-6 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground">
