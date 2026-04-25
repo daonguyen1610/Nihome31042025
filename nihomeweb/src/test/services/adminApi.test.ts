@@ -57,6 +57,38 @@ describe("adminApi", () => {
     await adminApi.deleteLogo(7);
     expect(mockApi.delete).toHaveBeenCalledWith("/logos/7");
   });
+
+  it("createSlideshow sends correct route and payload", async () => {
+    const payload = {
+      slug: "hero-slide",
+      imageUrl: "/img/hero.jpg",
+      title: "Hero",
+      subtitle: "Sub",
+      linkUrl: "/projects",
+      linkText: "View",
+      isActive: true,
+      sortOrder: 0,
+    };
+    await adminApi.createSlideshow(payload);
+    expect(mockApi.post).toHaveBeenCalledWith("/slideshow", payload);
+  });
+
+  it("updateSlideshow sends correct route and payload", async () => {
+    const payload = {
+      slug: "hero-updated",
+      imageUrl: "/img/updated.jpg",
+      title: "Updated",
+      isActive: false,
+      sortOrder: 1,
+    };
+    await adminApi.updateSlideshow(3, payload);
+    expect(mockApi.put).toHaveBeenCalledWith("/slideshow/3", payload);
+  });
+
+  it("deleteSlideshow sends correct route", async () => {
+    await adminApi.deleteSlideshow(5);
+    expect(mockApi.delete).toHaveBeenCalledWith("/slideshow/5");
+  });
 });
 
 describe("slugify", () => {

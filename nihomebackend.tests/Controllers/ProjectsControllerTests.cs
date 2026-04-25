@@ -18,17 +18,17 @@ namespace nihomebackend.tests.Controllers;
 public class ProjectsControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
-        private readonly ProjectsController _sut;
+    private readonly ProjectsController _sut;
 
-        public ProjectsControllerTests()
-        {
-            _db = DbContextFactory.Create();
-            
-            var service = new ProjectService(_db);
-            _sut = new ProjectsController(service);
-        }
+    public ProjectsControllerTests()
+    {
+        _db = DbContextFactory.Create();
 
-        public void Dispose() => _db.Dispose();
+        var service = new ProjectService(_db);
+        _sut = new ProjectsController(service);
+    }
+
+    public void Dispose() => _db.Dispose();
 
     [Fact]
     async Task GetAll_ReturnsEmptyList_WhenNoProjects()

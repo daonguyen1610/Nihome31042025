@@ -57,6 +57,24 @@ export interface UpsertLogoRequest {
   sortOrder?: number;
 }
 
+export interface UpsertProcessRequest {
+  groupKey: string;
+  code?: string;
+  title: string;
+  sortOrder?: number;
+}
+
+export interface UpsertSlideshowRequest {
+  slug: string;
+  imageUrl: string;
+  title: string;
+  subtitle?: string;
+  linkUrl?: string;
+  linkText?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
@@ -91,6 +109,22 @@ export const adminApi = {
     api.put(`/logos/${id}`, data),
   deleteLogo: (id: number) =>
     api.delete(`/logos/${id}`),
+
+  // Processes
+  createProcess: (data: UpsertProcessRequest) =>
+    api.post("/processes", data),
+  updateProcess: (id: number, data: UpsertProcessRequest) =>
+    api.put(`/processes/${id}`, data),
+  deleteProcess: (id: number) =>
+    api.delete(`/processes/${id}`),
+
+  // Slideshow
+  createSlideshow: (data: UpsertSlideshowRequest) =>
+    api.post("/slideshow", data),
+  updateSlideshow: (id: number, data: UpsertSlideshowRequest) =>
+    api.put(`/slideshow/${id}`, data),
+  deleteSlideshow: (id: number) =>
+    api.delete(`/slideshow/${id}`),
 };
 
 // ─── Slug helper ─────────────────────────────────────────────

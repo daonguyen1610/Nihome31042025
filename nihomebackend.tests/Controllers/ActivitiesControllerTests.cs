@@ -18,21 +18,21 @@ namespace nihomebackend.tests.Controllers;
 public class ActivitiesControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
-        private readonly ActivityService _service;
-        private readonly ActivitiesController _sut;
+    private readonly ActivityService _service;
+    private readonly ActivitiesController _sut;
 
-        public ActivitiesControllerTests()
-        {
-            _db = DbContextFactory.Create();
-            
-            var entityTranslationSvc = new EntityTranslationService(
-                _db, Mock.Of<IMemoryCache>());
-            
-            _service = new ActivityService(_db, entityTranslationSvc);
-            _sut = new ActivitiesController(_service);
-        }
+    public ActivitiesControllerTests()
+    {
+        _db = DbContextFactory.Create();
 
-        public void Dispose() => _db.Dispose();
+        var entityTranslationSvc = new EntityTranslationService(
+            _db, Mock.Of<IMemoryCache>());
+
+        _service = new ActivityService(_db, entityTranslationSvc);
+        _sut = new ActivitiesController(_service);
+    }
+
+    public void Dispose() => _db.Dispose();
 
     [Fact]
     async Task GetAll_ReturnsEmptyList_WhenNoActivities()

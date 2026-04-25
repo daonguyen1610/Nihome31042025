@@ -1,68 +1,43 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search as SearchIcon, Pencil, Trash2, FileText, Eye, X, Upload, Image as ImageIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search as SearchIcon, Pencil, Trash2, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
+import { useProcesses } from "@/hooks/useContentApi";
+import { adminApi } from "@/services/adminApi";
 
-export type ProcessItem = {
-  id: string;
+type ProcessItem = {
+  id: number;
+  groupKey: string;
   title: string;
   code?: string;
-  fileUrl?: string;
-  contentType?: "text" | "image";
-  content?: string; // text body or image data URL / URL
 };
 
 type Props = {
-  storageKey: string;
+  groupKey: string;
   titleKey: string;
-  seed: ProcessItem[];
-};
-
-const load = (key: string, seed: ProcessItem[]): ProcessItem[] => {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as ProcessItem[]) : seed;
-  } catch {
-    return seed;
-  }
 };
 
 type EditorState = {
   open: boolean;
   mode: "create" | "edit";
-  draft: ProcessItem;
+  draft: { id?: number; title: string; code: string };
 };
 
-const emptyDraft = (): ProcessItem => ({
-  id: "",
-  title: "",
-  code: "",
-  contentType: "text",
-  content: "",
-});
+const emptyDraft = () => ({ title: "", code: "" });
 
-const ProcessList = ({ storageKey, titleKey, seed }: Props) => {
+const ProcessList = ({ groupKey, titleKey }: Props) => {
   const { t } = useI18n();
-  const [items, setItems] = useState<ProcessItem[]>(() => load(storageKey, seed));
   const [q, setQ] = useState("");
-  const [viewing, setViewing] = useState<ProcessItem | null>(null);
-  const [editor, setEditor] = useState<EditorState>({ open: false, mode: "create", draft: emptyDraft() });
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [editor, setEditor] = useState<EditorState>({
+    open: false,
+    mode: "create",
+    draft: emptyDraft(),
+  });
 
-  useEffect(() => {
-    setItems(load(storageKey, seed));
-    setQ("");
-  }, [storageKey, seed]);
-
-  const persist = (next: ProcessItem[]) => {
-    setItems(next);
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
-  };
+  const { data, loading, error, refetch } = useProcesses();
+  const items = (data?.[groupKey] ?? []) as ProcessItem[];
 
   const filtered = useMemo(
     () =>
@@ -79,49 +54,62 @@ const ProcessList = ({ storageKey, titleKey, seed }: Props) => {
     setEditor({
       open: true,
       mode: "edit",
-      draft: { ...p, contentType: p.contentType ?? "text", content: p.content ?? "" },
+      draft: { id: p.id, title: p.title, code: p.code ?? "" },
     });
-  const closeEditor = () => setEditor((s) => ({ ...s, open: false }));
 
-  const updateDraft = (patch: Partial<ProcessItem>) =>
+  const closeEditor = () =>
+    setEditor((s) => ({ ...s, open: false, draft: emptyDraft() }));
+
+  const updateDraft = (patch: Partial<EditorState["draft"]>) =>
     setEditor((s) => ({ ...s, draft: { ...s.draft, ...patch } }));
 
-  const handleFile = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("File must be an image");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => updateDraft({ content: reader.result as string });
-    reader.readAsDataURL(file);
-  };
-
-  const submit = () => {
-    const { draft, mode } = editor;
-    if (!draft.title.trim()) {
+  const submit = async () => {
+    if (!editor.draft.title.trim()) {
       toast.error(t("proc.title"));
       return;
     }
-    const clean: ProcessItem = {
-      ...draft,
-      title: draft.title.trim(),
-      code: draft.code?.trim() || undefined,
-      content: draft.content?.trim() || undefined,
-    };
-    if (mode === "create") {
-      persist([...items, { ...clean, id: `p${Date.now()}` }]);
-      toast.success(t("form.created"));
-    } else {
-      persist(items.map((i) => (i.id === clean.id ? clean : i)));
-      toast.success(t("form.updated"));
+
+    setSubmitting(true);
+    try {
+      if (editor.mode === "create") {
+        await adminApi.createProcess({
+          groupKey,
+          title: editor.draft.title.trim(),
+          code: editor.draft.code.trim() || undefined,
+          sortOrder: items.length,
+        });
+        toast.success(t("form.created"));
+      } else if (editor.draft.id != null) {
+        const current = items.find((x) => x.id === editor.draft.id);
+        const sortOrder = current ? items.findIndex((x) => x.id === current.id) : 0;
+        await adminApi.updateProcess(editor.draft.id, {
+          groupKey,
+          title: editor.draft.title.trim(),
+          code: editor.draft.code.trim() || undefined,
+          sortOrder,
+        });
+        toast.success(t("form.updated"));
+      }
+
+      closeEditor();
+      await refetch();
+    } catch {
+      toast.error(t("common.error"));
+    } finally {
+      setSubmitting(false);
     }
-    closeEditor();
   };
 
-  const remove = (p: ProcessItem) => {
+  const remove = async (p: ProcessItem) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
-    persist(items.filter((i) => i.id !== p.id));
-    toast.success(t("form.deleted"));
+
+    try {
+      await adminApi.deleteProcess(p.id);
+      toast.success(t("form.deleted"));
+      await refetch();
+    } catch {
+      toast.error(t("common.error"));
+    }
   };
 
   return (
@@ -156,97 +144,62 @@ const ProcessList = ({ storageKey, titleKey, seed }: Props) => {
         </div>
       </div>
 
-      <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-            {t("proc.empty")}
-          </div>
-        ) : (
-          filtered.map((p) => (
-            <div
-              key={p.id}
-              className="admin-card flex items-center gap-4 px-5 py-4 hover:shadow-md transition"
-            >
+      {loading ? (
+        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+          {t("common.loading")}
+        </div>
+      ) : error ? (
+        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-danger))" }}>
+          {error}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.length === 0 ? (
+            <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+              {t("proc.empty")}
+            </div>
+          ) : (
+            filtered.map((p) => (
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{
-                  background:
-                    "linear-gradient(135deg, hsl(var(--admin-primary) / 0.12), hsl(22 95% 58% / 0.1))",
-                  color: "hsl(var(--admin-primary))",
-                }}
+                key={p.id}
+                className="admin-card flex items-center gap-4 px-5 py-4 hover:shadow-md transition"
               >
-                {p.contentType === "image" ? <ImageIcon className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold truncate" style={{ color: "hsl(var(--admin-primary))" }}>
-                  {p.code ? `${p.code} — ${p.title}` : p.title}
-                </p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setViewing(p)}
-                  className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, hsl(var(--admin-primary) / 0.12), hsl(22 95% 58% / 0.1))",
+                    color: "hsl(var(--admin-primary))",
+                  }}
                 >
-                  <Eye className="w-3.5 h-3.5" /> {t("proc.view")}
-                </button>
-                <button
-                  onClick={() => openEdit(p)}
-                  className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
-                >
-                  <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
-                </button>
-                <button
-                  onClick={() => remove(p)}
-                  className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
-                  style={{ color: "hsl(var(--admin-danger))" }}
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* View detail modal */}
-      {viewing && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-          onClick={() => setViewing(null)}
-        >
-          <div
-            className="bg-background rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 p-5 border-b">
-              <div className="min-w-0">
-                {viewing.code && (
-                  <p className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--admin-primary))" }}>
-                    {viewing.code}
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold truncate" style={{ color: "hsl(var(--admin-primary))" }}>
+                    {p.code ? `${p.code} — ${p.title}` : p.title}
                   </p>
-                )}
-                <h2 className="font-display text-xl font-extrabold mt-1 break-words">{viewing.title}</h2>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => openEdit(p)}
+                    className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
+                  </button>
+                  <button
+                    onClick={() => remove(p)}
+                    className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                    style={{ color: "hsl(var(--admin-danger))" }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
+                  </button>
+                </div>
               </div>
-              <button onClick={() => setViewing(null)} className="p-2 rounded-lg hover:bg-muted shrink-0">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5 overflow-y-auto">
-              {viewing.contentType === "image" && viewing.content ? (
-                <img src={viewing.content} alt={viewing.title} className="w-full h-auto rounded-lg border" />
-              ) : viewing.content ? (
-                <div className="prose prose-sm max-w-none whitespace-pre-wrap">{viewing.content}</div>
-              ) : (
-                <p className="text-sm text-center py-10" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {t("proc.noContent")}
-                </p>
-              )}
-            </div>
-          </div>
+            ))
+          )}
         </div>
       )}
 
-      {/* Editor modal */}
       {editor.open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
@@ -279,90 +232,18 @@ const ProcessList = ({ storageKey, titleKey, seed }: Props) => {
                 <label className="block text-sm font-bold mb-1.5">{t("proc.code")}</label>
                 <input
                   className="admin-input w-full"
-                  value={editor.draft.code ?? ""}
+                  value={editor.draft.code}
                   onChange={(e) => updateDraft({ code: e.target.value })}
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-bold mb-1.5">{t("proc.contentType")}</label>
-                <div className="flex gap-2">
-                  {(["text", "image"] as const).map((tp) => (
-                    <button
-                      key={tp}
-                      type="button"
-                      onClick={() => updateDraft({ contentType: tp, content: "" })}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold border transition ${
-                        editor.draft.contentType === tp
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background hover:bg-muted"
-                      }`}
-                    >
-                      {tp === "text" ? t("proc.text") : t("proc.image")}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {editor.draft.contentType === "image" ? (
-                <div className="space-y-3">
-                  <label className="block text-sm font-bold">{t("proc.content")}</label>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-muted text-sm font-bold"
-                  >
-                    <Upload className="w-4 h-4" /> {t("proc.uploadImage")}
-                  </button>
-                  <input
-                    type="url"
-                    placeholder={t("proc.imageUrl")}
-                    className="admin-input w-full"
-                    value={editor.draft.content?.startsWith("data:") ? "" : editor.draft.content ?? ""}
-                    onChange={(e) => updateDraft({ content: e.target.value })}
-                  />
-                  {editor.draft.content && (
-                    <div className="border rounded-lg p-2">
-                      <img
-                        src={editor.draft.content}
-                        alt="preview"
-                        className="max-h-64 mx-auto rounded"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-bold mb-1.5">{t("proc.content")}</label>
-                  <textarea
-                    className="admin-input w-full min-h-[200px] resize-y"
-                    placeholder={t("proc.contentPh")}
-                    value={editor.draft.content ?? ""}
-                    onChange={(e) => updateDraft({ content: e.target.value })}
-                  />
-                </div>
-              )}
             </div>
 
-            <div className="flex items-center justify-end gap-2 p-5 border-t">
-              <button
-                onClick={closeEditor}
-                className="px-4 py-2 rounded-lg border text-sm font-bold hover:bg-muted"
-              >
+            <div className="p-5 border-t flex items-center justify-end gap-2">
+              <button className="admin-btn-ghost" onClick={closeEditor}>
                 {t("proc.cancel")}
               </button>
-              <button
-                onClick={submit}
-                className="admin-btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 whitespace-nowrap leading-none"
-              >
-                {t("proc.save")}
+              <button className="admin-btn-primary" onClick={submit} disabled={submitting}>
+                {submitting ? t("common.loading") : t("proc.save")}
               </button>
             </div>
           </div>

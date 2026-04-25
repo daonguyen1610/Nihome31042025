@@ -8,6 +8,7 @@ import {
   type ServiceResponse,
   type LogosGroupedResponse,
   type ProcessResponse,
+  type SlideshowResponse,
 } from "@/services/contentApi";
 
 /* ------------------------------------------------------------------ */
@@ -87,4 +88,9 @@ export function useLogos() {
 
 export function useProcesses() {
   return useFetch<Record<string, ProcessResponse[]>>(() => contentApi.getProcesses(), []);
+}
+
+export function useSlideshow() {
+  const { lang } = useI18n();
+  return useFetch<SlideshowResponse[]>(() => contentApi.getSlideshow(lang), [lang]);
 }

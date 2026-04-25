@@ -20,7 +20,7 @@ public class NewsControllerTests : IDisposable
     public NewsControllerTests()
     {
         _db = DbContextFactory.Create();
-        
+
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var service = new NewsService(_db, entityTranslationSvc);
         _sut = new NewsController(service);

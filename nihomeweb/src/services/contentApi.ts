@@ -86,6 +86,18 @@ export interface ProcessResponse {
   title: string;
 }
 
+export interface SlideshowResponse {
+  id: number;
+  slug: string;
+  imageUrl: string;
+  title: string;
+  subtitle?: string;
+  linkUrl?: string;
+  linkText?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 // --- Translation types ---
 
 export interface TranslationPair {
@@ -105,30 +117,117 @@ export interface EntityTranslationRow {
   value: string;
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
+function getApiOrigin() {
+  const base = API_BASE;
+  if (!base) return "";
+
+  try {
+    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+    return new URL(base, origin).origin;
+  } catch {
+    return "";
+  }
+}
+
+function resolveImageUrl(value: string) {
+  if (!value) return value;
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:")
+  ) {
+    return value;
+  }
+
+  if (!value.startsWith("/")) {
+    return value;
+  }
+
+  const apiOrigin = getApiOrigin();
+  return apiOrigin ? `${apiOrigin}${value}` : value;
+}
+
+function mapActivity(item: ActivityResponse): ActivityResponse {
+  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+}
+
+function mapNews(item: NewsResponse): NewsResponse {
+  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+}
+
+function mapProject(item: ProjectResponse): ProjectResponse {
+  return {
+    ...item,
+    imageUrl: resolveImageUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveImageUrl),
+  };
+}
+
+function mapLogo(item: LogoResponse): LogoResponse {
+  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+}
+
+function mapSlideshow(item: SlideshowResponse): SlideshowResponse {
+  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+}
+
+function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {
+  return {
+    clients: data.clients.map(mapLogo),
+    partners: data.partners.map(mapLogo),
+    suppliers: data.suppliers.map(mapLogo),
+  };
+}
+
 // --- API functions ---
 
 export const contentApi = {
   // Activities (pass ?lang= for translation)
-  getActivities: (lang = "vi") => api.get<ActivityResponse[]>(`/activities?lang=${lang}`),
-  getActivity: (slug: string, lang = "vi") => api.get<ActivityResponse>(`/activities/${slug}?lang=${lang}`),
+  getActivities: (lang = "vi") =>
+    api.get<ActivityResponse[]>(`/activities?lang=${lang}`)
+      .then((res) => ({ ...res, data: res.data.map(mapActivity) })),
+
+  getActivity: (slug: string, lang = "vi") =>
+    api.get<ActivityResponse>(`/activities/${slug}?lang=${lang}`)
+      .then((res) => ({ ...res, data: mapActivity(res.data) })),
 
   // News
-  getNews: (lang = "vi") => api.get<NewsResponse[]>(`/news?lang=${lang}`),
-  getNewsItem: (slug: string, lang = "vi") => api.get<NewsResponse>(`/news/${slug}?lang=${lang}`),
+  getNews: (lang = "vi") =>
+    api.get<NewsResponse[]>(`/news?lang=${lang}`)
+      .then((res) => ({ ...res, data: res.data.map(mapNews) })),
+
+  getNewsItem: (slug: string, lang = "vi") =>
+    api.get<NewsResponse>(`/news/${slug}?lang=${lang}`)
+      .then((res) => ({ ...res, data: mapNews(res.data) })),
 
   // Projects
-  getProjects: () => api.get<ProjectResponse[]>("/projects"),
-  getProject: (slug: string) => api.get<ProjectResponse>(`/projects/${slug}`),
+  getProjects: () =>
+    api.get<ProjectResponse[]>("/projects")
+      .then((res) => ({ ...res, data: res.data.map(mapProject) })),
+
+  getProject: (slug: string) =>
+    api.get<ProjectResponse>(`/projects/${slug}`)
+      .then((res) => ({ ...res, data: mapProject(res.data) })),
 
   // Services
   getServices: () => api.get<ServiceResponse[]>("/services"),
   getService: (slug: string) => api.get<ServiceResponse>(`/services/${slug}`),
 
   // Logos
-  getLogos: () => api.get<LogosGroupedResponse>("/logos"),
+  getLogos: () =>
+    api.get<LogosGroupedResponse>("/logos")
+      .then((res) => ({ ...res, data: mapLogosGrouped(res.data) })),
 
   // Processes
   getProcesses: () => api.get<Record<string, ProcessResponse[]>>("/processes"),
+
+  // Slideshow
+  getSlideshow: (lang = "vi") =>
+    api.get<SlideshowResponse[]>(`/slideshow?lang=${lang}`)
+      .then((res) => ({ ...res, data: res.data.map(mapSlideshow) })),
 };
 
 // --- Translation API (admin-managed) ---

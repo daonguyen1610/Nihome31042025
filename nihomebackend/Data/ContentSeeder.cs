@@ -14,6 +14,7 @@ public static class ContentSeeder
         SeedServices(db);
         SeedLogos(db);
         SeedProcesses(db);
+        SeedSlideshow(db);
         SeedEntityTranslations(db);
     }
 
@@ -110,6 +111,137 @@ public static class ContentSeeder
                 }),
                 SortOrder = 5,
             },
+            // ── Additional activities from nicon.vn ──
+            new()
+            {
+                Slug = "scholarships-awarding-2021", Date = "23.11.2021",
+                ImageUrl = "/images/activities/activity-ceremony.jpg",
+                Category = "Cộng đồng", Author = "Phòng Hành Chính",
+                Title = "Trao học bổng khuyến học",
+                Excerpt = "Cuối năm 2021, Công ty NICON vinh dự trao 35 suất học bổng khuyến học cho học sinh trường THPT Phù Mỹ số 1, Bình Định.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Cuối năm 2021, Công ty NICON vinh dự trao tặng 35 suất Học Bổng Khuyến Học cho các em học sinh Trường THPT Phù Mỹ Số 1, huyện Phù Mỹ, tỉnh Bình Định — những em có hoàn cảnh gia đình khó khăn nhưng đạt thành tích học tập xuất sắc.",
+                    "NICON xin chúc các em thêm quyết tâm, nỗ lực đạt nhiều thành tích hơn nữa, sau này trở thành công dân tốt đóng góp cho xã hội, gia đình và bản thân.",
+                }),
+                SortOrder = 6,
+            },
+            new()
+            {
+                Slug = "grand-opening-hbfuller", Date = "19.07.2019",
+                ImageUrl = "/images/activities/activity-opening.jpg",
+                Category = "Khánh thành", Author = "Phòng Truyền Thông",
+                Title = "Lễ khánh thành Nhà máy H.B.Fuller Việt Nam",
+                Excerpt = "Lễ khánh thành nhà máy H.B.Fuller Việt Nam tại KCN VSIP II-A, Tân Uyên, Bình Dương.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Nhà máy H.B.Fuller Việt Nam tại đường 27, KCN VSIP II-A, Tân Uyên, Bình Dương đã chính thức khánh thành.",
+                    "Dự án do NICON đảm nhận phần thi công MEP, đáp ứng các tiêu chuẩn quốc tế về an toàn và chất lượng.",
+                }),
+                SortOrder = 7,
+            },
+            new()
+            {
+                Slug = "great-lotus-steel-structure", Date = "20.05.2019",
+                ImageUrl = "/images/activities/activity-handover.jpg",
+                Category = "Dự án", Author = "Phòng Truyền Thông",
+                Title = "NICON hoàn thành kết cấu thép Nhà máy Great Lotus Việt Nam",
+                Excerpt = "Ngày 10/05/2019, NICON đã hoàn thành hạng mục kết cấu thép cho Nhà máy Great Lotus Việt Nam.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Ngày 10/05/2019, NICON hoàn thành hạng mục kết cấu thép cho Nhà máy Great Lotus Việt Nam tại VSIP II-A, Bình Dương.",
+                    "Đây là một trong những dự án quy mô lớn với diện tích hơn 31.000 m², NICON đảm nhận vai trò Tổng thầu Thiết kế – Thi công.",
+                }),
+                SortOrder = 8,
+            },
+            new()
+            {
+                Slug = "nicon-top10-vietnam-brand-2018", Date = "24.01.2019",
+                ImageUrl = "/images/activities/activity-ceremony.jpg",
+                Category = "Giải thưởng", Author = "Phòng Marketing",
+                Title = "Báo Nhật: NICON lọt Top 10 Vietnam Leading Brands 2018",
+                Excerpt = "NICON được vinh danh trong Top 10 Thương hiệu Hàng đầu Việt Nam 2018, được đưa tin bởi báo chí Nhật Bản.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "NICON vinh dự lọt vào Top 10 Vietnam Leading Brands 2018, một giải thưởng uy tín được đưa tin rộng rãi bởi các tờ báo Nhật Bản.",
+                    "Giải thưởng này khẳng định vị thế và uy tín của NICON trong lĩnh vực xây dựng công nghiệp tại Việt Nam, đặc biệt trong mắt các nhà đầu tư quốc tế.",
+                }),
+                SortOrder = 9,
+            },
+            new()
+            {
+                Slug = "nicon-mori-strategic-cooperation", Date = "07.07.2018",
+                ImageUrl = "/images/activities/activity-ceremony.jpg",
+                Category = "Sự kiện", Author = "Phòng Truyền Thông",
+                Title = "NICON – Mori: Hợp tác chiến lược",
+                Excerpt = "Tập đoàn Mori Construction từ Nhật Bản đã mở rộng hợp tác quốc tế với NICON.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Tập đoàn Mori Construction từ Nhật Bản đã chính thức mở rộng hợp tác quốc tế với Công ty NICON.",
+                    "Sự hợp tác này mang đến cho NICON tiêu chuẩn kỹ thuật và văn hóa làm việc chuẩn Nhật, nâng cao năng lực cạnh tranh trong lĩnh vực xây dựng công nghiệp.",
+                }),
+                SortOrder = 10,
+            },
+            new()
+            {
+                Slug = "training-improvement-2018", Date = "06.09.2018",
+                ImageUrl = "/images/activities/activity-handover.jpg",
+                Category = "Đào tạo", Author = "Phòng Hành Chính",
+                Title = "Đào tạo nâng cao kỹ năng làm việc và đổi mới sáng tạo",
+                Excerpt = "Đào tạo, giáo dục là hoạt động thường xuyên để nâng cao kỹ năng quản lý chất lượng, tiến độ và an toàn thi công.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Đào tạo và giáo dục là hoạt động thường xuyên tại NICON nhằm nâng cao kỹ năng quản lý chất lượng, kiểm soát tiến độ và đảm bảo an toàn tại công trường.",
+                    "Các khóa đào tạo được tổ chức định kỳ, mời chuyên gia trong và ngoài nước để cập nhật kiến thức và phương pháp mới nhất.",
+                }),
+                SortOrder = 11,
+            },
+            new()
+            {
+                Slug = "nicon-annual-trip-2018", Date = "26.08.2018",
+                ImageUrl = "/images/activities/activity-opening.jpg",
+                Category = "Văn hóa", Author = "Phòng Hành Chính",
+                Title = "Du lịch và Team Building NICON hàng năm",
+                Excerpt = "Chuyến du lịch hàng năm của NICON giúp các thành viên có khoảng thời gian vui vẻ, trải nghiệm tuyệt vời sau một năm làm việc.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Chuyến du lịch hàng năm của Công ty NICON nhằm giúp tất cả thành viên có khoảng thời gian tốt đẹp, trải nghiệm tuyệt vời sau một năm làm việc vất vả.",
+                    "Đây cũng là dịp để gắn kết tình cảm giữa các thành viên trong đại gia đình NICON.",
+                }),
+                SortOrder = 12,
+            },
+            new()
+            {
+                Slug = "nha-xuong-vda-hcm", Date = "07.07.2018",
+                ImageUrl = "/images/activities/activity-handover.jpg",
+                Category = "Khởi công", Author = "Phòng Truyền Thông",
+                Title = "Xây dựng nhà máy mới của Công ty VDA-HCM",
+                Excerpt = "Ngày 23/12/2016, NICON và VDA-HCM khởi công nhà máy mới tại KCN Cầu Tràm, Cần Đước, Long An.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Ngày 23/12/2016, NICON và VDA-HCM đã khởi công nhà máy mới tại Khu công nghiệp Cầu Tràm, huyện Cần Đước, tỉnh Long An.",
+                    "Dự án đánh dấu sự mở rộng hoạt động của VDA-HCM và sự tin tưởng vào năng lực thi công của NICON.",
+                }),
+                SortOrder = 13,
+            },
+            new()
+            {
+                Slug = "nha-may-amiba-db", Date = "07.07.2018",
+                ImageUrl = "/images/activities/activity-ceremony.jpg",
+                Category = "Khởi công", Author = "Phòng Truyền Thông",
+                Title = "Dự án Nhà máy AMIBA: Thiết kế & Thi công",
+                Excerpt = "Ngày 29/12/2017, NICON và AMIBA tổ chức lễ khởi công nhà máy mới với diện tích 2 hecta tại KCN VSIP II-A, Bình Dương.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Ngày 29/12/2017, NICON và AMIBA đã long trọng tổ chức lễ khởi công nhà máy mới với diện tích 2 hecta tại KCN VSIP II-A, Tân Uyên, Bình Dương.",
+                    "Dự án được thực hiện theo hình thức Design & Build, NICON chịu trách nhiệm toàn bộ từ thiết kế đến thi công và bàn giao.",
+                }),
+                SortOrder = 14,
+            },
+            new()
+            {
+                Slug = "ky-ket-nicon-mori", Date = "07.07.2018",
+                ImageUrl = "/images/activities/activity-ceremony.jpg",
+                Category = "Sự kiện", Author = "Phòng Truyền Thông",
+                Title = "Ký kết hợp đồng đối tác chiến lược NICON & Mori",
+                Excerpt = "Ngày 19/06/2016, ông Võ Trí Nguyên (CEO NICON) và ông Yoshihiro Mori (CEO Mori Industrial Group) ký kết hợp đồng đối tác chiến lược.",
+                ContentJson = JsonSerializer.Serialize(new[] {
+                    "Ngày 19/06/2016, tại Văn phòng NICON, ông Võ Trí Nguyên (CEO NICON) và ông Yoshihiro Mori (CEO Mori Industrial Group) đã ký kết hợp đồng đối tác chiến lược.",
+                    "Với thỏa thuận này, Mori Industrial Group trở thành đối tác chiến lược của NICON, mang đến tiêu chuẩn kỹ thuật Nhật Bản cho các dự án xây dựng công nghiệp.",
+                }),
+                SortOrder = 15,
+            },
         };
 
         db.Activities.AddRange(items);
@@ -130,6 +262,23 @@ public static class ContentSeeder
             new() { Slug = "nicon-consulting-factory-projects", Date = "15.12.2024", ImageUrl = "/images/news/news-consulting-factory.jpeg", Category = "Dịch vụ", Title = "NICON tư vấn và thiết kế dự án nhà máy, nhà xưởng", Excerpt = "Với nhiều năm kinh nghiệm tư vấn và thiết kế, NICON cung cấp dịch vụ trọn gói từ tư vấn thiết kế đến thi công, luôn đem lại giải pháp tối ưu cho dự án của nhà đầu tư.", ContentJson = JsonSerializer.Serialize(new[] { "Là nhà thầu chuyên nghiệp với hơn 18 năm kinh nghiệm, NICON đã đồng hành cùng hơn 80 chủ đầu tư trong và ngoài nước trong việc tư vấn và thiết kế nhà máy, nhà xưởng công nghiệp.", "Dịch vụ tư vấn của NICON bao gồm: lựa chọn địa điểm, lập dự án đầu tư, thiết kế cơ sở, thiết kế kỹ thuật và bản vẽ thi công.", "Chúng tôi cam kết bàn giao hồ sơ đúng tiến độ và hỗ trợ chủ đầu tư trong suốt quá trình xin phép xây dựng." }), SortOrder = 3 },
             new() { Slug = "nicon-factory-price-list-2024", Date = "10.11.2024", ImageUrl = "/images/news/news-price-list-2024.jpeg", Category = "Báo giá", Title = "Bảng giá xây dựng nhà máy NICON 2024", Excerpt = "NICON cập nhật bảng giá xây dựng nhà máy nhà xưởng năm 2024 — minh bạch theo từng loại kết cấu và quy mô diện tích.", ContentJson = JsonSerializer.Serialize(new[] { "Bảng giá năm 2024 của NICON áp dụng cho các loại nhà xưởng kết cấu thép tiền chế và bê tông cốt thép, với các mức từ tiêu chuẩn đến cao cấp.", "Mức giá tham khảo: nhà xưởng thép tiền chế từ 2.700.000 đ/m², nhà xưởng có lửng văn phòng từ 3.500.000 đ/m², kho lạnh từ 5.000.000 đ/m² (chưa VAT).", "Để có báo giá chính xác, vui lòng liên hệ phòng kinh doanh NICON với thông tin chi tiết về địa điểm, diện tích và yêu cầu kỹ thuật cụ thể." }), SortOrder = 4 },
             new() { Slug = "nihome-redefining-service-apartment", Date = "07.11.2024", ImageUrl = "/images/news/news-nihome-apartment.png", Category = "Đối tác", Title = "NIHOME — \"Định nghĩa lại\" mô hình căn hộ dịch vụ", Excerpt = "Nicon và Nihome đã \"định nghĩa lại\" khái niệm căn hộ dịch vụ thành một không gian sống mang đến trải nghiệm thư giãn, tận hưởng cho khách hàng.", ContentJson = JsonSerializer.Serialize(new[] { "NIHOME là thương hiệu căn hộ dịch vụ cao cấp được phát triển bởi NICON, hướng đến đối tượng chuyên gia nước ngoài làm việc dài hạn tại Việt Nam.", "Khác biệt của NIHOME là sự kết hợp giữa thiết kế nội thất tối giản kiểu Nhật, dịch vụ khách sạn 4 sao và vị trí trung tâm các đô thị lớn.", "Hiện NIHOME đã có mặt tại Thủ Đức, Bình Dương và đang mở rộng sang Hà Nội trong giai đoạn 2025-2026." }), SortOrder = 5 },
+            // ── Additional news from nicon.vn (page 2) ──
+            new() { Slug = "nihome-trends-2024", Date = "16.10.2024", ImageUrl = "/images/news/news-build-concept.jpeg", Category = "Xu hướng", Title = "NIHOME Trends — Xu hướng thiết kế nội thất 2024", Excerpt = "Khám phá những xu hướng thiết kế nội thất nổi bật năm 2024 mà NIHOME đang áp dụng trong các dự án căn hộ dịch vụ.", ContentJson = JsonSerializer.Serialize(new[] { "Năm 2024 chứng kiến sự trỗi dậy của phong cách Japandi — sự giao thoa giữa tối giản Nhật Bản và ấm áp Scandinavian.", "NIHOME áp dụng xu hướng này với vật liệu tự nhiên, tông màu trung tính và ánh sáng tự nhiên tối đa trong mỗi căn hộ." }), SortOrder = 6 },
+            new() { Slug = "5-nha-may-kien-truc-doc-dao", Date = "10.10.2024", ImageUrl = "/images/news/news-consulting-factory.jpeg", Category = "Kiến trúc", Title = "5 Nhà máy có kiến trúc độc đáo nhất thế giới", Excerpt = "Điểm danh 5 nhà máy công nghiệp có kiến trúc ấn tượng, đột phá, truyền cảm hứng cho ngành xây dựng công nghiệp.", ContentJson = JsonSerializer.Serialize(new[] { "Kiến trúc nhà máy không chỉ đáp ứng công năng sản xuất mà còn thể hiện bản sắc thương hiệu.", "Bài viết giới thiệu 5 nhà máy tiêu biểu toàn cầu với thiết kế sáng tạo, bền vững và thân thiện môi trường." }), SortOrder = 7 },
+            new() { Slug = "quy-trinh-xay-dung-nha-may", Date = "07.10.2024", ImageUrl = "/images/news/news-gmp-standards.jpeg", Category = "Quy trình", Title = "Quy trình xây dựng nhà máy công nghiệp từ A-Z", Excerpt = "Tổng hợp quy trình xây dựng nhà máy công nghiệp chi tiết từ giai đoạn lập dự án đến bàn giao vận hành.", ContentJson = JsonSerializer.Serialize(new[] { "Xây dựng nhà máy công nghiệp là quá trình phức tạp, đòi hỏi sự phối hợp chặt chẽ giữa nhiều bên.", "NICON chia quy trình thành 6 giai đoạn chính: Lập dự án → Thiết kế → Xin phép → Thi công → Nghiệm thu → Bàn giao vận hành." }), SortOrder = 8 },
+            new() { Slug = "yeu-to-tham-my-thiet-ke-cong-nghiep", Date = "03.10.2024", ImageUrl = "/images/news/news-build-concept.jpeg", Category = "Thiết kế", Title = "Yếu tố thẩm mỹ trong thiết kế công nghiệp", Excerpt = "Thẩm mỹ không chỉ dành cho công trình dân dụng — nhà máy cũng cần được thiết kế đẹp để nâng cao giá trị thương hiệu.", ContentJson = JsonSerializer.Serialize(new[] { "Xu hướng hiện đại yêu cầu nhà máy không chỉ đáp ứng công năng mà còn phải đẹp, thể hiện bản sắc doanh nghiệp.", "NICON tích hợp yếu tố thẩm mỹ vào thiết kế nhà máy: mặt đứng hiện đại, cảnh quan xanh, khu văn phòng tiêu chuẩn 5 sao." }), SortOrder = 9 },
+            new() { Slug = "healing-trong-kien-truc", Date = "25.09.2024", ImageUrl = "/images/news/news-nihome-apartment.png", Category = "Kiến trúc", Title = "Healing trong kiến trúc — Không gian chữa lành", Excerpt = "Xu hướng thiết kế không gian chữa lành (healing architecture) đang được áp dụng rộng rãi trong kiến trúc hiện đại.", ContentJson = JsonSerializer.Serialize(new[] { "Healing architecture tập trung vào việc tạo ra không gian sống và làm việc mang lại cảm giác thư thái, giảm stress.", "NIHOME áp dụng nguyên tắc này: cây xanh nội thất, ánh sáng tự nhiên, vật liệu gỗ ấm áp và không gian mở." }), SortOrder = 10 },
+            new() { Slug = "tieu-chuan-pccc-2024", Date = "24.09.2024", ImageUrl = "/images/news/news-fire-protection.jpeg", Category = "Tiêu chuẩn", Title = "Tiêu chuẩn PCCC mới nhất 2024 cho nhà máy công nghiệp", Excerpt = "Cập nhật các quy định và tiêu chuẩn phòng cháy chữa cháy mới nhất năm 2024 áp dụng cho nhà máy, nhà xưởng.", ContentJson = JsonSerializer.Serialize(new[] { "Năm 2024, Bộ Công an ban hành nhiều quy định mới về PCCC cho công trình công nghiệp.", "NICON cập nhật và tuân thủ đầy đủ các tiêu chuẩn TCVN 3890:2023, QCVN 06:2022/BXD trong mọi dự án." }), SortOrder = 11 },
+            // ── Additional news from nicon.vn (page 3) ──
+            new() { Slug = "xu-huong-nha-dep-2025", Date = "23.09.2024", ImageUrl = "/images/news/news-build-concept.jpeg", Category = "Xu hướng", Title = "Xu hướng nhà đẹp 2025 — Tối giản và bền vững", Excerpt = "Những xu hướng thiết kế nhà ở nổi bật dự kiến sẽ thống trị năm 2025: tối giản, bền vững và thông minh.", ContentJson = JsonSerializer.Serialize(new[] { "Năm 2025 dự kiến tiếp tục xu hướng tối giản kết hợp công nghệ smart home.", "Vật liệu tái chế, năng lượng mặt trời và hệ thống quản lý năng lượng thông minh sẽ trở thành tiêu chuẩn." }), SortOrder = 12 },
+            new() { Slug = "tong-thau-nha-may-thuc-pham", Date = "19.09.2024", ImageUrl = "/images/news/news-gmp-standards.jpeg", Category = "Dịch vụ", Title = "Tổng thầu nhà máy thực phẩm — Tiêu chuẩn GMP/HACCP", Excerpt = "NICON chia sẻ kinh nghiệm trong vai trò tổng thầu thiết kế và thi công nhà máy thực phẩm đạt chuẩn quốc tế.", ContentJson = JsonSerializer.Serialize(new[] { "Nhà máy thực phẩm yêu cầu tuân thủ nghiêm ngặt tiêu chuẩn GMP và HACCP từ giai đoạn thiết kế.", "NICON đã hoàn thành nhiều dự án nhà máy thực phẩm cho khách hàng Nhật Bản, Thái Lan và Philippines." }), SortOrder = 13 },
+            new() { Slug = "stfood-va-thiet-ke-cong-nghiep", Date = "18.09.2024", ImageUrl = "/images/news/news-consulting-factory.jpeg", Category = "Dự án", Title = "S.T.Food & Thiết kế công nghiệp — Case Study", Excerpt = "Phân tích chi tiết dự án nhà máy S.T.Food Marketing Việt Nam — từ concept đến bàn giao.", ContentJson = JsonSerializer.Serialize(new[] { "Dự án S.T.Food là ví dụ điển hình cho mô hình tổng thầu D&B mà NICON thực hiện.", "Từ thiết kế đến bàn giao trong 14 tháng, nhà máy đạt đầy đủ tiêu chuẩn GMP/HACCP cho sản xuất thực phẩm." }), SortOrder = 14 },
+            new() { Slug = "thiet-ke-kien-truc-tinh-than-thuong-hieu", Date = "12.09.2024", ImageUrl = "/images/news/news-build-concept.jpeg", Category = "Thiết kế", Title = "Thiết kế kiến trúc thể hiện tinh thần thương hiệu", Excerpt = "Kiến trúc nhà máy không chỉ là nơi sản xuất — đó còn là bộ mặt thương hiệu của doanh nghiệp.", ContentJson = JsonSerializer.Serialize(new[] { "Nhiều doanh nghiệp quốc tế yêu cầu nhà máy tại Việt Nam phải thể hiện đúng bản sắc thương hiệu toàn cầu.", "NICON có kinh nghiệm thiết kế nhà máy cho Nestlé, Red Bull, Rebisco... đều tuân thủ Brand Guidelines nghiêm ngặt." }), SortOrder = 15 },
+            new() { Slug = "xu-huong-khong-gian-mo", Date = "12.09.2024", ImageUrl = "/images/news/news-nihome-apartment.png", Category = "Xu hướng", Title = "Xu hướng không gian mở trong thiết kế văn phòng và nhà máy", Excerpt = "Không gian mở (open space) đang trở thành xu hướng chủ đạo trong thiết kế văn phòng và nhà máy hiện đại.", ContentJson = JsonSerializer.Serialize(new[] { "Không gian mở giúp tăng tương tác, linh hoạt bố trí và tiết kiệm diện tích.", "NICON áp dụng xu hướng này trong thiết kế văn phòng B37 và các dự án nhà máy có khu văn phòng tích hợp." }), SortOrder = 16 },
+            new() { Slug = "hanh-trinh-thanh-cong-nha-may-thuc-pham", Date = "12.09.2024", ImageUrl = "/images/news/news-gmp-standards.jpeg", Category = "Dự án", Title = "Hành trình thành công của một nhà máy thực phẩm", Excerpt = "Chia sẻ hành trình từ ý tưởng đến vận hành thành công của một nhà máy thực phẩm tại Việt Nam.", ContentJson = JsonSerializer.Serialize(new[] { "Xây dựng nhà máy thực phẩm đạt chuẩn quốc tế là hành trình dài đòi hỏi sự kiên trì và chuyên môn cao.", "NICON đồng hành cùng chủ đầu tư từ giai đoạn khảo sát địa điểm, thiết kế, thi công đến khi nhà máy vận hành ổn định." }), SortOrder = 17 },
+            // ── Additional news from nicon.vn (page 4) ──
+            new() { Slug = "ban-giao-nha-may-apm", Date = "26.08.2024", ImageUrl = "/images/news/news-consulting-factory.jpeg", Category = "Dự án", Title = "Bàn giao nhà kho APM — Dự án D&B hoàn thành", Excerpt = "NICON hoàn thành bàn giao nhà kho APM cho Auto Components Việt Nam tại KCN VSIP Bình Dương.", ContentJson = JsonSerializer.Serialize(new[] { "Dự án nhà kho APM đã được bàn giao đúng tiến độ cam kết.", "Đây là dự án thiết kế nhà kho logistics hiện đại với dock loading và hệ thống kệ chứa hàng tự động." }), SortOrder = 18 },
+            new() { Slug = "hiep-hoi-thep-bai-viet", Date = "09.08.2018", ImageUrl = "/images/news/news-fire-protection.jpeg", Category = "Ngành", Title = "NICON và ngành kết cấu thép Việt Nam", Excerpt = "NICON chia sẻ về vai trò của kết cấu thép trong xây dựng công nghiệp hiện đại tại Việt Nam.", ContentJson = JsonSerializer.Serialize(new[] { "Kết cấu thép là giải pháp tối ưu cho nhà máy công nghiệp nhờ tốc độ thi công nhanh, nhịp lớn và chi phí hợp lý.", "NICON là một trong những nhà thầu hàng đầu Việt Nam trong lĩnh vực thiết kế và thi công nhà xưởng kết cấu thép." }), SortOrder = 19 },
         };
 
         db.NewsArticles.AddRange(items);
@@ -148,11 +297,42 @@ public static class ContentSeeder
             new() { Slug = "nha-xuong-nbdc", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Xưởng NBDC", Client = "Công ty TNHH NBDC VN", Location = "KCN Giang Điền, Đồng Nai", Scale = "8.500 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà xưởng sản xuất", Description = "NICON cung cấp dịch vụ thiết kế kiến trúc và kết cấu trọn gói cho nhà xưởng sản xuất NBDC tại KCN Giang Điền.", ChallengesJson = JsonSerializer.Serialize(new[] { "Bố cục dây chuyền sản xuất phức tạp với nhiều khu vực chức năng.", "Yêu cầu tích hợp khu văn phòng điều hành và sản xuất trong cùng một khối." }), SolutionsJson = JsonSerializer.Serialize(new[] { "Phân khu rõ ràng với luồng di chuyển một chiều, giảm chéo nhau.", "Thiết kế khu văn phòng 2 tầng tích hợp với view nhìn xuống xưởng." }), HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "8.500 m²" }, new { label = "Khu chức năng", value = "5" }, new { label = "Nhân sự dự kiến", value = "200" }, new { label = "Năm", value = "2024" } }), SortOrder = 1 },
             new() { Slug = "nha-may-lhh", ImageUrl = "/images/projects/project-lhh.jpg", Name = "Nhà Máy Lâm Hiệp Hưng – Tân Toàn Phát", Client = "Lam Hiệp Hưng & Tân Toàn Phát", Location = "Tỉnh Bình Dương", Scale = "250.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2023", Category = "Tổ hợp công nghiệp", Description = "Một trong những dự án quy mô lớn nhất NICON đã thực hiện: tổ hợp nhà máy 250.000 m².", ChallengesJson = JsonSerializer.Serialize(new[] { "Quy hoạch tổng mặt bằng quy mô siêu lớn với nhiều khối công trình.", "Đồng bộ hạ tầng kỹ thuật trên diện tích lớn." }), SolutionsJson = JsonSerializer.Serialize(new[] { "Quy hoạch theo mô-đun, dễ dàng mở rộng và thay đổi công năng.", "Hệ thống đường nội bộ thiết kế cho xe container 40 feet." }), HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Tổng diện tích", value = "250.000 m²" }, new { label = "Khối công trình", value = "12" }, new { label = "Đường nội bộ", value = "5,2 km" }, new { label = "Năm", value = "2023" } }), SortOrder = 2 },
             new() { Slug = "ttdtt-thu-duc", ImageUrl = "/images/projects/project-sports.jpg", Name = "Trung Tâm Thể Dục Thể Thao Thủ Đức", Client = "Thủ Thiêm Group", Location = "Thủ Đức, TP.HCM", Scale = "12.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Công trình công cộng", Description = "Trung tâm thể dục thể thao đa năng phục vụ cộng đồng tại Thủ Đức.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "12.000 m²" }, new { label = "Nhịp mái", value = "45 m" }, new { label = "Sức chứa", value = "2.000 chỗ" }, new { label = "Năm", value = "2024" } }), SortOrder = 3 },
-            new() { Slug = "noi-that-b37", ImageUrl = "/images/projects/project-office.jpg", Name = "Nội Thất – Văn Phòng B37", Client = "Nihome", Location = "Thủ Đức, TP.HCM", Scale = "1.200 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nội thất văn phòng", Description = "Thiết kế nội thất văn phòng hiện đại với phong cách tối giản.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "1.200 m²" }, new { label = "Sức chứa", value = "80 người" }, new { label = "Phòng họp", value = "6" }, new { label = "Năm", value = "2024" } }), SortOrder = 4 },
+            new() { Slug = "noi-that-b37", ImageUrl = "/images/projects/project-office.jpg", Name = "Văn Phòng B37", Client = "Nihome", Location = "Thủ Đức, TP.HCM", Scale = "1.200 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2024", Category = "Nội thất văn phòng", Description = "Thiết kế nội thất văn phòng hiện đại với phong cách tối giản, không gian mở.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "1.200 m²" }, new { label = "Sức chứa", value = "80 người" }, new { label = "Phòng họp", value = "6" }, new { label = "Năm", value = "2024" } }), SortOrder = 4 },
             new() { Slug = "nha-may-trimas", ImageUrl = "/images/projects/project-bma.jpg", Name = "Nhà Máy Trimas Việt Nam", Client = "Rieke Packaging Vietnam Co., Ltd", Location = "VSIP IIA, TP.HCM", Scale = "10.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2022", Category = "Nhà máy công nghiệp", Description = "Dự án trọn gói thiết kế và thi công nhà máy sản xuất bao bì cho Trimas tại VSIP IIA.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "10.000 m²" }, new { label = "Tiêu chuẩn", value = "ISO Class 8" }, new { label = "Thời gian", value = "9 tháng" }, new { label = "Năm", value = "2022" } }), SortOrder = 5 },
-            new() { Slug = "nha-kho-apm", ImageUrl = "/images/projects/project-lhh.jpg", Name = "Nhà Kho APM", Client = "Auto Components Việt Nam", Location = "KCN Việt Nam – Singapore", Scale = "6.500 m²", Scope = "Thiết kế", Status = "completed", Year = "2022", Category = "Nhà kho logistics", Description = "Thiết kế nhà kho logistics cho Auto Components Việt Nam.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "6.500 m²" }, new { label = "Chiều cao", value = "12 m" }, new { label = "Dock loading", value = "6" }, new { label = "Năm", value = "2022" } }), SortOrder = 6 },
+            new() { Slug = "nha-kho-apm", ImageUrl = "/images/projects/project-lhh.jpg", Name = "Nhà Kho APM", Client = "Auto Components Việt Nam", Location = "KCN Việt Nam – Singapore, Bình Hòa, Thuận An, Bình Dương", Scale = "6.500 m²", Scope = "Thiết kế", Status = "completed", Year = "2022", Category = "Nhà kho logistics", Description = "Thiết kế nhà kho logistics cho Auto Components Việt Nam.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "6.500 m²" }, new { label = "Chiều cao", value = "12 m" }, new { label = "Dock loading", value = "6" }, new { label = "Năm", value = "2022" } }), SortOrder = 6 },
             new() { Slug = "nha-may-jojo", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy JOJO", Client = "Phạm – Asset", Location = "KCN Hựu Thạnh, Long An", Scale = "7.800 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy sản xuất JOJO với yêu cầu cao về vệ sinh an toàn thực phẩm.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "7.800 m²" }, new { label = "Tiêu chuẩn", value = "HACCP" }, new { label = "Khu sạch", value = "3" }, new { label = "Năm", value = "2024" } }), SortOrder = 7 },
             new() { Slug = "khach-san-d22", ImageUrl = "/images/projects/project-sports.jpg", Name = "Khách sạn D22", Client = "Nihome", Location = "Thủ Đức, TP.HCM", Scale = "4.500 m²", Scope = "Thiết kế và Thi công", Status = "ongoing", Year = "2024", Category = "Khách sạn", Description = "Khách sạn 4 sao với 80 phòng nghỉ, nhà hàng tầng trệt và khu spa.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "4.500 m²" }, new { label = "Số phòng", value = "80" }, new { label = "Tầng cao", value = "12" }, new { label = "Năm", value = "2024" } }), SortOrder = 8 },
+            // ── Ongoing projects from nicon.vn ──
+            new() { Slug = "nbdc-canteen", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "NBDC Canteen", Client = "Công ty TNHH NBDC VN", Location = "KCN Giang Điền, Đồng Nai", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà xưởng sản xuất", Description = "Thiết kế nhà ăn cho khu công nghiệp NBDC tại KCN Giang Điền.", SortOrder = 9 },
+            new() { Slug = "nbdc-office", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "NBDC Office", Client = "Công ty TNHH NBDC VN", Location = "KCN Giang Điền, Đồng Nai", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Văn phòng", Description = "Thiết kế văn phòng điều hành cho NBDC tại KCN Giang Điền.", SortOrder = 10 },
+            new() { Slug = "nha-may-ttp", ImageUrl = "/images/projects/project-lhh.jpg", Name = "Nhà Máy Tân Toàn Phát", Client = "Lam Hiệp Hưng & Tân Toàn Phát", Location = "Tỉnh Bình Dương", Scale = "250.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Nhà máy thuộc tổ hợp Lâm Hiệp Hưng – Tân Toàn Phát tại Bình Dương.", SortOrder = 11 },
+            new() { Slug = "nha-may-lhh-2", ImageUrl = "/images/projects/project-lhh.jpg", Name = "Nhà Máy Lâm Hiệp Hưng", Client = "Lam Hiệp Hưng", Location = "Tỉnh Bình Dương", Scale = "250.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Nhà máy Lâm Hiệp Hưng tại Bình Dương, mở rộng dây chuyền sản xuất.", SortOrder = 12 },
+            // ── Completed projects from nicon.vn ──
+            new() { Slug = "nha-may-stfood", ImageUrl = "/images/projects/project-bma.jpg", Name = "Nhà Máy S.T.Food Marketing Việt Nam", Client = "S.T.FOOD MARKETING Vietnam Co. Ltd.", Location = "Đường 24, VSIP II-A, Tân Uyên, Bình Dương", Scale = "20.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2022", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất thực phẩm từ chủ đầu tư Thái Lan, thiết kế theo tiêu chuẩn GMP và HACCP.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "20.000 m²" }, new { label = "Tiêu chuẩn", value = "GMP/HACCP" }, new { label = "Thời gian", value = "14 tháng" }, new { label = "Năm", value = "2022" } }), SortOrder = 13 },
+            new() { Slug = "medicare-shop", ImageUrl = "/images/projects/project-office.jpg", Name = "Medicare Shop", Client = "Medicare Company", Location = "G3, Aeon Mall Bình Dương Canary", Scale = "250 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2020", Category = "Thương mại", Description = "Cửa hàng Medicare tại Aeon Mall Bình Dương Canary.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "250 m²" }, new { label = "Vị trí", value = "Aeon Mall" }, new { label = "Năm", value = "2020" } }), SortOrder = 14 },
+            new() { Slug = "nha-may-lhh-completed", ImageUrl = "/images/projects/project-lhh.jpg", Name = "Nhà Máy Lâm Hiệp Hưng (Hoàn thành)", Client = "Lam Hiệp Hưng & Tân Toàn Phát", Location = "Tỉnh Bình Dương", Scale = "18.000 m²", Scope = "Thiết kế", Status = "completed", Year = "2019", Category = "Nhà máy công nghiệp", Description = "Dự án nhà máy Lâm Hiệp Hưng giai đoạn 1 đã hoàn thành.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "18.000 m²" }, new { label = "Năm", value = "2019" } }), SortOrder = 15 },
+            new() { Slug = "sctv-office", ImageUrl = "/images/projects/project-office.jpg", Name = "Văn Phòng SCTV", Client = "Đài Truyền hình Cáp Sài Gòn", Location = "Quận 2, TP.HCM", Scale = "4.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2020", Category = "Văn phòng", Description = "Thiết kế và thi công văn phòng SCTV tại Quận 2, TP.HCM.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "4.000 m²" }, new { label = "Năm", value = "2020" } }), SortOrder = 16 },
+            new() { Slug = "nha-may-hbfuller", ImageUrl = "/images/projects/project-bma.jpg", Name = "Nhà Máy H.B.Fuller", Client = "H.B.Fuller Co., Ltd.", Location = "Tỉnh Bình Dương", Scale = "", Scope = "MEP", Status = "completed", Year = "2019", Category = "Nhà máy công nghiệp", Description = "Thi công hệ thống MEP cho nhà máy H.B.Fuller tại Bình Dương.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Phạm vi", value = "MEP" }, new { label = "Năm", value = "2019" } }), SortOrder = 17 },
+            new() { Slug = "red-bull-expansion", ImageUrl = "/images/projects/project-bma.jpg", Name = "Dự Án Mở Rộng Red Bull", Client = "Red Bull (Việt Nam) Co., Ltd", Location = "Xa lộ Hà Nội, Bình Thắng, Dĩ An, Bình Dương", Scale = "2.000 m²", Scope = "Thiết kế", Status = "completed", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế mở rộng nhà máy Red Bull tại Bình Dương, giữ nguyên bản sắc thương hiệu.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "2.000 m²" }, new { label = "Năm", value = "2024" } }), SortOrder = 18 },
+            new() { Slug = "nha-may-great-lotus", ImageUrl = "/images/projects/project-bma.jpg", Name = "Nhà Máy Great Lotus Việt Nam", Client = "Great Lotus Manufacturing Vietnam Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "31.187 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2019", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy Great Lotus với quy mô hơn 31.000 m².", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "31.187 m²" }, new { label = "Năm", value = "2019" } }), SortOrder = 19 },
+            new() { Slug = "nha-may-advanced-casting", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy Advanced Casting Asia", Client = "Advanced Casting Asia Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "15.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất Advanced Casting Asia tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "15.000 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 20 },
+            new() { Slug = "sctv-studio", ImageUrl = "/images/projects/project-office.jpg", Name = "SCTV Studio & Văn Phòng", Client = "Đài Truyền hình Cáp Sài Gòn", Location = "Quận 2, TP.HCM", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Studio", Description = "Trường quay truyền hình quy mô lớn nhất Việt Nam tại thời điểm xây dựng.", SortOrder = 21 },
+            new() { Slug = "nha-may-bkl", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy BKL", Client = "BKL International Ltd., Co", Location = "KCN Thịnh Phát, Bến Lức, Long An", Scale = "5.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy BKL tại KCN Thịnh Phát.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "5.000 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 22 },
+            new() { Slug = "nha-may-rebisco", ImageUrl = "/images/projects/project-bma.jpg", Name = "Nhà Máy Rebisco", Client = "Republic Biscuit Corporation", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "20.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2017", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất bánh kẹo Rebisco (Philippines) tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "20.000 m²" }, new { label = "Năm", value = "2017" } }), SortOrder = 23 },
+            new() { Slug = "nha-may-nestle", ImageUrl = "/images/projects/project-bma.jpg", Name = "Nhà Máy & Văn Phòng Nestlé Bình An", Client = "Nestlé Việt Nam", Location = "KCN Biên Hòa II, Đồng Nai", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2015", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy và văn phòng Nestlé Bình An.", SortOrder = 24 },
+            new() { Slug = "nha-may-ampharco", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy Ampharco U.S.A", Client = "Ampharco U.S.A", Location = "KCN Nhơn Trạch 3, Đồng Nai", Scale = "", Scope = "Thi công", Status = "completed", Year = "2016", Category = "Nhà máy dược phẩm", Description = "Thi công nhà máy dược phẩm Ampharco U.S.A tại Nhơn Trạch.", SortOrder = 25 },
+            new() { Slug = "konimiyaki-restaurant", ImageUrl = "/images/projects/project-office.jpg", Name = "Nhà Hàng Konimiyaki", Client = "Konimiyaki Restaurant", Location = "Quận 1, TP.HCM", Scale = "400 m²", Scope = "Thiết kế", Status = "completed", Year = "2018", Category = "Nhà hàng", Description = "Thiết kế nhà hàng Konimiyaki tại Quận 1, TP.HCM.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "400 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 26 },
+            new() { Slug = "nha-may-scon", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy SCON", Client = "SCON Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "8.337 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy SCON tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "8.337 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 27 },
+            new() { Slug = "nha-may-clotex", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy Clotex Labels Việt Nam", Client = "Clotex Labels (VN) Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "8.565 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Nhà máy nhãn mác Clotex Labels Vietnam tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "8.565 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 28 },
+            new() { Slug = "nha-may-amiba", ImageUrl = "/images/projects/project-bma.jpg", Name = "Nhà Máy Amiba", Client = "Amiba Vietnam Company Limited", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "20.000 m²", Scope = "Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Thi công nhà máy Amiba với diện tích 2 hecta tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "20.000 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 29 },
+            new() { Slug = "nha-may-akati-wood", ImageUrl = "/images/projects/project-lhh.jpg", Name = "Nhà Máy Akati Wood", Client = "Akati Dominant (Malaysia)", Location = "Bình Dương", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2016", Category = "Nhà máy công nghiệp", Description = "Nhà máy gỗ Akati Wood, chi nhánh của Akati Dominant từ Malaysia.", SortOrder = 30 },
+            new() { Slug = "nha-may-japan-plus", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy Japan Plus", Client = "Japan Plus (Nhật Bản)", Location = "KCN Đông Nam Củ Chi", Scale = "", Scope = "Thi công", Status = "completed", Year = "2016", Category = "Nhà máy công nghiệp", Description = "Nhà máy Japan Plus sản xuất hộp PE tại KCN Đông Nam Củ Chi.", SortOrder = 31 },
+            new() { Slug = "duoc-pham-trung-uong", ImageUrl = "/images/projects/project-office.jpg", Name = "Dược Phẩm Trung Ương TP.HCM", Client = "Công ty TNHH Dược Phẩm Trung Ương 1", Location = "TP.HCM", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "2020", Category = "Nhà máy dược phẩm", Description = "Thiết kế nhà máy dược phẩm Trung Ương tại TP.HCM.", SortOrder = 32 },
+            new() { Slug = "kumgang-office", ImageUrl = "/images/projects/project-office.jpg", Name = "Văn Phòng Kumgang", Client = "KUMGANG VINA CO., LTD", Location = "KCN Giang Điền, Trảng Bom, Đồng Nai", Scale = "180 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Văn phòng", Description = "Thiết kế và thi công văn phòng Kumgang Vina.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "180 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 33 },
+            new() { Slug = "nha-may-vda-hcm", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy VDA-HCM", Client = "VDA-HCM", Location = "KCN Cầu Tràm, Cần Đước, Long An", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2017", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy VDA-HCM tại KCN Cầu Tràm.", SortOrder = 34 },
+            new() { Slug = "thu-thiem-dragon", ImageUrl = "/images/projects/project-sports.jpg", Name = "Thu Thiêm Dragon Show Flat", Client = "Thu Thiêm Group", Location = "Quận 2, TP.HCM", Scale = "", Scope = "Thi công", Status = "completed", Year = "2015", Category = "Bất động sản", Description = "Thi công căn hộ mẫu Thu Thiêm Dragon tại Quận 2.", SortOrder = 35 },
+            new() { Slug = "nha-may-nam-ha-viet", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy Nam Hà Việt", Client = "Nam Hà Việt Co., Ltd.", Location = "KCN Rạch Bắp, Bến Cát, Bình Dương", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "2020", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất que hàn Nam Hà Việt.", SortOrder = 36 },
+            new() { Slug = "nha-may-yc-tec", ImageUrl = "/images/projects/project-nbdc.jpg", Name = "Nhà Máy YC TEC", Client = "YC TEC Group", Location = "KCN Sóng Thần II, Dĩ An, Bình Dương", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "2020", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy YC TEC tại KCN Sóng Thần II.", SortOrder = 37 },
         };
 
         db.Projects.AddRange(items);
@@ -316,6 +496,75 @@ public static class ContentSeeder
         db.SaveChanges();
     }
 
+    // ─── Slideshow ──────────────────────────────────────────────────
+
+    private static void SeedSlideshow(AppDbContext db)
+    {
+        if (db.SlideshowItems.Any()) return;
+
+        var items = new SlideshowItem[]
+        {
+            new()
+            {
+                Slug = "hero-factory",
+                ImageUrl = "/images/projects/project-bma.jpg",
+                Title = "Tổng thầu Thiết kế & Thi công Nhà máy",
+                Subtitle = "Hơn 18 năm kinh nghiệm — 150+ dự án công nghiệp",
+                LinkUrl = "/projects",
+                LinkText = "Xem dự án",
+                IsActive = true,
+                SortOrder = 0,
+            },
+            new()
+            {
+                Slug = "hero-design-build",
+                ImageUrl = "/images/projects/project-nbdc.jpg",
+                Title = "Design & Build — Giải pháp trọn gói",
+                Subtitle = "Một đầu mối — toàn bộ vòng đời dự án từ thiết kế đến bàn giao",
+                LinkUrl = "/services/design-and-build",
+                LinkText = "Tìm hiểu thêm",
+                IsActive = true,
+                SortOrder = 1,
+            },
+            new()
+            {
+                Slug = "hero-industrial",
+                ImageUrl = "/images/projects/project-lhh.jpg",
+                Title = "Nhà máy Công nghiệp Quy mô lớn",
+                Subtitle = "Tổ hợp 250.000 m² — Tiêu chuẩn Nhật Bản cùng Mori Group",
+                LinkUrl = "/projects/nha-may-lhh",
+                LinkText = "Xem chi tiết",
+                IsActive = true,
+                SortOrder = 2,
+            },
+            new()
+            {
+                Slug = "hero-sports-center",
+                ImageUrl = "/images/projects/project-sports.jpg",
+                Title = "Công trình Thể dục Thể thao",
+                Subtitle = "Thiết kế không gian thể thao đa năng phục vụ cộng đồng",
+                LinkUrl = "/projects/ttdtt-thu-duc",
+                LinkText = "Khám phá",
+                IsActive = true,
+                SortOrder = 3,
+            },
+            new()
+            {
+                Slug = "hero-office",
+                ImageUrl = "/images/projects/project-office.jpg",
+                Title = "Nội thất Văn phòng Hiện đại",
+                Subtitle = "Phong cách tối giản — Không gian mở — Tiêu chuẩn quốc tế",
+                LinkUrl = "/projects/noi-that-b37",
+                LinkText = "Xem dự án",
+                IsActive = true,
+                SortOrder = 4,
+            },
+        };
+
+        db.SlideshowItems.AddRange(items);
+        db.SaveChanges();
+    }
+
     // ─── Entity Translations (en/zh/ja for Activities & News) ───────
 
     private static void SeedEntityTranslations(AppDbContext db)
@@ -394,6 +643,110 @@ public static class ContentSeeder
         Add(EntityTypes.News, 2, "Title", "en", "Building the concept for a design project");
         Add(EntityTypes.News, 2, "Excerpt", "en", "Creating the concept for a residential project is the first and crucial step that shapes ideas and harmonizes aesthetics, function and real needs.");
         Add(EntityTypes.News, 2, "Content", "en", JsonSerializer.Serialize(new[] { "Design concept is the foundation guiding the entire construction process. A great concept reflects the personality and story of the home.", "NICON builds concepts on three pillars: client research, trend reference and material experimentation. Every project gets a 3D moodboard before detailed development.", "This process ensures clients see the final outcome before construction, avoiding costly revisions." }));
+
+        // --- Activity 7: scholarships-awarding-2021 ---
+        Add(EntityTypes.Activity, 7, "Title", "en", "Scholarships awarded to outstanding students");
+        Add(EntityTypes.Activity, 7, "Excerpt", "en", "In late 2021, NICON proudly awarded 35 scholarships to students of Phu My High School No. 1, Binh Dinh.");
+
+        // --- Activity 8: grand-opening-hbfuller ---
+        Add(EntityTypes.Activity, 8, "Title", "en", "Grand Opening of H.B.Fuller Vietnam Factory");
+        Add(EntityTypes.Activity, 8, "Excerpt", "en", "The H.B.Fuller Vietnam factory at VSIP II-A IP, Tan Uyen, Binh Duong was officially inaugurated.");
+
+        // --- Activity 9: great-lotus-steel-structure ---
+        Add(EntityTypes.Activity, 9, "Title", "en", "NICON completes steel structure for Great Lotus Vietnam Factory");
+        Add(EntityTypes.Activity, 9, "Excerpt", "en", "On May 10, 2019, NICON completed the steel structure for the 31,000 m² Great Lotus Vietnam Factory.");
+
+        // --- Activity 10: nicon-top10-vietnam-brand-2018 ---
+        Add(EntityTypes.Activity, 10, "Title", "en", "Japanese media: NICON in Top 10 Vietnam Leading Brands 2018");
+        Add(EntityTypes.Activity, 10, "Excerpt", "en", "NICON was honored as a Top 10 Vietnam Leading Brand 2018, featured by Japanese media.");
+
+        // --- Activity 11: nicon-mori-strategic-cooperation ---
+        Add(EntityTypes.Activity, 11, "Title", "en", "NICON – Mori: Strategic Cooperation");
+        Add(EntityTypes.Activity, 11, "Excerpt", "en", "Mori Construction from Japan expanded international cooperation with NICON.");
+
+        // --- Activity 12: training-improvement-2018 ---
+        Add(EntityTypes.Activity, 12, "Title", "en", "Training for improvement — Quality, safety and innovation");
+        Add(EntityTypes.Activity, 12, "Excerpt", "en", "Training and education are regular activities at NICON to enhance quality management, schedule control and site safety.");
+
+        // --- Activity 13: nicon-annual-trip-2018 ---
+        Add(EntityTypes.Activity, 13, "Title", "en", "NICON Annual Trip & Team Building");
+        Add(EntityTypes.Activity, 13, "Excerpt", "en", "The annual trip gives all NICON members a wonderful time and great experiences after a year of hard work.");
+
+        // --- Activity 14: nha-xuong-vda-hcm ---
+        Add(EntityTypes.Activity, 14, "Title", "en", "Groundbreaking of VDA-HCM new factory");
+        Add(EntityTypes.Activity, 14, "Excerpt", "en", "On December 23, 2016, NICON and VDA-HCM broke ground for the new factory at Cau Tram IP, Long An.");
+
+        // --- Activity 15: nha-may-amiba-db ---
+        Add(EntityTypes.Activity, 15, "Title", "en", "AMIBA Factory Project — Design & Build");
+        Add(EntityTypes.Activity, 15, "Excerpt", "en", "On December 29, 2017, NICON and AMIBA held the groundbreaking for a 2-hectare factory at VSIP II-A, Binh Duong.");
+
+        // --- Activity 16: ky-ket-nicon-mori ---
+        Add(EntityTypes.Activity, 16, "Title", "en", "NICON & Mori strategic partnership signing");
+        Add(EntityTypes.Activity, 16, "Excerpt", "en", "On June 19, 2016, CEO Vo Tri Nguyen (NICON) and CEO Yoshihiro Mori (Mori Industrial Group) signed a strategic partnership agreement.");
+
+        // --- News 7-20: English translations for new news articles ---
+        Add(EntityTypes.News, 7, "Title", "en", "NIHOME Trends — Interior Design Trends 2024");
+        Add(EntityTypes.News, 7, "Excerpt", "en", "Discover the top interior design trends of 2024 that NIHOME is applying in service apartment projects.");
+
+        Add(EntityTypes.News, 8, "Title", "en", "5 Factories with the Most Unique Architecture in the World");
+        Add(EntityTypes.News, 8, "Excerpt", "en", "Counting down 5 industrial factories with impressive, breakthrough architecture that inspires industrial construction.");
+
+        Add(EntityTypes.News, 9, "Title", "en", "Industrial Factory Construction Process from A to Z");
+        Add(EntityTypes.News, 9, "Excerpt", "en", "A comprehensive guide to the industrial factory construction process from project initiation to operational handover.");
+
+        Add(EntityTypes.News, 10, "Title", "en", "Aesthetic Factors in Industrial Design");
+        Add(EntityTypes.News, 10, "Excerpt", "en", "Aesthetics are not just for civil works — factories also need beautiful design to enhance brand value.");
+
+        Add(EntityTypes.News, 11, "Title", "en", "Healing in Architecture — Healing Spaces");
+        Add(EntityTypes.News, 11, "Excerpt", "en", "The healing architecture trend is being widely applied in modern architecture design.");
+
+        Add(EntityTypes.News, 12, "Title", "en", "Latest Fire Safety Standards 2024 for Industrial Factories");
+        Add(EntityTypes.News, 12, "Excerpt", "en", "Updated fire prevention and fighting regulations and standards for 2024 applicable to factories and workshops.");
+
+        Add(EntityTypes.News, 13, "Title", "en", "Beautiful Home Trends 2025 — Minimalist and Sustainable");
+        Add(EntityTypes.News, 13, "Excerpt", "en", "The standout residential design trends expected to dominate 2025: minimalist, sustainable and smart.");
+
+        Add(EntityTypes.News, 14, "Title", "en", "General Contractor for Food Factories — GMP/HACCP Standards");
+        Add(EntityTypes.News, 14, "Excerpt", "en", "NICON shares experience as general contractor for food factory design and construction meeting international standards.");
+
+        Add(EntityTypes.News, 15, "Title", "en", "S.T.Food & Industrial Design — Case Study");
+        Add(EntityTypes.News, 15, "Excerpt", "en", "Detailed analysis of the S.T.Food Marketing Vietnam factory project — from concept to handover.");
+
+        Add(EntityTypes.News, 16, "Title", "en", "Architectural Design Expressing Brand Spirit");
+        Add(EntityTypes.News, 16, "Excerpt", "en", "Factory architecture is not just a place of production — it is the face of the corporate brand.");
+
+        Add(EntityTypes.News, 17, "Title", "en", "Open Space Trend in Office and Factory Design");
+        Add(EntityTypes.News, 17, "Excerpt", "en", "Open space is becoming the dominant trend in modern office and factory design.");
+
+        Add(EntityTypes.News, 18, "Title", "en", "The Success Journey of a Food Factory");
+        Add(EntityTypes.News, 18, "Excerpt", "en", "Sharing the journey from idea to successful operation of a food factory in Vietnam.");
+
+        Add(EntityTypes.News, 19, "Title", "en", "APM Warehouse Handover — D&B Project Completed");
+        Add(EntityTypes.News, 19, "Excerpt", "en", "NICON completed the handover of APM warehouse to Auto Components Vietnam at VSIP IP, Binh Duong.");
+
+        Add(EntityTypes.News, 20, "Title", "en", "NICON and Vietnam's Steel Structure Industry");
+        Add(EntityTypes.News, 20, "Excerpt", "en", "NICON shares insights on the role of steel structures in modern industrial construction in Vietnam.");
+
+        // --- Slideshow items ---
+        Add(EntityTypes.Slideshow, 1, "Title", "en", "General Contractor for Factory Design & Build");
+        Add(EntityTypes.Slideshow, 1, "Subtitle", "en", "Over 18 years of experience — 150+ industrial projects");
+        Add(EntityTypes.Slideshow, 1, "LinkText", "en", "View Projects");
+
+        Add(EntityTypes.Slideshow, 2, "Title", "en", "Design & Build — Turnkey Solutions");
+        Add(EntityTypes.Slideshow, 2, "Subtitle", "en", "One point of contact — full project lifecycle from design to handover");
+        Add(EntityTypes.Slideshow, 2, "LinkText", "en", "Learn More");
+
+        Add(EntityTypes.Slideshow, 3, "Title", "en", "Large-Scale Industrial Factories");
+        Add(EntityTypes.Slideshow, 3, "Subtitle", "en", "250,000 m² complex — Japanese standards with Mori Group");
+        Add(EntityTypes.Slideshow, 3, "LinkText", "en", "View Details");
+
+        Add(EntityTypes.Slideshow, 4, "Title", "en", "Sports & Recreation Facilities");
+        Add(EntityTypes.Slideshow, 4, "Subtitle", "en", "Multi-purpose sports facility design serving the community");
+        Add(EntityTypes.Slideshow, 4, "LinkText", "en", "Explore");
+
+        Add(EntityTypes.Slideshow, 5, "Title", "en", "Modern Office Interiors");
+        Add(EntityTypes.Slideshow, 5, "Subtitle", "en", "Minimalist style — Open space — International standards");
+        Add(EntityTypes.Slideshow, 5, "LinkText", "en", "View Project");
 
         db.EntityTranslations.AddRange(translations);
         db.SaveChanges();

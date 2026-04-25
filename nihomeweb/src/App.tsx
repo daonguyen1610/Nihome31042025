@@ -56,16 +56,6 @@ import MessageQueue from "./pages/admin/system/MessageQueue.tsx";
 import ScheduleTasks from "./pages/admin/system/ScheduleTasks.tsx";
 import SeNamesPage from "./pages/admin/system/SeNames.tsx";
 import HelpPage from "./pages/admin/Help.tsx";
-import {
-  generalProcesses,
-  ptcskhProcesses,
-  dtProcesses,
-  tkProcesses,
-  tcProcesses,
-  ttqtctProcesses,
-  qlnsProcesses,
-  mhdgncuProcesses,
-} from "./data/processes.ts";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -137,35 +127,35 @@ const App = () => (
             <Route path="/admin/system/se-names" element={<SeNamesPage />} />
             <Route
               path="/admin/processes/general"
-              element={<ProcessList storageKey="nicon_admin_proc_general_v1" titleKey="proc.general" seed={generalProcesses} />}
+              element={<ProcessList groupKey="general" titleKey="proc.general" />}
             />
             <Route
               path="/admin/processes/ptcskh"
-              element={<ProcessList storageKey="nicon_admin_proc_ptcskh_v1" titleKey="proc.ptcskh" seed={ptcskhProcesses} />}
+              element={<ProcessList groupKey="ptcskh" titleKey="proc.ptcskh" />}
             />
             <Route
               path="/admin/processes/dt"
-              element={<ProcessList storageKey="nicon_admin_proc_dt_v1" titleKey="proc.dt" seed={dtProcesses} />}
+              element={<ProcessList groupKey="dt" titleKey="proc.dt" />}
             />
             <Route
               path="/admin/processes/tk"
-              element={<ProcessList storageKey="nicon_admin_proc_tk_v1" titleKey="proc.tk" seed={tkProcesses} />}
+              element={<ProcessList groupKey="tk" titleKey="proc.tk" />}
             />
             <Route
               path="/admin/processes/tc"
-              element={<ProcessList storageKey="nicon_admin_proc_tc_v1" titleKey="proc.tc" seed={tcProcesses} />}
+              element={<ProcessList groupKey="tc" titleKey="proc.tc" />}
             />
             <Route
               path="/admin/processes/ttqtct"
-              element={<ProcessList storageKey="nicon_admin_proc_ttqtct_v1" titleKey="proc.ttqtct" seed={ttqtctProcesses} />}
+              element={<ProcessList groupKey="ttqtct" titleKey="proc.ttqtct" />}
             />
             <Route
               path="/admin/processes/qlns"
-              element={<ProcessList storageKey="nicon_admin_proc_qlns_v1" titleKey="proc.qlns" seed={qlnsProcesses} />}
+              element={<ProcessList groupKey="qlns" titleKey="proc.qlns" />}
             />
             <Route
               path="/admin/processes/mhdgncu"
-              element={<ProcessList storageKey="nicon_admin_proc_mhdgncu_v1" titleKey="proc.mhdgncu" seed={mhdgncuProcesses} />}
+              element={<ProcessList groupKey="mhdgncu" titleKey="proc.mhdgncu" />}
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
