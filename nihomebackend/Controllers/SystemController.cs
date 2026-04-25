@@ -74,6 +74,7 @@ public class SystemController(
 
     private void DeleteManagedUpload(string? imageUrl, string? currentFileName = null)
     {
+        imageUrl = NormalizeManagedUploadUrl(imageUrl);
         if (string.IsNullOrWhiteSpace(imageUrl) ||
             !imageUrl.StartsWith(ManagedImagePrefix, StringComparison.OrdinalIgnoreCase))
         {
@@ -92,5 +93,26 @@ public class SystemController(
         {
             System.IO.File.Delete(fullPath);
         }
+    }
+
+    private static string? NormalizeManagedUploadUrl(string? imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return imageUrl;
+        }
+
+        if (imageUrl.StartsWith(ManagedImagePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return imageUrl;
+        }
+
+        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var uri) &&
+            uri.AbsolutePath.StartsWith(ManagedImagePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return uri.AbsolutePath;
+        }
+
+        return imageUrl;
     }
 }

@@ -46,11 +46,14 @@ public class ActivityService(
 
     public async Task<ActivityResponse> CreateAsync(UpsertActivityRequest req)
     {
+        await EnsureCategoryExistsAsync(req.Category);
+        var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
+
         var entity = new Activity
         {
             Slug = req.Slug,
             Date = req.Date,
-            ImageUrl = req.ImageUrl,
+            ImageUrl = normalizedImageUrl ?? string.Empty,
             Category = req.Category,
             Author = req.Author,
             Title = req.Title,
@@ -73,11 +76,14 @@ public class ActivityService(
             return null;
         }
 
-        var previousImageUrl = entity.ImageUrl;
+        var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
+        var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
+
+        await EnsureCategoryExistsAsync(req.Category);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;
-        entity.ImageUrl = req.ImageUrl;
+        entity.ImageUrl = nextImageUrl ?? string.Empty;
         entity.Category = req.Category;
         entity.Author = req.Author;
         entity.Title = req.Title;
@@ -127,4 +133,37 @@ public class ActivityService(
             ? JsonSerializer.Deserialize<string[]>(c) ?? []
             : JsonSerializer.Deserialize<string[]>(a.ContentJson) ?? [],
     };
+
+    private async Task EnsureCategoryExistsAsync(string categoryName)
+    {
+        var normalizedName = (categoryName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalizedName))
+        {
+            return;
+        }
+
+        var exists = await db.ActivityCategories
+            .AsNoTracking()
+            .AnyAsync(c => c.Name.ToLower() == normalizedName.ToLower());
+
+        if (exists)
+        {
+            return;
+        }
+
+        var maxSortOrder = await db.ActivityCategories
+            .AsNoTracking()
+            .Select(c => (int?)c.SortOrder)
+            .MaxAsync() ?? 0;
+
+        db.ActivityCategories.Add(new ActivityCategory
+        {
+            Name = normalizedName,
+            IsActive = true,
+            SortOrder = maxSortOrder + 1,
+        });
+
+        await db.SaveChangesAsync();
+        Logger.LogInformation("Auto-created activity category {CategoryName} from activity payload", normalizedName);
+    }
 }

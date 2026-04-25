@@ -7,6 +7,14 @@ import { useActivity } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import { PageLoading, PageError } from "@/components/PageState";
 
+const ContentBlock = ({ value }: { value: string }) => {
+  if (!value.trim()) {
+    return <div className="h-4" aria-hidden="true" />;
+  }
+
+  return <p className="whitespace-pre-line">{value}</p>;
+};
+
 const PostView = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -87,7 +95,7 @@ const PostView = () => {
           <div className="admin-card p-6">
             <p className="text-sm font-semibold mb-4" style={{ color: "hsl(var(--admin-muted))" }}>{post.excerpt}</p>
             <div className="space-y-4 text-sm leading-relaxed" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
-              {post.content.map((p, i) => <p key={i}>{p}</p>)}
+              {post.content.map((p, i) => <ContentBlock key={i} value={p} />)}
             </div>
           </div>
         </div>

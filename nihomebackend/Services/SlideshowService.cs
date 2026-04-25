@@ -48,10 +48,11 @@ public class SlideshowService(
 
     public async Task<SlideshowResponse> CreateAsync(UpsertSlideshowRequest req)
     {
+        var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var entity = new SlideshowItem
         {
             Slug = req.Slug,
-            ImageUrl = req.ImageUrl,
+            ImageUrl = normalizedImageUrl ?? string.Empty,
             Title = req.Title,
             Subtitle = req.Subtitle,
             LinkUrl = req.LinkUrl,
@@ -74,10 +75,11 @@ public class SlideshowService(
             return null;
         }
 
-        var previousImageUrl = entity.ImageUrl;
+        var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
+        var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
 
         entity.Slug = req.Slug;
-        entity.ImageUrl = req.ImageUrl;
+        entity.ImageUrl = nextImageUrl ?? string.Empty;
         entity.Title = req.Title;
         entity.Subtitle = req.Subtitle;
         entity.LinkUrl = req.LinkUrl;

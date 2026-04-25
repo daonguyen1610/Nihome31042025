@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify } from "@/services/adminApi";
 import type { UpsertActivityRequest } from "@/services/adminApi";
-import { useActivity } from "@/hooks/useContentApi";
+import { useActivity, useActivityCategories } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 
 interface FormData {
@@ -21,10 +21,31 @@ interface FormData {
   author: string;
 }
 
+const toInputDate = (value: string) => {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const match = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!match) return new Date().toISOString().slice(0, 10);
+
+  const day = match[1].padStart(2, "0");
+  const month = match[2].padStart(2, "0");
+  const year = match[3];
+  return `${year}-${month}-${day}`;
+};
+
+const toApiDate = (value: string) => {
+  const parts = value.split("-");
+  if (parts.length !== 3) return value;
+  const [year, month, day] = parts;
+  return `${day}.${month}.${year}`;
+};
+
+const toContentLines = (value: string) => value.replace(/\r\n/g, "\n").split("\n");
+
 const empty: FormData = {
   id: 0,
   slug: "",
-  date: new Date().toLocaleDateString("vi-VN").split("/").join("."),
+  date: new Date().toISOString().slice(0, 10),
   imageUrl: "",
   category: "",
   title: "",
@@ -39,17 +60,20 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { data: existing, loading, error, refetch } = useActivity(mode === "edit" ? (slug ?? "") : "");
+  const { data: categories } = useActivityCategories();
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
 
   // Sync fetched data into form state once
   if (mode === "edit" && existing && !initialized) {
     setData({
       id: existing.id,
       slug: existing.slug,
-      date: existing.date,
+      date: toInputDate(existing.date),
       imageUrl: existing.imageUrl,
       category: existing.category,
       title: existing.title,
@@ -63,21 +87,31 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const categoryOptions = Array.from(
+    new Set((categories ?? []).map((item) => item.name).filter(Boolean)),
+  ).sort((a, b) => a.localeCompare(b, "vi"));
+
+  useEffect(() => {
+    if (!pendingImageFile) {
+      setPendingImagePreview(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(pendingImageFile);
+    setPendingImagePreview(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [pendingImageFile]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingImage(true);
-    try {
-      const res = await adminApi.uploadImage(file, data.imageUrl);
-      update("imageUrl", res.data.imageUrl);
-      toast({ title: t("form.updated"), description: res.data.imageUrl });
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
-    } finally {
-      e.target.value = "";
-      setUploadingImage(false);
-    }
+    setPendingImageFile(file);
+    e.target.value = "";
+    toast({ title: t("form.updated"), description: file.name });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,18 +120,30 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
       toast({ title: t("form.required"), description: t("posts.field.title"), variant: "destructive" });
       return;
     }
-    const payload: UpsertActivityRequest = {
+    let imageUrl = data.imageUrl || "/placeholder.svg";
+
+    setSubmitting(true);
+    try {
+      if (pendingImageFile) {
+        setUploadingImage(true);
+        const upload = await adminApi.uploadImage(
+          pendingImageFile,
+          mode === "edit" ? data.imageUrl : undefined,
+        );
+        imageUrl = upload.data.imageUrl;
+      }
+
+      const payload: UpsertActivityRequest = {
       slug: data.slug || slugify(data.title),
-      date: data.date,
-      imageUrl: data.imageUrl || "/placeholder.svg",
+      date: toApiDate(data.date),
+      imageUrl,
       category: data.category,
       author: data.author || undefined,
       title: data.title,
       excerpt: data.excerpt,
       content: data.content,
-    };
-    setSubmitting(true);
-    try {
+      };
+
       if (mode === "create") {
         await adminApi.createActivity(payload);
       } else {
@@ -108,6 +154,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
+      setUploadingImage(false);
       setSubmitting(false);
     }
   };
@@ -146,13 +193,21 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
               </Field>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Field label={t("posts.field.category")}>
-                  <input className="admin-input" value={data.category} onChange={(e) => update("category", e.target.value)} />
+                  <select className="admin-input" value={data.category} onChange={(e) => update("category", e.target.value)}>
+                    <option value="">-- Chọn danh mục --</option>
+                    {[
+                      ...categoryOptions,
+                      ...(data.category && !categoryOptions.includes(data.category) ? [data.category] : []),
+                    ].map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label={t("posts.field.author")}>
                   <input className="admin-input" value={data.author ?? ""} onChange={(e) => update("author", e.target.value)} />
                 </Field>
                 <Field label={t("posts.field.date")}>
-                  <input className="admin-input" value={data.date} onChange={(e) => update("date", e.target.value)} placeholder="DD.MM.YYYY" />
+                  <input type="date" className="admin-input" value={data.date} onChange={(e) => update("date", e.target.value)} />
                 </Field>
               </div>
             </div>
@@ -164,7 +219,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
               <textarea
                 className="admin-input min-h-64"
                 value={data.content.join("\n")}
-                onChange={(e) => update("content", e.target.value.split("\n").filter(Boolean))}
+                onChange={(e) => update("content", toContentLines(e.target.value))}
               />
             </Field>
           </div>
@@ -179,9 +234,9 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
                 <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} />
               </div>
             </Field>
-            {data.imageUrl && (
+            {(pendingImagePreview || data.imageUrl) && (
               <div className="mt-4 aspect-[16/10] rounded-xl overflow-hidden bg-muted">
-                <img src={data.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
+                <img src={pendingImagePreview ?? data.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
               </div>
             )}
           </div>

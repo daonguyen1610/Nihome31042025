@@ -1,64 +1,119 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { adminApi, type ActivityCategoryResponse } from "@/services/adminApi";
 
-type Category = { id: string; name: string; published: boolean; order: number };
-
-const seed: Category[] = [
-  { id: "c1", name: "Tin tức", published: true, order: 1 },
-  { id: "c2", name: "Dự án", published: true, order: 2 },
-  { id: "c3", name: "Hoạt động", published: true, order: 3 },
-  { id: "c4", name: "Tuyển dụng", published: true, order: 4 },
-  { id: "c5", name: "Chứng nhận", published: false, order: 5 },
-];
-
-const KEY = "nicon_admin_categories_v1";
-const load = (): Category[] => {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Category[]) : seed;
-  } catch {
-    return seed;
-  }
+type CategoryFormData = {
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
 };
-const save = (items: Category[]) => localStorage.setItem(KEY, JSON.stringify(items));
+
+const emptyForm: CategoryFormData = {
+  name: "",
+  isActive: true,
+  sortOrder: 0,
+};
 
 const Categories = () => {
   const { t } = useI18n();
-  const [items, setItems] = useState<Category[]>(load);
+  const { toast } = useToast();
+  const [items, setItems] = useState<ActivityCategoryResponse[]>([]);
   const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState<CategoryFormData>(emptyForm);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const result = await adminApi.getActivityCategories(true);
+      setItems(result.data);
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const filtered = useMemo(
-    () => items.filter((i) => i.name.toLowerCase().includes(q.toLowerCase())),
+    () => items.filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase())),
     [items, q],
   );
 
-  const add = () => {
-    const name = window.prompt(t("cat.name"));
-    if (!name?.trim()) return;
-    const next = [...items, { id: `c${Date.now()}`, name: name.trim(), published: true, order: items.length + 1 }];
-    setItems(next);
-    save(next);
-    toast.success(t("form.created"));
+  const startCreate = () => {
+    setEditingId(null);
+    setForm({ ...emptyForm, sortOrder: items.length + 1 });
   };
 
-  const edit = (c: Category) => {
-    const name = window.prompt(t("cat.name"), c.name);
-    if (!name?.trim()) return;
-    const next = items.map((i) => (i.id === c.id ? { ...i, name: name.trim() } : i));
-    setItems(next);
-    save(next);
-    toast.success(t("form.updated"));
+  const startEdit = (item: ActivityCategoryResponse) => {
+    setEditingId(item.id);
+    setForm({
+      name: item.name,
+      isActive: item.isActive,
+      sortOrder: item.sortOrder,
+    });
   };
 
-  const remove = (c: Category) => {
+  const submitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form.name.trim()) {
+      toast({ title: t("form.required"), description: t("cat.name"), variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        name: form.name.trim(),
+        isActive: form.isActive,
+        sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
+      };
+
+      if (editingId == null) {
+        await adminApi.createActivityCategory(payload);
+        toast({ title: t("form.created") });
+      } else {
+        await adminApi.updateActivityCategory(editingId, payload);
+        toast({ title: t("form.updated") });
+      }
+
+      setEditingId(null);
+      setForm(emptyForm);
+      await loadData();
+    } catch (error: any) {
+      toast({
+        title: t("common.error"),
+        description: error?.response?.data?.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const remove = async (item: ActivityCategoryResponse) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
-    const next = items.filter((i) => i.id !== c.id);
-    setItems(next);
-    save(next);
-    toast.success(t("form.deleted"));
+
+    try {
+      await adminApi.deleteActivityCategory(item.id);
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      toast({ title: t("form.deleted") });
+    } catch (error: any) {
+      toast({
+        title: t("common.error"),
+        description: error?.response?.data?.message,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -67,15 +122,57 @@ const Categories = () => {
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("cat.title")}</h1>
           <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {filtered.length} / {items.length}
+            {loading ? "..." : `${filtered.length} / ${items.length}`}
           </p>
         </div>
-        <button onClick={add} className="admin-btn-primary inline-flex items-center gap-2">
+        <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
           <Plus className="w-4 h-4" /> {t("cat.add")}
         </button>
       </div>
 
       <div className="admin-card p-5 mb-5">
+        <form onSubmit={submitForm} className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">
+          <input
+            value={form.name}
+            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder={t("cat.name")}
+            className="admin-input"
+            required
+          />
+          <input
+            type="number"
+            value={form.sortOrder}
+            onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
+            placeholder={t("cat.order")}
+            className="admin-input"
+          />
+          <label className="inline-flex items-center gap-2 px-3 rounded-xl border" style={{ borderColor: "hsl(var(--admin-border))" }}>
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+            />
+            <span className="text-sm font-semibold">{t("cat.published")}</span>
+          </label>
+          <div className="flex items-center gap-2">
+            <button type="submit" className="admin-btn-primary" disabled={submitting}>
+              {editingId == null ? t("form.create") : t("form.update")}
+            </button>
+            {editingId != null && (
+              <button
+                type="button"
+                className="admin-btn-primary opacity-70"
+                onClick={() => {
+                  setEditingId(null);
+                  setForm(emptyForm);
+                }}
+              >
+                {t("common.cancel")}
+              </button>
+            )}
+          </div>
+        </form>
+
         <div className="flex items-center gap-2 max-w-md">
           <SearchIcon className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
           <input
@@ -98,33 +195,39 @@ const Categories = () => {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={4} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                  Loading...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
                   {t("cat.empty")}
                 </td>
               </tr>
             ) : (
-              filtered.map((c) => (
-                <tr key={c.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <td className="px-5 py-3 font-semibold">{c.name}</td>
+              filtered.map((item) => (
+                <tr key={item.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                  <td className="px-5 py-3 font-semibold">{item.name}</td>
                   <td className="px-5 py-3">
-                    {c.published ? (
+                    {item.isActive ? (
                       <Check className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} />
                     ) : (
                       <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />
                     )}
                   </td>
-                  <td className="px-5 py-3">{c.order}</td>
+                  <td className="px-5 py-3">{item.sortOrder}</td>
                   <td className="px-5 py-3 text-right">
                     <button
-                      onClick={() => edit(c)}
+                      onClick={() => startEdit(item)}
                       className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted mr-2"
                     >
                       <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
                     </button>
                     <button
-                      onClick={() => remove(c)}
+                      onClick={() => remove(item)}
                       className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
                       style={{ color: "hsl(var(--admin-danger))" }}
                     >

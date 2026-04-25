@@ -31,10 +31,11 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
 
     public async Task<ProjectResponse> CreateAsync(UpsertProjectRequest req)
     {
+        var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var entity = new Project
         {
             Slug = req.Slug,
-            ImageUrl = req.ImageUrl,
+            ImageUrl = normalizedImageUrl ?? string.Empty,
             GalleryJson = req.Gallery != null ? JsonSerializer.Serialize(req.Gallery) : null,
             Name = req.Name,
             Client = req.Client,
@@ -65,10 +66,11 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
             return null;
         }
 
-        var previousImageUrl = entity.ImageUrl;
+        var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
+        var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
 
         entity.Slug = req.Slug;
-        entity.ImageUrl = req.ImageUrl;
+        entity.ImageUrl = nextImageUrl ?? string.Empty;
         entity.GalleryJson = req.Gallery != null ? JsonSerializer.Serialize(req.Gallery) : null;
         entity.Name = req.Name;
         entity.Client = req.Client;

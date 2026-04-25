@@ -46,11 +46,12 @@ public class NewsService(
 
     public async Task<NewsResponse> CreateAsync(UpsertNewsRequest req)
     {
+        var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var entity = new NewsArticle
         {
             Slug = req.Slug,
             Date = req.Date,
-            ImageUrl = req.ImageUrl,
+            ImageUrl = normalizedImageUrl ?? string.Empty,
             Category = req.Category,
             Title = req.Title,
             Excerpt = req.Excerpt,
@@ -72,11 +73,12 @@ public class NewsService(
             return null;
         }
 
-        var previousImageUrl = entity.ImageUrl;
+        var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
+        var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;
-        entity.ImageUrl = req.ImageUrl;
+        entity.ImageUrl = nextImageUrl ?? string.Empty;
         entity.Category = req.Category;
         entity.Title = req.Title;
         entity.Excerpt = req.Excerpt;

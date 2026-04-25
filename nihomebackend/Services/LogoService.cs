@@ -25,10 +25,11 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
 
     public async Task<LogoResponse> CreateAsync(UpsertLogoRequest req)
     {
+        var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var entity = new ClientLogo
         {
             Name = req.Name,
-            ImageUrl = req.ImageUrl,
+            ImageUrl = normalizedImageUrl ?? string.Empty,
             Href = req.Href,
             Kind = Enum.Parse<LogoKind>(req.Kind, ignoreCase: true),
             SortOrder = req.SortOrder,
@@ -48,10 +49,11 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
             return null;
         }
 
-        var previousImageUrl = entity.ImageUrl;
+        var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
+        var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
 
         entity.Name = req.Name;
-        entity.ImageUrl = req.ImageUrl;
+        entity.ImageUrl = nextImageUrl ?? string.Empty;
         entity.Href = req.Href;
         entity.Kind = Enum.Parse<LogoKind>(req.Kind, ignoreCase: true);
         entity.SortOrder = req.SortOrder;
