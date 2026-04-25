@@ -49,6 +49,53 @@ vi.mock("@/lib/i18n", () => {
     "auth.forgot.success": "Password reset successfully",
     "auth.forgot.doneTitle": "All done!",
     "auth.forgot.doneDesc": "Your password has been changed. You can now sign in.",
+    // common
+    "common.all": "All",
+    "common.search": "Search",
+    "common.save": "Save",
+    "common.cancel": "Cancel",
+    "common.edit": "Edit",
+    "common.delete": "Delete",
+    "common.view": "View",
+    "common.new": "New",
+    "common.actions": "Actions",
+    "common.retry": "Retry",
+    "common.showing": "showing",
+    "common.readMore": "Read more",
+    "common.viewAll": "View all",
+    "common.viewDetail": "View detail",
+    "common.back": "Back",
+    "common.notFound": "Not found",
+    "common.noResults": "No results found",
+    "common.error": "An error occurred",
+    // form
+    "form.confirmDelete": "Are you sure?",
+    "form.deleted": "Deleted",
+    "form.created": "Created",
+    "form.updated": "Updated",
+    "form.create": "Create",
+    "form.update": "Update",
+    "form.back": "Back",
+    "form.required": "Required",
+    // not found
+    "nf.oops": "Oops! Page not found",
+    "nf.home": "Return to home",
+    // activities page
+    "actPage.eyebrow": "Activities",
+    "actPage.title": "Latest Activities",
+    "actPage.desc": "Stay updated with our latest activities.",
+    "actPage.empty": "No activities found.",
+    // news page
+    "newsPage.eyebrow": "News",
+    "newsPage.title": "Latest News",
+    "newsPage.desc": "Stay updated with industry news.",
+    "newsPage.empty": "No news found.",
+    // projects page
+    "proj.title": "Projects",
+    "proj.add": "Add project",
+    "proj.ongoing": "Ongoing",
+    "proj.completed": "Completed",
+    "proj.empty": "No projects found.",
   };
 
   return {
