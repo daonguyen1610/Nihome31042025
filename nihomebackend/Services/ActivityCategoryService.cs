@@ -58,7 +58,7 @@ public class ActivityCategoryService(AppDbContext db)
             return null;
         }
 
-    var previousName = entity.Name;
+        var previousName = entity.Name;
         var normalizedName = NormalizeName(req.Name);
         await EnsureNameUniqueAsync(normalizedName, id);
 
@@ -67,7 +67,7 @@ public class ActivityCategoryService(AppDbContext db)
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
-    await UpdateActivitiesForRenamedCategoryAsync(previousName, normalizedName);
+        await UpdateActivitiesForRenamedCategoryAsync(previousName, normalizedName);
 
         await db.SaveChangesAsync();
 
