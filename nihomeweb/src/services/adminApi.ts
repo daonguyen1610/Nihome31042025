@@ -78,6 +78,15 @@ export interface UpsertSlideshowRequest {
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
+  uploadImage: (file: File, previousImageUrl?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (previousImageUrl) {
+      formData.append("previousImageUrl", previousImageUrl);
+    }
+    return api.post<{ imageUrl: string }>("/system/upload-image", formData);
+  },
+
   // Activities / Posts
   createActivity: (data: UpsertActivityRequest) =>
     api.post("/activities", data),

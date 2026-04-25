@@ -52,6 +52,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   if (mode === "edit" && existing && !initialized) {
     setData({
@@ -75,6 +76,23 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const res = await adminApi.uploadImage(file, data.imageUrl);
+      update("imageUrl", res.data.imageUrl);
+      toast({ title: t("form.updated"), description: res.data.imageUrl });
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    } finally {
+      e.target.value = "";
+      setUploadingImage(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +225,10 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.media")}</h2>
             <Field label={t("proj.field.image")}>
-              <input className="admin-input" value={data.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="https://..." />
+              <div className="space-y-2">
+                <input className="admin-input" value={data.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="/images/upload/..." />
+                <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} />
+              </div>
             </Field>
             {data.imageUrl && (
               <div className="mt-4 aspect-[16/10] rounded-xl overflow-hidden bg-muted">
@@ -216,7 +237,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             )}
           </div>
 
-          <button type="submit" disabled={submitting} className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50">
+          <button type="submit" disabled={submitting || uploadingImage} className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50">
             <Save className="w-4 h-4" />
             {mode === "create" ? t("form.create") : t("form.update")}
           </button>

@@ -77,6 +77,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<OtpService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<HostedImageService>();
 
         // Content services
         services.AddScoped<ActivityService>();
@@ -90,6 +91,8 @@ public static class ServiceCollectionExtensions
         // Translation services
         services.AddScoped<TranslationService>();
         services.AddScoped<EntityTranslationService>();
+
+        services.AddHostedService<UploadedImageCleanupService>();
 
         return services;
     }

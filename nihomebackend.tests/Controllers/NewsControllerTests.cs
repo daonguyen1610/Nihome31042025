@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
@@ -22,7 +23,9 @@ public class NewsControllerTests : IDisposable
         _db = DbContextFactory.Create();
 
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
-        var service = new NewsService(_db, entityTranslationSvc);
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
+        var service = new NewsService(_db, entityTranslationSvc, hostedImageService);
         _sut = new NewsController(service);
     }
 

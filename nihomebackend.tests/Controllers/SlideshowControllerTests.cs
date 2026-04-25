@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
@@ -24,8 +25,10 @@ public class SlideshowControllerTests : IDisposable
 
         var entityTranslationSvc = new EntityTranslationService(
             _db, Mock.Of<IMemoryCache>());
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
 
-        _service = new SlideshowService(_db, entityTranslationSvc);
+        _service = new SlideshowService(_db, entityTranslationSvc, hostedImageService);
         _sut = new SlideshowController(_service);
     }
 
