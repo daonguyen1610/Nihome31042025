@@ -6,6 +6,12 @@ import { logoutThunk, type AuthUser } from "@/store/authSlice";
 
 export type { AuthUser } from "@/store/authSlice";
 
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+
+/** Check if a role string represents an admin. */
+export const isAdminRole = (role: string): boolean =>
+  ADMIN_ROLES.includes(role.toUpperCase());
+
 /**
  * Read current user from the Redux store.
  * Returns a shape compatible with the old mock (name, email, role) for backward compat.
@@ -16,7 +22,7 @@ export const getCurrentUser = (): { name: string; email: string; role: "admin" |
   return {
     name: user.fullName,
     email: user.email ?? "",
-    role: user.role === "admin" ? "admin" : "user",
+    role: isAdminRole(user.role) ? "admin" : "user",
   };
 };
 

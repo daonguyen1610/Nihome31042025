@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Phone, Lock, ArrowRight, KeyRound, RotateCw } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, translateError } from "@/lib/i18n";
 import { useAppDispatch, useAppSelector } from "@/store";
 import {
   forgotStartThunk,
@@ -31,7 +31,7 @@ const ForgotPassword = () => {
 
   useEffect(() => {
     if (error) {
-      toast({ title: t("auth.error"), description: error, variant: "destructive" });
+      toast({ title: t("auth.error"), description: translateError(t, error), variant: "destructive" });
       dispatch(clearError());
     }
   }, [error, toast, t, dispatch]);

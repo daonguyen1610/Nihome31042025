@@ -37,7 +37,7 @@ public static class DbSeeder
         {
             var superAdmin = new ApplicationUser
             {
-                PhoneNumber = "84335240370",
+                PhoneNumber = "0335240370",
                 FullName = "Super Admin",
                 Email = "superadmin@nihome.vn",
                 Role = UserRole.SUPER_ADMIN,

@@ -21,7 +21,7 @@ To connect to the MySQL database. If you manage to run ASP .NET with docker.
 We need to declare the `appsettings.json` like
 ```json
 "ConnectionStrings": {
-    "DefaultConnection": "Server=host.docker.internal,1433;Database=NihomeDB;User Id=sa;Password=Nihome@12092025;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=host.docker.internal,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;"
 }
 ```
 
@@ -30,7 +30,7 @@ Otherwise if you are running thee ASP .NET in local dev.
 We need to declare the `appsettings.json` like
 ```json
 "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=NihomeDB;User Id=sa;Password=Nihome@12092025;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=localhost,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;"
 }
 ```
 
@@ -52,7 +52,7 @@ Best for development because it recompiles automatically when you modify files.
 Check the SQL Server database is created
 
 ```bash
-docker run --platform linux/amd64 -it --rm --network container:Nihome12092025-sqlserver mcr.microsoft.com/mssql-tools /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Nihome@12092025"
+docker run --platform linux/amd64 -it --rm --network container:nihome31042025-sqlserver mcr.microsoft.com/mssql-tools /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Nihome@31042025"
 
 1> select name from sys.databases;
 2> go
@@ -64,6 +64,38 @@ tempdb
 model                                                                                                                           
 msdb                                                                                                                            
 NihomeDB
+```
+
+### Useful SQL Commands
+
+List all tables:
+
+```sql
+SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
+GO
+```
+
+Describe a table (show columns, types, nullability):
+
+```sql
+EXEC sp_columns @table_name = 'YourTableName';
+GO
+```
+
+Quick column overview:
+
+```sql
+SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'YourTableName';
+GO
+```
+
+Show all indexes on a table:
+
+```sql
+EXEC sp_helpindex 'YourTableName';
+GO
 ```
 
 For SQL Server Cheat Sheet Command, please look at: [SQL Server Cheat Sheet](docs/sqlserver_cheatsheet.md).

@@ -2,13 +2,16 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, X, Search, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCurrentUser } from "@/lib/auth";
+import { isAdminRole } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { useAppSelector } from "@/store";
 import LanguageToggle from "@/components/LanguageToggle";
 import logoNicon from "@/assets/logo-nicon.png";
 
 const Header = () => {
   const { t } = useI18n();
+  const authUser = useAppSelector((s) => s.auth.user);
+  const isAdmin = authUser ? isAdminRole(authUser.role) : false;
   const nav = useMemo(
     () => [
       { to: "/", label: t("site.nav.home") },
@@ -104,35 +107,32 @@ const Header = () => {
               <Search className="w-4 h-4" />
             </button>
             <LanguageToggle variant={transparent ? "dark" : "light"} />
-            {(() => {
-              const u = getCurrentUser();
-              return u ? (
-                <Link
-                  to={u.role === "admin" ? "/admin" : "/profile"}
-                  className={cn(
-                    "flex items-center gap-1.5 pl-2.5 pr-3 2xl:pl-3 2xl:pr-4 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap",
-                    transparent
-                      ? "bg-white text-foreground hover:shadow-glow"
-                      : "bg-foreground text-background hover:bg-primary"
-                  )}
-                >
-                  <User className="w-3.5 h-3.5" />
-                  {u.role === "admin" ? "Admin" : u.name}
-                </Link>
-              ) : (
-                <Link
-                  to="/login"
-                  className={cn(
-                    "px-3 2xl:px-5 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap",
-                    transparent
-                      ? "bg-white text-foreground hover:shadow-glow"
-                      : "btn-gradient text-white"
-                  )}
-                >
-                  {t("site.nav.login")}
-                </Link>
-              );
-            })()}
+            {authUser ? (
+              <Link
+                to={isAdmin ? "/admin" : "/profile"}
+                className={cn(
+                  "flex items-center gap-1.5 pl-2.5 pr-3 2xl:pl-3 2xl:pr-4 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap",
+                  transparent
+                    ? "bg-white text-foreground hover:shadow-glow"
+                    : "bg-foreground text-background hover:bg-primary"
+                )}
+              >
+                <User className="w-3.5 h-3.5" />
+                {isAdmin ? "Admin" : authUser.fullName}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className={cn(
+                  "px-3 2xl:px-5 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap",
+                  transparent
+                    ? "bg-white text-foreground hover:shadow-glow"
+                    : "btn-gradient text-white"
+                )}
+              >
+                {t("site.nav.login")}
+              </Link>
+            )}
           </div>
 
           {/* Mobile toggle */}
@@ -174,12 +174,22 @@ const Header = () => {
           ))}
           <div className="pt-3 mt-2 border-t border-border flex items-center justify-between gap-3">
             <LanguageToggle />
-            <Link
-              to="/login"
-              className="px-5 py-2 rounded-full text-xs uppercase tracking-wider font-bold whitespace-nowrap btn-gradient text-white"
-            >
-              {t("site.nav.login")}
-            </Link>
+            {authUser ? (
+              <Link
+                to={isAdmin ? "/admin" : "/profile"}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-full text-xs uppercase tracking-wider font-bold whitespace-nowrap bg-foreground text-background hover:bg-primary transition-all"
+              >
+                <User className="w-3.5 h-3.5" />
+                {isAdmin ? "Admin" : authUser.fullName}
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="px-5 py-2 rounded-full text-xs uppercase tracking-wider font-bold whitespace-nowrap btn-gradient text-white"
+              >
+                {t("site.nav.login")}
+              </Link>
+            )}
           </div>
         </nav>
       </div>
