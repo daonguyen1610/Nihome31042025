@@ -1,0 +1,37 @@
+name: nihomebackend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "nihomebackend/**"
+      - "nihomebackend.tests/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "nihomebackend/**"
+      - "nihomebackend.tests/**"
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+        working-directory: .
+
+      - name: Build
+        run: dotnet build --no-restore -c Release -p:SkipNihomeWebBuild=true -p:TreatWarningsAsErrors=true
+        working-directory: .
+
+      - name: Test
+        run: dotnet test --no-build -c Release --verbosity normal
+        working-directory: nihomebackend.tests
