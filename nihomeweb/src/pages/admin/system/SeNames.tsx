@@ -50,7 +50,7 @@ const SeNamesPage = () => {
   const pageRows = filtered.slice((page - 1) * perPage, page * perPage);
 
   const toggle = (id: number) => {
-    const n = new Set(selected); n.has(id) ? n.delete(id) : n.add(id); setSelected(n);
+    const n = new Set(selected); if (n.has(id)) { n.delete(id); } else { n.add(id); } setSelected(n);
   };
   const toggleAll = () => {
     if (pageRows.every((r) => selected.has(r.id))) {

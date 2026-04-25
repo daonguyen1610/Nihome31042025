@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  nihomeweb:
+    name: nihomeweb (lint, build, test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nihomeweb
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: nihomeweb/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
+
+  nihomebackend:
+    name: nihomebackend (build, test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release -p:SkipNihomeWebBuild=true -p:TreatWarningsAsErrors=true
+
+      - name: Lint (dotnet format)
+        run: dotnet format --no-restore --verify-no-changes
+
+      - name: Test
+        run: dotnet test --no-build -c Release --verbosity normal
+        working-directory: nihomebackend.tests

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ChevronDown, Search, BookOpen, MessageCircle, Keyboard, HelpCircle, FileText, Building2, Workflow, Mail, Phone, Clock, Send, Info } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -64,13 +64,13 @@ const HelpPage = () => {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   const [form, setForm] = useState({ subject: "", message: "", priority: "normal" });
 
-  const pickLang = (obj: { vi: string; en: string }) => (lang === "en" ? obj.en : obj.vi);
+  const pickLang = useCallback((obj: { vi: string; en: string }) => (lang === "en" ? obj.en : obj.vi), [lang]);
 
   const filteredFaqs = useMemo(() => {
     if (!q.trim()) return FAQS;
     const k = q.toLowerCase();
     return FAQS.filter((f) => pickLang(f.q).toLowerCase().includes(k) || pickLang(f.a).toLowerCase().includes(k));
-  }, [q, lang]);
+  }, [q, pickLang]);
 
   const submitTicket = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +78,7 @@ const HelpPage = () => {
     setForm({ subject: "", message: "", priority: "normal" });
   };
 
-  const tabs: { id: Tab; icon: any; label: string }[] = [
+  const tabs: { id: Tab; icon: typeof HelpCircle; label: string }[] = [
     { id: "faq", icon: HelpCircle, label: t("help.tab.faq") },
     { id: "guide", icon: BookOpen, label: t("help.tab.guide") },
     { id: "contact", icon: MessageCircle, label: t("help.tab.contact") },

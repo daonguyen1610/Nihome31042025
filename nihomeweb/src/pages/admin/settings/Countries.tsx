@@ -149,7 +149,7 @@ const CountriesPage = () => {
               ].map(([key, label, type]) => (
                 <div key={key as string}>
                   <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>{label}</label>
-                  <input type={type as string} value={(draft as any)[key as string]} onChange={(e) => setDraft({ ...draft, [key as string]: type === "number" ? +e.target.value : e.target.value } as Country)} className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none" style={{ borderColor: "hsl(var(--admin-border))" }} />
+                  <input type={type as string} value={(draft as Record<string, string | number | boolean>)[key as string]} onChange={(e) => setDraft({ ...draft, [key as string]: type === "number" ? +e.target.value : e.target.value } as Country)} className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none" style={{ borderColor: "hsl(var(--admin-border))" }} />
                 </div>
               ))}
               {([

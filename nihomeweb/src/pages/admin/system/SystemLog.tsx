@@ -98,7 +98,7 @@ const SystemLog = () => {
           </label>
           <label className="block">
             <span className="text-xs font-bold mb-1 inline-block" style={{ color: "hsl(var(--admin-muted))" }}>{t("sys.log.level")}</span>
-            <select value={level} onChange={(e) => setLevel(e.target.value as any)} className="admin-input w-full">
+            <select value={level} onChange={(e) => setLevel(e.target.value as "All" | Level)} className="admin-input w-full">
               {(["All", "Information", "Warning", "Error", "Fatal", "Debug"] as const).map((l) => <option key={l}>{l}</option>)}
             </select>
           </label>
