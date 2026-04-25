@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { Phone, Lock, ArrowRight } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useToast } from "@/hooks/use-toast";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, translateError } from "@/lib/i18n";
+import { isAdminRole } from "@/lib/auth";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { loginThunk, clearError } from "@/store/authSlice";
 
@@ -19,13 +20,13 @@ const Login = () => {
   useEffect(() => {
     if (user) {
       toast({ title: t("auth.login.toast.title"), description: `${t("auth.login.toast.hello")} ${user.fullName}` });
-      navigate(user.role === "admin" ? "/admin" : "/profile");
+      navigate(isAdminRole(user.role) ? "/admin" : "/profile");
     }
   }, [user, navigate, toast, t]);
 
   useEffect(() => {
     if (error) {
-      toast({ title: t("auth.error"), description: error, variant: "destructive" });
+      toast({ title: t("auth.error"), description: translateError(t, error), variant: "destructive" });
       dispatch(clearError());
     }
   }, [error, toast, t, dispatch]);

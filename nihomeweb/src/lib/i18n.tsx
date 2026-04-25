@@ -529,6 +529,24 @@ const dict: Dict = {
   "auth.forgot.doneTitle": { vi: "Hoàn tất!", en: "All done!", zh: "完成!", ja: "完了!" },
   "auth.forgot.doneDesc": { vi: "Mật khẩu đã được thay đổi. Bạn có thể đăng nhập ngay.", en: "Your password has been changed. You can now sign in.", zh: "密码已更改。您现在可以登录。", ja: "パスワードが変更されました。ログインできます。" },
 
+  // ========== AUTH ERROR MESSAGES (mapped from backend) ==========
+  "auth.err.invalidCredentials": { vi: "Số điện thoại hoặc mật khẩu không đúng.", en: "Invalid phone number or password.", zh: "手机号或密码错误。", ja: "電話番号またはパスワードが正しくありません。" },
+  "auth.err.accountInactive": { vi: "Tài khoản đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.", en: "Your account has been deactivated. Please contact an administrator.", zh: "账户已被停用，请联系管理员。", ja: "アカウントが無効化されています。管理者にお問い合わせください。" },
+  "auth.err.phoneRegistered": { vi: "Số điện thoại này đã được đăng ký.", en: "This phone number is already registered.", zh: "该手机号已被注册。", ja: "この電話番号はすでに登録されています。" },
+  "auth.err.invalidOtp": { vi: "Mã OTP không đúng. Vui lòng kiểm tra lại.", en: "Invalid OTP code. Please check and try again.", zh: "验证码错误，请重新输入。", ja: "OTPコードが正しくありません。もう一度お試しください。" },
+  "auth.err.otpExpired": { vi: "Phiên OTP đã hết hạn. Vui lòng yêu cầu mã mới.", en: "OTP session has expired. Please request a new code.", zh: "验证码已过期，请重新获取。", ja: "OTPセッションが期限切れです。新しいコードをリクエストしてください。" },
+  "auth.err.otpLimitExceeded": { vi: "Bạn đã yêu cầu quá nhiều mã OTP. Vui lòng thử lại sau.", en: "Too many OTP requests. Please try again later.", zh: "验证码请求过多，请稍后再试。", ja: "OTPリクエストが多すぎます。後でもう一度お試しください。" },
+  "auth.err.otpWait": { vi: "Vui lòng đợi trước khi yêu cầu mã OTP mới.", en: "Please wait before requesting a new OTP.", zh: "请稍后再请求新的验证码。", ja: "新しいOTPをリクエストする前にお待ちください。" },
+  "auth.err.accountNotFound": { vi: "Không tìm thấy tài khoản với số điện thoại này.", en: "No account found with this phone number.", zh: "未找到该手机号对应的账户。", ja: "この電話番号のアカウントが見つかりません。" },
+  "auth.err.refreshTokenInvalid": { vi: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.", en: "Your session has expired. Please sign in again.", zh: "登录已过期，请重新登录。", ja: "セッションが期限切れです。再度ログインしてください。" },
+  "auth.err.userNotFound": { vi: "Không tìm thấy người dùng.", en: "User not found.", zh: "未找到用户。", ja: "ユーザーが見つかりません。" },
+  "auth.err.otpDisabledRegister": { vi: "Xác thực OTP không được bật cho đăng ký.", en: "OTP verification is disabled for registration.", zh: "注册不需要OTP验证。", ja: "登録にはOTP認証は不要です。" },
+  "auth.err.otpDisabledForgot": { vi: "Xác thực OTP không được bật cho quên mật khẩu.", en: "OTP verification is disabled for forgot password.", zh: "忘记密码不需要OTP验证。", ja: "パスワードリセットにはOTP認証は不要です。" },
+  "auth.err.otpRequiredForgot": { vi: "Cần xác thực OTP. Vui lòng sử dụng quy trình quên mật khẩu tiêu chuẩn.", en: "OTP verification is required. Please use the standard forgot password flow.", zh: "需要OTP验证，请使用标准的忘记密码流程。", ja: "OTP認証が必要です。通常のパスワードリセット手順をご利用ください。" },
+  "auth.err.otpDisabledComplete": { vi: "Xác thực OTP không được bật. Vui lòng đăng ký từ bước đầu.", en: "OTP verification is disabled. Complete registration from the start.", zh: "OTP验证已关闭，请从头开始注册。", ja: "OTP認証は無効です。最初から登録を完了してください。" },
+  "auth.err.networkError": { vi: "Lỗi kết nối mạng. Vui lòng kiểm tra internet.", en: "Network error. Please check your connection.", zh: "网络错误，请检查您的网络连接。", ja: "ネットワークエラー。接続を確認してください。" },
+  "auth.err.unexpected": { vi: "Đã xảy ra lỗi. Vui lòng thử lại sau.", en: "An error occurred. Please try again later.", zh: "发生错误，请稍后再试。", ja: "エラーが発生しました。後でもう一度お試しください。" },
+
   // ========== NOT FOUND ==========
   "nf.title": { vi: "Không tìm thấy trang", en: "Page not found", zh: "页面未找到", ja: "ページが見つかりません" },
   "nf.home": { vi: "Về trang chủ", en: "Return to home", zh: "返回首页", ja: "ホームに戻る" },
@@ -909,6 +927,32 @@ const dict: Dict = {
   "posts.detail": { vi: "Chi tiết bài đăng", en: "Post details" },
   "posts.editTitle": { vi: "Chỉnh sửa bài đăng", en: "Edit post" },
   "posts.addTitle": { vi: "Thêm bài đăng mới", en: "Add new post" },
+};
+
+// --- Backend error message → i18n key mapping ---
+const backendErrorMap: Record<string, string> = {
+  "Invalid credentials.": "auth.err.invalidCredentials",
+  "Account is inactive.": "auth.err.accountInactive",
+  "Phone number already registered.": "auth.err.phoneRegistered",
+  "Invalid OTP.": "auth.err.invalidOtp",
+  "OTP session not found or expired.": "auth.err.otpExpired",
+  "OTP request limit exceeded.": "auth.err.otpLimitExceeded",
+  "Please wait before requesting a new OTP.": "auth.err.otpWait",
+  "Account not found.": "auth.err.accountNotFound",
+  "Refresh token is invalid.": "auth.err.refreshTokenInvalid",
+  "User not found.": "auth.err.userNotFound",
+  "OTP verification is disabled for registration.": "auth.err.otpDisabledRegister",
+  "OTP verification is disabled for forgot password.": "auth.err.otpDisabledForgot",
+  "OTP verification is required. Please use the standard forgot password flow.": "auth.err.otpRequiredForgot",
+  "OTP verification is disabled. Complete registration from register/start.": "auth.err.otpDisabledComplete",
+  "Network Error": "auth.err.networkError",
+  "An unexpected error occurred": "auth.err.unexpected",
+};
+
+/** Translate a backend error message using the current i18n translate function. */
+export const translateError = (t: (key: string) => string, message: string): string => {
+  const key = backendErrorMap[message];
+  return key ? t(key) : message;
 };
 
 type Ctx = {
