@@ -460,6 +460,7 @@ public static class ContentSeeder
             ["American Standard", "/images/logos/suppliers/american-standard.jpeg"],
             ["Vina Kyoei", "/images/logos/suppliers/vina-kyoei.jpeg"],
             ["Binh Minh", "/images/logos/suppliers/binh-minh.jpeg"],
+            ["Taicera", "/images/logos/suppliers/taicera.jpeg"],
         ];
         i = 0;
         foreach (var s in suppliers)
