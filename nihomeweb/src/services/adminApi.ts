@@ -75,6 +75,19 @@ export interface UpsertSlideshowRequest {
   sortOrder?: number;
 }
 
+export interface UpsertActivityCategoryRequest {
+  name: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface ActivityCategoryResponse {
+  id: number;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
@@ -94,6 +107,16 @@ export const adminApi = {
     api.put(`/activities/${id}`, data),
   deleteActivity: (id: number) =>
     api.delete(`/activities/${id}`),
+
+  // Activity categories
+  getActivityCategories: (includeInactive = false) =>
+    api.get<ActivityCategoryResponse[]>(`/activity-categories?includeInactive=${includeInactive}`),
+  createActivityCategory: (data: UpsertActivityCategoryRequest) =>
+    api.post<ActivityCategoryResponse>("/activity-categories", data),
+  updateActivityCategory: (id: number, data: UpsertActivityCategoryRequest) =>
+    api.put<ActivityCategoryResponse>(`/activity-categories/${id}`, data),
+  deleteActivityCategory: (id: number) =>
+    api.delete(`/activity-categories/${id}`),
 
   // News
   createNews: (data: UpsertNewsRequest) =>

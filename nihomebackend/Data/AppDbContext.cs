@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ClientLogo> ClientLogos => Set<ClientLogo>();
     public DbSet<ProcessDocument> ProcessDocuments => Set<ProcessDocument>();
     public DbSet<SlideshowItem> SlideshowItems => Set<SlideshowItem>();
+    public DbSet<ActivityCategory> ActivityCategories => Set<ActivityCategory>();
 
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
@@ -82,6 +83,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<SlideshowItem>().ToTable("slideshow_items");
         modelBuilder.Entity<SlideshowItem>().HasKey(s => s.Id);
         modelBuilder.Entity<SlideshowItem>().HasIndex(s => s.Slug).IsUnique();
+
+        modelBuilder.Entity<ActivityCategory>().ToTable("activity_categories");
+        modelBuilder.Entity<ActivityCategory>().HasKey(c => c.Id);
+        modelBuilder.Entity<ActivityCategory>().HasIndex(c => c.Name).IsUnique();
 
         // i18n tables
         modelBuilder.Entity<Translation>().ToTable("translations");

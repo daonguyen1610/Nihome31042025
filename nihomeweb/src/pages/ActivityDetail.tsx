@@ -5,6 +5,14 @@ import { useI18n } from "@/lib/i18n";
 import { useActivity, useActivities } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 
+const ContentBlock = ({ value }: { value: string }) => {
+  if (!value.trim()) {
+    return <div className="h-4" aria-hidden="true" />;
+  }
+
+  return <p className="text-foreground/85 leading-relaxed whitespace-pre-line">{value}</p>;
+};
+
 const ActivityDetail = () => {
   const { t } = useI18n();
   const { slug } = useParams();
@@ -55,9 +63,7 @@ const ActivityDetail = () => {
             {a.excerpt}
           </p>
           <div className="prose prose-lg max-w-none space-y-6">
-            {a.content.map((p, i) => (
-              <p key={i} className="text-foreground/85 leading-relaxed">{p}</p>
-            ))}
+            {a.content.map((p, i) => <ContentBlock key={i} value={p} />)}
           </div>
         </div>
       </article>

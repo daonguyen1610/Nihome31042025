@@ -98,6 +98,13 @@ export interface SlideshowResponse {
   sortOrder: number;
 }
 
+export interface ActivityCategoryResponse {
+  id: number;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 // --- Translation types ---
 
 export interface TranslationPair {
@@ -193,6 +200,9 @@ export const contentApi = {
   getActivity: (slug: string, lang = "vi") =>
     api.get<ActivityResponse>(`/activities/${slug}?lang=${lang}`)
       .then((res) => ({ ...res, data: mapActivity(res.data) })),
+
+  getActivityCategories: (includeInactive = false) =>
+    api.get<ActivityCategoryResponse[]>(`/activity-categories?includeInactive=${includeInactive}`),
 
   // News
   getNews: (lang = "vi") =>

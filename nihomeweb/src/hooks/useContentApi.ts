@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   contentApi,
+  type ActivityCategoryResponse,
   type ActivityResponse,
   type NewsResponse,
   type ProjectResponse,
@@ -54,6 +55,13 @@ export function useActivities() {
 export function useActivity(slug: string) {
   const { lang } = useI18n();
   return useFetch<ActivityResponse>(() => contentApi.getActivity(slug, lang), [slug, lang]);
+}
+
+export function useActivityCategories(includeInactive = false) {
+  return useFetch<ActivityCategoryResponse[]>(
+    () => contentApi.getActivityCategories(includeInactive),
+    [includeInactive],
+  );
 }
 
 export function useNews() {
