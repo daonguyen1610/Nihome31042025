@@ -48,6 +48,7 @@ import EmailAccountsPage from "./pages/admin/settings/EmailAccounts.tsx";
 import StoresPage from "./pages/admin/settings/Stores.tsx";
 import CountriesPage from "./pages/admin/settings/Countries.tsx";
 import LanguagesPage from "./pages/admin/settings/Languages.tsx";
+import TranslationsPage from "./pages/admin/settings/Translations.tsx";
 import SystemLog from "./pages/admin/system/SystemLog.tsx";
 import WarningsPage from "./pages/admin/system/Warnings.tsx";
 import MaintenancePage from "./pages/admin/system/Maintenance.tsx";
@@ -114,6 +115,7 @@ const App = () => (
             <Route path="/admin/stores" element={<StoresPage />} />
             <Route path="/admin/countries" element={<CountriesPage />} />
             <Route path="/admin/languages" element={<LanguagesPage />} />
+            <Route path="/admin/translations" element={<TranslationsPage />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/admin/customer-roles" element={<AdminCustomerRoles />} />

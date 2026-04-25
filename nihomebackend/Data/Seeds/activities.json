@@ -1,0 +1,66 @@
+[
+  {
+    "key": "actPage.eyebrow",
+    "category": "actPage",
+    "vi": "Hoạt động & tin tức",
+    "en": "Activities & news",
+    "zh": "活动与新闻",
+    "ja": "活動とニュース"
+  },
+  {
+    "key": "actPage.title",
+    "category": "actPage",
+    "vi": "Câu chuyện đằng sau mỗi công trình.",
+    "en": "The story behind every project.",
+    "zh": "每个工程背后的故事。",
+    "ja": "プロジェクトの裏側にある物語。"
+  },
+  {
+    "key": "actPage.desc",
+    "category": "actPage",
+    "vi": "Cập nhật những sự kiện, lễ khởi công, khánh thành và hoạt động truyền thông mới nhất của NICON.",
+    "en": "Latest events, groundbreakings, inaugurations and communications activities from NICON.",
+    "zh": "NICON 最新的活动、奠基仪式、落成典礼及公关动态。",
+    "ja": "NICONの最新イベント、起工式、竣工式、広報活動の情報。"
+  },
+  {
+    "key": "actPage.empty",
+    "category": "actPage",
+    "vi": "Không có bài viết phù hợp.",
+    "en": "No matching articles.",
+    "zh": "没有匹配的文章。",
+    "ja": "一致する記事がありません。"
+  },
+  {
+    "key": "actPage.related",
+    "category": "actPage",
+    "vi": "Bài viết liên quan",
+    "en": "Related articles",
+    "zh": "相关文章",
+    "ja": "関連記事"
+  },
+  {
+    "key": "actPage.allNews",
+    "category": "actPage",
+    "vi": "Tất cả tin",
+    "en": "All news",
+    "zh": "全部新闻",
+    "ja": "すべてのニュース"
+  },
+  {
+    "key": "actPage.notFound",
+    "category": "actPage",
+    "vi": "Không tìm thấy bài viết",
+    "en": "Article not found",
+    "zh": "未找到文章",
+    "ja": "記事が見つかりません"
+  },
+  {
+    "key": "actPage.backToList",
+    "category": "actPage",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "活動"
+  }
+]

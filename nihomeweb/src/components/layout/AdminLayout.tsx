@@ -137,6 +137,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/stores", label: t("set.stores"), icon: Store },
           { to: "/admin/countries", label: t("set.countries"), icon: Globe },
           { to: "/admin/languages", label: t("set.languages"), icon: Languages },
+          { to: "/admin/translations", label: "Translations", icon: Languages },
         ],
       },
       {

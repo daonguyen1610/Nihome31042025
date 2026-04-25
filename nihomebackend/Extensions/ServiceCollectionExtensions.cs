@@ -78,6 +78,18 @@ public static class ServiceCollectionExtensions
         services.AddScoped<OtpService>();
         services.AddScoped<IEmailService, EmailService>();
 
+        // Content services
+        services.AddScoped<ActivityService>();
+        services.AddScoped<NewsService>();
+        services.AddScoped<ProjectService>();
+        services.AddScoped<ServiceItemService>();
+        services.AddScoped<LogoService>();
+        services.AddScoped<ProcessService>();
+
+        // Translation services
+        services.AddScoped<TranslationService>();
+        services.AddScoped<EntityTranslationService>();
+
         return services;
     }
 }

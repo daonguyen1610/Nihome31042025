@@ -38,6 +38,10 @@
     <Watch Include="@(NihomeWebBuildInputs)" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Data/Seeds/*.json" />
+  </ItemGroup>
+
   <Target
     Name="RestoreNihomeWeb"
     BeforeTargets="BuildNihomeWeb"

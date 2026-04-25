@@ -6,12 +6,21 @@ namespace NihomeBackend.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
-
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-
     public DbSet<RegistrationOtp> RegistrationOtps => Set<RegistrationOtp>();
-
     public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
+
+    // Content
+    public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<NewsArticle> NewsArticles => Set<NewsArticle>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<ServiceItem> ServiceItems => Set<ServiceItem>();
+    public DbSet<ClientLogo> ClientLogos => Set<ClientLogo>();
+    public DbSet<ProcessDocument> ProcessDocuments => Set<ProcessDocument>();
+
+    // Internationalization (i18n)
+    public DbSet<Translation> Translations => Set<Translation>();
+    public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,5 +49,40 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<SiteSettings>().ToTable("site_settings");
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);
+
+        // Content tables
+        modelBuilder.Entity<Activity>().ToTable("activities");
+        modelBuilder.Entity<Activity>().HasKey(a => a.Id);
+        modelBuilder.Entity<Activity>().HasIndex(a => a.Slug).IsUnique();
+
+        modelBuilder.Entity<NewsArticle>().ToTable("news_articles");
+        modelBuilder.Entity<NewsArticle>().HasKey(n => n.Id);
+        modelBuilder.Entity<NewsArticle>().HasIndex(n => n.Slug).IsUnique();
+
+        modelBuilder.Entity<Project>().ToTable("projects");
+        modelBuilder.Entity<Project>().HasKey(p => p.Id);
+        modelBuilder.Entity<Project>().HasIndex(p => p.Slug).IsUnique();
+
+        modelBuilder.Entity<ServiceItem>().ToTable("service_items");
+        modelBuilder.Entity<ServiceItem>().HasKey(s => s.Id);
+        modelBuilder.Entity<ServiceItem>().HasIndex(s => s.Slug).IsUnique();
+
+        modelBuilder.Entity<ClientLogo>().ToTable("client_logos");
+        modelBuilder.Entity<ClientLogo>().HasKey(l => l.Id);
+        modelBuilder.Entity<ClientLogo>()
+            .Property(l => l.Kind)
+            .HasConversion<string>()
+            .HasMaxLength(20);
+
+        modelBuilder.Entity<ProcessDocument>().ToTable("process_documents");
+        modelBuilder.Entity<ProcessDocument>().HasKey(p => p.Id);
+        modelBuilder.Entity<ProcessDocument>().HasIndex(p => p.GroupKey);
+
+        // i18n tables
+        modelBuilder.Entity<Translation>().ToTable("translations");
+        modelBuilder.Entity<Translation>().HasKey(t => t.TranslationId);
+
+        modelBuilder.Entity<EntityTranslation>().ToTable("entity_translations");
+        modelBuilder.Entity<EntityTranslation>().HasKey(t => t.Id);
     }
 }

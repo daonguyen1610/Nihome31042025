@@ -1,0 +1,174 @@
+import api from "@/lib/api";
+
+// --- Types matching backend DTOs ---
+
+export interface ActivityResponse {
+  id: number;
+  slug: string;
+  date: string;
+  imageUrl: string;
+  category: string;
+  author?: string;
+  title: string;
+  excerpt: string;
+  content: string[];
+}
+
+export interface NewsResponse {
+  id: number;
+  slug: string;
+  date: string;
+  imageUrl: string;
+  category: string;
+  title: string;
+  excerpt: string;
+  content: string[];
+}
+
+export interface ProjectHighlight {
+  label: string;
+  value: string;
+}
+
+export interface ProjectResponse {
+  id: number;
+  slug: string;
+  imageUrl: string;
+  gallery?: string[];
+  name: string;
+  client: string;
+  location: string;
+  scale: string;
+  scope: string;
+  status: string;
+  year?: string;
+  category?: string;
+  description?: string;
+  challenges?: string[];
+  solutions?: string[];
+  highlights?: ProjectHighlight[];
+}
+
+export interface ServiceSection {
+  heading: string;
+  body: string[];
+}
+
+export interface ServiceResponse {
+  id: number;
+  slug: string;
+  title: string;
+  shortTitle: string;
+  tagline: string;
+  intro: string;
+  sections: ServiceSection[];
+  highlights: string[];
+}
+
+export interface LogoResponse {
+  id: number;
+  name: string;
+  imageUrl: string;
+  href?: string;
+  kind: string;
+}
+
+export interface LogosGroupedResponse {
+  clients: LogoResponse[];
+  partners: LogoResponse[];
+  suppliers: LogoResponse[];
+}
+
+export interface ProcessResponse {
+  id: number;
+  groupKey: string;
+  code?: string;
+  title: string;
+}
+
+// --- Translation types ---
+
+export interface TranslationPair {
+  key: string;
+  category?: string;
+  vietnameseValue: string;
+  translations: Record<string, string>;
+  createdAt: string;
+}
+
+export interface EntityTranslationRow {
+  id: number;
+  entityType: string;
+  entityId: number;
+  fieldName: string;
+  languageCode: string;
+  value: string;
+}
+
+// --- API functions ---
+
+export const contentApi = {
+  // Activities (pass ?lang= for translation)
+  getActivities: (lang = "vi") => api.get<ActivityResponse[]>(`/activities?lang=${lang}`),
+  getActivity: (slug: string, lang = "vi") => api.get<ActivityResponse>(`/activities/${slug}?lang=${lang}`),
+
+  // News
+  getNews: (lang = "vi") => api.get<NewsResponse[]>(`/news?lang=${lang}`),
+  getNewsItem: (slug: string, lang = "vi") => api.get<NewsResponse>(`/news/${slug}?lang=${lang}`),
+
+  // Projects
+  getProjects: () => api.get<ProjectResponse[]>("/projects"),
+  getProject: (slug: string) => api.get<ProjectResponse>(`/projects/${slug}`),
+
+  // Services
+  getServices: () => api.get<ServiceResponse[]>("/services"),
+  getService: (slug: string) => api.get<ServiceResponse>(`/services/${slug}`),
+
+  // Logos
+  getLogos: () => api.get<LogosGroupedResponse>("/logos"),
+
+  // Processes
+  getProcesses: () => api.get<Record<string, ProcessResponse[]>>("/processes"),
+};
+
+// --- Translation API (admin-managed) ---
+
+export const translationApi = {
+  // Static UI translations
+  getTranslationMap: (lang: string) =>
+    api.get<{ languageCode: string; translations: Record<string, string> }>(`/translations/${lang}`),
+
+  // Admin: translation pairs
+  getPairs: (params?: { category?: string; search?: string }) =>
+    api.get<TranslationPair[]>("/translations/admin", { params }),
+
+  getCategories: () => api.get<string[]>("/translations/categories"),
+
+  upsertPair: (data: {
+    key: string;
+    vietnameseValue: string;
+    translations?: Record<string, string>;
+    category?: string;
+  }) => api.post("/translations/pair", data),
+
+  bulkUpsert: (items: Array<{ key: string; languageCode: string; value: string; category?: string }>) =>
+    api.post("/translations/bulk", items),
+
+  deleteKey: (key: string) => api.delete(`/translations/key/${encodeURIComponent(key)}`),
+
+  // Entity translations
+  getEntityTypes: () =>
+    api.get<Array<{ type: string; fields: string[] }>>("/translations/entity/types"),
+
+  getEntityTranslations: (entityType: string, entityId: number) =>
+    api.get<EntityTranslationRow[]>(`/translations/entity/${entityType}/${entityId}`),
+
+  saveEntityTranslations: (
+    entityType: string,
+    entityId: number,
+    data: { languageCode: string; translations: Record<string, string> }
+  ) => api.post(`/translations/entity/${entityType}/${entityId}`, data),
+
+  deleteEntityTranslations: (entityType: string, entityId: number) =>
+    api.delete(`/translations/entity/${entityType}/${entityId}`),
+};
