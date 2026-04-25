@@ -1,21 +1,14 @@
 services:
   nihomeBackend:
+    image: nihome31042025-backend
+    container_name: nihome31042025-backend
     build:
       context: .
       dockerfile: ./nihomebackend/Dockerfile
-    image: nihome31042025-backend-dev
-    container_name: nihome31042025-backend
-    working_dir: /src/nihomebackend
-    command:
-      - dotnet
-      - watch
-      - --non-interactive
-      - run
-      - --no-launch-profile
-      - --project
-      - nihomebackend.csproj
-      - --urls
-      - http://0.0.0.0:5043
+    stdin_open: true
+    tty: true
+    working_dir: /app
+    command: dotnet watch --non-interactive run --urls=http://0.0.0.0:5043
     ports:
       - "5043:5043"
     restart: unless-stopped
@@ -26,15 +19,14 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:5043
       DOTNET_USE_POLLING_FILE_WATCHER: "1"
-      NEXT_TELEMETRY_DISABLED: "1"
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;
     volumes:
-      - ./nihomebackend:/src/nihomebackend
-      - ./nihomeweb:/src/nihomeweb
-      - nihomebackend_bin:/src/nihomebackend/bin
-      - nihomebackend_obj:/src/nihomebackend/obj
-      - nihomeweb_node_modules:/src/nihomeweb/node_modules
-      - nihomeweb_next:/src/nihomeweb/.next
+      - ./nihomebackend:/app
+      - ./nihomeweb:/nihomeweb
+      - nihomebackend_bin:/app/bin
+      - nihomebackend_obj:/app/obj
+      - nihomeweb_node_modules:/nihomeweb/node_modules
+      - nihomeweb_dist:/nihomeweb/dist
       - nuget_packages:/root/.nuget/packages
     networks:
       - nihome-network
@@ -42,7 +34,7 @@ services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     platform: linux/amd64
-    container_name: Nihome31042025-sqlserver
+    container_name: nihome31042025-sqlserver
     environment:
       SA_PASSWORD: "Nihome@31042025"
       ACCEPT_EULA: "Y"
@@ -62,7 +54,7 @@ services:
 
 volumes:
   nihomeweb_node_modules:
-  nihomeweb_next:
+  nihomeweb_dist:
   nihomebackend_bin:
   nihomebackend_obj:
   nuget_packages:
