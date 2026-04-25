@@ -12,9 +12,9 @@ const Index = () => {
   const { data: activitiesData } = useActivities();
   const { data: slideshowData } = useSlideshow();
 
-  const projects = projectsData ?? [];
-  const activities = activitiesData ?? [];
-  const slides = slideshowData ?? [];
+  const projects = useMemo(() => projectsData ?? [], [projectsData]);
+  const activities = useMemo(() => activitiesData ?? [], [activitiesData]);
+  const slides = useMemo(() => slideshowData ?? [], [slideshowData]);
 
   const heroSlides = useMemo(() => {
     if (slides.length > 0) return slides;

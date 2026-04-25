@@ -16,7 +16,7 @@ const AdminPosts = () => {
   const [cat, setCat] = useState("all");
   const { data: items, loading, error, refetch } = useActivities();
 
-  const list = items ?? [];
+  const list = useMemo(() => items ?? [], [items]);
   const categories = useMemo(() => ["all", ...Array.from(new Set(list.map((a) => a.category)))], [list]);
   const filtered = list.filter((a) => {
     const matchQ = !q || a.title.toLowerCase().includes(q.toLowerCase());

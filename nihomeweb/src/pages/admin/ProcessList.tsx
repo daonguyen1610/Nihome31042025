@@ -37,7 +37,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
   });
 
   const { data, loading, error, refetch } = useProcesses();
-  const items = (data?.[groupKey] ?? []) as ProcessItem[];
+  const items = useMemo(() => (data?.[groupKey] ?? []) as ProcessItem[], [data, groupKey]);
 
   const filtered = useMemo(
     () =>
