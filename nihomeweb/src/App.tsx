@@ -98,12 +98,12 @@ const App = () => (
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/posts" element={<AdminPosts />} />
             <Route path="/admin/posts/new" element={<PostForm mode="create" />} />
-            <Route path="/admin/posts/:id" element={<PostView />} />
-            <Route path="/admin/posts/:id/edit" element={<PostForm mode="edit" />} />
+            <Route path="/admin/posts/:slug" element={<PostView />} />
+            <Route path="/admin/posts/:slug/edit" element={<PostForm mode="edit" />} />
             <Route path="/admin/projects" element={<AdminProjects />} />
             <Route path="/admin/projects/new" element={<ProjectForm mode="create" />} />
-            <Route path="/admin/projects/:id" element={<ProjectView />} />
-            <Route path="/admin/projects/:id/edit" element={<ProjectForm mode="edit" />} />
+            <Route path="/admin/projects/:slug" element={<ProjectView />} />
+            <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
             <Route path="/admin/contacts" element={<AdminContacts />} />
             <Route path="/admin/recruitment" element={<AdminRecruitment />} />
             <Route path="/admin/settings" element={<AdminSettings />} />

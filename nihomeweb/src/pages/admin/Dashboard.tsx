@@ -25,8 +25,8 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { getCurrentUser } from "@/lib/auth";
-import { activities } from "@/data/activities";
-import { projects } from "@/data/projects";
+import { useActivities } from "@/hooks/useContentApi";
+import { useProjects } from "@/hooks/useContentApi";
 
 type Range = "year" | "month" | "week";
 
@@ -50,18 +50,20 @@ const Dashboard = () => {
   const { t } = useI18n();
   const user = getCurrentUser();
   const [range, setRange] = useState<Range>("week");
+  const { data: activities } = useActivities();
+  const { data: projects } = useProjects();
 
   const stats = [
     {
       label: t("dash.totalPosts"),
-      value: activities.length,
+      value: (activities ?? []).length,
       delta: "+12%",
       icon: FileText,
       bg: "linear-gradient(135deg, hsl(244 75% 64%), hsl(255 80% 72%))",
     },
     {
       label: t("dash.activeProjects"),
-      value: projects.filter((p) => p.status === "ongoing").length,
+      value: (projects ?? []).filter((p) => p.status === "ongoing").length,
       delta: "+3",
       icon: Building2,
       bg: "linear-gradient(135deg, hsl(354 84% 57%), hsl(22 95% 58%))",
@@ -82,7 +84,7 @@ const Dashboard = () => {
     },
   ];
 
-  const recentPosts = activities.slice(0, 5);
+  const recentPosts = (activities ?? []).slice(0, 5);
 
   const data = useMemo(() => generateSeries(range), [range]);
   const totalNew = data.reduce((s, d) => s + d.customers, 0);
@@ -246,7 +248,7 @@ const Dashboard = () => {
           <div className="divide-y" style={{ borderColor: "hsl(var(--admin-border))" }}>
             {recentPosts.map((p) => (
               <div key={p.id} className="py-3 flex items-center gap-4 first:pt-0">
-                <img src={p.img} alt="" className="w-14 h-14 rounded-xl object-cover" />
+                <img src={p.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover" />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm line-clamp-1">{p.title}</p>
                   <p className="text-xs mt-0.5" style={{ color: "hsl(var(--admin-muted))" }}>

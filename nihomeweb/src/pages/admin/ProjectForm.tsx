@@ -1,15 +1,35 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { getProject, upsertProject, slugify } from "@/lib/adminStore";
-import type { Project, ProjectStatus } from "@/data/projects";
+import { adminApi, slugify } from "@/services/adminApi";
+import type { UpsertProjectRequest } from "@/services/adminApi";
+import { useProject } from "@/hooks/useContentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
-const empty: Project = {
-  id: "",
-  img: "",
+interface FormData {
+  id: number;
+  slug: string;
+  imageUrl: string;
+  name: string;
+  client: string;
+  location: string;
+  scale: string;
+  scope: string;
+  status: string;
+  year: string;
+  category: string;
+  description: string;
+  challenges: string[];
+  solutions: string[];
+}
+
+const empty: FormData = {
+  id: 0,
+  slug: "",
+  imageUrl: "",
   name: "",
   client: "",
   location: "",
@@ -24,40 +44,77 @@ const empty: Project = {
 };
 
 const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
-  const [data, setData] = useState<Project>(empty);
+  const { data: existing, loading, error, refetch } = useProject(mode === "edit" ? (slug ?? "") : "");
+  const [data, setData] = useState<FormData>(empty);
+  const [initialized, setInitialized] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (mode === "edit" && id) {
-      const found = getProject(id);
-      if (found) setData(found);
-    }
-  }, [mode, id]);
+  if (mode === "edit" && existing && !initialized) {
+    setData({
+      id: existing.id,
+      slug: existing.slug,
+      imageUrl: existing.imageUrl,
+      name: existing.name,
+      client: existing.client,
+      location: existing.location,
+      scale: existing.scale,
+      scope: existing.scope,
+      status: existing.status,
+      year: existing.year ?? "",
+      category: existing.category ?? "",
+      description: existing.description ?? "",
+      challenges: existing.challenges ?? [],
+      solutions: existing.solutions ?? [],
+    });
+    setInitialized(true);
+  }
 
-  const update = <K extends keyof Project>(key: K, value: Project[K]) =>
+  const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.name.trim()) {
       toast({ title: t("form.required"), description: t("proj.field.name"), variant: "destructive" });
       return;
     }
-    const final: Project = {
-      ...data,
-      id: data.id || slugify(data.name),
-      img: data.img || "/placeholder.svg",
+    const payload: UpsertProjectRequest = {
+      slug: data.slug || slugify(data.name),
+      imageUrl: data.imageUrl || "/placeholder.svg",
+      name: data.name,
+      client: data.client,
+      location: data.location,
+      scale: data.scale,
+      scope: data.scope,
+      status: data.status,
+      year: data.year || undefined,
+      category: data.category || undefined,
+      description: data.description || undefined,
+      challenges: data.challenges.length ? data.challenges : undefined,
+      solutions: data.solutions.length ? data.solutions : undefined,
     };
-    upsertProject(final);
-    toast({
-      title: mode === "create" ? t("form.created") : t("form.updated"),
-      description: final.name,
-    });
-    navigate("/admin/projects");
+    setSubmitting(true);
+    try {
+      if (mode === "create") {
+        await adminApi.createProject(payload);
+      } else {
+        await adminApi.updateProject(data.id, payload);
+      }
+      toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: data.name });
+      navigate("/admin/projects");
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (mode === "edit" && loading) return <AdminLayout><PageLoading /></AdminLayout>;
+  if (mode === "edit" && error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
 
   return (
     <AdminLayout>
@@ -74,7 +131,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             {mode === "create" ? t("proj.addTitle") : t("proj.editTitle")}
           </h1>
           <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
-            {mode === "edit" && data.id}
+            {mode === "edit" && data.slug}
           </p>
         </div>
       </div>
@@ -109,7 +166,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                 <select
                   className="admin-input"
                   value={data.status}
-                  onChange={(e) => update("status", e.target.value as ProjectStatus)}
+                  onChange={(e) => update("status", e.target.value)}
                 >
                   <option value="ongoing">{t("proj.ongoing")}</option>
                   <option value="completed">{t("proj.completed")}</option>
@@ -150,16 +207,16 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.media")}</h2>
             <Field label={t("proj.field.image")}>
-              <input className="admin-input" value={data.img} onChange={(e) => update("img", e.target.value)} placeholder="https://..." />
+              <input className="admin-input" value={data.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="https://..." />
             </Field>
-            {data.img && (
+            {data.imageUrl && (
               <div className="mt-4 aspect-[16/10] rounded-xl overflow-hidden bg-muted">
-                <img src={data.img} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
+                <img src={data.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
               </div>
             )}
           </div>
 
-          <button type="submit" className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm">
+          <button type="submit" disabled={submitting} className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50">
             <Save className="w-4 h-4" />
             {mode === "create" ? t("form.create") : t("form.update")}
           </button>

@@ -1,39 +1,38 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { deletePost, getAllPosts } from "@/lib/adminStore";
-import type { Activity } from "@/data/activities";
+import { useActivities } from "@/hooks/useContentApi";
+import { adminApi } from "@/services/adminApi";
+import type { ActivityResponse } from "@/services/contentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const AdminPosts = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
-  const [items, setItems] = useState<Activity[]>([]);
+  const { data: items, loading, error, refetch } = useActivities();
 
-  const refresh = () => setItems(getAllPosts());
-  useEffect(() => {
-    refresh();
-    const handler = () => refresh();
-    window.addEventListener("nicon_admin_posts_v1:changed", handler);
-    return () => window.removeEventListener("nicon_admin_posts_v1:changed", handler);
-  }, []);
-
-  const categories = useMemo(() => ["all", ...Array.from(new Set(items.map((a) => a.category)))], [items]);
-  const filtered = items.filter((a) => {
+  const list = items ?? [];
+  const categories = useMemo(() => ["all", ...Array.from(new Set(list.map((a) => a.category)))], [list]);
+  const filtered = list.filter((a) => {
     const matchQ = !q || a.title.toLowerCase().includes(q.toLowerCase());
     const matchCat = cat === "all" || a.category === cat;
     return matchQ && matchCat;
   });
 
-  const handleDelete = (a: Activity) => {
+  const handleDelete = async (a: ActivityResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;
-    deletePost(a.id);
-    toast({ title: t("form.deleted"), description: a.title });
-    refresh();
+    try {
+      await adminApi.deleteActivity(a.id);
+      toast({ title: t("form.deleted"), description: a.title });
+      refetch();
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
   };
 
   return (
@@ -50,6 +49,12 @@ const AdminPosts = () => {
         </Link>
       </div>
 
+      {loading ? (
+        <PageLoading />
+      ) : error ? (
+        <PageError message={error} onRetry={refetch} />
+      ) : (
+      <>
       <div className="admin-card p-5 mb-5 flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
         <div
           className="flex items-center gap-2 rounded-full px-4 py-2 border w-full lg:w-80"
@@ -104,8 +109,8 @@ const AdminPosts = () => {
                 filtered.map((a) => (
                   <tr key={a.id} className="border-t hover:bg-muted/30 transition" style={{ borderColor: "hsl(var(--admin-border))" }}>
                     <td className="px-6 py-4">
-                      <Link to={`/admin/posts/${a.id}`} className="flex items-center gap-3 hover:opacity-80 transition">
-                        <img src={a.img} alt="" className="w-12 h-12 rounded-xl object-cover" />
+                      <Link to={`/admin/posts/${a.slug}`} className="flex items-center gap-3 hover:opacity-80 transition">
+                        <img src={a.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />
                         <p className="font-semibold line-clamp-2 max-w-md">{a.title}</p>
                       </Link>
                     </td>
@@ -119,14 +124,14 @@ const AdminPosts = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex items-center gap-1">
                         <Link
-                          to={`/admin/posts/${a.id}`}
+                          to={`/admin/posts/${a.slug}`}
                           className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
                           style={{ color: "hsl(var(--admin-info))" }}
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
                         <Link
-                          to={`/admin/posts/${a.id}/edit`}
+                          to={`/admin/posts/${a.slug}/edit`}
                           className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
                           style={{ color: "hsl(var(--admin-primary))" }}
                         >
@@ -148,6 +153,8 @@ const AdminPosts = () => {
           </table>
         </div>
       </div>
+      </>
+      )}
     </AdminLayout>
   );
 };

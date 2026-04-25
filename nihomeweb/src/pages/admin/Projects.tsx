@@ -1,33 +1,32 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, MapPin, Maximize2, Edit, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { deleteProject, getAllProjects } from "@/lib/adminStore";
-import type { Project } from "@/data/projects";
+import { useProjects } from "@/hooks/useContentApi";
+import { adminApi } from "@/services/adminApi";
+import type { ProjectResponse } from "@/services/contentApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const AdminProjects = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [tab, setTab] = useState<"all" | "ongoing" | "completed">("all");
-  const [items, setItems] = useState<Project[]>([]);
+  const { data: items, loading, error, refetch } = useProjects();
 
-  const refresh = () => setItems(getAllProjects());
-  useEffect(() => {
-    refresh();
-    const handler = () => refresh();
-    window.addEventListener("nicon_admin_projects_v1:changed", handler);
-    return () => window.removeEventListener("nicon_admin_projects_v1:changed", handler);
-  }, []);
+  const list = items ?? [];
+  const filtered = list.filter((p) => tab === "all" || p.status === tab);
 
-  const filtered = items.filter((p) => tab === "all" || p.status === tab);
-
-  const handleDelete = (p: Project) => {
+  const handleDelete = async (p: ProjectResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;
-    deleteProject(p.id);
-    toast({ title: t("form.deleted"), description: p.name });
-    refresh();
+    try {
+      await adminApi.deleteProject(p.id);
+      toast({ title: t("form.deleted"), description: p.name });
+      refetch();
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
   };
 
   return (
@@ -69,11 +68,16 @@ const AdminProjects = () => {
         ))}
       </div>
 
+      {loading ? (
+        <PageLoading />
+      ) : error ? (
+        <PageError message={error} onRetry={refetch} />
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((p) => (
           <div key={p.id} className="admin-card overflow-hidden group">
-            <Link to={`/admin/projects/${p.id}`} className="block aspect-[16/10] overflow-hidden bg-muted relative">
-              <img src={p.img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
+            <Link to={`/admin/projects/${p.slug}`} className="block aspect-[16/10] overflow-hidden bg-muted relative">
+              <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
               <span
                 className="admin-chip absolute top-4 left-4"
                 style={
@@ -96,14 +100,14 @@ const AdminProjects = () => {
               </div>
               <div className="flex items-center gap-1.5 pt-4 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
                 <Link
-                  to={`/admin/projects/${p.id}`}
+                  to={`/admin/projects/${p.slug}`}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold hover:bg-muted transition"
                   style={{ color: "hsl(var(--admin-info))" }}
                 >
                   <Eye className="w-3.5 h-3.5" /> {t("common.view")}
                 </Link>
                 <Link
-                  to={`/admin/projects/${p.id}/edit`}
+                  to={`/admin/projects/${p.slug}/edit`}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold hover:bg-muted transition"
                   style={{ color: "hsl(var(--admin-primary))" }}
                 >
@@ -121,6 +125,7 @@ const AdminProjects = () => {
           </div>
         ))}
       </div>
+      )}
     </AdminLayout>
   );
 };
