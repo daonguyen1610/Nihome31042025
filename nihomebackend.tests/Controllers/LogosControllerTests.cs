@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -18,7 +20,9 @@ public class LogosControllerTests : IDisposable
     public LogosControllerTests()
     {
         _db = DbContextFactory.Create();
-        var service = new LogoService(_db);
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
+        var service = new LogoService(_db, hostedImageService);
         _sut = new LogosController(service);
     }
 

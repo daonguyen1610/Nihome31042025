@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -27,8 +28,10 @@ public class ActivitiesControllerTests : IDisposable
 
         var entityTranslationSvc = new EntityTranslationService(
             _db, Mock.Of<IMemoryCache>());
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
 
-        _service = new ActivityService(_db, entityTranslationSvc);
+        _service = new ActivityService(_db, entityTranslationSvc, hostedImageService);
         _sut = new ActivitiesController(_service);
     }
 

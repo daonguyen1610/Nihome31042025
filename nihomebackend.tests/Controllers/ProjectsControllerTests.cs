@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,9 @@ public class ProjectsControllerTests : IDisposable
     {
         _db = DbContextFactory.Create();
 
-        var service = new ProjectService(_db);
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
+        var service = new ProjectService(_db, hostedImageService);
         _sut = new ProjectsController(service);
     }
 

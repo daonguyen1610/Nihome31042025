@@ -1,5 +1,7 @@
 using NihomeBackend.Extensions;
 using NihomeBackend.Services;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 
 var currentDirectory = Directory.GetCurrentDirectory();
 
@@ -47,6 +49,17 @@ var appOptions = new WebApplicationOptions
 
 var builder = WebApplication.CreateBuilder(appOptions);
 
+builder.Logging.ClearProviders();
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+    options.SingleLine = true;
+});
+if (builder.Environment.IsDevelopment())
+{
+    builder.Logging.AddDebug();
+}
+
 builder.Services.AddOpenApiServices();
 builder.Services.AddFrontendCors(builder.Configuration);
 builder.Services.AddAuthAndEmail(builder.Configuration);
@@ -56,6 +69,41 @@ var app = builder.Build();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+var uploadImagesPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "images", "upload");
+Directory.CreateDirectory(uploadImagesPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadImagesPath),
+    RequestPath = "/images/upload"
+});
+
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+    {
+        await next();
+        return;
+    }
+
+    var logger = context.RequestServices
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("ApiRequestLogger");
+
+    var start = DateTime.UtcNow;
+    logger.LogDebug("HTTP {Method} {Path}{QueryString} started", context.Request.Method, context.Request.Path, context.Request.QueryString);
+
+    await next();
+
+    var elapsedMs = (DateTime.UtcNow - start).TotalMilliseconds;
+    logger.LogDebug(
+        "HTTP {Method} {Path} finished {StatusCode} in {ElapsedMs} ms",
+        context.Request.Method,
+        context.Request.Path,
+        context.Response.StatusCode,
+        Math.Round(elapsedMs, 2));
+});
+
 app.UseRouting();
 app.UseCors(FrontendCorsExtensions.PolicyName);
 app.UseAuthentication();

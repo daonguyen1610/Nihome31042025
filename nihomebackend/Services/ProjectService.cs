@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,17 +8,24 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProjectService(AppDbContext db)
+public class ProjectService(AppDbContext db, HostedImageService hostedImageService)
 {
+    private ILogger<ProjectService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProjectService>();
+
     public async Task<List<ProjectResponse>> GetAllAsync()
     {
         var items = await db.Projects.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync();
+        Logger.LogDebug("Fetched {Count} projects", items.Count);
         return items.Select(MapToResponse).ToList();
     }
 
     public async Task<ProjectResponse?> GetBySlugAsync(string slug)
     {
         var item = await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
+        if (item == null)
+        {
+            Logger.LogWarning("Project not found by slug {Slug}", slug);
+        }
         return item == null ? null : MapToResponse(item);
     }
 
@@ -44,13 +52,20 @@ public class ProjectService(AppDbContext db)
         };
         db.Projects.Add(entity);
         await db.SaveChangesAsync();
+        Logger.LogInformation("Created project {ProjectId} (slug={Slug})", entity.Id, entity.Slug);
         return MapToResponse(entity);
     }
 
     public async Task<ProjectResponse?> UpdateAsync(int id, UpsertProjectRequest req)
     {
         var entity = await db.Projects.FindAsync(id);
-        if (entity == null) return null;
+        if (entity == null)
+        {
+            Logger.LogWarning("Cannot update project. Id {ProjectId} not found", id);
+            return null;
+        }
+
+        var previousImageUrl = entity.ImageUrl;
 
         entity.Slug = req.Slug;
         entity.ImageUrl = req.ImageUrl;
@@ -71,15 +86,28 @@ public class ProjectService(AppDbContext db)
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
+        if (!string.Equals(previousImageUrl, entity.ImageUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            hostedImageService.DeleteIfManagedUpload(previousImageUrl);
+            Logger.LogInformation("Updated project {ProjectId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
+        }
+        Logger.LogInformation("Updated project {ProjectId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
         var entity = await db.Projects.FindAsync(id);
-        if (entity == null) return false;
+        if (entity == null)
+        {
+            Logger.LogWarning("Cannot delete project. Id {ProjectId} not found", id);
+            return false;
+        }
+        var imageUrl = entity.ImageUrl;
         db.Projects.Remove(entity);
         await db.SaveChangesAsync();
+        hostedImageService.DeleteIfManagedUpload(imageUrl);
+        Logger.LogInformation("Deleted project {ProjectId}", id);
         return true;
     }
 

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Models;
@@ -16,7 +18,10 @@ public class SystemControllerTests
     public void GetHealth_ReturnsHealthResponse()
     {
         var timeService = new TimeService();
-        var controller = new SystemController(timeService);
+        var webHostEnvMock = new Mock<IWebHostEnvironment>();
+        webHostEnvMock.Setup(h => h.ContentRootPath).Returns("/tmp");
+        var loggerMock = new Mock<ILogger<SystemController>>();
+        var controller = new SystemController(timeService, webHostEnvMock.Object, loggerMock.Object);
 
         var hostEnvMock = new Mock<IHostEnvironment>();
         hostEnvMock.Setup(h => h.EnvironmentName).Returns("Testing");
@@ -43,7 +48,10 @@ public class SystemControllerTests
     public void GetHealth_TimestampUtcIsRecent()
     {
         var timeService = new TimeService();
-        var controller = new SystemController(timeService);
+        var webHostEnvMock = new Mock<IWebHostEnvironment>();
+        webHostEnvMock.Setup(h => h.ContentRootPath).Returns("/tmp");
+        var loggerMock = new Mock<ILogger<SystemController>>();
+        var controller = new SystemController(timeService, webHostEnvMock.Object, loggerMock.Object);
 
         var hostEnvMock = new Mock<IHostEnvironment>();
         hostEnvMock.Setup(h => h.EnvironmentName).Returns("Test");

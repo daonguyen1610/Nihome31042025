@@ -21,6 +21,17 @@ describe("adminApi", () => {
     vi.clearAllMocks();
   });
 
+  it("uploadImage sends multipart form data to system upload endpoint", async () => {
+    const file = new File(["img"], "photo.png", { type: "image/png" });
+    await adminApi.uploadImage(file, "/images/upload/old-photo.png");
+
+    const [url, formData] = mockApi.post.mock.calls[0];
+    expect(url).toBe("/system/upload-image");
+    expect(formData).toBeInstanceOf(FormData);
+    expect((formData as FormData).get("file")).toBe(file);
+    expect((formData as FormData).get("previousImageUrl")).toBe("/images/upload/old-photo.png");
+  });
+
   // ── Activities ────────────────────────────────────────────────
 
   it("createActivity sends correct route and payload", async () => {

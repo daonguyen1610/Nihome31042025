@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using NihomeBackend.Data;
@@ -18,7 +19,9 @@ public class SlideshowServiceTests : IDisposable
     {
         _db = DbContextFactory.Create();
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
-        _sut = new SlideshowService(_db, entityTranslationSvc);
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
+        _sut = new SlideshowService(_db, entityTranslationSvc, hostedImageService);
     }
 
     public void Dispose() => _db.Dispose();

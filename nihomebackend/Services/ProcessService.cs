@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -8,9 +9,12 @@ namespace NihomeBackend.Services;
 
 public class ProcessService(AppDbContext db)
 {
+    private ILogger<ProcessService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProcessService>();
+
     public async Task<Dictionary<string, List<ProcessResponse>>> GetAllGroupedAsync()
     {
         var all = await db.ProcessDocuments.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync();
+        Logger.LogDebug("Fetched {Count} process documents", all.Count);
         return all.GroupBy(p => p.GroupKey)
             .ToDictionary(g => g.Key, g => g.Select(MapToResponse).ToList());
     }
@@ -26,13 +30,18 @@ public class ProcessService(AppDbContext db)
         };
         db.ProcessDocuments.Add(entity);
         await db.SaveChangesAsync();
+        Logger.LogInformation("Created process document {ProcessId} (group={GroupKey}, code={Code})", entity.Id, entity.GroupKey, entity.Code);
         return MapToResponse(entity);
     }
 
     public async Task<ProcessResponse?> UpdateAsync(int id, UpsertProcessRequest req)
     {
         var entity = await db.ProcessDocuments.FindAsync(id);
-        if (entity == null) return null;
+        if (entity == null)
+        {
+            Logger.LogWarning("Cannot update process document. Id {ProcessId} not found", id);
+            return null;
+        }
 
         entity.GroupKey = req.GroupKey;
         entity.Code = req.Code;
@@ -40,15 +49,21 @@ public class ProcessService(AppDbContext db)
         entity.SortOrder = req.SortOrder;
 
         await db.SaveChangesAsync();
+        Logger.LogInformation("Updated process document {ProcessId}", id);
         return MapToResponse(entity);
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
         var entity = await db.ProcessDocuments.FindAsync(id);
-        if (entity == null) return false;
+        if (entity == null)
+        {
+            Logger.LogWarning("Cannot delete process document. Id {ProcessId} not found", id);
+            return false;
+        }
         db.ProcessDocuments.Remove(entity);
         await db.SaveChangesAsync();
+        Logger.LogInformation("Deleted process document {ProcessId}", id);
         return true;
     }
 

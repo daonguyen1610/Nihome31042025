@@ -21,10 +21,33 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const { data: logos, loading, error, refetch } = useLogos();
   const items: LogoResponse[] = logos?.[kind] ?? [];
 
+  const uploadImageFromPicker = async (previousImageUrl?: string) => {
+    const file = await new Promise<File | null>((resolve) => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = () => resolve(input.files?.[0] ?? null);
+      input.click();
+    });
+
+    if (!file) return null;
+    const res = await adminApi.uploadImage(file, previousImageUrl);
+    return res.data.imageUrl;
+  };
+
   const add = async () => {
     const name = window.prompt("Tên")?.trim();
     if (!name) return;
-    const imageUrl = window.prompt("URL hình ảnh")?.trim() ?? "";
+
+    let imageUrl = "";
+    if (window.confirm("Tải ảnh lên host từ máy của bạn?")) {
+      const uploadedImageUrl = await uploadImageFromPicker();
+      if (!uploadedImageUrl) return;
+      imageUrl = uploadedImageUrl;
+    } else {
+      imageUrl = window.prompt("URL hình ảnh")?.trim() ?? "";
+    }
+
     const href = window.prompt("Liên kết (tuỳ chọn)")?.trim() || undefined;
     try {
       await adminApi.createLogo({ name, imageUrl, href, kind: kindMap[kind] });
@@ -38,7 +61,16 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const edit = async (item: LogoResponse) => {
     const name = window.prompt("Tên", item.name)?.trim();
     if (!name) return;
-    const imageUrl = window.prompt("URL hình ảnh", item.imageUrl)?.trim() ?? item.imageUrl;
+
+    let imageUrl = item.imageUrl;
+    if (window.confirm("Tải ảnh mới lên host từ máy của bạn?")) {
+      const uploadedImageUrl = await uploadImageFromPicker(item.imageUrl);
+      if (!uploadedImageUrl) return;
+      imageUrl = uploadedImageUrl;
+    } else {
+      imageUrl = window.prompt("URL hình ảnh", item.imageUrl)?.trim() ?? item.imageUrl;
+    }
+
     const href = window.prompt("Liên kết (tuỳ chọn)", item.href ?? "")?.trim() || undefined;
     try {
       await adminApi.updateLogo(item.id, { name, imageUrl, href, kind: kindMap[kind] });
