@@ -1,6 +1,6 @@
 # Working Procedure
 
-This is the standard day-to-day procedure for you, your teammate, Claude, and Codex when working in `nihomeweb/`.
+This is the standard day-to-day procedure for humans, Claude, and Codex when working in `nihomeweb/`.
 Use it with `AGENTS.md`, the frontend playbook, and the memory bank.
 
 ## Core Rule
@@ -28,8 +28,8 @@ Choose the owner before implementation starts.
 
 Good ownership splits:
 
-- one owner for landing and marketing UI
-- one owner for dashboard shell
+- one owner for public marketing pages
+- one owner for admin shell and admin navigation
 - one owner for backend integration strategy
 - one owner for reusable UI primitives
 
@@ -77,12 +77,19 @@ Run a review pass against the frontend playbook and confirm:
 
 - the owner was clear
 - the task boundary stayed clear
-- the result is aligned with the installed Next.js version and the active starter-kit baseline
-- the chosen routing model matches the current Pages Router architecture
+- the result is aligned with the Vite + React Router baseline
+- routes remain centralized through `src/App.tsx` unless a documented migration changes that
 - no undocumented convention was introduced
-- the UI still fits the current visual direction
+- no stale Next.js, Materialize starter-kit, or full admin template assumption remains in the touched docs
+- the UI still fits the current NICON / Nihome visual direction
 - any changed backend assumptions were written into the memory bank
 - no stale documentation was knowingly left behind
+
+Run the relevant checks for the blast radius:
+
+- `npm run lint` for TS/TSX changes
+- `npm run build` for app, route, config, or bundling changes
+- `npm run test` for logic or store changes when tests exist or are touched
 
 ## Non-Negotiable Rules
 

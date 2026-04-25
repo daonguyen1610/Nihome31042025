@@ -7,54 +7,60 @@ Agents should read it before any non-trivial implementation task together with `
 ## Project Identity
 
 - Repo name: `nihomeweb`
-- Product name: Nihome
-- Product shape: internal admin portal plus client portal for a design-and-build business
-- Current phase: starter-kit baseline reset
+- Product name: NICON / Nihome
+- Product shape: public corporate website plus lightweight admin/content portal for a design-and-build business
+- Current phase: Vite/Lovable baseline adoption after the template refactor
 
 ## Current Technical Baseline
 
-- Next.js `13.0.0`
-- React `18.2.0`
-- TypeScript `4.8.x`
-- MUI `5.x`
-- Emotion `11.x`
-- Pages Router
+- Vite `5.x`
+- React `18.3.x`
+- TypeScript `5.8.x`
+- React Router DOM `6.x`
+- Tailwind CSS `3.4.x`
+- shadcn/ui and Radix UI primitives
+- TanStack React Query `5.x`
+- Vitest `3.x`
 
 Current repo reality:
 
-- starter-kit layout, theme, and settings system are the active frontend baseline
-- mock JWT auth is still present as a placeholder
-- no real API client
-- no production auth provider or route ownership decision beyond the current mock baseline
-- no deep feature modules yet
+- `nihomeweb/` now contains the Vite + React frontend copied from the Lovable source direction.
+- The app is a client-rendered SPA, not a Next.js app.
+- Public website pages and an admin shell already exist.
+- Demo auth, admin CRUD, and settings behavior are localStorage-backed placeholders.
+- Legacy Next.js and Materialize code remains under `legacy/` only as reference material.
+- No production API client, auth provider, or backend session model is committed yet.
 
 ## Architectural Defaults
 
-- Pages Router is the active routing model.
-- Route files live under `src/pages/`.
-- `_app.tsx` owns providers, guards, theme setup, and page defaults.
-- `_document.tsx` owns document markup and Emotion SSR integration.
-- Build by phase instead of scaffolding every future module at once.
+- Browser routing is centralized in `src/App.tsx`.
+- `src/main.tsx` owns app bootstrapping.
+- Public pages live under `src/pages/`.
+- Admin pages live under `src/pages/admin/`.
+- Public layout belongs in `src/components/layout/Layout.tsx`.
+- Admin layout belongs in `src/components/layout/AdminLayout.tsx`.
+- Shared shadcn/Radix primitives belong in `src/components/ui/`.
+- Static seed data belongs in `src/data/`.
+- Demo localStorage stores belong in `src/lib/` until a real API strategy replaces them.
 
 ## Current Scope
 
-Included in the current baseline reset:
+Included in the current refactor:
 
-- replace the retired Next 16 App Router shell with the imported starter-kit baseline
-- personalize the starter-kit for Nihome and remove vendor-facing template language
-- preserve these routes: `/`, `/projects`, `/notifications`, `/login`, `/forgot-password`, `/admin`, `/admin/dashboard`
-- keep mock auth only as an explicit placeholder
-- align repo-local AI docs and memory to the active baseline
+- make the Vite/Lovable source tree the active frontend inside `nihomeweb/`
+- retire the Materialize starter-kit and Next.js shells to `legacy/`
+- rewrite AI docs and memory around Vite, React Router, Tailwind, shadcn, and the current source tree
+- preserve the existing public and admin route surfaces in `src/App.tsx`
+- keep demo auth and localStorage stores only as explicit placeholders
 
 Explicitly deferred:
 
-- auth provider choice
-- route protection
-- API client layer
-- state-management libraries
-- deep business-logic feature components
-- broad `full-template` imports
-- framework modernization back to a newer Next.js baseline
+- production auth provider choice
+- route protection and backend session ownership
+- API client layer and backend integration contract
+- production persistence for admin content/settings
+- broad imports from Materialize or another full admin template
+- migration back to Next.js
 
 ## AI Working Rules
 
@@ -71,12 +77,14 @@ Update the memory bank in the same task when a durable decision changes architec
 
 ## Acceptance Criteria
 
-The starter baseline reset is only complete when:
+The refactor documentation baseline is only complete when:
 
 - `npm run build` passes
-- `npx tsc --noEmit` passes
-- the official route surface renders cleanly
-- visible legacy vendor references are gone from the shipped UI
+- `npm run lint` passes or any existing lint baseline issues are documented
+- `npm run test` passes when tests are present and dependencies are installed
+- the official public and admin route surfaces render cleanly
+- visible legacy Materialize, Next.js, and stale starter-kit assumptions are gone from active repo docs
+- legacy directories are clearly marked as reference-only
 - no second active frontend architecture remains in normal use
 - repo docs and memory reflect the same implementation reality
 
@@ -84,11 +92,11 @@ The starter baseline reset is only complete when:
 
 Future work may introduce:
 
-- auth and route protection
-- API integration
-- state management
-- deeper admin modules
-- richer client portal flows
-- selective component imports from the larger full template
+- production auth and route protection
+- API integration with the backend
+- persistent admin content management
+- richer admin modules
+- stronger client portal flows
+- deployment and environment-variable hardening
 
 Those phases should only start after the relevant decisions are documented in the memory bank.

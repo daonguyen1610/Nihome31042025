@@ -1,13 +1,27 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
 # Shared Agent Contract
 
 `AGENTS.md` is the primary source of truth for AI agent workflow in `nihomeweb/`.
 If another repo instruction file disagrees with this one, follow `AGENTS.md` and then repair the stale document.
+
+## Active Frontend Baseline
+
+This repo is now a Vite + React single-page app.
+It is not an active Next.js app, not the old Materialize starter-kit baseline, and not a full admin template import.
+
+Authoritative source-code facts:
+
+- app entry: `src/main.tsx`
+- route table and top-level providers: `src/App.tsx`
+- routing: `react-router-dom` `BrowserRouter` and `Routes`
+- public pages: `src/pages/*.tsx`
+- admin pages: `src/pages/admin/**/*.tsx`
+- public layout: `src/components/layout/Layout.tsx`
+- admin layout: `src/components/layout/AdminLayout.tsx`
+- shared UI primitives: `src/components/ui/`
+- design tokens and global utilities: `src/index.css` and `tailwind.config.ts`
+- static seed data: `src/data/`
+- demo client-side stores: `src/lib/`
+- legacy reference code: `legacy/materialize-starter-kit/` and `legacy/next16-shell/`
 
 ## Required Read Order
 
@@ -50,11 +64,11 @@ For Codex environments with Vercel skills available, `docs/ai/frontend-playbook.
 
 Use these skills intentionally:
 
-- `vercel:nextjs` for work touching `src/pages/`, `_app`, `_document`, `next.config.*`, layouts, routing, auth guards, rendering, or caching
 - `vercel:react-best-practices` after multi-component TSX edits and for React code review
-- `vercel:shadcn` when introducing or standardizing reusable UI primitives
-- `vercel:swr` when client-side server-state handling becomes more than a simple one-off fetch
-- `vercel:geist` only if the team explicitly standardizes typography around Geist
+- `vercel:shadcn` when introducing or standardizing reusable UI primitives under `src/components/ui/`
+- `vercel:agent-browser-verify` or `vercel:agent-browser` when a dev server is running and a browser flow must be checked
+- `vercel:swr` only if the team explicitly chooses SWR later; the current repo already includes TanStack Query
+- `vercel:nextjs` only if a future documented migration to Next.js begins; it is not the default skill for this repo
 
 Claude does not share Codex's native skill system, so Claude should mirror the same workflow by reading the playbook and applying its rules directly.
 
@@ -90,8 +104,8 @@ When multiple people or agents work in this repo:
 
 Good ownership examples:
 
-- one owner for landing or marketing UI
-- one owner for dashboard shell
+- one owner for public marketing pages
+- one owner for admin shell and navigation
 - one owner for backend integration strategy
 - one owner for reusable UI primitives
 
@@ -134,6 +148,7 @@ A task is only considered done correctly when:
 - durable context was written into the repo instead of left only in chat
 - no stale documentation was knowingly left behind
 - the result passes the review expectations in `docs/ai/frontend-playbook.md`
+- relevant checks were run or the skipped checks were explained
 - Claude and Codex would reach the same understanding by reading the repo docs alone
 
 Keep repo-facing rules and memory in English for consistency across Claude, Codex, and Vercel skill guidance.

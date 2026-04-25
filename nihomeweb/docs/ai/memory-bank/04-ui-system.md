@@ -1,31 +1,40 @@
 # UI System
 
-Last reviewed: 2026-04-21
+Last reviewed: 2026-04-25
 
 ## Visual Direction
 
-The current UI direction comes from the imported starter-kit and is now the official admin baseline for Nihome.
-New work should preserve that baseline while replacing demo and vendor-facing copy with Nihome-specific language.
+The current UI direction comes from the Lovable/Vite source tree and is now the official frontend baseline for NICON / Nihome.
+New work should preserve the NICON / Nihome design language already encoded in `src/index.css` and the current components.
 
 ## Tokens and Styling Ownership
 
-- Global theme ownership lives primarily in the MUI theme, `themeConfig`, and the starter-kit styling layer.
-- `styles/globals.css` is the current home for shared global CSS used by `_app.tsx`.
-- Before repeating raw color, spacing, or shadow values across screens, promote them into the theme or a reusable MUI-aware pattern.
-- Avoid mixing unrelated token systems without a deliberate migration plan.
+- Global design tokens live primarily in `src/index.css` CSS variables and `tailwind.config.ts`.
+- shadcn/ui configuration lives in `components.json`.
+- `src/components/ui/` is the active primitive component layer.
+- Use Tailwind utilities and token-backed classes before repeating raw color, spacing, or shadow values.
+- Avoid mixing unrelated token systems such as MUI, Emotion, or Materialize without a documented migration plan.
 
 ## Typography
 
-- The current baseline uses the starter-kit typography system and a Google Fonts import through `_document.tsx`.
+- The current baseline imports Be Vietnam Pro and Manrope in `src/index.css`.
 - Do not switch to Geist by default.
 - If the team changes typography later, treat that as a documented visual-system decision and update the playbook plus memory bank together.
 
+## Color and Surface Direction
+
+- Primary brand direction is red/orange with neutral surfaces and selected indigo accents.
+- Public pages should stay media-rich and brand-forward, using project/company assets where available.
+- Admin pages should stay quieter, denser, and optimized for repeated work.
+- Do not reintroduce Materialize or MUI visuals as the default admin language.
+
 ## Component Strategy
 
+- Prefer existing shadcn/Radix primitives for common controls.
+- Prefer lucide-react icons for recognizable actions.
 - Start simple while the app is small, but do not let repeated route-local UI harden into inconsistent one-off patterns.
-- Prefer starter-kit layout primitives, theme overrides, and shared MUI composition over ad hoc route-local styling.
 - Keep visual wrappers, content logic, and data-loading concerns reasonably separated.
-- The current baseline ships with a shared shell layer based on `UserLayout`, navigation config, dropdowns, footer, and page cards.
+- The current baseline ships with a public layout, admin layout, language toggle, page header, and shadcn primitives.
 
 ## Responsiveness and Accessibility
 
@@ -33,6 +42,7 @@ New work should preserve that baseline while replacing demo and vendor-facing co
 - Use semantic HTML before adding ARIA fallbacks.
 - Ensure interactive elements remain keyboard-usable and visually understandable.
 - Keep contrast, text sizing, and spacing readable without relying on one perfect viewport.
+- Ensure sidebar, table, filter, card, and button text does not overflow at expected viewport widths.
 
 ## Naming and Drift Control
 

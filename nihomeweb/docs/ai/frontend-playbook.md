@@ -7,32 +7,24 @@ Use it together with `AGENTS.md`, `docs/ai/project-brief.md`, and the memory ban
 
 - align Claude and Codex on the same frontend workflow
 - route Codex to the right Vercel skill for the task
-- keep the starter-kit baseline decisions consistent across the repo
+- keep the Vite / React / shadcn baseline consistent across the repo
 - reduce styling and architecture drift when multiple agents contribute
 
 ## Required Baseline
 
-- Treat the installed Next.js version in this repo as authoritative.
-- Before changing app code, read the relevant local Next.js docs under `node_modules/next/dist/docs/` when dependencies are installed.
-- Prefer the current Pages Router architecture instead of mixing in a second active routing model.
-- Preserve the starter-kit layout, theme, and settings system unless the team explicitly documents a replacement.
+- Treat the current Vite + React SPA as authoritative.
+- `src/main.tsx` mounts the app.
+- `src/App.tsx` owns top-level providers, `BrowserRouter`, and the route table.
+- `src/pages/` contains React page components; it is not Next.js Pages Router.
+- `src/components/ui/` contains shadcn/ui primitives configured by `components.json`.
+- `src/index.css` and `tailwind.config.ts` own design tokens and global utilities.
+- The app currently uses local seed data and localStorage-backed demo stores.
+- `legacy/materialize-starter-kit/` and `legacy/next16-shell/` are archived references, not active app code.
+- Do not reintroduce the old Materialize starter-kit, full admin template, or Next.js assumptions without a dated decision and migration plan.
 
 ## Vercel Skill Routing
 
 Use these skills intentionally in Codex environments:
-
-### `vercel:nextjs`
-
-Use for any task touching:
-
-- `src/pages/`
-- `_app.tsx`, `_document.tsx`, `next.d.ts`
-- `next.config.*`
-- layouts, routing, rendering mode, auth guards, or page-level redirects
-- cache behavior, revalidation, or fetch strategy
-- migration work that affects the current Pages Router baseline
-
-This is the default skill for most work in this repo.
 
 ### `vercel:react-best-practices`
 
@@ -40,57 +32,75 @@ Use when:
 
 - reviewing React or TSX quality
 - editing multiple components in one task
-- checking hooks, accessibility, typing, and component structure after a UI pass
+- checking hooks, accessibility, typing, performance, and component structure after a UI pass
 
 ### `vercel:shadcn`
 
 Use when:
 
-- introducing a shared primitive such as buttons, cards, tabs, dialogs, or form controls
+- introducing or standardizing shared primitives such as buttons, cards, tabs, dialogs, forms, selects, or tables
+- changing `src/components/ui/` or `components.json`
 - moving repeated UI patterns into reusable building blocks
-- standardizing composition instead of continuing ad hoc styled sections
 
-Do not introduce `shadcn/ui` just for one isolated element with no reuse value, and do not let it silently replace the current MUI baseline.
+Do not bypass the existing shadcn/Radix primitives with one-off copies unless there is a clear reason.
 
-### `vercel:swr`
+### `vercel:agent-browser-verify` and `vercel:agent-browser`
 
 Use when:
 
-- client-side server state becomes persistent, shared, retry-aware, or mutation-heavy
-- a one-off `fetch` in `useEffect` is no longer enough
-- the UI needs caching, revalidation, deduplication, or optimistic updates
+- a dev server is running and a visual gut-check is needed
+- testing routes, forms, admin flows, or responsive layout behavior in a browser is part of the task
 
-Do not add SWR prematurely for simple static screens.
+### `vercel:swr`
 
-### `vercel:geist`
+Use only if the team explicitly chooses SWR later.
+The current project already includes TanStack Query, so server-state work should normally evaluate that existing dependency first.
 
-Use only if the team explicitly decides to standardize on Geist typography.
-Do not quietly replace the current visual direction with Geist just because the skill exists.
+### `vercel:nextjs`
+
+Do not use this as the default project skill.
+Use it only if a future task explicitly starts a Next.js migration and the decision is recorded in the memory bank.
 
 ## Default Frontend Conventions
 
 ### Architecture
 
-- Pages Router first
-- `src/pages/` is the active route surface
-- `_app.tsx` owns app-level providers, guards, theme setup, and head defaults
-- `_document.tsx` owns document-level markup and Emotion server integration
-- Avoid direct backend URLs inside presentational components
-- Keep phase work aligned with the current repo brief instead of jumping ahead to future modules or dependencies
+- Vite + React SPA first.
+- Route declarations live in `src/App.tsx`.
+- Add a new route by adding the page component and an explicit `Route` entry.
+- Public pages use `src/components/layout/Layout.tsx` unless there is a documented exception.
+- Admin pages use `src/components/layout/AdminLayout.tsx` for sidebar, topbar, and admin navigation.
+- Shared primitive UI belongs in `src/components/ui/`.
+- Shared app-specific components belong in `src/components/` by role, not by page location.
+- Static seed content belongs in `src/data/`.
+- Client-side demo persistence belongs in `src/lib/`, but production data access should be centralized separately.
+- Use the `@/` alias configured by Vite and TypeScript.
 
-### Data Fetching
+### Data Fetching And State
 
-- Start with the simplest approach that matches the rendering model.
-- Keep backend access patterns explicit and easy to centralize later.
-- The current baseline uses mock auth only and does not commit to a real API layer yet.
-- If client-side data fetching grows, move toward a shared server-state strategy instead of repeating `useEffect` fetch blocks everywhere.
+- Keep the current static/localStorage demo baseline explicit.
+- Do not treat `src/lib/auth.ts`, `src/lib/adminStore.ts`, or `src/lib/settingsStore.ts` as production-ready backend integration.
+- If real API calls are introduced, centralize API access instead of scattering raw `fetch` calls across presentation components.
+- Prefer TanStack Query for shared client-side server state if the existing dependency fits the use case.
+- Keep backend base URLs and environment contracts documented; Vite-exposed variables must use the `VITE_` prefix.
 
 ### UI System
 
-- MUI 5 and Emotion are the official admin UI system in the current repo state.
-- Preserve the starter-kit layout system while replacing vendor/demo language with Nihome language.
-- Promote repeated UI into shared MUI-aware components or theme overrides before drift accumulates.
-- Avoid mixing the retired Tailwind shell and the active MUI shell in the same implementation pass.
+- Tailwind CSS, shadcn/ui, Radix UI, and lucide-react are the active UI foundation.
+- Preserve the NICON / Nihome visual language currently encoded in `src/index.css`: Be Vietnam Pro, red/orange primary gradients, neutral surfaces, and selected indigo accents.
+- Public pages should stay media-rich and brand-forward, using real project/company assets where available.
+- Admin pages should stay dense, scannable, and work-focused rather than marketing-like.
+- Use lucide icons for recognizable actions where possible.
+- Avoid silently mixing in MUI, Materialize, or another token system.
+- If a visual convention changes durably, update `docs/ai/memory-bank/04-ui-system.md` in the same task.
+
+### Accessibility And Responsiveness
+
+- Design and review at both desktop and mobile widths.
+- Use semantic HTML before adding ARIA fallbacks.
+- Keep keyboard access intact for menus, dialogs, forms, filters, and admin actions.
+- Ensure text fits within buttons, cards, sidebars, and navigation labels.
+- Keep contrast and touch targets readable without relying on one perfect viewport.
 
 ### Documentation
 
@@ -103,9 +113,10 @@ Do not quietly replace the current visual direction with Geist just because the 
 Before closing a non-trivial frontend task, verify:
 
 - the assigned owner and task boundary stayed clear
-- the chosen rendering model matches the installed Next.js version and current Pages Router baseline
-- no second active routing architecture was introduced by accident
+- routing still matches the Vite + React Router baseline
+- no old Next.js, Materialize starter-kit, or full admin template assumption was reintroduced
 - no new convention conflicts with the memory bank
 - presentational components do not hide infrastructure assumptions
 - any new library or reusable pattern was intentionally chosen
+- the UI remains responsive and keyboard-usable for changed surfaces
 - any durable decision or blocker was written down in the memory bank

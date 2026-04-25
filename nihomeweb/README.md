@@ -1,47 +1,62 @@
-## Nihome Web
+# Nihomeweb
 
-This is the Next.js frontend for the Nihome platform.
+Active frontend for the NICON / Nihome web experience.
 
-## Development
+This project has been refactored away from the prior Next.js / Materialize starter-kit baseline. The active app is now a Vite + React single-page app using React Router, Tailwind CSS, shadcn/ui, Radix UI, TanStack Query, and Vitest.
 
-Install dependencies if they are not present yet:
+The older Next.js and Materialize code is retained only under `legacy/` as reference material. New feature work should build on the current source tree under `src/`.
 
-```bash
-npm install
-```
+## Current Stack
 
-Then run the app:
+- Vite `5.x`
+- React `18.3.x`
+- TypeScript `5.8.x`
+- React Router DOM `6.x`
+- Tailwind CSS `3.4.x`
+- shadcn/ui and Radix UI primitives
+- TanStack React Query `5.x`
+- Vitest `3.x`
+
+## Source Map
+
+- `src/main.tsx`: app bootstrap
+- `src/App.tsx`: providers, browser router, and route table
+- `src/pages/`: public page components and admin page components
+- `src/components/layout/`: public and admin shell components
+- `src/components/ui/`: shadcn/ui primitives
+- `src/components/admin/`: admin-specific reusable controls
+- `src/data/`: static seed data
+- `src/lib/`: localStorage-backed demo auth, admin, settings, i18n, and utilities
+- `src/index.css`: global Tailwind layers, tokens, and utilities
+- `tailwind.config.ts`: Tailwind theme extension
+
+## Agent Workflow
+
+Before non-trivial work, read:
+
+1. `AGENTS.md`
+2. `docs/ai/working-procedure.md`
+3. `docs/ai/frontend-playbook.md`
+4. `docs/ai/project-brief.md`
+5. `docs/ai/memory-bank/README.md`
+6. the relevant memory-bank files
+
+Repo-facing AI docs stay in English so Claude, Codex, and Vercel skill guidance share the same source of truth.
+
+## Commands
 
 ```bash
 npm run dev
+npm run build
+npm run lint
+npm run test
 ```
 
-Open `http://localhost:3000`.
+The Vite dev server is configured in `vite.config.ts` and defaults to port `8080`.
 
-## Current status
+## Current Constraints
 
-- The app now follows the imported starter-kit baseline: Next.js 13 Pages Router, MUI 5, and Emotion.
-- Core routes live under `src/pages/`.
-- The official round-1 route surface is `/`, `/projects`, `/notifications`, `/login`, `/forgot-password`, `/admin`, and `/admin/dashboard`.
-- Mock JWT auth is still in place as a placeholder until a real auth strategy is chosen.
-- The larger `full-template` is intentionally deferred; future screens can adopt its compatible components selectively.
-
-## Main files
-
-- `src/pages/index.tsx`: Nihome workspace overview
-- `src/pages/admin/dashboard/index.tsx`: admin dashboard baseline
-- `src/pages/login/index.tsx`: starter-kit auth screen, Nihome-personalized
-- `src/layouts/UserLayout.tsx`: shared workspace layout
-- `styles/globals.css`: global styles imported by `_app.tsx`
-- `next.config.js`: current Next.js config
-
-## Shared AI docs
-
-Repo-level AI collaboration rules live here:
-
-- `AGENTS.md`: canonical rules for Codex and other agents
-- `CLAUDE.md`: Claude entrypoint into the same shared rules
-- `docs/ai/working-procedure.md`: day-to-day operating procedure for teammates and agents
-- `docs/ai/frontend-playbook.md`: frontend skill-routing and implementation conventions
-- `docs/ai/project-brief.md`: current product and phase execution brief
-- `docs/ai/memory-bank/`: durable project memory, decisions, and handoffs
+- Auth is demo-only and localStorage-backed.
+- Admin CRUD and settings persistence are localStorage-backed demo behavior.
+- No production API client or backend session model has been committed yet.
+- `legacy/materialize-starter-kit/` and `legacy/next16-shell/` are not active frontend architecture.

@@ -1,61 +1,113 @@
 # Current State
 
-Last reviewed: 2026-04-21
+Last reviewed: 2026-04-25
 
 ## Stack
 
-- Next.js `13.0.0`
-- React `18.2.0`
-- React DOM `18.2.0`
-- TypeScript `4.8.x`
-- MUI `5.x`
-- Emotion `11.x`
-- ESLint `8.x`
+- Vite `5.x`
+- React `18.3.x`
+- React DOM `18.3.x`
+- TypeScript `5.8.x`
+- React Router DOM `6.x`
+- Tailwind CSS `3.4.x`
+- shadcn/ui and Radix UI primitives
+- TanStack React Query `5.x`
+- Vitest `3.x`
 
 ## Current App Structure
 
-The active frontend now includes:
+The active frontend includes:
 
-- `src/pages/_app.tsx`
-- `src/pages/_document.tsx`
-- `src/pages/index.tsx`
-- `src/pages/projects/index.tsx`
-- `src/pages/notifications/index.tsx`
-- `src/pages/login/index.tsx`
-- `src/pages/forgot-password/index.tsx`
-- `src/pages/admin/index.tsx`
-- `src/pages/admin/dashboard/index.tsx`
-- `src/layouts/UserLayout.tsx`
-- `src/configs/themeConfig.ts`
-- `styles/globals.css`
+- `src/main.tsx`
+- `src/App.tsx`
+- `src/index.css`
+- `src/App.css`
+- `src/components/layout/Layout.tsx`
+- `src/components/layout/AdminLayout.tsx`
+- `src/components/ui/`
+- `src/components/admin/SettingsControls.tsx`
+- `src/pages/Index.tsx`
+- `src/pages/Profile.tsx`
+- `src/pages/Services.tsx`
+- `src/pages/Projects.tsx`
+- `src/pages/News.tsx`
+- `src/pages/Activities.tsx`
+- `src/pages/Clients.tsx`
+- `src/pages/Recruitment.tsx`
+- `src/pages/Contact.tsx`
+- `src/pages/Login.tsx`
+- `src/pages/Register.tsx`
+- `src/pages/admin/**/*.tsx`
+- `src/data/`
+- `src/lib/auth.ts`
+- `src/lib/adminStore.ts`
+- `src/lib/settingsStore.ts`
+- `src/lib/i18n.tsx`
 
-The retired Next 16 App Router shell has been moved under `legacy/next16-shell/` and is no longer the active frontend architecture.
+`nihomeweb/` now ships the Vite + React source tree as the active frontend. The old Materialize starter-kit and Next.js shell have been moved under `legacy/` and are no longer the active frontend architecture.
+
+## Current Route Surface
+
+Public route groups:
+
+- `/`
+- `/profile`
+- `/services` and `/services/:slug`
+- `/projects` and `/projects/:id`
+- `/news` and `/news/:id`
+- `/activities` and `/activities/:id`
+- `/clients`
+- `/recruitment`
+- `/contact`
+- `/login`
+- `/register`
+
+Admin route groups:
+
+- `/admin`
+- `/admin/posts`, post create/view/edit routes
+- `/admin/projects`, project create/view/edit routes
+- `/admin/contacts`
+- `/admin/recruitment`
+- `/admin/settings` and detailed settings routes
+- `/admin/categories`
+- `/admin/customers`, customer roles, online customers, and activity log
+- `/admin/clients`, `/admin/partners`, `/admin/suppliers`
+- `/admin/awards`, slideshow, map, about, and help placeholder/simple pages
+- `/admin/processes/*`
+- `/admin/system/*`
+
+The catch-all route renders `src/pages/NotFound.tsx`.
 
 ## Current Portal Shell Behavior
 
-- `/` is the MUI-based workspace overview page.
-- `/projects` and `/notifications` are Nihome placeholder pages on top of the starter-kit layout system.
-- `/admin` redirects to `/admin/dashboard`.
-- `/login` and `/forgot-password` are starter-kit auth screens rewritten for Nihome.
-- Pages are protected by the mock auth guard unless they are explicitly marked as guest routes.
+- `src/App.tsx` wraps the app in `QueryClientProvider`, `I18nProvider`, `TooltipProvider`, toast providers, and `BrowserRouter`.
+- Public pages use the public header/footer layout where implemented.
+- Admin pages use `AdminLayout` for sidebar navigation, admin topbar behavior, and language controls.
+- `/login` and `/register` use mock localStorage auth from `src/lib/auth.ts`.
+- Admin pages are currently demo routes; production route protection is not implemented.
 
 ## Current Config Reality
 
-- `next.config.js` follows the starter-kit baseline.
-- The active route surface is Pages Router under `src/pages/`.
-- Mock JWT auth runs through `src/@fake-db/auth/jwt.ts`.
-- There is still no committed `.env.example`; the mock auth now has safe local fallbacks so the baseline can boot without local env setup.
+- `vite.config.ts` defines the Vite build, dev server, and path alias behavior.
+- The dev server defaults to port `8080`.
+- `components.json` configures shadcn/ui with aliases under `@/`.
+- `tailwind.config.ts` and `src/index.css` own the active design tokens and utility classes.
+- `vitest.config.ts` and `src/test/setup.ts` define the current test setup.
+- There is no committed production `.env.example` contract yet.
 - The repo includes repo-local AI docs, a project brief, and a memory bank under `docs/ai/`.
+- Repo-local skills live under `.agents/skills/`.
 
 ## Current Gaps
 
 - No real auth provider or backend session model is implemented yet.
-- No API client or server-state strategy is established yet.
-- No deep business modules such as CRM, design, construction, procurement, or finance are implemented yet.
-- No frontend test suite is committed yet.
-- The larger full template is not imported yet.
+- No production API client or server-state contract is established yet.
+- Admin content/settings persistence is still localStorage-backed demo behavior.
+- No documented deployment/environment contract is committed yet.
+- Legacy source under `legacy/` has not been deleted because it remains useful as reference material during the refactor.
 
 ## Agent Notes
 
-- Do not assume the retired App Router shell is still active; the repo currently ships the starter-kit baseline.
-- In fresh environments, `node_modules/` may not be present yet, so local Next.js docs may require dependency installation before they can be consulted.
+- Do not assume Next.js Pages Router, `_app.tsx`, `_document.tsx`, `next.config.*`, MUI, Emotion, or Materialize are active in this repo.
+- `src/pages/` means React page components routed from `src/App.tsx`, not filesystem routing.
+- Treat localStorage stores as demo scaffolding until a backend API decision is recorded.
