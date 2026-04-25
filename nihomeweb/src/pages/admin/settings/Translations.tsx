@@ -124,7 +124,7 @@ const TranslationsPage = () => {
       setEntityTypes(data);
       if (data.length > 0 && !selectedType) setSelectedType(data[0].type);
     });
-  }, [tab]);
+  }, [selectedType, tab]);
 
   /* ─── Fetch entities for selected type ─── */
   const fetchEntities = useCallback(async () => {

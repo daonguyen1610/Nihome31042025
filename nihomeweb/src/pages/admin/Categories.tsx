@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -17,6 +17,25 @@ const emptyForm: CategoryFormData = {
   sortOrder: 0,
 };
 
+const getErrorMessage = (error: unknown) => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "data" in error.response &&
+    typeof error.response.data === "object" &&
+    error.response.data !== null &&
+    "message" in error.response.data &&
+    typeof error.response.data.message === "string"
+  ) {
+    return error.response.data.message;
+  }
+
+  return undefined;
+};
+
 const Categories = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -27,7 +46,7 @@ const Categories = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<CategoryFormData>(emptyForm);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const result = await adminApi.getActivityCategories(true);
@@ -37,11 +56,11 @@ const Categories = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t, toast]);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const filtered = useMemo(
     () => items.filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase())),
@@ -89,10 +108,10 @@ const Categories = () => {
       setEditingId(null);
       setForm(emptyForm);
       await loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: t("common.error"),
-        description: error?.response?.data?.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     } finally {
@@ -107,10 +126,10 @@ const Categories = () => {
       await adminApi.deleteActivityCategory(item.id);
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       toast({ title: t("form.deleted") });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: t("common.error"),
-        description: error?.response?.data?.message,
+        description: getErrorMessage(error),
         variant: "destructive",
       });
     }
