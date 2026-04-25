@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify } from "@/services/adminApi";
 import type { UpsertProjectRequest } from "@/services/adminApi";
-import { useProject } from "@/hooks/useContentApi";
+import { useProject, useProjects } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 
 interface FormData {
@@ -49,10 +49,18 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { data: existing, loading, error, refetch } = useProject(mode === "edit" ? (slug ?? "") : "");
+  const { data: allProjects } = useProjects();
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
+
+  const categoryOptions = useMemo(
+    () => Array.from(new Set((allProjects ?? []).map((p) => p.category).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, "vi")),
+    [allProjects],
+  );
 
   if (mode === "edit" && existing && !initialized) {
     setData({
@@ -77,21 +85,22 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (!pendingImageFile) {
+      setPendingImagePreview(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(pendingImageFile);
+    setPendingImagePreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [pendingImageFile]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setUploadingImage(true);
-    try {
-      const res = await adminApi.uploadImage(file, data.imageUrl);
-      update("imageUrl", res.data.imageUrl);
-      toast({ title: t("form.updated"), description: res.data.imageUrl });
-    } catch {
-      toast({ title: t("common.error"), variant: "destructive" });
-    } finally {
-      e.target.value = "";
-      setUploadingImage(false);
-    }
+    setPendingImageFile(file);
+    e.target.value = "";
+    toast({ title: t("form.updated"), description: file.name });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,23 +109,34 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       toast({ title: t("form.required"), description: t("proj.field.name"), variant: "destructive" });
       return;
     }
-    const payload: UpsertProjectRequest = {
-      slug: data.slug || slugify(data.name),
-      imageUrl: data.imageUrl || "/placeholder.svg",
-      name: data.name,
-      client: data.client,
-      location: data.location,
-      scale: data.scale,
-      scope: data.scope,
-      status: data.status,
-      year: data.year || undefined,
-      category: data.category || undefined,
-      description: data.description || undefined,
-      challenges: data.challenges.length ? data.challenges : undefined,
-      solutions: data.solutions.length ? data.solutions : undefined,
-    };
+    let imageUrl = data.imageUrl || "/placeholder.svg";
+
     setSubmitting(true);
     try {
+      if (pendingImageFile) {
+        setUploadingImage(true);
+        const upload = await adminApi.uploadImage(
+          pendingImageFile,
+          mode === "edit" ? data.imageUrl : undefined,
+        );
+        imageUrl = upload.data.imageUrl;
+      }
+
+      const payload: UpsertProjectRequest = {
+        slug: data.slug || slugify(data.name),
+        imageUrl,
+        name: data.name,
+        client: data.client,
+        location: data.location,
+        scale: data.scale,
+        scope: data.scope,
+        status: data.status,
+        year: data.year || undefined,
+        category: data.category || undefined,
+        description: data.description || undefined,
+        challenges: data.challenges.length ? data.challenges : undefined,
+        solutions: data.solutions.length ? data.solutions : undefined,
+      };
       if (mode === "create") {
         await adminApi.createProject(payload);
       } else {
@@ -127,6 +147,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
+      setUploadingImage(false);
       setSubmitting(false);
     }
   };
@@ -156,29 +177,69 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
+
+          {/* ── Thông tin cơ bản ── */}
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label={t("proj.field.name") + " *"}>
-                <input className="admin-input" value={data.name} onChange={(e) => update("name", e.target.value)} required />
+              <Field label={t("proj.field.name") + " *"} className="md:col-span-2">
+                <input
+                  className="admin-input"
+                  value={data.name}
+                  onChange={(e) => update("name", e.target.value)}
+                  placeholder="Dự án nhà máy ABC..."
+                  required
+                />
               </Field>
               <Field label={t("proj.field.client")}>
-                <input className="admin-input" value={data.client} onChange={(e) => update("client", e.target.value)} />
+                <input
+                  className="admin-input"
+                  value={data.client}
+                  onChange={(e) => update("client", e.target.value)}
+                  placeholder="Tên chủ đầu tư"
+                />
               </Field>
               <Field label={t("proj.field.location")}>
-                <input className="admin-input" value={data.location} onChange={(e) => update("location", e.target.value)} />
+                <input
+                  className="admin-input"
+                  value={data.location}
+                  onChange={(e) => update("location", e.target.value)}
+                  placeholder="Tỉnh / thành phố"
+                />
               </Field>
               <Field label={t("proj.scale")}>
-                <input className="admin-input" value={data.scale} onChange={(e) => update("scale", e.target.value)} placeholder="e.g. 15.000 m²" />
-              </Field>
-              <Field label={t("proj.field.scope")}>
-                <input className="admin-input" value={data.scope} onChange={(e) => update("scope", e.target.value)} />
+                <input
+                  className="admin-input"
+                  value={data.scale}
+                  onChange={(e) => update("scale", e.target.value)}
+                  placeholder="15.000 m²"
+                />
               </Field>
               <Field label={t("proj.field.year")}>
-                <input className="admin-input" value={data.year ?? ""} onChange={(e) => update("year", e.target.value)} />
+                <input
+                  type="number"
+                  min="1990"
+                  max="2100"
+                  className="admin-input"
+                  value={data.year ?? ""}
+                  onChange={(e) => update("year", e.target.value)}
+                  placeholder={String(new Date().getFullYear())}
+                />
               </Field>
               <Field label={t("proj.field.category")}>
-                <input className="admin-input" value={data.category ?? ""} onChange={(e) => update("category", e.target.value)} />
+                <select
+                  className="admin-input"
+                  value={data.category}
+                  onChange={(e) => update("category", e.target.value)}
+                >
+                  <option value="">-- Chọn danh mục --</option>
+                  {[
+                    ...categoryOptions,
+                    ...(data.category && !categoryOptions.includes(data.category) ? [data.category] : []),
+                  ].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
               </Field>
               <Field label={t("proj.field.status")}>
                 <select
@@ -190,54 +251,82 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                   <option value="completed">{t("proj.completed")}</option>
                 </select>
               </Field>
+              <Field label={t("proj.field.scope")} className="md:col-span-2">
+                <input
+                  className="admin-input"
+                  value={data.scope}
+                  onChange={(e) => update("scope", e.target.value)}
+                  placeholder="Thiết kế, thi công, hoàn thiện..."
+                />
+              </Field>
             </div>
           </div>
 
+          {/* ── Mô tả ── */}
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.content")}</h2>
-            <div className="space-y-4">
-              <Field label={t("proj.field.description")}>
-                <textarea
-                  className="admin-input min-h-24"
-                  value={data.description ?? ""}
-                  onChange={(e) => update("description", e.target.value)}
-                />
-              </Field>
-              <Field label={t("proj.field.challenges")}>
-                <textarea
-                  className="admin-input min-h-28"
-                  value={(data.challenges ?? []).join("\n")}
-                  onChange={(e) => update("challenges", e.target.value.split("\n").filter(Boolean))}
-                />
-              </Field>
-              <Field label={t("proj.field.solutions")}>
-                <textarea
-                  className="admin-input min-h-28"
-                  value={(data.solutions ?? []).join("\n")}
-                  onChange={(e) => update("solutions", e.target.value.split("\n").filter(Boolean))}
-                />
-              </Field>
+            <Field label={t("proj.field.description")}>
+              <textarea
+                className="admin-input min-h-24"
+                value={data.description ?? ""}
+                onChange={(e) => update("description", e.target.value)}
+                placeholder="Mô tả tổng quan về dự án..."
+              />
+            </Field>
+          </div>
+
+          {/* ── Thách thức & Giải pháp ── */}
+          <div className="admin-card p-6">
+            <h2 className="font-bold mb-4">{t("proj.field.challenges")} & {t("proj.field.solutions")}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <ListEditor
+                label={t("proj.field.challenges")}
+                items={data.challenges}
+                onChange={(items) => update("challenges", items)}
+                placeholder="Thêm thách thức..."
+              />
+              <ListEditor
+                label={t("proj.field.solutions")}
+                items={data.solutions}
+                onChange={(items) => update("solutions", items)}
+                placeholder="Thêm giải pháp..."
+              />
             </div>
           </div>
         </div>
 
+        {/* ── Sidebar ── */}
         <div className="space-y-5">
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.media")}</h2>
             <Field label={t("proj.field.image")}>
               <div className="space-y-2">
-                <input className="admin-input" value={data.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} placeholder="/images/upload/..." />
+                <input
+                  className="admin-input"
+                  value={data.imageUrl}
+                  onChange={(e) => update("imageUrl", e.target.value)}
+                  placeholder="/images/upload/..."
+                />
                 <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} />
               </div>
             </Field>
-            {data.imageUrl && (
+            {(pendingImagePreview || data.imageUrl) && (
               <div className="mt-4 aspect-[16/10] rounded-xl overflow-hidden bg-muted">
-                <img src={data.imageUrl} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")} />
+                <img
+                  src={pendingImagePreview ?? data.imageUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                />
               </div>
             )}
           </div>
 
-          <button type="submit" disabled={submitting || uploadingImage} className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={submitting || uploadingImage}
+            className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50"
+          >
             <Save className="w-4 h-4" />
             {mode === "create" ? t("form.create") : t("form.update")}
           </button>
@@ -247,13 +336,70 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   );
 };
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
+const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
+  <label className={["block", className].filter(Boolean).join(" ")}>
     <span className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "hsl(var(--admin-muted))" }}>
       {label}
     </span>
     {children}
   </label>
 );
+
+const ListEditor = ({
+  label,
+  items,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  items: string[];
+  onChange: (items: string[]) => void;
+  placeholder?: string;
+}) => {
+  const addItem = () => onChange([...items, ""]);
+  const updateItem = (i: number, val: string) => {
+    const next = [...items];
+    next[i] = val;
+    onChange(next);
+  };
+  const removeItem = (i: number) => onChange(items.filter((_, idx) => idx !== i));
+
+  return (
+    <div>
+      <span className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: "hsl(var(--admin-muted))" }}>
+        {label}
+      </span>
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <div key={i} className="flex gap-2">
+            <input
+              className="admin-input flex-1"
+              value={item}
+              onChange={(e) => updateItem(i, e.target.value)}
+              placeholder={placeholder}
+            />
+            <button
+              type="button"
+              onClick={() => removeItem(i)}
+              className="w-9 h-9 flex items-center justify-center rounded-lg border text-destructive hover:bg-destructive/10 transition"
+              style={{ borderColor: "hsl(var(--admin-border))" }}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={addItem}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-sm transition hover:bg-muted"
+          style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))" }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {placeholder ? `+ ${placeholder}` : "+ Thêm"}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default ProjectForm;
