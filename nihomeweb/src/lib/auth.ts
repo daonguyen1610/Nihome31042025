@@ -1,42 +1,25 @@
-// Mock auth for UI demo. Stores user in localStorage. NOT for production.
-export type AuthUser = {
-  email: string;
-  name: string;
-  role: "admin" | "user";
-};
+// Bridge between Redux auth state and legacy components that call getCurrentUser / logout.
+// Login and Register pages now use Redux directly.
 
-const KEY = "nicon_demo_user";
-const ADMIN_EMAIL = "admin@nicon.vn";
+import { store } from "@/store";
+import { logoutThunk, type AuthUser } from "@/store/authSlice";
 
-export const getCurrentUser = (): AuthUser | null => {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
-  } catch {
-    return null;
-  }
-};
+export type { AuthUser } from "@/store/authSlice";
 
-export const login = (email: string, _password: string): AuthUser => {
-  const role: AuthUser["role"] = email.toLowerCase() === ADMIN_EMAIL ? "admin" : "user";
-  const user: AuthUser = {
-    email,
-    name: email.split("@")[0],
-    role,
+/**
+ * Read current user from the Redux store.
+ * Returns a shape compatible with the old mock (name, email, role) for backward compat.
+ */
+export const getCurrentUser = (): { name: string; email: string; role: "admin" | "user" } | null => {
+  const user = store.getState().auth.user;
+  if (!user) return null;
+  return {
+    name: user.fullName,
+    email: user.email ?? "",
+    role: user.role === "admin" ? "admin" : "user",
   };
-  localStorage.setItem(KEY, JSON.stringify(user));
-  return user;
-};
-
-export const register = (name: string, email: string, _password: string): AuthUser => {
-  const role: AuthUser["role"] = email.toLowerCase() === ADMIN_EMAIL ? "admin" : "user";
-  const user: AuthUser = { name, email, role };
-  localStorage.setItem(KEY, JSON.stringify(user));
-  return user;
 };
 
 export const logout = () => {
-  localStorage.removeItem(KEY);
+  store.dispatch(logoutThunk());
 };
-
-export const ADMIN_HINT = ADMIN_EMAIL;

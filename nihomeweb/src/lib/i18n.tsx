@@ -480,7 +480,10 @@ const dict: Dict = {
   // Detail extras
   "newsDetail.readMore": { vi: "Đọc thêm", en: "Read more", zh: "阅读更多", ja: "もっと読む" },
 
-  // ========== LOGIN / REGISTER ==========
+  // ========== LOGIN / REGISTER / AUTH ==========
+  "auth.error": { vi: "Lỗi", en: "Error", zh: "错误", ja: "エラー" },
+  "auth.phone": { vi: "Số điện thoại", en: "Phone number", zh: "电话号码", ja: "電話番号" },
+  "auth.login.forgot": { vi: "Quên mật khẩu?", en: "Forgot password?", zh: "忘记密码?", ja: "パスワードをお忘れですか?" },
   "auth.login.eyebrow": { vi: "Đăng nhập", en: "Sign in", zh: "登录", ja: "ログイン" },
   "auth.login.titleA": { vi: "Chào mừng", en: "Welcome", zh: "欢迎", ja: "おかえり" },
   "auth.login.titleB": { vi: "trở lại", en: "back", zh: "回来", ja: "なさい" },
@@ -503,6 +506,28 @@ const dict: Dict = {
   "auth.reg.btn": { vi: "Tạo tài khoản", en: "Create account", zh: "创建账户", ja: "アカウント作成" },
   "auth.reg.hasAcc": { vi: "Đã có tài khoản?", en: "Already have an account?", zh: "已有账户?", ja: "すでにアカウントをお持ちですか?" },
   "auth.reg.toast.title": { vi: "Tạo tài khoản thành công", en: "Account created", zh: "账户创建成功", ja: "アカウントを作成しました" },
+
+  // OTP
+  "auth.otp.eyebrow": { vi: "Xác thực", en: "Verification", zh: "验证", ja: "確認" },
+  "auth.otp.title": { vi: "Nhập mã OTP", en: "Enter OTP code", zh: "输入验证码", ja: "OTPコードを入力" },
+  "auth.otp.desc": { vi: "Mã OTP đã được gửi đến", en: "An OTP code has been sent to", zh: "验证码已发送至", ja: "OTPコードが送信されました" },
+  "auth.otp.placeholder": { vi: "Mã OTP", en: "OTP Code", zh: "验证码", ja: "OTPコード" },
+  "auth.otp.verify": { vi: "Xác nhận", en: "Verify", zh: "验证", ja: "確認" },
+  "auth.otp.resend": { vi: "Gửi lại mã", en: "Resend code", zh: "重新发送", ja: "再送信" },
+  "auth.otp.resent": { vi: "Đã gửi lại mã OTP", en: "OTP code resent", zh: "验证码已重新发送", ja: "OTPコードを再送信しました" },
+
+  // Forgot password
+  "auth.forgot.eyebrow": { vi: "Quên mật khẩu", en: "Forgot password", zh: "忘记密码", ja: "パスワードをお忘れの方" },
+  "auth.forgot.title": { vi: "Khôi phục mật khẩu", en: "Reset password", zh: "重置密码", ja: "パスワードをリセット" },
+  "auth.forgot.desc": { vi: "Nhập số điện thoại đã đăng ký.", en: "Enter your registered phone number.", zh: "请输入注册的电话号码。", ja: "登録した電話番号を入力してください。" },
+  "auth.forgot.btn": { vi: "Tiếp tục", en: "Continue", zh: "继续", ja: "続行" },
+  "auth.forgot.backLogin": { vi: "Quay lại đăng nhập", en: "Back to login", zh: "返回登录", ja: "ログインに戻る" },
+  "auth.forgot.newPwdTitle": { vi: "Đặt mật khẩu mới", en: "Set new password", zh: "设置新密码", ja: "新しいパスワードを設定" },
+  "auth.forgot.newPwd": { vi: "Mật khẩu mới", en: "New password", zh: "新密码", ja: "新しいパスワード" },
+  "auth.forgot.resetBtn": { vi: "Đặt lại mật khẩu", en: "Reset password", zh: "重置密码", ja: "パスワードをリセット" },
+  "auth.forgot.success": { vi: "Đặt lại mật khẩu thành công", en: "Password reset successfully", zh: "密码重置成功", ja: "パスワードがリセットされました" },
+  "auth.forgot.doneTitle": { vi: "Hoàn tất!", en: "All done!", zh: "完成!", ja: "完了!" },
+  "auth.forgot.doneDesc": { vi: "Mật khẩu đã được thay đổi. Bạn có thể đăng nhập ngay.", en: "Your password has been changed. You can now sign in.", zh: "密码已更改。您现在可以登录。", ja: "パスワードが変更されました。ログインできます。" },
 
   // ========== NOT FOUND ==========
   "nf.title": { vi: "Không tìm thấy trang", en: "Page not found", zh: "页面未找到", ja: "ページが見つかりません" },
