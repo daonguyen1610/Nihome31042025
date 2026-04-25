@@ -78,7 +78,7 @@ const HelpPage = () => {
     setForm({ subject: "", message: "", priority: "normal" });
   };
 
-  const tabs: { id: Tab; icon: any; label: string }[] = [
+  const tabs: { id: Tab; icon: typeof HelpCircle; label: string }[] = [
     { id: "faq", icon: HelpCircle, label: t("help.tab.faq") },
     { id: "guide", icon: BookOpen, label: t("help.tab.guide") },
     { id: "contact", icon: MessageCircle, label: t("help.tab.contact") },

@@ -52,9 +52,10 @@ import { getCurrentUser, logout } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import LanguageToggle from "@/components/LanguageToggle";
 import logoNicon from "@/assets/logo-nicon.png";
+import type { LucideIcon } from "lucide-react";
 
-type NavItem = { to: string; label: string; icon: any; end?: boolean };
-type NavGroup = { id: string; label: string; icon: any; items: NavItem[] };
+type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
+type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] };
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
