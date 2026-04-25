@@ -5,7 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <SkipNihomeWebBuild Condition="'$(SkipNihomeWebBuild)' == ''">false</SkipNihomeWebBuild>
-    <NihomeWebDirectory>$(MSBuildProjectDirectory)/../nihomeweb</NihomeWebDirectory>
+    <NihomeWebDirectory Condition="'$(NihomeWebDirectory)' == ''">$(MSBuildProjectDirectory)/../nihomeweb</NihomeWebDirectory>
+    <NihomeWebDistDirectory>$(NihomeWebDirectory)/dist</NihomeWebDistDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,13 +23,16 @@
   <ItemGroup Condition="Exists('$(NihomeWebDirectory)/package.json')">
     <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/package.json" />
     <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/package-lock.json" />
-    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/next.config.js" />
-    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/next.d.ts" />
     <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/tsconfig.json" />
-    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/declaration.d.ts" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/tsconfig.app.json" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/tsconfig.node.json" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/vite.config.ts" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/tailwind.config.ts" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/postcss.config.js" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/components.json" />
+    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/index.html" />
     <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/public/**" />
     <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/src/**" />
-    <NihomeWebBuildInputs Include="$(NihomeWebDirectory)/styles/**" />
 
     <Watch Remove="wwwroot/**" />
     <Watch Include="@(NihomeWebBuildInputs)" />
@@ -40,7 +44,7 @@
     Condition="'$(SkipNihomeWebBuild)' != 'true' and Exists('$(NihomeWebDirectory)/package.json')"
     Inputs="$(NihomeWebDirectory)/package.json;$(NihomeWebDirectory)/package-lock.json"
     Outputs="$(NihomeWebDirectory)/node_modules/.package-lock.json">
-    <Exec WorkingDirectory="$(NihomeWebDirectory)" Command="npm install" />
+    <Exec WorkingDirectory="$(NihomeWebDirectory)" Command="npm ci" />
   </Target>
 
   <Target
@@ -48,8 +52,21 @@
     BeforeTargets="Build"
     Condition="'$(SkipNihomeWebBuild)' != 'true' and Exists('$(NihomeWebDirectory)/package.json')"
     Inputs="@(NihomeWebBuildInputs)"
-    Outputs="$(MSBuildProjectDirectory)/wwwroot/index.html">
+    Outputs="$(NihomeWebDistDirectory)/index.html">
     <Exec WorkingDirectory="$(NihomeWebDirectory)" Command="npm run build" />
+  </Target>
+
+  <Target
+    Name="CopyNihomeWebToPublishWwwroot"
+    AfterTargets="ComputeFilesToPublish"
+    Condition="'$(SkipNihomeWebBuild)' != 'true' and Exists('$(NihomeWebDistDirectory)/index.html')">
+    <ItemGroup>
+      <NihomeWebDistFiles Include="$(NihomeWebDistDirectory)/**" />
+    </ItemGroup>
+    <Copy
+      SourceFiles="@(NihomeWebDistFiles)"
+      DestinationFiles="@(NihomeWebDistFiles->'$(PublishDir)wwwroot/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
