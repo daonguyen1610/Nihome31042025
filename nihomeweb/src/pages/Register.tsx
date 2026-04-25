@@ -1,0 +1,97 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import Layout from "@/components/layout/Layout";
+import { register } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
+
+const Register = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { t } = useI18n();
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setTimeout(() => {
+      const u = register(form.name, form.email, form.password);
+      toast({ title: t("auth.reg.toast.title"), description: `${t("auth.login.toast.hello")} ${u.name}` });
+      navigate("/profile");
+    }, 500);
+  };
+
+  return (
+    <Layout>
+      <section className="min-h-screen pt-32 pb-20 bg-gradient-soft relative overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-accent-orange/15 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-primary/15 rounded-full blur-3xl" />
+
+        <div className="container-custom relative">
+          <div className="max-w-md mx-auto bg-card border border-border rounded-3xl p-8 lg:p-10 shadow-elegant">
+            <p className="eyebrow text-primary mb-5 justify-center">{t("auth.reg.eyebrow")}</p>
+            <h1 className="font-display text-3xl md:text-4xl font-extrabold text-center mb-3 tracking-tight">
+              {t("auth.reg.titleA")} <span className="text-gradient-primary">{t("auth.reg.titleB")}</span>
+            </h1>
+            <p className="text-center text-muted-foreground text-sm mb-8">{t("auth.reg.desc")}</p>
+
+            <form onSubmit={submit} className="space-y-4">
+              <div className="relative">
+                <User className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder={t("auth.reg.fullName")}
+                  className="w-full bg-secondary rounded-full pl-12 pr-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
+                />
+              </div>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder={t("auth.email")}
+                  className="w-full bg-secondary rounded-full pl-12 pr-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
+                />
+              </div>
+              <div className="relative">
+                <Lock className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  required
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder={t("auth.password")}
+                  className="w-full bg-secondary rounded-full pl-12 pr-5 py-3.5 text-sm border border-transparent focus:border-primary focus:bg-background outline-none transition"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-pill btn-gradient text-white w-full py-3.5 text-sm uppercase tracking-wider disabled:opacity-60"
+              >
+                {loading ? t("auth.processing") : <>{t("auth.reg.btn")} <ArrowRight className="w-4 h-4" /></>}
+              </button>
+            </form>
+
+            <div className="text-center mt-6 pt-6 border-t border-border">
+              <p className="text-sm text-muted-foreground">
+                {t("auth.reg.hasAcc")}{" "}
+                <Link to="/login" className="font-bold text-primary link-underline">
+                  {t("auth.login.btn")}
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </Layout>
+  );
+};
+
+export default Register;
