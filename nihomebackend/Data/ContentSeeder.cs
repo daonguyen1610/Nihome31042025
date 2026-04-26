@@ -935,6 +935,112 @@ public static class ContentSeeder
         Add(EntityTypes.Activity, 16, "Excerpt", "en", "On June 19, 2016, CEO Vo Tri Nguyen (NICON) and CEO Yoshihiro Mori (Mori Industrial Group) signed a strategic partnership agreement.");
         Add(EntityTypes.Activity, 16, "Content", "en", JsonSerializer.Serialize(new[] { "On June 19, 2016, CEO Vo Tri Nguyen of NICON and CEO Yoshihiro Mori of Mori Industrial Group signed a strategic partnership agreement.", "The partnership combines NICON's local construction expertise with Mori's Japanese engineering standards and project management methodology.", "This collaboration marks a significant step in NICON's internationalization strategy and quality enhancement." }));
 
+        // --- Activity 3: missing ZH/JA Excerpt ---
+        Add(EntityTypes.Activity, 3, "Excerpt", "zh", "2025年10月13日，位于胡志明市永新坊 VSIP IIA 扩展区的 TriMas 工厂在欢庆气氛中正式落成。");
+        Add(EntityTypes.Activity, 3, "Excerpt", "ja", "2025年10月13日、ホーチミン市ヴィンタン区VSIP IIA拡張地区のTriMas工場が喜びの雰囲気の中で正式に竣工しました。");
+
+        // --- Activities 4-16: ZH translations ---
+        Add(EntityTypes.Activity, 4, "Title", "zh", "NICON 参加第 17 届国际安全与消防展览会");
+        Add(EntityTypes.Activity, 4, "Excerpt", "zh", "NICON 参加国际展览会，了解安全和消防领域的最新技术。");
+        Add(EntityTypes.Activity, 4, "Content", "zh", JsonSerializer.Serialize(new[] { "NICON 自豪地参加了在西贡SECC举办的第17届国际安全与消防展。", "这是接触最新消防技术、提升NICON为工业项目设计和安装安全系统能力的机会。", "工程团队与来自日本、德国和美国的领先供应商进行了多次技术交流。" }));
+        Add(EntityTypes.Activity, 5, "Title", "zh", "越德大学建筑系学生参观 STFM 工地");
+        Add(EntityTypes.Activity, 5, "Excerpt", "zh", "2022年8月4日，NICON 接待了越德大学三年级建筑系学生。");
+        Add(EntityTypes.Activity, 5, "Content", "zh", JsonSerializer.Serialize(new[] { "2022年8月4日，NICON 欢迎越德大学三年级建筑系学生参观位于VSIP II-A的S.T.Food Marketing项目。", "此次参观让学生了解了工业工厂建设的各个方面——从钢结构、MEP到装修。", "该活动是NICON与VGU合作培养下一代建筑师和工程师计划的一部分。" }));
+        Add(EntityTypes.Activity, 6, "Title", "zh", "S.T.Food Marketing越南工厂奠基");
+        Add(EntityTypes.Activity, 6, "Excerpt", "zh", "2021年6月9日，NICON 作为设计施工总承包商，在VSIP II-A为泰国投资商举行奠基仪式。");
+        Add(EntityTypes.Activity, 6, "Content", "zh", JsonSerializer.Serialize(new[] { "2021年6月9日上午，NICON作为设计施工总承包商在平阳省VSIP II-A工业园隆重举行奠基仪式。", "来自泰国投资商的大型项目标志着国际市场对NICON总承包能力的信任。", "项目遵循GMP和HACCP食品安全标准，施工周期预计14个月。" }));
+        Add(EntityTypes.Activity, 7, "Title", "zh", "向优秀学生颁发奖学金");
+        Add(EntityTypes.Activity, 7, "Excerpt", "zh", "2021年底，NICON向平定省富美第一高中的35名学生颁发了奖学金。");
+        Add(EntityTypes.Activity, 7, "Content", "zh", JsonSerializer.Serialize(new[] { "2021年底，NICON向平定省富美第一高中的35名优秀学生颁发了奖学金。", "这项年度社会责任活动体现了NICON对社区教育和人才培养的承诺。", "每份奖学金涵盖一学年的学费和学习用品。" }));
+        Add(EntityTypes.Activity, 8, "Title", "zh", "H.B.Fuller越南工厂盛大开幕");
+        Add(EntityTypes.Activity, 8, "Excerpt", "zh", "位于平阳省新渊县VSIP II-A工业园的H.B.Fuller越南工厂正式落成。");
+        Add(EntityTypes.Activity, 8, "Content", "zh", JsonSerializer.Serialize(new[] { "位于VSIP II-A工业园的H.B.Fuller越南工厂正式投产，标志着NICON总承包能力的一个里程碑。", "NICON作为设计施工总承包商按期交付项目，符合国际胶粘剂生产标准。", "工厂面积超过15,000㎡，配备先进的MEP系统和环保达标的废水处理设施。" }));
+        Add(EntityTypes.Activity, 9, "Title", "zh", "NICON 完成大莲花越南工厂钢结构");
+        Add(EntityTypes.Activity, 9, "Excerpt", "zh", "2019年5月10日，NICON 完成了31,000㎡大莲花越南工厂的钢结构安装。");
+        Add(EntityTypes.Activity, 9, "Content", "zh", JsonSerializer.Serialize(new[] { "2019年5月10日，NICON成功完成31,000㎡大莲花越南工厂的钢结构安装。", "该项目展示了NICON在大型工业钢结构施工方面的精确和安全能力。", "所有结构钢均为自主制造并在计划时间内完成安装。" }));
+        Add(EntityTypes.Activity, 10, "Title", "zh", "日本媒体：NICON 入选2018年越南十大领先品牌");
+        Add(EntityTypes.Activity, 10, "Excerpt", "zh", "NICON 荣获2018年越南十大领先品牌，被日本媒体报道。");
+        Add(EntityTypes.Activity, 10, "Content", "zh", JsonSerializer.Serialize(new[] { "NICON 被日本权威媒体评选为2018年越南十大领先品牌之一。", "这一荣誉反映了20多年来对建筑质量和客户信任的持续付出。", "该奖项巩固了NICON在国际市场尤其是日本投资者中的声誉。" }));
+        Add(EntityTypes.Activity, 11, "Title", "zh", "NICON – Mori：战略合作");
+        Add(EntityTypes.Activity, 11, "Excerpt", "zh", "日本Mori建设与NICON扩大国际合作。");
+        Add(EntityTypes.Activity, 11, "Content", "zh", JsonSerializer.Serialize(new[] { "日本Mori建设与NICON扩大国际合作，将日本工程精度与本地专业知识相结合。", "合作涵盖联合项目投标、技术交流和质量管理体系对接。", "此次合作为两家公司在越南日益增长的工业建设领域开辟了新机遇。" }));
+        Add(EntityTypes.Activity, 12, "Title", "zh", "培训提升——质量、安全与创新");
+        Add(EntityTypes.Activity, 12, "Excerpt", "zh", "培训和教育是NICON提升质量管理、进度控制和工地安全的常规活动。");
+        Add(EntityTypes.Activity, 12, "Content", "zh", JsonSerializer.Serialize(new[] { "培训和持续教育是NICON的核心活动，涵盖质量管理、进度控制和施工安全。", "定期培训确保所有团队成员掌握最新的行业标准和最佳实践。", "NICON的培训计划符合ISO 9001:2015质量管理要求。" }));
+        Add(EntityTypes.Activity, 13, "Title", "zh", "NICON 年度旅行与团队建设");
+        Add(EntityTypes.Activity, 13, "Excerpt", "zh", "年度旅行为所有NICON成员在辛苦工作一年后带来美好时光和难忘体验。");
+        Add(EntityTypes.Activity, 13, "Content", "zh", JsonSerializer.Serialize(new[] { "公司年度旅行为所有NICON成员在一年辛勤工作后提供美好体验和团队凝聚。", "活动包括团队建设游戏、文化参观和休息放松，为新的一年充电。", "这一传统反映了NICON的信念：强大的团队精神是优质建设的基础。" }));
+        Add(EntityTypes.Activity, 14, "Title", "zh", "VDA-HCM 新工厂奠基");
+        Add(EntityTypes.Activity, 14, "Excerpt", "zh", "2016年12月23日，NICON和VDA-HCM在龙安省宅痕工业园为新工厂奠基。");
+        Add(EntityTypes.Activity, 14, "Content", "zh", JsonSerializer.Serialize(new[] { "2016年12月23日，NICON和VDA-HCM在龙安省宅痕工业园举行了新工厂奠基仪式。", "项目采用设计施工一体化合同，NICON管理从设计到施工的完整流程。", "工厂设计满足现代制造标准，布局和物流高效合理。" }));
+        Add(EntityTypes.Activity, 15, "Title", "zh", "AMIBA 工厂项目——设计与施工");
+        Add(EntityTypes.Activity, 15, "Excerpt", "zh", "2017年12月29日，NICON和AMIBA在平阳省VSIP II-A举行了2公顷工厂的奠基仪式。");
+        Add(EntityTypes.Activity, 15, "Content", "zh", JsonSerializer.Serialize(new[] { "2017年12月29日，NICON和AMIBA在平阳省新渊县VSIP II-A工业园为2公顷新工厂举行奠基仪式。", "项目采用设计施工一体化模式，NICON负责从设计到施工和移交的全过程。", "AMIBA工厂采用现代工业建筑设计，优化生产效率。" }));
+        Add(EntityTypes.Activity, 16, "Title", "zh", "NICON 与 Mori 战略伙伴签约");
+        Add(EntityTypes.Activity, 16, "Excerpt", "zh", "2016年6月19日，NICON首席执行官武志元与Mori工业集团首席执行官森义弘签署战略合作协议。");
+        Add(EntityTypes.Activity, 16, "Content", "zh", JsonSerializer.Serialize(new[] { "2016年6月19日，NICON首席执行官武志元与Mori工业集团首席执行官森义弘签署了战略合作协议。", "合作将NICON的本地施工专长与Mori的日本工程标准和项目管理方法相结合。", "此次合作标志着NICON国际化战略和质量提升的重要一步。" }));
+
+        // --- Activities 4-16: JA translations ---
+        Add(EntityTypes.Activity, 4, "Title", "ja", "NICON 第17回国際安全・防災・消防展示会に参加");
+        Add(EntityTypes.Activity, 4, "Excerpt", "ja", "NICONは安全・消防分野の最新技術を学ぶため国際展示会に参加しました。");
+        Add(EntityTypes.Activity, 4, "Content", "ja", JsonSerializer.Serialize(new[] { "NICONはサイゴンSECCで開催された第17回国際安全・消防展に出展しました。", "工場安全システムの設計・施工能力を高める最新消防技術に触れる機会となりました。", "当社エンジニアチームは日本、ドイツ、米国の主要サプライヤーと複数の技術交流を行いました。" }));
+        Add(EntityTypes.Activity, 5, "Title", "ja", "VGU建築学科の学生がSTFM工事現場を見学");
+        Add(EntityTypes.Activity, 5, "Excerpt", "ja", "2022年8月4日、NICONはベトナム・ドイツ大学（VGU）の建築学科3年生を受け入れました。");
+        Add(EntityTypes.Activity, 5, "Content", "ja", JsonSerializer.Serialize(new[] { "2022年8月4日、NICONはVGU建築学科3年生をVSIP II-AのS.T.Food Marketingプロジェクト見学に迎えました。", "この見学では鉄骨構造・MEP・仕上げまで工場建設の各段階を実際に体験できました。", "この活動はNICON-VGU連携による次世代建築家・エンジニア育成の一環です。" }));
+        Add(EntityTypes.Activity, 6, "Title", "ja", "S.T.Food Marketing ベトナム工場起工式");
+        Add(EntityTypes.Activity, 6, "Excerpt", "ja", "2021年6月9日、NICONは設計施工一括請負としてVSIP II-Aでタイ投資家のS.T.FOOD MARKETING工場の起工式を行いました。");
+        Add(EntityTypes.Activity, 6, "Content", "ja", JsonSerializer.Serialize(new[] { "2021年6月9日午前、NICONは設計施工一括の総合請負業者としてビンズオン省VSIP II-A工業団地で厳粛に起工式を執り行いました。", "タイ投資家による大型プロジェクトは、NICONの総合請負能力に対する国際的な信頼の証です。", "プロジェクトはGMP・HACCP食品安全基準に準拠し、施工期間は約14ヶ月を予定しています。" }));
+        Add(EntityTypes.Activity, 7, "Title", "ja", "優秀な学生への奨学金授与");
+        Add(EntityTypes.Activity, 7, "Excerpt", "ja", "2021年末、NICONはビンディン省フーミー第一高校の35名の学生に奨学金を授与しました。");
+        Add(EntityTypes.Activity, 7, "Content", "ja", JsonSerializer.Serialize(new[] { "2021年末、NICONはビンディン省フーミー第一高校の優秀な学生35名に奨学金を授与しました。", "この年次CSR活動は、NICONの地域教育と人材育成への取り組みを表しています。", "各奨学金は1学年分の授業料と学用品をカバーします。" }));
+        Add(EntityTypes.Activity, 8, "Title", "ja", "H.B.Fullerベトナム工場グランドオープン");
+        Add(EntityTypes.Activity, 8, "Excerpt", "ja", "ビンズオン省タンウエン県VSIP II-A工業団地のH.B.Fullerベトナム工場が正式に落成しました。");
+        Add(EntityTypes.Activity, 8, "Content", "ja", JsonSerializer.Serialize(new[] { "VSIP II-A工業団地のH.B.Fullerベトナム工場が正式に稼働を開始し、NICONの総合請負能力の節目となりました。", "NICONは設計施工一括請負として予定通りプロジェクトを納品し、国際接着剤製造基準を満たしました。", "工場は15,000㎡超の規模で、先進的なMEPシステムと環境基準準拠の排水処理設備を備えています。" }));
+        Add(EntityTypes.Activity, 9, "Title", "ja", "NICON 大蓮花ベトナム工場の鉄骨構造完成");
+        Add(EntityTypes.Activity, 9, "Excerpt", "ja", "2019年5月10日、NICONは31,000㎡の大蓮花ベトナム工場の鉄骨構造を完成させました。");
+        Add(EntityTypes.Activity, 9, "Content", "ja", JsonSerializer.Serialize(new[] { "2019年5月10日、NICONは31,000㎡の大蓮花ベトナム工場の鉄骨構造建て方を成功裏に完了しました。", "本プロジェクトは大規模産業用鉄骨構造の精密かつ安全な施工能力を示しています。", "全構造鉄骨は自社工場で製作し、計画期間内に建て方を完了しました。" }));
+        Add(EntityTypes.Activity, 10, "Title", "ja", "日本メディア：NICON 2018年ベトナムトップ10ブランドに選出");
+        Add(EntityTypes.Activity, 10, "Excerpt", "ja", "NICONは2018年ベトナムトップ10リーディングブランドに選ばれ、日本メディアに取り上げられました。");
+        Add(EntityTypes.Activity, 10, "Content", "ja", JsonSerializer.Serialize(new[] { "NICONは権威ある日本メディアにより2018年ベトナムトップ10リーディングブランドの一つに選出されました。", "この評価は20年以上にわたる建設品質と顧客からの信頼への取り組みを反映しています。", "受賞は国際市場、特に日本の投資家におけるNICONの評判を強化します。" }));
+        Add(EntityTypes.Activity, 11, "Title", "ja", "NICON – Mori：戦略的協力");
+        Add(EntityTypes.Activity, 11, "Excerpt", "ja", "日本のMori建設がNICONと国際協力を拡大しました。");
+        Add(EntityTypes.Activity, 11, "Content", "ja", JsonSerializer.Serialize(new[] { "日本のMori建設がNICONと国際協力を拡大し、日本のエンジニアリング精度と現地の専門知識を融合しました。", "提携は共同入札、技術交流、品質管理システムの連携をカバーしています。", "この協力はベトナムの成長する産業建設分野で両社に新たな機会を開きます。" }));
+        Add(EntityTypes.Activity, 12, "Title", "ja", "研修による改善——品質・安全・イノベーション");
+        Add(EntityTypes.Activity, 12, "Excerpt", "ja", "研修・教育はNICONの品質管理・工程管理・現場安全を高める定期的な活動です。");
+        Add(EntityTypes.Activity, 12, "Content", "ja", JsonSerializer.Serialize(new[] { "研修と継続教育はNICONの中核活動であり、品質管理・工程管理・建設現場安全を網羅しています。", "定期的な研修により全チームメンバーが最新の業界基準とベストプラクティスを習得します。", "NICONの研修プログラムはISO 9001:2015品質管理要件に沿っています。" }));
+        Add(EntityTypes.Activity, 13, "Title", "ja", "NICON 年次旅行＆チームビルディング");
+        Add(EntityTypes.Activity, 13, "Excerpt", "ja", "年次旅行はNICON全メンバーに1年の努力の後、素晴らしい時間と体験を提供します。");
+        Add(EntityTypes.Activity, 13, "Content", "ja", JsonSerializer.Serialize(new[] { "会社の年次旅行は全NICONメンバーに1年間の献身的な仕事の後、素晴らしい体験とチームの絆を提供します。", "チームビルディングゲーム、文化体験、リフレッシュなど来年に向けてエネルギーを充電する活動が含まれます。", "この伝統は強いチームスピリットが優れた建設の基盤であるというNICONの信念を反映しています。" }));
+        Add(EntityTypes.Activity, 14, "Title", "ja", "VDA-HCM新工場起工式");
+        Add(EntityTypes.Activity, 14, "Excerpt", "ja", "2016年12月23日、NICONとVDA-HCMはロンアン省カウチャム工業団地で新工場の起工式を行いました。");
+        Add(EntityTypes.Activity, 14, "Content", "ja", JsonSerializer.Serialize(new[] { "2016年12月23日、NICONとVDA-HCMはロンアン省カウチャム工業団地で新工場の起工式を行いました。", "プロジェクトは設計施工一括契約で実施され、NICONが設計から施工まで一貫管理します。", "工場は現代的な製造基準に沿い、効率的なレイアウトと物流動線で設計されています。" }));
+        Add(EntityTypes.Activity, 15, "Title", "ja", "AMIBA工場プロジェクト——設計＆施工");
+        Add(EntityTypes.Activity, 15, "Excerpt", "ja", "2017年12月29日、NICONとAMIBAはビンズオン省VSIP II-Aで2ヘクタールの工場の起工式を行いました。");
+        Add(EntityTypes.Activity, 15, "Content", "ja", JsonSerializer.Serialize(new[] { "2017年12月29日、NICONとAMIBAはビンズオン省タンウエン県VSIP II-A工業団地で2ヘクタールの新工場の起工式を行いました。", "プロジェクトは設計＆施工モデルに従い、NICONが設計から施工・引渡しまでの全工程を担当します。", "AMIBA工場は生産効率に最適化された現代的な工業建築を特徴としています。" }));
+        Add(EntityTypes.Activity, 16, "Title", "ja", "NICON＆Mori戦略的パートナーシップ調印");
+        Add(EntityTypes.Activity, 16, "Excerpt", "ja", "2016年6月19日、NICONのCEO武志元とMori工業グループCEO森義弘が戦略的パートナーシップ契約に調印しました。");
+        Add(EntityTypes.Activity, 16, "Content", "ja", JsonSerializer.Serialize(new[] { "2016年6月19日、NICONのCEO武志元とMori工業グループのCEO森義弘が戦略的パートナーシップ契約に調印しました。", "提携はNICONの地元建設ノウハウとMoriの日本のエンジニアリング基準・プロジェクト管理手法を融合させます。", "この協力はNICONの国際化戦略と品質向上における重要な一歩です。" }));
+
+        // --- News 3-20: EN Content translations ---
+        Add(EntityTypes.News, 3, "Content", "en", JsonSerializer.Serialize(new[] { "GMP (Good Manufacturing Practices) is a mandatory standard for the food, pharmaceutical and cosmetics industries, controlling everything from facility design to production processes.", "NICON has designed and built multiple GMP-WHO and GMP-EU projects including pharmaceutical and cosmetics factories. Core requirements include: ISO 5/7/8 cleanroom classification, independent HVAC, non-dust-emitting materials and one-way process flow.", "NICON's engineering team provides free consultation during the project planning phase, helping investors avoid design errors that lead to non-compliance during inspection." }));
+        Add(EntityTypes.News, 4, "Content", "en", JsonSerializer.Serialize(new[] { "As a professional contractor with over 18 years of experience, NICON has partnered with 80+ domestic and international investors in factory and workshop consulting and design.", "NICON's consulting services include: site selection, investment feasibility, schematic design, technical design and construction drawings.", "We commit to delivering documentation on schedule and supporting investors throughout the construction permit process." }));
+        Add(EntityTypes.News, 5, "Content", "en", JsonSerializer.Serialize(new[] { "NICON's 2024 price list applies to pre-engineered steel and reinforced concrete workshops, from standard to premium tiers.", "Reference pricing: pre-engineered steel workshop from VND 2,700,000/m², workshop with mezzanine office from VND 3,500,000/m², cold storage from VND 5,000,000/m² (excluding VAT).", "For an accurate quote, please contact NICON's sales department with specific details on location, area and technical requirements." }));
+        Add(EntityTypes.News, 6, "Content", "en", JsonSerializer.Serialize(new[] { "NIHOME is a premium service apartment brand developed by NICON, targeting foreign professionals working long-term in Vietnam.", "NIHOME's differentiator is the fusion of Japanese minimalist interior design, 4-star hotel services and central locations in major urban areas.", "NIHOME currently operates in Thu Duc and Binh Duong, with expansion to Hanoi planned for 2025-2026." }));
+        Add(EntityTypes.News, 7, "Content", "en", JsonSerializer.Serialize(new[] { "2024 has seen the rise of Japandi style — a fusion of Japanese minimalism and Scandinavian warmth.", "NIHOME adopts this trend with natural materials, neutral tones and maximized natural light in every apartment." }));
+        Add(EntityTypes.News, 8, "Content", "en", JsonSerializer.Serialize(new[] { "Factory architecture is not just about production function — it also reflects brand identity.", "This article introduces 5 globally outstanding factories with creative, sustainable and eco-friendly designs." }));
+        Add(EntityTypes.News, 9, "Content", "en", JsonSerializer.Serialize(new[] { "Industrial factory construction is a complex process requiring close coordination between many parties.", "NICON divides the process into 6 main phases: Project planning → Design → Permitting → Construction → Inspection → Commissioning & Handover." }));
+        Add(EntityTypes.News, 10, "Content", "en", JsonSerializer.Serialize(new[] { "Modern trends require factories to not only be functional but also visually appealing to reflect corporate identity.", "NICON integrates aesthetics into factory design: modern facades, green landscaping and 5-star standard office areas." }));
+        Add(EntityTypes.News, 11, "Content", "en", JsonSerializer.Serialize(new[] { "Healing architecture focuses on creating living and working spaces that bring relaxation and reduce stress.", "NIHOME applies these principles: indoor greenery, natural lighting, warm wood materials and open spaces." }));
+        Add(EntityTypes.News, 12, "Content", "en", JsonSerializer.Serialize(new[] { "In 2024, the Ministry of Public Security issued new fire safety regulations for industrial buildings.", "NICON stays updated and fully complies with TCVN 3890:2023 and QCVN 06:2022/BXD in all projects." }));
+        Add(EntityTypes.News, 13, "Content", "en", JsonSerializer.Serialize(new[] { "2025 is expected to continue the minimalist trend combined with smart home technology.", "Recycled materials, solar energy and intelligent energy management systems will become standard." }));
+        Add(EntityTypes.News, 14, "Content", "en", JsonSerializer.Serialize(new[] { "Food factories require strict compliance with GMP and HACCP standards from the design phase.", "NICON has completed numerous food factory projects for Japanese, Thai and Philippine clients." }));
+        Add(EntityTypes.News, 15, "Content", "en", JsonSerializer.Serialize(new[] { "The S.T.Food project is a classic example of the D&B turnkey model that NICON executes.", "From design to handover in 14 months, the factory fully meets GMP/HACCP standards for food production." }));
+        Add(EntityTypes.News, 16, "Content", "en", JsonSerializer.Serialize(new[] { "Many international enterprises require their Vietnam factories to accurately reflect global brand identity.", "NICON has experience designing factories for Nestlé, Red Bull, Rebisco — all strictly following Brand Guidelines." }));
+        Add(EntityTypes.News, 17, "Content", "en", JsonSerializer.Serialize(new[] { "Open space enhances interaction, flexibility and saves area.", "NICON applies this trend in B37 office design and factory projects with integrated office zones." }));
+        Add(EntityTypes.News, 18, "Content", "en", JsonSerializer.Serialize(new[] { "Building an internationally certified food factory is a long journey requiring perseverance and deep expertise.", "NICON accompanies investors from site survey, design, construction to stable factory operation." }));
+        Add(EntityTypes.News, 19, "Content", "en", JsonSerializer.Serialize(new[] { "The APM warehouse project was handed over on the committed schedule.", "This modern logistics warehouse features dock loading and automated storage rack systems." }));
+        Add(EntityTypes.News, 20, "Content", "en", JsonSerializer.Serialize(new[] { "Steel structures are the optimal solution for industrial factories thanks to fast construction, large spans and reasonable costs.", "NICON is one of Vietnam's leading contractors in steel structure factory design and construction." }));
+
         // --- News 7-20: English translations for new news articles ---
         Add(EntityTypes.News, 7, "Title", "en", "NIHOME Trends — Interior Design Trends 2024");
         Add(EntityTypes.News, 7, "Excerpt", "en", "Discover the top interior design trends of 2024 that NIHOME is applying in service apartment projects.");
@@ -1134,6 +1240,70 @@ public static class ContentSeeder
         Add(EntityTypes.Service, 4, "ShortTitle", "en", "MEP Contractor");
         Add(EntityTypes.Service, 4, "Tagline", "en", "Synchronized Mechanical–Electrical–Plumbing systems optimized for operations.");
         Add(EntityTypes.Service, 4, "Intro", "en", "MEP (Mechanical–Electrical–Plumbing) is the key system determining factory operational efficiency. NICON provides standalone or integrated MEP contracting within D&B packages.");
+
+        // ─── Service Sections: EN translations ───
+        Add(EntityTypes.Service, 1, "Sections", "en", JsonSerializer.Serialize(new[] {
+            new { heading = "Advantages of D&B / EPC", body = "Minimize management obligations for the investor — NICON handles all project coordination. Reduce inconsistency risk between design and construction. Accelerate schedule even before design is finalized, cutting change-order costs. Reasonable management fees — the investor works with a single contractor for easy cost estimation and quality control." },
+            new { heading = "Advanced Project Management", body = "In close partnership with Mori Construction (Japan), NICON applies BIM (Building Information Modeling) throughout every phase. An experienced BIM team delivers synchronized solutions, giving investors full project visibility and early risk detection." },
+            new { heading = "Best Products from the Best People", body = "NICON maintains an international partner network spanning architecture, structure, interiors and M&E. An experienced team of project managers, architects, engineers and skilled workers can handle LARGE-SCALE – TIGHT-SCHEDULE – HIGH-QUALITY projects." }
+        }));
+        Add(EntityTypes.Service, 2, "Sections", "en", JsonSerializer.Serialize(new[] {
+            new { heading = "Main Contractor Scope", body = "Full site management, subcontractor and supplier coordination. Ensure schedule, quality and HSE (Health Safety Environment) on site. Regular reporting to investors in Vietnamese, English and Japanese." },
+            new { heading = "International-Standard Management", body = "PMP project management standards and Lean Construction methods. MS Project and Primavera P6 for scheduling and cost control. QA/QC per ISO 9001:2015 for every work package." },
+            new { heading = "Strategic Partnership with Mori Group", body = "The partnership with Mori Industry Group (Japan) brings Japanese technical standards and work culture to every NICON project." }
+        }));
+        Add(EntityTypes.Service, 3, "Sections", "en", JsonSerializer.Serialize(new[] {
+            new { heading = "General Contractor Role", body = "Comprehensive management from schematic design, technical design to construction drawings. Material and equipment procurement and supply chain management. Construction execution, partial acceptance and complete handover." },
+            new { heading = "Mega-Project Capability", body = "NICON has successfully delivered 250,000 m² industrial complexes like Lam Hiep Hung – Tan Toan Phat. Capability to manage large sites with hundreds of workers, heavy equipment and complex logistics." },
+            new { heading = "Quality Commitment", body = "100% of projects delivered on schedule over the last 5 years. 24-month warranty for construction, 12-month warranty for MEP." }
+        }));
+        Add(EntityTypes.Service, 4, "Sections", "en", JsonSerializer.Serialize(new[] {
+            new { heading = "NICON MEP Scope", body = "Industrial electrical systems: medium/low voltage, backup generators, UPS, high-efficiency lighting. HVAC, ventilation and cleanroom systems per ISO Class 5/7/8. Water supply/drainage, solar hot water, wastewater treatment. Fire sprinkler and addressable alarm systems per TCVN and NFPA." },
+            new { heading = "Integration & Handover", body = "Rigorous T&C (Testing & Commissioning) process witnessed by supervision consultants and investors. Handover with as-built documentation, O&M manuals. Operational training for the investor's technical staff." },
+            new { heading = "BIM-Powered Project Management", body = "3D MEP models detect clashes before construction, reducing 80% of field rework. BIM deliverables support long-term operations and maintenance for the investor." }
+        }));
+
+        // ─── Project Challenges & Solutions: EN translations (Projects 1-3) ───
+        Add(EntityTypes.Project, 1, "Challenges", "en", JsonSerializer.Serialize(new[] { "Tight 10-month schedule from groundbreaking to commissioning.", "Large-span column-free structural solution for production lines.", "Optimizing ventilation and natural lighting for energy savings." }));
+        Add(EntityTypes.Project, 1, "Solutions", "en", JsonSerializer.Serialize(new[] { "Pre-engineered steel with 30m spans and polycarbonate skylights.", "Parallel construction of multiple work packages, managed with BIM 4D software.", "Synchronized M&E systems with 30% capacity reserve for future expansion." }));
+        Add(EntityTypes.Project, 2, "Challenges", "en", JsonSerializer.Serialize(new[] { "Complex production line layout with multiple functional zones.", "Requirement to integrate executive offices and production in one building." }));
+        Add(EntityTypes.Project, 2, "Solutions", "en", JsonSerializer.Serialize(new[] { "Clear zoning with one-way traffic flow to minimize cross-movement.", "Two-story integrated office with production floor overlook." }));
+        Add(EntityTypes.Project, 3, "Challenges", "en", JsonSerializer.Serialize(new[] { "Master planning for a mega-scale site with many building blocks.", "Synchronizing technical infrastructure across a large area." }));
+        Add(EntityTypes.Project, 3, "Solutions", "en", JsonSerializer.Serialize(new[] { "Modular master plan for easy expansion and function changes.", "Internal road system designed for 40-foot container trucks." }));
+
+        // ─── Slideshow: ZH translations ───
+        Add(EntityTypes.Slideshow, 1, "Title", "zh", "工厂设计施工总承包商");
+        Add(EntityTypes.Slideshow, 1, "Subtitle", "zh", "18年以上经验 — 150+工业项目");
+        Add(EntityTypes.Slideshow, 1, "LinkText", "zh", "查看项目");
+        Add(EntityTypes.Slideshow, 2, "Title", "zh", "设计施工一体化 — 交钥匙方案");
+        Add(EntityTypes.Slideshow, 2, "Subtitle", "zh", "单一联系窗口 — 从设计到移交的全项目周期");
+        Add(EntityTypes.Slideshow, 2, "LinkText", "zh", "了解更多");
+        Add(EntityTypes.Slideshow, 3, "Title", "zh", "大规模工业工厂");
+        Add(EntityTypes.Slideshow, 3, "Subtitle", "zh", "250,000㎡综合体 — 与Mori集团合作的日本标准");
+        Add(EntityTypes.Slideshow, 3, "LinkText", "zh", "查看详情");
+        Add(EntityTypes.Slideshow, 4, "Title", "zh", "体育休闲设施");
+        Add(EntityTypes.Slideshow, 4, "Subtitle", "zh", "服务社区的多功能体育设施设计");
+        Add(EntityTypes.Slideshow, 4, "LinkText", "zh", "探索");
+        Add(EntityTypes.Slideshow, 5, "Title", "zh", "现代办公室内装");
+        Add(EntityTypes.Slideshow, 5, "Subtitle", "zh", "极简风格 — 开放空间 — 国际标准");
+        Add(EntityTypes.Slideshow, 5, "LinkText", "zh", "查看项目");
+
+        // ─── Slideshow: JA translations ───
+        Add(EntityTypes.Slideshow, 1, "Title", "ja", "工場設計施工の総合請負");
+        Add(EntityTypes.Slideshow, 1, "Subtitle", "ja", "18年以上の実績 — 150件超の産業プロジェクト");
+        Add(EntityTypes.Slideshow, 1, "LinkText", "ja", "プロジェクトを見る");
+        Add(EntityTypes.Slideshow, 2, "Title", "ja", "設計＆施工 — ターンキーソリューション");
+        Add(EntityTypes.Slideshow, 2, "Subtitle", "ja", "単一窓口 — 設計から引渡しまでの全工程");
+        Add(EntityTypes.Slideshow, 2, "LinkText", "ja", "詳しく見る");
+        Add(EntityTypes.Slideshow, 3, "Title", "ja", "大規模産業工場");
+        Add(EntityTypes.Slideshow, 3, "Subtitle", "ja", "250,000㎡の複合施設 — Moriグループとの日本基準");
+        Add(EntityTypes.Slideshow, 3, "LinkText", "ja", "詳細を見る");
+        Add(EntityTypes.Slideshow, 4, "Title", "ja", "スポーツ・レクリエーション施設");
+        Add(EntityTypes.Slideshow, 4, "Subtitle", "ja", "地域に貢献する多目的スポーツ施設の設計");
+        Add(EntityTypes.Slideshow, 4, "LinkText", "ja", "探索する");
+        Add(EntityTypes.Slideshow, 5, "Title", "ja", "モダンオフィスインテリア");
+        Add(EntityTypes.Slideshow, 5, "Subtitle", "ja", "ミニマリスト — オープンスペース — 国際基準");
+        Add(EntityTypes.Slideshow, 5, "LinkText", "ja", "プロジェクトを見る");
 
         db.EntityTranslations.AddRange(translations);
         db.SaveChanges();
