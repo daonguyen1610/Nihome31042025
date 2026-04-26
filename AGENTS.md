@@ -196,3 +196,9 @@ Every response MUST include:
 * Be clear and concise
 * Focus on practical solutions
 * Highlight risks when needed
+
+## Git commit and push
+
+* When done about a feature, or bugs fix then automate write commit message and push automatically
+* Please write the git commit follow 50/72 rule
+* Push commit seperate to main branch and create pull request to main branch

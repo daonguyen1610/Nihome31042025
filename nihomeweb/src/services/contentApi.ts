@@ -143,6 +143,27 @@ export interface ActivityCategoryResponse {
     cvUrl?: string;
   }
 
+  export interface SubmitContactRequest {
+    name: string;
+    email: string;
+    phone?: string;
+    subject: string;
+    message: string;
+  }
+
+  export interface ContactMessageResponse {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    subject: string;
+    message: string;
+    isReplied: boolean;
+    replyContent?: string;
+    repliedAt?: string;
+    createdAt: string;
+  }
+
 // --- Translation types ---
 
 export interface TranslationPair {
@@ -289,6 +310,10 @@ export const contentApi = {
 
   submitJobApplication: (data: SubmitJobApplicationRequest) =>
     api.post<JobApplicationResponse>("/job-applications", data),
+
+  // Contact messages (public)
+  submitContact: (data: SubmitContactRequest) =>
+    api.post<ContactMessageResponse>("/contacts", data),
 };
 
 // --- Translation API (admin-managed) ---

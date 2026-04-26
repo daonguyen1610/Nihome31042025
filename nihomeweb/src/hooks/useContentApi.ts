@@ -10,7 +10,9 @@ import {
   type LogosGroupedResponse,
   type ProcessResponse,
   type SlideshowResponse,
+  type ContactMessageResponse,
 } from "@/services/contentApi";
+import { adminApi } from "@/services/adminApi";
   import type { JobPositionResponse } from "@/services/contentApi";
 
 /* ------------------------------------------------------------------ */
@@ -106,4 +108,11 @@ export function useProcesses() {
 export function useSlideshow() {
   const { lang } = useI18n();
   return useFetch<SlideshowResponse[]>(() => contentApi.getSlideshow(lang), [lang]);
+}
+
+export function useContacts(replied?: boolean) {
+  return useFetch<ContactMessageResponse[]>(
+    () => adminApi.getContacts(replied) as Promise<{ data: ContactMessageResponse[] }>,
+    [replied],
+  );
 }

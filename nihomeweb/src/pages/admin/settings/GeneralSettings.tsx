@@ -51,9 +51,6 @@ const GeneralSettingsPage = () => {
           <SettingRow label="YouTube channel URL">
             <TextInput value={s.youtube} onChange={(e) => upd("youtube", e.target.value)} />
           </SettingRow>
-          <SettingRow label="Google+ page URL">
-            <TextInput value={s.googlePlus} onChange={(e) => upd("googlePlus", e.target.value)} />
-          </SettingRow>
         </SettingSection>
 
         <SettingSection title={t("set.section.sitemap")}>
@@ -66,16 +63,6 @@ const GeneralSettingsPage = () => {
           <SettingRow label="Default page title">
             <TextInput value={s.defaultPageTitle} onChange={(e) => upd("defaultPageTitle", e.target.value)} />
           </SettingRow>
-          <SettingRow label="Page title SEO adjustment">
-            <SelectInput
-              value={s.pageTitleAdjustment}
-              onChange={(e) => upd("pageTitleAdjustment", e.target.value as GeneralSettings["pageTitleAdjustment"])}
-              options={[
-                { value: "PagenameAfterStorename", label: "Page name comes after store name" },
-                { value: "StorenameAfterPagename", label: "Store name comes after page name" },
-              ]}
-            />
-          </SettingRow>
           <SettingRow label="Page title separator">
             <TextInput value={s.pageTitleSeparator} onChange={(e) => upd("pageTitleSeparator", e.target.value)} />
           </SettingRow>
@@ -84,9 +71,6 @@ const GeneralSettingsPage = () => {
           </SettingRow>
           <SettingRow label="Default meta description">
             <TextInput value={s.defaultMetaDescription} onChange={(e) => upd("defaultMetaDescription", e.target.value)} />
-          </SettingRow>
-          <SettingRow label="Generate product META description">
-            <Toggle on={s.generateProductMeta} onChange={(v) => upd("generateProductMeta", v)} />
           </SettingRow>
           <SettingRow label="JavaScript bundling and minification">
             <Toggle on={s.jsBundling} onChange={(v) => upd("jsBundling", v)} />

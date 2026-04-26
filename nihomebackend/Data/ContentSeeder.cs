@@ -806,13 +806,17 @@ public static class ContentSeeder
 
     private static void SeedEntityTranslations(AppDbContext db)
     {
-        if (db.EntityTranslations.Any()) return;
+        var existingKeys = db.EntityTranslations
+            .Select(t => t.EntityType + "|" + t.EntityId + "|" + t.FieldName + "|" + t.LanguageCode)
+            .ToHashSet();
 
         var translations = new List<EntityTranslation>();
         var now = DateTime.UtcNow;
 
         void Add(string entityType, int entityId, string field, string lang, string value)
         {
+            var key = entityType + "|" + entityId + "|" + field + "|" + lang;
+            if (existingKeys.Contains(key)) return;
             translations.Add(new EntityTranslation
             {
                 EntityType = entityType,
@@ -884,42 +888,52 @@ public static class ContentSeeder
         // --- Activity 7: scholarships-awarding-2021 ---
         Add(EntityTypes.Activity, 7, "Title", "en", "Scholarships awarded to outstanding students");
         Add(EntityTypes.Activity, 7, "Excerpt", "en", "In late 2021, NICON proudly awarded 35 scholarships to students of Phu My High School No. 1, Binh Dinh.");
+        Add(EntityTypes.Activity, 7, "Content", "en", JsonSerializer.Serialize(new[] { "In late 2021, NICON awarded 35 scholarships to outstanding students of Phu My High School No. 1 in Binh Dinh province.", "This annual CSR initiative reflects NICON's commitment to community education and nurturing future talent.", "Each scholarship covers tuition and school supplies for one academic year." }));
 
         // --- Activity 8: grand-opening-hbfuller ---
         Add(EntityTypes.Activity, 8, "Title", "en", "Grand Opening of H.B.Fuller Vietnam Factory");
         Add(EntityTypes.Activity, 8, "Excerpt", "en", "The H.B.Fuller Vietnam factory at VSIP II-A IP, Tan Uyen, Binh Duong was officially inaugurated.");
+        Add(EntityTypes.Activity, 8, "Content", "en", JsonSerializer.Serialize(new[] { "The H.B.Fuller Vietnam factory at VSIP II-A Industrial Park, Tan Uyen, Binh Duong was officially inaugurated, marking a milestone for NICON's general contracting capabilities.", "As Design–Build contractor, NICON delivered the project on schedule meeting international adhesive manufacturing standards.", "The factory spans over 15,000 m² with advanced MEP systems and environmentally compliant wastewater treatment." }));
 
         // --- Activity 9: great-lotus-steel-structure ---
         Add(EntityTypes.Activity, 9, "Title", "en", "NICON completes steel structure for Great Lotus Vietnam Factory");
         Add(EntityTypes.Activity, 9, "Excerpt", "en", "On May 10, 2019, NICON completed the steel structure for the 31,000 m² Great Lotus Vietnam Factory.");
+        Add(EntityTypes.Activity, 9, "Content", "en", JsonSerializer.Serialize(new[] { "On May 10, 2019, NICON successfully completed the steel structure erection for the 31,000 m² Great Lotus Vietnam Factory.", "The project showcases NICON's capability in large-scale industrial steel structure construction with precision and safety.", "All structural steel was fabricated in-house and erected within the planned timeline." }));
 
         // --- Activity 10: nicon-top10-vietnam-brand-2018 ---
         Add(EntityTypes.Activity, 10, "Title", "en", "Japanese media: NICON in Top 10 Vietnam Leading Brands 2018");
         Add(EntityTypes.Activity, 10, "Excerpt", "en", "NICON was honored as a Top 10 Vietnam Leading Brand 2018, featured by Japanese media.");
+        Add(EntityTypes.Activity, 10, "Content", "en", JsonSerializer.Serialize(new[] { "NICON was honored as one of the Top 10 Vietnam Leading Brands 2018 by a prestigious Japanese media outlet.", "This recognition reflects over 20 years of dedication to quality construction and customer trust.", "The award strengthens NICON's reputation in the international market, especially with Japanese investors." }));
 
         // --- Activity 11: nicon-mori-strategic-cooperation ---
         Add(EntityTypes.Activity, 11, "Title", "en", "NICON – Mori: Strategic Cooperation");
         Add(EntityTypes.Activity, 11, "Excerpt", "en", "Mori Construction from Japan expanded international cooperation with NICON.");
+        Add(EntityTypes.Activity, 11, "Content", "en", JsonSerializer.Serialize(new[] { "Mori Construction from Japan expanded international cooperation with NICON, combining Japanese engineering precision with local expertise.", "The partnership covers joint project bidding, technical exchange and quality management system alignment.", "This collaboration opens new opportunities for both companies in Vietnam's growing industrial construction sector." }));
 
         // --- Activity 12: training-improvement-2018 ---
         Add(EntityTypes.Activity, 12, "Title", "en", "Training for improvement — Quality, safety and innovation");
         Add(EntityTypes.Activity, 12, "Excerpt", "en", "Training and education are regular activities at NICON to enhance quality management, schedule control and site safety.");
+        Add(EntityTypes.Activity, 12, "Content", "en", JsonSerializer.Serialize(new[] { "Training and continuous education are core activities at NICON, covering quality management, schedule control and construction site safety.", "Regular training sessions ensure all team members stay updated with the latest industry standards and best practices.", "NICON's training programs are aligned with ISO 9001:2015 quality management requirements." }));
 
         // --- Activity 13: nicon-annual-trip-2018 ---
         Add(EntityTypes.Activity, 13, "Title", "en", "NICON Annual Trip & Team Building");
         Add(EntityTypes.Activity, 13, "Excerpt", "en", "The annual trip gives all NICON members a wonderful time and great experiences after a year of hard work.");
+        Add(EntityTypes.Activity, 13, "Content", "en", JsonSerializer.Serialize(new[] { "The annual company trip provides all NICON members with wonderful experiences and team bonding after a year of dedicated work.", "Activities include team-building games, cultural excursions and relaxation to recharge for the coming year.", "This tradition reflects NICON's belief that a strong team spirit is the foundation of great construction." }));
 
         // --- Activity 14: nha-xuong-vda-hcm ---
         Add(EntityTypes.Activity, 14, "Title", "en", "Groundbreaking of VDA-HCM new factory");
         Add(EntityTypes.Activity, 14, "Excerpt", "en", "On December 23, 2016, NICON and VDA-HCM broke ground for the new factory at Cau Tram IP, Long An.");
+        Add(EntityTypes.Activity, 14, "Content", "en", JsonSerializer.Serialize(new[] { "On December 23, 2016, NICON and VDA-HCM held a groundbreaking ceremony for the new factory at Cau Tram Industrial Park, Long An.", "The project is executed under a Design–Build contract, with NICON managing the complete process from design through construction.", "The factory is designed to meet modern manufacturing standards with efficient layout and logistics flow." }));
 
         // --- Activity 15: nha-may-amiba-db ---
         Add(EntityTypes.Activity, 15, "Title", "en", "AMIBA Factory Project — Design & Build");
         Add(EntityTypes.Activity, 15, "Excerpt", "en", "On December 29, 2017, NICON and AMIBA held the groundbreaking for a 2-hectare factory at VSIP II-A, Binh Duong.");
+        Add(EntityTypes.Activity, 15, "Content", "en", JsonSerializer.Serialize(new[] { "On December 29, 2017, NICON and AMIBA held a groundbreaking ceremony for the new 2-hectare factory at VSIP II-A Industrial Park, Tan Uyen, Binh Duong.", "The project follows the Design & Build model, with NICON responsible for the entire process from design to construction and handover.", "The AMIBA factory features modern industrial architecture optimized for production efficiency." }));
 
         // --- Activity 16: ky-ket-nicon-mori ---
         Add(EntityTypes.Activity, 16, "Title", "en", "NICON & Mori strategic partnership signing");
         Add(EntityTypes.Activity, 16, "Excerpt", "en", "On June 19, 2016, CEO Vo Tri Nguyen (NICON) and CEO Yoshihiro Mori (Mori Industrial Group) signed a strategic partnership agreement.");
+        Add(EntityTypes.Activity, 16, "Content", "en", JsonSerializer.Serialize(new[] { "On June 19, 2016, CEO Vo Tri Nguyen of NICON and CEO Yoshihiro Mori of Mori Industrial Group signed a strategic partnership agreement.", "The partnership combines NICON's local construction expertise with Mori's Japanese engineering standards and project management methodology.", "This collaboration marks a significant step in NICON's internationalization strategy and quality enhancement." }));
 
         // --- News 7-20: English translations for new news articles ---
         Add(EntityTypes.News, 7, "Title", "en", "NIHOME Trends — Interior Design Trends 2024");
@@ -984,6 +998,142 @@ public static class ContentSeeder
         Add(EntityTypes.Slideshow, 5, "Title", "en", "Modern Office Interiors");
         Add(EntityTypes.Slideshow, 5, "Subtitle", "en", "Minimalist style — Open space — International standards");
         Add(EntityTypes.Slideshow, 5, "LinkText", "en", "View Project");
+
+        // ─── Projects: English translations ───
+        Add(EntityTypes.Project, 1, "Name", "en", "BMA Factory");
+        Add(EntityTypes.Project, 1, "Description", "en", "The BMA Factory project is a modern 15,000 m² production complex, designed to international industrial standards.");
+
+        Add(EntityTypes.Project, 2, "Name", "en", "NBDC Workshop");
+        Add(EntityTypes.Project, 2, "Description", "en", "NICON provides full architecture and structural design for the NBDC production workshop at Giang Dien IP.");
+
+        Add(EntityTypes.Project, 3, "Name", "en", "Lam Hiep Hung – Tan Toan Phat Complex");
+        Add(EntityTypes.Project, 3, "Description", "en", "One of NICON's largest projects: a 250,000 m² industrial complex.");
+
+        Add(EntityTypes.Project, 4, "Name", "en", "Thu Duc Sports Center");
+        Add(EntityTypes.Project, 4, "Description", "en", "Multi-purpose sports and recreation center serving the Thu Duc community.");
+
+        Add(EntityTypes.Project, 5, "Name", "en", "B37 Office");
+        Add(EntityTypes.Project, 5, "Description", "en", "Modern office interior design with minimalist style and open space concept.");
+
+        Add(EntityTypes.Project, 6, "Name", "en", "TriMas Vietnam Factory");
+        Add(EntityTypes.Project, 6, "Description", "en", "Turnkey design and build of a packaging factory for TriMas at VSIP IIA.");
+
+        Add(EntityTypes.Project, 7, "Name", "en", "APM Warehouse");
+        Add(EntityTypes.Project, 7, "Description", "en", "Logistics warehouse design for Auto Components Vietnam.");
+
+        Add(EntityTypes.Project, 8, "Name", "en", "JOJO Factory");
+        Add(EntityTypes.Project, 8, "Description", "en", "Factory design with high food safety requirements, HACCP compliant.");
+
+        Add(EntityTypes.Project, 9, "Name", "en", "D22 Hotel");
+        Add(EntityTypes.Project, 9, "Description", "en", "4-star hotel with 80 rooms, ground-floor restaurant and spa.");
+
+        Add(EntityTypes.Project, 10, "Name", "en", "NBDC Canteen");
+        Add(EntityTypes.Project, 10, "Description", "en", "Canteen design for the NBDC industrial complex at Giang Dien IP.");
+
+        Add(EntityTypes.Project, 11, "Name", "en", "NBDC Office");
+        Add(EntityTypes.Project, 11, "Description", "en", "Executive office design for NBDC at Giang Dien IP.");
+
+        Add(EntityTypes.Project, 12, "Name", "en", "Tan Toan Phat Factory");
+        Add(EntityTypes.Project, 12, "Description", "en", "Factory within the Lam Hiep Hung – Tan Toan Phat complex in Binh Duong.");
+
+        Add(EntityTypes.Project, 13, "Name", "en", "Lam Hiep Hung Factory");
+        Add(EntityTypes.Project, 13, "Description", "en", "Lam Hiep Hung factory in Binh Duong, expanding production line.");
+
+        Add(EntityTypes.Project, 14, "Name", "en", "S.T.Food Marketing Vietnam Factory");
+        Add(EntityTypes.Project, 14, "Description", "en", "Food production factory for a Thai investor, designed to GMP and HACCP standards.");
+
+        Add(EntityTypes.Project, 15, "Name", "en", "Medicare Shop");
+        Add(EntityTypes.Project, 15, "Description", "en", "Medicare store at Aeon Mall Binh Duong Canary.");
+
+        Add(EntityTypes.Project, 16, "Name", "en", "Lam Hiep Hung Factory (Phase 1)");
+        Add(EntityTypes.Project, 16, "Description", "en", "Lam Hiep Hung factory phase 1 completed.");
+
+        Add(EntityTypes.Project, 17, "Name", "en", "SCTV Office");
+        Add(EntityTypes.Project, 17, "Description", "en", "Office design and construction for SCTV in District 2, HCMC.");
+
+        Add(EntityTypes.Project, 18, "Name", "en", "H.B.Fuller Factory");
+        Add(EntityTypes.Project, 18, "Description", "en", "MEP system construction for H.B.Fuller factory in Binh Duong.");
+
+        Add(EntityTypes.Project, 19, "Name", "en", "Red Bull Expansion Project");
+        Add(EntityTypes.Project, 19, "Description", "en", "Design for the Red Bull factory expansion in Binh Duong, preserving brand identity.");
+
+        Add(EntityTypes.Project, 20, "Name", "en", "Great Lotus Vietnam Factory");
+        Add(EntityTypes.Project, 20, "Description", "en", "Design and construction of the Great Lotus factory spanning over 31,000 m².");
+
+        Add(EntityTypes.Project, 21, "Name", "en", "Advanced Casting Asia Factory");
+        Add(EntityTypes.Project, 21, "Description", "en", "Advanced Casting Asia production factory at VSIP II-A.");
+
+        Add(EntityTypes.Project, 22, "Name", "en", "SCTV Studio & Office");
+        Add(EntityTypes.Project, 22, "Description", "en", "The largest TV studio in Vietnam at the time of construction.");
+
+        Add(EntityTypes.Project, 23, "Name", "en", "BKL Factory");
+        Add(EntityTypes.Project, 23, "Description", "en", "Design and construction of BKL factory at Thinh Phat IP.");
+
+        Add(EntityTypes.Project, 24, "Name", "en", "Rebisco Factory");
+        Add(EntityTypes.Project, 24, "Description", "en", "Rebisco confectionery factory (Philippines) at VSIP II-A.");
+
+        Add(EntityTypes.Project, 25, "Name", "en", "Nestlé Binh An Factory & Office");
+        Add(EntityTypes.Project, 25, "Description", "en", "Design and construction of Nestlé Binh An factory and office.");
+
+        Add(EntityTypes.Project, 26, "Name", "en", "Ampharco U.S.A Factory");
+        Add(EntityTypes.Project, 26, "Description", "en", "Pharmaceutical factory construction for Ampharco U.S.A at Nhon Trach.");
+
+        Add(EntityTypes.Project, 27, "Name", "en", "Konimiyaki Restaurant");
+        Add(EntityTypes.Project, 27, "Description", "en", "Restaurant design for Konimiyaki in District 1, HCMC.");
+
+        Add(EntityTypes.Project, 28, "Name", "en", "SCON Factory");
+        Add(EntityTypes.Project, 28, "Description", "en", "Design and construction of SCON factory at VSIP II-A.");
+
+        Add(EntityTypes.Project, 29, "Name", "en", "Clotex Labels Vietnam Factory");
+        Add(EntityTypes.Project, 29, "Description", "en", "Clotex Labels Vietnam factory at VSIP II-A.");
+
+        Add(EntityTypes.Project, 30, "Name", "en", "Amiba Factory");
+        Add(EntityTypes.Project, 30, "Description", "en", "Construction of the 2-hectare Amiba factory at VSIP II-A.");
+
+        Add(EntityTypes.Project, 31, "Name", "en", "Akati Wood Factory");
+        Add(EntityTypes.Project, 31, "Description", "en", "Akati Wood factory, a branch of Akati Dominant from Malaysia.");
+
+        Add(EntityTypes.Project, 32, "Name", "en", "Japan Plus Factory");
+        Add(EntityTypes.Project, 32, "Description", "en", "Japan Plus PE box production factory at Dong Nam Cu Chi IP.");
+
+        Add(EntityTypes.Project, 33, "Name", "en", "Central Pharmaceutical HCMC");
+        Add(EntityTypes.Project, 33, "Description", "en", "Pharmaceutical factory design in HCMC.");
+
+        Add(EntityTypes.Project, 34, "Name", "en", "Kumgang Office");
+        Add(EntityTypes.Project, 34, "Description", "en", "Office design and construction for Kumgang Vina.");
+
+        Add(EntityTypes.Project, 35, "Name", "en", "VDA-HCM Factory");
+        Add(EntityTypes.Project, 35, "Description", "en", "Design and construction of VDA-HCM factory at Cau Tram IP.");
+
+        Add(EntityTypes.Project, 36, "Name", "en", "Thu Thiem Dragon Show Flat");
+        Add(EntityTypes.Project, 36, "Description", "en", "Show flat construction for Thu Thiem Dragon in District 2.");
+
+        Add(EntityTypes.Project, 37, "Name", "en", "Nam Ha Viet Factory");
+        Add(EntityTypes.Project, 37, "Description", "en", "Welding rod production factory Nam Ha Viet.");
+
+        Add(EntityTypes.Project, 38, "Name", "en", "YC TEC Factory");
+        Add(EntityTypes.Project, 38, "Description", "en", "YC TEC factory design at Song Than II IP.");
+
+        // ─── Services: English translations ───
+        Add(EntityTypes.Service, 1, "Title", "en", "Design & Build General Contractor (D&B)");
+        Add(EntityTypes.Service, 1, "ShortTitle", "en", "Design & Build");
+        Add(EntityTypes.Service, 1, "Tagline", "en", "One point of contact — full project lifecycle from design to handover.");
+        Add(EntityTypes.Service, 1, "Intro", "en", "Design & Build (D&B) and EPC are the two most popular methods in industrial and civil construction. NICON has systemized the D&B process since inception and continuously refined it through 150+ projects.");
+
+        Add(EntityTypes.Service, 2, "Title", "en", "Main Contractor Services");
+        Add(EntityTypes.Service, 2, "ShortTitle", "en", "Main Contractor");
+        Add(EntityTypes.Service, 2, "Tagline", "en", "Full construction management — turnkey handover.");
+        Add(EntityTypes.Service, 2, "Intro", "en", "As a Vietnamese–Japanese Main Contractor, NICON fulfills all tasks of an industrial construction project.");
+
+        Add(EntityTypes.Service, 3, "Title", "en", "General Contractor Services");
+        Add(EntityTypes.Service, 3, "ShortTitle", "en", "General Contractor");
+        Add(EntityTypes.Service, 3, "Tagline", "en", "Handling the full lifecycle of industrial factory construction.");
+        Add(EntityTypes.Service, 3, "Intro", "en", "As a Vietnamese–Japanese General Contractor, NICON undertakes design, permitting, construction and turnkey handover.");
+
+        Add(EntityTypes.Service, 4, "Title", "en", "MEP Contractor Services");
+        Add(EntityTypes.Service, 4, "ShortTitle", "en", "MEP Contractor");
+        Add(EntityTypes.Service, 4, "Tagline", "en", "Synchronized Mechanical–Electrical–Plumbing systems optimized for operations.");
+        Add(EntityTypes.Service, 4, "Intro", "en", "MEP (Mechanical–Electrical–Plumbing) is the key system determining factory operational efficiency. NICON provides standalone or integrated MEP contracting within D&B packages.");
 
         db.EntityTranslations.AddRange(translations);
         db.SaveChanges();

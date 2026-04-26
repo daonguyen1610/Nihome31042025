@@ -550,5 +550,45 @@
     "en": "Select a contact to view details",
     "zh": "选择联系人查看详情",
     "ja": "連絡先を選択して詳細を表示"
+  },
+  {
+    "key": "contacts.empty",
+    "category": "contacts",
+    "vi": "Không có tin nhắn nào",
+    "en": "No messages",
+    "zh": "没有消息",
+    "ja": "メッセージはありません"
+  },
+  {
+    "key": "contacts.justNow",
+    "category": "contacts",
+    "vi": "Vừa xong",
+    "en": "Just now",
+    "zh": "刚刚",
+    "ja": "たった今"
+  },
+  {
+    "key": "contacts.hoursAgo",
+    "category": "contacts",
+    "vi": "giờ trước",
+    "en": "hours ago",
+    "zh": "小时前",
+    "ja": "時間前"
+  },
+  {
+    "key": "contacts.daysAgo",
+    "category": "contacts",
+    "vi": "ngày trước",
+    "en": "days ago",
+    "zh": "天前",
+    "ja": "日前"
+  },
+  {
+    "key": "contacts.replyContent",
+    "category": "contacts",
+    "vi": "Nội dung phản hồi",
+    "en": "Reply content",
+    "zh": "回复内容",
+    "ja": "返信内容"
   }
 ]

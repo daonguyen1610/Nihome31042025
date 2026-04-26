@@ -5,14 +5,11 @@ import { useI18n } from "@/lib/i18n";
 type Warn = { ok: boolean; text: string };
 
 const data: Warn[] = [
-  { ok: false, text: "Specified store URL (http://nicon.info/) doesn't match this store URL (http://nicon.vn/)" },
-  { ok: true, text: "Primary exchange rate currency is set" },
-  { ok: true, text: "Primary store currency is set" },
-  { ok: true, text: "Default weight is set" },
-  { ok: true, text: "Default dimension is set" },
+  { ok: true, text: "Database connection is active" },
   { ok: true, text: "All directory permissions are OK" },
   { ok: true, text: "All file permissions are OK" },
-  { ok: false, text: "A custom machine key is not specified (web.config file)" },
+  { ok: true, text: "Email settings are configured" },
+  { ok: true, text: "SSL certificate is valid" },
 ];
 
 const WarningsPage = () => {

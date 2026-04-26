@@ -8,6 +8,22 @@
     "ja": "検索..."
   },
   {
+    "key": "common.error",
+    "category": "common",
+    "vi": "Đã xảy ra lỗi",
+    "en": "An error occurred",
+    "zh": "发生错误",
+    "ja": "エラーが発生しました"
+  },
+  {
+    "key": "common.loading",
+    "category": "common",
+    "vi": "Đang tải...",
+    "en": "Loading...",
+    "zh": "加载中...",
+    "ja": "読み込み中..."
+  },
+  {
     "key": "common.save",
     "category": "common",
     "vi": "Lưu thay đổi",

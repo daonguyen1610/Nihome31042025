@@ -1,59 +1,27 @@
 [
   {
-    "key": "dash.commonStats",
+    "key": "dash.openPositions",
     "category": "dash",
-    "vi": "Thống kê chung",
-    "en": "Common statistics",
-    "zh": "综合统计",
-    "ja": "総合統計"
+    "vi": "Vị trí tuyển dụng đang mở",
+    "en": "Open job positions",
+    "zh": "招聘职位",
+    "ja": "募集中のポジション"
   },
   {
-    "key": "dash.newCustomers",
+    "key": "dash.ongoingProjects",
     "category": "dash",
-    "vi": "Khách hàng mới",
-    "en": "New customers",
-    "zh": "新客户",
-    "ja": "新規顧客"
+    "vi": "Dự án đang triển khai",
+    "en": "Ongoing projects",
+    "zh": "正在进行的项目",
+    "ja": "進行中のプロジェクト"
   },
   {
-    "key": "dash.year",
+    "key": "dash.totalApplications",
     "category": "dash",
-    "vi": "Năm",
-    "en": "Year",
-    "zh": "年",
-    "ja": "年"
-  },
-  {
-    "key": "dash.month",
-    "category": "dash",
-    "vi": "Tháng",
-    "en": "Month",
-    "zh": "月",
-    "ja": "月"
-  },
-  {
-    "key": "dash.week",
-    "category": "dash",
-    "vi": "Tuần",
-    "en": "Week",
-    "zh": "周",
-    "ja": "週"
-  },
-  {
-    "key": "dash.pendingReturns",
-    "category": "dash",
-    "vi": "Yêu cầu hoàn trả chờ xử lý",
-    "en": "Pending return requests",
-    "zh": "待处理退货请求",
-    "ja": "保留中の返品リクエスト"
-  },
-  {
-    "key": "dash.lowStock",
-    "category": "dash",
-    "vi": "Sản phẩm sắp hết hàng",
-    "en": "Low stock products",
-    "zh": "库存不足产品",
-    "ja": "在庫不足製品"
+    "vi": "Tổng đơn ứng tuyển",
+    "en": "Total applications",
+    "zh": "申请总数",
+    "ja": "応募総数"
   },
   {
     "key": "dash.moreInfo",
@@ -62,6 +30,334 @@
     "en": "More info",
     "zh": "更多信息",
     "ja": "詳細"
+  },
+  {
+    "key": "common.change",
+    "category": "common",
+    "vi": "Thay đổi",
+    "en": "Change",
+    "zh": "更改",
+    "ja": "変更"
+  },
+  {
+    "key": "common.noData",
+    "category": "common",
+    "vi": "Chưa có dữ liệu",
+    "en": "No data yet",
+    "zh": "暂无数据",
+    "ja": "データなし"
+  },
+  {
+    "key": "set.emailTemplates",
+    "category": "set",
+    "vi": "Mẫu email",
+    "en": "Email templates",
+    "zh": "邮件模板",
+    "ja": "メールテンプレート"
+  },
+  {
+    "key": "set.section.thumbnails",
+    "category": "set",
+    "vi": "Kích thước ảnh",
+    "en": "Thumbnail sizes",
+    "zh": "缩略图尺寸",
+    "ja": "サムネイルサイズ"
+  },
+  {
+    "key": "settings.centerDesc",
+    "category": "settings",
+    "vi": "Quản lý cài đặt tổng hợp cho hệ thống NICON",
+    "en": "Manage all NICON system settings",
+    "zh": "管理所有NICON系统设置",
+    "ja": "NICONシステムの全設定を管理"
+  },
+  {
+    "key": "settings.companyName",
+    "category": "settings",
+    "vi": "Tên công ty",
+    "en": "Company name",
+    "zh": "公司名称",
+    "ja": "会社名"
+  },
+  {
+    "key": "settings.phone",
+    "category": "settings",
+    "vi": "Điện thoại",
+    "en": "Phone",
+    "zh": "电话",
+    "ja": "電話"
+  },
+  {
+    "key": "settings.address",
+    "category": "settings",
+    "vi": "Địa chỉ",
+    "en": "Address",
+    "zh": "地址",
+    "ja": "住所"
+  },
+  {
+    "key": "settings.feat.recruitment",
+    "category": "settings",
+    "vi": "Trang tuyển dụng",
+    "en": "Recruitment page",
+    "zh": "招聘页面",
+    "ja": "採用ページ"
+  },
+  {
+    "key": "settings.feat.recruitmentDesc",
+    "category": "settings",
+    "vi": "Hiển thị các vị trí tuyển dụng công khai.",
+    "en": "Show public job positions.",
+    "zh": "显示公开招聘职位。",
+    "ja": "公開求人情報を表示。"
+  },
+  {
+    "key": "settings.feat.multilang",
+    "category": "settings",
+    "vi": "Đa ngôn ngữ (VI/EN)",
+    "en": "Multi-language (VI/EN)",
+    "zh": "多语言 (VI/EN)",
+    "ja": "多言語 (VI/EN)"
+  },
+  {
+    "key": "settings.feat.multilangDesc",
+    "category": "settings",
+    "vi": "Bật chuyển đổi tiếng Việt và tiếng Anh.",
+    "en": "Enable Vietnamese and English toggle.",
+    "zh": "启用越南语和英语切换。",
+    "ja": "ベトナム語と英語の切替を有効化。"
+  },
+  {
+    "key": "settings.feat.chat",
+    "category": "settings",
+    "vi": "Live chat",
+    "en": "Live chat",
+    "zh": "在线聊天",
+    "ja": "ライブチャット"
+  },
+  {
+    "key": "settings.feat.chatDesc",
+    "category": "settings",
+    "vi": "Tích hợp widget chat trực tuyến.",
+    "en": "Integrate live chat widget.",
+    "zh": "集成在线聊天小部件。",
+    "ja": "ライブチャットウィジェットを統合。"
+  },
+  {
+    "key": "settings.feat.analytics",
+    "category": "settings",
+    "vi": "Theo dõi analytics",
+    "en": "Analytics tracking",
+    "zh": "分析跟踪",
+    "ja": "アナリティクス追跡"
+  },
+  {
+    "key": "settings.feat.analyticsDesc",
+    "category": "settings",
+    "vi": "Bật theo dõi hành vi người dùng.",
+    "en": "Enable user behavior tracking.",
+    "zh": "启用用户行为跟踪。",
+    "ja": "ユーザー行動追跡を有効化。"
+  },
+  {
+    "key": "set.defaultPageTitle",
+    "category": "set",
+    "vi": "Tiêu đề trang mặc định",
+    "en": "Default page title",
+    "zh": "默认页面标题",
+    "ja": "デフォルトページタイトル"
+  },
+  {
+    "key": "set.pageTitleSeparator",
+    "category": "set",
+    "vi": "Dấu phân cách tiêu đề",
+    "en": "Page title separator",
+    "zh": "页面标题分隔符",
+    "ja": "ページタイトル区切り"
+  },
+  {
+    "key": "set.metaKeywords",
+    "category": "set",
+    "vi": "Meta keywords mặc định",
+    "en": "Default meta keywords",
+    "zh": "默认元关键词",
+    "ja": "デフォルトメタキーワード"
+  },
+  {
+    "key": "set.metaDescription",
+    "category": "set",
+    "vi": "Meta description mặc định",
+    "en": "Default meta description",
+    "zh": "默认元描述",
+    "ja": "デフォルトメタディスクリプション"
+  },
+  {
+    "key": "set.sitemapEnabled",
+    "category": "set",
+    "vi": "Bật sitemap",
+    "en": "Sitemap enabled",
+    "zh": "启用站点地图",
+    "ja": "サイトマップ有効"
+  },
+  {
+    "key": "set.canonicalUrls",
+    "category": "set",
+    "vi": "Bật canonical URLs",
+    "en": "Enable canonical URLs",
+    "zh": "启用规范URL",
+    "ja": "正規URL有効"
+  },
+  {
+    "key": "set.wwwPrefix",
+    "category": "set",
+    "vi": "Yêu cầu WWW prefix",
+    "en": "WWW prefix requirement",
+    "zh": "WWW前缀要求",
+    "ja": "WWWプレフィックス要件"
+  },
+  {
+    "key": "set.www.doesntMatter",
+    "category": "set",
+    "vi": "Không quan trọng",
+    "en": "Doesn't matter",
+    "zh": "无所谓",
+    "ja": "どちらでも"
+  },
+  {
+    "key": "set.www.without",
+    "category": "set",
+    "vi": "Không có www",
+    "en": "Without www",
+    "zh": "无www",
+    "ja": "wwwなし"
+  },
+  {
+    "key": "set.www.with",
+    "category": "set",
+    "vi": "Có www",
+    "en": "With www",
+    "zh": "有www",
+    "ja": "wwwあり"
+  },
+  {
+    "key": "set.customHead",
+    "category": "set",
+    "vi": "Custom thẻ <head>",
+    "en": "Custom <head> tag",
+    "zh": "自定义<head>标签",
+    "ja": "カスタム<head>タグ"
+  },
+  {
+    "key": "set.adminAllowedIp",
+    "category": "set",
+    "vi": "IP cho phép truy cập admin",
+    "en": "Admin area allowed IP",
+    "zh": "管理区允许的IP",
+    "ja": "管理エリア許可IP"
+  },
+  {
+    "key": "set.forceSsl",
+    "category": "set",
+    "vi": "Bắt buộc SSL",
+    "en": "Force SSL",
+    "zh": "强制SSL",
+    "ja": "SSL強制"
+  },
+  {
+    "key": "set.captchaEnabled",
+    "category": "set",
+    "vi": "Bật CAPTCHA",
+    "en": "CAPTCHA enabled",
+    "zh": "启用验证码",
+    "ja": "CAPTCHA有効"
+  },
+  {
+    "key": "set.imageStorage",
+    "category": "set",
+    "vi": "Lưu trữ ảnh",
+    "en": "Image storage",
+    "zh": "图片存储",
+    "ja": "画像ストレージ"
+  },
+  {
+    "key": "set.maxImageSize",
+    "category": "set",
+    "vi": "Kích thước ảnh tối đa",
+    "en": "Maximum image size",
+    "zh": "最大图片尺寸",
+    "ja": "最大画像サイズ"
+  },
+  {
+    "key": "set.imageQuality",
+    "category": "set",
+    "vi": "Chất lượng ảnh (0–100)",
+    "en": "Image quality (0–100)",
+    "zh": "图片质量 (0–100)",
+    "ja": "画像品質 (0–100)"
+  },
+  {
+    "key": "set.pictureZoom",
+    "category": "set",
+    "vi": "Zoom ảnh",
+    "en": "Picture zoom",
+    "zh": "图片缩放",
+    "ja": "画像ズーム"
+  },
+  {
+    "key": "set.projectThumb",
+    "category": "set",
+    "vi": "Ảnh dự án",
+    "en": "Project image size",
+    "zh": "项目图片尺寸",
+    "ja": "プロジェクト画像サイズ"
+  },
+  {
+    "key": "set.postThumb",
+    "category": "set",
+    "vi": "Ảnh bài viết",
+    "en": "Post thumbnail size",
+    "zh": "文章缩略图尺寸",
+    "ja": "投稿サムネイルサイズ"
+  },
+  {
+    "key": "set.categoryThumb",
+    "category": "set",
+    "vi": "Ảnh danh mục",
+    "en": "Category thumbnail size",
+    "zh": "分类缩略图尺寸",
+    "ja": "カテゴリサムネイルサイズ"
+  },
+  {
+    "key": "set.avatarSize",
+    "category": "set",
+    "vi": "Kích thước avatar",
+    "en": "Avatar size",
+    "zh": "头像尺寸",
+    "ja": "アバターサイズ"
+  },
+  {
+    "key": "set.displayName",
+    "category": "set",
+    "vi": "Tên hiển thị",
+    "en": "Display name",
+    "zh": "显示名称",
+    "ja": "表示名"
+  },
+  {
+    "key": "set.default",
+    "category": "set",
+    "vi": "Mặc định",
+    "en": "Default",
+    "zh": "默认",
+    "ja": "デフォルト"
+  },
+  {
+    "key": "set.markDefault",
+    "category": "set",
+    "vi": "Đặt làm mặc định",
+    "en": "Set as default",
+    "zh": "设为默认",
+    "ja": "デフォルトに設定"
   },
   {
     "key": "cat.title",
@@ -110,158 +406,6 @@
     "en": "No categories.",
     "zh": "没有分类。",
     "ja": "カテゴリがありません。"
-  },
-  {
-    "key": "cust.title",
-    "category": "cust",
-    "vi": "Danh sách người dùng",
-    "en": "Customers",
-    "zh": "客户列表",
-    "ja": "顧客一覧"
-  },
-  {
-    "key": "cust.email",
-    "category": "cust",
-    "vi": "Email",
-    "en": "Email",
-    "zh": "邮箱",
-    "ja": "メール"
-  },
-  {
-    "key": "cust.firstName",
-    "category": "cust",
-    "vi": "Tên",
-    "en": "First name",
-    "zh": "名",
-    "ja": "名"
-  },
-  {
-    "key": "cust.lastName",
-    "category": "cust",
-    "vi": "Họ",
-    "en": "Last name",
-    "zh": "姓",
-    "ja": "姓"
-  },
-  {
-    "key": "cust.company",
-    "category": "cust",
-    "vi": "Công ty",
-    "en": "Company",
-    "zh": "公司",
-    "ja": "会社"
-  },
-  {
-    "key": "cust.ip",
-    "category": "cust",
-    "vi": "Địa chỉ IP",
-    "en": "IP address",
-    "zh": "IP 地址",
-    "ja": "IPアドレス"
-  },
-  {
-    "key": "cust.role",
-    "category": "cust",
-    "vi": "Phân quyền",
-    "en": "Customer role",
-    "zh": "客户角色",
-    "ja": "顧客ロール"
-  },
-  {
-    "key": "cust.active",
-    "category": "cust",
-    "vi": "Hoạt động",
-    "en": "Active",
-    "zh": "活跃",
-    "ja": "アクティブ"
-  },
-  {
-    "key": "cust.createdOn",
-    "category": "cust",
-    "vi": "Ngày tạo",
-    "en": "Created on",
-    "zh": "创建日期",
-    "ja": "作成日"
-  },
-  {
-    "key": "cust.lastActivity",
-    "category": "cust",
-    "vi": "Hoạt động gần nhất",
-    "en": "Last activity",
-    "zh": "最近活动",
-    "ja": "最終アクティビティ"
-  },
-  {
-    "key": "role.title",
-    "category": "role",
-    "vi": "Phân quyền",
-    "en": "Customer roles",
-    "zh": "客户角色",
-    "ja": "顧客ロール"
-  },
-  {
-    "key": "role.name",
-    "category": "role",
-    "vi": "Tên",
-    "en": "Name",
-    "zh": "名称",
-    "ja": "名前"
-  },
-  {
-    "key": "role.freeShipping",
-    "category": "role",
-    "vi": "Miễn phí vận chuyển",
-    "en": "Free shipping",
-    "zh": "免运费",
-    "ja": "送料無料"
-  },
-  {
-    "key": "role.taxExempt",
-    "category": "role",
-    "vi": "Miễn thuế",
-    "en": "Tax exempt",
-    "zh": "免税",
-    "ja": "免税"
-  },
-  {
-    "key": "role.systemRole",
-    "category": "role",
-    "vi": "Vai trò hệ thống",
-    "en": "Is system role",
-    "zh": "系统角色",
-    "ja": "システムロール"
-  },
-  {
-    "key": "online.title",
-    "category": "online",
-    "vi": "Người dùng trực tuyến",
-    "en": "Online users",
-    "zh": "在线用户",
-    "ja": "オンラインユーザー"
-  },
-  {
-    "key": "online.customer",
-    "category": "online",
-    "vi": "Khách hàng",
-    "en": "Customer",
-    "zh": "客户",
-    "ja": "顧客"
-  },
-  {
-    "key": "online.location",
-    "category": "online",
-    "vi": "Vị trí",
-    "en": "Location",
-    "zh": "位置",
-    "ja": "場所"
-  },
-  {
-    "key": "online.lastPage",
-    "category": "online",
-    "vi": "Trang truy cập gần nhất",
-    "en": "Last visited page",
-    "zh": "最后访问页面",
-    "ja": "最終アクセスページ"
   },
   {
     "key": "log.title",
@@ -320,6 +464,22 @@
     "ja": "クリア"
   },
   {
+    "key": "log.ip",
+    "category": "log",
+    "vi": "Địa chỉ IP",
+    "en": "IP address",
+    "zh": "IP 地址",
+    "ja": "IPアドレス"
+  },
+  {
+    "key": "log.createdOn",
+    "category": "log",
+    "vi": "Ngày tạo",
+    "en": "Created on",
+    "zh": "创建日期",
+    "ja": "作成日"
+  },
+  {
     "key": "dash.welcome",
     "category": "dash",
     "vi": "Chào mừng trở lại",
@@ -350,22 +510,6 @@
     "en": "Active projects",
     "zh": "进行中的项目",
     "ja": "進行中のプロジェクト"
-  },
-  {
-    "key": "dash.newContacts",
-    "category": "dash",
-    "vi": "Liên hệ mới",
-    "en": "New contacts",
-    "zh": "新联系人",
-    "ja": "新規お問い合わせ"
-  },
-  {
-    "key": "dash.monthlyViews",
-    "category": "dash",
-    "vi": "Lượt xem tháng",
-    "en": "Monthly views",
-    "zh": "月浏览量",
-    "ja": "月間閲覧数"
   },
   {
     "key": "dash.recentPosts",
@@ -406,14 +550,6 @@
     "en": "Publish news, events, or articles about new projects.",
     "zh": "发布新闻、活动或有关新项目的文章。",
     "ja": "ニュース、イベント、新プロジェクトの記事を公開。"
-  },
-  {
-    "key": "dash.activity",
-    "category": "dash",
-    "vi": "Hoạt động hệ thống",
-    "en": "System activity",
-    "zh": "系统活动",
-    "ja": "システムアクティビティ"
   },
   {
     "key": "posts.title",
@@ -528,14 +664,6 @@
     "ja": "設定を保存しました"
   },
   {
-    "key": "set.customer",
-    "category": "set",
-    "vi": "Cài đặt người dùng",
-    "en": "Customer settings",
-    "zh": "客户设置",
-    "ja": "顧客設定"
-  },
-  {
     "key": "set.general",
     "category": "set",
     "vi": "Cài đặt chung",
@@ -552,36 +680,12 @@
     "ja": "メディア設定"
   },
   {
-    "key": "set.all",
-    "category": "set",
-    "vi": "Tất cả cài đặt (nâng cao)",
-    "en": "All settings (advanced)",
-    "zh": "所有设置 (高级)",
-    "ja": "すべての設定 (詳細)"
-  },
-  {
     "key": "set.email",
     "category": "set",
     "vi": "Tài khoản email",
     "en": "Email accounts",
     "zh": "邮箱账户",
     "ja": "メールアカウント"
-  },
-  {
-    "key": "set.stores",
-    "category": "set",
-    "vi": "Cửa hàng",
-    "en": "Stores",
-    "zh": "门店",
-    "ja": "店舗"
-  },
-  {
-    "key": "set.countries",
-    "category": "set",
-    "vi": "Quốc gia",
-    "en": "Countries",
-    "zh": "国家",
-    "ja": "国"
   },
   {
     "key": "set.languages",
@@ -680,22 +784,6 @@
     "ja": "CAPTCHA"
   },
   {
-    "key": "set.section.product",
-    "category": "set",
-    "vi": "Sản phẩm",
-    "en": "Product",
-    "zh": "产品",
-    "ja": "製品"
-  },
-  {
-    "key": "set.section.otherPages",
-    "category": "set",
-    "vi": "Các trang khác",
-    "en": "Other pages",
-    "zh": "其他页面",
-    "ja": "その他のページ"
-  },
-  {
     "key": "set.search",
     "category": "set",
     "vi": "Tìm kiếm",
@@ -726,14 +814,6 @@
     "en": "Value",
     "zh": "值",
     "ja": "値"
-  },
-  {
-    "key": "set.store",
-    "category": "set",
-    "vi": "Cửa hàng",
-    "en": "Store",
-    "zh": "门店",
-    "ja": "店舗"
   },
   {
     "key": "set.add",

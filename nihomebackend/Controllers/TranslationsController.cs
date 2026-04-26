@@ -155,21 +155,36 @@ public class TranslationsController(
     [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
     public async Task<IActionResult> GetEntityTranslations(string entityType, int entityId)
     {
-        // Get original entity data
-        object? original = entityType switch
-        {
-            EntityTypes.Activity => await db.Activities.AsNoTracking().Where(a => a.Id == entityId)
-                .Select(a => new { a.Title, a.Excerpt, Content = a.ContentJson ?? "" }).FirstOrDefaultAsync(),
-            EntityTypes.News => await db.NewsArticles.AsNoTracking().Where(n => n.Id == entityId)
-                .Select(n => new { n.Title, n.Excerpt, Content = n.ContentJson ?? "" }).FirstOrDefaultAsync(),
-            EntityTypes.Project => await db.Projects.AsNoTracking().Where(p => p.Id == entityId)
-                .Select(p => new { Name = p.Name, Description = p.Description ?? "", Challenges = p.ChallengesJson ?? "", Solutions = p.SolutionsJson ?? "" }).FirstOrDefaultAsync(),
-            EntityTypes.Service => await db.ServiceItems.AsNoTracking().Where(s => s.Id == entityId)
-                .Select(s => new { s.Title, s.ShortTitle, s.Tagline, s.Intro, Sections = s.SectionsJson ?? "" }).FirstOrDefaultAsync(),
-            _ => null
-        };
+        // Build original as Dictionary so keys stay PascalCase (matching fields array)
+        Dictionary<string, string>? original = null;
 
-        var translations = await entitySvc.GetAllTranslationsForEntityAsync(entityType, entityId);
+        switch (entityType)
+        {
+            case EntityTypes.Activity:
+                var act = await db.Activities.AsNoTracking().FirstOrDefaultAsync(a => a.Id == entityId);
+                if (act != null) original = new() { ["Title"] = act.Title, ["Excerpt"] = act.Excerpt ?? "", ["Content"] = act.ContentJson ?? "" };
+                break;
+            case EntityTypes.News:
+                var news = await db.NewsArticles.AsNoTracking().FirstOrDefaultAsync(n => n.Id == entityId);
+                if (news != null) original = new() { ["Title"] = news.Title, ["Excerpt"] = news.Excerpt ?? "", ["Content"] = news.ContentJson ?? "" };
+                break;
+            case EntityTypes.Project:
+                var proj = await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Id == entityId);
+                if (proj != null) original = new() { ["Name"] = proj.Name, ["Description"] = proj.Description ?? "", ["Challenges"] = proj.ChallengesJson ?? "", ["Solutions"] = proj.SolutionsJson ?? "" };
+                break;
+            case EntityTypes.Service:
+                var svc = await db.ServiceItems.AsNoTracking().FirstOrDefaultAsync(s => s.Id == entityId);
+                if (svc != null) original = new() { ["Title"] = svc.Title, ["ShortTitle"] = svc.ShortTitle ?? "", ["Tagline"] = svc.Tagline ?? "", ["Intro"] = svc.Intro ?? "", ["Sections"] = svc.SectionsJson ?? "" };
+                break;
+        }
+
+        var raw = await entitySvc.GetAllTranslationsForEntityAsync(entityType, entityId);
+        // Transform flat list into { lang: { field: value } } shape expected by frontend
+        var translations = raw
+            .GroupBy(t => t.LanguageCode)
+            .ToDictionary(
+                g => g.Key,
+                g => g.ToDictionary(t => t.FieldName, t => t.Value));
         return Ok(new { entityType, entityId, original, translations });
     }
 

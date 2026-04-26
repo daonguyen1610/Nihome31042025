@@ -10,7 +10,9 @@ public static class TranslationSeeder
 
     public static void Seed(AppDbContext db)
     {
-        if (db.Translations.Any()) return;
+        var existingKeys = db.Translations
+            .Select(t => t.Key + "|" + t.LanguageCode)
+            .ToHashSet();
 
         var assembly = Assembly.GetExecutingAssembly();
         var seedResources = assembly.GetManifestResourceNames()
@@ -38,6 +40,9 @@ public static class TranslationSeeder
                     if (!entry.TryGetProperty(lang, out var valProp)) continue;
                     var value = valProp.GetString();
                     if (string.IsNullOrEmpty(value)) continue;
+
+                    var compositeKey = key + "|" + lang;
+                    if (existingKeys.Contains(compositeKey)) continue;
 
                     allTranslations.Add(new Translation
                     {
