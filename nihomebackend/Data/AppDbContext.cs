@@ -20,6 +20,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SlideshowItem> SlideshowItems => Set<SlideshowItem>();
     public DbSet<ActivityCategory> ActivityCategories => Set<ActivityCategory>();
 
+    // Recruitment
+    public DbSet<JobPosition> JobPositions => Set<JobPosition>();
+    public DbSet<JobApplication> JobApplications => Set<JobApplication>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -87,6 +91,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ActivityCategory>().ToTable("activity_categories");
         modelBuilder.Entity<ActivityCategory>().HasKey(c => c.Id);
         modelBuilder.Entity<ActivityCategory>().HasIndex(c => c.Name).IsUnique();
+
+        modelBuilder.Entity<JobPosition>().ToTable("job_positions");
+        modelBuilder.Entity<JobPosition>().HasKey(j => j.Id);
+
+        modelBuilder.Entity<JobApplication>().ToTable("job_applications");
+        modelBuilder.Entity<JobApplication>().HasKey(a => a.Id);
+        modelBuilder.Entity<JobApplication>()
+            .HasOne(a => a.JobPosition)
+            .WithMany(j => j.Applications)
+            .HasForeignKey(a => a.JobPositionId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // i18n tables
         modelBuilder.Entity<Translation>().ToTable("translations");

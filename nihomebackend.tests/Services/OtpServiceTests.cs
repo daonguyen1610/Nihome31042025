@@ -99,8 +99,8 @@ public class OtpServiceTests : IDisposable
 
         _emailServiceMock.Verify(e => e.SendEmailAsync(
             "user@test.com",
-            It.Is<string>(s => s.Contains("[Nihome]")),
-            It.Is<string>(s => s.Contains("Your OTP code is"))),
+            It.Is<string>(s => s.Contains("Nihome")),
+            It.Is<string>(s => s.Contains("{{otpCode}}") == false && s.Contains("Nihome"))),
             Times.Once);
     }
 

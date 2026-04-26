@@ -40,13 +40,12 @@ public class OtpService
             {
                 var settings = await _db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
                 var siteName = settings?.SiteName ?? "Nihome";
-                var subject = (settings?.OtpEmailSubjectTemplate ?? "[{{siteName}}] Your verification code")
-                    .Replace("{{siteName}}", siteName, StringComparison.OrdinalIgnoreCase);
-                var body = (settings?.OtpEmailBodyTemplate
-                        ?? "<p>Your OTP code is <strong>{{otpCode}}</strong>. It expires in {{otpExpireMinutes}} minutes.</p>")
-                    .Replace("{{siteName}}", siteName, StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{otpCode}}", otp, StringComparison.OrdinalIgnoreCase)
-                    .Replace("{{otpExpireMinutes}}", "5", StringComparison.OrdinalIgnoreCase);
+
+                var (subject, body) = EmailTemplateFormatter.BuildOtpEmail(
+                    settings?.OtpEmailSubjectTemplate,
+                    settings?.OtpEmailBodyTemplate,
+                    siteName,
+                    otp);
 
                 await _emailService.SendEmailAsync(
                     email,

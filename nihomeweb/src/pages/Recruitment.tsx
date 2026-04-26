@@ -1,23 +1,68 @@
+import { useEffect, useMemo, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Link } from "react-router-dom";
-import { ArrowUpRight, MapPin, Clock, Briefcase, Sparkles, Heart, GraduationCap, Coffee } from "lucide-react";
+import { ArrowUpRight, MapPin, Clock, Briefcase, Sparkles, Heart, GraduationCap, Coffee, Send, Paperclip } from "lucide-react";
 import recruitHero from "@/assets/recruit-hero.jpg";
 import culture1 from "@/assets/recruit-culture-1.jpg";
 import culture2 from "@/assets/recruit-culture-2.jpg";
 import culture3 from "@/assets/recruit-culture-3.jpg";
+import { useToast } from "@/hooks/use-toast";
+import { useJobPositions } from "@/hooks/useContentApi";
+import { contentApi } from "@/services/contentApi";
 import { useI18n } from "@/lib/i18n";
+
+type ApplicationForm = {
+  candidateName: string;
+  email: string;
+  phone: string;
+  experienceYears: string;
+  coverLetter: string;
+};
+
+const emptyForm: ApplicationForm = {
+  candidateName: "",
+  email: "",
+  phone: "",
+  experienceYears: "",
+  coverLetter: "",
+};
+
+function getEmploymentTypeLabel(value: string) {
+  switch (value) {
+    case "full-time": return "Toàn thời gian";
+    case "part-time": return "Bán thời gian";
+    case "intern": return "Thực tập sinh";
+    default: return value;
+  }
+}
+
+function getExperienceLabel(value: string) {
+  switch (value) {
+    case "student": return "Sinh viên";
+    case "junior": return "0-2 năm";
+    case "mid": return "2-5 năm";
+    case "senior": return "5+ năm";
+    default: return value;
+  }
+}
 
 const Recruitment = () => {
   const { t } = useI18n();
+  const { toast } = useToast();
+  const { data, loading, error, refetch } = useJobPositions();
+  const positions = useMemo(() => data ?? [], [data]);
+  const [selectedPositionId, setSelectedPositionId] = useState<number | null>(null);
+  const [form, setForm] = useState<ApplicationForm>(emptyForm);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const positions = [
-    { titleKey: "rec.pos.t1", deptKey: "rec.pos.dept.design", locKey: "rec.pos.loc.hcm", typeKey: "rec.pos.type.full", lvlKey: "rec.pos.lvl.5" },
-    { titleKey: "rec.pos.t2", deptKey: "rec.pos.dept.design", locKey: "rec.pos.loc.hcm", typeKey: "rec.pos.type.full", lvlKey: "rec.pos.lvl.3" },
-    { titleKey: "rec.pos.t3", deptKey: "rec.pos.dept.design", locKey: "rec.pos.loc.hcm", typeKey: "rec.pos.type.full", lvlKey: "rec.pos.lvl.2" },
-    { titleKey: "rec.pos.t4", deptKey: "rec.pos.dept.constr", locKey: "rec.pos.loc.bd", typeKey: "rec.pos.type.full", lvlKey: "rec.pos.lvl.5" },
-    { titleKey: "rec.pos.t5", deptKey: "rec.pos.dept.qa", locKey: "rec.pos.loc.all", typeKey: "rec.pos.type.full", lvlKey: "rec.pos.lvl.2" },
-    { titleKey: "rec.pos.t6", deptKey: "rec.pos.dept.design", locKey: "rec.pos.loc.hcm", typeKey: "rec.pos.type.intern", lvlKey: "rec.pos.lvl.student" },
-  ];
+  useEffect(() => {
+    if (!selectedPositionId && positions.length > 0) {
+      setSelectedPositionId(positions[0].id);
+    }
+  }, [positions, selectedPositionId]);
+
+  const selectedPosition = positions.find((item) => item.id === selectedPositionId) ?? null;
 
   const benefits = [
     { icon: Heart, title: t("rec.b1.title"), desc: t("rec.b1.desc") },
@@ -25,6 +70,52 @@ const Recruitment = () => {
     { icon: Coffee, title: t("rec.b3.title"), desc: t("rec.b3.desc") },
     { icon: Sparkles, title: t("rec.b4.title"), desc: t("rec.b4.desc") },
   ];
+
+  const updateForm = <K extends keyof ApplicationForm>(key: K, value: ApplicationForm[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const submitApplication = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedPosition) {
+      toast({ title: t("common.error"), description: "Vui lòng chọn vị trí ứng tuyển.", variant: "destructive" });
+      return;
+    }
+
+    if (!form.candidateName.trim() || !form.email.trim()) {
+      toast({ title: t("common.error"), description: "Vui lòng nhập họ tên và email.", variant: "destructive" });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let cvUrl: string | undefined;
+      if (cvFile) {
+        const uploadRes = await contentApi.uploadCv(cvFile);
+        cvUrl = uploadRes.data.cvUrl;
+      }
+
+      await contentApi.submitJobApplication({
+        jobPositionId: selectedPosition.id,
+        candidateName: form.candidateName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || undefined,
+        experienceYears: form.experienceYears ? Number(form.experienceYears) : undefined,
+        coverLetter: form.coverLetter.trim() || undefined,
+        cvUrl,
+      });
+      toast({ title: "Đã gửi hồ sơ", description: `Ứng tuyển vị trí ${selectedPosition.title}` });
+      setForm(emptyForm);
+      setCvFile(null);
+    } catch (submitError) {
+      const message = submitError && typeof submitError === "object" && "response" in submitError
+        ? (submitError as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined;
+      toast({ title: t("common.error"), description: message ?? "Không thể gửi hồ sơ lúc này.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Layout>
@@ -98,32 +189,123 @@ const Recruitment = () => {
               </h2>
             </div>
           </div>
-          <div className="space-y-3">
-            {positions.map((p, i) => (
-              <div
-                key={i}
-                className="group bg-card border border-border rounded-2xl p-5 lg:p-6 flex flex-col lg:flex-row lg:items-center gap-5 hover-lift"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-primary mb-1">{t(p.deptKey)}</p>
-                  <h3 className="font-display text-xl lg:text-2xl font-extrabold group-hover:text-primary transition-colors">
-                    {t(p.titleKey)}
-                  </h3>
-                </div>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {t(p.locKey)}</span>
-                  <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {t(p.typeKey)}</span>
-                  <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {t(p.lvlKey)}</span>
-                </div>
-                <Link
-                  to="/contact"
-                  className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider shrink-0"
-                >
-                  {t("rec.apply")} <ArrowUpRight className="w-4 h-4" />
-                </Link>
+          {loading ? (
+            <div className="py-12 text-center text-muted-foreground">Đang tải vị trí tuyển dụng...</div>
+          ) : error ? (
+            <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-3">
+              <p className="text-muted-foreground">{error}</p>
+              <button onClick={refetch} className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider">
+                Tải lại
+              </button>
+            </div>
+          ) : positions.length === 0 ? (
+            <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
+              Hiện chưa có vị trí tuyển dụng đang mở. Bạn có thể để lại nhu cầu tại trang liên hệ.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] gap-6 items-start">
+              <div className="space-y-3">
+                {positions.map((position) => (
+                  <div
+                    key={position.id}
+                    className={[
+                      "group bg-card border rounded-2xl p-5 lg:p-6 flex flex-col gap-5 transition",
+                      selectedPositionId === position.id ? "border-primary shadow-glow" : "border-border hover-lift",
+                    ].join(" ")}
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-5">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-primary mb-1">{position.department}</p>
+                        <h3 className="font-display text-xl lg:text-2xl font-extrabold group-hover:text-primary transition-colors">
+                          {position.title}
+                        </h3>
+                        {position.description && (
+                          <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{position.description}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPositionId(position.id)}
+                        className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider shrink-0"
+                      >
+                        {t("rec.apply")} <ArrowUpRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {position.location}</span>
+                      <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {getEmploymentTypeLabel(position.employmentType)}</span>
+                      <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {getExperienceLabel(position.experienceLevel)}</span>
+                    </div>
+                    {position.requirements.length > 0 && (
+                      <ul className="grid gap-2 text-sm text-muted-foreground">
+                        {position.requirements.slice(0, 4).map((requirement, index) => (
+                          <li key={`${position.id}-${index}`} className="flex gap-2">
+                            <span className="text-primary">•</span>
+                            <span>{requirement}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+
+              <div className="bg-card border border-border rounded-3xl p-6 lg:p-7 sticky top-24">
+                <p className="eyebrow text-primary mb-4">Ứng tuyển trực tuyến</p>
+                <h3 className="font-display text-2xl font-extrabold mb-2">
+                  {selectedPosition?.title ?? "Chọn vị trí phù hợp"}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  {selectedPosition
+                    ? `${selectedPosition.department} • ${selectedPosition.location}`
+                    : "Chọn một vị trí ở danh sách bên trái để gửi hồ sơ ngay trên website."}
+                </p>
+
+                <form className="space-y-4" onSubmit={submitApplication}>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Họ và tên</label>
+                    <input className="admin-input w-full" value={form.candidateName} onChange={(e) => updateForm("candidateName", e.target.value)} placeholder="Nguyễn Văn A" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Email</label>
+                    <input type="email" className="admin-input w-full" value={form.email} onChange={(e) => updateForm("email", e.target.value)} placeholder="email@company.com" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Số điện thoại</label>
+                      <input className="admin-input w-full" value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} placeholder="090..." />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Số năm kinh nghiệm</label>
+                      <input type="number" min="0" className="admin-input w-full" value={form.experienceYears} onChange={(e) => updateForm("experienceYears", e.target.value)} placeholder="3" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Giới thiệu ngắn</label>
+                    <textarea className="admin-input w-full min-h-28" value={form.coverLetter} onChange={(e) => updateForm("coverLetter", e.target.value)} placeholder="Giới thiệu ngắn về kinh nghiệm, dự án đã tham gia, thế mạnh của bạn..." />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">CV / Hồ sơ (PDF, DOC, DOCX)</label>
+                    <label className="flex items-center gap-2 cursor-pointer admin-input w-full text-sm">
+                      <Paperclip className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <span className={cvFile ? "text-foreground" : "text-muted-foreground"}>
+                        {cvFile ? cvFile.name : "Chọn file..."}
+                      </span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        className="hidden"
+                        onChange={(e) => setCvFile(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                  </div>
+                  <button disabled={submitting || !selectedPosition} className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider w-full disabled:opacity-50 disabled:cursor-not-allowed">
+                    Gửi hồ sơ <Send className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </Layout>

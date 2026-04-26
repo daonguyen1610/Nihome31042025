@@ -57,6 +57,7 @@ describe("Login page", () => {
           error: null,
           otpRequired: false,
           otpPhone: null,
+          otpEmail: null,
           otpFlow: null,
           otpPassword: null,
         },

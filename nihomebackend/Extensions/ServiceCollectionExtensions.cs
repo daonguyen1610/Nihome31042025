@@ -82,6 +82,9 @@ public static class ServiceCollectionExtensions
         // Content services
         services.AddScoped<ActivityService>();
         services.AddScoped<ActivityCategoryService>();
+        services.AddScoped<JobPositionService>();
+        services.AddScoped<JobApplicationService>();
+        services.AddScoped<SiteSettingsService>();
         services.AddScoped<NewsService>();
         services.AddScoped<ProjectService>();
         services.AddScoped<ServiceItemService>();

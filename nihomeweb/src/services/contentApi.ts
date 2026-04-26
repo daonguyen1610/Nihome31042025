@@ -105,6 +105,44 @@ export interface ActivityCategoryResponse {
   sortOrder: number;
 }
 
+  export interface JobPositionResponse {
+    id: number;
+    title: string;
+    department: string;
+    location: string;
+    employmentType: string;
+    experienceLevel: string;
+    description?: string;
+    requirements: string[];
+    isActive: boolean;
+    sortOrder: number;
+    applicationCount: number;
+  }
+
+  export interface JobApplicationResponse {
+    id: number;
+    jobPositionId: number;
+    positionTitle: string;
+    candidateName: string;
+    email: string;
+    phone?: string;
+    experienceYears?: number;
+    coverLetter?: string;
+    cvUrl?: string;
+    status: string;
+    appliedAt: string;
+  }
+
+  export interface SubmitJobApplicationRequest {
+    jobPositionId: number;
+    candidateName: string;
+    email: string;
+    phone?: string;
+    experienceYears?: number;
+    coverLetter?: string;
+    cvUrl?: string;
+  }
+
 // --- Translation types ---
 
 export interface TranslationPair {
@@ -238,6 +276,19 @@ export const contentApi = {
   getSlideshow: (lang = "vi") =>
     api.get<SlideshowResponse[]>(`/slideshow?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapSlideshow) })),
+
+  // Job positions (public)
+  getJobPositions: () =>
+    api.get<JobPositionResponse[]>("/job-positions"),
+
+  uploadCv: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<{ cvUrl: string }>("/system/upload-cv", formData);
+  },
+
+  submitJobApplication: (data: SubmitJobApplicationRequest) =>
+    api.post<JobApplicationResponse>("/job-applications", data),
 };
 
 // --- Translation API (admin-managed) ---

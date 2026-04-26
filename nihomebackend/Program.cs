@@ -78,6 +78,14 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/images/upload"
 });
 
+var uploadCvPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "files", "cv");
+Directory.CreateDirectory(uploadCvPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadCvPath),
+    RequestPath = "/files/cv"
+});
+
 app.Use(async (context, next) =>
 {
     if (!context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))

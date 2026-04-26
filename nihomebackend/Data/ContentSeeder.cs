@@ -15,6 +15,7 @@ public static class ContentSeeder
         SeedLogos(db);
         SeedProcesses(db);
         SeedSlideshow(db);
+        SeedRecruitment(db);
         SeedEntityTranslations(db);
     }
 
@@ -563,6 +564,241 @@ public static class ContentSeeder
         };
 
         db.SlideshowItems.AddRange(items);
+        db.SaveChanges();
+    }
+
+    // ─── Recruitment ────────────────────────────────────────────────
+
+    private static void SeedRecruitment(AppDbContext db)
+    {
+        if (db.JobPositions.Any()) return;
+
+        var now = DateTime.UtcNow;
+
+        var positions = new JobPosition[]
+        {
+            new()
+            {
+                Title = "Kỹ sư Xây dựng (Site Engineer)",
+                Department = "Phòng Thi công",
+                Location = "TP. Hồ Chí Minh",
+                EmploymentType = "full-time",
+                ExperienceLevel = "mid",
+                Description = "Giám sát thi công trực tiếp tại công trường, kiểm tra chất lượng vật liệu, đảm bảo tiến độ và an toàn lao động theo tiêu chuẩn ISO 9001:2015.",
+                RequirementsJson = JsonSerializer.Serialize(new[]
+                {
+                    "Tốt nghiệp Đại học ngành Xây dựng Dân dụng & Công nghiệp",
+                    "Ít nhất 2 năm kinh nghiệm thi công nhà xưởng, nhà máy",
+                    "Đọc hiểu bản vẽ kết cấu, kiến trúc, MEP",
+                    "Sử dụng thành thạo AutoCAD, MS Project",
+                    "Có khả năng làm việc ngoài trời, chịu được áp lực tiến độ"
+                }),
+                IsActive = true,
+                SortOrder = 0,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new()
+            {
+                Title = "Kiến trúc sư Thiết kế",
+                Department = "Phòng Thiết kế",
+                Location = "TP. Hồ Chí Minh",
+                EmploymentType = "full-time",
+                ExperienceLevel = "mid",
+                Description = "Thiết kế kiến trúc cho các dự án nhà xưởng công nghiệp, văn phòng và công trình dân dụng. Phối hợp với đội kết cấu và MEP để hoàn thiện hồ sơ thiết kế.",
+                RequirementsJson = JsonSerializer.Serialize(new[]
+                {
+                    "Tốt nghiệp Đại học ngành Kiến trúc",
+                    "Thành thạo Revit, AutoCAD, SketchUp, Photoshop",
+                    "Kinh nghiệm thiết kế công trình công nghiệp là lợi thế",
+                    "Tư duy sáng tạo, cập nhật xu hướng thiết kế mới",
+                    "Khả năng giao tiếp tốt với khách hàng và nội bộ"
+                }),
+                IsActive = true,
+                SortOrder = 1,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new()
+            {
+                Title = "Nhân viên Kinh doanh Dự án",
+                Department = "Phòng Kinh doanh",
+                Location = "TP. Hồ Chí Minh",
+                EmploymentType = "full-time",
+                ExperienceLevel = "junior",
+                Description = "Tìm kiếm và phát triển khách hàng doanh nghiệp, tư vấn giải pháp xây dựng trọn gói, theo dõi và chăm sóc khách hàng từ giai đoạn tiếp cận đến ký hợp đồng.",
+                RequirementsJson = JsonSerializer.Serialize(new[]
+                {
+                    "Tốt nghiệp Đại học ngành Quản trị Kinh doanh, Marketing hoặc Xây dựng",
+                    "Kỹ năng giao tiếp và thuyết trình xuất sắc",
+                    "Có xe máy và sẵn sàng đi công tác",
+                    "Ưu tiên có kinh nghiệm bán hàng B2B trong lĩnh vực xây dựng",
+                    "Ngoại ngữ tiếng Anh hoặc tiếng Nhật là lợi thế lớn"
+                }),
+                IsActive = true,
+                SortOrder = 2,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new()
+            {
+                Title = "Kỹ sư MEP (Cơ điện)",
+                Department = "Phòng Thiết kế",
+                Location = "TP. Hồ Chí Minh",
+                EmploymentType = "full-time",
+                ExperienceLevel = "senior",
+                Description = "Thiết kế và giám sát hệ thống MEP (điện, nước, HVAC, PCCC) cho các dự án nhà xưởng công nghiệp và văn phòng quy mô lớn.",
+                RequirementsJson = JsonSerializer.Serialize(new[]
+                {
+                    "Tốt nghiệp Đại học ngành Điện, Cơ khí hoặc Kỹ thuật Công trình",
+                    "Tối thiểu 5 năm kinh nghiệm thiết kế MEP",
+                    "Thành thạo Revit MEP, AutoCAD MEP",
+                    "Am hiểu tiêu chuẩn PCCC, QCVN về hệ thống điện, nước",
+                    "Kinh nghiệm dự án nhà máy, khu công nghiệp là bắt buộc"
+                }),
+                IsActive = true,
+                SortOrder = 3,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new()
+            {
+                Title = "Thực tập sinh Kỹ thuật",
+                Department = "Phòng Thi công",
+                Location = "Bình Dương",
+                EmploymentType = "intern",
+                ExperienceLevel = "student",
+                Description = "Hỗ trợ đội kỹ sư hiện trường trong công tác đo đạc, nghiệm thu, lập hồ sơ hoàn công. Cơ hội học hỏi thực tế tại các công trình nhà xưởng quy mô lớn.",
+                RequirementsJson = JsonSerializer.Serialize(new[]
+                {
+                    "Sinh viên năm cuối ngành Xây dựng, Kiến trúc hoặc liên quan",
+                    "Có thể thực tập toàn thời gian ít nhất 3 tháng",
+                    "Chăm chỉ, ham học hỏi, chịu khó di chuyển",
+                    "Biết sử dụng AutoCAD cơ bản"
+                }),
+                IsActive = true,
+                SortOrder = 4,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+            new()
+            {
+                Title = "Kế toán Tổng hợp",
+                Department = "Phòng Kế toán",
+                Location = "TP. Hồ Chí Minh",
+                EmploymentType = "full-time",
+                ExperienceLevel = "mid",
+                Description = "Theo dõi công nợ, lập báo cáo tài chính, xử lý thuế GTGT, TNCN và phối hợp kiểm toán. Hỗ trợ Ban Giám đốc phân tích chi phí dự án.",
+                RequirementsJson = JsonSerializer.Serialize(new[]
+                {
+                    "Tốt nghiệp Đại học ngành Kế toán – Tài chính",
+                    "Kinh nghiệm 2+ năm, ưu tiên ngành xây dựng",
+                    "Thành thạo phần mềm kế toán (MISA, Fast, SAP)",
+                    "Nắm vững Luật Thuế và chuẩn mực kế toán Việt Nam",
+                    "Cẩn thận, trung thực, chịu được áp lực deadline"
+                }),
+                IsActive = false, // Đã đóng
+                SortOrder = 5,
+                CreatedAt = now,
+                UpdatedAt = now
+            },
+        };
+
+        db.JobPositions.AddRange(positions);
+        db.SaveChanges();
+
+        // Seed sample applications
+        var posIds = db.JobPositions.Select(p => new { p.Id, p.Title }).ToList();
+
+        var applications = new JobApplication[]
+        {
+            new()
+            {
+                JobPositionId = posIds[0].Id, // Kỹ sư Xây dựng
+                CandidateName = "Nguyễn Minh Tuấn",
+                Email = "tuan.nguyen@gmail.com",
+                Phone = "0901234567",
+                ExperienceYears = 4,
+                CoverLetter = "Tôi có 4 năm kinh nghiệm giám sát thi công nhà xưởng tại các KCN Long An và Bình Dương. Rất mong được gia nhập đội ngũ NICON.",
+                Status = "interview",
+                AppliedAt = now.AddDays(-10),
+                UpdatedAt = now.AddDays(-7)
+            },
+            new()
+            {
+                JobPositionId = posIds[0].Id, // Kỹ sư Xây dựng
+                CandidateName = "Trần Thị Hương",
+                Email = "huong.tran@outlook.com",
+                Phone = "0912345678",
+                ExperienceYears = 2,
+                CoverLetter = "Tốt nghiệp ĐH Bách Khoa TP.HCM, đã tham gia 3 dự án nhà xưởng trong vai trò kỹ sư hiện trường.",
+                Status = "new",
+                AppliedAt = now.AddDays(-3),
+                UpdatedAt = now.AddDays(-3)
+            },
+            new()
+            {
+                JobPositionId = posIds[1].Id, // Kiến trúc sư
+                CandidateName = "Lê Quốc Bảo",
+                Email = "bao.le.arch@gmail.com",
+                Phone = "0933456789",
+                ExperienceYears = 5,
+                CoverLetter = "Kiến trúc sư với 5 năm kinh nghiệm tại công ty thiết kế hàng đầu. Đam mê thiết kế công nghiệp và muốn phát triển sự nghiệp tại NICON.",
+                Status = "hired",
+                AppliedAt = now.AddDays(-30),
+                UpdatedAt = now.AddDays(-15)
+            },
+            new()
+            {
+                JobPositionId = posIds[2].Id, // Nhân viên Kinh doanh
+                CandidateName = "Phạm Anh Dũng",
+                Email = "dung.pham.sales@gmail.com",
+                Phone = "0944567890",
+                ExperienceYears = 1,
+                CoverLetter = "Tôi vừa tốt nghiệp và có 1 năm kinh nghiệm sales B2B ngành vật liệu xây dựng. Giao tiếp tốt tiếng Anh (IELTS 7.0).",
+                Status = "new",
+                AppliedAt = now.AddDays(-1),
+                UpdatedAt = now.AddDays(-1)
+            },
+            new()
+            {
+                JobPositionId = posIds[2].Id, // Nhân viên Kinh doanh
+                CandidateName = "Võ Thị Mai",
+                Email = "mai.vo@yahoo.com",
+                Phone = "0955678901",
+                ExperienceYears = 3,
+                CoverLetter = "3 năm kinh doanh dự án xây dựng, đã ký được nhiều hợp đồng lớn tại khu vực miền Nam.",
+                Status = "rejected",
+                AppliedAt = now.AddDays(-20),
+                UpdatedAt = now.AddDays(-18)
+            },
+            new()
+            {
+                JobPositionId = posIds[3].Id, // Kỹ sư MEP
+                CandidateName = "Đặng Văn Hải",
+                Email = "hai.dang.mep@gmail.com",
+                Phone = "0966789012",
+                ExperienceYears = 7,
+                CoverLetter = "Senior MEP Engineer với 7 năm kinh nghiệm tại Samsung Engineering. Chuyên thiết kế hệ thống HVAC và PCCC cho nhà máy.",
+                Status = "interview",
+                AppliedAt = now.AddDays(-5),
+                UpdatedAt = now.AddDays(-2)
+            },
+            new()
+            {
+                JobPositionId = posIds[4].Id, // Thực tập sinh
+                CandidateName = "Hoàng Minh Khôi",
+                Email = "khoi.hoang.sv@gmail.com",
+                Phone = "0977890123",
+                ExperienceYears = 0,
+                CoverLetter = "Sinh viên năm cuối ĐH Xây dựng Hà Nội, muốn thực tập tại công trường thực tế để tích lũy kinh nghiệm trước khi ra trường.",
+                Status = "new",
+                AppliedAt = now.AddDays(-2),
+                UpdatedAt = now.AddDays(-2)
+            },
+        };
+
+        db.JobApplications.AddRange(applications);
         db.SaveChanges();
     }
 
