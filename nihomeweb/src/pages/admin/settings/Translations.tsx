@@ -83,7 +83,8 @@ interface EntityItem {
 /* ─── Constants ──────────────────────────────────── */
 
 const SUPPORTED_LANGS = ["en", "zh", "ja"] as const;
-const LANG_LABELS: Record<string, string> = { en: "English", zh: "中文", ja: "日本語" };
+const LANG_LABELS: Record<string, string> = { vi: "🇻🇳 VI", en: "🇺🇸 English", zh: "🇨🇳 中文", ja: "🇯🇵 日本語" };
+const ALL_LANGS = ["vi", "en", "zh", "ja"] as const;
 const PAGE_SIZE = 20;
 
 /* ─── Component ──────────────────────────────────── */
@@ -382,8 +383,9 @@ const TranslationsPage = () => {
                   <thead style={{ background: "hsl(var(--admin-bg))" }}>
                     <tr className="text-left">
                       <th className="px-4 py-3 font-bold">Key</th>
-                      <th className="px-4 py-3 font-bold">VI</th>
-                      <th className="px-4 py-3 font-bold">EN</th>
+                      {ALL_LANGS.map((lang) => (
+                        <th key={lang} className="px-4 py-3 font-bold">{LANG_LABELS[lang]}</th>
+                      ))}
                       <th className="px-4 py-3 font-bold">Category</th>
                       <th className="px-4 py-3 font-bold w-32">Actions</th>
                     </tr>
@@ -391,7 +393,7 @@ const TranslationsPage = () => {
                   <tbody>
                     {paged.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                        <td colSpan={7} className="px-4 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
                           No translations found.
                         </td>
                       </tr>
@@ -403,8 +405,10 @@ const TranslationsPage = () => {
                             {p.key}
                           </code>
                         </td>
-                        <td className="px-4 py-3 max-w-[200px] truncate text-xs">{p.vietnameseValue}</td>
-                        <td className="px-4 py-3 max-w-[200px] truncate text-xs">{p.translations["en"] ?? "—"}</td>
+                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.vietnameseValue}</td>
+                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.translations["en"] ?? "—"}</td>
+                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.translations["zh"] ?? "—"}</td>
+                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.translations["ja"] ?? "—"}</td>
                         <td className="px-4 py-3">
                           {p.category && (
                             <span

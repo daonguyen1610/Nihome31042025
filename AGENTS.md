@@ -195,3 +195,5 @@ Every response MUST include:
 * Please write the git commit follow 50/72 rule
 * Push commit seperate to main branch and create pull request to main branch, please automate to write unique brnnch and easy to remember
 * Only add files related to the commit you write.
+* Ensure the main always latest commit, and rebase the development branch targeting to the main branch
+* Automate create PRs in github using `gh pr create`
