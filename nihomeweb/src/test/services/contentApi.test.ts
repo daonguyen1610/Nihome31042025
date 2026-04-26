@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { mockApi } = vi.hoisted(() => ({
   mockApi: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -16,6 +17,7 @@ describe("contentApi", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockApi.get.mockResolvedValue({ data: [] });
+    mockApi.post.mockResolvedValue({ data: { cvUrl: "/files/cv/demo.pdf" } });
   });
 
   // ── Activities ────────────────────────────────────────────────
@@ -164,5 +166,23 @@ describe("contentApi", () => {
     const result = await contentApi.getProjects();
     expect(result.data[0].gallery).toHaveLength(2);
     expect(result.data[0].gallery![0]).toContain("/img/a.jpg");
+  });
+
+  // ── Recruitment CV upload ─────────────────────────────────────
+
+  it("uploadCv sends multipart/form-data request", async () => {
+    const file = new File(["cv-data"], "cv.pdf", { type: "application/pdf" });
+
+    await contentApi.uploadCv(file);
+
+    expect(mockApi.post).toHaveBeenCalledWith(
+      "/system/upload-cv",
+      expect.any(FormData),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "Content-Type": "multipart/form-data",
+        }),
+      }),
+    );
   });
 });

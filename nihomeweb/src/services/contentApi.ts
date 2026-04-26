@@ -305,7 +305,11 @@ export const contentApi = {
   uploadCv: (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return api.post<{ cvUrl: string }>("/system/upload-cv", formData);
+    return api.post<{ cvUrl: string }>("/system/upload-cv", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
   },
 
   submitJobApplication: (data: SubmitJobApplicationRequest) =>
