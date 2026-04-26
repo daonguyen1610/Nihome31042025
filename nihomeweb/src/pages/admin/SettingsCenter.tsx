@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Save, Building2, Mail, Phone, MapPin, Globe } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -20,13 +21,15 @@ import {
   type GeneralSettings,
   type MediaSettings,
 } from "@/lib/settingsStore";
+import SlideshowSettings from "./settings/SlideshowSettings";
 
-type Tab = "company" | "general" | "media";
+type Tab = "company" | "general" | "media" | "slideshow";
 
 const tabs: { key: Tab; labelKey: string }[] = [
   { key: "company", labelKey: "settings.company" },
   { key: "general", labelKey: "set.general" },
   { key: "media", labelKey: "set.media" },
+  { key: "slideshow", labelKey: "set.slideshow" },
 ];
 
 /* ─── Company Tab ─── */
@@ -261,7 +264,23 @@ const MediaTab = () => {
 /* ─── Settings Center ─── */
 const SettingsCenter = () => {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<Tab>("company");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTab = searchParams.get("tab");
+  const initialTab = tabs.some((tab) => tab.key === currentTab)
+    ? (currentTab as Tab)
+    : "company";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+
+  useEffect(() => {
+    if (tabs.some((tab) => tab.key === currentTab)) {
+      setActiveTab(currentTab as Tab);
+    }
+  }, [currentTab]);
+
+  const onChangeTab = (tab: Tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   return (
     <AdminLayout>
@@ -278,7 +297,7 @@ const SettingsCenter = () => {
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
+            onClick={() => onChangeTab(tab.key)}
             className="px-5 py-2.5 rounded-lg text-sm font-bold transition whitespace-nowrap"
             style={
               activeTab === tab.key
@@ -295,6 +314,7 @@ const SettingsCenter = () => {
       {activeTab === "company" && <CompanyTab />}
       {activeTab === "general" && <GeneralTab />}
       {activeTab === "media" && <MediaTab />}
+      {activeTab === "slideshow" && <SlideshowSettings />}
     </AdminLayout>
   );
 };

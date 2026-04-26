@@ -250,10 +250,10 @@
   {
     "key": "nav.slideshow",
     "category": "nav",
-    "vi": "Slideshow và hình ảnh",
-    "en": "Slideshow & images",
-    "zh": "幻灯片与图片",
-    "ja": "スライドショーと画像"
+    "vi": "Slideshow và media",
+    "en": "Slideshow & media",
+    "zh": "幻灯片与媒体",
+    "ja": "スライドショーとメディア"
   },
   {
     "key": "nav.map",

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -27,7 +27,6 @@ import AdminPosts from "./pages/admin/Posts.tsx";
 import AdminProjects from "./pages/admin/Projects.tsx";
 import AdminContacts from "./pages/admin/Contacts.tsx";
 import AdminRecruitment from "./pages/admin/Recruitment.tsx";
-import AdminSettings from "./pages/admin/Settings.tsx";
 import SettingsCenter from "./pages/admin/SettingsCenter.tsx";
 import JobPositionForm from "./pages/admin/JobPositionForm.tsx";
 import EmailTemplateConfig from "./pages/admin/EmailTemplateConfig.tsx";
@@ -98,7 +97,7 @@ const App = () => (
             <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />
             <Route path="/admin/suppliers" element={<AdminLogosManager kind="suppliers" titleKey="nav.suppliers" />} />
             <Route path="/admin/awards" element={<AdminSimplePage titleKey="nav.awards" />} />
-            <Route path="/admin/slideshow" element={<AdminSimplePage titleKey="nav.slideshow" />} />
+            <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
             <Route path="/admin/map" element={<AdminSimplePage titleKey="nav.map" />} />
             <Route path="/admin/about" element={<AdminSimplePage titleKey="nav.about" />} />
             <Route path="/admin/help" element={<HelpPage />} />

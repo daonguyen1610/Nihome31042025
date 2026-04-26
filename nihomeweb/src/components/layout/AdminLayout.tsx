@@ -85,7 +85,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/partners", label: t("nav.partners"), icon: Building },
           { to: "/admin/suppliers", label: t("nav.suppliers"), icon: Truck },
           { to: "/admin/awards", label: t("nav.awards"), icon: Award },
-          { to: "/admin/slideshow", label: t("nav.slideshow"), icon: ImageIcon },
           { to: "/admin/about", label: t("nav.about"), icon: Info },
         ],
       },

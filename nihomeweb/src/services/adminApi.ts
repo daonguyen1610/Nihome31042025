@@ -70,6 +70,18 @@ export interface UpsertSlideshowRequest {
   sortOrder?: number;
 }
 
+export interface SlideshowAdminResponse {
+  id: number;
+  slug: string;
+  imageUrl: string;
+  title: string;
+  subtitle?: string;
+  linkUrl?: string;
+  linkText?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface UpsertActivityCategoryRequest {
   name: string;
   isActive?: boolean;
@@ -174,6 +186,15 @@ export const adminApi = {
     return api.post<{ imageUrl: string }>("/system/upload-image", formData);
   },
 
+  uploadVideo: (file: File, previousImageUrl?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (previousImageUrl) {
+      formData.append("previousImageUrl", previousImageUrl);
+    }
+    return api.post<{ mediaUrl: string }>("/system/upload-video", formData);
+  },
+
   // Activities / Posts
   createActivity: (data: UpsertActivityRequest) =>
     api.post("/activities", data),
@@ -225,6 +246,8 @@ export const adminApi = {
     api.delete(`/processes/${id}`),
 
   // Slideshow
+  getSlideshow: (lang = "vi", activeOnly = false) =>
+    api.get<SlideshowAdminResponse[]>(`/slideshow?lang=${lang}&activeOnly=${activeOnly}`),
   createSlideshow: (data: UpsertSlideshowRequest) =>
     api.post("/slideshow", data),
   updateSlideshow: (id: number, data: UpsertSlideshowRequest) =>

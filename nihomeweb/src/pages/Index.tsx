@@ -5,6 +5,8 @@ import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useActivities, useProjects, useSlideshow } from "@/hooks/useContentApi";
 
+const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
+
 const Index = () => {
   const { t } = useI18n();
   const [slide, setSlide] = useState(0);
@@ -105,7 +107,10 @@ const Index = () => {
     [activities],
   );
 
-  const ctaBgImage = recentActivities[0]?.img || heroSlides[0]?.imageUrl;
+  const ctaBgImage =
+    (recentActivities[0]?.img && !isVideoUrl(recentActivities[0].img) ? recentActivities[0].img : undefined) ||
+    heroSlides.find((s) => !isVideoUrl(s.imageUrl))?.imageUrl ||
+    "/images/projects/project-bma.jpg";
 
   const currentSlide = heroSlides[slide] ?? heroSlides[0];
 
@@ -121,7 +126,19 @@ const Index = () => {
               className="absolute inset-0 overflow-hidden transition-transform duration-1000 ease-[cubic-bezier(0.7,0,0.3,1)]"
               style={{ transform: `translateX(${offset * 100}%)` }}
             >
-              <img src={s.imageUrl} alt={s.title || "NICON industrial factory"} className="absolute inset-0 w-full h-full object-cover" />
+              {isVideoUrl(s.imageUrl) ? (
+                <video
+                  src={s.imageUrl}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                />
+              ) : (
+                <img src={s.imageUrl} alt={s.title || "NICON industrial factory"} className="absolute inset-0 w-full h-full object-cover" />
+              )}
             </div>
           );
         })}
