@@ -129,8 +129,13 @@ Always review migration files before applying.
 
 ## ASP.NET Testing Rules
 
-* Prefer manual testing for fast delivery.
-* Add automated tests only when necessary.
+* When develop the feature, please cover the test cases properly in `nihomebackend.tests`
+* Ensure the linter with `dotnet format`
+* Ensure the test cases cover the feature, and follow the design pattern
+
+## Documentation
+
+* When maturing the features, please update the documentation in `docs/`
 
 ### Manual API Test
 
@@ -164,17 +169,6 @@ docker compose up --build
 
 ---
 
-## Manual Testing Rules
-
-Always provide:
-
-* Preconditions
-* Steps
-* Expected result
-* Edge cases
-
----
-
 ## Final Response Format
 
 Every response MUST include:
@@ -184,8 +178,6 @@ Every response MUST include:
 ## Files Changed
 
 ## Quality Check
-
-## Manual Test Checklist
 
 ## Assumptions / Risks
 
@@ -201,4 +193,5 @@ Every response MUST include:
 
 * When done about a feature, or bugs fix then automate write commit message and push automatically
 * Please write the git commit follow 50/72 rule
-* Push commit seperate to main branch and create pull request to main branch
+* Push commit seperate to main branch and create pull request to main branch, please automate to write unique brnnch and easy to remember
+* Only add files related to the commit you write.

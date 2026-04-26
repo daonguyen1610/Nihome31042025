@@ -16,6 +16,46 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
+/* ─── Helpers ───────────────────────────────────── */
+const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions"];
+
+/** Try to parse a JSON array of strings into plain text (paragraphs separated by blank lines). */
+function jsonToPlainText(raw: string): string {
+  if (!raw) return "";
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      // Handle array of strings
+      if (parsed.every((v: unknown) => typeof v === "string")) return parsed.join("\n\n");
+      // Handle array of objects (e.g. Sections with heading/body)
+      if (parsed.every((v: unknown) => typeof v === "object" && v !== null)) {
+        return parsed.map((s: Record<string, string>) => {
+          if (s.heading && s.body) return `## ${s.heading}\n${s.body}`;
+          return JSON.stringify(s);
+        }).join("\n\n");
+      }
+    }
+  } catch { /* not JSON, return as-is */ }
+  return raw;
+}
+
+/** Convert plain text back to JSON array string for storage. */
+function plainTextToJson(text: string, field: string): string {
+  if (!text.trim()) return "";
+  if (field === "Sections") {
+    // Parse ## heading\nbody format back to [{heading,body}]
+    const sections = text.split(/\n\n+/).filter(Boolean).map((block) => {
+      const m = block.match(/^##\s+(.+)\n([\s\S]*)$/);
+      if (m) return { heading: m[1].trim(), body: m[2].trim() };
+      return { heading: "", body: block.trim() };
+    });
+    return JSON.stringify(sections);
+  }
+  // For Content, Challenges, Solutions: split by blank lines into array
+  const parts = text.split(/\n\n+/).filter(Boolean);
+  return JSON.stringify(parts);
+}
+
 /* ─── Types ─────────────────────────────────────── */
 
 interface TranslationPair {
@@ -205,8 +245,19 @@ const TranslationsPage = () => {
     setEntityModalLang("en");
     try {
       const { data } = await api.get(`/translations/entity/${selectedType}/${item.id}`);
-      setEntityOriginal(data.original ?? {});
-      setEntityTranslations(data.translations ?? {});
+      // Convert JSON fields to plain text for display
+      const orig: Record<string, string> = data.original ?? {};
+      for (const f of JSON_FIELDS) {
+        if (orig[f]) orig[f] = jsonToPlainText(orig[f]);
+      }
+      setEntityOriginal(orig);
+      const trans: Record<string, Record<string, string>> = data.translations ?? {};
+      for (const lang of Object.keys(trans)) {
+        for (const f of JSON_FIELDS) {
+          if (trans[lang][f]) trans[lang][f] = jsonToPlainText(trans[lang][f]);
+        }
+      }
+      setEntityTranslations(trans);
     } catch {
       setEntityOriginal({});
       setEntityTranslations({});
@@ -218,7 +269,12 @@ const TranslationsPage = () => {
     if (!entityModalItem || !entityModalType) return;
     setEntitySaving(true);
     try {
-      const fields = entityTranslations[entityModalLang] ?? {};
+      const raw = entityTranslations[entityModalLang] ?? {};
+      // Convert plain text back to JSON for storage
+      const fields: Record<string, string> = {};
+      for (const [k, v] of Object.entries(raw)) {
+        fields[k] = JSON_FIELDS.includes(k) ? plainTextToJson(v, k) : v;
+      }
       await api.post(`/translations/entity/${entityModalType.type}/${entityModalItem.id}`, {
         languageCode: entityModalLang,
         translations: fields,
@@ -567,8 +623,8 @@ const TranslationsPage = () => {
 
       {/* ════════ Entity Translation Modal ════════ */}
       {entityModalOpen && entityModalItem && entityModalType && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setEntityModalOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-4xl p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto p-4 pt-8 pb-8" onClick={() => setEntityModalOpen(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-4xl p-6 my-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="font-display text-xl font-extrabold">
