@@ -74,7 +74,8 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 * Do not break API contracts.
 * Update frontend if backend changes.
 * Handle loading, error, and empty states.
-* Update the translation keys in the ASP .NET DbSeeder aligned with frontend.
+* Update the translation and content keys in the ASP .NET DbSeeder aligned with frontend.
+* Check `npm run lint` and fix the issues.
 
 ---
 
