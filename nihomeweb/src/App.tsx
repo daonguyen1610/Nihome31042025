@@ -28,6 +28,7 @@ import AdminProjects from "./pages/admin/Projects.tsx";
 import AdminContacts from "./pages/admin/Contacts.tsx";
 import AdminRecruitment from "./pages/admin/Recruitment.tsx";
 import AdminSettings from "./pages/admin/Settings.tsx";
+import SettingsCenter from "./pages/admin/SettingsCenter.tsx";
 import JobPositionForm from "./pages/admin/JobPositionForm.tsx";
 import EmailTemplateConfig from "./pages/admin/EmailTemplateConfig.tsx";
 import ProjectForm from "./pages/admin/ProjectForm.tsx";
@@ -35,28 +36,15 @@ import ProjectView from "./pages/admin/ProjectView.tsx";
 import PostForm from "./pages/admin/PostForm.tsx";
 import PostView from "./pages/admin/PostView.tsx";
 import AdminCategories from "./pages/admin/Categories.tsx";
-import AdminCustomers from "./pages/admin/Customers.tsx";
-import AdminCustomerRoles from "./pages/admin/CustomerRoles.tsx";
-import AdminOnlineCustomers from "./pages/admin/OnlineCustomers.tsx";
 import AdminActivityLog from "./pages/admin/ActivityLog.tsx";
 import AdminLogosManager from "./pages/admin/LogosManager.tsx";
 import AdminSimplePage from "./pages/admin/SimplePage.tsx";
 import ProcessList from "./pages/admin/ProcessList.tsx";
-import CustomerSettingsPage from "./pages/admin/settings/CustomerSettings.tsx";
-import GeneralSettingsPage from "./pages/admin/settings/GeneralSettings.tsx";
-import MediaSettingsPage from "./pages/admin/settings/MediaSettings.tsx";
-import AllSettingsPage from "./pages/admin/settings/AllSettings.tsx";
-import EmailAccountsPage from "./pages/admin/settings/EmailAccounts.tsx";
-import StoresPage from "./pages/admin/settings/Stores.tsx";
-import CountriesPage from "./pages/admin/settings/Countries.tsx";
 import LanguagesPage from "./pages/admin/settings/Languages.tsx";
 import TranslationsPage from "./pages/admin/settings/Translations.tsx";
 import SystemLog from "./pages/admin/system/SystemLog.tsx";
 import WarningsPage from "./pages/admin/system/Warnings.tsx";
 import MaintenancePage from "./pages/admin/system/Maintenance.tsx";
-import MessageQueue from "./pages/admin/system/MessageQueue.tsx";
-import ScheduleTasks from "./pages/admin/system/ScheduleTasks.tsx";
-import SeNamesPage from "./pages/admin/system/SeNames.tsx";
 import HelpPage from "./pages/admin/Help.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -101,20 +89,10 @@ const App = () => (
             <Route path="/admin/recruitment/new" element={<JobPositionForm mode="create" />} />
             <Route path="/admin/recruitment/:id/edit" element={<JobPositionForm mode="edit" />} />
             <Route path="/admin/email-templates" element={<EmailTemplateConfig />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/settings/customer" element={<CustomerSettingsPage />} />
-            <Route path="/admin/settings/general" element={<GeneralSettingsPage />} />
-            <Route path="/admin/settings/media" element={<MediaSettingsPage />} />
-            <Route path="/admin/settings/all" element={<AllSettingsPage />} />
-            <Route path="/admin/email-accounts" element={<EmailAccountsPage />} />
-            <Route path="/admin/stores" element={<StoresPage />} />
-            <Route path="/admin/countries" element={<CountriesPage />} />
+            <Route path="/admin/settings" element={<SettingsCenter />} />
             <Route path="/admin/languages" element={<LanguagesPage />} />
             <Route path="/admin/translations" element={<TranslationsPage />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
-            <Route path="/admin/customers" element={<AdminCustomers />} />
-            <Route path="/admin/customer-roles" element={<AdminCustomerRoles />} />
-            <Route path="/admin/online-customers" element={<AdminOnlineCustomers />} />
             <Route path="/admin/activity-log" element={<AdminActivityLog />} />
             <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
             <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />
@@ -127,9 +105,6 @@ const App = () => (
             <Route path="/admin/system/log" element={<SystemLog />} />
             <Route path="/admin/system/warnings" element={<WarningsPage />} />
             <Route path="/admin/system/maintenance" element={<MaintenancePage />} />
-            <Route path="/admin/system/queue" element={<MessageQueue />} />
-            <Route path="/admin/system/tasks" element={<ScheduleTasks />} />
-            <Route path="/admin/system/se-names" element={<SeNamesPage />} />
             <Route
               path="/admin/processes/general"
               element={<ProcessList groupKey="general" titleKey="proc.general" />}

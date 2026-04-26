@@ -119,9 +119,9 @@ const SystemLog = () => {
               <tr className="text-left">
                 <th className="px-5 py-3 font-semibold">{t("sys.log.level")}</th>
                 <th className="px-5 py-3 font-semibold">{t("sys.log.shortMessage")}</th>
-                <th className="px-5 py-3 font-semibold">{t("cust.ip")}</th>
+                <th className="px-5 py-3 font-semibold">{t("log.ip")}</th>
                 <th className="px-5 py-3 font-semibold">{t("log.customer")}</th>
-                <th className="px-5 py-3 font-semibold">{t("cust.createdOn")}</th>
+                <th className="px-5 py-3 font-semibold">{t("log.createdOn")}</th>
                 <th className="px-5 py-3 font-semibold text-right">{t("common.actions")}</th>
               </tr>
             </thead>
@@ -163,10 +163,10 @@ const SystemLog = () => {
             <h3 className="font-display text-xl font-extrabold mb-4">{view.shortMessage}</h3>
             <div className="space-y-3 text-sm">
               <p><b>{t("sys.log.level")}:</b> <span style={{ color: levelColor[view.level] }}>{view.level}</span></p>
-              <p><b>{t("cust.ip")}:</b> <span className="font-mono">{view.ipAddress}</span></p>
+              <p><b>{t("log.ip")}:</b> <span className="font-mono">{view.ipAddress}</span></p>
               <p><b>{t("log.customer")}:</b> {view.customer}</p>
               <p><b>{t("sys.log.pageUrl")}:</b> <span className="font-mono text-xs">{view.pageUrl}</span></p>
-              <p><b>{t("cust.createdOn")}:</b> {view.createdOn}</p>
+              <p><b>{t("log.createdOn")}:</b> {view.createdOn}</p>
               <div>
                 <b>{t("sys.log.fullMessage")}:</b>
                 <pre className="mt-2 p-3 rounded-lg text-xs whitespace-pre-wrap" style={{ background: "hsl(var(--admin-bg))" }}>{view.fullMessage}</pre>

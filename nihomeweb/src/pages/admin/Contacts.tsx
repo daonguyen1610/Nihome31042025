@@ -1,77 +1,75 @@
 import { useState } from "react";
-import { Mail, Phone, Reply, CheckCircle2, Clock } from "lucide-react";
+import { Mail, Phone, CheckCircle2, Clock, Trash2, Send } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-
-type Contact = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  subject: string;
-  message: string;
-  date: string;
-  replied: boolean;
-};
-
-const initial: Contact[] = [
-  {
-    id: "c1",
-    name: "Trang Lê",
-    email: "trang.le@trang.com.vn",
-    phone: "0901 234 567",
-    subject: "Tư vấn xây dựng nhà máy 8.000m²",
-    message:
-      "Chúng tôi đang tìm đối tác thiết kế và thi công cho dự án nhà máy mới tại KCN Long An. Mong nhận được báo giá sớm.",
-    date: "2 giờ trước",
-    replied: false,
-  },
-  {
-    id: "c2",
-    name: "Mr. Yamada",
-    email: "yamada@morigroup.jp",
-    phone: "+81 90 1234 5678",
-    subject: "Hợp tác chiến lược MORI x NICON",
-    message: "Đề xuất buổi gặp trực tiếp để trao đổi về hợp tác đầu tư trong quý tới.",
-    date: "5 giờ trước",
-    replied: false,
-  },
-  {
-    id: "c3",
-    name: "Phạm Minh Tú",
-    email: "tu.pm@bma.vn",
-    phone: "0912 987 654",
-    subject: "Update tiến độ dự án BMA",
-    message: "Anh cập nhật giúp em tiến độ thi công tuần này nhé.",
-    date: "1 ngày trước",
-    replied: true,
-  },
-  {
-    id: "c4",
-    name: "Nguyễn Hồng Anh",
-    email: "hong.anh@email.com",
-    phone: "0987 654 321",
-    subject: "Thiết kế nội thất văn phòng",
-    message: "Mình cần tư vấn thiết kế văn phòng 800m² tại Quận 7.",
-    date: "2 ngày trước",
-    replied: false,
-  },
-];
+import { useContacts } from "@/hooks/useContentApi";
+import { adminApi, type ContactMessageResponse } from "@/services/adminApi";
+import { PageLoading, PageError } from "@/components/PageState";
 
 const AdminContacts = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const [list, setList] = useState(initial);
-  const [active, setActive] = useState<Contact | null>(initial[0]);
+  const { data: list, loading, error, refetch } = useContacts();
+  const [active, setActive] = useState<ContactMessageResponse | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
 
-  const markReplied = (id: string) => {
-    setList((l) => l.map((c) => (c.id === id ? { ...c, replied: true } : c)));
-    setActive((a) => (a?.id === id ? { ...a, replied: true } : a));
-    toast({ title: t("contacts.markReplied") });
+  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
+  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (!list) return null;
+
+  const newCount = list.filter((c) => !c.isReplied).length;
+
+  const handleReply = async () => {
+    if (!active || !replyText.trim()) return;
+    setSending(true);
+    try {
+      const { data } = await adminApi.replyContact(active.id, replyText.trim());
+      setActive(data);
+      setReplyText("");
+      refetch();
+      toast({ title: t("contacts.reply"), description: t("contacts.replied") });
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
   };
 
-  const newCount = list.filter((c) => !c.replied).length;
+  const handleMarkReplied = async (id: number) => {
+    try {
+      const { data } = await adminApi.markContactReplied(id);
+      setActive(data);
+      refetch();
+      toast({ title: t("contacts.markReplied") });
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await adminApi.deleteContact(id);
+      if (active?.id === id) setActive(null);
+      refetch();
+      toast({ title: t("common.deleted") });
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    }
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffH = Math.floor(diffMs / 3600000);
+    if (diffH < 1) return t("contacts.justNow") || "Vừa xong";
+    if (diffH < 24) return `${diffH} ${t("contacts.hoursAgo") || "giờ trước"}`;
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 7) return `${diffD} ${t("contacts.daysAgo") || "ngày trước"}`;
+    return d.toLocaleDateString("vi-VN");
+  };
 
   return (
     <AdminLayout>
@@ -88,10 +86,15 @@ const AdminContacts = () => {
           <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-muted))" }}>
             {t("contacts.inbox")} ({list.length})
           </p>
+          {list.length === 0 && (
+            <p className="px-3 py-8 text-center text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
+              {t("contacts.empty") || "Không có tin nhắn nào"}
+            </p>
+          )}
           {list.map((c) => (
             <button
               key={c.id}
-              onClick={() => setActive(c)}
+              onClick={() => { setActive(c); setReplyText(""); }}
               className="w-full text-left p-4 rounded-2xl transition flex gap-3 mb-1"
               style={
                 active?.id === c.id
@@ -102,7 +105,7 @@ const AdminContacts = () => {
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 text-white"
                 style={{
-                  background: c.replied
+                  background: c.isReplied
                     ? "hsl(var(--admin-muted))"
                     : "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(255 80% 72%))",
                 }}
@@ -112,13 +115,13 @@ const AdminContacts = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-bold text-sm truncate">{c.name}</p>
-                  {!c.replied && (
+                  {!c.isReplied && (
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: "hsl(var(--admin-danger))" }} />
                   )}
                 </div>
                 <p className="text-xs font-semibold truncate mt-0.5">{c.subject}</p>
                 <p className="text-xs mt-1 flex items-center gap-1" style={{ color: "hsl(var(--admin-muted))" }}>
-                  <Clock className="w-3 h-3" /> {c.date}
+                  <Clock className="w-3 h-3" /> {formatDate(c.createdAt)}
                 </p>
               </div>
             </button>
@@ -145,25 +148,34 @@ const AdminContacts = () => {
                     <h2 className="font-display text-xl font-extrabold">{active.name}</h2>
                     <div className="flex flex-wrap gap-3 text-xs mt-2" style={{ color: "hsl(var(--admin-muted))" }}>
                       <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {active.email}</span>
-                      <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {active.phone}</span>
+                      {active.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {active.phone}</span>}
                     </div>
                   </div>
                 </div>
-                {active.replied ? (
-                  <span
-                    className="admin-chip"
-                    style={{ background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }}
+                <div className="flex items-center gap-2">
+                  {active.isReplied ? (
+                    <span
+                      className="admin-chip"
+                      style={{ background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }}
+                    >
+                      <CheckCircle2 className="w-3 h-3" /> {t("contacts.replied")}
+                    </span>
+                  ) : (
+                    <span
+                      className="admin-chip"
+                      style={{ background: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))" }}
+                    >
+                      {t("contacts.new")}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDelete(active.id)}
+                    className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition"
+                    title={t("common.delete")}
                   >
-                    <CheckCircle2 className="w-3 h-3" /> {t("contacts.replied")}
-                  </span>
-                ) : (
-                  <span
-                    className="admin-chip"
-                    style={{ background: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))" }}
-                  >
-                    {t("contacts.new")}
-                  </span>
-                )}
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <h3 className="font-display text-lg font-extrabold mb-3">{active.subject}</h3>
@@ -177,29 +189,48 @@ const AdminContacts = () => {
                 {active.message}
               </p>
 
-              <textarea
-                rows={4}
-                placeholder={t("contacts.reply") + "..."}
-                className="w-full rounded-2xl p-4 text-sm border outline-none resize-none focus:border-primary"
-                style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
-              />
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => toast({ title: t("contacts.reply"), description: "Demo gửi reply." })}
-                  className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-                >
-                  <Reply className="w-4 h-4" /> {t("contacts.reply")}
-                </button>
-                {!active.replied && (
-                  <button
-                    onClick={() => markReplied(active.id)}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl border"
-                    style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-success))" }}
+              {active.replyContent && (
+                <div className="mb-6">
+                  <p className="text-xs uppercase tracking-wider font-bold mb-2" style={{ color: "hsl(var(--admin-success))" }}>
+                    {t("contacts.replyContent") || "Nội dung phản hồi"}
+                  </p>
+                  <p
+                    className="leading-relaxed p-5 rounded-2xl"
+                    style={{ background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-text))" }}
                   >
-                    <CheckCircle2 className="w-4 h-4" /> {t("contacts.markReplied")}
-                  </button>
-                )}
-              </div>
+                    {active.replyContent}
+                  </p>
+                </div>
+              )}
+
+              {!active.isReplied && (
+                <>
+                  <textarea
+                    rows={4}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder={t("contacts.reply") + "..."}
+                    className="w-full rounded-2xl p-4 text-sm border outline-none resize-none focus:border-primary"
+                    style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+                  />
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={handleReply}
+                      disabled={sending || !replyText.trim()}
+                      className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-50"
+                    >
+                      <Send className="w-4 h-4" /> {sending ? "..." : t("contacts.reply")}
+                    </button>
+                    <button
+                      onClick={() => handleMarkReplied(active.id)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold rounded-xl border"
+                      style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-success))" }}
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> {t("contacts.markReplied")}
+                    </button>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

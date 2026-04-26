@@ -103,7 +103,7 @@ const ActivityLog = () => {
           </label>
           <label className="block">
             <span className="text-xs font-bold mb-1 inline-block" style={{ color: "hsl(var(--admin-muted))" }}>
-              {t("cust.ip")}
+              {t("log.ip")}
             </span>
             <input value={ip} onChange={(e) => setIp(e.target.value)} className="admin-input w-full" />
           </label>
@@ -127,9 +127,9 @@ const ActivityLog = () => {
               <tr className="text-left">
                 <th className="px-5 py-3 font-semibold">{t("log.type")}</th>
                 <th className="px-5 py-3 font-semibold">{t("log.customer")}</th>
-                <th className="px-5 py-3 font-semibold">{t("cust.ip")}</th>
+                <th className="px-5 py-3 font-semibold">{t("log.ip")}</th>
                 <th className="px-5 py-3 font-semibold">{t("log.message")}</th>
-                <th className="px-5 py-3 font-semibold">{t("cust.createdOn")}</th>
+                <th className="px-5 py-3 font-semibold">{t("log.createdOn")}</th>
                 <th className="px-5 py-3 font-semibold text-right">{t("common.actions")}</th>
               </tr>
             </thead>

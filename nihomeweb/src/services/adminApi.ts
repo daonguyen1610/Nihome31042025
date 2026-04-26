@@ -149,6 +149,19 @@ export interface ActivityCategoryResponse {
     otpEmailBodyTemplate?: string | null;
   }
 
+  export interface ContactMessageResponse {
+    id: number;
+    name: string;
+    email: string;
+    phone?: string;
+    subject: string;
+    message: string;
+    isReplied: boolean;
+    replyContent?: string;
+    repliedAt?: string;
+    createdAt: string;
+  }
+
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
@@ -250,6 +263,19 @@ export const adminApi = {
       api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
     updateEmailTemplates: (data: UpdateEmailTemplatesRequest) =>
       api.put<EmailTemplatesResponse>("/site-settings/email-templates", data),
+
+    // Contact messages
+    getContacts: (replied?: boolean) => {
+      const params = new URLSearchParams();
+      if (replied !== undefined) params.append("replied", String(replied));
+      return api.get<ContactMessageResponse[]>(`/contacts?${params}`);
+    },
+    replyContact: (id: number, replyContent: string) =>
+      api.post<ContactMessageResponse>(`/contacts/${id}/reply`, { replyContent }),
+    markContactReplied: (id: number) =>
+      api.patch<ContactMessageResponse>(`/contacts/${id}/mark-replied`),
+    deleteContact: (id: number) =>
+      api.delete(`/contacts/${id}`),
 };
 
 // ─── Slug helper ─────────────────────────────────────────────

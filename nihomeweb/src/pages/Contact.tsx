@@ -4,6 +4,7 @@ import PageHeader from "@/components/PageHeader";
 import { MapPin, Phone, Mail, Clock, Send, Facebook, Linkedin, Youtube } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
+import { contentApi } from "@/services/contentApi";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -16,14 +17,24 @@ const Contact = () => {
     { city: t("contact.office.bd"), address: t("contact.office.bdAddr"), phone: "+84 274 365 4321", email: "binhduong@nicon.vn" },
   ];
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await contentApi.submitContact({
+        name: form.name,
+        email: form.email,
+        phone: form.phone || undefined,
+        subject: form.subject,
+        message: form.message,
+      });
       toast({ title: t("contact.toast.title"), description: t("contact.toast.desc") });
       setForm({ name: "", email: "", phone: "", subject: "", message: "" });
+    } catch {
+      toast({ title: t("common.error"), description: t("common.tryAgain"), variant: "destructive" });
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (

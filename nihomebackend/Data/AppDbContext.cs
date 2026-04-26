@@ -24,6 +24,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<JobPosition> JobPositions => Set<JobPosition>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
 
+    // Contact
+    public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -102,6 +105,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany(j => j.Applications)
             .HasForeignKey(a => a.JobPositionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");
+        modelBuilder.Entity<ContactMessage>().HasKey(c => c.Id);
 
         // i18n tables
         modelBuilder.Entity<Translation>().ToTable("translations");

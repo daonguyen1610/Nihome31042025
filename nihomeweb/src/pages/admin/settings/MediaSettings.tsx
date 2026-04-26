@@ -49,7 +49,7 @@ const MediaSettingsPage = () => {
                 className="px-3 py-2 rounded-lg text-xs font-bold text-white"
                 style={{ background: "hsl(var(--admin-primary))" }}
               >
-                Change
+                {t("common.change")}
               </button>
             </div>
           </SettingRow>
@@ -62,44 +62,20 @@ const MediaSettingsPage = () => {
           <SettingRow label="Default image quality (0 - 100)">
             <NumberInput value={s.defaultImageQuality} onChange={(e) => upd("defaultImageQuality", +e.target.value)} />
           </SettingRow>
-          <SettingRow label="Import product images using hash">
-            <Toggle on={s.importUsingHash} onChange={(v) => upd("importUsingHash", v)} />
-          </SettingRow>
           <SettingRow label="Picture zoom">
             <Toggle on={s.pictureZoom} onChange={(v) => upd("pictureZoom", v)} />
           </SettingRow>
         </SettingSection>
 
-        <SettingSection title={t("set.section.product")}>
-          <SettingRow label="Product detail image size">
-            <NumberInput value={s.productDetailSize} onChange={(e) => upd("productDetailSize", +e.target.value)} />
+        <SettingSection title={t("set.section.thumbnails")}>
+          <SettingRow label="Project image size">
+            <NumberInput value={s.projectThumbSize} onChange={(e) => upd("projectThumbSize", +e.target.value)} />
           </SettingRow>
-          <SettingRow label="Product thumbnail image size (catalog)">
-            <NumberInput value={s.productThumbCatalog} onChange={(e) => upd("productThumbCatalog", +e.target.value)} />
+          <SettingRow label="Post thumbnail size">
+            <NumberInput value={s.postThumbSize} onChange={(e) => upd("postThumbSize", +e.target.value)} />
           </SettingRow>
-          <SettingRow label="Product thumbnail image size (product page)">
-            <NumberInput value={s.productThumbProduct} onChange={(e) => upd("productThumbProduct", +e.target.value)} />
-          </SettingRow>
-          <SettingRow label="Associated product image size">
-            <NumberInput value={s.associatedProductSize} onChange={(e) => upd("associatedProductSize", +e.target.value)} />
-          </SettingRow>
-        </SettingSection>
-
-        <SettingSection title={t("set.section.otherPages")}>
-          <SettingRow label="Category thumbnail image size">
+          <SettingRow label="Category thumbnail size">
             <NumberInput value={s.categoryThumb} onChange={(e) => upd("categoryThumb", +e.target.value)} />
-          </SettingRow>
-          <SettingRow label="Manufacturer thumbnail image size">
-            <NumberInput value={s.manufacturerThumb} onChange={(e) => upd("manufacturerThumb", +e.target.value)} />
-          </SettingRow>
-          <SettingRow label="Vendor thumbnail image size">
-            <NumberInput value={s.vendorThumb} onChange={(e) => upd("vendorThumb", +e.target.value)} />
-          </SettingRow>
-          <SettingRow label="Cart/Wishlist thumbnail image size">
-            <NumberInput value={s.cartThumb} onChange={(e) => upd("cartThumb", +e.target.value)} />
-          </SettingRow>
-          <SettingRow label="Mini-shopping cart thumbnail image size">
-            <NumberInput value={s.miniCartThumb} onChange={(e) => upd("miniCartThumb", +e.target.value)} />
           </SettingRow>
           <SettingRow label="Avatar image size">
             <NumberInput value={s.avatarSize} onChange={(e) => upd("avatarSize", +e.target.value)} />

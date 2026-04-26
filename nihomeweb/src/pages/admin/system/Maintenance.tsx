@@ -26,8 +26,7 @@ const MaintenancePage = () => {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [guestStart, setGuestStart] = useState("");
   const [guestEnd, setGuestEnd] = useState(new Date().toISOString().slice(0, 10));
-  const [onlyEmptyCart, setOnlyEmptyCart] = useState(true);
-  const [cartDate, setCartDate] = useState(new Date().toISOString().slice(0, 10));
+
   const [expStart, setExpStart] = useState("");
   const [expEnd, setExpEnd] = useState("");
 
@@ -45,25 +44,13 @@ const MaintenancePage = () => {
     <AdminLayout>
       <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight mb-6">{t("sys.maint.title")}</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
         <Card title={t("sys.maint.deleteGuests")}>
           <Field label={t("sys.maint.startDate")}>
             <input type="date" value={guestStart} onChange={(e) => setGuestStart(e.target.value)} className="admin-input w-full" />
           </Field>
           <Field label={t("sys.maint.endDate")}>
             <input type="date" value={guestEnd} onChange={(e) => setGuestEnd(e.target.value)} className="admin-input w-full" />
-          </Field>
-          <Field label={t("sys.maint.onlyEmptyCart")}>
-            <input type="checkbox" checked={onlyEmptyCart} onChange={(e) => setOnlyEmptyCart(e.target.checked)} />
-          </Field>
-          <button onClick={() => toast({ title: t("form.deleted") })} className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg text-white" style={{ background: "hsl(var(--admin-danger))" }}>
-            <Trash2 className="w-4 h-4" /> {t("common.delete")}
-          </button>
-        </Card>
-
-        <Card title={t("sys.maint.deleteCarts")}>
-          <Field label={t("sys.maint.createdBefore")}>
-            <input type="date" value={cartDate} onChange={(e) => setCartDate(e.target.value)} className="admin-input w-full" />
           </Field>
           <button onClick={() => toast({ title: t("form.deleted") })} className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg text-white" style={{ background: "hsl(var(--admin-danger))" }}>
             <Trash2 className="w-4 h-4" /> {t("common.delete")}
