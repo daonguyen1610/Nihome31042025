@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -41,6 +41,20 @@ const mapSlideToDraft = (slide: SlideshowAdminResponse): Draft => ({
   mediaKind: getMediaKind(slide.imageUrl),
 });
 
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (typeof error === "object" && error !== null) {
+    const withMessage = error as { message?: unknown; response?: { data?: { message?: unknown } } };
+    if (typeof withMessage.response?.data?.message === "string") {
+      return withMessage.response.data.message;
+    }
+    if (typeof withMessage.message === "string") {
+      return withMessage.message;
+    }
+  }
+
+  return fallback;
+};
+
 const SlideshowSettings = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -51,7 +65,7 @@ const SlideshowSettings = () => {
   const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
 
-  const loadSlides = async () => {
+  const loadSlides = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -59,16 +73,16 @@ const SlideshowSettings = () => {
       const res = await adminApi.getSlideshow("vi", false);
       const sorted = [...res.data].sort((a, b) => a.sortOrder - b.sortOrder);
       setSlides(sorted);
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? e?.message ?? t("set.slideshow.loadError"));
+    } catch (error) {
+      setError(getErrorMessage(error, t("set.slideshow.loadError")));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void loadSlides();
-  }, []);
+  }, [loadSlides]);
 
   const titleHint = useMemo(() => {
     return draft.id ? t("set.slideshow.editHint") : t("set.slideshow.createHint");
