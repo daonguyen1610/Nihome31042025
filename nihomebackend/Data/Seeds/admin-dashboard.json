@@ -934,5 +934,237 @@
     "en": "Add new post",
     "zh": "添加新文章",
     "ja": "新規投稿を追加"
+  },
+  {
+    "key": "set.slideshow",
+    "category": "set",
+    "vi": "Slideshow và media",
+    "en": "Slideshow & media",
+    "zh": "幻灯片与媒体",
+    "ja": "スライドショーとメディア"
+  },
+  {
+    "key": "set.slideshow.title",
+    "category": "set",
+    "vi": "Slideshow và media",
+    "en": "Slideshow & media",
+    "zh": "幻灯片与媒体",
+    "ja": "スライドショーとメディア"
+  },
+  {
+    "key": "set.slideshow.desc",
+    "category": "set",
+    "vi": "Quản lý banner trang chủ, hỗ trợ ảnh và video ngắn.",
+    "en": "Manage homepage banners with support for images and short videos.",
+    "zh": "管理首页横幅，支持图片和短视频。",
+    "ja": "トップページのバナーを管理し、画像と短い動画に対応します。"
+  },
+  {
+    "key": "set.slideshow.editorDesc",
+    "category": "set",
+    "vi": "Bạn có thể dán URL hoặc upload trực tiếp từ máy.",
+    "en": "You can paste a URL or upload directly from your device.",
+    "zh": "您可以粘贴 URL 或直接从设备上传。",
+    "ja": "URLを貼り付けるか、端末から直接アップロードできます。"
+  },
+  {
+    "key": "set.slideshow.createHint",
+    "category": "set",
+    "vi": "Tạo slide mới",
+    "en": "Create new slide",
+    "zh": "创建新幻灯片",
+    "ja": "新しいスライドを作成"
+  },
+  {
+    "key": "set.slideshow.editHint",
+    "category": "set",
+    "vi": "Cập nhật slide đang chọn",
+    "en": "Update selected slide",
+    "zh": "更新所选幻灯片",
+    "ja": "選択中のスライドを更新"
+  },
+  {
+    "key": "set.slideshow.loadError",
+    "category": "set",
+    "vi": "Không thể tải slideshow",
+    "en": "Failed to load slideshow",
+    "zh": "无法加载幻灯片",
+    "ja": "スライドショーを読み込めません"
+  },
+  {
+    "key": "set.slideshow.fieldTitle",
+    "category": "set",
+    "vi": "Tiêu đề slide",
+    "en": "Slide title",
+    "zh": "幻灯片标题",
+    "ja": "スライドタイトル"
+  },
+  {
+    "key": "set.slideshow.fieldSlug",
+    "category": "set",
+    "vi": "Slug",
+    "en": "Slug",
+    "zh": "Slug",
+    "ja": "Slug"
+  },
+  {
+    "key": "set.slideshow.fieldMediaUrl",
+    "category": "set",
+    "vi": "Media URL",
+    "en": "Media URL",
+    "zh": "媒体 URL",
+    "ja": "メディア URL"
+  },
+  {
+    "key": "set.slideshow.fieldMediaType",
+    "category": "set",
+    "vi": "Loại media",
+    "en": "Media type",
+    "zh": "媒体类型",
+    "ja": "メディア種別"
+  },
+  {
+    "key": "set.slideshow.fieldSortOrder",
+    "category": "set",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "表示順"
+  },
+  {
+    "key": "set.slideshow.fieldSubtitle",
+    "category": "set",
+    "vi": "Mô tả ngắn",
+    "en": "Subtitle",
+    "zh": "副标题",
+    "ja": "サブタイトル"
+  },
+  {
+    "key": "set.slideshow.fieldLinkText",
+    "category": "set",
+    "vi": "Nút CTA",
+    "en": "CTA text",
+    "zh": "CTA 文案",
+    "ja": "CTA テキスト"
+  },
+  {
+    "key": "set.slideshow.fieldLinkUrl",
+    "category": "set",
+    "vi": "Link URL",
+    "en": "Link URL",
+    "zh": "链接 URL",
+    "ja": "リンク URL"
+  },
+  {
+    "key": "set.slideshow.fieldIsActive",
+    "category": "set",
+    "vi": "Hiển thị",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "set.slideshow.mediaTypeImage",
+    "category": "set",
+    "vi": "Hình ảnh",
+    "en": "Image",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "set.slideshow.mediaTypeVideo",
+    "category": "set",
+    "vi": "Video",
+    "en": "Video",
+    "zh": "视频",
+    "ja": "動画"
+  },
+  {
+    "key": "set.slideshow.uploadButton",
+    "category": "set",
+    "vi": "Upload ảnh / video",
+    "en": "Upload image / video",
+    "zh": "上传图片 / 视频",
+    "ja": "画像 / 動画をアップロード"
+  },
+  {
+    "key": "set.slideshow.uploading",
+    "category": "set",
+    "vi": "Đang upload...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "set.slideshow.statusActive",
+    "category": "set",
+    "vi": "active",
+    "en": "active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "set.slideshow.statusInactive",
+    "category": "set",
+    "vi": "inactive",
+    "en": "inactive",
+    "zh": "停用",
+    "ja": "無効"
+  },
+  {
+    "key": "set.slideshow.placeholderTitle",
+    "category": "set",
+    "vi": "Tiêu đề slide",
+    "en": "Slide title",
+    "zh": "幻灯片标题",
+    "ja": "スライドタイトル"
+  },
+  {
+    "key": "set.slideshow.placeholderSlug",
+    "category": "set",
+    "vi": "Tuỳ chọn, để trống sẽ tự tạo",
+    "en": "Optional, auto-generated if empty",
+    "zh": "可选，留空则自动生成",
+    "ja": "任意。未入力の場合は自動生成"
+  },
+  {
+    "key": "set.slideshow.placeholderMediaUrl",
+    "category": "set",
+    "vi": "/images/upload/...",
+    "en": "/images/upload/...",
+    "zh": "/images/upload/...",
+    "ja": "/images/upload/..."
+  },
+  {
+    "key": "set.slideshow.placeholderSubtitle",
+    "category": "set",
+    "vi": "Subtitle",
+    "en": "Subtitle",
+    "zh": "副标题",
+    "ja": "サブタイトル"
+  },
+  {
+    "key": "set.slideshow.placeholderLinkText",
+    "category": "set",
+    "vi": "Xem thêm",
+    "en": "Learn more",
+    "zh": "查看更多",
+    "ja": "詳細を見る"
+  },
+  {
+    "key": "set.slideshow.placeholderLinkUrl",
+    "category": "set",
+    "vi": "/projects",
+    "en": "/projects",
+    "zh": "/projects",
+    "ja": "/projects"
+  },
+  {
+    "key": "set.slideshow.previewAlt",
+    "category": "set",
+    "vi": "Xem trước media",
+    "en": "Media preview",
+    "zh": "媒体预览",
+    "ja": "メディアプレビュー"
   }
 ]
