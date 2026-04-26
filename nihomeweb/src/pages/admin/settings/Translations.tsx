@@ -599,7 +599,10 @@ const TranslationsPage = () => {
 
             {/* Side-by-side fields */}
             <div className="space-y-4">
-              {entityModalType.fields.map((field) => (
+              {entityModalType.fields.map((field) => {
+                const isLong = ["Content", "Sections", "Challenges", "Solutions", "Description"].includes(field);
+                const rows = isLong ? 8 : 3;
+                return (
                 <div key={field} className="grid grid-cols-2 gap-4">
                   {/* Original (VI) */}
                   <div>
@@ -609,8 +612,8 @@ const TranslationsPage = () => {
                     <textarea
                       value={entityOriginal[field] ?? ""}
                       readOnly
-                      rows={3}
-                      className="w-full rounded-lg px-3 py-2 text-sm border bg-gray-50 outline-none resize-none"
+                      rows={rows}
+                      className="w-full rounded-lg px-3 py-2 text-sm border bg-gray-50 outline-none resize-y"
                       style={{ borderColor: "hsl(var(--admin-border))" }}
                     />
                   </div>
@@ -622,13 +625,14 @@ const TranslationsPage = () => {
                     <textarea
                       value={entityTranslations[entityModalLang]?.[field] ?? ""}
                       onChange={(e) => updateEntityField(field, e.target.value)}
-                      rows={3}
-                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none resize-none"
+                      rows={rows}
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none resize-y"
                       style={{ borderColor: "hsl(var(--admin-border))" }}
                     />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex justify-end gap-2 mt-5">
