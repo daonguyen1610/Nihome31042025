@@ -5,13 +5,13 @@ const { mockApi } = vi.hoisted(() => ({
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
+    get: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
-vi.mock("axios", () => ({
-  default: {
-    create: vi.fn(() => mockApi),
-  },
+vi.mock("@/lib/api", () => ({
+  default: mockApi,
 }));
 
 import { adminApi, slugify } from "@/services/adminApi";

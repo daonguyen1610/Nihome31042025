@@ -99,7 +99,7 @@ describe("authSlice", () => {
           store.dispatch(clearOtpFlow());
           const s = store.getState().auth;
           expect(s.otpRequired).toBe(false);
-          expect(s.otpPhone).toBeNull();
+          expect(s.otpEmail).toBeNull();
           expect(s.otpFlow).toBeNull();
           expect(s.otpPassword).toBeNull();
         });
@@ -198,6 +198,7 @@ describe("authSlice", () => {
       await store.dispatch(registerStartThunk({ phone: "0901234567", fullName: "User", email: "a@b.com", password: "pass123" }));
       const s = store.getState().auth;
       expect(s.otpRequired).toBe(true);
+      expect(s.otpEmail).toBe("a@b.com");
       expect(s.otpPhone).toBe("0901234567");
       expect(s.otpFlow).toBe("register");
       expect(s.otpPassword).toBe("pass123");
@@ -243,7 +244,7 @@ describe("authSlice", () => {
       expect(s.user?.fullName).toBe("Test User");
       expect(s.accessToken).toBe("access-123");
       expect(s.otpRequired).toBe(false);
-      expect(s.otpPhone).toBeNull();
+      expect(s.otpEmail).toBeNull();
       expect(s.otpFlow).toBeNull();
       expect(s.otpPassword).toBeNull();
     });
@@ -279,7 +280,7 @@ describe("authSlice", () => {
       await store.dispatch(forgotStartThunk("0901234567"));
       const s = store.getState().auth;
       expect(s.otpRequired).toBe(true);
-      expect(s.otpPhone).toBe("0901234567");
+      expect(s.otpEmail).toBe("0901234567");
       expect(s.otpFlow).toBe("forgot");
     });
 
@@ -329,7 +330,7 @@ describe("authSlice", () => {
       await store.dispatch(forgotCompleteThunk({ phone: "0901234567", newPassword: "newpass" }));
       const s = store.getState().auth;
       expect(s.otpRequired).toBe(false);
-      expect(s.otpPhone).toBeNull();
+      expect(s.otpEmail).toBeNull();
       expect(s.otpFlow).toBeNull();
       expect(s.loading).toBe(false);
     });
@@ -374,7 +375,7 @@ describe("authSlice", () => {
       // Pre-set a refresh token
       const store = configureStore({
         reducer: { auth: authReducer },
-        preloadedState: { auth: { user: null, accessToken: "old", refreshToken: "old-refresh", loading: false, error: null, otpRequired: false, otpPhone: null, otpFlow: null, otpPassword: null } },
+        preloadedState: { auth: { user: null, accessToken: "old", refreshToken: "old-refresh", loading: false, error: null, otpRequired: false, otpPhone: null, otpEmail: null, otpFlow: null, otpPassword: null } },
       });
       await store.dispatch(refreshThunk());
       const s = store.getState().auth;
@@ -393,7 +394,7 @@ describe("authSlice", () => {
       vi.mocked(authApi.refresh).mockRejectedValueOnce(new Error("Expired"));
       const store = configureStore({
         reducer: { auth: authReducer },
-        preloadedState: { auth: { user: null, accessToken: "a", refreshToken: "r", loading: false, error: null, otpRequired: false, otpPhone: null, otpFlow: null, otpPassword: null } },
+        preloadedState: { auth: { user: null, accessToken: "a", refreshToken: "r", loading: false, error: null, otpRequired: false, otpPhone: null, otpEmail: null, otpFlow: null, otpPassword: null } },
       });
       await store.dispatch(refreshThunk());
       expect(store.getState().auth.user).toBeNull();
@@ -418,6 +419,7 @@ describe("authSlice", () => {
             error: null,
             otpRequired: true,
             otpPhone: "123",
+            otpEmail: "test@example.com",
             otpFlow: "register" as const,
             otpPassword: "pwd",
           },
@@ -429,7 +431,7 @@ describe("authSlice", () => {
       expect(s.accessToken).toBeNull();
       expect(s.refreshToken).toBeNull();
       expect(s.otpRequired).toBe(false);
-      expect(s.otpPhone).toBeNull();
+      expect(s.otpEmail).toBeNull();
       expect(getCookie("nicon_access_token")).toBeNull();
     });
 
@@ -437,7 +439,7 @@ describe("authSlice", () => {
       vi.mocked(authApi.logout).mockRejectedValueOnce(new Error("Network error"));
       const store = configureStore({
         reducer: { auth: authReducer },
-        preloadedState: { auth: { user: null, accessToken: "a", refreshToken: "r", loading: false, error: null, otpRequired: false, otpPhone: null, otpFlow: null, otpPassword: null } },
+        preloadedState: { auth: { user: null, accessToken: "a", refreshToken: "r", loading: false, error: null, otpRequired: false, otpPhone: null, otpEmail: null, otpFlow: null, otpPassword: null } },
       });
       await store.dispatch(logoutThunk());
       // Should still clear state

@@ -135,6 +135,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/languages", label: t("set.languages"), icon: Languages },
           { to: "/admin/translations", label: t("nav.translations"), icon: Languages },
           { to: "/admin/email-accounts", label: t("set.email"), icon: Mail },
+          { to: "/admin/email-templates", label: "Email Template", icon: Mail },
           { to: "/admin/settings/all", label: t("set.all"), icon: SettingsIcon },
         ],
       },

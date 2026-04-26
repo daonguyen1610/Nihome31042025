@@ -15,6 +15,7 @@ const defaultAuthState = {
   error: null,
   otpRequired: false,
   otpPhone: null,
+  otpEmail: null,
   otpFlow: null as "register" | "forgot" | null,
   otpPassword: null,
 };
@@ -71,6 +72,7 @@ describe("ForgotPassword page", () => {
         ...defaultAuthState,
         otpRequired: true,
         otpPhone: "0901234567",
+        otpEmail: "test@example.com",
         otpFlow: "forgot" as const,
       },
     };
@@ -80,9 +82,9 @@ describe("ForgotPassword page", () => {
       expect(screen.getByPlaceholderText("OTP Code")).toBeInTheDocument();
     });
 
-    it("shows the phone number in OTP step", () => {
+    it("shows the email in OTP step", () => {
       renderWithProviders(<ForgotPassword />, { preloadedState: otpState });
-      expect(screen.getByText("0901234567")).toBeInTheDocument();
+      expect(screen.getByText("test@example.com")).toBeInTheDocument();
     });
 
     it("shows verify button", () => {

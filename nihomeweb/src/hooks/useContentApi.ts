@@ -11,6 +11,7 @@ import {
   type ProcessResponse,
   type SlideshowResponse,
 } from "@/services/contentApi";
+  import type { JobPositionResponse } from "@/services/contentApi";
 
 /* ------------------------------------------------------------------ */
 /*  Generic fetch hook with loading / error / data pattern            */
@@ -97,6 +98,10 @@ export function useLogos() {
 export function useProcesses() {
   return useFetch<Record<string, ProcessResponse[]>>(() => contentApi.getProcesses(), []);
 }
+
+  export function useJobPositions() {
+    return useFetch<JobPositionResponse[]>(() => contentApi.getJobPositions(), []);
+  }
 
 export function useSlideshow() {
   const { lang } = useI18n();

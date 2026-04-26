@@ -14,6 +14,8 @@ public class SystemController(
     private const string ManagedImagePrefix = "/images/upload/";
     private static readonly HashSet<string> AllowedImageExtensions =
         [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+    private static readonly HashSet<string> AllowedCvExtensions =
+        [".pdf", ".doc", ".docx"];
 
     [HttpGet("health")]
     public ActionResult<HealthResponse> GetHealth()
@@ -39,6 +41,11 @@ public class SystemController(
         if (file == null || file.Length == 0)
         {
             return BadRequest(new { message = "No file uploaded" });
+        }
+
+        if (file.Length > 5 * 1024 * 1024)
+        {
+            return BadRequest(new { message = "File quá lớn (tối đa 5MB)" });
         }
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
@@ -69,6 +76,42 @@ public class SystemController(
         {
             logger.LogError(ex, "Error uploading image file");
             return StatusCode(500, new { message = "Error uploading image" });
+        }
+    }
+
+    [HttpPost("upload-cv")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadCv(
+        [FromForm] IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "No file uploaded" });
+
+        if (file.Length > 10 * 1024 * 1024)
+            return BadRequest(new { message = "File quá lớn (tối đa 10MB)" });
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedCvExtensions.Contains(extension))
+            return BadRequest(new { message = "Chỉ chấp nhận file PDF, DOC, DOCX" });
+
+        try
+        {
+            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", "cv");
+            Directory.CreateDirectory(uploadDir);
+
+            var fileName = $"{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(uploadDir, fileName);
+
+            await using var stream = new FileStream(filePath, FileMode.Create);
+            await file.CopyToAsync(stream, cancellationToken);
+
+            return Ok(new { cvUrl = $"/files/cv/{fileName}" });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error uploading CV file");
+            return StatusCode(500, new { message = "Error uploading CV" });
         }
     }
 

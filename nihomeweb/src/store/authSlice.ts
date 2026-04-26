@@ -22,6 +22,7 @@ interface AuthState {
   error: string | null;
   // OTP flow state
   otpRequired: boolean;
+  otpEmail: string | null;
   otpPhone: string | null;
   otpFlow: "register" | "forgot" | null;
   otpPassword: string | null; // kept in memory for register-complete
@@ -109,7 +110,7 @@ export const registerStartThunk = createAsyncThunk(
   async (payload: { phone: string; fullName: string; email: string; password: string }, { rejectWithValue }) => {
     try {
       const { data } = await authApi.registerStart(payload.phone, payload.fullName, payload.email, payload.password);
-      return { data, password: payload.password, phone: payload.phone };
+      return { data, password: payload.password, phone: payload.phone, email: payload.email };
     } catch (err) {
       return rejectWithValue(extractError(err));
     }
@@ -153,7 +154,7 @@ export const resendRegisterOtpThunk = createAsyncThunk("auth/resendRegisterOtp",
 export const forgotStartThunk = createAsyncThunk("auth/forgotStart", async (phone: string, { rejectWithValue }) => {
   try {
     const { data } = await authApi.forgotStart(phone);
-    return { data, phone };
+    return { data, phone, email: data.email as string | undefined };
   } catch (err) {
     return rejectWithValue(extractError(err));
   }
@@ -242,6 +243,7 @@ const initialState: AuthState = {
   loading: false,
   error: null,
   otpRequired: false,
+  otpEmail: null,
   otpPhone: null,
   otpFlow: null,
   otpPassword: null,
@@ -258,6 +260,7 @@ const authSlice = createSlice({
     },
     clearOtpFlow(state) {
       state.otpRequired = false;
+      state.otpEmail = null;
       state.otpPhone = null;
       state.otpFlow = null;
       state.otpPassword = null;
@@ -301,6 +304,7 @@ const authSlice = createSlice({
       } else {
         // OTP required
         state.otpRequired = true;
+        state.otpEmail = payload.email;
         state.otpPhone = payload.phone;
         state.otpFlow = "register";
         state.otpPassword = payload.password;
@@ -335,6 +339,7 @@ const authSlice = createSlice({
       state.accessToken = payload.accessToken;
       state.refreshToken = payload.refreshToken;
       state.otpRequired = false;
+      state.otpEmail = null;
       state.otpPhone = null;
       state.otpFlow = null;
       state.otpPassword = null;
@@ -358,6 +363,7 @@ const authSlice = createSlice({
       state.loading = false;
       if (payload.data.otpRequired) {
         state.otpRequired = true;
+        state.otpEmail = payload.email ?? payload.phone;
         state.otpPhone = payload.phone;
         state.otpFlow = "forgot";
       }
@@ -388,6 +394,7 @@ const authSlice = createSlice({
     builder.addCase(forgotCompleteThunk.fulfilled, (state) => {
       state.loading = false;
       state.otpRequired = false;
+      state.otpEmail = null;
       state.otpPhone = null;
       state.otpFlow = null;
     });
@@ -430,6 +437,7 @@ const authSlice = createSlice({
       state.accessToken = null;
       state.refreshToken = null;
       state.otpRequired = false;
+      state.otpEmail = null;
       state.otpPhone = null;
       state.otpFlow = null;
       state.otpPassword = null;

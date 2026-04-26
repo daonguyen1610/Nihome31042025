@@ -22,7 +22,7 @@ const ForgotPassword = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const { t } = useI18n();
-  const { loading, error, otpRequired, otpPhone, otpFlow } = useAppSelector((s) => s.auth);
+  const { loading, error, otpRequired, otpEmail, otpPhone, otpFlow } = useAppSelector((s) => s.auth);
 
   const [phone, setPhone] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -145,7 +145,7 @@ const ForgotPassword = () => {
               <p className="eyebrow text-primary mb-5 justify-center">{t("auth.otp.eyebrow")}</p>
               <h1 className="font-display text-3xl font-extrabold text-center mb-3 tracking-tight">{t("auth.otp.title")}</h1>
               <p className="text-center text-muted-foreground text-sm mb-8">
-                {t("auth.otp.desc")} <span className="font-bold">{otpPhone ?? phone}</span>
+                {t("auth.otp.desc")} <span className="font-bold">{otpEmail ?? phone}</span>
               </p>
               <form onSubmit={submitOtp} className="space-y-4">
                 <div className="relative">

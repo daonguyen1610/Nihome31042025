@@ -32,7 +32,7 @@ vi.mock("@/lib/i18n", () => {
     // auth - otp
     "auth.otp.eyebrow": "Verification",
     "auth.otp.title": "Enter OTP code",
-    "auth.otp.desc": "An OTP code has been sent to",
+    "auth.otp.desc": "An OTP code has been sent to email",
     "auth.otp.placeholder": "OTP Code",
     "auth.otp.verify": "Verify",
     "auth.otp.resend": "Resend code",

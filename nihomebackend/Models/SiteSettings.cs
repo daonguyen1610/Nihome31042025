@@ -26,6 +26,12 @@ public class SiteSettings
 
     public string? OtpEmailBodyTemplate { get; set; }
 
+    public string? NewApplicationEmailSubjectTemplate { get; set; }
+
+    public string? NewApplicationEmailBodyTemplate { get; set; }
+
+    public string? NotificationEmail { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

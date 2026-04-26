@@ -20,7 +20,7 @@ const Register = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
   const { t } = useI18n();
-  const { user, loading, error, otpRequired, otpPhone, otpFlow, otpPassword } = useAppSelector((s) => s.auth);
+  const { user, loading, error, otpRequired, otpEmail, otpPhone, otpFlow, otpPassword } = useAppSelector((s) => s.auth);
 
   const [form, setForm] = useState({ fullName: "", phone: "", email: "", password: "" });
   const [otpCode, setOtpCode] = useState("");
@@ -88,7 +88,7 @@ const Register = () => {
                 {t("auth.otp.title")}
               </h1>
               <p className="text-center text-muted-foreground text-sm mb-8">
-                {t("auth.otp.desc")} <span className="font-bold">{otpPhone}</span>
+                {t("auth.otp.desc")} <span className="font-bold">{otpEmail}</span>
               </p>
 
               <form onSubmit={submitOtp} className="space-y-4">

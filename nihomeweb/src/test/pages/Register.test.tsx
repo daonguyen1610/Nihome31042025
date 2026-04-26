@@ -61,6 +61,7 @@ describe("Register page", () => {
           error: null,
           otpRequired: false,
           otpPhone: null,
+          otpEmail: null,
           otpFlow: null,
           otpPassword: null,
         },
@@ -80,6 +81,7 @@ describe("Register page", () => {
           error: null,
           otpRequired: true,
           otpPhone: "0901234567",
+          otpEmail: "test@example.com",
           otpFlow: "register" as const,
           otpPassword: "pass123",
         },
@@ -92,7 +94,7 @@ describe("Register page", () => {
     expect(screen.queryByPlaceholderText("Full name")).not.toBeInTheDocument();
   });
 
-  it("OTP form shows the phone number", () => {
+  it("OTP form shows the email address", () => {
     renderWithProviders(<Register />, {
       preloadedState: {
         auth: {
@@ -103,12 +105,13 @@ describe("Register page", () => {
           error: null,
           otpRequired: true,
           otpPhone: "0901234567",
+          otpEmail: "test@example.com",
           otpFlow: "register" as const,
           otpPassword: "pass123",
         },
       },
     });
-    expect(screen.getByText("0901234567")).toBeInTheDocument();
+    expect(screen.getByText("test@example.com")).toBeInTheDocument();
   });
 
   it("allows typing OTP code", () => {
@@ -122,6 +125,7 @@ describe("Register page", () => {
           error: null,
           otpRequired: true,
           otpPhone: "0901234567",
+          otpEmail: "test@example.com",
           otpFlow: "register" as const,
           otpPassword: "pass123",
         },
