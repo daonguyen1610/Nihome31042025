@@ -7,7 +7,7 @@ import culture1 from "@/assets/recruit-culture-1.jpg";
 import culture2 from "@/assets/recruit-culture-2.jpg";
 import culture3 from "@/assets/recruit-culture-3.jpg";
 import { useToast } from "@/hooks/use-toast";
-import { useJobPositions } from "@/hooks/useContentApi";
+import { useEmploymentTypes, useJobPositions } from "@/hooks/useContentApi";
 import { contentApi } from "@/services/contentApi";
 import { useI18n } from "@/lib/i18n";
 
@@ -27,15 +27,6 @@ const emptyForm: ApplicationForm = {
   coverLetter: "",
 };
 
-function getEmploymentTypeLabel(value: string) {
-  switch (value) {
-    case "full-time": return "Toàn thời gian";
-    case "part-time": return "Bán thời gian";
-    case "intern": return "Thực tập sinh";
-    default: return value;
-  }
-}
-
 function getExperienceLabel(value: string) {
   switch (value) {
     case "student": return "Sinh viên";
@@ -50,7 +41,12 @@ const Recruitment = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { data, loading, error, refetch } = useJobPositions();
+  const { data: employmentTypeData } = useEmploymentTypes();
   const positions = useMemo(() => data ?? [], [data]);
+  const employmentTypeMap = useMemo(
+    () => new Map((employmentTypeData ?? []).map((item) => [item.code, item.name])),
+    [employmentTypeData],
+  );
   const [selectedPositionId, setSelectedPositionId] = useState<number | null>(null);
   const [form, setForm] = useState<ApplicationForm>(emptyForm);
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -233,7 +229,7 @@ const Recruitment = () => {
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {position.location}</span>
-                      <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {getEmploymentTypeLabel(position.employmentType)}</span>
+                      <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {employmentTypeMap.get(position.employmentType) ?? position.employmentType}</span>
                       <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {getExperienceLabel(position.experienceLevel)}</span>
                     </div>
                     {position.requirements.length > 0 && (

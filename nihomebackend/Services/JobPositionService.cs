@@ -7,7 +7,7 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class JobPositionService(AppDbContext db)
+public class JobPositionService(AppDbContext db, EmploymentTypeService employmentTypeService)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
 
@@ -36,6 +36,8 @@ public class JobPositionService(AppDbContext db)
 
     public async Task<JobPositionResponse> CreateAsync(UpsertJobPositionRequest req)
     {
+        await employmentTypeService.EnsureCodeExistsAsync(req.EmploymentType);
+
         var entity = new JobPosition
         {
             Title = req.Title.Trim(),
@@ -56,6 +58,8 @@ public class JobPositionService(AppDbContext db)
 
     public async Task<JobPositionResponse?> UpdateAsync(int id, UpsertJobPositionRequest req)
     {
+        await employmentTypeService.EnsureCodeExistsAsync(req.EmploymentType);
+
         var entity = await db.JobPositions.FindAsync(id);
         if (entity == null) return null;
 

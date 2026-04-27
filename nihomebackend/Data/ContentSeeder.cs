@@ -571,6 +571,8 @@ public static class ContentSeeder
 
     private static void SeedRecruitment(AppDbContext db)
     {
+        SeedEmploymentTypes(db);
+
         if (db.JobPositions.Any()) return;
 
         var now = DateTime.UtcNow;
@@ -799,6 +801,21 @@ public static class ContentSeeder
         };
 
         db.JobApplications.AddRange(applications);
+        db.SaveChanges();
+    }
+
+    private static void SeedEmploymentTypes(AppDbContext db)
+    {
+        if (db.EmploymentTypes.Any()) return;
+
+        var items = new EmploymentType[]
+        {
+            new() { Code = "full-time", Name = "Toàn thời gian", IsActive = true, SortOrder = 1 },
+            new() { Code = "part-time", Name = "Bán thời gian", IsActive = true, SortOrder = 2 },
+            new() { Code = "intern", Name = "Thực tập sinh", IsActive = true, SortOrder = 3 },
+        };
+
+        db.EmploymentTypes.AddRange(items);
         db.SaveChanges();
     }
 

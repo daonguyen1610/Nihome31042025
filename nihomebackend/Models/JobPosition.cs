@@ -6,7 +6,7 @@ public class JobPosition
     public string Title { get; set; } = "";
     public string Department { get; set; } = "";
     public string Location { get; set; } = "";
-    public string EmploymentType { get; set; } = "full-time"; // full-time | intern
+    public string EmploymentType { get; set; } = "";
     public string ExperienceLevel { get; set; } = "mid";      // junior | mid | senior
     public string? Description { get; set; }
     /// <summary>JSON array of requirement strings.</summary>

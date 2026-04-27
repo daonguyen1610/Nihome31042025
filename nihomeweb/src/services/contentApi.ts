@@ -105,64 +105,72 @@ export interface ActivityCategoryResponse {
   sortOrder: number;
 }
 
-  export interface JobPositionResponse {
-    id: number;
-    title: string;
-    department: string;
-    location: string;
-    employmentType: string;
-    experienceLevel: string;
-    description?: string;
-    requirements: string[];
-    isActive: boolean;
-    sortOrder: number;
-    applicationCount: number;
-  }
+export interface EmploymentTypeResponse {
+  id: number;
+  code: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
 
-  export interface JobApplicationResponse {
-    id: number;
-    jobPositionId: number;
-    positionTitle: string;
-    candidateName: string;
-    email: string;
-    phone?: string;
-    experienceYears?: number;
-    coverLetter?: string;
-    cvUrl?: string;
-    status: string;
-    appliedAt: string;
-  }
+export interface JobPositionResponse {
+  id: number;
+  title: string;
+  department: string;
+  location: string;
+  employmentType: string;
+  experienceLevel: string;
+  description?: string;
+  requirements: string[];
+  isActive: boolean;
+  sortOrder: number;
+  applicationCount: number;
+}
 
-  export interface SubmitJobApplicationRequest {
-    jobPositionId: number;
-    candidateName: string;
-    email: string;
-    phone?: string;
-    experienceYears?: number;
-    coverLetter?: string;
-    cvUrl?: string;
-  }
+export interface JobApplicationResponse {
+  id: number;
+  jobPositionId: number;
+  positionTitle: string;
+  candidateName: string;
+  email: string;
+  phone?: string;
+  experienceYears?: number;
+  coverLetter?: string;
+  cvUrl?: string;
+  status: string;
+  appliedAt: string;
+}
 
-  export interface SubmitContactRequest {
-    name: string;
-    email: string;
-    phone?: string;
-    subject: string;
-    message: string;
-  }
+export interface SubmitJobApplicationRequest {
+  jobPositionId: number;
+  candidateName: string;
+  email: string;
+  phone?: string;
+  experienceYears?: number;
+  coverLetter?: string;
+  cvUrl?: string;
+}
 
-  export interface ContactMessageResponse {
-    id: number;
-    name: string;
-    email: string;
-    phone?: string;
-    subject: string;
-    message: string;
-    isReplied: boolean;
-    replyContent?: string;
-    repliedAt?: string;
-    createdAt: string;
-  }
+export interface SubmitContactRequest {
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+}
+
+export interface ContactMessageResponse {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  isReplied: boolean;
+  replyContent?: string;
+  repliedAt?: string;
+  createdAt: string;
+}
 
 // --- Translation types ---
 
@@ -262,6 +270,9 @@ export const contentApi = {
 
   getActivityCategories: (includeInactive = false) =>
     api.get<ActivityCategoryResponse[]>(`/activity-categories?includeInactive=${includeInactive}`),
+
+  getEmploymentTypes: (includeInactive = false) =>
+    api.get<EmploymentTypeResponse[]>(`/employment-types?includeInactive=${includeInactive}`),
 
   // News
   getNews: (lang = "vi") =>

@@ -5,7 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
-import type { UpsertJobPositionRequest, JobPositionResponse } from "@/services/adminApi";
+import type { UpsertJobPositionRequest, JobPositionResponse, EmploymentTypeResponse } from "@/services/adminApi";
 
 interface FormData {
   id: number;
@@ -25,7 +25,7 @@ const empty: FormData = {
   title: "",
   department: "",
   location: "",
-  employmentType: "full-time",
+  employmentType: "",
   experienceLevel: "mid",
   description: "",
   requirements: [],
@@ -41,6 +41,21 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const [data, setData] = useState<FormData>(empty);
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
+  const [employmentTypes, setEmploymentTypes] = useState<EmploymentTypeResponse[]>([]);
+
+  useEffect(() => {
+    adminApi.getEmploymentTypes(true)
+      .then((res) => setEmploymentTypes(res.data))
+      .catch(() => setEmploymentTypes([]));
+  }, []);
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (data.employmentType) return;
+    const firstType = employmentTypes.find((x) => x.isActive) ?? employmentTypes[0];
+    if (!firstType) return;
+    update("employmentType", firstType.code);
+  }, [mode, employmentTypes, data.employmentType]);
 
   useEffect(() => {
     if (mode !== "edit" || !idParam) return;
@@ -178,11 +193,19 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   className="admin-input"
                   value={data.employmentType}
                   onChange={(e) => update("employmentType", e.target.value)}
+                  required
+                  disabled={employmentTypes.length === 0}
                 >
-                  <option value="full-time">Toàn thời gian</option>
-                  <option value="part-time">Bán thời gian</option>
-                  <option value="intern">Thực tập sinh</option>
+                  {employmentTypes.length === 0 && <option value="">Chưa có dữ liệu</option>}
+                  {employmentTypes.map((type) => (
+                    <option key={type.id} value={type.code}>
+                      {type.name}
+                    </option>
+                  ))}
                 </select>
+                <p className="text-xs mt-1.5" style={{ color: "hsl(var(--admin-muted))" }}>
+                  Quản lý danh mục tại <Link to="/admin/recruitment/employment-types" className="underline">Hình thức làm việc</Link>.
+                </p>
               </Field>
               <Field label="Kinh nghiệm yêu cầu">
                 <select

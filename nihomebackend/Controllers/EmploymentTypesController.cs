@@ -6,35 +6,22 @@ using NihomeBackend.Services;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Route("api/job-positions")]
-[Route("api/v1/job-positions")]
-public class JobPositionsController(JobPositionService svc) : ControllerBase
+[Route("api/employment-types")]
+[Route("api/v1/employment-types")]
+public class EmploymentTypesController(EmploymentTypeService svc) : ControllerBase
 {
-    /// <summary>Public: list active positions. Admin: optionally include inactive.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
-    {
-        // Only admin can see inactive positions
-        if (includeInactive && !User.Identity?.IsAuthenticated == true)
-            return Ok(await svc.GetAllAsync(false));
-        return Ok(await svc.GetAllAsync(includeInactive));
-    }
-
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
-    {
-        var item = await svc.GetByIdAsync(id);
-        return item == null ? NotFound() : Ok(item);
-    }
+        => Ok(await svc.GetAllAsync(includeInactive));
 
     [HttpPost]
     [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
-    public async Task<IActionResult> Create([FromBody] UpsertJobPositionRequest req)
+    public async Task<IActionResult> Create([FromBody] UpsertEmploymentTypeRequest req)
     {
         try
         {
             var created = await svc.CreateAsync(req);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            return CreatedAtAction(nameof(GetAll), new { includeInactive = true }, created);
         }
         catch (InvalidOperationException ex)
         {
@@ -44,7 +31,7 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
 
     [HttpPut("{id:int}")]
     [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpsertJobPositionRequest req)
+    public async Task<IActionResult> Update(int id, [FromBody] UpsertEmploymentTypeRequest req)
     {
         try
         {
@@ -60,5 +47,14 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
     public async Task<IActionResult> Delete(int id)
-        => await svc.DeleteAsync(id) ? NoContent() : NotFound();
+    {
+        try
+        {
+            return await svc.DeleteAsync(id) ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
