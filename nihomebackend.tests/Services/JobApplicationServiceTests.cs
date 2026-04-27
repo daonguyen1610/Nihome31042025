@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Hosting;
 using Moq;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
@@ -13,6 +14,7 @@ public class JobApplicationServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly string _tempRoot;
     private readonly JobApplicationService _sut;
 
     public JobApplicationServiceTests()
@@ -20,16 +22,28 @@ public class JobApplicationServiceTests : IDisposable
         _db = DbContextFactory.Create();
         SeedRecruitmentMetadata();
         _emailServiceMock = new Mock<IEmailService>();
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"job-app-service-tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
+        var envMock = new Mock<IWebHostEnvironment>();
+        envMock.SetupGet(env => env.ContentRootPath).Returns(_tempRoot);
         var translationService = new TranslationService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
         var recruitmentMetadataService = new RecruitmentMetadataService(_db, translationService);
         _sut = new JobApplicationService(
             _db,
             recruitmentMetadataService,
+            envMock.Object,
             _emailServiceMock.Object,
             Mock.Of<ILogger<JobApplicationService>>());
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        if (Directory.Exists(_tempRoot))
+        {
+            Directory.Delete(_tempRoot, true);
+        }
+    }
 
     private void SeedRecruitmentMetadata()
     {
@@ -408,6 +422,31 @@ public class JobApplicationServiceTests : IDisposable
 
         Assert.True(result);
         Assert.Empty(_db.JobApplications);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesManagedCvFile_WhenPresent()
+    {
+        var pos = await SeedActivePosition();
+        var uploadDir = Path.Combine(_tempRoot, "wwwroot", "files", "cv");
+        Directory.CreateDirectory(uploadDir);
+        var filePath = Path.Combine(uploadDir, "candidate.pdf");
+        await File.WriteAllTextAsync(filePath, "cv");
+
+        var app = new JobApplication
+        {
+            JobPositionId = pos.Id,
+            CandidateName = "A",
+            Email = "a@t.com",
+            CvUrl = "/files/cv/candidate.pdf",
+        };
+        _db.JobApplications.Add(app);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.DeleteAsync(app.Id);
+
+        Assert.True(result);
+        Assert.False(File.Exists(filePath));
     }
 
     [Fact]

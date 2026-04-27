@@ -10,9 +10,12 @@ namespace NihomeBackend.Services;
 public class JobApplicationService(
     AppDbContext db,
     RecruitmentMetadataService recruitmentMetadataService,
+    IWebHostEnvironment env,
     IEmailService emailService,
     ILogger<JobApplicationService> logger)
 {
+    private const string ManagedCvPrefix = "/files/cv/";
+
     public async Task<List<JobApplicationResponse>> GetAllAsync(int? positionId = null, string? status = null)
     {
         var query = db.JobApplications
@@ -109,9 +112,49 @@ public class JobApplicationService(
     {
         var entity = await db.JobApplications.FindAsync(id);
         if (entity == null) return false;
+
+        DeleteManagedCv(entity.CvUrl);
         db.JobApplications.Remove(entity);
         await db.SaveChangesAsync();
         return true;
+    }
+
+    private void DeleteManagedCv(string? cvUrl)
+    {
+        var normalizedCvUrl = NormalizeManagedCvUrl(cvUrl);
+        if (string.IsNullOrWhiteSpace(normalizedCvUrl) ||
+            !normalizedCvUrl.StartsWith(ManagedCvPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var relativePath = normalizedCvUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", relativePath);
+        if (File.Exists(fullPath))
+        {
+            File.Delete(fullPath);
+        }
+    }
+
+    private static string? NormalizeManagedCvUrl(string? cvUrl)
+    {
+        if (string.IsNullOrWhiteSpace(cvUrl))
+        {
+            return cvUrl;
+        }
+
+        if (cvUrl.StartsWith(ManagedCvPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return cvUrl;
+        }
+
+        if (Uri.TryCreate(cvUrl, UriKind.Absolute, out var uri) &&
+            uri.AbsolutePath.StartsWith(ManagedCvPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return uri.AbsolutePath;
+        }
+
+        return cvUrl;
     }
 
     private static JobApplicationResponse MapToResponse(JobApplication a) => new()

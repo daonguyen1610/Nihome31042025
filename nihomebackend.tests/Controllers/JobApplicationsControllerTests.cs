@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NihomeBackend.Constants;
@@ -15,6 +16,7 @@ public class JobApplicationsControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly string _tempRoot;
     private readonly JobApplicationsController _sut;
 
     public JobApplicationsControllerTests()
@@ -22,17 +24,29 @@ public class JobApplicationsControllerTests : IDisposable
         _db = DbContextFactory.Create();
         SeedRecruitmentMetadata();
         _emailServiceMock = new Mock<IEmailService>();
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"job-apps-tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempRoot);
+        var envMock = new Mock<IWebHostEnvironment>();
+        envMock.SetupGet(env => env.ContentRootPath).Returns(_tempRoot);
         var translationService = new TranslationService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
         var recruitmentMetadataService = new RecruitmentMetadataService(_db, translationService);
         var svc = new JobApplicationService(
             _db,
             recruitmentMetadataService,
+            envMock.Object,
             _emailServiceMock.Object,
             Mock.Of<ILogger<JobApplicationService>>());
         _sut = new JobApplicationsController(svc);
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        if (Directory.Exists(_tempRoot))
+        {
+            Directory.Delete(_tempRoot, true);
+        }
+    }
 
     private void SeedRecruitmentMetadata()
     {
