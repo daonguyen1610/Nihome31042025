@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ActivityCategory> ActivityCategories => Set<ActivityCategory>();
 
     // Recruitment
+    public DbSet<RecruitmentMetadataItem> RecruitmentMetadataItems => Set<RecruitmentMetadataItem>();
     public DbSet<JobPosition> JobPositions => Set<JobPosition>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
 
@@ -94,6 +95,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ActivityCategory>().ToTable("activity_categories");
         modelBuilder.Entity<ActivityCategory>().HasKey(c => c.Id);
         modelBuilder.Entity<ActivityCategory>().HasIndex(c => c.Name).IsUnique();
+
+        modelBuilder.Entity<RecruitmentMetadataItem>().ToTable("recruitment_metadata");
+        modelBuilder.Entity<RecruitmentMetadataItem>().HasKey(r => r.Id);
+        modelBuilder.Entity<RecruitmentMetadataItem>()
+            .HasIndex(r => new { r.GroupKey, r.Value })
+            .IsUnique();
 
         modelBuilder.Entity<JobPosition>().ToTable("job_positions");
         modelBuilder.Entity<JobPosition>().HasKey(j => j.Id);

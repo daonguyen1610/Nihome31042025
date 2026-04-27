@@ -24,5 +24,5 @@ public class SubmitJobApplicationRequest
 public class UpdateApplicationStatusRequest
 {
     [Required]
-    public string Status { get; set; } = "new";
+    public string Status { get; set; } = "";
 }

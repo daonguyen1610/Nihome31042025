@@ -825,16 +825,28 @@ Administrators create and manage job positions with the following details:
 
 Positions can be activated or deactivated. Only active positions are visible to public visitors. Administrators can view all positions including inactive ones.
 
+### 9.1.1 Recruitment Metadata
+
+Recruitment option sets are managed from the admin recruitment page instead of being hardcoded in the frontend. Administrators can create, update, activate/deactivate, and delete metadata items for:
+
+- Employment types
+- Experience levels
+- Application statuses
+
+Each metadata item includes:
+
+| Field          | Description                                                        |
+|----------------|--------------------------------------------------------------------|
+| Group Key      | Metadata group such as employment type or application status       |
+| Value          | Stable machine value used by APIs and saved on job/application rows|
+| Label          | Default display label shown in Vietnamese                          |
+| Translation Key| Optional static translation key for multilingual display           |
+| Is Active      | Whether the option is available for new selections                 |
+| Sort Order     | Numeric ordering for display                                       |
+
 ### 9.2 Job Applications
 
-When a candidate submits an application, it is created with the `new` status. The application lifecycle follows these statuses:
-
-| Status    | Description                                                |
-|-----------|------------------------------------------------------------|
-| new       | Freshly submitted application, awaiting review             |
-| interview | Candidate has been selected for an interview               |
-| hired     | Candidate has been hired                                   |
-| rejected  | Application has been declined                              |
+When a candidate submits an application, it is created with the default `new` status from recruitment metadata. The available statuses shown to administrators are also driven by recruitment metadata.
 
 Administrators can:
 - View all applications, optionally filtered by position and status
@@ -1216,7 +1228,30 @@ Authorization: Bearer <access-token>
 }
 ```
 
-### 14.9 Recruitment -- Job Applications
+### 14.9 Recruitment -- Metadata
+
+| Method | Endpoint                                              | Auth   | Description                              |
+|--------|-------------------------------------------------------|--------|------------------------------------------|
+| GET    | `/api/recruitment/metadata?lang=vi`                   | Public | List active recruitment metadata by group|
+| GET    | `/api/recruitment/metadata-items?includeInactive=true`| Admin  | List metadata items for admin management |
+| POST   | `/api/recruitment/metadata-items`                     | Admin  | Create metadata item                     |
+| PUT    | `/api/recruitment/metadata-items/{id}`                | Admin  | Update metadata item                     |
+| DELETE | `/api/recruitment/metadata-items/{id}`                | Admin  | Delete metadata item                     |
+
+#### Create/Update Metadata Request
+
+```json
+{
+  "groupKey": "employment-type",
+  "value": "full-time",
+  "label": "Toàn thời gian",
+  "translationKey": "recruit.meta.employment.fullTime",
+  "isActive": true,
+  "sortOrder": 1
+}
+```
+
+### 14.10 Recruitment -- Job Applications
 
 | Method | Endpoint                                           | Auth   | Description                         |
 |--------|----------------------------------------------------|--------|-------------------------------------|
@@ -1224,8 +1259,6 @@ Authorization: Bearer <access-token>
 | POST   | `/api/job-applications`                             | Public | Submit a job application            |
 | PATCH  | `/api/job-applications/{id}/status`                 | Admin  | Update application status           |
 | DELETE | `/api/job-applications/{id}`                        | Admin  | Delete application                  |
-
-Application statuses: `new`, `interview`, `hired`, `rejected`.
 
 #### Submit Application Request
 
@@ -1249,7 +1282,7 @@ Application statuses: `new`, `interview`, `hired`, `rejected`.
 }
 ```
 
-### 14.10 Contact Messages
+### 14.11 Contact Messages
 
 | Method | Endpoint                                  | Auth   | Description                          |
 |--------|-------------------------------------------|--------|--------------------------------------|

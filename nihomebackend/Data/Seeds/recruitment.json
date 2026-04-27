@@ -1054,5 +1054,149 @@
     "en": "Unable to submit the application right now.",
     "zh": "暂时无法提交申请。",
     "ja": "現在、応募を送信できません。"
+  },
+  {
+    "key": "recruit.metadata.title",
+    "category": "recruit",
+    "vi": "Danh mục metadata tuyển dụng",
+    "en": "Recruitment metadata",
+    "zh": "招聘元数据",
+    "ja": "採用メタデータ"
+  },
+  {
+    "key": "recruit.metadata.description",
+    "category": "recruit",
+    "vi": "Quản lý các nhóm dữ liệu dùng cho loại hình làm việc, cấp độ kinh nghiệm và trạng thái hồ sơ.",
+    "en": "Manage the data sets used for employment type, experience level, and application status.",
+    "zh": "管理工作类型、经验级别和申请状态所使用的数据集。",
+    "ja": "雇用形態、経験レベル、応募ステータスで使用するデータを管理します。"
+  },
+  {
+    "key": "recruit.metadata.add",
+    "category": "recruit",
+    "vi": "Thêm mục",
+    "en": "Add item",
+    "zh": "添加项",
+    "ja": "項目を追加"
+  },
+  {
+    "key": "recruit.metadata.count",
+    "category": "recruit",
+    "vi": "{count} mục",
+    "en": "{count} items",
+    "zh": "{count} 项",
+    "ja": "{count}件"
+  },
+  {
+    "key": "recruit.metadata.groups.employmentType",
+    "category": "recruit",
+    "vi": "Loại hình làm việc",
+    "en": "Employment types",
+    "zh": "工作类型",
+    "ja": "雇用形態"
+  },
+  {
+    "key": "recruit.metadata.groups.experienceLevel",
+    "category": "recruit",
+    "vi": "Cấp độ kinh nghiệm",
+    "en": "Experience levels",
+    "zh": "经验级别",
+    "ja": "経験レベル"
+  },
+  {
+    "key": "recruit.metadata.groups.applicationStatus",
+    "category": "recruit",
+    "vi": "Trạng thái hồ sơ",
+    "en": "Application statuses",
+    "zh": "申请状态",
+    "ja": "応募ステータス"
+  },
+  {
+    "key": "recruit.metadata.fields.value",
+    "category": "recruit",
+    "vi": "Giá trị",
+    "en": "Value",
+    "zh": "值",
+    "ja": "値"
+  },
+  {
+    "key": "recruit.metadata.fields.label",
+    "category": "recruit",
+    "vi": "Nhãn hiển thị",
+    "en": "Display label",
+    "zh": "显示标签",
+    "ja": "表示ラベル"
+  },
+  {
+    "key": "recruit.metadata.fields.translationKey",
+    "category": "recruit",
+    "vi": "Khóa dịch",
+    "en": "Translation key",
+    "zh": "翻译键",
+    "ja": "翻訳キー"
+  },
+  {
+    "key": "recruit.metadata.fields.sortOrder",
+    "category": "recruit",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "順序"
+  },
+  {
+    "key": "recruit.metadata.fields.isActive",
+    "category": "recruit",
+    "vi": "Đang sử dụng",
+    "en": "Active",
+    "zh": "启用中",
+    "ja": "有効"
+  },
+  {
+    "key": "recruit.metadata.placeholders.value",
+    "category": "recruit",
+    "vi": "full-time, junior...",
+    "en": "full-time, junior...",
+    "zh": "full-time、junior……",
+    "ja": "full-time、junior など"
+  },
+  {
+    "key": "recruit.metadata.placeholders.label",
+    "category": "recruit",
+    "vi": "Toàn thời gian, Mới ra trường...",
+    "en": "Full-time, Junior...",
+    "zh": "全职、初级……",
+    "ja": "フルタイム、ジュニアなど"
+  },
+  {
+    "key": "recruit.metadata.placeholders.translationKey",
+    "category": "recruit",
+    "vi": "recruit.meta....",
+    "en": "recruit.meta....",
+    "zh": "recruit.meta....",
+    "ja": "recruit.meta...."
+  },
+  {
+    "key": "recruit.metadata.table.label",
+    "category": "recruit",
+    "vi": "Nhãn",
+    "en": "Label",
+    "zh": "标签",
+    "ja": "ラベル"
+  },
+  {
+    "key": "recruit.metadata.table.value",
+    "category": "recruit",
+    "vi": "Mã",
+    "en": "Code",
+    "zh": "代码",
+    "ja": "コード"
+  },
+  {
+    "key": "recruit.metadata.empty",
+    "category": "recruit",
+    "vi": "Chưa có metadata nào.",
+    "en": "No metadata items yet.",
+    "zh": "当前没有元数据项。",
+    "ja": "メタデータ項目はまだありません。"
   }
 ]

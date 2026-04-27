@@ -571,9 +571,135 @@ public static class ContentSeeder
 
     private static void SeedRecruitment(AppDbContext db)
     {
-        if (db.JobPositions.Any()) return;
-
         var now = DateTime.UtcNow;
+        if (!db.RecruitmentMetadataItems.Any())
+        {
+            db.RecruitmentMetadataItems.AddRange(
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.EmploymentType,
+                    Value = "full-time",
+                    Label = "Toàn thời gian",
+                    TranslationKey = "recruit.meta.employment.fullTime",
+                    IsActive = true,
+                    SortOrder = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.EmploymentType,
+                    Value = "part-time",
+                    Label = "Bán thời gian",
+                    TranslationKey = "recruit.meta.employment.partTime",
+                    IsActive = true,
+                    SortOrder = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.EmploymentType,
+                    Value = "intern",
+                    Label = "Thực tập sinh",
+                    TranslationKey = "recruit.meta.employment.intern",
+                    IsActive = true,
+                    SortOrder = 3,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ExperienceLevel,
+                    Value = "student",
+                    Label = "Sinh viên",
+                    TranslationKey = "recruit.meta.experience.student",
+                    IsActive = true,
+                    SortOrder = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ExperienceLevel,
+                    Value = "junior",
+                    Label = "Mới ra trường (0-2 năm)",
+                    TranslationKey = "recruit.meta.experience.junior",
+                    IsActive = true,
+                    SortOrder = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ExperienceLevel,
+                    Value = "mid",
+                    Label = "Trung cấp (2-5 năm)",
+                    TranslationKey = "recruit.meta.experience.mid",
+                    IsActive = true,
+                    SortOrder = 3,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ExperienceLevel,
+                    Value = "senior",
+                    Label = "Cao cấp (5+ năm)",
+                    TranslationKey = "recruit.meta.experience.senior",
+                    IsActive = true,
+                    SortOrder = 4,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                    Value = "new",
+                    Label = "Mới",
+                    TranslationKey = "recruit.meta.status.new",
+                    IsActive = true,
+                    SortOrder = 1,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                    Value = "interview",
+                    Label = "Phỏng vấn",
+                    TranslationKey = "recruit.meta.status.interview",
+                    IsActive = true,
+                    SortOrder = 2,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                    Value = "hired",
+                    Label = "Đã tuyển",
+                    TranslationKey = "recruit.meta.status.hired",
+                    IsActive = true,
+                    SortOrder = 3,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+                new RecruitmentMetadataItem
+                {
+                    GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                    Value = "rejected",
+                    Label = "Từ chối",
+                    TranslationKey = "recruit.meta.status.rejected",
+                    IsActive = true,
+                    SortOrder = 4,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            db.SaveChanges();
+        }
+
+        if (db.JobPositions.Any()) return;
 
         var positions = new JobPosition[]
         {

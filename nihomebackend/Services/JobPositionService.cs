@@ -1,3 +1,4 @@
+using NihomeBackend.Constants;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
@@ -7,7 +8,9 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class JobPositionService(AppDbContext db)
+public class JobPositionService(
+    AppDbContext db,
+    RecruitmentMetadataService recruitmentMetadataService)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
 
@@ -36,6 +39,8 @@ public class JobPositionService(AppDbContext db)
 
     public async Task<JobPositionResponse> CreateAsync(UpsertJobPositionRequest req)
     {
+        await ValidateMetadataAsync(req);
+
         var entity = new JobPosition
         {
             Title = req.Title.Trim(),
@@ -59,6 +64,8 @@ public class JobPositionService(AppDbContext db)
         var entity = await db.JobPositions.FindAsync(id);
         if (entity == null) return null;
 
+        await ValidateMetadataAsync(req);
+
         entity.Title = req.Title.Trim();
         entity.Department = req.Department.Trim();
         entity.Location = req.Location.Trim();
@@ -72,6 +79,16 @@ public class JobPositionService(AppDbContext db)
 
         await db.SaveChangesAsync();
         return MapToResponse(entity);
+    }
+
+    private async Task ValidateMetadataAsync(UpsertJobPositionRequest req)
+    {
+        await recruitmentMetadataService.EnsureOptionExistsAsync(
+            RecruitmentMetadataGroups.EmploymentType,
+            req.EmploymentType);
+        await recruitmentMetadataService.EnsureOptionExistsAsync(
+            RecruitmentMetadataGroups.ExperienceLevel,
+            req.ExperienceLevel);
     }
 
     public async Task<bool> DeleteAsync(int id)

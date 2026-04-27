@@ -17,8 +17,22 @@ public class JobPositionResponse
 
 public class RecruitmentOptionResponse
 {
+    public int Id { get; set; }
     public string Value { get; set; } = "";
     public string Label { get; set; } = "";
+    public bool IsActive { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public class RecruitmentMetadataItemResponse
+{
+    public int Id { get; set; }
+    public string GroupKey { get; set; } = "";
+    public string Value { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string? TranslationKey { get; set; }
+    public bool IsActive { get; set; }
+    public int SortOrder { get; set; }
 }
 
 public class RecruitmentMetadataResponse

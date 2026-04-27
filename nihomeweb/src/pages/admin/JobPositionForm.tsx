@@ -39,7 +39,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
-  const { data: metadata } = useRecruitmentMetadata();
+  const { data: metadata } = useRecruitmentMetadata(true);
   const [data, setData] = useState<FormData>(empty);
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
@@ -49,8 +49,8 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
     setData((current) => ({
       ...current,
-      employmentType: current.employmentType || metadata.employmentTypes[0]?.value || "",
-      experienceLevel: current.experienceLevel || metadata.experienceLevels[0]?.value || "",
+      employmentType: current.employmentType || metadata.employmentTypes.find((item) => item.isActive)?.value || metadata.employmentTypes[0]?.value || "",
+      experienceLevel: current.experienceLevel || metadata.experienceLevels.find((item) => item.isActive)?.value || metadata.experienceLevels[0]?.value || "",
     }));
   }, [metadata, mode]);
 

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NihomeBackend.Constants;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -19,15 +20,57 @@ public class JobApplicationsControllerTests : IDisposable
     public JobApplicationsControllerTests()
     {
         _db = DbContextFactory.Create();
+        SeedRecruitmentMetadata();
         _emailServiceMock = new Mock<IEmailService>();
+        var translationService = new TranslationService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions()));
+        var recruitmentMetadataService = new RecruitmentMetadataService(_db, translationService);
         var svc = new JobApplicationService(
             _db,
+            recruitmentMetadataService,
             _emailServiceMock.Object,
             Mock.Of<ILogger<JobApplicationService>>());
         _sut = new JobApplicationsController(svc);
     }
 
     public void Dispose() => _db.Dispose();
+
+    private void SeedRecruitmentMetadata()
+    {
+        _db.RecruitmentMetadataItems.AddRange(
+            new RecruitmentMetadataItem
+            {
+                GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                Value = "new",
+                Label = "Mới",
+                IsActive = true,
+                SortOrder = 1,
+            },
+            new RecruitmentMetadataItem
+            {
+                GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                Value = "interview",
+                Label = "Phỏng vấn",
+                IsActive = true,
+                SortOrder = 2,
+            },
+            new RecruitmentMetadataItem
+            {
+                GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                Value = "hired",
+                Label = "Đã tuyển",
+                IsActive = true,
+                SortOrder = 3,
+            },
+            new RecruitmentMetadataItem
+            {
+                GroupKey = RecruitmentMetadataGroups.ApplicationStatus,
+                Value = "rejected",
+                Label = "Từ chối",
+                IsActive = true,
+                SortOrder = 4,
+            });
+        _db.SaveChanges();
+    }
 
     private async Task<JobPosition> SeedActivePosition()
     {

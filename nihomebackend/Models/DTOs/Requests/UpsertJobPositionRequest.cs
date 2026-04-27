@@ -13,9 +13,9 @@ public class UpsertJobPositionRequest
     [Required]
     public string Location { get; set; } = "";
 
-    public string EmploymentType { get; set; } = "full-time";
+    public string EmploymentType { get; set; } = "";
 
-    public string ExperienceLevel { get; set; } = "mid";
+    public string ExperienceLevel { get; set; } = "";
 
     public string? Description { get; set; }
 

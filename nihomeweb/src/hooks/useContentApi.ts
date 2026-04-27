@@ -106,9 +106,12 @@ export function useJobPositions() {
   return useFetch<JobPositionResponse[]>(() => contentApi.getJobPositions(), []);
 }
 
-export function useRecruitmentMetadata() {
+export function useRecruitmentMetadata(includeInactive = false) {
   const { lang } = useI18n();
-  return useFetch<RecruitmentMetadataResponse>(() => contentApi.getRecruitmentMetadata(lang), [lang]);
+  return useFetch<RecruitmentMetadataResponse>(
+    () => contentApi.getRecruitmentMetadata(lang, includeInactive),
+    [lang, includeInactive],
+  );
 }
 
 export function useSlideshow() {

@@ -1,3 +1,4 @@
+using NihomeBackend.Constants;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -8,11 +9,10 @@ namespace NihomeBackend.Services;
 
 public class JobApplicationService(
     AppDbContext db,
+    RecruitmentMetadataService recruitmentMetadataService,
     IEmailService emailService,
     ILogger<JobApplicationService> logger)
 {
-    private static readonly HashSet<string> ValidStatuses = ["new", "interview", "hired", "rejected"];
-
     public async Task<List<JobApplicationResponse>> GetAllAsync(int? positionId = null, string? status = null)
     {
         var query = db.JobApplications
@@ -36,6 +36,9 @@ public class JobApplicationService(
         if (!positionExists)
             throw new InvalidOperationException("Vị trí tuyển dụng không tồn tại hoặc đã đóng.");
 
+        var defaultStatus = await recruitmentMetadataService.GetDefaultOptionValueAsync(
+            RecruitmentMetadataGroups.ApplicationStatus);
+
         var entity = new JobApplication
         {
             JobPositionId = req.JobPositionId,
@@ -45,7 +48,7 @@ public class JobApplicationService(
             ExperienceYears = req.ExperienceYears,
             CoverLetter = req.CoverLetter?.Trim(),
             CvUrl = req.CvUrl?.Trim(),
-            Status = "new",
+            Status = defaultStatus,
         };
 
         db.JobApplications.Add(entity);
@@ -86,8 +89,9 @@ public class JobApplicationService(
 
     public async Task<JobApplicationResponse?> UpdateStatusAsync(int id, string status)
     {
-        if (!ValidStatuses.Contains(status))
-            throw new InvalidOperationException($"Trạng thái không hợp lệ: {status}");
+        await recruitmentMetadataService.EnsureOptionExistsAsync(
+            RecruitmentMetadataGroups.ApplicationStatus,
+            status);
 
         var entity = await db.JobApplications
             .Include(a => a.JobPosition)

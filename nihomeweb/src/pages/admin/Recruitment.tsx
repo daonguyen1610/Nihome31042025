@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Briefcase, MapPin, Eye, CheckCircle2, X, Pencil, Trash2, ChevronDown, Users, FileDown, Mail, Clock3, ClipboardList, Sparkles } from "lucide-react";
+import { Plus, Briefcase, MapPin, Eye, Pencil, Trash2, ChevronDown, Users, FileDown, Mail, Clock3, ClipboardList, Sparkles } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import RecruitmentMetadataManager from "@/pages/admin/components/RecruitmentMetadataManager";
 import { useRecruitmentMetadata } from "@/hooks/useContentApi";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +34,7 @@ const applicationIconActionButtonClass =
 const AdminRecruitment = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { data: metadata } = useRecruitmentMetadata();
+  const { data: metadata, refetch: refetchMetadata } = useRecruitmentMetadata(true);
 
   const [positions, setPositions] = useState<JobPositionResponse[]>([]);
   const [applications, setApplications] = useState<JobApplicationResponse[]>([]);
@@ -221,6 +222,8 @@ const AdminRecruitment = () => {
           </div>
         ))}
       </div>
+
+      <RecruitmentMetadataManager onUpdated={refetchMetadata} />
 
       <div className="flex items-end justify-between gap-4 mb-4">
         <div>
@@ -448,21 +451,19 @@ const AdminRecruitment = () => {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 mt-4">
-                      <button
-                        onClick={() => updateAppStatus(a.id, "interview")}
-                        className="inline-flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold border"
-                        style={{ borderColor: "hsl(var(--admin-warning-soft))", background: "hsl(var(--admin-warning-soft) / 0.55)", color: "hsl(var(--admin-warning))" }}
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" /> {t("recruit.shortInterview")}
-                      </button>
-                      <button
-                        onClick={() => updateAppStatus(a.id, "rejected")}
-                        className="inline-flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold border"
-                        style={{ borderColor: "hsl(var(--admin-danger-soft))", background: "hsl(var(--admin-danger-soft) / 0.55)", color: "hsl(var(--admin-danger))" }}
-                      >
-                        <X className="w-3.5 h-3.5" /> {t("recruit.shortReject")}
-                      </button>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 mt-4">
+                      <div className="relative">
+                        <select
+                          className="admin-input pr-8 text-sm appearance-none w-full"
+                          value={a.status}
+                          onChange={(e) => updateAppStatus(a.id, e.target.value)}
+                        >
+                          {applicationStatusOptions.map((statusOption) => (
+                            <option key={statusOption.value} value={statusOption.value}>{statusOption.label}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: "hsl(var(--admin-muted))" }} />
+                      </div>
                       <button
                         onClick={() => deleteApp(a.id)}
                         className="inline-flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold border"
@@ -565,30 +566,6 @@ const AdminRecruitment = () => {
                               <FileDown className="w-3.5 h-3.5" />
                             </a>
                           )}
-                          <button
-                            onClick={() => updateAppStatus(a.id, "interview")}
-                            title={t("recruit.inviteInterview")}
-                            className={applicationIconActionButtonClass}
-                            style={{
-                              borderColor: "hsl(var(--admin-warning-soft))",
-                              background: "hsl(var(--admin-warning-soft) / 0.4)",
-                              color: "hsl(var(--admin-warning))",
-                            }}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => updateAppStatus(a.id, "rejected")}
-                            title={t("recruit.reject")}
-                            className={applicationIconActionButtonClass}
-                            style={{
-                              borderColor: "hsl(var(--admin-danger-soft))",
-                              background: "hsl(var(--admin-danger-soft) / 0.4)",
-                              color: "hsl(var(--admin-danger))",
-                            }}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
                           <button
                             onClick={() => deleteApp(a.id)}
                             title={t("common.delete")}

@@ -120,8 +120,11 @@ export interface JobPositionResponse {
 }
 
 export interface RecruitmentOptionResponse {
+  id: number;
   value: string;
   label: string;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 export interface RecruitmentMetadataResponse {
@@ -313,8 +316,8 @@ export const contentApi = {
   getJobPositions: () =>
     api.get<JobPositionResponse[]>("/job-positions"),
 
-  getRecruitmentMetadata: (lang = "vi") =>
-    api.get<RecruitmentMetadataResponse>(`/recruitment/metadata?lang=${lang}`),
+  getRecruitmentMetadata: (lang = "vi", includeInactive = false) =>
+    api.get<RecruitmentMetadataResponse>(`/recruitment/metadata?lang=${lang}&includeInactive=${includeInactive}`),
 
   uploadCv: (file: File) => {
     const formData = new FormData();
