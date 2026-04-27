@@ -13,6 +13,8 @@ public class UpsertJobPositionRequest
     [Required]
     public string Location { get; set; } = "";
 
+    [Required]
+    [MinLength(1)]
     public string EmploymentType { get; set; } = "";
 
     public string ExperienceLevel { get; set; } = "mid";

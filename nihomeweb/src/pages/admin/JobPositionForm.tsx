@@ -42,11 +42,14 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
   const [employmentTypes, setEmploymentTypes] = useState<EmploymentTypeResponse[]>([]);
+  const [employmentTypesLoading, setEmploymentTypesLoading] = useState(true);
 
   useEffect(() => {
+    setEmploymentTypesLoading(true);
     adminApi.getEmploymentTypes(true)
       .then((res) => setEmploymentTypes(res.data))
-      .catch(() => setEmploymentTypes([]));
+      .catch(() => setEmploymentTypes([]))
+      .finally(() => setEmploymentTypesLoading(false));
   }, []);
 
   useEffect(() => {
@@ -95,6 +98,18 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
     e.preventDefault();
     if (!data.title.trim() || !data.department.trim() || !data.location.trim()) {
       toast({ title: t("form.required"), variant: "destructive" });
+      return;
+    }
+    if (employmentTypesLoading) {
+      toast({ title: "Đang tải hình thức làm việc", description: "Vui lòng thử lại sau vài giây.", variant: "destructive" });
+      return;
+    }
+    if (employmentTypes.length === 0) {
+      toast({ title: "Thiếu dữ liệu hình thức làm việc", description: "Vui lòng quản lý danh mục trước khi lưu vị trí tuyển dụng.", variant: "destructive" });
+      return;
+    }
+    if (!data.employmentType.trim()) {
+      toast({ title: t("form.required"), description: "Vui lòng chọn hình thức làm việc.", variant: "destructive" });
       return;
     }
     const payload: UpsertJobPositionRequest = {
@@ -295,7 +310,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || employmentTypesLoading || employmentTypes.length === 0 || !data.employmentType.trim()}
             className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50"
           >
             <Save className="w-4 h-4" />

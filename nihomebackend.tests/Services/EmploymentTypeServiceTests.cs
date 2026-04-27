@@ -74,6 +74,35 @@ public class EmploymentTypeServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateAsync_UpdatesLinkedJobPositions_WhenLegacyEmploymentTypeHasSpacesAndCase()
+    {
+        var type = new EmploymentType { Code = "full-time", Name = "Toàn thời gian", IsActive = true, SortOrder = 1 };
+        _db.EmploymentTypes.Add(type);
+        _db.JobPositions.Add(new JobPosition
+        {
+            Title = "Legacy",
+            Department = "Engineering",
+            Location = "HCM",
+            EmploymentType = "  Full-Time  ",
+            ExperienceLevel = "mid",
+            IsActive = true,
+            SortOrder = 1,
+        });
+        await _db.SaveChangesAsync();
+
+        var updated = await _sut.UpdateAsync(type.Id, new UpsertEmploymentTypeRequest
+        {
+            Code = "permanent",
+            Name = "Toàn thời gian",
+            IsActive = true,
+            SortOrder = 1,
+        });
+
+        Assert.NotNull(updated);
+        Assert.Equal("permanent", _db.JobPositions.Single().EmploymentType);
+    }
+
+    [Fact]
     public async Task DeleteAsync_Throws_WhenEmploymentTypeInUse()
     {
         var type = new EmploymentType { Code = "intern", Name = "Thực tập sinh", IsActive = true, SortOrder = 1 };
@@ -84,6 +113,27 @@ public class EmploymentTypeServiceTests : IDisposable
             Department = "Engineering",
             Location = "HCM",
             EmploymentType = "intern",
+            ExperienceLevel = "student",
+            IsActive = true,
+            SortOrder = 1,
+        });
+        await _db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.DeleteAsync(type.Id));
+        Assert.Equal("Hình thức làm việc đang được sử dụng trong vị trí tuyển dụng, không thể xóa.", ex.Message);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_Throws_WhenLegacyEmploymentTypeHasSpacesAndCase()
+    {
+        var type = new EmploymentType { Code = "intern", Name = "Thực tập sinh", IsActive = true, SortOrder = 1 };
+        _db.EmploymentTypes.Add(type);
+        _db.JobPositions.Add(new JobPosition
+        {
+            Title = "Legacy intern",
+            Department = "Engineering",
+            Location = "HCM",
+            EmploymentType = "  Intern  ",
             ExperienceLevel = "student",
             IsActive = true,
             SortOrder = 1,

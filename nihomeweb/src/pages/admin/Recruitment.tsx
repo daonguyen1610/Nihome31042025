@@ -127,7 +127,7 @@ const AdminRecruitment = () => {
             className="inline-flex items-center gap-2 px-4 py-2.5 text-sm rounded-xl border font-semibold hover:bg-muted transition"
             style={{ borderColor: "hsl(var(--admin-border))" }}
           >
-            Quản lý hình thức làm việc
+            {t("nav.employmentTypes")}
           </Link>
           <Link
             to="/admin/recruitment/new"
