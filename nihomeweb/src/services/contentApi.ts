@@ -71,6 +71,7 @@ export interface LogoResponse {
   imageUrl: string;
   href?: string;
   kind: string;
+  sortOrder?: number;
 }
 
 export interface LogosGroupedResponse {

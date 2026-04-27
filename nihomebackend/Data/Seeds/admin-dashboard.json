@@ -1166,5 +1166,141 @@
     "en": "Media preview",
     "zh": "媒体预览",
     "ja": "メディアプレビュー"
+  },
+  {
+    "key": "logoAdmin.fallbackError",
+    "category": "logoAdmin",
+    "vi": "Không thể thực hiện thao tác lúc này.",
+    "en": "Unable to complete this action right now.",
+    "zh": "当前无法完成此操作。",
+    "ja": "現在この操作を完了できません。"
+  },
+  {
+    "key": "logoAdmin.uploadSuccess",
+    "category": "logoAdmin",
+    "vi": "Đã tải ảnh lên",
+    "en": "Image uploaded successfully",
+    "zh": "图片上传成功",
+    "ja": "画像をアップロードしました"
+  },
+  {
+    "key": "logoAdmin.requiredNameImage",
+    "category": "logoAdmin",
+    "vi": "Tên và hình ảnh là bắt buộc.",
+    "en": "Name and image are required.",
+    "zh": "名称和图片为必填项。",
+    "ja": "名前と画像は必須です。"
+  },
+  {
+    "key": "logoAdmin.confirmDelete",
+    "category": "logoAdmin",
+    "vi": "Xóa logo",
+    "en": "Delete logo",
+    "zh": "删除标识",
+    "ja": "ロゴを削除"
+  },
+  {
+    "key": "logoAdmin.logoNoun",
+    "category": "logoAdmin",
+    "vi": "logo",
+    "en": "logos",
+    "zh": "个标识",
+    "ja": "件のロゴ"
+  },
+  {
+    "key": "logoAdmin.add",
+    "category": "logoAdmin",
+    "vi": "Thêm logo",
+    "en": "Add logo",
+    "zh": "添加标识",
+    "ja": "ロゴを追加"
+  },
+  {
+    "key": "logoAdmin.editTitle",
+    "category": "logoAdmin",
+    "vi": "Chỉnh sửa logo",
+    "en": "Edit logo",
+    "zh": "编辑标识",
+    "ja": "ロゴを編集"
+  },
+  {
+    "key": "logoAdmin.createTitle",
+    "category": "logoAdmin",
+    "vi": "Thêm logo mới",
+    "en": "Add new logo",
+    "zh": "添加新标识",
+    "ja": "新しいロゴを追加"
+  },
+  {
+    "key": "logoAdmin.fieldName",
+    "category": "logoAdmin",
+    "vi": "Tên logo",
+    "en": "Logo name",
+    "zh": "标识名称",
+    "ja": "ロゴ名"
+  },
+  {
+    "key": "logoAdmin.placeholderName",
+    "category": "logoAdmin",
+    "vi": "Nhập tên thương hiệu",
+    "en": "Enter brand name",
+    "zh": "输入品牌名称",
+    "ja": "ブランド名を入力"
+  },
+  {
+    "key": "logoAdmin.fieldImage",
+    "category": "logoAdmin",
+    "vi": "Hình ảnh",
+    "en": "Image",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "logoAdmin.upload",
+    "category": "logoAdmin",
+    "vi": "Tải lên",
+    "en": "Upload",
+    "zh": "上传",
+    "ja": "アップロード"
+  },
+  {
+    "key": "logoAdmin.uploading",
+    "category": "logoAdmin",
+    "vi": "Đang tải...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "logoAdmin.previewAlt",
+    "category": "logoAdmin",
+    "vi": "Xem trước logo",
+    "en": "Logo preview",
+    "zh": "标识预览",
+    "ja": "ロゴプレビュー"
+  },
+  {
+    "key": "logoAdmin.fieldHref",
+    "category": "logoAdmin",
+    "vi": "Liên kết",
+    "en": "Link",
+    "zh": "链接",
+    "ja": "リンク"
+  },
+  {
+    "key": "logoAdmin.fieldSortOrder",
+    "category": "logoAdmin",
+    "vi": "Thứ tự hiển thị",
+    "en": "Display order",
+    "zh": "显示顺序",
+    "ja": "表示順"
+  },
+  {
+    "key": "logoAdmin.sortOrderLabel",
+    "category": "logoAdmin",
+    "vi": "Thứ tự",
+    "en": "Order",
+    "zh": "顺序",
+    "ja": "順序"
   }
 ]

@@ -7,6 +7,7 @@ public class LogoResponse
     public string ImageUrl { get; set; } = "";
     public string? Href { get; set; }
     public string Kind { get; set; } = "";
+    public int SortOrder { get; set; }
 }
 
 public class LogosGroupedResponse

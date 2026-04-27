@@ -91,5 +91,6 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
         ImageUrl = l.ImageUrl,
         Href = l.Href,
         Kind = l.Kind.ToString(),
+        SortOrder = l.SortOrder,
     };
 }
