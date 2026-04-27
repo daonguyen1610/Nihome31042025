@@ -38,8 +38,12 @@ const makeLogosData = () => ({
     { id: 1, name: "Acme Corp", imageUrl: "/logo1.png", kind: "client", href: null },
     { id: 2, name: "Beta Ltd", imageUrl: "/logo2.png", kind: "client", href: "https://beta.com" },
   ],
-  partners: [],
-  suppliers: [],
+  partners: [
+    { id: 11, name: "Partner One", imageUrl: "/partner-1.png", kind: "partner", href: null, sortOrder: 1 },
+  ],
+  suppliers: [
+    { id: 21, name: "Supplier One", imageUrl: "/supplier-1.png", kind: "supplier", href: null, sortOrder: 1 },
+  ],
 });
 
 const renderComponent = (kind: "clients" | "partners" | "suppliers" = "clients") =>
@@ -105,6 +109,54 @@ describe("Admin LogosManager page", () => {
     fireEvent.click(deleteBtns[0]);
     await waitFor(() => {
       expect(mockDeleteLogo).toHaveBeenCalledWith(1);
+      expect(refetch).toHaveBeenCalled();
+    });
+  });
+
+  it("creates a partner logo with Partner kind", async () => {
+    const refetch = vi.fn();
+    mockCreateLogo.mockResolvedValue({});
+    mockUseLogos.mockReturnValue({ data: makeLogosData(), loading: false, error: null, refetch });
+
+    renderComponent("partners");
+
+    fireEvent.click(screen.getByText("logoAdmin.add"));
+    fireEvent.change(screen.getByPlaceholderText("logoAdmin.placeholderName"), { target: { value: "NCC Partner" } });
+    fireEvent.change(screen.getByPlaceholderText("/images/upload/..."), { target: { value: "/images/upload/partner-new.png" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /create/i }));
+
+    await waitFor(() => {
+      expect(mockCreateLogo).toHaveBeenCalledWith({
+        name: "NCC Partner",
+        imageUrl: "/images/upload/partner-new.png",
+        href: undefined,
+        kind: "Partner",
+        sortOrder: 2,
+      });
+      expect(refetch).toHaveBeenCalled();
+    });
+  });
+
+  it("updates a partner logo with Partner kind", async () => {
+    const refetch = vi.fn();
+    mockUpdateLogo.mockResolvedValue({});
+    mockUseLogos.mockReturnValue({ data: makeLogosData(), loading: false, error: null, refetch });
+
+    renderComponent("partners");
+
+    fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+    fireEvent.change(screen.getByPlaceholderText("logoAdmin.placeholderName"), { target: { value: "Partner Updated" } });
+    fireEvent.click(screen.getByRole("button", { name: /update/i }));
+
+    await waitFor(() => {
+      expect(mockUpdateLogo).toHaveBeenCalledWith(
+        11,
+        expect.objectContaining({
+          name: "Partner Updated",
+          kind: "Partner",
+        }),
+      );
       expect(refetch).toHaveBeenCalled();
     });
   });
