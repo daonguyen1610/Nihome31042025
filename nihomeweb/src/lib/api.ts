@@ -13,6 +13,15 @@ export const setStoreRef = (getState: () => RootState) => {
 };
 
 api.interceptors.request.use((config) => {
+  if (typeof FormData !== "undefined" && config.data instanceof FormData && config.headers) {
+    // Let the browser set multipart boundaries for FormData payloads.
+    if (typeof (config.headers as { set?: unknown }).set === "function") {
+      (config.headers as { set: (name: string, value?: string) => void }).set("Content-Type", undefined);
+    } else {
+      delete (config.headers as Record<string, unknown>)["Content-Type"];
+    }
+  }
+
   const token = storeRef?.()?.auth.accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

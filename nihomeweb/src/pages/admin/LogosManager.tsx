@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Plus, Pencil, Trash2, ExternalLink, Upload, Save, X } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Upload, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -7,6 +7,7 @@ import { useLogos } from "@/hooks/useContentApi";
 import { adminApi, type UpsertLogoRequest } from "@/services/adminApi";
 import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type Kind = "clients" | "partners" | "suppliers";
 
@@ -33,9 +34,31 @@ const kindMap: Record<Kind, string> = {
 };
 
 function getErrorMessage(error: unknown) {
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const response = (error as { response?: { data?: { message?: string } } }).response;
-    if (response?.data?.message) return response.data.message;
+  if (typeof error === "object" && error !== null) {
+    const withResponse = error as {
+      message?: unknown;
+      response?: {
+        data?: {
+          message?: unknown;
+          title?: unknown;
+          errors?: Record<string, unknown>;
+        };
+      };
+    };
+
+    const data = withResponse.response?.data;
+    if (typeof data?.message === "string") return data.message;
+    if (data?.errors && typeof data.errors === "object") {
+      for (const value of Object.values(data.errors)) {
+        if (typeof value === "string" && value.trim()) return value;
+        if (Array.isArray(value)) {
+          const first = value.find((item) => typeof item === "string" && item.trim());
+          if (typeof first === "string") return first;
+        }
+      }
+    }
+    if (typeof data?.title === "string") return data.title;
+    if (typeof withResponse.message === "string") return withResponse.message;
   }
 
   return null;
@@ -48,6 +71,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const [form, setForm] = useState<LogoFormData>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
 
   const items = useMemo(() => {
     const source = logos?.[kind] ?? [];
@@ -57,6 +81,8 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   }, [logos, kind]);
 
   const isEditing = form.id != null;
+  const hasImage = form.imageUrl.trim().length > 0;
+  const isBusy = submitting || uploading;
 
   const updateForm = <K extends keyof LogoFormData>(key: K, value: LogoFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -67,6 +93,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
       ...emptyForm,
       sortOrder: maxSortOrder + 1,
     });
+    setOpenModal(true);
   };
 
   const startEdit = (item: LogoResponse) => {
@@ -77,6 +104,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
       href: item.href ?? "",
       sortOrder: item.sortOrder ?? 0,
     });
+    setOpenModal(true);
   };
 
   const pickImageFile = async () => {
@@ -139,6 +167,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
       }
 
       setForm(emptyForm);
+      setOpenModal(false);
       await refetch();
     } catch (error) {
       toast({
@@ -159,6 +188,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
       toast({ title: t("form.deleted"), description: item.name });
       if (form.id === item.id) {
         setForm(emptyForm);
+        setOpenModal(false);
       }
       await refetch();
     } catch (error) {
@@ -187,147 +217,175 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[380px_minmax(0,1fr)] gap-5">
-        <div className="admin-card p-5 h-fit">
-          <h2 className="font-display text-lg font-extrabold mb-4">
-            {isEditing ? t("logoAdmin.editTitle") : t("logoAdmin.createTitle")}
-          </h2>
+      <div className="admin-card p-4">
+        {items.length === 0 ? (
+          <PageEmpty message={t("common.noData")} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {items.map((item) => (
+              <div key={item.id} className="rounded-2xl border bg-white p-4" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                <div
+                  className="aspect-[4/3] rounded-xl border bg-white flex items-center justify-center overflow-hidden mb-3"
+                  style={{ borderColor: "hsl(var(--admin-border))" }}
+                >
+                  <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain p-2" />
+                </div>
 
-          <form onSubmit={save} className="space-y-4">
-            <Field label={`${t("logoAdmin.fieldName")} *`}>
-              <input
-                className="admin-input"
-                value={form.name}
-                onChange={(e) => updateForm("name", e.target.value)}
-                placeholder={t("logoAdmin.placeholderName")}
-                required
-              />
-            </Field>
+                <p className="font-semibold text-sm leading-tight line-clamp-2 min-h-10">{item.name}</p>
+                <div className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+                  {t("logoAdmin.sortOrderLabel")}: {item.sortOrder ?? 0}
+                </div>
+                {item.href && (
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs mt-1.5"
+                    style={{ color: "hsl(var(--admin-primary))" }}
+                  >
+                    <ExternalLink className="w-3 h-3" /> {item.href}
+                  </a>
+                )}
 
-            <Field label={`${t("logoAdmin.fieldImage")} *`}>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    className="admin-input flex-1"
-                    value={form.imageUrl}
-                    onChange={(e) => updateForm("imageUrl", e.target.value)}
-                    placeholder="/images/upload/..."
-                    required
-                  />
+                <div className="grid grid-cols-2 gap-2 mt-3">
                   <button
-                    type="button"
-                    onClick={uploadImage}
-                    disabled={uploading}
-                    className="inline-flex items-center justify-center gap-1 rounded-xl px-3 text-sm border hover:bg-muted disabled:opacity-60"
+                    onClick={() => startEdit(item)}
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg border hover:bg-muted"
                     style={{ borderColor: "hsl(var(--admin-border))" }}
                   >
-                    <Upload className="w-4 h-4" /> {uploading ? t("logoAdmin.uploading") : t("logoAdmin.upload")}
+                    <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
+                  </button>
+                  <button
+                    onClick={() => remove(item)}
+                    className="inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg border hover:bg-destructive/10"
+                    style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
                   </button>
                 </div>
-                {form.imageUrl && (
-                  <div
-                    className="h-32 rounded-xl border bg-white flex items-center justify-center overflow-hidden p-3"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  >
-                    <img src={form.imageUrl} alt={form.name || t("logoAdmin.previewAlt")} className="max-w-full max-h-full object-contain" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <Dialog open={openModal} onOpenChange={setOpenModal}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b" style={{ borderColor: "hsl(var(--admin-border))" }}>
+            <DialogTitle className="font-display text-xl lg:text-2xl">
+              {isEditing ? t("logoAdmin.editTitle") : t("logoAdmin.createTitle")}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={save} className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="px-6 py-5 space-y-4">
+              <Field label={`${t("logoAdmin.fieldName")} *`}>
+                <input
+                  className="admin-input"
+                  value={form.name}
+                  onChange={(e) => updateForm("name", e.target.value)}
+                  placeholder={t("logoAdmin.placeholderName")}
+                  required
+                />
+              </Field>
+
+              <Field label={`${t("logoAdmin.fieldImage")} *`}>
+                <div
+                  className="rounded-2xl border p-3 space-y-2"
+                  style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg))" }}
+                >
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      className="admin-input flex-1 bg-white"
+                      value={form.imageUrl}
+                      onChange={(e) => updateForm("imageUrl", e.target.value)}
+                      placeholder="/images/upload/..."
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={uploadImage}
+                      disabled={uploading}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60 sm:min-w-[140px]"
+                      style={{ borderColor: "hsl(var(--admin-border))" }}
+                    >
+                      <Upload className="w-4 h-4" /> {uploading ? t("logoAdmin.uploading") : t("logoAdmin.upload")}
+                    </button>
+                  </div>
+                </div>
+              </Field>
+
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_150px] gap-3">
+                <Field label={t("logoAdmin.fieldHref")}>
+                  <input
+                    className="admin-input"
+                    value={form.href}
+                    onChange={(e) => updateForm("href", e.target.value)}
+                    placeholder="https://..."
+                  />
+                </Field>
+
+                <Field label={t("logoAdmin.fieldSortOrder")}>
+                  <input
+                    type="number"
+                    className="admin-input"
+                    value={form.sortOrder}
+                    onChange={(e) => updateForm("sortOrder", Number(e.target.value))}
+                    min={0}
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <aside
+              className="border-t lg:border-t-0 lg:border-l px-6 py-5"
+              style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg))" }}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "hsl(var(--admin-muted))" }}>
+                {t("logoAdmin.previewAlt")}
+              </p>
+              <div
+                className="h-48 rounded-2xl border bg-white flex items-center justify-center overflow-hidden p-3"
+                style={{ borderColor: "hsl(var(--admin-border))" }}
+              >
+                {hasImage ? (
+                  <img src={form.imageUrl} alt={form.name || t("logoAdmin.previewAlt")} className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <div className="text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                    <Upload className="w-6 h-6 mx-auto mb-1" />
+                    <span className="text-sm">{t("logoAdmin.fieldImage")}</span>
                   </div>
                 )}
               </div>
-            </Field>
 
-            <Field label={t("logoAdmin.fieldHref")}>
-              <input
-                className="admin-input"
-                value={form.href}
-                onChange={(e) => updateForm("href", e.target.value)}
-                placeholder="https://..."
-              />
-            </Field>
+              <div className="mt-3 space-y-1 text-sm">
+                <p className="font-semibold truncate">{form.name.trim() || "-"}</p>
+                <p style={{ color: "hsl(var(--admin-muted))" }}>
+                  {t("logoAdmin.sortOrderLabel")}: {Number.isFinite(form.sortOrder) ? form.sortOrder : 0}
+                </p>
+              </div>
+            </aside>
 
-            <Field label={t("logoAdmin.fieldSortOrder")}>
-              <input
-                type="number"
-                className="admin-input"
-                value={form.sortOrder}
-                onChange={(e) => updateForm("sortOrder", Number(e.target.value))}
-                min={0}
-              />
-            </Field>
-
-            <div className="flex gap-2 pt-1">
+            <div className="lg:col-span-2 px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "hsl(var(--admin-border))" }}>
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border hover:bg-muted"
+                style={{ borderColor: "hsl(var(--admin-border))" }}
+              >
+                {t("common.cancel")}
+              </button>
               <button
                 type="submit"
-                disabled={submitting}
-                className="admin-btn-primary inline-flex items-center justify-center gap-2 flex-1 disabled:opacity-60"
+                disabled={isBusy}
+                className="admin-btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 disabled:opacity-60"
               >
                 <Save className="w-4 h-4" /> {isEditing ? t("form.update") : t("form.create")}
               </button>
-              {isEditing && (
-                <button
-                  type="button"
-                  onClick={() => setForm(emptyForm)}
-                  className="inline-flex items-center justify-center gap-2 px-3 rounded-xl border hover:bg-muted"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                >
-                  <X className="w-4 h-4" /> {t("common.cancel")}
-                </button>
-              )}
             </div>
           </form>
-        </div>
-
-        <div className="admin-card p-4">
-          {items.length === 0 ? (
-            <PageEmpty message={t("common.noData")} />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {items.map((item) => (
-                <div key={item.id} className="rounded-2xl border bg-white p-4" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <div
-                    className="aspect-[4/3] rounded-xl border bg-white flex items-center justify-center overflow-hidden mb-3"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  >
-                    <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain p-2" />
-                  </div>
-
-                  <p className="font-semibold text-sm leading-tight line-clamp-2 min-h-10">{item.name}</p>
-                  <div className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-                    {t("logoAdmin.sortOrderLabel")}: {item.sortOrder ?? 0}
-                  </div>
-                  {item.href && (
-                    <a
-                      href={item.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs mt-1.5"
-                      style={{ color: "hsl(var(--admin-primary))" }}
-                    >
-                      <ExternalLink className="w-3 h-3" /> {item.href}
-                    </a>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-2 mt-3">
-                    <button
-                      onClick={() => startEdit(item)}
-                      className="inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg border hover:bg-muted"
-                      style={{ borderColor: "hsl(var(--admin-border))" }}
-                    >
-                      <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
-                    </button>
-                    <button
-                      onClick={() => remove(item)}
-                      className="inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg border hover:bg-destructive/10"
-                      style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
