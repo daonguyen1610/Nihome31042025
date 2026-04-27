@@ -16,6 +16,7 @@ public static class ContentSeeder
         SeedProcesses(db);
         SeedSlideshow(db);
         SeedRecruitment(db);
+        SeedContactMessages(db);
         SeedEntityTranslations(db);
     }
 
@@ -362,113 +363,135 @@ public static class ContentSeeder
 
     private static void SeedLogos(AppDbContext db)
     {
-        if (db.ClientLogos.Any()) return;
-
         var logos = new List<ClientLogo>();
         var i = 0;
 
-        string[][] clients = [
-            ["CLOTEX", "/images/logos/clients/clotex.png"],
-            ["SCON", "/images/logos/clients/scon.jpeg"],
-            ["SMITH MULLER", "/images/logos/clients/smith-muller.jpeg"],
-            ["LAM HIEP HUNG", "/images/logos/clients/lam-hiep-hung.jpeg"],
-            ["NESTLE", "/images/logos/clients/nestle.jpeg"],
-            ["REBISCO", "/images/logos/clients/rebisco.jpeg"],
-            ["S.T.FOOD MARKETING", "/images/logos/clients/stfood-marketing.png"],
-            ["PHAM-ASSET", "/images/logos/clients/pham-asset.png"],
-            ["WATTENS", "/images/logos/clients/wattens.jpeg"],
-            ["GREAT LOTUS", "/images/logos/clients/great-lotus.jpeg"],
-            ["ADVANCED CASTING ASIA", "/images/logos/clients/advanced-casting-asia.jpeg"],
-            ["AMPHACO", "/images/logos/clients/amphaco.jpeg"],
-            ["EVERGREEN", "/images/logos/clients/evergreen.jpeg"],
-            ["APM SPRINGS", "/images/logos/clients/apm-springs.jpeg"],
-            ["RED BULL", "/images/logos/clients/red-bull.png"],
-            ["SALADSTOP", "/images/logos/clients/saladstop.jpeg"],
-            ["BMT GROUP", "/images/logos/clients/bmt-group.jpeg"],
-            ["LAVIE", "/images/logos/clients/lavie.jpeg"],
-            ["AKATI WOOD", "/images/logos/clients/akati-wood.png"],
-            ["TLC", "/images/logos/clients/tlc.png"],
-            ["JAPAN PLUS", "/images/logos/clients/japan-plus.jpeg"],
-            ["AMPHARCO U.S.A", "/images/logos/clients/ampharco-usa.png"],
-            ["NISSI", "/images/logos/clients/nissi.png"],
-            ["SCTV", "/images/logos/clients/sctv.png"],
-            ["H.B.FULLER", "/images/logos/clients/hb-fuller.png"],
-            ["SONADEZI", "/images/logos/clients/sonadezi.jpeg"],
-            ["MYUNGBO", "/images/logos/clients/myungbo.jpeg"],
-            ["HEART OF DARKNESS", "/images/logos/clients/heart-of-darkness.jpeg"],
-        ];
-        foreach (var c in clients)
-            logos.Add(new ClientLogo { Name = c[0], ImageUrl = c[1], Kind = LogoKind.Client, SortOrder = i++ });
+        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Client))
+        {
+            string[][] clients = [
+                ["CLOTEX", "/images/logos/clients/clotex.png"],
+                ["SCON", "/images/logos/clients/scon.jpeg"],
+                ["SMITH MULLER", "/images/logos/clients/smith-muller.jpeg"],
+                ["LAM HIEP HUNG", "/images/logos/clients/lam-hiep-hung.jpeg"],
+                ["NESTLE", "/images/logos/clients/nestle.jpeg"],
+                ["REBISCO", "/images/logos/clients/rebisco.jpeg"],
+                ["S.T.FOOD MARKETING", "/images/logos/clients/stfood-marketing.png"],
+                ["PHAM-ASSET", "/images/logos/clients/pham-asset.png"],
+                ["WATTENS", "/images/logos/clients/wattens.jpeg"],
+                ["GREAT LOTUS", "/images/logos/clients/great-lotus.jpeg"],
+                ["ADVANCED CASTING ASIA", "/images/logos/clients/advanced-casting-asia.jpeg"],
+                ["AMPHACO", "/images/logos/clients/amphaco.jpeg"],
+                ["EVERGREEN", "/images/logos/clients/evergreen.jpeg"],
+                ["APM SPRINGS", "/images/logos/clients/apm-springs.jpeg"],
+                ["RED BULL", "/images/logos/clients/red-bull.png"],
+                ["SALADSTOP", "/images/logos/clients/saladstop.jpeg"],
+                ["BMT GROUP", "/images/logos/clients/bmt-group.jpeg"],
+                ["LAVIE", "/images/logos/clients/lavie.jpeg"],
+                ["AKATI WOOD", "/images/logos/clients/akati-wood.png"],
+                ["TLC", "/images/logos/clients/tlc.png"],
+                ["JAPAN PLUS", "/images/logos/clients/japan-plus.jpeg"],
+                ["AMPHARCO U.S.A", "/images/logos/clients/ampharco-usa.png"],
+                ["NISSI", "/images/logos/clients/nissi.png"],
+                ["SCTV", "/images/logos/clients/sctv.png"],
+                ["H.B.FULLER", "/images/logos/clients/hb-fuller.png"],
+                ["SONADEZI", "/images/logos/clients/sonadezi.jpeg"],
+                ["MYUNGBO", "/images/logos/clients/myungbo.jpeg"],
+                ["HEART OF DARKNESS", "/images/logos/clients/heart-of-darkness.jpeg"],
+            ];
+            foreach (var c in clients)
+                logos.Add(new ClientLogo { Name = c[0], ImageUrl = c[1], Kind = LogoKind.Client, SortOrder = i++ });
+        }
 
-        string[][] partners = [
-            ["VSIP", "/images/logos/partners/vsip.jpeg"],
-            ["RESCO", "/images/logos/partners/resco.jpeg"],
-            ["TECHCONS", "/images/logos/partners/techcons.jpeg"],
-            ["ZONA", "/images/logos/partners/zona.png"],
-            ["HAM KIEM I", "/images/logos/partners/ham-kiem-i.png"],
-            ["CHAU DUC", "/images/logos/partners/chau-duc.jpeg"],
-            ["PHU MY 3", "/images/logos/partners/phu-my-3.png"],
-            ["AMATA", "/images/logos/partners/amata.jpeg"],
-            ["TIN NGHIA", "/images/logos/partners/tin-nghia.jpeg"],
-            ["IDICO", "/images/logos/partners/idico.jpeg"],
-            ["VIETNAM RUBBER", "/images/logos/partners/vietnam-rubber.jpeg"],
-            ["LONG DUC", "/images/logos/partners/long-duc.jpeg"],
-            ["SONADEZI", "/images/logos/partners/sonadezi.jpeg"],
-            ["PROTRADE", "/images/logos/partners/protrade.png"],
-            ["LHC", "/images/logos/partners/lhc.png"],
-            ["THANH YEN", "/images/logos/partners/thanh-yen.png"],
-            ["VIETCOMBANK", "/images/logos/partners/vietcombank.jpeg"],
-            ["HIEP PHUOC", "/images/logos/partners/hiep-phuoc.jpeg"],
-            ["ACB", "/images/logos/partners/acb.jpeg"],
-        ];
-        i = 0;
-        foreach (var p in partners)
-            logos.Add(new ClientLogo { Name = p[0], ImageUrl = p[1], Kind = LogoKind.Partner, SortOrder = i++ });
+        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Partner))
+        {
+            string[][] partners = [
+                ["VSIP", "/images/logos/partners/vsip.jpeg"],
+                ["RESCO", "/images/logos/partners/resco.jpeg"],
+                ["TECHCONS", "/images/logos/partners/techcons.jpeg"],
+                ["ZONA", "/images/logos/partners/zona.png"],
+                ["HAM KIEM I", "/images/logos/partners/ham-kiem-i.png"],
+                ["CHAU DUC", "/images/logos/partners/chau-duc.jpeg"],
+                ["PHU MY 3", "/images/logos/partners/phu-my-3.png"],
+                ["AMATA", "/images/logos/partners/amata.jpeg"],
+                ["TIN NGHIA", "/images/logos/partners/tin-nghia.jpeg"],
+                ["IDICO", "/images/logos/partners/idico.jpeg"],
+                ["VIETNAM RUBBER", "/images/logos/partners/vietnam-rubber.jpeg"],
+                ["LONG DUC", "/images/logos/partners/long-duc.jpeg"],
+                ["SONADEZI", "/images/logos/partners/sonadezi.jpeg"],
+                ["PROTRADE", "/images/logos/partners/protrade.png"],
+                ["LHC", "/images/logos/partners/lhc.png"],
+                ["THANH YEN", "/images/logos/partners/thanh-yen.png"],
+                ["VIETCOMBANK", "/images/logos/partners/vietcombank.jpeg"],
+                ["HIEP PHUOC", "/images/logos/partners/hiep-phuoc.jpeg"],
+                ["ACB", "/images/logos/partners/acb.jpeg"],
+            ];
+            i = 0;
+            foreach (var p in partners)
+                logos.Add(new ClientLogo { Name = p[0], ImageUrl = p[1], Kind = LogoKind.Partner, SortOrder = i++ });
+        }
 
-        string[][] suppliers = [
-            ["Seamasterpaint", "/images/logos/suppliers/seamasterpaint.jpeg"],
-            ["MPE-Inc", "/images/logos/suppliers/mpe-inc.jpeg"],
-            ["Chi Thanh Steel", "/images/logos/suppliers/chi-thanh-steel.jpeg"],
-            ["Nippon", "/images/logos/suppliers/nippon.jpeg"],
-            ["Vicem Cement", "/images/logos/suppliers/vicem-cement.png"],
-            ["Fico Cement", "/images/logos/suppliers/fico-cement.png"],
-            ["Dong Tam Group", "/images/logos/suppliers/dong-tam-group.png"],
-            ["Hoa Phat Steel", "/images/logos/suppliers/hoa-phat-steel.jpeg"],
-            ["Dulux", "/images/logos/suppliers/dulux.jpeg"],
-            ["Sika", "/images/logos/suppliers/sika.jpeg"],
-            ["Shell", "/images/logos/suppliers/shell.jpeg"],
-            ["Cadivi", "/images/logos/suppliers/cadivi.png"],
-            ["VN Steel", "/images/logos/suppliers/vn-steel.png"],
-            ["EVN", "/images/logos/suppliers/evn.png"],
-            ["Schneider", "/images/logos/suppliers/schneider.png"],
-            ["Thinh Phat", "/images/logos/suppliers/thinh-phat.jpeg"],
-            ["LS-Vina", "/images/logos/suppliers/ls-vina.jpeg"],
-            ["Posco VN", "/images/logos/suppliers/posco-vn.png"],
-            ["WhiteHorse Ceramic", "/images/logos/suppliers/whitehorse-ceramic.png"],
-            ["Minh Viet Son", "/images/logos/suppliers/minh-viet-son.jpeg"],
-            ["QSB Steel", "/images/logos/suppliers/qsb-steel.jpeg"],
-            ["Song Hop Luc", "/images/logos/suppliers/song-hop-luc.jpeg"],
-            ["Duhal Led", "/images/logos/suppliers/duhal-led.jpeg"],
-            ["Eurowindow", "/images/logos/suppliers/eurowindow.jpeg"],
-            ["SINO", "/images/logos/suppliers/sino.jpeg"],
-            ["Zamil Steel", "/images/logos/suppliers/zamil-steel.jpeg"],
-            ["BlueScope", "/images/logos/suppliers/bluescope.jpeg"],
-            ["Caesar", "/images/logos/suppliers/caesar.jpeg"],
-            ["TungShin", "/images/logos/suppliers/tungshin.jpeg"],
-            ["Tai Truong Thanh", "/images/logos/suppliers/tai-truong-thanh.jpeg"],
-            ["Holcim", "/images/logos/suppliers/holcim.jpeg"],
-            ["Viglacera", "/images/logos/suppliers/viglacera.jpeg"],
-            ["American Standard", "/images/logos/suppliers/american-standard.jpeg"],
-            ["Vina Kyoei", "/images/logos/suppliers/vina-kyoei.jpeg"],
-            ["Binh Minh", "/images/logos/suppliers/binh-minh.jpeg"],
-            ["Taicera", "/images/logos/suppliers/taicera.jpeg"],
-        ];
-        i = 0;
-        foreach (var s in suppliers)
-            logos.Add(new ClientLogo { Name = s[0], ImageUrl = s[1], Kind = LogoKind.Supplier, SortOrder = i++ });
+        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Supplier))
+        {
+            string[][] suppliers = [
+                ["Seamasterpaint", "/images/logos/suppliers/seamasterpaint.jpeg"],
+                ["MPE-Inc", "/images/logos/suppliers/mpe-inc.jpeg"],
+                ["Chi Thanh Steel", "/images/logos/suppliers/chi-thanh-steel.jpeg"],
+                ["Nippon", "/images/logos/suppliers/nippon.jpeg"],
+                ["Vicem Cement", "/images/logos/suppliers/vicem-cement.png"],
+                ["Fico Cement", "/images/logos/suppliers/fico-cement.png"],
+                ["Dong Tam Group", "/images/logos/suppliers/dong-tam-group.png"],
+                ["Hoa Phat Steel", "/images/logos/suppliers/hoa-phat-steel.jpeg"],
+                ["Dulux", "/images/logos/suppliers/dulux.jpeg"],
+                ["Sika", "/images/logos/suppliers/sika.jpeg"],
+                ["Shell", "/images/logos/suppliers/shell.jpeg"],
+                ["Cadivi", "/images/logos/suppliers/cadivi.png"],
+                ["VN Steel", "/images/logos/suppliers/vn-steel.png"],
+                ["EVN", "/images/logos/suppliers/evn.png"],
+                ["Schneider", "/images/logos/suppliers/schneider.png"],
+                ["Thinh Phat", "/images/logos/suppliers/thinh-phat.jpeg"],
+                ["LS-Vina", "/images/logos/suppliers/ls-vina.jpeg"],
+                ["Posco VN", "/images/logos/suppliers/posco-vn.png"],
+                ["WhiteHorse Ceramic", "/images/logos/suppliers/whitehorse-ceramic.png"],
+                ["Minh Viet Son", "/images/logos/suppliers/minh-viet-son.jpeg"],
+                ["QSB Steel", "/images/logos/suppliers/qsb-steel.jpeg"],
+                ["Song Hop Luc", "/images/logos/suppliers/song-hop-luc.jpeg"],
+                ["Duhal Led", "/images/logos/suppliers/duhal-led.jpeg"],
+                ["Eurowindow", "/images/logos/suppliers/eurowindow.jpeg"],
+                ["SINO", "/images/logos/suppliers/sino.jpeg"],
+                ["Zamil Steel", "/images/logos/suppliers/zamil-steel.jpeg"],
+                ["BlueScope", "/images/logos/suppliers/bluescope.jpeg"],
+                ["Caesar", "/images/logos/suppliers/caesar.jpeg"],
+                ["TungShin", "/images/logos/suppliers/tungshin.jpeg"],
+                ["Tai Truong Thanh", "/images/logos/suppliers/tai-truong-thanh.jpeg"],
+                ["Holcim", "/images/logos/suppliers/holcim.jpeg"],
+                ["Viglacera", "/images/logos/suppliers/viglacera.jpeg"],
+                ["American Standard", "/images/logos/suppliers/american-standard.jpeg"],
+                ["Vina Kyoei", "/images/logos/suppliers/vina-kyoei.jpeg"],
+                ["Binh Minh", "/images/logos/suppliers/binh-minh.jpeg"],
+                ["Taicera", "/images/logos/suppliers/taicera.jpeg"],
+            ];
+            i = 0;
+            foreach (var s in suppliers)
+                logos.Add(new ClientLogo { Name = s[0], ImageUrl = s[1], Kind = LogoKind.Supplier, SortOrder = i++ });
+        }
 
-        db.ClientLogos.AddRange(logos);
-        db.SaveChanges();
+        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Award))
+        {
+            string[][] awards = [
+                ["Top 10 Vietnam Leading Brands 2018", "/images/activities/activity-ceremony.jpg"],
+                ["Vietnam Golden FDI 2019", "/images/activities/activity-opening.jpg"],
+                ["Outstanding Design & Build Contractor", "/images/activities/activity-handover.jpg"],
+            ];
+            i = 0;
+            foreach (var a in awards)
+                logos.Add(new ClientLogo { Name = a[0], ImageUrl = a[1], Kind = LogoKind.Award, SortOrder = i++ });
+        }
+
+        if (logos.Count > 0)
+        {
+            db.ClientLogos.AddRange(logos);
+            db.SaveChanges();
+        }
     }
 
     // ─── Processes ──────────────────────────────────────────────────
@@ -816,6 +839,69 @@ public static class ContentSeeder
         };
 
         db.EmploymentTypes.AddRange(items);
+        db.SaveChanges();
+    }
+
+    // ─── Contact Messages ───────────────────────────────────────────
+
+    private static void SeedContactMessages(AppDbContext db)
+    {
+        if (db.ContactMessages.Any()) return;
+
+        var now = DateTime.UtcNow;
+        var items = new ContactMessage[]
+        {
+            new()
+            {
+                Name = "Nguyễn Minh Anh",
+                Email = "minhanh.client@gmail.com",
+                Phone = "0901122334",
+                Subject = "Tư vấn thiết kế nhà xưởng 5.000m2",
+                Message = "Chúng tôi cần tư vấn giải pháp tổng thầu thiết kế và thi công cho nhà xưởng sản xuất tại Bình Dương.",
+                IsReplied = true,
+                ReplyContent = "NICON đã tiếp nhận yêu cầu và sẽ liên hệ trong 24 giờ để khảo sát nhu cầu chi tiết.",
+                RepliedAt = now.AddDays(-6),
+                CreatedAt = now.AddDays(-7),
+                UpdatedAt = now.AddDays(-6),
+            },
+            new()
+            {
+                Name = "Trần Quốc Huy",
+                Email = "huy.tran@abc-industrial.vn",
+                Phone = "0912345678",
+                Subject = "Báo giá thi công MEP",
+                Message = "Vui lòng gửi báo giá tham khảo cho hạng mục MEP nhà máy diện tích 12.000m2 tại Long An.",
+                IsReplied = false,
+                CreatedAt = now.AddDays(-4),
+                UpdatedAt = now.AddDays(-4),
+            },
+            new()
+            {
+                Name = "Lê Thu Phương",
+                Email = "phuong.le@thmcorp.vn",
+                Phone = "0987654321",
+                Subject = "Hợp tác dự án mới 2026",
+                Message = "Công ty chúng tôi dự kiến triển khai dự án kho logistics và mong muốn trao đổi cơ hội hợp tác cùng NICON.",
+                IsReplied = true,
+                ReplyContent = "Cảm ơn chị Phương. Bộ phận kinh doanh đã đặt lịch họp sơ bộ vào tuần tới.",
+                RepliedAt = now.AddDays(-2),
+                CreatedAt = now.AddDays(-3),
+                UpdatedAt = now.AddDays(-2),
+            },
+            new()
+            {
+                Name = "Phạm Gia Bảo",
+                Email = "baopham@gmail.com",
+                Phone = "0977000111",
+                Subject = "Yêu cầu tư vấn cải tạo văn phòng",
+                Message = "Tôi cần tư vấn cải tạo không gian văn phòng 800m2 theo phong cách hiện đại, tối ưu công năng.",
+                IsReplied = false,
+                CreatedAt = now.AddHours(-18),
+                UpdatedAt = now.AddHours(-18),
+            },
+        };
+
+        db.ContactMessages.AddRange(items);
         db.SaveChanges();
     }
 

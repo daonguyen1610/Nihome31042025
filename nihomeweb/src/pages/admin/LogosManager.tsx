@@ -7,7 +7,7 @@ import { useLogos } from "@/hooks/useContentApi";
 import { adminApi, type UpsertLogoRequest } from "@/services/adminApi";
 import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type Kind = "clients" | "partners" | "suppliers" | "awards";
 
@@ -271,15 +271,21 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
       </div>
 
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden gap-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b" style={{ borderColor: "hsl(var(--admin-border))" }}>
+        <DialogContent
+          className="max-w-5xl p-0 overflow-hidden gap-0 rounded-3xl border shadow-2xl"
+          style={{ borderColor: "hsl(var(--admin-border))" }}
+        >
+          <DialogHeader className="px-6 pt-5 pb-4" style={{ background: "hsl(var(--admin-bg))" }}>
             <DialogTitle className="font-display text-xl lg:text-2xl">
               {isEditing ? t("logoAdmin.editTitle") : t("logoAdmin.createTitle")}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              {t("logoAdmin.requiredNameImage")}
+            </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={save} className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="px-6 py-5 space-y-4">
+          <form onSubmit={save} className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-0">
+            <div className="px-6 py-5 space-y-5">
               <Field label={`${t("logoAdmin.fieldName")} *`}>
                 <input
                   className="admin-input"
@@ -292,8 +298,8 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
               <Field label={`${t("logoAdmin.fieldImage")} *`}>
                 <div
-                  className="rounded-2xl border p-3 space-y-2"
-                  style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg))" }}
+                  className="rounded-2xl border p-3.5 space-y-2.5"
+                  style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg) / 0.55)" }}
                 >
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
@@ -307,7 +313,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                       type="button"
                       onClick={uploadImage}
                       disabled={uploading}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60 sm:min-w-[140px]"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60 sm:min-w-[148px]"
                       style={{ borderColor: "hsl(var(--admin-border))" }}
                     >
                       <Upload className="w-4 h-4" /> {uploading ? t("logoAdmin.uploading") : t("logoAdmin.upload")}
@@ -340,13 +346,13 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
             <aside
               className="border-t lg:border-t-0 lg:border-l px-6 py-5"
-              style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg))" }}
+              style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg) / 0.75)" }}
             >
               <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "hsl(var(--admin-muted))" }}>
                 {t("logoAdmin.previewAlt")}
               </p>
               <div
-                className="h-48 rounded-2xl border bg-white flex items-center justify-center overflow-hidden p-3"
+                className="h-[240px] rounded-2xl border bg-white flex items-center justify-center overflow-hidden p-3"
                 style={{ borderColor: "hsl(var(--admin-border))" }}
               >
                 {hasImage ? (
@@ -359,15 +365,18 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                 )}
               </div>
 
-              <div className="mt-3 space-y-1 text-sm">
+              <div className="mt-3 rounded-xl border p-3 space-y-1 text-sm" style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-card))" }}>
                 <p className="font-semibold truncate">{form.name.trim() || "-"}</p>
-                <p style={{ color: "hsl(var(--admin-muted))" }}>
+                <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
                   {t("logoAdmin.sortOrderLabel")}: {Number.isFinite(form.sortOrder) ? form.sortOrder : 0}
                 </p>
               </div>
             </aside>
 
-            <div className="lg:col-span-2 px-6 py-4 border-t flex items-center justify-end gap-2" style={{ borderColor: "hsl(var(--admin-border))" }}>
+            <div
+              className="lg:col-span-2 px-6 py-4 border-t flex items-center justify-end gap-2"
+              style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg))" }}
+            >
               <button
                 type="button"
                 onClick={() => setOpenModal(false)}
@@ -379,7 +388,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
               <button
                 type="submit"
                 disabled={isBusy}
-                className="admin-btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 disabled:opacity-60"
+                className="admin-btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 min-w-[138px] disabled:opacity-60"
               >
                 <Save className="w-4 h-4" /> {isEditing ? t("form.update") : t("form.create")}
               </button>
