@@ -856,6 +856,118 @@
     "ja": "表示順"
   },
   {
+    "key": "aboutAdmin.title",
+    "category": "aboutAdmin",
+    "vi": "Quản lý nội dung trang Về chúng tôi",
+    "en": "About page content management",
+    "zh": "关于我们页面内容管理",
+    "ja": "「私たちについて」ページのコンテンツ管理"
+  },
+  {
+    "key": "aboutAdmin.description",
+    "category": "aboutAdmin",
+    "vi": "Chỉnh trực tiếp bộ key",
+    "en": "Edit directly the key set",
+    "zh": "直接编辑键集合",
+    "ja": "キーセットを直接編集"
+  },
+  {
+    "key": "aboutAdmin.languages",
+    "category": "aboutAdmin",
+    "vi": "4 ngôn ngữ",
+    "en": "4 languages",
+    "zh": "4 种语言",
+    "ja": "4 言語"
+  },
+  {
+    "key": "aboutAdmin.category",
+    "category": "aboutAdmin",
+    "vi": "Danh mục: profilePage",
+    "en": "Category: profilePage",
+    "zh": "分类: profilePage",
+    "ja": "カテゴリ: profilePage"
+  },
+  {
+    "key": "aboutAdmin.searchPlaceholder",
+    "category": "aboutAdmin",
+    "vi": "Tìm theo key hoặc nội dung",
+    "en": "Search by key or content",
+    "zh": "按键名或内容搜索",
+    "ja": "キーまたは内容で検索"
+  },
+  {
+    "key": "aboutAdmin.empty",
+    "category": "aboutAdmin",
+    "vi": "Không có dữ liệu phù hợp.",
+    "en": "No matching data.",
+    "zh": "没有匹配的数据。",
+    "ja": "一致するデータがありません。"
+  },
+  {
+    "key": "aboutAdmin.viHint",
+    "category": "aboutAdmin",
+    "vi": "Tiếng Việt (bắt buộc)",
+    "en": "Vietnamese (required)",
+    "zh": "越南语（必填）",
+    "ja": "ベトナム語（必須）"
+  },
+  {
+    "key": "aboutAdmin.langPrefix",
+    "category": "aboutAdmin",
+    "vi": "Ngôn ngữ:",
+    "en": "Language:",
+    "zh": "语言:",
+    "ja": "言語:"
+  },
+  {
+    "key": "aboutAdmin.unsaved",
+    "category": "aboutAdmin",
+    "vi": "Có thay đổi chưa lưu",
+    "en": "You have unsaved changes",
+    "zh": "有未保存的更改",
+    "ja": "未保存の変更があります"
+  },
+  {
+    "key": "aboutAdmin.synced",
+    "category": "aboutAdmin",
+    "vi": "Đã đồng bộ",
+    "en": "Synced",
+    "zh": "已同步",
+    "ja": "同期済み"
+  },
+  {
+    "key": "aboutAdmin.loadError",
+    "category": "aboutAdmin",
+    "vi": "Không tải được nội dung trang Về chúng tôi.",
+    "en": "Failed to load about page content.",
+    "zh": "无法加载关于我们页面内容。",
+    "ja": "「私たちについて」ページの内容を読み込めません。"
+  },
+  {
+    "key": "aboutAdmin.saveError",
+    "category": "aboutAdmin",
+    "vi": "Không cập nhật được nội dung. Vui lòng thử lại.",
+    "en": "Failed to update content. Please try again.",
+    "zh": "更新内容失败，请重试。",
+    "ja": "コンテンツの更新に失敗しました。再試行してください。"
+  },
+  {
+    "key": "aboutAdmin.missingDataTitle",
+    "category": "aboutAdmin",
+    "vi": "Thiếu dữ liệu",
+    "en": "Missing data",
+    "zh": "缺少数据",
+    "ja": "データ不足"
+  },
+  {
+    "key": "aboutAdmin.viRequired",
+    "category": "aboutAdmin",
+    "vi": "Giá trị tiếng Việt là bắt buộc.",
+    "en": "Vietnamese value is required.",
+    "zh": "越南语内容为必填。",
+    "ja": "ベトナム語の値は必須です。"
+  },
+  {
     "key": "posts.field.title",
     "category": "posts",
     "vi": "Tiêu đề",

@@ -718,5 +718,197 @@
     "en": "Design Director",
     "zh": "设计总监",
     "ja": "設計ディレクター"
+  },
+  {
+    "key": "profilePage.stat.yearsValue",
+    "category": "profilePage",
+    "vi": "18+",
+    "en": "18+",
+    "zh": "18+",
+    "ja": "18+"
+  },
+  {
+    "key": "profilePage.stat.projectsValue",
+    "category": "profilePage",
+    "vi": "150+",
+    "en": "150+",
+    "zh": "150+",
+    "ja": "150+"
+  },
+  {
+    "key": "profilePage.stat.clientsValue",
+    "category": "profilePage",
+    "vi": "80+",
+    "en": "80+",
+    "zh": "80+",
+    "ja": "80+"
+  },
+  {
+    "key": "profilePage.stat.isoTop",
+    "category": "profilePage",
+    "vi": "ISO",
+    "en": "ISO",
+    "zh": "ISO",
+    "ja": "ISO"
+  },
+  {
+    "key": "profilePage.stat.isoBottom",
+    "category": "profilePage",
+    "vi": "9001:2015",
+    "en": "9001:2015",
+    "zh": "9001:2015",
+    "ja": "9001:2015"
+  },
+  {
+    "key": "profilePage.ld.name.chair",
+    "category": "profilePage",
+    "vi": "KTS. Võ Trí Nguyên",
+    "en": "Arch. Vo Tri Nguyen",
+    "zh": "武智阮建筑师",
+    "ja": "ヴォー・チー・グエン（建築家）"
+  },
+  {
+    "key": "profilePage.ld.name.viceChair1",
+    "category": "profilePage",
+    "vi": "KS. Yoshihiro Mori",
+    "en": "Eng. Yoshihiro Mori",
+    "zh": "森良弘工程师",
+    "ja": "森 芳宏（技術者）"
+  },
+  {
+    "key": "profilePage.ld.name.viceChair2",
+    "category": "profilePage",
+    "vi": "KTS. Lê Thị Yến",
+    "en": "Arch. Le Thi Yen",
+    "zh": "黎氏燕建筑师",
+    "ja": "レ・ティ・イェン（建築家）"
+  },
+  {
+    "key": "profilePage.ld.name.secretary",
+    "category": "profilePage",
+    "vi": "MBA. Võ Tô Uyên",
+    "en": "MBA. Vo To Uyen",
+    "zh": "武素鸳 MBA",
+    "ja": "ヴォー・トー・ウエン（MBA）"
+  },
+  {
+    "key": "profilePage.ld.name.ceo",
+    "category": "profilePage",
+    "vi": "KTS. Võ Trí Nguyên",
+    "en": "Arch. Vo Tri Nguyen",
+    "zh": "武智阮建筑师",
+    "ja": "ヴォー・チー・グエン（建築家）"
+  },
+  {
+    "key": "profilePage.ld.name.bdJp",
+    "category": "profilePage",
+    "vi": "Yoshihiro Mori",
+    "en": "Yoshihiro Mori",
+    "zh": "森良弘",
+    "ja": "森 芳宏"
+  },
+  {
+    "key": "profilePage.ld.name.bdAsia",
+    "category": "profilePage",
+    "vi": "Richard Penalosa",
+    "en": "Richard Penalosa",
+    "zh": "Richard Penalosa",
+    "ja": "Richard Penalosa"
+  },
+  {
+    "key": "profilePage.ld.name.design",
+    "category": "profilePage",
+    "vi": "KTS. Lê Thị Yến",
+    "en": "Arch. Le Thi Yen",
+    "zh": "黎氏燕建筑师",
+    "ja": "レ・ティ・イェン（建築家）"
+  },
+  {
+    "key": "profilePage.cert.iso2008.n",
+    "category": "profilePage",
+    "vi": "ISO 9001:2008",
+    "en": "ISO 9001:2008",
+    "zh": "ISO 9001:2008",
+    "ja": "ISO 9001:2008"
+  },
+  {
+    "key": "profilePage.cert.iso2015.n",
+    "category": "profilePage",
+    "vi": "ISO 9001:2015",
+    "en": "ISO 9001:2015",
+    "zh": "ISO 9001:2015",
+    "ja": "ISO 9001:2015"
+  },
+  {
+    "key": "profilePage.cert.iso14001.n",
+    "category": "profilePage",
+    "vi": "ISO 14001:2015",
+    "en": "ISO 14001:2015",
+    "zh": "ISO 14001:2015",
+    "ja": "ISO 14001:2015"
+  },
+  {
+    "key": "profilePage.dl.f1.size",
+    "category": "profilePage",
+    "vi": "12.4 MB",
+    "en": "12.4 MB",
+    "zh": "12.4 MB",
+    "ja": "12.4 MB"
+  },
+  {
+    "key": "profilePage.dl.f2.size",
+    "category": "profilePage",
+    "vi": "1.8 MB",
+    "en": "1.8 MB",
+    "zh": "1.8 MB",
+    "ja": "1.8 MB"
+  },
+  {
+    "key": "profilePage.dl.f3.size",
+    "category": "profilePage",
+    "vi": "24 MB",
+    "en": "24 MB",
+    "zh": "24 MB",
+    "ja": "24 MB"
+  },
+  {
+    "key": "profilePage.dl.f4.size",
+    "category": "profilePage",
+    "vi": "0.6 MB",
+    "en": "0.6 MB",
+    "zh": "0.6 MB",
+    "ja": "0.6 MB"
+  },
+  {
+    "key": "profilePage.dl.f1.type",
+    "category": "profilePage",
+    "vi": "PDF",
+    "en": "PDF",
+    "zh": "PDF",
+    "ja": "PDF"
+  },
+  {
+    "key": "profilePage.dl.f2.type",
+    "category": "profilePage",
+    "vi": "PDF",
+    "en": "PDF",
+    "zh": "PDF",
+    "ja": "PDF"
+  },
+  {
+    "key": "profilePage.dl.f3.type",
+    "category": "profilePage",
+    "vi": "PDF",
+    "en": "PDF",
+    "zh": "PDF",
+    "ja": "PDF"
+  },
+  {
+    "key": "profilePage.dl.f4.type",
+    "category": "profilePage",
+    "vi": "PDF",
+    "en": "PDF",
+    "zh": "PDF",
+    "ja": "PDF"
   }
 ]
