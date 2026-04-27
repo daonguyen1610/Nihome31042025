@@ -4,6 +4,7 @@ import { Save, Building2, Mail, Phone, MapPin, Globe } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import RecruitmentMetadataManager from "@/pages/admin/components/RecruitmentMetadataManager";
 import {
   SettingSection,
   SettingRow,
@@ -23,13 +24,14 @@ import {
 } from "@/lib/settingsStore";
 import SlideshowSettings from "./settings/SlideshowSettings";
 
-type Tab = "company" | "general" | "media" | "slideshow";
+type Tab = "company" | "general" | "media" | "slideshow" | "recruitment";
 
 const tabs: { key: Tab; labelKey: string }[] = [
   { key: "company", labelKey: "settings.company" },
   { key: "general", labelKey: "set.general" },
   { key: "media", labelKey: "set.media" },
   { key: "slideshow", labelKey: "set.slideshow" },
+  { key: "recruitment", labelKey: "nav.recruitment" },
 ];
 
 /* ─── Company Tab ─── */
@@ -315,6 +317,7 @@ const SettingsCenter = () => {
       {activeTab === "general" && <GeneralTab />}
       {activeTab === "media" && <MediaTab />}
       {activeTab === "slideshow" && <SlideshowSettings />}
+      {activeTab === "recruitment" && <RecruitmentMetadataManager />}
     </AdminLayout>
   );
 };

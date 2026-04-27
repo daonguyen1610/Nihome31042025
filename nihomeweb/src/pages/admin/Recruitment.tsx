@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Briefcase, MapPin, Eye, Pencil, Trash2, ChevronDown, Users, FileDown, Mail, Clock3, ClipboardList, Sparkles } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import RecruitmentMetadataManager from "@/pages/admin/components/RecruitmentMetadataManager";
+
 import { useRecruitmentMetadata } from "@/hooks/useContentApi";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -34,7 +34,7 @@ const applicationIconActionButtonClass =
 const AdminRecruitment = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { data: metadata, refetch: refetchMetadata } = useRecruitmentMetadata(true);
+  const { data: metadata } = useRecruitmentMetadata(true);
 
   const [positions, setPositions] = useState<JobPositionResponse[]>([]);
   const [applications, setApplications] = useState<JobApplicationResponse[]>([]);
@@ -223,7 +223,7 @@ const AdminRecruitment = () => {
         ))}
       </div>
 
-      <RecruitmentMetadataManager onUpdated={refetchMetadata} />
+
 
       <div className="flex items-end justify-between gap-4 mb-4">
         <div>
