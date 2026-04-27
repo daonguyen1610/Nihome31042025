@@ -26,7 +26,7 @@ const backendErrorMap: Record<string, string> = {
 };
 
 /** Translate a backend error message using the current i18n translate function. */
-export const translateError = (t: (key: string) => string, message: string): string => {
+export const translateError = (t: (key: string, params?: Record<string, string | number>) => string, message: string): string => {
   const key = backendErrorMap[message];
   return key ? t(key) : message;
 };
@@ -34,7 +34,7 @@ export const translateError = (t: (key: string) => string, message: string): str
 type Ctx = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 };
 
 const I18nContext = createContext<Ctx | null>(null);
@@ -93,7 +93,15 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const setLang = (l: Lang) => setLangState(l);
 
   const t = useMemo(() => {
-    return (key: string) => currentMap[key] ?? fallbackViMap[key] ?? key;
+    return (key: string, params?: Record<string, string | number>) => {
+      const template = currentMap[key] ?? fallbackViMap[key] ?? key;
+      if (!params) return template;
+
+      return Object.entries(params).reduce(
+        (result, [paramKey, value]) => result.replaceAll(`{${paramKey}}`, String(value)),
+        template,
+      );
+    };
   }, [currentMap, fallbackViMap]);
 
   return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;

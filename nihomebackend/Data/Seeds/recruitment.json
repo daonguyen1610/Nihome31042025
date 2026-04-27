@@ -382,5 +382,677 @@
     "en": "Hiring",
     "zh": "招聘中",
     "ja": "採用中"
+  },
+  {
+    "key": "recruit.closed",
+    "category": "recruit",
+    "vi": "Đã đóng",
+    "en": "Closed",
+    "zh": "已关闭",
+    "ja": "募集終了"
+  },
+  {
+    "key": "recruit.headerStats",
+    "category": "recruit",
+    "vi": "{positions} vị trí đang mở · {applications} đơn ứng tuyển",
+    "en": "{positions} open positions · {applications} applications",
+    "zh": "{positions} 个开放职位 · {applications} 份申请",
+    "ja": "{positions}件の募集中ポジション・{applications}件の応募"
+  },
+  {
+    "key": "recruit.meta.employment.fullTime",
+    "category": "recruit",
+    "vi": "Toàn thời gian",
+    "en": "Full-time",
+    "zh": "全职",
+    "ja": "フルタイム"
+  },
+  {
+    "key": "recruit.meta.employment.partTime",
+    "category": "recruit",
+    "vi": "Bán thời gian",
+    "en": "Part-time",
+    "zh": "兼职",
+    "ja": "パートタイム"
+  },
+  {
+    "key": "recruit.meta.employment.intern",
+    "category": "recruit",
+    "vi": "Thực tập sinh",
+    "en": "Internship",
+    "zh": "实习",
+    "ja": "インターン"
+  },
+  {
+    "key": "recruit.meta.experience.student",
+    "category": "recruit",
+    "vi": "Sinh viên",
+    "en": "Student",
+    "zh": "学生",
+    "ja": "学生"
+  },
+  {
+    "key": "recruit.meta.experience.junior",
+    "category": "recruit",
+    "vi": "Mới ra trường (0-2 năm)",
+    "en": "Junior (0-2 years)",
+    "zh": "初级（0-2年）",
+    "ja": "ジュニア（0〜2年）"
+  },
+  {
+    "key": "recruit.meta.experience.mid",
+    "category": "recruit",
+    "vi": "Trung cấp (2-5 năm)",
+    "en": "Mid-level (2-5 years)",
+    "zh": "中级（2-5年）",
+    "ja": "中堅（2〜5年）"
+  },
+  {
+    "key": "recruit.meta.experience.senior",
+    "category": "recruit",
+    "vi": "Cao cấp (5+ năm)",
+    "en": "Senior (5+ years)",
+    "zh": "高级（5年以上）",
+    "ja": "シニア（5年以上）"
+  },
+  {
+    "key": "recruit.meta.status.new",
+    "category": "recruit",
+    "vi": "Mới",
+    "en": "New",
+    "zh": "新申请",
+    "ja": "新規"
+  },
+  {
+    "key": "recruit.meta.status.interview",
+    "category": "recruit",
+    "vi": "Phỏng vấn",
+    "en": "Interview",
+    "zh": "面试中",
+    "ja": "面接"
+  },
+  {
+    "key": "recruit.meta.status.hired",
+    "category": "recruit",
+    "vi": "Đã tuyển",
+    "en": "Hired",
+    "zh": "已录用",
+    "ja": "採用済み"
+  },
+  {
+    "key": "recruit.meta.status.rejected",
+    "category": "recruit",
+    "vi": "Từ chối",
+    "en": "Rejected",
+    "zh": "已拒绝",
+    "ja": "不採用"
+  },
+  {
+    "key": "recruit.messages.confirmDeletePosition",
+    "category": "recruit",
+    "vi": "Xóa vị trí \"{title}\"? Tất cả đơn ứng tuyển liên quan cũng sẽ bị xóa.",
+    "en": "Delete \"{title}\"? Related applications will also be removed.",
+    "zh": "删除“{title}”吗？相关申请也会一并删除。",
+    "ja": "「{title}」を削除しますか？関連する応募も削除されます。"
+  },
+  {
+    "key": "recruit.messages.deleted",
+    "category": "recruit",
+    "vi": "Đã xóa",
+    "en": "Deleted",
+    "zh": "已删除",
+    "ja": "削除しました"
+  },
+  {
+    "key": "recruit.messages.updated",
+    "category": "recruit",
+    "vi": "Đã cập nhật",
+    "en": "Updated",
+    "zh": "已更新",
+    "ja": "更新しました"
+  },
+  {
+    "key": "recruit.messages.confirmDeleteApplication",
+    "category": "recruit",
+    "vi": "Xóa đơn ứng tuyển này?",
+    "en": "Delete this application?",
+    "zh": "删除这份申请吗？",
+    "ja": "この応募を削除しますか？"
+  },
+  {
+    "key": "recruit.summary.openPositions",
+    "category": "recruit",
+    "vi": "Vị trí đang mở",
+    "en": "Open positions",
+    "zh": "开放职位",
+    "ja": "募集中の職種"
+  },
+  {
+    "key": "recruit.summary.totalPositions",
+    "category": "recruit",
+    "vi": "{count} tổng vị trí",
+    "en": "{count} total positions",
+    "zh": "共 {count} 个职位",
+    "ja": "全{count}件の職種"
+  },
+  {
+    "key": "recruit.summary.newApplications",
+    "category": "recruit",
+    "vi": "Hồ sơ mới",
+    "en": "New applications",
+    "zh": "新申请",
+    "ja": "新規応募"
+  },
+  {
+    "key": "recruit.summary.totalApplications",
+    "category": "recruit",
+    "vi": "{count} tổng hồ sơ",
+    "en": "{count} total applications",
+    "zh": "共 {count} 份申请",
+    "ja": "全{count}件の応募"
+  },
+  {
+    "key": "recruit.summary.interviewing",
+    "category": "recruit",
+    "vi": "Đang phỏng vấn",
+    "en": "Interviewing",
+    "zh": "面试中",
+    "ja": "面接中"
+  },
+  {
+    "key": "recruit.summary.interviewHint",
+    "category": "recruit",
+    "vi": "Cần xử lý tiếp theo",
+    "en": "Needs follow-up",
+    "zh": "需要后续处理",
+    "ja": "次の対応が必要"
+  },
+  {
+    "key": "recruit.summary.hired",
+    "category": "recruit",
+    "vi": "Đã tuyển",
+    "en": "Hired",
+    "zh": "已录用",
+    "ja": "採用済み"
+  },
+  {
+    "key": "recruit.summary.hiredHint",
+    "category": "recruit",
+    "vi": "Ứng viên chốt thành công",
+    "en": "Successfully closed candidates",
+    "zh": "成功录用的候选人",
+    "ja": "採用確定した候補者"
+  },
+  {
+    "key": "recruit.positionsOverview",
+    "category": "recruit",
+    "vi": "Tổng quan các vị trí đang mở, đã đóng và mức độ quan tâm của ứng viên.",
+    "en": "Overview of open and closed positions and candidate interest.",
+    "zh": "概览开放、关闭职位及候选人关注度。",
+    "ja": "募集中・終了済みポジションと候補者の関心度の概要。"
+  },
+  {
+    "key": "recruit.emptyPositions",
+    "category": "recruit",
+    "vi": "Chưa có vị trí tuyển dụng nào.",
+    "en": "No job positions yet.",
+    "zh": "当前没有招聘职位。",
+    "ja": "現在、募集職種はありません。"
+  },
+  {
+    "key": "recruit.featuredRequirements",
+    "category": "recruit",
+    "vi": "Yêu cầu nổi bật",
+    "en": "Key requirements",
+    "zh": "重点要求",
+    "ja": "主な要件"
+  },
+  {
+    "key": "recruit.applicationCount",
+    "category": "recruit",
+    "vi": "{count} ứng viên",
+    "en": "{count} candidates",
+    "zh": "{count} 位候选人",
+    "ja": "{count}人の候補者"
+  },
+  {
+    "key": "recruit.deletePosition",
+    "category": "recruit",
+    "vi": "Xóa vị trí",
+    "en": "Delete position",
+    "zh": "删除职位",
+    "ja": "職種を削除"
+  },
+  {
+    "key": "recruit.applicationsOverview",
+    "category": "recruit",
+    "vi": "Theo dõi hồ sơ theo vị trí, trạng thái và xem nhanh thông tin ứng viên.",
+    "en": "Track applications by position and status, and review candidate details quickly.",
+    "zh": "按职位和状态跟踪申请，并快速查看候选人信息。",
+    "ja": "職種とステータスごとに応募を追跡し、候補者情報をすばやく確認します。"
+  },
+  {
+    "key": "recruit.summary.newStatusCount",
+    "category": "recruit",
+    "vi": "{count} mới",
+    "en": "{count} new",
+    "zh": "{count} 个新申请",
+    "ja": "{count}件の新規"
+  },
+  {
+    "key": "recruit.summary.interviewStatusCount",
+    "category": "recruit",
+    "vi": "{count} phỏng vấn",
+    "en": "{count} interviews",
+    "zh": "{count} 个面试中",
+    "ja": "{count}件の面接"
+  },
+  {
+    "key": "recruit.summary.hiredStatusCount",
+    "category": "recruit",
+    "vi": "{count} đã tuyển",
+    "en": "{count} hired",
+    "zh": "{count} 个已录用",
+    "ja": "{count}件の採用済み"
+  },
+  {
+    "key": "recruit.filters.allPositions",
+    "category": "recruit",
+    "vi": "Tất cả vị trí",
+    "en": "All positions",
+    "zh": "全部职位",
+    "ja": "すべての職種"
+  },
+  {
+    "key": "recruit.filters.allStatuses",
+    "category": "recruit",
+    "vi": "Tất cả trạng thái",
+    "en": "All statuses",
+    "zh": "全部状态",
+    "ja": "すべてのステータス"
+  },
+  {
+    "key": "recruit.emptyApplications",
+    "category": "recruit",
+    "vi": "Chưa có đơn ứng tuyển nào.",
+    "en": "No applications yet.",
+    "zh": "当前没有申请。",
+    "ja": "現在、応募はありません。"
+  },
+  {
+    "key": "recruit.experienceYearsLabel",
+    "category": "recruit",
+    "vi": "Kinh nghiệm",
+    "en": "Experience",
+    "zh": "经验",
+    "ja": "経験"
+  },
+  {
+    "key": "recruit.experienceYearsValue",
+    "category": "recruit",
+    "vi": "{count} năm",
+    "en": "{count} years",
+    "zh": "{count} 年",
+    "ja": "{count}年"
+  },
+  {
+    "key": "recruit.viewCoverLetter",
+    "category": "recruit",
+    "vi": "Xem thư",
+    "en": "View letter",
+    "zh": "查看求职信",
+    "ja": "紹介文を見る"
+  },
+  {
+    "key": "recruit.downloadCv",
+    "category": "recruit",
+    "vi": "Tải CV",
+    "en": "Download CV",
+    "zh": "下载简历",
+    "ja": "履歴書をダウンロード"
+  },
+  {
+    "key": "recruit.shortInterview",
+    "category": "recruit",
+    "vi": "PV",
+    "en": "IV",
+    "zh": "面试",
+    "ja": "面接"
+  },
+  {
+    "key": "recruit.shortReject",
+    "category": "recruit",
+    "vi": "Từ chối",
+    "en": "Reject",
+    "zh": "拒绝",
+    "ja": "不採用"
+  },
+  {
+    "key": "recruit.inviteInterview",
+    "category": "recruit",
+    "vi": "Mời phỏng vấn",
+    "en": "Invite to interview",
+    "zh": "邀请面试",
+    "ja": "面接に招待"
+  },
+  {
+    "key": "recruit.reject",
+    "category": "recruit",
+    "vi": "Từ chối",
+    "en": "Reject",
+    "zh": "拒绝",
+    "ja": "不採用"
+  },
+  {
+    "key": "recruit.coverLetterTitle",
+    "category": "recruit",
+    "vi": "Thư giới thiệu ứng viên",
+    "en": "Candidate cover letter",
+    "zh": "候选人求职信",
+    "ja": "候補者の紹介文"
+  },
+  {
+    "key": "recruit.emptyCoverLetter",
+    "category": "recruit",
+    "vi": "Ứng viên chưa để lại thư giới thiệu.",
+    "en": "This candidate did not leave a cover letter.",
+    "zh": "候选人尚未留下求职信。",
+    "ja": "この候補者は紹介文を残していません。"
+  },
+  {
+    "key": "recruit.form.createTitle",
+    "category": "recruit",
+    "vi": "Đăng vị trí tuyển dụng",
+    "en": "Create job position",
+    "zh": "发布招聘职位",
+    "ja": "募集職種を作成"
+  },
+  {
+    "key": "recruit.form.editTitle",
+    "category": "recruit",
+    "vi": "Chỉnh sửa vị trí tuyển dụng",
+    "en": "Edit job position",
+    "zh": "编辑招聘职位",
+    "ja": "募集職種を編集"
+  },
+  {
+    "key": "recruit.form.fields.title",
+    "category": "recruit",
+    "vi": "Chức danh *",
+    "en": "Title *",
+    "zh": "职位名称 *",
+    "ja": "職種名 *"
+  },
+  {
+    "key": "recruit.form.fields.department",
+    "category": "recruit",
+    "vi": "Phòng ban *",
+    "en": "Department *",
+    "zh": "部门 *",
+    "ja": "部門 *"
+  },
+  {
+    "key": "recruit.form.fields.location",
+    "category": "recruit",
+    "vi": "Địa điểm *",
+    "en": "Location *",
+    "zh": "地点 *",
+    "ja": "勤務地 *"
+  },
+  {
+    "key": "recruit.form.fields.employmentType",
+    "category": "recruit",
+    "vi": "Hình thức làm việc",
+    "en": "Employment type",
+    "zh": "工作类型",
+    "ja": "雇用形態"
+  },
+  {
+    "key": "recruit.form.fields.experienceLevel",
+    "category": "recruit",
+    "vi": "Kinh nghiệm yêu cầu",
+    "en": "Experience level",
+    "zh": "经验要求",
+    "ja": "必要経験"
+  },
+  {
+    "key": "recruit.form.fields.sortOrder",
+    "category": "recruit",
+    "vi": "Thứ tự hiển thị",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "表示順"
+  },
+  {
+    "key": "recruit.form.placeholders.title",
+    "category": "recruit",
+    "vi": "Kỹ sư kết cấu, Kiến trúc sư...",
+    "en": "Structural Engineer, Architect...",
+    "zh": "结构工程师、建筑师……",
+    "ja": "構造エンジニア、建築士など"
+  },
+  {
+    "key": "recruit.form.placeholders.department",
+    "category": "recruit",
+    "vi": "Thiết kế, Thi công...",
+    "en": "Design, Construction...",
+    "zh": "设计、施工……",
+    "ja": "設計、施工など"
+  },
+  {
+    "key": "recruit.form.placeholders.location",
+    "category": "recruit",
+    "vi": "TP.HCM, Toàn quốc...",
+    "en": "HCMC, Nationwide...",
+    "zh": "胡志明市、全国……",
+    "ja": "ホーチミン、全国など"
+  },
+  {
+    "key": "recruit.form.descriptionTitle",
+    "category": "recruit",
+    "vi": "Mô tả công việc",
+    "en": "Job description",
+    "zh": "职位描述",
+    "ja": "仕事内容"
+  },
+  {
+    "key": "recruit.form.placeholders.description",
+    "category": "recruit",
+    "vi": "Mô tả chi tiết về vị trí, trách nhiệm công việc...",
+    "en": "Describe the position and responsibilities...",
+    "zh": "描述职位及其职责……",
+    "ja": "ポジションと業務内容を記載してください。"
+  },
+  {
+    "key": "recruit.form.requirementsTitle",
+    "category": "recruit",
+    "vi": "Yêu cầu ứng viên",
+    "en": "Candidate requirements",
+    "zh": "候选人要求",
+    "ja": "応募要件"
+  },
+  {
+    "key": "recruit.form.placeholders.requirement",
+    "category": "recruit",
+    "vi": "Tốt nghiệp đại học chuyên ngành...",
+    "en": "University degree in a relevant major...",
+    "zh": "相关专业本科毕业……",
+    "ja": "関連分野の大学卒業など"
+  },
+  {
+    "key": "recruit.form.addRequirement",
+    "category": "recruit",
+    "vi": "Thêm yêu cầu",
+    "en": "Add requirement",
+    "zh": "添加要求",
+    "ja": "要件を追加"
+  },
+  {
+    "key": "recruit.form.settingsTitle",
+    "category": "recruit",
+    "vi": "Cài đặt",
+    "en": "Settings",
+    "zh": "设置",
+    "ja": "設定"
+  },
+  {
+    "key": "recruit.form.isActive",
+    "category": "recruit",
+    "vi": "Đang tuyển dụng",
+    "en": "Currently hiring",
+    "zh": "正在招聘",
+    "ja": "募集中"
+  },
+  {
+    "key": "rec.positions.loading",
+    "category": "rec",
+    "vi": "Đang tải vị trí tuyển dụng...",
+    "en": "Loading job positions...",
+    "zh": "正在加载职位列表……",
+    "ja": "募集職種を読み込み中です…"
+  },
+  {
+    "key": "rec.positions.empty",
+    "category": "rec",
+    "vi": "Hiện chưa có vị trí tuyển dụng đang mở. Bạn có thể để lại nhu cầu tại trang liên hệ.",
+    "en": "There are no open positions right now. You can leave your inquiry on the contact page.",
+    "zh": "当前没有开放职位。您可以在联系页面留下需求。",
+    "ja": "現在募集中の職種はありません。お問い合わせページからご連絡ください。"
+  },
+  {
+    "key": "rec.form.eyebrow",
+    "category": "rec",
+    "vi": "Ứng tuyển trực tuyến",
+    "en": "Apply online",
+    "zh": "在线申请",
+    "ja": "オンライン応募"
+  },
+  {
+    "key": "rec.form.selectPositionTitle",
+    "category": "rec",
+    "vi": "Chọn vị trí phù hợp",
+    "en": "Choose a suitable position",
+    "zh": "选择合适的职位",
+    "ja": "適した職種を選択"
+  },
+  {
+    "key": "rec.form.selectPositionHint",
+    "category": "rec",
+    "vi": "Chọn một vị trí ở danh sách bên trái để gửi hồ sơ ngay trên website.",
+    "en": "Choose a position from the list to submit your application on the website.",
+    "zh": "从列表中选择职位，即可在网站上直接提交申请。",
+    "ja": "一覧から職種を選ぶと、このサイト上で応募できます。"
+  },
+  {
+    "key": "rec.form.fullName",
+    "category": "rec",
+    "vi": "Họ và tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "rec.form.fullNamePlaceholder",
+    "category": "rec",
+    "vi": "Nguyễn Văn A",
+    "en": "Nguyen Van A",
+    "zh": "Nguyễn Văn A",
+    "ja": "Nguyen Van A"
+  },
+  {
+    "key": "rec.form.phone",
+    "category": "rec",
+    "vi": "Số điện thoại",
+    "en": "Phone number",
+    "zh": "电话号码",
+    "ja": "電話番号"
+  },
+  {
+    "key": "rec.form.phonePlaceholder",
+    "category": "rec",
+    "vi": "090...",
+    "en": "090...",
+    "zh": "090...",
+    "ja": "090..."
+  },
+  {
+    "key": "rec.form.experienceYears",
+    "category": "rec",
+    "vi": "Số năm kinh nghiệm",
+    "en": "Years of experience",
+    "zh": "工作年限",
+    "ja": "経験年数"
+  },
+  {
+    "key": "rec.form.coverLetter",
+    "category": "rec",
+    "vi": "Giới thiệu ngắn",
+    "en": "Short introduction",
+    "zh": "简短介绍",
+    "ja": "自己紹介"
+  },
+  {
+    "key": "rec.form.coverLetterPlaceholder",
+    "category": "rec",
+    "vi": "Giới thiệu ngắn về kinh nghiệm, dự án đã tham gia, thế mạnh của bạn...",
+    "en": "Briefly introduce your experience, projects, and strengths...",
+    "zh": "简要介绍您的经验、参与项目和优势……",
+    "ja": "経験、参加したプロジェクト、強みを簡単にご紹介ください。"
+  },
+  {
+    "key": "rec.form.cvLabel",
+    "category": "rec",
+    "vi": "CV / Hồ sơ (PDF, DOC, DOCX)",
+    "en": "CV / Resume (PDF, DOC, DOCX)",
+    "zh": "简历（PDF、DOC、DOCX）",
+    "ja": "履歴書（PDF、DOC、DOCX）"
+  },
+  {
+    "key": "rec.form.cvPlaceholder",
+    "category": "rec",
+    "vi": "Chọn file...",
+    "en": "Choose a file...",
+    "zh": "选择文件……",
+    "ja": "ファイルを選択..."
+  },
+  {
+    "key": "rec.form.submit",
+    "category": "rec",
+    "vi": "Gửi hồ sơ",
+    "en": "Submit application",
+    "zh": "提交申请",
+    "ja": "応募を送信"
+  },
+  {
+    "key": "rec.form.errors.positionRequired",
+    "category": "rec",
+    "vi": "Vui lòng chọn vị trí ứng tuyển.",
+    "en": "Please choose a position.",
+    "zh": "请选择应聘职位。",
+    "ja": "応募する職種を選択してください。"
+  },
+  {
+    "key": "rec.form.errors.nameEmailRequired",
+    "category": "rec",
+    "vi": "Vui lòng nhập họ tên và email.",
+    "en": "Please enter your full name and email.",
+    "zh": "请输入姓名和邮箱。",
+    "ja": "氏名とメールアドレスを入力してください。"
+  },
+  {
+    "key": "rec.form.toast.submitted",
+    "category": "rec",
+    "vi": "Đã gửi hồ sơ",
+    "en": "Application submitted",
+    "zh": "申请已提交",
+    "ja": "応募を送信しました"
+  },
+  {
+    "key": "rec.form.errors.submitFailed",
+    "category": "rec",
+    "vi": "Không thể gửi hồ sơ lúc này.",
+    "en": "Unable to submit the application right now.",
+    "zh": "暂时无法提交申请。",
+    "ja": "現在、応募を送信できません。"
   }
 ]

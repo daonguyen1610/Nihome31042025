@@ -105,7 +105,7 @@ export interface ActivityCategoryResponse {
   sortOrder: number;
 }
 
-  export interface JobPositionResponse {
+export interface JobPositionResponse {
     id: number;
     title: string;
     department: string;
@@ -116,10 +116,21 @@ export interface ActivityCategoryResponse {
     requirements: string[];
     isActive: boolean;
     sortOrder: number;
-    applicationCount: number;
-  }
+  applicationCount: number;
+}
 
-  export interface JobApplicationResponse {
+export interface RecruitmentOptionResponse {
+  value: string;
+  label: string;
+}
+
+export interface RecruitmentMetadataResponse {
+  employmentTypes: RecruitmentOptionResponse[];
+  experienceLevels: RecruitmentOptionResponse[];
+  applicationStatuses: RecruitmentOptionResponse[];
+}
+
+export interface JobApplicationResponse {
     id: number;
     jobPositionId: number;
     positionTitle: string;
@@ -301,6 +312,9 @@ export const contentApi = {
   // Job positions (public)
   getJobPositions: () =>
     api.get<JobPositionResponse[]>("/job-positions"),
+
+  getRecruitmentMetadata: (lang = "vi") =>
+    api.get<RecruitmentMetadataResponse>(`/recruitment/metadata?lang=${lang}`),
 
   uploadCv: (file: File) => {
     const formData = new FormData();

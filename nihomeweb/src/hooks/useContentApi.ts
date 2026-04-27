@@ -11,9 +11,10 @@ import {
   type ProcessResponse,
   type SlideshowResponse,
   type ContactMessageResponse,
+  type RecruitmentMetadataResponse,
 } from "@/services/contentApi";
 import { adminApi } from "@/services/adminApi";
-  import type { JobPositionResponse } from "@/services/contentApi";
+import type { JobPositionResponse } from "@/services/contentApi";
 
 /* ------------------------------------------------------------------ */
 /*  Generic fetch hook with loading / error / data pattern            */
@@ -101,9 +102,14 @@ export function useProcesses() {
   return useFetch<Record<string, ProcessResponse[]>>(() => contentApi.getProcesses(), []);
 }
 
-  export function useJobPositions() {
-    return useFetch<JobPositionResponse[]>(() => contentApi.getJobPositions(), []);
-  }
+export function useJobPositions() {
+  return useFetch<JobPositionResponse[]>(() => contentApi.getJobPositions(), []);
+}
+
+export function useRecruitmentMetadata() {
+  const { lang } = useI18n();
+  return useFetch<RecruitmentMetadataResponse>(() => contentApi.getRecruitmentMetadata(lang), [lang]);
+}
 
 export function useSlideshow() {
   const { lang } = useI18n();

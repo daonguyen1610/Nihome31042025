@@ -4,6 +4,7 @@ import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { useRecruitmentMetadata } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import type { UpsertJobPositionRequest, JobPositionResponse } from "@/services/adminApi";
 
@@ -25,8 +26,8 @@ const empty: FormData = {
   title: "",
   department: "",
   location: "",
-  employmentType: "full-time",
-  experienceLevel: "mid",
+  employmentType: "",
+  experienceLevel: "",
   description: "",
   requirements: [],
   isActive: true,
@@ -38,9 +39,20 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
+  const { data: metadata } = useRecruitmentMetadata();
   const [data, setData] = useState<FormData>(empty);
   const [loading, setLoading] = useState(mode === "edit");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (mode !== "create" || !metadata) return;
+
+    setData((current) => ({
+      ...current,
+      employmentType: current.employmentType || metadata.employmentTypes[0]?.value || "",
+      experienceLevel: current.experienceLevel || metadata.experienceLevels[0]?.value || "",
+    }));
+  }, [metadata, mode]);
 
   useEffect(() => {
     if (mode !== "edit" || !idParam) return;
@@ -109,7 +121,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
     }
   };
 
-  if (loading) {
+  if (loading || !metadata) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -131,7 +143,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
         </Link>
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {mode === "create" ? "Đăng vị trí tuyển dụng" : "Chỉnh sửa vị trí tuyển dụng"}
+            {mode === "create" ? t("recruit.form.createTitle") : t("recruit.form.editTitle")}
           </h1>
           {mode === "edit" && data.title && (
             <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{data.title}</p>
@@ -146,54 +158,53 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="Chức danh *" className="md:col-span-2">
+              <Field label={t("recruit.form.fields.title")} className="md:col-span-2">
                 <input
                   className="admin-input"
                   value={data.title}
                   onChange={(e) => update("title", e.target.value)}
-                  placeholder="Kỹ sư kết cấu, Kiến trúc sư..."
+                  placeholder={t("recruit.form.placeholders.title")}
                   required
                 />
               </Field>
-              <Field label="Phòng ban *">
+              <Field label={t("recruit.form.fields.department")}>
                 <input
                   className="admin-input"
                   value={data.department}
                   onChange={(e) => update("department", e.target.value)}
-                  placeholder="Thiết kế, Thi công..."
+                  placeholder={t("recruit.form.placeholders.department")}
                   required
                 />
               </Field>
-              <Field label="Địa điểm *">
+              <Field label={t("recruit.form.fields.location")}>
                 <input
                   className="admin-input"
                   value={data.location}
                   onChange={(e) => update("location", e.target.value)}
-                  placeholder="TP.HCM, Toàn quốc..."
+                  placeholder={t("recruit.form.placeholders.location")}
                   required
                 />
               </Field>
-              <Field label="Hình thức làm việc">
+              <Field label={t("recruit.form.fields.employmentType")}>
                 <select
                   className="admin-input"
                   value={data.employmentType}
                   onChange={(e) => update("employmentType", e.target.value)}
                 >
-                  <option value="full-time">Toàn thời gian</option>
-                  <option value="part-time">Bán thời gian</option>
-                  <option value="intern">Thực tập sinh</option>
+                  {metadata?.employmentTypes.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </Field>
-              <Field label="Kinh nghiệm yêu cầu">
+              <Field label={t("recruit.form.fields.experienceLevel")}>
                 <select
                   className="admin-input"
                   value={data.experienceLevel}
                   onChange={(e) => update("experienceLevel", e.target.value)}
                 >
-                  <option value="student">Sinh viên</option>
-                  <option value="junior">Mới ra trường (0–2 năm)</option>
-                  <option value="mid">Trung cấp (2–5 năm)</option>
-                  <option value="senior">Cao cấp (5+ năm)</option>
+                  {metadata?.experienceLevels.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </Field>
             </div>
@@ -201,18 +212,18 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
           {/* Description */}
           <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">Mô tả công việc</h2>
+            <h2 className="font-bold mb-4">{t("recruit.form.descriptionTitle")}</h2>
             <textarea
               className="admin-input min-h-28"
               value={data.description}
               onChange={(e) => update("description", e.target.value)}
-              placeholder="Mô tả chi tiết về vị trí, trách nhiệm công việc..."
+              placeholder={t("recruit.form.placeholders.description")}
             />
           </div>
 
           {/* Requirements */}
           <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">Yêu cầu ứng viên</h2>
+            <h2 className="font-bold mb-4">{t("recruit.form.requirementsTitle")}</h2>
             <div className="space-y-2">
               {data.requirements.map((req, i) => (
                 <div key={i} className="flex gap-2">
@@ -220,7 +231,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                     className="admin-input flex-1"
                     value={req}
                     onChange={(e) => updateRequirement(i, e.target.value)}
-                    placeholder="Tốt nghiệp đại học chuyên ngành..."
+                    placeholder={t("recruit.form.placeholders.requirement")}
                   />
                   <button
                     type="button"
@@ -238,7 +249,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                 className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-sm hover:bg-muted transition"
                 style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))" }}
               >
-                <Plus className="w-3.5 h-3.5" /> Thêm yêu cầu
+                <Plus className="w-3.5 h-3.5" /> {t("recruit.form.addRequirement")}
               </button>
             </div>
           </div>
@@ -247,7 +258,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
         {/* Sidebar */}
         <div className="space-y-5">
           <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">Cài đặt</h2>
+            <h2 className="font-bold mb-4">{t("recruit.form.settingsTitle")}</h2>
             <div className="space-y-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -256,9 +267,9 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   onChange={(e) => update("isActive", e.target.checked)}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-sm font-medium">Đang tuyển dụng</span>
+                <span className="text-sm font-medium">{t("recruit.form.isActive")}</span>
               </label>
-              <Field label="Thứ tự hiển thị">
+              <Field label={t("recruit.form.fields.sortOrder")}>
                 <input
                   type="number"
                   className="admin-input"

@@ -15,6 +15,19 @@ public class JobPositionResponse
     public int ApplicationCount { get; set; }
 }
 
+public class RecruitmentOptionResponse
+{
+    public string Value { get; set; } = "";
+    public string Label { get; set; } = "";
+}
+
+public class RecruitmentMetadataResponse
+{
+    public List<RecruitmentOptionResponse> EmploymentTypes { get; set; } = [];
+    public List<RecruitmentOptionResponse> ExperienceLevels { get; set; } = [];
+    public List<RecruitmentOptionResponse> ApplicationStatuses { get; set; } = [];
+}
+
 public class JobApplicationResponse
 {
     public int Id { get; set; }
