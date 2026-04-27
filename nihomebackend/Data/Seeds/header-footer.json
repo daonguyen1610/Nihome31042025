@@ -318,5 +318,13 @@
     "en": "Translations",
     "zh": "翻译管理",
     "ja": "翻訳管理"
+  },
+  {
+    "key": "nav.employmentTypes",
+    "category": "nav",
+    "vi": "Hình thức làm việc",
+    "en": "Employment types",
+    "zh": "工作形式",
+    "ja": "雇用形態"
   }
 ]

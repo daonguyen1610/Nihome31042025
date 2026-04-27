@@ -37,13 +37,14 @@ public class JobPositionService(AppDbContext db, EmploymentTypeService employmen
     public async Task<JobPositionResponse> CreateAsync(UpsertJobPositionRequest req)
     {
         await employmentTypeService.EnsureCodeExistsAsync(req.EmploymentType);
+        var normalizedEmploymentType = req.EmploymentType.Trim().ToLowerInvariant();
 
         var entity = new JobPosition
         {
             Title = req.Title.Trim(),
             Department = req.Department.Trim(),
             Location = req.Location.Trim(),
-            EmploymentType = req.EmploymentType,
+            EmploymentType = normalizedEmploymentType,
             ExperienceLevel = req.ExperienceLevel,
             Description = req.Description?.Trim(),
             RequirementsJson = JsonSerializer.Serialize(req.Requirements, JsonOpts),
@@ -59,6 +60,7 @@ public class JobPositionService(AppDbContext db, EmploymentTypeService employmen
     public async Task<JobPositionResponse?> UpdateAsync(int id, UpsertJobPositionRequest req)
     {
         await employmentTypeService.EnsureCodeExistsAsync(req.EmploymentType);
+        var normalizedEmploymentType = req.EmploymentType.Trim().ToLowerInvariant();
 
         var entity = await db.JobPositions.FindAsync(id);
         if (entity == null) return null;
@@ -66,7 +68,7 @@ public class JobPositionService(AppDbContext db, EmploymentTypeService employmen
         entity.Title = req.Title.Trim();
         entity.Department = req.Department.Trim();
         entity.Location = req.Location.Trim();
-        entity.EmploymentType = req.EmploymentType;
+        entity.EmploymentType = normalizedEmploymentType;
         entity.ExperienceLevel = req.ExperienceLevel;
         entity.Description = req.Description?.Trim();
         entity.RequirementsJson = JsonSerializer.Serialize(req.Requirements, JsonOpts);

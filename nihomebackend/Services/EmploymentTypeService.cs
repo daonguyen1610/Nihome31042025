@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
@@ -85,7 +86,7 @@ public class EmploymentTypeService(AppDbContext db)
 
         var inUse = await db.JobPositions
             .AsNoTracking()
-            .AnyAsync(x => x.EmploymentType.ToLower() == entity.Code.ToLower());
+            .AnyAsync(x => x.EmploymentType.Trim().ToLower() == entity.Code);
 
         if (inUse)
         {
@@ -143,15 +144,25 @@ public class EmploymentTypeService(AppDbContext db)
         }
 
         db.EmploymentTypes.AddRange(entities);
-        await db.SaveChangesAsync();
-        Logger.LogInformation("Seeded {Count} employment types", entities.Count);
+        try
+        {
+            await db.SaveChangesAsync();
+            Logger.LogInformation("Seeded {Count} employment types", entities.Count);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            // Concurrent first-requests may race on the same defaults.
+            // Treat duplicate-key as benign and continue with existing rows.
+            db.ChangeTracker.Clear();
+            Logger.LogInformation("Skipped employment type seeding due to concurrent insert race.");
+        }
     }
 
     private async Task EnsureCodeUniqueAsync(string code, int? excludingId = null)
     {
         var exists = await db.EmploymentTypes
             .AsNoTracking()
-            .AnyAsync(x => x.Code.ToLower() == code.ToLower() && (!excludingId.HasValue || x.Id != excludingId.Value));
+            .AnyAsync(x => x.Code == code && (!excludingId.HasValue || x.Id != excludingId.Value));
 
         if (exists)
         {
@@ -166,9 +177,9 @@ public class EmploymentTypeService(AppDbContext db)
             return;
         }
 
-        var previousCodeNormalized = previousCode.Trim().ToLower();
+        var previousCodeNormalized = NormalizeCode(previousCode);
         var linkedPositions = await db.JobPositions
-            .Where(x => x.EmploymentType.ToLower() == previousCodeNormalized)
+            .Where(x => x.EmploymentType.Trim().ToLower() == previousCodeNormalized)
             .ToListAsync();
 
         foreach (var position in linkedPositions)
@@ -183,7 +194,7 @@ public class EmploymentTypeService(AppDbContext db)
         var normalizedCode = NormalizeCode(code);
         var exists = await db.EmploymentTypes
             .AsNoTracking()
-            .AnyAsync(x => x.Code.ToLower() == normalizedCode.ToLower());
+            .AnyAsync(x => x.Code == normalizedCode);
 
         if (!exists)
         {
@@ -199,7 +210,7 @@ public class EmploymentTypeService(AppDbContext db)
             throw new InvalidOperationException("Mã hình thức làm việc không được để trống.");
         }
 
-        return normalized;
+        return normalized.ToLowerInvariant();
     }
 
     private static string NormalizeName(string name)
@@ -211,6 +222,16 @@ public class EmploymentTypeService(AppDbContext db)
         }
 
         return normalized;
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        if (ex.InnerException is not SqlException sqlException)
+        {
+            return false;
+        }
+
+        return sqlException.Number == 2601 || sqlException.Number == 2627;
     }
 
     private static EmploymentTypeResponse MapToResponse(EmploymentType item) => new()
