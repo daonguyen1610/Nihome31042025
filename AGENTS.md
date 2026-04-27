@@ -76,6 +76,7 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 * Handle loading, error, and empty states.
 * Update the translation and content keys in the ASP .NET DbSeeder aligned with frontend.
 * Check `npm run lint` and fix the issues.
+* No hardcode like the category in the React. All need to fetch from the backend API to avoid the hardcode.
 
 ---
 
