@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // Recruitment
     public DbSet<JobPosition> JobPositions => Set<JobPosition>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
+    public DbSet<EmploymentType> EmploymentTypes => Set<EmploymentType>();
 
     // Contact
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
@@ -105,6 +106,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany(j => j.Applications)
             .HasForeignKey(a => a.JobPositionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<EmploymentType>().ToTable("employment_types");
+        modelBuilder.Entity<EmploymentType>().HasKey(e => e.Id);
+        modelBuilder.Entity<EmploymentType>().HasIndex(e => e.Code).IsUnique();
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");
         modelBuilder.Entity<ContactMessage>().HasKey(c => c.Id);

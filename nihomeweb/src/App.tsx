@@ -27,6 +27,7 @@ import AdminPosts from "./pages/admin/Posts.tsx";
 import AdminProjects from "./pages/admin/Projects.tsx";
 import AdminContacts from "./pages/admin/Contacts.tsx";
 import AdminRecruitment from "./pages/admin/Recruitment.tsx";
+import EmploymentTypes from "./pages/admin/EmploymentTypes.tsx";
 import SettingsCenter from "./pages/admin/SettingsCenter.tsx";
 import JobPositionForm from "./pages/admin/JobPositionForm.tsx";
 import EmailTemplateConfig from "./pages/admin/EmailTemplateConfig.tsx";
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
             <Route path="/admin/contacts" element={<AdminContacts />} />
             <Route path="/admin/recruitment" element={<AdminRecruitment />} />
+            <Route path="/admin/recruitment/employment-types" element={<EmploymentTypes />} />
             <Route path="/admin/recruitment/new" element={<JobPositionForm mode="create" />} />
             <Route path="/admin/recruitment/:id/edit" element={<JobPositionForm mode="edit" />} />
             <Route path="/admin/email-templates" element={<EmailTemplateConfig />} />

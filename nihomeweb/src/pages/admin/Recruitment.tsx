@@ -5,7 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
-import type { JobPositionResponse, JobApplicationResponse } from "@/services/adminApi";
+import type { JobPositionResponse, JobApplicationResponse, EmploymentTypeResponse } from "@/services/adminApi";
 
 const APP_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   new: { bg: "hsl(var(--admin-info-soft))", color: "hsl(var(--admin-info))", label: "Mới" },
@@ -31,6 +31,7 @@ const AdminRecruitment = () => {
   const [loadingPositions, setLoadingPositions] = useState(true);
   const [loadingApps, setLoadingApps] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [employmentTypes, setEmploymentTypes] = useState<EmploymentTypeResponse[]>([]);
   const [filterPosition, setFilterPosition] = useState<number | "">("");
   const [filterStatus, setFilterStatus] = useState<string>("");
 
@@ -63,6 +64,15 @@ const AdminRecruitment = () => {
 
   useEffect(() => { loadPositions(); }, [loadPositions]);
   useEffect(() => { loadApplications(); }, [loadApplications]);
+  useEffect(() => {
+    adminApi.getEmploymentTypes(true)
+      .then((res) => setEmploymentTypes(res.data))
+      .catch(() => setEmploymentTypes([]));
+  }, []);
+
+  const employmentTypeMap = useMemo(() => {
+    return new Map(employmentTypes.map((item) => [item.code, item.name]));
+  }, [employmentTypes]);
 
   const deletePosition = async (id: number, title: string) => {
     if (!confirm(`Xóa vị trí "${title}"? Tất cả đơn ứng tuyển liên quan cũng sẽ bị xóa.`)) return;
@@ -111,12 +121,21 @@ const AdminRecruitment = () => {
             {activeCount} {t("recruit.positions")} đang mở · {applications.length} {t("recruit.applications")}
           </p>
         </div>
-        <Link
-          to="/admin/recruitment/new"
-          className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-        >
-          <Plus className="w-4 h-4" /> {t("recruit.postPosition")}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/admin/recruitment/employment-types"
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm rounded-xl border font-semibold hover:bg-muted transition"
+            style={{ borderColor: "hsl(var(--admin-border))" }}
+          >
+            Quản lý hình thức làm việc
+          </Link>
+          <Link
+            to="/admin/recruitment/new"
+            className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
+          >
+            <Plus className="w-4 h-4" /> {t("recruit.postPosition")}
+          </Link>
+        </div>
       </div>
 
       <h2 className="font-display text-xl font-extrabold mb-4">{t("recruit.positions")}</h2>
@@ -154,7 +173,7 @@ const AdminRecruitment = () => {
               <p className="text-xs mb-2" style={{ color: "hsl(var(--admin-muted))" }}>{p.department}</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="admin-chip text-xs">
-                  {p.employmentType === "full-time" ? "Toàn thời gian" : p.employmentType === "intern" ? "Thực tập" : p.employmentType}
+                  {employmentTypeMap.get(p.employmentType) ?? p.employmentType}
                 </span>
                 <span className="admin-chip text-xs">
                   {p.experienceLevel === "student" ? "Sinh viên" : p.experienceLevel === "junior" ? "0–2 năm" : p.experienceLevel === "mid" ? "2–5 năm" : "5+ năm"}

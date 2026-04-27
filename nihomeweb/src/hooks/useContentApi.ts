@@ -3,6 +3,7 @@ import { useI18n } from "@/lib/i18n";
 import {
   contentApi,
   type ActivityCategoryResponse,
+  type EmploymentTypeResponse,
   type ActivityResponse,
   type NewsResponse,
   type ProjectResponse,
@@ -63,6 +64,13 @@ export function useActivity(slug: string) {
 export function useActivityCategories(includeInactive = false) {
   return useFetch<ActivityCategoryResponse[]>(
     () => contentApi.getActivityCategories(includeInactive),
+    [includeInactive],
+  );
+}
+
+export function useEmploymentTypes(includeInactive = false) {
+  return useFetch<EmploymentTypeResponse[]>(
+    () => contentApi.getEmploymentTypes(includeInactive),
     [includeInactive],
   );
 }

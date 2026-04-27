@@ -816,7 +816,7 @@ Administrators create and manage job positions with the following details:
 | Title            | Position title                                        |
 | Department       | Department name                                       |
 | Location         | Work location                                         |
-| Employment Type  | `full-time` or `intern`                               |
+| Employment Type  | Employment type code managed in Employment Types API  |
 | Experience Level | `junior`, `mid`, or `senior`                          |
 | Description      | Full position description                             |
 | Requirements     | JSON array of position requirements                   |
@@ -1216,7 +1216,16 @@ Authorization: Bearer <access-token>
 }
 ```
 
-### 14.9 Recruitment -- Job Applications
+### 14.9 Recruitment -- Employment Types
+
+| Method | Endpoint                                      | Auth   | Description                                         |
+|--------|-----------------------------------------------|--------|-----------------------------------------------------|
+| GET    | `/api/employment-types?includeInactive=false` | Public | List active employment types                        |
+| POST   | `/api/employment-types`                       | Admin  | Create employment type (`code`, `name`, etc.)      |
+| PUT    | `/api/employment-types/{id}`                  | Admin  | Update employment type                              |
+| DELETE | `/api/employment-types/{id}`                  | Admin  | Delete employment type (blocked if still in use)   |
+
+### 14.10 Recruitment -- Job Applications
 
 | Method | Endpoint                                           | Auth   | Description                         |
 |--------|----------------------------------------------------|--------|-------------------------------------|
@@ -1491,7 +1500,7 @@ Same structure as Activity.
 | Title            | string   | Position title                    |
 | Department       | string   | Department name                   |
 | Location         | string   | Work location                     |
-| EmploymentType   | string   | `full-time` or `intern`           |
+| EmploymentType   | string   | Employment type code              |
 | ExperienceLevel  | string   | `junior`, `mid`, or `senior`      |
 | Description      | string   | Position description              |
 | RequirementsJson | string   | JSON array of requirements        |
@@ -1500,7 +1509,19 @@ Same structure as Activity.
 | CreatedAt        | datetime | Creation timestamp                |
 | UpdatedAt        | datetime | Last update timestamp             |
 
-### 15.8 Job Application
+### 15.8 Employment Type
+
+| Field     | Type     | Description                                 |
+|-----------|----------|---------------------------------------------|
+| Id        | int      | Primary key                                 |
+| Code      | string   | Unique code used by `job_positions`         |
+| Name      | string   | Display name                                |
+| IsActive  | bool     | Whether available for new position creation |
+| SortOrder | int      | Display order                               |
+| CreatedAt | datetime | Creation timestamp                          |
+| UpdatedAt | datetime | Last update timestamp                       |
+
+### 15.9 Job Application
 
 | Field           | Type     | Description                        |
 |-----------------|----------|------------------------------------|
