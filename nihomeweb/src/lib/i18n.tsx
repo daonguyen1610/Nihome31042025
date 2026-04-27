@@ -98,7 +98,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       if (!params) return template;
 
       return Object.entries(params).reduce(
-        (result, [paramKey, value]) => result.replaceAll(`{${paramKey}}`, String(value)),
+        (result, [paramKey, value]) => result.split(`{${paramKey}}`).join(String(value)),
         template,
       );
     };
