@@ -34,10 +34,10 @@ const Profile = () => {
   ];
 
   const stats = [
-    { num: "18+", label: t("profilePage.stat.years"), icon: Calendar },
-    { num: "150+", label: t("profilePage.stat.projects"), icon: Building2 },
-    { num: "80+", label: t("profilePage.stat.clients"), icon: Users },
-    { num: "ISO", label: "9001:2015", icon: Award },
+    { num: t("profilePage.stat.yearsValue"), label: t("profilePage.stat.years"), icon: Calendar },
+    { num: t("profilePage.stat.projectsValue"), label: t("profilePage.stat.projects"), icon: Building2 },
+    { num: t("profilePage.stat.clientsValue"), label: t("profilePage.stat.clients"), icon: Users },
+    { num: t("profilePage.stat.isoTop"), label: t("profilePage.stat.isoBottom"), icon: Award },
   ];
 
   const businessLines = [
@@ -51,30 +51,30 @@ const Profile = () => {
 
   const leadership_data = {
     board: [
-      { role: t("profilePage.ld.role.chair"), name: "KTS. Võ Trí Nguyên" },
-      { role: t("profilePage.ld.role.viceChair"), name: "KS. Yoshihiro Mori" },
-      { role: t("profilePage.ld.role.viceChair"), name: "KTS. Lê Thị Yến" },
-      { role: t("profilePage.ld.role.secretary"), name: "MBA. Võ Tô Uyên" },
+      { role: t("profilePage.ld.role.chair"), name: t("profilePage.ld.name.chair") },
+      { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair1") },
+      { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair2") },
+      { role: t("profilePage.ld.role.secretary"), name: t("profilePage.ld.name.secretary") },
     ],
     directors: [
-      { role: t("profilePage.ld.role.ceo"), name: "KTS. Võ Trí Nguyên" },
-      { role: t("profilePage.ld.role.bdJp"), name: "Yoshihiro Mori" },
-      { role: t("profilePage.ld.role.bdAsia"), name: "Richard Penalosa" },
-      { role: t("profilePage.ld.role.design"), name: "KTS. Lê Thị Yến" },
+      { role: t("profilePage.ld.role.ceo"), name: t("profilePage.ld.name.ceo") },
+      { role: t("profilePage.ld.role.bdJp"), name: t("profilePage.ld.name.bdJp") },
+      { role: t("profilePage.ld.role.bdAsia"), name: t("profilePage.ld.name.bdAsia") },
+      { role: t("profilePage.ld.role.design"), name: t("profilePage.ld.name.design") },
     ],
   };
 
   const certifications = [
-    { name: "ISO 9001:2008", desc: t("profilePage.cert.iso2008.d") },
-    { name: "ISO 9001:2015", desc: t("profilePage.cert.iso2015.d") },
-    { name: "ISO 14001:2015", desc: t("profilePage.cert.iso14001.d") },
+    { name: t("profilePage.cert.iso2008.n"), desc: t("profilePage.cert.iso2008.d") },
+    { name: t("profilePage.cert.iso2015.n"), desc: t("profilePage.cert.iso2015.d") },
+    { name: t("profilePage.cert.iso14001.n"), desc: t("profilePage.cert.iso14001.d") },
   ];
 
   const downloads = [
-    { name: t("profilePage.dl.f1"), size: "12.4 MB", type: "PDF" },
-    { name: t("profilePage.dl.f2"), size: "1.8 MB", type: "PDF" },
-    { name: t("profilePage.dl.f3"), size: "24 MB", type: "PDF" },
-    { name: t("profilePage.dl.f4"), size: "0.6 MB", type: "PDF" },
+    { name: t("profilePage.dl.f1"), size: t("profilePage.dl.f1.size"), type: t("profilePage.dl.f1.type") },
+    { name: t("profilePage.dl.f2"), size: t("profilePage.dl.f2.size"), type: t("profilePage.dl.f2.type") },
+    { name: t("profilePage.dl.f3"), size: t("profilePage.dl.f3.size"), type: t("profilePage.dl.f3.type") },
+    { name: t("profilePage.dl.f4"), size: t("profilePage.dl.f4.size"), type: t("profilePage.dl.f4.type") },
   ];
 
   const navItems = [

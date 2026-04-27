@@ -39,6 +39,7 @@ import AdminCategories from "./pages/admin/Categories.tsx";
 import AdminActivityLog from "./pages/admin/ActivityLog.tsx";
 import AdminLogosManager from "./pages/admin/LogosManager.tsx";
 import AdminSimplePage from "./pages/admin/SimplePage.tsx";
+import AboutContent from "./pages/admin/AboutContent.tsx";
 import ProcessList from "./pages/admin/ProcessList.tsx";
 import LanguagesPage from "./pages/admin/settings/Languages.tsx";
 import TranslationsPage from "./pages/admin/settings/Translations.tsx";
@@ -101,7 +102,7 @@ const App = () => (
             <Route path="/admin/awards" element={<AdminLogosManager kind="awards" titleKey="nav.awards" />} />
             <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
             <Route path="/admin/map" element={<AdminSimplePage titleKey="nav.map" />} />
-            <Route path="/admin/about" element={<AdminSimplePage titleKey="nav.about" />} />
+            <Route path="/admin/about" element={<AboutContent />} />
             <Route path="/admin/help" element={<HelpPage />} />
             <Route path="/admin/system/log" element={<SystemLog />} />
             <Route path="/admin/system/warnings" element={<WarningsPage />} />
