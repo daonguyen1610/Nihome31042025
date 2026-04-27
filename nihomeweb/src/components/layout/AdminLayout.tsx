@@ -72,7 +72,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/posts", label: t("nav.posts"), icon: FileText },
           { to: "/admin/projects", label: t("nav.projects"), icon: Building2 },
           { to: "/admin/recruitment", label: t("nav.recruitment"), icon: Briefcase },
-          { to: "/admin/recruitment/employment-types", label: t("nav.employmentTypes"), icon: Briefcase },
           { to: "/admin/contacts", label: t("nav.contacts"), icon: Inbox },
           { to: "/admin/categories", label: t("nav.categories"), icon: FolderTree },
         ],
