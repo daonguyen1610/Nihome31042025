@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Plus, Pencil, Trash2, ExternalLink, Upload, Save } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Upload, Save, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +84,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const isEditing = form.id != null;
   const hasImage = form.imageUrl.trim().length > 0;
   const isBusy = submitting || uploading;
+  const isAwards = kind === "awards";
 
   const updateForm = <K extends keyof LogoFormData>(key: K, value: LogoFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -206,6 +207,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
   return (
     <AdminLayout>
+      <div className={`admin-logo-manager ${isAwards ? "is-awards" : ""}`}>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t(titleKey)}</h1>
@@ -224,7 +226,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {items.map((item) => (
-              <div key={item.id} className="rounded-2xl border bg-white p-4" style={{ borderColor: "hsl(var(--admin-border))" }}>
+              <div
+                key={item.id}
+                className="logo-grid-card rounded-2xl border p-4 card-hover"
+                style={{ borderColor: "hsl(var(--admin-border))" }}
+              >
                 <div
                   className="aspect-[4/3] rounded-xl border bg-white flex items-center justify-center overflow-hidden mb-3"
                   style={{ borderColor: "hsl(var(--admin-border))" }}
@@ -232,7 +238,9 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                   <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain p-2" />
                 </div>
 
-                <p className="font-semibold text-sm leading-tight line-clamp-2 min-h-10">{item.name}</p>
+                <p className={`font-semibold text-sm leading-tight ${isAwards ? "line-clamp-3 min-h-14" : "line-clamp-2 min-h-10"}`}>
+                  {item.name}
+                </p>
                 <div className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
                   {t("logoAdmin.sortOrderLabel")}: {item.sortOrder ?? 0}
                 </div>
@@ -272,11 +280,15 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
       <Dialog open={openModal} onOpenChange={setOpenModal}>
         <DialogContent
-          className="max-w-5xl p-0 overflow-hidden gap-0 rounded-3xl border shadow-2xl"
+          className="logo-modal max-w-5xl p-0 overflow-hidden gap-0 rounded-3xl border shadow-2xl"
           style={{ borderColor: "hsl(var(--admin-border))" }}
         >
-          <DialogHeader className="px-6 pt-5 pb-4" style={{ background: "hsl(var(--admin-bg))" }}>
-            <DialogTitle className="font-display text-xl lg:text-2xl">
+          <DialogHeader
+            className="logo-modal-header px-6 pt-5 pb-4"
+            style={{ background: "hsl(var(--admin-bg))" }}
+          >
+            <DialogTitle className="font-display text-xl lg:text-2xl flex items-center gap-2">
+              {isAwards && <Trophy className="w-5 h-5 text-primary" />}
               {isEditing ? t("logoAdmin.editTitle") : t("logoAdmin.createTitle")}
             </DialogTitle>
             <DialogDescription className="sr-only">
@@ -288,7 +300,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
             <div className="px-6 py-5 space-y-5">
               <Field label={`${t("logoAdmin.fieldName")} *`}>
                 <input
-                  className="admin-input"
+                  className="admin-input logo-name-input w-full"
                   value={form.name}
                   onChange={(e) => updateForm("name", e.target.value)}
                   placeholder={t("logoAdmin.placeholderName")}
@@ -298,12 +310,12 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
               <Field label={`${t("logoAdmin.fieldImage")} *`}>
                 <div
-                  className="rounded-2xl border p-3.5 space-y-2.5"
-                  style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg) / 0.55)" }}
+                  className="logo-upload-wrap rounded-2xl border p-3.5 space-y-2.5"
+                  style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
-                      className="admin-input flex-1 bg-white"
+                      className="admin-input w-full flex-1 bg-white"
                       value={form.imageUrl}
                       onChange={(e) => updateForm("imageUrl", e.target.value)}
                       placeholder="/images/upload/..."
@@ -325,7 +337,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
               <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_150px] gap-3">
                 <Field label={t("logoAdmin.fieldHref")}>
                   <input
-                    className="admin-input"
+                    className="admin-input w-full"
                     value={form.href}
                     onChange={(e) => updateForm("href", e.target.value)}
                     placeholder="https://..."
@@ -335,7 +347,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                 <Field label={t("logoAdmin.fieldSortOrder")}>
                   <input
                     type="number"
-                    className="admin-input"
+                    className="admin-input w-full"
                     value={form.sortOrder}
                     onChange={(e) => updateForm("sortOrder", Number(e.target.value))}
                     min={0}
@@ -345,10 +357,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
             </div>
 
             <aside
-              className="border-t lg:border-t-0 lg:border-l px-6 py-5"
-              style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg) / 0.75)" }}
+              className="logo-preview-pane border-t lg:border-t-0 lg:border-l px-6 py-5"
+              style={{ borderColor: "hsl(var(--admin-border))" }}
             >
-              <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "hsl(var(--admin-muted))" }}>
+              <p className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: "hsl(var(--admin-muted))" }}>
+                {isAwards && <Trophy className="w-3.5 h-3.5" />}
                 {t("logoAdmin.previewAlt")}
               </p>
               <div
@@ -365,8 +378,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                 )}
               </div>
 
-              <div className="mt-3 rounded-xl border p-3 space-y-1 text-sm" style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-card))" }}>
-                <p className="font-semibold truncate">{form.name.trim() || "-"}</p>
+              <div
+                className="logo-preview-meta mt-3 rounded-xl border p-3 space-y-1 text-sm"
+                style={{ borderColor: "hsl(var(--admin-border))" }}
+              >
+                <p className="font-semibold whitespace-normal break-words leading-snug">{form.name.trim() || "-"}</p>
                 <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
                   {t("logoAdmin.sortOrderLabel")}: {Number.isFinite(form.sortOrder) ? form.sortOrder : 0}
                 </p>
@@ -396,6 +412,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </AdminLayout>
   );
 };

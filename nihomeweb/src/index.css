@@ -411,3 +411,66 @@
   border-radius: 50%;
   pointer-events: none;
 }
+
+/* Logos manager visual language (NICON gradients + depth) */
+.admin-scope .admin-logo-manager .logo-grid-card {
+  background: hsl(var(--admin-surface));
+  transition: transform 320ms var(--transition-smooth), box-shadow 320ms var(--transition-smooth);
+}
+.admin-scope .admin-logo-manager .logo-grid-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px -18px hsl(var(--admin-shadow) / 0.35);
+}
+.admin-scope .admin-logo-manager .logo-modal {
+  backdrop-filter: blur(8px);
+}
+.admin-scope .admin-logo-manager .logo-modal-header {
+  border-bottom: 1px solid hsl(var(--admin-border));
+}
+.admin-scope .admin-logo-manager .logo-upload-wrap {
+  background: linear-gradient(135deg, hsl(var(--admin-bg)), hsl(var(--admin-primary-soft) / 0.28));
+}
+.admin-scope .admin-logo-manager .logo-preview-pane {
+  background: linear-gradient(180deg, hsl(var(--admin-bg)), hsl(var(--admin-bg) / 0.8));
+}
+.admin-scope .admin-logo-manager .logo-preview-meta {
+  background: hsl(var(--admin-surface));
+}
+.admin-scope .admin-logo-manager .logo-name-input {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+/* Awards mode gets stronger branding treatment */
+.admin-scope .admin-logo-manager.is-awards .logo-grid-card {
+  background:
+    radial-gradient(at 85% 15%, hsl(var(--admin-primary) / 0.16) 0px, transparent 55%),
+    linear-gradient(160deg, hsl(var(--admin-surface)), hsl(var(--admin-primary-soft) / 0.45));
+}
+.admin-scope .admin-logo-manager.is-awards .logo-grid-card::before {
+  content: "AWARD";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: hsl(var(--admin-primary));
+  background: hsl(var(--admin-surface) / 0.95);
+  border: 1px solid hsl(var(--admin-border));
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-bottom: 10px;
+}
+.admin-scope .admin-logo-manager.is-awards .logo-modal-header {
+  background:
+    radial-gradient(at 90% 10%, hsl(var(--admin-primary) / 0.18) 0px, transparent 50%),
+    linear-gradient(135deg, hsl(var(--admin-bg)), hsl(var(--admin-primary-soft) / 0.45));
+}
+.admin-scope .admin-logo-manager.is-awards .logo-preview-pane {
+  background: linear-gradient(180deg, hsl(var(--admin-primary-soft) / 0.45), hsl(var(--admin-bg)));
+}
+.admin-scope .admin-logo-manager.is-awards .logo-preview-meta {
+  background: linear-gradient(135deg, hsl(var(--admin-surface)), hsl(var(--admin-primary-soft) / 0.32));
+}
