@@ -98,7 +98,7 @@ const App = () => (
             <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
             <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />
             <Route path="/admin/suppliers" element={<AdminLogosManager kind="suppliers" titleKey="nav.suppliers" />} />
-            <Route path="/admin/awards" element={<AdminSimplePage titleKey="nav.awards" />} />
+            <Route path="/admin/awards" element={<AdminLogosManager kind="awards" titleKey="nav.awards" />} />
             <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
             <Route path="/admin/map" element={<AdminSimplePage titleKey="nav.map" />} />
             <Route path="/admin/about" element={<AdminSimplePage titleKey="nav.about" />} />

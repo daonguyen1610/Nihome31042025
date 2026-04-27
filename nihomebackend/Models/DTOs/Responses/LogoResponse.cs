@@ -15,4 +15,5 @@ public class LogosGroupedResponse
     public LogoResponse[] Clients { get; set; } = [];
     public LogoResponse[] Partners { get; set; } = [];
     public LogoResponse[] Suppliers { get; set; } = [];
+    public LogoResponse[] Awards { get; set; } = [];
 }

@@ -88,7 +88,7 @@ describe("useLogos", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("resolves logos data", async () => {
-    const logos = { clients: [], partners: [], suppliers: [] };
+    const logos = { clients: [], partners: [], suppliers: [], awards: [] };
     mockGet.mockResolvedValue({ data: logos });
     const { result } = renderHook(() => useLogos());
     await waitFor(() => expect(result.current.loading).toBe(false));

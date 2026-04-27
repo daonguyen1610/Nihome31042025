@@ -20,6 +20,7 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
             Clients = all.Where(l => l.Kind == LogoKind.Client).Select(MapToResponse).ToArray(),
             Partners = all.Where(l => l.Kind == LogoKind.Partner).Select(MapToResponse).ToArray(),
             Suppliers = all.Where(l => l.Kind == LogoKind.Supplier).Select(MapToResponse).ToArray(),
+            Awards = all.Where(l => l.Kind == LogoKind.Award).Select(MapToResponse).ToArray(),
         };
     }
 

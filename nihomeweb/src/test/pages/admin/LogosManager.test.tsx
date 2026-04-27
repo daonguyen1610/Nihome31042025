@@ -44,9 +44,12 @@ const makeLogosData = () => ({
   suppliers: [
     { id: 21, name: "Supplier One", imageUrl: "/supplier-1.png", kind: "supplier", href: null, sortOrder: 1 },
   ],
+  awards: [
+    { id: 31, name: "Award One", imageUrl: "/award-1.png", kind: "award", href: null, sortOrder: 1 },
+  ],
 });
 
-const renderComponent = (kind: "clients" | "partners" | "suppliers" = "clients") =>
+const renderComponent = (kind: "clients" | "partners" | "suppliers" | "awards" = "clients") =>
   render(
     <MemoryRouter future={ROUTER_FUTURE}>
       <I18nProvider>
@@ -82,7 +85,7 @@ describe("Admin LogosManager page", () => {
 
   it("shows empty state when no logos", () => {
     mockUseLogos.mockReturnValue({
-      data: { clients: [], partners: [], suppliers: [] },
+      data: { clients: [], partners: [], suppliers: [], awards: [] },
       loading: false,
       error: null,
       refetch: vi.fn(),
@@ -157,6 +160,30 @@ describe("Admin LogosManager page", () => {
           kind: "Partner",
         }),
       );
+      expect(refetch).toHaveBeenCalled();
+    });
+  });
+
+  it("creates an award logo with Award kind", async () => {
+    const refetch = vi.fn();
+    mockCreateLogo.mockResolvedValue({});
+    mockUseLogos.mockReturnValue({ data: makeLogosData(), loading: false, error: null, refetch });
+
+    renderComponent("awards");
+
+    fireEvent.click(screen.getByText("logoAdmin.add"));
+    fireEvent.change(screen.getByPlaceholderText("logoAdmin.placeholderName"), { target: { value: "Top 10 Brands" } });
+    fireEvent.change(screen.getByPlaceholderText("/images/upload/..."), { target: { value: "/images/upload/award-new.png" } });
+    fireEvent.click(screen.getByRole("button", { name: /create/i }));
+
+    await waitFor(() => {
+      expect(mockCreateLogo).toHaveBeenCalledWith({
+        name: "Top 10 Brands",
+        imageUrl: "/images/upload/award-new.png",
+        href: undefined,
+        kind: "Award",
+        sortOrder: 2,
+      });
       expect(refetch).toHaveBeenCalled();
     });
   });

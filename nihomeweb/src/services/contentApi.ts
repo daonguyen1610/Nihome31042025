@@ -78,6 +78,7 @@ export interface LogosGroupedResponse {
   clients: LogoResponse[];
   partners: LogoResponse[];
   suppliers: LogoResponse[];
+  awards: LogoResponse[];
 }
 
 export interface ProcessResponse {
@@ -254,6 +255,7 @@ function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {
     clients: data.clients.map(mapLogo),
     partners: data.partners.map(mapLogo),
     suppliers: data.suppliers.map(mapLogo),
+    awards: data.awards.map(mapLogo),
   };
 }
 

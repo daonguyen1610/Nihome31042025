@@ -4,7 +4,8 @@ public enum LogoKind
 {
     Client,
     Partner,
-    Supplier
+    Supplier,
+    Award
 }
 
 public class ClientLogo

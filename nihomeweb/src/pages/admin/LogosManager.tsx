@@ -9,7 +9,7 @@ import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-type Kind = "clients" | "partners" | "suppliers";
+type Kind = "clients" | "partners" | "suppliers" | "awards";
 
 type LogoFormData = {
   id: number | null;
@@ -31,6 +31,7 @@ const kindMap: Record<Kind, string> = {
   clients: "Client",
   partners: "Partner",
   suppliers: "Supplier",
+  awards: "Award",
 };
 
 function getErrorMessage(error: unknown) {

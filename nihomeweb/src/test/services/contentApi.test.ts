@@ -86,7 +86,7 @@ describe("contentApi", () => {
 
   it("getLogos calls correct route", async () => {
     mockApi.get.mockResolvedValueOnce({
-      data: { clients: [], partners: [], suppliers: [] },
+      data: { clients: [], partners: [], suppliers: [], awards: [] },
     });
     await contentApi.getLogos();
     expect(mockApi.get).toHaveBeenCalledWith("/logos");
@@ -145,6 +145,7 @@ describe("contentApi", () => {
         clients: [{ id: 1, name: "C", imageUrl: "/images/logo.png", kind: "client" }],
         partners: [],
         suppliers: [],
+        awards: [],
       },
     });
     const result = await contentApi.getLogos();
