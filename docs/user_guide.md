@@ -1378,7 +1378,34 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 }
 ```
 
-### 14.15 System
+### 14.15 About Sections
+
+| Method | Endpoint                           | Auth   | Description                                        |
+|--------|------------------------------------|--------|----------------------------------------------------|
+| GET    | `/api/about-sections?activeOnly=true` | Public | List sections used on the profile/about page       |
+| GET    | `/api/about-sections/{slug}`       | Public | Get a specific profile/about page section by slug  |
+| POST   | `/api/about-sections`              | Admin  | Create a profile/about page section                |
+| PUT    | `/api/about-sections/{id}`         | Admin  | Update a profile/about page section                |
+| DELETE | `/api/about-sections/{id}`         | Admin  | Delete a profile/about page section                |
+
+#### Create/Update About Section Request
+
+```json
+{
+  "slug": "timeline-main",
+  "itemsJson": "[{\"year\":\"2006\",\"title\":\"Founded\",\"desc\":\"...\"}]",
+  "eyebrow": "LỊCH SỬ",
+  "titleA": "Dấu mốc phát triển",
+  "titleB": "qua từng giai đoạn",
+  "paragraph1": "",
+  "paragraph2": "",
+  "imageUrl": "/images/upload/timeline.jpg",
+  "isActive": true,
+  "sortOrder": 5
+}
+```
+
+### 14.16 System
 
 | Method | Endpoint                      | Auth   | Description              |
 |--------|-------------------------------|--------|--------------------------|

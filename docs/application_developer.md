@@ -500,6 +500,7 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `ProjectService`           | CRUD for projects with slug lookup                       |
 | `ServiceItemService`       | CRUD for services with slug lookup                       |
 | `SlideshowService`         | CRUD for slideshow items with filtering                  |
+| `AboutSectionService`      | CRUD for profile/about page sections and structured data |
 | `JobPositionService`       | CRUD for job positions                                   |
 | `JobApplicationService`    | Submit, list, and manage job applications                |
 | `ContactMessageService`    | Submit, list, and reply to contact messages              |

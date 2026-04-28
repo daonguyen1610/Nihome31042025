@@ -107,6 +107,20 @@ export interface ActivityCategoryResponse {
   sortOrder: number;
 }
 
+export interface AboutSectionResponse {
+  id: number;
+  slug: string;
+  itemsJson?: string | null;
+  eyebrow: string;
+  titleA: string;
+  titleB: string;
+  paragraph1: string;
+  paragraph2: string;
+  imageUrl: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface EmploymentTypeResponse {
   id: number;
   code: string;
@@ -311,6 +325,11 @@ export const contentApi = {
   getSlideshow: (lang = "vi") =>
     api.get<SlideshowResponse[]>(`/slideshow?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapSlideshow) })),
+
+  // About sections
+  getAboutSections: (activeOnly = true) =>
+    api.get<AboutSectionResponse[]>(`/about-sections?activeOnly=${activeOnly}`)
+      .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveImageUrl(x.imageUrl) })) })),
 
   // Job positions (public)
   getJobPositions: () =>
