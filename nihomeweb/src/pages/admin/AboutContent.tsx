@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Save, Sparkles, Trash2, Upload, Calendar, Building2, Users, Award, Info } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { adminApi, type AboutSectionAdminResponse, type UpsertAboutSectionRequest } from "@/services/adminApi";
@@ -39,6 +39,10 @@ type OrganizationItem = { board: LeaderItem[]; directors: LeaderItem[] };
 type TimelineItem = { year: string; title: string; desc: string };
 type CertItem = { name: string; desc: string };
 type DownloadItem = { name: string; size: string; type: string; url: string };
+
+// Icons for stats section (matching client-side display)
+const STAT_ICONS = [Calendar, Building2, Users, Award];
+const STAT_ICON_NAMES = ["Calendar", "Building2", "Users", "Award"];
 
 const SECTION_TABS: SectionTab[] = [
   {
@@ -324,46 +328,107 @@ const AboutContent = () => {
   const renderStructuredEditor = () => {
     if (activeTab.editor === "stats") {
       return (
-        <EditorSection
-          title="Danh sách chỉ số"
-          actionLabel="Thêm chỉ số"
-          onAdd={() => updateItemsJson([...statItems, { num: "", label: "" }])}
-        >
-          <div className="space-y-3">
-            {statItems.map((item, index) => (
-              <RowCard key={`stat-${index}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Field label="Giá trị">
-                    <input
-                      className="admin-input"
-                      value={item.num}
-                      onChange={(e) => {
-                        const next = [...statItems];
-                        next[index] = { ...item, num: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
-                  </Field>
-                  <Field label="Nhãn">
-                    <input
-                      className="admin-input"
-                      value={item.label}
-                      onChange={(e) => {
-                        const next = [...statItems];
-                        next[index] = { ...item, label: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
-                  </Field>
-                </div>
-                <button type="button" onClick={() => updateItemsJson(statItems.filter((_, i) => i !== index))} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
-                  <Trash2 className="w-4 h-4" />
-                  Xóa
-                </button>
-              </RowCard>
-            ))}
+        <div className="space-y-5">
+          {/* Guidelines for non-technical users */}
+          <div className="p-4 rounded-xl border space-y-2" style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-primary-soft))" }}>
+            <div className="flex gap-2 items-start">
+              <Info className="w-5 h-5 flex-shrink-0" style={{ color: "hsl(var(--admin-primary))" }} />
+              <div className="text-sm">
+                <p className="font-bold mb-1" style={{ color: "hsl(var(--admin-primary))" }}>Hướng dẫn cho người dùng không-kỹ-thuật:</p>
+                <ul className="space-y-1 list-disc list-inside" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
+                  <li>Mỗi chỉ số bao gồm: Số (18+, 150+, ISO) + Mô tả (Năm kinh nghiệm, ...)</li>
+                  <li>Hiển thị tối đa 4 chỉ số trên trang client</li>
+                  <li>Các icon được tự động gán theo thứ tự: Lịch, Tòa nhà, Người dùng, Giải thưởng</li>
+                  <li>Xem trước bên dưới để kiểm tra cách hiển thị trên trang khách hàng</li>
+                </ul>
+              </div>
+            </div>
           </div>
-        </EditorSection>
+
+          {/* Editor Section */}
+          <EditorSection
+            title="Danh sách chỉ số"
+            actionLabel="Thêm chỉ số"
+            onAdd={() => statItems.length < 4 ? updateItemsJson([...statItems, { num: "", label: "" }]) : null}
+          >
+            <div className="space-y-3">
+              {statItems.length === 0 && (
+                <p className="text-sm italic py-4" style={{ color: "hsl(var(--admin-muted))" }}>Chưa có chỉ số nào. Nhấn "Thêm chỉ số" để thêm.</p>
+              )}
+              {statItems.map((item, index) => (
+                <RowCard key={`stat-${index}`}>
+                  <div className="flex gap-3 mb-3 pb-3" style={{ borderBottomColor: "hsl(var(--admin-border))", borderBottomWidth: "1px" }}>
+                    <div className="flex-shrink-0">
+                      {(() => {
+                        const Icon = STAT_ICONS[index] ?? Award;
+                        return <Icon className="w-6 h-6" style={{ color: "hsl(var(--admin-primary))" }} />;
+                      })()}
+                    </div>
+                    <div className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+                      <p className="font-semibold">{STAT_ICON_NAMES[index]} icon</p>
+                      <p>Vị trí #{index + 1}</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Field label="Giá trị (ví dụ: 18+, 150+, ISO)">
+                      <input
+                        className="admin-input"
+                        value={item.num}
+                        onChange={(e) => {
+                          const next = [...statItems];
+                          next[index] = { ...item, num: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                        placeholder="18+"
+                      />
+                    </Field>
+                    <Field label="Mô tả (ví dụ: Năm kinh nghiệm)">
+                      <input
+                        className="admin-input"
+                        value={item.label}
+                        onChange={(e) => {
+                          const next = [...statItems];
+                          next[index] = { ...item, label: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                        placeholder="Năm kinh nghiệm"
+                      />
+                    </Field>
+                  </div>
+                  <button type="button" onClick={() => updateItemsJson(statItems.filter((_, i) => i !== index))} className="mt-2 px-3 py-2 rounded-xl border text-sm inline-flex items-center gap-2 hover:bg-muted" style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}>
+                    <Trash2 className="w-4 h-4" />
+                    Xóa
+                  </button>
+                </RowCard>
+              ))}
+              {statItems.length >= 4 && (
+                <p className="text-xs italic" style={{ color: "hsl(var(--admin-warning))" }}>Đã đạt tối đa 4 chỉ số. Xóa một chỉ số nếu muốn thêm chỉ số mới.</p>
+              )}
+            </div>
+          </EditorSection>
+
+          {/* Live Preview Section */}
+          {statItems.some((s) => s.num || s.label) && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm">Xem trước trên trang khách hàng</h3>
+                <span className="text-xs px-2 py-1 rounded font-semibold" style={{ background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }}>Trực tiếp</span>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl" style={{ background: "hsl(var(--admin-bg))" }}>
+                {statItems.map((item, i) => {
+                  const Icon = STAT_ICONS[i] ?? Award;
+                  return (
+                    <div key={`preview-${i}`} className="rounded-2xl p-4 text-center" style={{ background: "hsl(var(--admin-surface))", borderColor: "hsl(var(--admin-border))", borderWidth: "1px" }}>
+                      <Icon className="w-6 h-6 mx-auto mb-3" style={{ color: "hsl(var(--admin-primary))" }} strokeWidth={1.5} />
+                      <p className="font-display text-2xl font-extrabold mb-1" style={{ color: "hsl(var(--admin-primary))" }}>{item.num || "—"}</p>
+                      <p className="text-xs font-medium leading-snug h-8 flex items-center justify-center" style={{ color: "hsl(var(--admin-muted))" }}>{item.label || "(chưa có)"}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       );
     }
 
