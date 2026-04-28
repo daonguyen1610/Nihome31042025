@@ -17,7 +17,8 @@ const Section = ({ id, children, bg = "bg-background" }: { id?: string; children
 );
 
 type SimpleItem = { title: string; desc: string };
-type StatItem = { num: string; label: string };
+type StatIconKey = "calendar" | "building" | "users" | "award";
+type StatItem = { iconKey?: StatIconKey; num: string; label: string; isActive?: boolean };
 type LeaderItem = { role: string; name: string };
 type OrganizationItems = { board: LeaderItem[]; directors: LeaderItem[] };
 type TimelineItem = { year: string; title: string; desc: string };
@@ -149,12 +150,17 @@ const Profile = () => {
 
   const milestones = parseItems<TimelineItem[]>(timelineMain?.itemsJson, defaultMilestones);
   const values = parseItems<SimpleItem[]>(valuesMain?.itemsJson, defaultValues);
-  const stats = parseItems<StatItem[]>(statsMain?.itemsJson, defaultStats);
+  const stats = parseItems<StatItem[]>(statsMain?.itemsJson, defaultStats).filter((item) => item.isActive !== false);
   const businessLines = parseItems<SimpleItem[]>(strategyMain?.itemsJson, defaultBusinessLines);
   const leadershipData = parseItems<OrganizationItems>(organizationMain?.itemsJson, defaultLeadershipData);
   const certifications = parseItems<CertificationItem[]>(certsMain?.itemsJson, defaultCertifications);
   const downloads = parseItems<DownloadItem[]>(downloadsMain?.itemsJson, defaultDownloads);
-  const statIcons = [Calendar, Building2, Users, Award];
+  const statIcons: Record<StatIconKey, typeof Calendar> = {
+    calendar: Calendar,
+    building: Building2,
+    users: Users,
+    award: Award,
+  };
   const valueIcons = [Target, Shield, Compass, Heart];
   const businessLineIcons = [Building2, Hammer, Layers, Wrench, Briefcase, Users2];
 
@@ -212,9 +218,9 @@ const Profile = () => {
       <section className="py-12 bg-surface">
         <div className="container-custom grid grid-cols-2 lg:grid-cols-4 gap-5">
           {stats.map((s, i) => (
-            <div key={i} className="bg-card border border-border rounded-3xl p-7 text-center hover-lift">
+            <div key={`${s.iconKey ?? "calendar"}-${s.num}-${s.label}-${i}`} className="bg-card border border-border rounded-3xl p-7 text-center hover-lift">
               {(() => {
-                const Icon = statIcons[i] ?? Award;
+                const Icon = statIcons[s.iconKey ?? "calendar"] ?? Award;
                 return <Icon className="w-7 h-7 text-primary mx-auto mb-4" strokeWidth={1.5} />;
               })()}
               <p className="font-display text-4xl font-extrabold text-gradient-primary mb-1">{s.num}</p>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, Plus, Save, Sparkles, Trash2, Upload, Calendar, Building2, Users, Award, Info } from "lucide-react";
+import { CheckCircle2, GripVertical, Loader2, Pencil, Plus, Save, Sparkles, Trash2, Upload, Calendar, Building2, Users, Award, Info } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { adminApi, type AboutSectionAdminResponse, type UpsertAboutSectionRequest } from "@/services/adminApi";
@@ -32,7 +32,8 @@ type SectionTab = {
   editor?: "stats" | "values" | "strategy" | "organization" | "timeline" | "certs" | "downloads";
 };
 
-type StatItem = { num: string; label: string };
+type StatIconKey = "calendar" | "building" | "users" | "award";
+type StatItem = { id?: string; iconKey?: StatIconKey; num: string; label: string; isActive?: boolean };
 type TitleDescItem = { title: string; desc: string };
 type LeaderItem = { role: string; name: string };
 type OrganizationItem = { board: LeaderItem[]; directors: LeaderItem[] };
@@ -40,9 +41,14 @@ type TimelineItem = { year: string; title: string; desc: string };
 type CertItem = { name: string; desc: string };
 type DownloadItem = { name: string; size: string; type: string; url: string };
 
-// Icons for stats section (matching client-side display)
-const STAT_ICONS = [Calendar, Building2, Users, Award];
-const STAT_ICON_NAMES = ["Calendar", "Building2", "Users", "Award"];
+// Icons for stats section (stable per item, not by index)
+const STAT_ICON_KEYS: StatIconKey[] = ["calendar", "building", "users", "award"];
+const STAT_ICON_META: Record<StatIconKey, { icon: typeof Calendar; name: string }> = {
+  calendar: { icon: Calendar, name: "Calendar" },
+  building: { icon: Building2, name: "Building2" },
+  users: { icon: Users, name: "Users" },
+  award: { icon: Award, name: "Award" },
+};
 
 const SECTION_TABS: SectionTab[] = [
   {
@@ -161,6 +167,21 @@ const parseItems = <T,>(value: string, fallback: T): T => {
 };
 
 const serializeItems = (value: unknown) => JSON.stringify(value, null, 2);
+const createLocalId = () => `stat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+const pickNextStatIconKey = (items: StatItem[]): StatIconKey => {
+  const used = new Set(items.map((x) => x.iconKey).filter(Boolean));
+  return STAT_ICON_KEYS.find((key) => !used.has(key)) ?? "calendar";
+};
+const normalizeStatItemsJson = (raw: string | null | undefined): string => {
+  const parsed = parseItems<StatItem[]>(raw ?? "", []);
+  const normalized = parsed.map((item, index) => ({
+    ...item,
+    id: item.id ?? createLocalId(),
+    iconKey: item.iconKey ?? STAT_ICON_KEYS[index] ?? "calendar",
+    isActive: item.isActive ?? true,
+  }));
+  return serializeItems(normalized);
+};
 
 const EditorSection = ({ title, actionLabel, onAdd, children }: {
   title: string;
@@ -193,6 +214,152 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
   </label>
 );
 
+const StatIconSelector = ({
+  value,
+  onChange,
+}: {
+  value: StatIconKey;
+  onChange: (value: StatIconKey) => void;
+}) => {
+  const PreviewIcon = STAT_ICON_META[value].icon;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="w-12 h-12 rounded-xl border flex items-center justify-center"
+          style={{
+            background: "linear-gradient(135deg, hsl(var(--admin-primary-soft)), hsl(var(--admin-surface)))",
+            borderColor: "hsl(var(--admin-primary-soft))",
+          }}
+        >
+          <PreviewIcon className="w-5 h-5" style={{ color: "hsl(var(--admin-primary))" }} />
+        </div>
+        <div className="text-sm">
+          <p className="font-semibold">{STAT_ICON_META[value].name}</p>
+          <p style={{ color: "hsl(var(--admin-muted))" }}>Icon hien tai</p>
+        </div>
+      </div>
+
+      <div
+        className="grid grid-cols-4 md:grid-cols-4 gap-2 p-3 rounded-xl border"
+        style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+      >
+        {STAT_ICON_KEYS.map((iconKey) => {
+          const Icon = STAT_ICON_META[iconKey].icon;
+          const isSelected = value === iconKey;
+
+          return (
+            <button
+              key={iconKey}
+              type="button"
+              onClick={() => onChange(iconKey)}
+              className="h-11 rounded-lg border flex items-center justify-center transition-colors"
+              style={
+                isSelected
+                  ? {
+                      background: "hsl(var(--admin-primary-soft))",
+                      borderColor: "hsl(var(--admin-primary))",
+                      color: "hsl(var(--admin-primary))",
+                    }
+                  : {
+                      background: "hsl(var(--admin-surface))",
+                      borderColor: "hsl(var(--admin-border))",
+                      color: "hsl(var(--admin-sidebar-text))",
+                    }
+              }
+              aria-label={STAT_ICON_META[iconKey].name}
+              title={STAT_ICON_META[iconKey].name}
+            >
+              <Icon className="w-5 h-5" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const StatListCard = ({
+  item,
+  index,
+  isSelected,
+  onEdit,
+  onDelete,
+}: {
+  item: StatItem;
+  index: number;
+  isSelected: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => {
+  const Icon = STAT_ICON_META[item.iconKey ?? "calendar"].icon;
+
+  return (
+    <div
+      className="rounded-2xl border p-4 transition-shadow"
+      style={{
+        background: "hsl(var(--admin-surface))",
+        borderColor: isSelected ? "hsl(var(--admin-primary-soft))" : "hsl(var(--admin-border))",
+        boxShadow: isSelected ? "0 6px 18px rgba(15,23,42,0.06)" : "0 1px 4px rgba(15,23,42,0.03)",
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0" style={{ color: "hsl(var(--admin-muted))" }}>
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <div
+          className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ background: "linear-gradient(135deg, hsl(var(--admin-primary-soft)), rgba(255,255,255,0.92))" }}
+        >
+          <Icon className="w-6 h-6" style={{ color: "hsl(var(--admin-primary))" }} strokeWidth={2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-3xl font-extrabold leading-none truncate" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
+            {item.num || "Chi so moi"}
+          </div>
+          <div className="mt-1 text-base truncate" style={{ color: "hsl(var(--admin-muted))" }}>
+            {item.label || "Mo ta chi so"}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span
+            className="px-3 py-1.5 rounded-full text-sm font-semibold"
+            style={
+              item.isActive
+                ? { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
+                : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-muted))" }
+            }
+          >
+            {item.isActive ? "Hoat dong" : "Tam an"}
+          </span>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
+            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-primary))" }}
+            title="Sua"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
+            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
+            title="Xoa"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      <div className="mt-2 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+        Vi tri #{index + 1} • {STAT_ICON_META[item.iconKey ?? "calendar"].name}
+      </div>
+    </div>
+  );
+};
+
 const AboutContent = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -200,6 +367,7 @@ const AboutContent = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [activeSlug, setActiveSlug] = useState("about-main");
+  const [selectedStatId, setSelectedStatId] = useState<string | null>(null);
   const [forms, setForms] = useState<Record<string, AboutForm>>({});
 
   useEffect(() => {
@@ -213,7 +381,19 @@ const AboutContent = () => {
 
         const nextForms = SECTION_TABS.reduce<Record<string, AboutForm>>((acc, tab, index) => {
           const existing = data.find((item) => item.slug === tab.slug);
-          acc[tab.slug] = existing ? toForm(existing) : emptyForm(tab.slug, index);
+          if (!existing)
+          {
+            acc[tab.slug] = emptyForm(tab.slug, index);
+            return acc;
+          }
+
+          const nextForm = toForm(existing);
+          if (tab.slug === "stats-main")
+          {
+            nextForm.itemsJson = normalizeStatItemsJson(existing.itemsJson);
+          }
+
+          acc[tab.slug] = nextForm;
           return acc;
         }, {});
 
@@ -265,6 +445,20 @@ const AboutContent = () => {
   const timelineItems = parseItems<TimelineItem[]>(form.itemsJson, []);
   const certItems = parseItems<CertItem[]>(form.itemsJson, []);
   const downloadItems = parseItems<DownloadItem[]>(form.itemsJson, []);
+  const selectedStatItem = statItems.find((item) => item.id === selectedStatId) ?? statItems[0] ?? null;
+
+  useEffect(() => {
+    if (activeSlug !== "stats-main") return;
+
+    if (statItems.length === 0) {
+      if (selectedStatId !== null) setSelectedStatId(null);
+      return;
+    }
+
+    if (!selectedStatId || !statItems.some((item) => item.id === selectedStatId)) {
+      setSelectedStatId(statItems[0].id ?? null);
+    }
+  }, [activeSlug, selectedStatId, statItems]);
 
   const saveSection = async () => {
     const payload: UpsertAboutSectionRequest = {
@@ -325,20 +519,29 @@ const AboutContent = () => {
     e.target.value = "";
   };
 
+  const updateStatItems = (nextItems: StatItem[]) => {
+    updateItemsJson(nextItems);
+  };
+
+  const updateStatItem = (id: string | undefined, updater: (item: StatItem) => StatItem) => {
+    if (!id) return;
+    updateStatItems(statItems.map((item) => (item.id === id ? updater(item) : item)));
+  };
+
   const renderStructuredEditor = () => {
     if (activeTab.editor === "stats") {
       return (
         <div className="space-y-5">
           {/* Guidelines for non-technical users */}
-          <div className="p-4 rounded-xl border space-y-2" style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-primary-soft))" }}>
+          <div className="p-3 rounded-xl border space-y-2" style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-primary-soft))" }}>
             <div className="flex gap-2 items-start">
               <Info className="w-5 h-5 flex-shrink-0" style={{ color: "hsl(var(--admin-primary))" }} />
               <div className="text-sm">
-                <p className="font-bold mb-1" style={{ color: "hsl(var(--admin-primary))" }}>Hướng dẫn cho người dùng không-kỹ-thuật:</p>
-                <ul className="space-y-1 list-disc list-inside" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
+                <p className="font-bold mb-1 text-sm" style={{ color: "hsl(var(--admin-primary))" }}>Hướng dẫn cho người dùng không-kỹ-thuật:</p>
+                <ul className="space-y-1 list-disc list-inside text-sm" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
                   <li>Mỗi chỉ số bao gồm: Số (18+, 150+, ISO) + Mô tả (Năm kinh nghiệm, ...)</li>
                   <li>Hiển thị tối đa 4 chỉ số trên trang client</li>
-                  <li>Các icon được tự động gán theo thứ tự: Lịch, Tòa nhà, Người dùng, Giải thưởng</li>
+                  <li>Bạn có thể tự chọn icon cho từng chỉ số</li>
                   <li>Xem trước bên dưới để kiểm tra cách hiển thị trên trang khách hàng</li>
                 </ul>
               </div>
@@ -349,76 +552,140 @@ const AboutContent = () => {
           <EditorSection
             title="Danh sách chỉ số"
             actionLabel="Thêm chỉ số"
-            onAdd={() => statItems.length < 4 ? updateItemsJson([...statItems, { num: "", label: "" }]) : null}
+            onAdd={() => {
+              if (statItems.length >= 4) return;
+              const newItem: StatItem = {
+                id: createLocalId(),
+                iconKey: pickNextStatIconKey(statItems),
+                num: "",
+                label: "",
+                isActive: true,
+              };
+              setSelectedStatId(newItem.id ?? null);
+              updateStatItems([...statItems, newItem]);
+            }}
           >
             <div className="space-y-3">
               {statItems.length === 0 && (
                 <p className="text-sm italic py-4" style={{ color: "hsl(var(--admin-muted))" }}>Chưa có chỉ số nào. Nhấn "Thêm chỉ số" để thêm.</p>
               )}
               {statItems.map((item, index) => (
-                <RowCard key={`stat-${index}`}>
-                  <div className="flex gap-3 mb-3 pb-3" style={{ borderBottomColor: "hsl(var(--admin-border))", borderBottomWidth: "1px" }}>
-                    <div className="flex-shrink-0">
-                      {(() => {
-                        const Icon = STAT_ICONS[index] ?? Award;
-                        return <Icon className="w-6 h-6" style={{ color: "hsl(var(--admin-primary))" }} />;
-                      })()}
-                    </div>
-                    <div className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-                      <p className="font-semibold">{STAT_ICON_NAMES[index]} icon</p>
-                      <p>Vị trí #{index + 1}</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <Field label="Giá trị (ví dụ: 18+, 150+, ISO)">
-                      <input
-                        className="admin-input"
-                        value={item.num}
-                        onChange={(e) => {
-                          const next = [...statItems];
-                          next[index] = { ...item, num: e.target.value };
-                          updateItemsJson(next);
-                        }}
-                        placeholder="18+"
-                      />
-                    </Field>
-                    <Field label="Mô tả (ví dụ: Năm kinh nghiệm)">
-                      <input
-                        className="admin-input"
-                        value={item.label}
-                        onChange={(e) => {
-                          const next = [...statItems];
-                          next[index] = { ...item, label: e.target.value };
-                          updateItemsJson(next);
-                        }}
-                        placeholder="Năm kinh nghiệm"
-                      />
-                    </Field>
-                  </div>
-                  <button type="button" onClick={() => updateItemsJson(statItems.filter((_, i) => i !== index))} className="mt-2 px-3 py-2 rounded-xl border text-sm inline-flex items-center gap-2 hover:bg-muted" style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}>
-                    <Trash2 className="w-4 h-4" />
-                    Xóa
-                  </button>
-                </RowCard>
+                <StatListCard
+                  key={item.id ?? `stat-${index}`}
+                  item={item}
+                  index={index}
+                  isSelected={(item.id ?? null) === selectedStatId}
+                  onEdit={() => setSelectedStatId(item.id ?? null)}
+                  onDelete={() => {
+                    const nextItems = statItems.filter((_, i) => (item.id ? statItems[i].id !== item.id : i !== index));
+                    setSelectedStatId(nextItems[0]?.id ?? null);
+                    updateStatItems(nextItems);
+                  }}
+                />
               ))}
               {statItems.length >= 4 && (
                 <p className="text-xs italic" style={{ color: "hsl(var(--admin-warning))" }}>Đã đạt tối đa 4 chỉ số. Xóa một chỉ số nếu muốn thêm chỉ số mới.</p>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (statItems.length >= 4) return;
+                  const newItem: StatItem = {
+                    id: createLocalId(),
+                    iconKey: pickNextStatIconKey(statItems),
+                    num: "",
+                    label: "",
+                    isActive: true,
+                  };
+                  setSelectedStatId(newItem.id ?? null);
+                  updateStatItems([...statItems, newItem]);
+                }}
+                className="w-full rounded-2xl border-2 border-dashed px-6 py-5 text-base font-medium"
+                style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))", background: "hsl(var(--admin-bg))" }}
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Thêm chỉ số mới
+                </span>
+              </button>
             </div>
           </EditorSection>
 
+          {selectedStatItem && (
+            <div className="rounded-2xl border p-4 space-y-4" style={{ background: "hsl(var(--admin-surface))", borderColor: "hsl(var(--admin-border))" }}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-bold text-base">Chỉnh sửa chỉ số</h3>
+                  <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
+                    Cập nhật icon, giá trị, mô tả và trạng thái hiển thị cho chỉ số đang chọn.
+                  </p>
+                </div>
+                <span
+                  className="px-3 py-1.5 rounded-full text-sm font-semibold"
+                  style={
+                    selectedStatItem.isActive
+                      ? { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
+                      : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-muted))" }
+                  }
+                >
+                  {selectedStatItem.isActive ? "Hoat dong" : "Tam an"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-5">
+                <Field label="Icon">
+                  <StatIconSelector
+                    value={selectedStatItem.iconKey ?? "calendar"}
+                    onChange={(iconKey) => updateStatItem(selectedStatItem.id, (item) => ({ ...item, iconKey }))}
+                  />
+                </Field>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
+                  <Field label="Giá trị (ví dụ: 18+, 150+, ISO)">
+                    <input
+                      className="admin-input"
+                      value={selectedStatItem.num}
+                      onChange={(e) => updateStatItem(selectedStatItem.id, (item) => ({ ...item, num: e.target.value }))}
+                      placeholder="18+"
+                    />
+                  </Field>
+                  <Field label="Trạng thái">
+                    <select
+                      className="admin-input"
+                      value={selectedStatItem.isActive ? "true" : "false"}
+                      onChange={(e) => updateStatItem(selectedStatItem.id, (item) => ({ ...item, isActive: e.target.value === "true" }))}
+                    >
+                      <option value="true">Hoạt động</option>
+                      <option value="false">Tạm ẩn</option>
+                    </select>
+                  </Field>
+                  <div className="md:col-span-2">
+                    <Field label="Mô tả (ví dụ: Năm kinh nghiệm)">
+                      <input
+                        className="admin-input"
+                        value={selectedStatItem.label}
+                        onChange={(e) => updateStatItem(selectedStatItem.id, (item) => ({ ...item, label: e.target.value }))}
+                        placeholder="Năm kinh nghiệm"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Live Preview Section */}
-          {statItems.some((s) => s.num || s.label) && (
+          {statItems.some((s) => (s.num || s.label) && s.isActive !== false) && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-sm">Xem trước trên trang khách hàng</h3>
                 <span className="text-xs px-2 py-1 rounded font-semibold" style={{ background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }}>Trực tiếp</span>
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl" style={{ background: "hsl(var(--admin-bg))" }}>
-                {statItems.map((item, i) => {
-                  const Icon = STAT_ICONS[i] ?? Award;
+                {statItems.filter((item) => item.isActive !== false).map((item, i) => {
+                  const Icon = STAT_ICON_META[item.iconKey ?? "calendar"].icon;
                   return (
-                    <div key={`preview-${i}`} className="rounded-2xl p-4 text-center" style={{ background: "hsl(var(--admin-surface))", borderColor: "hsl(var(--admin-border))", borderWidth: "1px" }}>
+                    <div key={item.id ?? `preview-${i}`} className="rounded-2xl p-4 text-center" style={{ background: "hsl(var(--admin-surface))", borderColor: "hsl(var(--admin-border))", borderWidth: "1px" }}>
                       <Icon className="w-6 h-6 mx-auto mb-3" style={{ color: "hsl(var(--admin-primary))" }} strokeWidth={1.5} />
                       <p className="font-display text-2xl font-extrabold mb-1" style={{ color: "hsl(var(--admin-primary))" }}>{item.num || "—"}</p>
                       <p className="text-xs font-medium leading-snug h-8 flex items-center justify-center" style={{ color: "hsl(var(--admin-muted))" }}>{item.label || "(chưa có)"}</p>
