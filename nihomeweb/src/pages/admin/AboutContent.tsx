@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, Save, Sparkles, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
-import {
-  adminApi,
-  type AboutSectionAdminResponse,
-  type UpsertAboutSectionRequest,
-} from "@/services/adminApi";
+import { adminApi, type AboutSectionAdminResponse, type UpsertAboutSectionRequest } from "@/services/adminApi";
 import { useToast } from "@/hooks/use-toast";
 
 type AboutForm = {
@@ -33,9 +29,16 @@ type SectionTab = {
   showParagraph1?: boolean;
   showParagraph2?: boolean;
   showImage?: boolean;
-  showItemsJson?: boolean;
-  itemsHint?: string;
+  editor?: "stats" | "values" | "strategy" | "organization" | "timeline" | "certs" | "downloads";
 };
+
+type StatItem = { num: string; label: string };
+type TitleDescItem = { title: string; desc: string };
+type LeaderItem = { role: string; name: string };
+type OrganizationItem = { board: LeaderItem[]; directors: LeaderItem[] };
+type TimelineItem = { year: string; title: string; desc: string };
+type CertItem = { name: string; desc: string };
+type DownloadItem = { name: string; size: string; type: string; url: string };
 
 const SECTION_TABS: SectionTab[] = [
   {
@@ -53,8 +56,7 @@ const SECTION_TABS: SectionTab[] = [
     slug: "stats-main",
     label: "Chỉ số",
     description: "Các chỉ số nổi bật nằm ngay dưới phần giới thiệu.",
-    showItemsJson: true,
-    itemsHint: '[{"num":"18+","label":"Năm kinh nghiệm"}]',
+    editor: "stats",
   },
   {
     slug: "values-main",
@@ -63,8 +65,7 @@ const SECTION_TABS: SectionTab[] = [
     showEyebrow: true,
     showTitleA: true,
     showTitleB: true,
-    showItemsJson: true,
-    itemsHint: '[{"title":"Mục tiêu rõ ràng","desc":"..."}]',
+    editor: "values",
   },
   {
     slug: "strategy-main",
@@ -75,18 +76,16 @@ const SECTION_TABS: SectionTab[] = [
     showTitleB: true,
     showParagraph1: true,
     showParagraph2: true,
-    showItemsJson: true,
-    itemsHint: '[{"title":"Thiết kế - thi công tổng thể","desc":"..."}]',
+    editor: "strategy",
   },
   {
     slug: "organization-main",
     label: "Tổ chức",
-    description: "Tiêu đề section và sơ đồ nhân sự điều hành.",
+    description: "Tiêu đề section và danh sách nhân sự điều hành.",
     showEyebrow: true,
     showTitleA: true,
     showTitleB: true,
-    showItemsJson: true,
-    itemsHint: '{"board":[{"role":"Chủ tịch HĐQT","name":"..."}],"directors":[{"role":"Tổng giám đốc","name":"..."}]}',
+    editor: "organization",
   },
   {
     slug: "timeline-main",
@@ -96,8 +95,7 @@ const SECTION_TABS: SectionTab[] = [
     showTitleA: true,
     showTitleB: true,
     showImage: true,
-    showItemsJson: true,
-    itemsHint: '[{"year":"2006","title":"Thành lập","desc":"..."}]',
+    editor: "timeline",
   },
   {
     slug: "certs-main",
@@ -106,8 +104,7 @@ const SECTION_TABS: SectionTab[] = [
     showEyebrow: true,
     showTitleA: true,
     showTitleB: true,
-    showItemsJson: true,
-    itemsHint: '[{"name":"ISO 9001:2015","desc":"..."}]',
+    editor: "certs",
   },
   {
     slug: "downloads-main",
@@ -117,8 +114,7 @@ const SECTION_TABS: SectionTab[] = [
     showTitleA: true,
     showTitleB: true,
     showParagraph1: true,
-    showItemsJson: true,
-    itemsHint: '[{"name":"Company Profile","size":"12 MB","type":"PDF","url":"#"}]',
+    editor: "downloads",
   },
 ];
 
@@ -149,6 +145,49 @@ const toForm = (item: AboutSectionAdminResponse): AboutForm => ({
   isActive: item.isActive,
   sortOrder: item.sortOrder,
 });
+
+const parseItems = <T,>(value: string, fallback: T): T => {
+  if (!value.trim()) return fallback;
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+};
+
+const serializeItems = (value: unknown) => JSON.stringify(value, null, 2);
+
+const EditorSection = ({ title, actionLabel, onAdd, children }: {
+  title: string;
+  actionLabel: string;
+  onAdd: () => void;
+  children: React.ReactNode;
+}) => (
+  <div className="space-y-3">
+    <div className="flex items-center justify-between">
+      <h3 className="font-bold text-sm">{title}</h3>
+      <button type="button" onClick={onAdd} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
+        <Plus className="w-4 h-4" />
+        {actionLabel}
+      </button>
+    </div>
+    {children}
+  </div>
+);
+
+const RowCard = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-2xl border border-border p-4 bg-muted/20 space-y-3">{children}</div>
+);
+
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <label className="block space-y-1.5">
+    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
+      {label}
+    </span>
+    {children}
+  </label>
+);
 
 const AboutContent = () => {
   const { t } = useI18n();
@@ -198,32 +237,32 @@ const AboutContent = () => {
     () => SECTION_TABS.find((tab) => tab.slug === activeSlug) ?? SECTION_TABS[0],
     [activeSlug],
   );
+
   const form = forms[activeSlug] ?? emptyForm(activeSlug, 0);
 
   const updateForm = <K extends keyof AboutForm>(key: K, value: AboutForm[K]) => {
     setForms((prev) => ({
       ...prev,
       [activeSlug]: {
-        ...(prev[activeSlug] ?? emptyForm(activeSlug, activeTab ? SECTION_TABS.indexOf(activeTab) : 0)),
+        ...(prev[activeSlug] ?? emptyForm(activeSlug, 0)),
         [key]: value,
       },
     }));
   };
 
-  const saveSection = async () => {
-    if (activeTab.showItemsJson && form.itemsJson.trim()) {
-      try {
-        JSON.parse(form.itemsJson);
-      } catch {
-        toast({
-          title: t("aboutAdmin.missingDataTitle"),
-          description: "Items JSON không hợp lệ.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
+  const updateItemsJson = (value: unknown) => {
+    updateForm("itemsJson", serializeItems(value));
+  };
 
+  const statItems = parseItems<StatItem[]>(form.itemsJson, []);
+  const valueItems = parseItems<TitleDescItem[]>(form.itemsJson, []);
+  const strategyItems = parseItems<TitleDescItem[]>(form.itemsJson, []);
+  const organizationItems = parseItems<OrganizationItem>(form.itemsJson, { board: [], directors: [] });
+  const timelineItems = parseItems<TimelineItem[]>(form.itemsJson, []);
+  const certItems = parseItems<CertItem[]>(form.itemsJson, []);
+  const downloadItems = parseItems<DownloadItem[]>(form.itemsJson, []);
+
+  const saveSection = async () => {
     const payload: UpsertAboutSectionRequest = {
       slug: form.slug,
       itemsJson: form.itemsJson.trim() || null,
@@ -243,10 +282,9 @@ const AboutContent = () => {
         await adminApi.updateAboutSection(form.id, payload);
       } else {
         const response = await adminApi.createAboutSection(payload);
-        const created = response.data;
         setForms((prev) => ({
           ...prev,
-          [activeSlug]: toForm(created),
+          [activeSlug]: toForm(response.data),
         }));
       }
 
@@ -283,6 +321,325 @@ const AboutContent = () => {
     e.target.value = "";
   };
 
+  const renderStructuredEditor = () => {
+    if (activeTab.editor === "stats") {
+      return (
+        <EditorSection
+          title="Danh sách chỉ số"
+          actionLabel="Thêm chỉ số"
+          onAdd={() => updateItemsJson([...statItems, { num: "", label: "" }])}
+        >
+          <div className="space-y-3">
+            {statItems.map((item, index) => (
+              <RowCard key={`stat-${index}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label="Giá trị">
+                    <input
+                      className="admin-input"
+                      value={item.num}
+                      onChange={(e) => {
+                        const next = [...statItems];
+                        next[index] = { ...item, num: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                  <Field label="Nhãn">
+                    <input
+                      className="admin-input"
+                      value={item.label}
+                      onChange={(e) => {
+                        const next = [...statItems];
+                        next[index] = { ...item, label: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                </div>
+                <button type="button" onClick={() => updateItemsJson(statItems.filter((_, i) => i !== index))} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa
+                </button>
+              </RowCard>
+            ))}
+          </div>
+        </EditorSection>
+      );
+    }
+
+    if (activeTab.editor === "values" || activeTab.editor === "strategy") {
+      const items = activeTab.editor === "values" ? valueItems : strategyItems;
+      const title = activeTab.editor === "values" ? "Danh sách giá trị" : "Danh sách lĩnh vực";
+      const actionLabel = activeTab.editor === "values" ? "Thêm giá trị" : "Thêm lĩnh vực";
+
+      return (
+        <EditorSection
+          title={title}
+          actionLabel={actionLabel}
+          onAdd={() => updateItemsJson([...items, { title: "", desc: "" }])}
+        >
+          <div className="space-y-3">
+            {items.map((item, index) => (
+              <RowCard key={`${activeTab.editor}-${index}`}>
+                <Field label="Tiêu đề">
+                  <input
+                    className="admin-input"
+                    value={item.title}
+                    onChange={(e) => {
+                      const next = [...items];
+                      next[index] = { ...item, title: e.target.value };
+                      updateItemsJson(next);
+                    }}
+                  />
+                </Field>
+                <Field label="Mô tả">
+                  <textarea
+                    className="admin-input min-h-24"
+                    value={item.desc}
+                    onChange={(e) => {
+                      const next = [...items];
+                      next[index] = { ...item, desc: e.target.value };
+                      updateItemsJson(next);
+                    }}
+                  />
+                </Field>
+                <button type="button" onClick={() => updateItemsJson(items.filter((_, i) => i !== index))} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa
+                </button>
+              </RowCard>
+            ))}
+          </div>
+        </EditorSection>
+      );
+    }
+
+    if (activeTab.editor === "organization") {
+      const updateGroup = (group: "board" | "directors", nextItems: LeaderItem[]) =>
+        updateItemsJson({ ...organizationItems, [group]: nextItems });
+
+      const renderGroup = (group: "board" | "directors", title: string) => (
+        <EditorSection
+          title={title}
+          actionLabel="Thêm thành viên"
+          onAdd={() => updateGroup(group, [...organizationItems[group], { role: "", name: "" }])}
+        >
+          <div className="space-y-3">
+            {organizationItems[group].map((item, index) => (
+              <RowCard key={`${group}-${index}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label="Chức danh">
+                    <input
+                      className="admin-input"
+                      value={item.role}
+                      onChange={(e) => {
+                        const next = [...organizationItems[group]];
+                        next[index] = { ...item, role: e.target.value };
+                        updateGroup(group, next);
+                      }}
+                    />
+                  </Field>
+                  <Field label="Họ tên">
+                    <input
+                      className="admin-input"
+                      value={item.name}
+                      onChange={(e) => {
+                        const next = [...organizationItems[group]];
+                        next[index] = { ...item, name: e.target.value };
+                        updateGroup(group, next);
+                      }}
+                    />
+                  </Field>
+                </div>
+                <button type="button" onClick={() => updateGroup(group, organizationItems[group].filter((_, i) => i !== index))} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa
+                </button>
+              </RowCard>
+            ))}
+          </div>
+        </EditorSection>
+      );
+
+      return (
+        <div className="space-y-5">
+          {renderGroup("board", "Hội đồng quản trị")}
+          {renderGroup("directors", "Ban điều hành")}
+        </div>
+      );
+    }
+
+    if (activeTab.editor === "timeline") {
+      return (
+        <EditorSection
+          title="Danh sách mốc thời gian"
+          actionLabel="Thêm mốc"
+          onAdd={() => updateItemsJson([...timelineItems, { year: "", title: "", desc: "" }])}
+        >
+          <div className="space-y-3">
+            {timelineItems.map((item, index) => (
+              <RowCard key={`timeline-${index}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label="Năm">
+                    <input
+                      className="admin-input"
+                      value={item.year}
+                      onChange={(e) => {
+                        const next = [...timelineItems];
+                        next[index] = { ...item, year: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                  <Field label="Tiêu đề">
+                    <input
+                      className="admin-input"
+                      value={item.title}
+                      onChange={(e) => {
+                        const next = [...timelineItems];
+                        next[index] = { ...item, title: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                </div>
+                <Field label="Mô tả">
+                  <textarea
+                    className="admin-input min-h-24"
+                    value={item.desc}
+                    onChange={(e) => {
+                      const next = [...timelineItems];
+                      next[index] = { ...item, desc: e.target.value };
+                      updateItemsJson(next);
+                    }}
+                  />
+                </Field>
+                <button type="button" onClick={() => updateItemsJson(timelineItems.filter((_, i) => i !== index))} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa
+                </button>
+              </RowCard>
+            ))}
+          </div>
+        </EditorSection>
+      );
+    }
+
+    if (activeTab.editor === "certs") {
+      return (
+        <EditorSection
+          title="Danh sách chứng nhận"
+          actionLabel="Thêm chứng nhận"
+          onAdd={() => updateItemsJson([...certItems, { name: "", desc: "" }])}
+        >
+          <div className="space-y-3">
+            {certItems.map((item, index) => (
+              <RowCard key={`cert-${index}`}>
+                <Field label="Tên chứng nhận">
+                  <input
+                    className="admin-input"
+                    value={item.name}
+                    onChange={(e) => {
+                      const next = [...certItems];
+                      next[index] = { ...item, name: e.target.value };
+                      updateItemsJson(next);
+                    }}
+                  />
+                </Field>
+                <Field label="Mô tả">
+                  <textarea
+                    className="admin-input min-h-24"
+                    value={item.desc}
+                    onChange={(e) => {
+                      const next = [...certItems];
+                      next[index] = { ...item, desc: e.target.value };
+                      updateItemsJson(next);
+                    }}
+                  />
+                </Field>
+                <button type="button" onClick={() => updateItemsJson(certItems.filter((_, i) => i !== index))} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa
+                </button>
+              </RowCard>
+            ))}
+          </div>
+        </EditorSection>
+      );
+    }
+
+    if (activeTab.editor === "downloads") {
+      return (
+        <EditorSection
+          title="Danh sách tài liệu"
+          actionLabel="Thêm tài liệu"
+          onAdd={() => updateItemsJson([...downloadItems, { name: "", size: "", type: "", url: "#" }])}
+        >
+          <div className="space-y-3">
+            {downloadItems.map((item, index) => (
+              <RowCard key={`download-${index}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label="Tên tài liệu">
+                    <input
+                      className="admin-input"
+                      value={item.name}
+                      onChange={(e) => {
+                        const next = [...downloadItems];
+                        next[index] = { ...item, name: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                  <Field label="Dung lượng">
+                    <input
+                      className="admin-input"
+                      value={item.size}
+                      onChange={(e) => {
+                        const next = [...downloadItems];
+                        next[index] = { ...item, size: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Field label="Loại file">
+                    <input
+                      className="admin-input"
+                      value={item.type}
+                      onChange={(e) => {
+                        const next = [...downloadItems];
+                        next[index] = { ...item, type: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                  <Field label="Đường dẫn">
+                    <input
+                      className="admin-input"
+                      value={item.url}
+                      onChange={(e) => {
+                        const next = [...downloadItems];
+                        next[index] = { ...item, url: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </Field>
+                </div>
+                <button type="button" onClick={() => updateItemsJson(downloadItems.filter((_, i) => i !== index))} className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted">
+                  <Trash2 className="w-4 h-4" />
+                  Xóa
+                </button>
+              </RowCard>
+            ))}
+          </div>
+        </EditorSection>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <AdminLayout>
       <div
@@ -294,14 +651,11 @@ const AboutContent = () => {
         </p>
         <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("aboutAdmin.title")}</h1>
         <p className="text-sm mt-2" style={{ color: "hsl(var(--admin-muted))" }}>
-          Quản lý đầy đủ các block hiển thị trên trang client `/profile`.
+          Quản lý đầy đủ các block hiển thị trên trang client `/profile` bằng form trực quan cho từng phần.
         </p>
       </div>
 
-      <div
-        className="flex gap-1 p-1 rounded-xl mb-6 overflow-x-auto"
-        style={{ background: "hsl(var(--admin-bg))" }}
-      >
+      <div className="flex gap-1 p-1 rounded-xl mb-6 overflow-x-auto" style={{ background: "hsl(var(--admin-bg))" }}>
         {SECTION_TABS.map((tab) => (
           <button
             key={tab.slug}
@@ -318,7 +672,7 @@ const AboutContent = () => {
         ))}
       </div>
 
-      <div className="admin-card p-5 space-y-4">
+      <div className="admin-card p-5 space-y-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="font-display text-xl font-extrabold">{activeTab.label}</h2>
@@ -343,92 +697,65 @@ const AboutContent = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input
-                className="admin-input"
-                value={form.slug}
-                onChange={(e) => updateForm("slug", e.target.value)}
-                placeholder="slug"
-              />
-              <input
-                className="admin-input"
-                type="number"
-                value={form.sortOrder}
-                onChange={(e) => updateForm("sortOrder", Number(e.target.value) || 0)}
-                placeholder="Sort order"
-              />
-              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-border text-sm">
-                <input
-                  type="checkbox"
-                  checked={form.isActive}
-                  onChange={(e) => updateForm("isActive", e.target.checked)}
-                />
-                Active
-              </label>
+              <Field label="Mã phần">
+                <input className="admin-input" value={form.slug} onChange={(e) => updateForm("slug", e.target.value)} placeholder="slug" />
+              </Field>
+              <Field label="Thứ tự">
+                <input className="admin-input" type="number" value={form.sortOrder} onChange={(e) => updateForm("sortOrder", Number(e.target.value) || 0)} placeholder="Sort order" />
+              </Field>
+              <Field label="Hiển thị">
+                <label className="inline-flex items-center gap-2 px-3 py-3 rounded-xl border border-border text-sm">
+                  <input type="checkbox" checked={form.isActive} onChange={(e) => updateForm("isActive", e.target.checked)} />
+                  Active
+                </label>
+              </Field>
             </div>
 
             {activeTab.showEyebrow && (
-              <input
-                className="admin-input"
-                value={form.eyebrow}
-                onChange={(e) => updateForm("eyebrow", e.target.value)}
-                placeholder="Eyebrow"
-              />
+              <Field label="Nhãn nhỏ">
+                <input className="admin-input" value={form.eyebrow} onChange={(e) => updateForm("eyebrow", e.target.value)} placeholder="VỀ CHÚNG TÔI" />
+              </Field>
             )}
 
             {(activeTab.showTitleA || activeTab.showTitleB) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {activeTab.showTitleA && (
-                  <input
-                    className="admin-input"
-                    value={form.titleA}
-                    onChange={(e) => updateForm("titleA", e.target.value)}
-                    placeholder="Title A"
-                  />
+                  <Field label="Tiêu đề dòng 1">
+                    <input className="admin-input" value={form.titleA} onChange={(e) => updateForm("titleA", e.target.value)} placeholder="Title A" />
+                  </Field>
                 )}
                 {activeTab.showTitleB && (
-                  <input
-                    className="admin-input"
-                    value={form.titleB}
-                    onChange={(e) => updateForm("titleB", e.target.value)}
-                    placeholder="Title B"
-                  />
+                  <Field label="Tiêu đề dòng 2 hoặc phần nhấn mạnh">
+                    <input className="admin-input" value={form.titleB} onChange={(e) => updateForm("titleB", e.target.value)} placeholder="Title B" />
+                  </Field>
                 )}
               </div>
             )}
 
             {activeTab.showParagraph1 && (
-              <textarea
-                className="admin-input min-h-24"
-                value={form.paragraph1}
-                onChange={(e) => updateForm("paragraph1", e.target.value)}
-                placeholder="Đoạn mô tả 1"
-              />
+              <Field label="Mô tả 1">
+                <textarea className="admin-input min-h-24" value={form.paragraph1} onChange={(e) => updateForm("paragraph1", e.target.value)} placeholder="Đoạn mô tả 1" />
+              </Field>
             )}
 
             {activeTab.showParagraph2 && (
-              <textarea
-                className="admin-input min-h-24"
-                value={form.paragraph2}
-                onChange={(e) => updateForm("paragraph2", e.target.value)}
-                placeholder="Đoạn mô tả 2"
-              />
+              <Field label="Mô tả 2">
+                <textarea className="admin-input min-h-24" value={form.paragraph2} onChange={(e) => updateForm("paragraph2", e.target.value)} placeholder="Đoạn mô tả 2" />
+              </Field>
             )}
 
             {activeTab.showImage && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    className="admin-input"
-                    value={form.imageUrl}
-                    onChange={(e) => updateForm("imageUrl", e.target.value)}
-                    placeholder="/images/upload/..."
-                  />
-                  <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm">
-                    <Upload className="w-4 h-4" />
-                    {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Upload"}
-                    <input type="file" accept="image/*" onChange={onSelectFile} disabled={uploading} className="hidden" />
-                  </label>
-                </div>
+                <Field label="Hình ảnh">
+                  <div className="flex items-center gap-2">
+                    <input className="admin-input" value={form.imageUrl} onChange={(e) => updateForm("imageUrl", e.target.value)} placeholder="/images/upload/..." />
+                    <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm">
+                      <Upload className="w-4 h-4" />
+                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Upload"}
+                      <input type="file" accept="image/*" onChange={onSelectFile} disabled={uploading} className="hidden" />
+                    </label>
+                  </div>
+                </Field>
                 {form.imageUrl && (
                   <div className="rounded-2xl overflow-hidden border border-border bg-muted/30">
                     <img src={form.imageUrl} alt={activeTab.label} className="w-full h-56 object-cover" />
@@ -437,19 +764,7 @@ const AboutContent = () => {
               </div>
             )}
 
-            {activeTab.showItemsJson && (
-              <div className="space-y-2">
-                <textarea
-                  className="admin-input min-h-64 font-mono text-xs"
-                  value={form.itemsJson}
-                  onChange={(e) => updateForm("itemsJson", e.target.value)}
-                  placeholder={activeTab.itemsHint}
-                />
-                <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-                  JSON mẫu: <code>{activeTab.itemsHint}</code>
-                </p>
-              </div>
-            )}
+            {renderStructuredEditor()}
 
             <div className="text-xs inline-flex items-center gap-1.5" style={{ color: saving ? "hsl(var(--admin-warning))" : "hsl(var(--admin-success))" }}>
               {saving ? <Sparkles className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
