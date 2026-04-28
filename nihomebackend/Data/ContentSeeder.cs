@@ -15,6 +15,7 @@ public static class ContentSeeder
         SeedLogos(db);
         SeedProcesses(db);
         SeedSlideshow(db);
+        SeedAboutSections(db);
         SeedRecruitment(db);
         SeedContactMessages(db);
         SeedEntityTranslations(db);
@@ -591,6 +592,172 @@ public static class ContentSeeder
     }
 
     // ─── Recruitment ────────────────────────────────────────────────
+
+    private static void SeedAboutSections(AppDbContext db)
+    {
+        if (db.AboutSectionContents.Any()) return;
+
+        var now = DateTime.UtcNow;
+
+        db.AboutSectionContents.AddRange(
+            new AboutSectionContent
+            {
+                Slug = "about-main",
+                Eyebrow = "VỀ CHÚNG TÔI",
+                TitleA = "Đối tác của sự",
+                TitleB = "phát triển từ 2006",
+                Paragraph1 = "Hơn 18 năm đồng hành cùng các nhà đầu tư trong và ngoài nước, NICON kiến tạo những công trình công nghiệp và dân dụng đạt chuẩn quốc tế.",
+                Paragraph2 = "Chúng tôi tập trung vào chất lượng, tiến độ và an toàn, đảm bảo mỗi dự án đều mang lại hiệu quả đầu tư bền vững cho khách hàng.",
+                ImageUrl = "/images/activities/activity-handover.jpg",
+                IsActive = true,
+                SortOrder = 0,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new AboutSectionContent
+            {
+                Slug = "values-main",
+                Eyebrow = "GIÁ TRỊ CỐT LÕI",
+                TitleA = "Nền tảng phát triển",
+                TitleB = "NICON",
+                ItemsJson = JsonSerializer.Serialize(new[]
+                {
+                    new { title = "Mục tiêu rõ ràng", desc = "Mọi quyết định đều hướng đến hiệu quả đầu tư và mục tiêu dài hạn của khách hàng." },
+                    new { title = "Kỷ luật chất lượng", desc = "Quy trình thi công, giám sát và nghiệm thu được kiểm soát nghiêm ngặt." },
+                    new { title = "Định hướng bền vững", desc = "Ưu tiên giải pháp tối ưu vận hành, chi phí và vòng đời công trình." },
+                    new { title = "Tận tâm đồng hành", desc = "Xây dựng niềm tin bằng cách làm việc minh bạch và trách nhiệm đến cùng." },
+                }),
+                IsActive = true,
+                SortOrder = 2,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new AboutSectionContent
+            {
+                Slug = "stats-main",
+                Eyebrow = "CHỈ SỐ NỔI BẬT",
+                ItemsJson = JsonSerializer.Serialize(new[]
+                {
+                    new { num = "18+", label = "Năm kinh nghiệm" },
+                    new { num = "150+", label = "Dự án hoàn thành" },
+                    new { num = "80+", label = "Khách hàng đồng hành" },
+                    new { num = "ISO", label = "Chuẩn hóa chất lượng" },
+                }),
+                IsActive = true,
+                SortOrder = 1,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new AboutSectionContent
+            {
+                Slug = "strategy-main",
+                Eyebrow = "CHIẾN LƯỢC",
+                TitleA = "Tư duy hệ thống cho",
+                TitleB = "mỗi dự án",
+                Paragraph1 = "Tầm nhìn: Trở thành tổng thầu thiết kế - thi công uy tín hàng đầu trong lĩnh vực công nghiệp và dân dụng tại Việt Nam.",
+                Paragraph2 = "Định hướng tương lai: Liên tục nâng cao năng lực thiết kế, quản lý và công nghệ để đáp ứng các tiêu chuẩn quốc tế ngày càng cao.",
+                ItemsJson = JsonSerializer.Serialize(new[]
+                {
+                    new { title = "Thiết kế - thi công tổng thể", desc = "Một đầu mối thống nhất giúp kiểm soát tiến độ, chi phí và chất lượng." },
+                    new { title = "Kết cấu và hạ tầng công nghiệp", desc = "Tối ưu giải pháp nền móng, kết cấu và hạ tầng kỹ thuật." },
+                    new { title = "Cơ điện và hệ thống phụ trợ", desc = "Đảm bảo vận hành ổn định, an toàn và phù hợp tiêu chuẩn dự án." },
+                    new { title = "Bảo trì và cải tạo", desc = "Đồng hành cùng khách hàng trong suốt vòng đời vận hành công trình." },
+                    new { title = "Tư vấn đầu tư", desc = "Hỗ trợ chủ đầu tư từ giai đoạn ý tưởng đến kế hoạch triển khai." },
+                    new { title = "Phát triển đội ngũ", desc = "Tăng cường năng lực tổ chức để đáp ứng dự án có quy mô ngày càng lớn." },
+                }),
+                IsActive = true,
+                SortOrder = 3,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new AboutSectionContent
+            {
+                Slug = "organization-main",
+                Eyebrow = "TỔ CHỨC",
+                TitleA = "Bộ máy điều hành",
+                TitleB = "vững mạnh",
+                ItemsJson = JsonSerializer.Serialize(new
+                {
+                    board = new[]
+                    {
+                        new { role = "Chủ tịch HĐQT", name = "Ông Võ Trí Nguyên" },
+                        new { role = "Phó chủ tịch HĐQT", name = "Ông Trần Văn A" },
+                        new { role = "Phó chủ tịch HĐQT", name = "Ông Nguyễn Văn B" },
+                        new { role = "Thư ký HĐQT", name = "Bà Lê Thị C" },
+                    },
+                    directors = new[]
+                    {
+                        new { role = "Tổng giám đốc", name = "Ông Võ Trí Nguyên" },
+                        new { role = "Giám đốc BD Nhật Bản", name = "Ông Daisuke Mori" },
+                        new { role = "Giám đốc BD châu Á", name = "Ông Kenji Sato" },
+                        new { role = "Giám đốc thiết kế", name = "Bà Nguyễn Thị Lan" },
+                    },
+                }),
+                IsActive = true,
+                SortOrder = 4,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new AboutSectionContent
+            {
+                Slug = "timeline-main",
+                Eyebrow = "LỊCH SỬ",
+                TitleA = "Dấu mốc phát triển",
+                TitleB = "qua từng giai đoạn",
+                ImageUrl = "/images/activities/activity-opening.jpg",
+                ItemsJson = JsonSerializer.Serialize(new[]
+                {
+                    new { year = "2006", title = "Thành lập NICON", desc = "Đặt nền móng cho hành trình phát triển trong lĩnh vực xây dựng công nghiệp." },
+                    new { year = "2007", title = "Mở rộng đội ngũ", desc = "Tăng cường năng lực triển khai và quản lý dự án." },
+                    new { year = "2010", title = "Chinh phục dự án FDI", desc = "Bắt đầu đồng hành cùng nhiều nhà đầu tư nước ngoài." },
+                    new { year = "2016", title = "Chuẩn hóa quy trình", desc = "Nâng cao hiệu quả quản trị và kiểm soát chất lượng." },
+                    new { year = "2018", title = "Mở rộng hợp tác chiến lược", desc = "Tăng cường kết nối với các đối tác trong và ngoài nước." },
+                    new { year = "2024", title = "Tiếp tục tăng trưởng", desc = "Khẳng định vị thế tổng thầu uy tín với nhiều dự án quy mô lớn." },
+                }),
+                IsActive = true,
+                SortOrder = 5,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new AboutSectionContent
+            {
+                Slug = "certs-main",
+                Eyebrow = "CHỨNG NHẬN",
+                TitleA = "Tiêu chuẩn vận hành",
+                TitleB = "đáng tin cậy",
+                ItemsJson = JsonSerializer.Serialize(new[]
+                {
+                    new { name = "ISO 9001:2008", desc = "Hệ thống quản lý chất lượng." },
+                    new { name = "ISO 9001:2015", desc = "Chuẩn hóa quy trình và cải tiến liên tục." },
+                    new { name = "ISO 14001", desc = "Quản lý môi trường trong thi công và vận hành." },
+                }),
+                IsActive = true,
+                SortOrder = 6,
+                CreatedAt = now,
+                UpdatedAt = now,
+            },
+            new AboutSectionContent
+            {
+                Slug = "downloads-main",
+                Eyebrow = "TÀI LIỆU",
+                TitleA = "Hồ sơ năng lực",
+                TitleB = "và tài liệu tham khảo",
+                Paragraph1 = "Tổng hợp các tài liệu giới thiệu năng lực, chứng nhận và thông tin doanh nghiệp phục vụ đối tác, khách hàng và nhà đầu tư.",
+                ItemsJson = JsonSerializer.Serialize(new[]
+                {
+                    new { name = "Company Profile", size = "12 MB", type = "PDF", url = "#" },
+                    new { name = "Brochure năng lực", size = "8 MB", type = "PDF", url = "#" },
+                    new { name = "ISO Certificates", size = "4 MB", type = "PDF", url = "#" },
+                    new { name = "Danh mục dự án tiêu biểu", size = "10 MB", type = "PDF", url = "#" },
+                }),
+                IsActive = true,
+                SortOrder = 7,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
+
+        db.SaveChanges();
+    }
 
     private static void SeedRecruitment(AppDbContext db)
     {

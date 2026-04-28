@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ClientLogo> ClientLogos => Set<ClientLogo>();
     public DbSet<ProcessDocument> ProcessDocuments => Set<ProcessDocument>();
     public DbSet<SlideshowItem> SlideshowItems => Set<SlideshowItem>();
+    public DbSet<AboutSectionContent> AboutSectionContents => Set<AboutSectionContent>();
     public DbSet<ActivityCategory> ActivityCategories => Set<ActivityCategory>();
 
     // Recruitment
@@ -91,6 +92,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<SlideshowItem>().ToTable("slideshow_items");
         modelBuilder.Entity<SlideshowItem>().HasKey(s => s.Id);
         modelBuilder.Entity<SlideshowItem>().HasIndex(s => s.Slug).IsUnique();
+
+        modelBuilder.Entity<AboutSectionContent>().ToTable("about_section_contents");
+        modelBuilder.Entity<AboutSectionContent>().HasKey(a => a.Id);
+        modelBuilder.Entity<AboutSectionContent>().HasIndex(a => a.Slug).IsUnique();
 
         modelBuilder.Entity<ActivityCategory>().ToTable("activity_categories");
         modelBuilder.Entity<ActivityCategory>().HasKey(c => c.Id);

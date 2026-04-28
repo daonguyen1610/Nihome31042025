@@ -70,6 +70,33 @@ export interface UpsertSlideshowRequest {
   sortOrder?: number;
 }
 
+export interface UpsertAboutSectionRequest {
+  slug: string;
+  itemsJson?: string | null;
+  eyebrow: string;
+  titleA: string;
+  titleB: string;
+  paragraph1: string;
+  paragraph2: string;
+  imageUrl: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface AboutSectionAdminResponse {
+  id: number;
+  slug: string;
+  itemsJson?: string | null;
+  eyebrow: string;
+  titleA: string;
+  titleB: string;
+  paragraph1: string;
+  paragraph2: string;
+  imageUrl: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface SlideshowAdminResponse {
   id: number;
   slug: string;
@@ -279,6 +306,16 @@ export const adminApi = {
     api.put(`/slideshow/${id}`, data),
   deleteSlideshow: (id: number) =>
     api.delete(`/slideshow/${id}`),
+
+  // About sections
+  getAboutSections: (activeOnly = false) =>
+    api.get<AboutSectionAdminResponse[]>(`/about-sections?activeOnly=${activeOnly}`),
+  createAboutSection: (data: UpsertAboutSectionRequest) =>
+    api.post<AboutSectionAdminResponse>("/about-sections", data),
+  updateAboutSection: (id: number, data: UpsertAboutSectionRequest) =>
+    api.put<AboutSectionAdminResponse>(`/about-sections/${id}`, data),
+  deleteAboutSection: (id: number) =>
+    api.delete(`/about-sections/${id}`),
 
   // Job positions
   getJobPositions: (includeInactive = false) =>
