@@ -3,3 +3,6 @@ nihomebackend/bin/**
 nihomebackend/obj/**
 nihomebackend.tests/bin/**
 nihomebackend.tests/obj/**
+.amazonq
+.agents
+skills-lock.json
