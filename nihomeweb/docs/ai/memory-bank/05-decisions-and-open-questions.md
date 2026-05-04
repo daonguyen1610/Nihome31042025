@@ -48,6 +48,10 @@ Rationale: The team explicitly chose not to continue with starter-kit or full ad
 
 Rationale: They make the UI usable during frontend development but do not define production auth, authorization, persistence, or API contracts.
 
+### 2026-05-05 - About/Profile content must be sourced from backend seed and API, not frontend fallbacks
+
+Rationale: Public `Profile` content and admin `AboutContent` should reflect the same source of truth. Frontend hardcoded fallback datasets caused drift between client rendering and admin editing, especially for `organization-main`. The backend `ContentSeeder` and `about-sections` API now define the default content baseline.
+
 ## Open Questions
 
 ### Should the `legacy/` reference folders remain long term?

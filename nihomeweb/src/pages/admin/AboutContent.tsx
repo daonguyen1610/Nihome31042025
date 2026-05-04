@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   CheckCircle2,
   Loader2,
@@ -304,8 +304,6 @@ const normalizeOrganizationItems = (raw: string | null | undefined): Organizatio
     directors: normalizeLeaderItems(parsed.directors ?? [], "director"),
   };
 };
-
-const hasOrganizationMembers = (items: OrganizationItem) => items.board.length > 0 || items.directors.length > 0;
 
 const normalizeTimelineItems = (raw: string | null | undefined): TimelineItem[] =>
   sortItemsBySortOrder(
@@ -687,23 +685,6 @@ const AboutContent = () => {
     () => SECTION_TABS.map((tab) => ({ ...tab, label: t(tab.labelKey), description: t(tab.descriptionKey) })),
     [t],
   );
-  const defaultOrganizationItems = useMemo<OrganizationItem>(
-    () => ({
-      board: [
-        { id: "board_0", role: t("profilePage.ld.role.chair"), name: t("profilePage.ld.name.chair"), isActive: true, sortOrder: 0 },
-        { id: "board_1", role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair1"), isActive: true, sortOrder: 1 },
-        { id: "board_2", role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair2"), isActive: true, sortOrder: 2 },
-        { id: "board_3", role: t("profilePage.ld.role.secretary"), name: t("profilePage.ld.name.secretary"), isActive: true, sortOrder: 3 },
-      ],
-      directors: [
-        { id: "director_0", role: t("profilePage.ld.role.ceo"), name: t("profilePage.ld.name.ceo"), isActive: true, sortOrder: 0 },
-        { id: "director_1", role: t("profilePage.ld.role.bdJp"), name: t("profilePage.ld.name.bdJp"), isActive: true, sortOrder: 1 },
-        { id: "director_2", role: t("profilePage.ld.role.bdAsia"), name: t("profilePage.ld.name.bdAsia"), isActive: true, sortOrder: 2 },
-        { id: "director_3", role: t("profilePage.ld.role.design"), name: t("profilePage.ld.name.design"), isActive: true, sortOrder: 3 },
-      ],
-    }),
-    [t],
-  );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -714,6 +695,8 @@ const AboutContent = () => {
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
   const [iconDialogEditor, setIconDialogEditor] = useState<"values" | "strategy">("values");
   const [iconDraft, setIconDraft] = useState<IconTextDraft | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const previousActiveSlugRef = useRef(activeSlug);
 
   useEffect(() => {
     let canceled = false;
@@ -755,15 +738,20 @@ const AboutContent = () => {
     [activeSlug, localizedTabs],
   );
 
+  useEffect(() => {
+    if (loading) return;
+    if (previousActiveSlugRef.current === activeSlug) return;
+
+    previousActiveSlugRef.current = activeSlug;
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeSlug, loading]);
+
   const form = forms[activeSlug] ?? emptyForm(activeSlug, 0);
   const shouldShowStructuredEditorFirst = activeTab.editor === "organization";
   const statItems = useMemo(() => normalizeStatItems(form.itemsJson), [form.itemsJson]);
   const valueItems = useMemo(() => normalizeIconTextItems(form.itemsJson, "value", DEFAULT_VALUE_ICON_KEYS), [form.itemsJson]);
   const strategyItems = useMemo(() => normalizeIconTextItems(form.itemsJson, "strategy", DEFAULT_STRATEGY_ICON_KEYS), [form.itemsJson]);
-  const organizationItems = useMemo(() => {
-    const normalized = normalizeOrganizationItems(form.itemsJson);
-    return hasOrganizationMembers(normalized) ? normalized : defaultOrganizationItems;
-  }, [defaultOrganizationItems, form.itemsJson]);
+  const organizationItems = useMemo(() => normalizeOrganizationItems(form.itemsJson), [form.itemsJson]);
   const timelineItems = useMemo(() => normalizeTimelineItems(form.itemsJson), [form.itemsJson]);
   const certItems = useMemo(() => normalizeCertItems(form.itemsJson), [form.itemsJson]);
   const downloadItems = useMemo(() => normalizeDownloadItems(form.itemsJson), [form.itemsJson]);
@@ -1374,16 +1362,18 @@ const AboutContent = () => {
       <div className="about-tabs">
         {localizedTabs.map((tab) => (
           <button
+            type="button"
             key={tab.slug}
             onClick={() => setActiveSlug(tab.slug)}
             className={`about-tab ${activeSlug === tab.slug ? "is-active" : ""}`}
+            aria-pressed={activeSlug === tab.slug}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className="admin-card about-editor p-5 lg:p-7 space-y-6">
+      <div ref={editorRef} className="admin-card about-editor p-5 lg:p-7 space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="font-display text-xl font-extrabold">{activeTab.label}</h2>
