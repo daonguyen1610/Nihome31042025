@@ -1414,5 +1414,189 @@
     "en": "Order",
     "zh": "顺序",
     "ja": "順序"
+  },
+  {
+    "key": "aboutAdmin.profileManagerDesc",
+    "category": "aboutAdmin",
+    "vi": "Quản lý toàn bộ nội dung text đang hiển thị trên trang Profile/Về chúng tôi của client.",
+    "en": "Manage all text content displayed on the client Profile/About page.",
+    "zh": "管理客户端简介/关于我们页面上显示的所有文本内容。",
+    "ja": "クライアント側のプロフィール/会社概要ページに表示される全テキストを管理します。"
+  },
+  {
+    "key": "aboutAdmin.saveSection",
+    "category": "aboutAdmin",
+    "vi": "Lưu section",
+    "en": "Save section",
+    "zh": "保存区块",
+    "ja": "セクションを保存"
+  },
+  {
+    "key": "aboutAdmin.preview",
+    "category": "aboutAdmin",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "aboutAdmin.section.header",
+    "category": "aboutAdmin",
+    "vi": "Header trang",
+    "en": "Page header",
+    "zh": "页面页眉",
+    "ja": "ページヘッダー"
+  },
+  {
+    "key": "aboutAdmin.section.headerDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề lớn và mô tả đầu trang Profile.",
+    "en": "Main title and description at the top of the Profile page.",
+    "zh": "简介页面顶部的主标题和说明。",
+    "ja": "プロフィールページ上部のメインタイトルと説明です。"
+  },
+  {
+    "key": "aboutAdmin.section.nav",
+    "category": "aboutAdmin",
+    "vi": "Menu neo",
+    "en": "Anchor menu",
+    "zh": "锚点菜单",
+    "ja": "アンカーメニュー"
+  },
+  {
+    "key": "aboutAdmin.section.navDesc",
+    "category": "aboutAdmin",
+    "vi": "Các nhãn điều hướng sticky bên dưới header.",
+    "en": "Sticky navigation labels below the header.",
+    "zh": "页眉下方的固定导航标签。",
+    "ja": "ヘッダー下の固定ナビゲーションラベルです。"
+  },
+  {
+    "key": "aboutAdmin.section.about",
+    "category": "aboutAdmin",
+    "vi": "About",
+    "en": "About",
+    "zh": "关于",
+    "ja": "概要"
+  },
+  {
+    "key": "aboutAdmin.section.aboutDesc",
+    "category": "aboutAdmin",
+    "vi": "Ảnh lãnh đạo, headline 2 phần và phần giới thiệu công ty.",
+    "en": "Leadership image, two-part headline, and company introduction.",
+    "zh": "领导图片、两段式标题和公司介绍。",
+    "ja": "リーダーシップ画像、2分割見出し、会社紹介です。"
+  },
+  {
+    "key": "aboutAdmin.section.stats",
+    "category": "aboutAdmin",
+    "vi": "Số liệu",
+    "en": "Stats",
+    "zh": "数据",
+    "ja": "実績数値"
+  },
+  {
+    "key": "aboutAdmin.section.statsDesc",
+    "category": "aboutAdmin",
+    "vi": "Các card số liệu ngay dưới section About.",
+    "en": "Metric cards directly below the About section.",
+    "zh": "关于区块下方的统计卡片。",
+    "ja": "概要セクション直下の数値カードです。"
+  },
+  {
+    "key": "aboutAdmin.section.values",
+    "category": "aboutAdmin",
+    "vi": "Giá trị cốt lõi",
+    "en": "Core values",
+    "zh": "核心价值",
+    "ja": "コアバリュー"
+  },
+  {
+    "key": "aboutAdmin.section.valuesDesc",
+    "category": "aboutAdmin",
+    "vi": "Bốn giá trị cốt lõi đang hiển thị trên trang Profile.",
+    "en": "The four core values displayed on the Profile page.",
+    "zh": "简介页面上显示的四项核心价值。",
+    "ja": "プロフィールページに表示される4つのコアバリューです。"
+  },
+  {
+    "key": "aboutAdmin.section.strategy",
+    "category": "aboutAdmin",
+    "vi": "Chiến lược",
+    "en": "Strategy",
+    "zh": "战略",
+    "ja": "戦略"
+  },
+  {
+    "key": "aboutAdmin.section.strategyDesc",
+    "category": "aboutAdmin",
+    "vi": "Headline, tầm nhìn, định hướng tương lai và 6 lĩnh vực hoạt động.",
+    "en": "Headline, vision, future direction, and six business lines.",
+    "zh": "标题、愿景、未来方向和六个业务领域。",
+    "ja": "見出し、ビジョン、今後の方向性、6つの事業領域です。"
+  },
+  {
+    "key": "aboutAdmin.section.organization",
+    "category": "aboutAdmin",
+    "vi": "Tổ chức",
+    "en": "Organization",
+    "zh": "组织",
+    "ja": "組織"
+  },
+  {
+    "key": "aboutAdmin.section.organizationDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và danh sách lãnh đạo.",
+    "en": "Section title and leadership list.",
+    "zh": "区块标题和领导名单。",
+    "ja": "セクション見出しとリーダー一覧です。"
+  },
+  {
+    "key": "aboutAdmin.section.timeline",
+    "category": "aboutAdmin",
+    "vi": "Timeline",
+    "en": "Timeline",
+    "zh": "时间线",
+    "ja": "沿革"
+  },
+  {
+    "key": "aboutAdmin.section.timelineDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề timeline và các mốc phát triển.",
+    "en": "Timeline title and development milestones.",
+    "zh": "时间线标题和发展里程碑。",
+    "ja": "沿革タイトルと発展の節目です。"
+  },
+  {
+    "key": "aboutAdmin.section.certifications",
+    "category": "aboutAdmin",
+    "vi": "Chứng nhận",
+    "en": "Certifications",
+    "zh": "认证",
+    "ja": "認証"
+  },
+  {
+    "key": "aboutAdmin.section.certificationsDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và 3 card chứng nhận.",
+    "en": "Section title and three certification cards.",
+    "zh": "区块标题和三个认证卡片。",
+    "ja": "セクション見出しと3つの認証カードです。"
+  },
+  {
+    "key": "aboutAdmin.section.downloads",
+    "category": "aboutAdmin",
+    "vi": "Tài liệu tải xuống",
+    "en": "Downloads",
+    "zh": "下载资料",
+    "ja": "ダウンロード資料"
+  },
+  {
+    "key": "aboutAdmin.section.downloadsDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề, mô tả và danh sách tài liệu tải xuống.",
+    "en": "Title, description, and downloadable document list.",
+    "zh": "标题、说明和可下载资料列表。",
+    "ja": "タイトル、説明、ダウンロード資料一覧です。"
   }
 ]
