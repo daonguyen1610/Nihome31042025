@@ -35,7 +35,8 @@ type TimelineItem = { year: string; title: string; desc: string; sortOrder?: num
 type CertificationItem = { name: string; desc: string; sortOrder?: number };
 type DownloadItem = { name: string; size: string; type: string; url?: string; sortOrder?: number };
 
-const hasOrganizationMembers = (items: OrganizationItems) => items.board.length > 0 || items.directors.length > 0;
+const hasOrganizationMembers = (items: { board: readonly unknown[]; directors: readonly unknown[] }) =>
+  items.board.length > 0 || items.directors.length > 0;
 
 const parseItems = <T,>(value: string | null | undefined, fallback: T): T => {
   if (!value) return fallback;
