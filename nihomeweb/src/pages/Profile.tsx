@@ -5,8 +5,6 @@ import {
   Download,
   FileText,
 } from "lucide-react";
-import leadership from "@/assets/profile-leadership.jpg";
-import activitiesImg from "@/assets/profile-activities.jpg";
 import { useI18n } from "@/lib/i18n";
 import { contentApi, type AboutSectionResponse } from "@/services/contentApi";
 import { useEffect, useMemo, useState } from "react";
@@ -109,90 +107,27 @@ const Profile = () => {
     [aboutSections],
   );
 
-  const defaultMilestones: TimelineItem[] = [
-    { year: "2006", title: t("profilePage.ms.2006.t"), desc: t("profilePage.ms.2006.d") },
-    { year: "2007", title: t("profilePage.ms.2007.t"), desc: t("profilePage.ms.2007.d") },
-    { year: "2010", title: t("profilePage.ms.2010.t"), desc: t("profilePage.ms.2010.d") },
-    { year: "2016", title: t("profilePage.ms.2016.t"), desc: t("profilePage.ms.2016.d") },
-    { year: "2018", title: t("profilePage.ms.2018.t"), desc: t("profilePage.ms.2018.d") },
-    { year: "2024", title: t("profilePage.ms.2024.t"), desc: t("profilePage.ms.2024.d") },
-  ];
-
-  const defaultValues: IconTextItem[] = [
-    { iconKey: DEFAULT_VALUE_ICON_KEYS[0], title: t("profilePage.v1.title"), desc: t("profilePage.v1.desc"), sortOrder: 0, isActive: true },
-    { iconKey: DEFAULT_VALUE_ICON_KEYS[1], title: t("profilePage.v2.title"), desc: t("profilePage.v2.desc"), sortOrder: 1, isActive: true },
-    { iconKey: DEFAULT_VALUE_ICON_KEYS[2], title: t("profilePage.v3.title"), desc: t("profilePage.v3.desc"), sortOrder: 2, isActive: true },
-    { iconKey: DEFAULT_VALUE_ICON_KEYS[3], title: t("profilePage.v4.title"), desc: t("profilePage.v4.desc"), sortOrder: 3, isActive: true },
-  ];
-
-  const defaultStats: StatItem[] = [
-    { num: t("profilePage.stat.yearsValue"), label: t("profilePage.stat.years"), iconKey: DEFAULT_STATS_ICON_KEYS[0], sortOrder: 0, isActive: true },
-    { num: t("profilePage.stat.projectsValue"), label: t("profilePage.stat.projects"), iconKey: DEFAULT_STATS_ICON_KEYS[1], sortOrder: 1, isActive: true },
-    { num: t("profilePage.stat.clientsValue"), label: t("profilePage.stat.clients"), iconKey: DEFAULT_STATS_ICON_KEYS[2], sortOrder: 2, isActive: true },
-    { num: t("profilePage.stat.isoTop"), label: t("profilePage.stat.isoBottom"), iconKey: DEFAULT_STATS_ICON_KEYS[3], sortOrder: 3, isActive: true },
-  ];
-
-  const defaultBusinessLines: IconTextItem[] = [
-    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[0], title: t("profilePage.bl1.title"), desc: t("profilePage.bl1.desc"), sortOrder: 0, isActive: true },
-    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[1], title: t("profilePage.bl2.title"), desc: t("profilePage.bl2.desc"), sortOrder: 1, isActive: true },
-    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[2], title: t("profilePage.bl3.title"), desc: t("profilePage.bl3.desc"), sortOrder: 2, isActive: true },
-    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[3], title: t("profilePage.bl4.title"), desc: t("profilePage.bl4.desc"), sortOrder: 3, isActive: true },
-    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[4], title: t("profilePage.bl5.title"), desc: t("profilePage.bl5.desc"), sortOrder: 4, isActive: true },
-    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[5], title: t("profilePage.bl6.title"), desc: t("profilePage.bl6.desc"), sortOrder: 5, isActive: true },
-  ];
-
-  const defaultLeadershipData = useMemo<OrganizationItems>(
-    () => ({
-      board: [
-        { role: t("profilePage.ld.role.chair"), name: t("profilePage.ld.name.chair") },
-        { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair1") },
-        { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair2") },
-        { role: t("profilePage.ld.role.secretary"), name: t("profilePage.ld.name.secretary") },
-      ],
-      directors: [
-        { role: t("profilePage.ld.role.ceo"), name: t("profilePage.ld.name.ceo") },
-        { role: t("profilePage.ld.role.bdJp"), name: t("profilePage.ld.name.bdJp") },
-        { role: t("profilePage.ld.role.bdAsia"), name: t("profilePage.ld.name.bdAsia") },
-        { role: t("profilePage.ld.role.design"), name: t("profilePage.ld.name.design") },
-      ],
-    }),
-    [t],
-  );
-
-  const defaultCertifications: CertificationItem[] = [
-    { name: t("profilePage.cert.iso2008.n"), desc: t("profilePage.cert.iso2008.d") },
-    { name: t("profilePage.cert.iso2015.n"), desc: t("profilePage.cert.iso2015.d") },
-    { name: t("profilePage.cert.iso14001.n"), desc: t("profilePage.cert.iso14001.d") },
-  ];
-
-  const defaultDownloads: DownloadItem[] = [
-    { name: t("profilePage.dl.f1"), size: t("profilePage.dl.f1.size"), type: t("profilePage.dl.f1.type"), url: "#" },
-    { name: t("profilePage.dl.f2"), size: t("profilePage.dl.f2.size"), type: t("profilePage.dl.f2.type"), url: "#" },
-    { name: t("profilePage.dl.f3"), size: t("profilePage.dl.f3.size"), type: t("profilePage.dl.f3.type"), url: "#" },
-    { name: t("profilePage.dl.f4"), size: t("profilePage.dl.f4.size"), type: t("profilePage.dl.f4.type"), url: "#" },
-  ];
-
-  const milestones = sortItemsBySortOrder(parseItems<TimelineItem[]>(timelineMain?.itemsJson, defaultMilestones));
-  const values = sortItemsBySortOrder(parseItems<IconTextItem[]>(valuesMain?.itemsJson, defaultValues)).filter((item) => item.isActive !== false);
-  const stats = sortItemsBySortOrder(parseItems<StatItem[]>(statsMain?.itemsJson, defaultStats)).filter((item) => item.isActive !== false);
-  const businessLines = sortItemsBySortOrder(parseItems<IconTextItem[]>(strategyMain?.itemsJson, defaultBusinessLines)).filter((item) => item.isActive !== false);
+  const milestones = sortItemsBySortOrder(parseItems<TimelineItem[]>(timelineMain?.itemsJson, []));
+  const values = sortItemsBySortOrder(parseItems<IconTextItem[]>(valuesMain?.itemsJson, [])).filter((item) => item.isActive !== false);
+  const stats = sortItemsBySortOrder(parseItems<StatItem[]>(statsMain?.itemsJson, [])).filter((item) => item.isActive !== false);
+  const businessLines = sortItemsBySortOrder(parseItems<IconTextItem[]>(strategyMain?.itemsJson, [])).filter((item) => item.isActive !== false);
   const leadershipData = useMemo(() => {
     if (!organizationMain?.itemsJson?.trim()) {
-      return defaultLeadershipData;
+      return { board: [], directors: [] } as OrganizationItems;
     }
 
     const parsed = parseOrganizationContent(organizationMain.itemsJson);
     if (!hasOrganizationMembers(parsed)) {
-      return defaultLeadershipData;
+      return { board: [], directors: [] } as OrganizationItems;
     }
 
     return {
       board: normalizeLeadershipItems(parsed.board),
       directors: normalizeLeadershipItems(parsed.directors),
     };
-  }, [defaultLeadershipData, organizationMain?.itemsJson]);
-  const certifications = sortItemsBySortOrder(parseItems<CertificationItem[]>(certsMain?.itemsJson, defaultCertifications));
-  const downloads = sortItemsBySortOrder(parseItems<DownloadItem[]>(downloadsMain?.itemsJson, defaultDownloads));
+  }, [organizationMain?.itemsJson]);
+  const certifications = sortItemsBySortOrder(parseItems<CertificationItem[]>(certsMain?.itemsJson, []));
+  const downloads = sortItemsBySortOrder(parseItems<DownloadItem[]>(downloadsMain?.itemsJson, []));
   const boardMembers = sortItemsBySortOrder(leadershipData.board).filter((item) => item.isActive !== false);
   const directors = sortItemsBySortOrder(leadershipData.directors).filter((item) => item.isActive !== false);
 
@@ -232,16 +167,18 @@ const Profile = () => {
       <Section id="about">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
           <div className="lg:col-span-7 image-zoom rounded-3xl overflow-hidden">
-            <img src={aboutMain?.imageUrl || leadership} alt="NICON leadership" className="w-full h-full object-cover" loading="lazy" />
+            {aboutMain?.imageUrl ? (
+              <img src={aboutMain.imageUrl} alt="NICON leadership" className="w-full h-full object-cover" loading="lazy" />
+            ) : null}
           </div>
           <div className="lg:col-span-5 lg:pt-6">
-            <p className="eyebrow text-primary mb-6">{aboutMain?.eyebrow || t("profilePage.about.eyebrow")}</p>
+            <p className="eyebrow text-primary mb-6">{aboutMain?.eyebrow}</p>
             <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] mb-8 tracking-tight text-balance">
-              {aboutMain?.titleA || t("profilePage.about.titleA")}{" "}
-              <span className="text-gradient-primary">{aboutMain?.titleB || t("profilePage.about.titleB")}</span>.
+              {aboutMain?.titleA}{" "}
+              <span className="text-gradient-primary">{aboutMain?.titleB}</span>.
             </h2>
-            <p className="text-lg text-foreground/80 leading-relaxed mb-6">{aboutMain?.paragraph1 || t("profilePage.about.p1")}</p>
-            <p className="text-base text-muted-foreground leading-relaxed">{aboutMain?.paragraph2 || t("profilePage.about.p2")}</p>
+            <p className="text-lg text-foreground/80 leading-relaxed mb-6">{aboutMain?.paragraph1}</p>
+            <p className="text-base text-muted-foreground leading-relaxed">{aboutMain?.paragraph2}</p>
           </div>
         </div>
       </Section>
@@ -265,10 +202,10 @@ const Profile = () => {
       {/* Core Values */}
       <Section bg="bg-background">
         <div className="text-center max-w-2xl mx-auto mb-16">
-          <p className="eyebrow text-primary mb-6 justify-center">{valuesMain?.eyebrow || t("profilePage.values.eyebrow")}</p>
+          <p className="eyebrow text-primary mb-6 justify-center">{valuesMain?.eyebrow}</p>
           <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight">
-            {valuesMain?.titleA || t("profilePage.values.titleA")}{" "}
-            <span className="text-gradient-primary">{valuesMain?.titleB || "NICON"}</span>.
+            {valuesMain?.titleA}{" "}
+            <span className="text-gradient-primary">{valuesMain?.titleB}</span>.
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -291,15 +228,15 @@ const Profile = () => {
       <Section id="strategy" bg="bg-surface">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start mb-14">
           <div className="lg:col-span-5">
-            <p className="eyebrow text-primary mb-6">{strategyMain?.eyebrow || t("profilePage.strategy.eyebrow")}</p>
+            <p className="eyebrow text-primary mb-6">{strategyMain?.eyebrow}</p>
             <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight text-balance">
-              {strategyMain?.titleA || t("profilePage.strategy.titleA")}{" "}
-              <span className="text-gradient-primary">{strategyMain?.titleB || t("profilePage.strategy.titleB")}</span>.
+              {strategyMain?.titleA}{" "}
+              <span className="text-gradient-primary">{strategyMain?.titleB}</span>.
             </h2>
           </div>
           <div className="lg:col-span-7 lg:pt-4 space-y-5 text-foreground/80 leading-relaxed">
-            <p>{strategyMain?.paragraph1 || `${t("profilePage.strategy.visionLabel")}: ${t("profilePage.strategy.visionText")}`}</p>
-            <p>{strategyMain?.paragraph2 || `${t("profilePage.strategy.futureLabel")}: ${t("profilePage.strategy.futureText")}`}</p>
+            <p>{strategyMain?.paragraph1}</p>
+            <p>{strategyMain?.paragraph2}</p>
           </div>
         </div>
 
@@ -322,10 +259,10 @@ const Profile = () => {
       {/* Organization */}
       <Section id="org" bg="bg-background">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="eyebrow text-primary mb-6 justify-center">{organizationMain?.eyebrow || t("profilePage.org.eyebrow")}</p>
+          <p className="eyebrow text-primary mb-6 justify-center">{organizationMain?.eyebrow}</p>
           <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight">
-            {organizationMain?.titleA || t("profilePage.org.titleA")}{" "}
-            <span className="text-gradient-primary">{organizationMain?.titleB || t("profilePage.org.titleB")}</span>.
+            {organizationMain?.titleA}{" "}
+            <span className="text-gradient-primary">{organizationMain?.titleB}</span>.
           </h2>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -362,12 +299,12 @@ const Profile = () => {
       <Section id="timeline" bg="bg-surface">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-4">
-            <p className="eyebrow text-primary mb-6">{timelineMain?.eyebrow || t("profilePage.timeline.eyebrow")}</p>
+            <p className="eyebrow text-primary mb-6">{timelineMain?.eyebrow}</p>
             <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight text-balance">
-              {timelineMain?.titleA || t("profilePage.timeline.titleA")}<br />
-              <span className="text-gradient-primary">{timelineMain?.titleB || t("profilePage.timeline.titleB")}</span>.
+              {timelineMain?.titleA}<br />
+              <span className="text-gradient-primary">{timelineMain?.titleB}</span>.
             </h2>
-            <img src={timelineMain?.imageUrl || activitiesImg} alt="" className="mt-10 rounded-3xl w-full hover-lift" loading="lazy" />
+            {timelineMain?.imageUrl ? <img src={timelineMain.imageUrl} alt="" className="mt-10 rounded-3xl w-full hover-lift" loading="lazy" /> : null}
           </div>
           <div className="lg:col-span-8 lg:pl-8 relative">
             <div className="absolute left-[18px] top-2 bottom-2 w-px bg-gradient-to-b from-primary via-accent-orange to-transparent lg:left-7" />
@@ -389,10 +326,10 @@ const Profile = () => {
       {/* Certifications */}
       <Section id="certs" bg="bg-background">
         <div className="text-center max-w-2xl mx-auto mb-14">
-          <p className="eyebrow text-primary mb-6 justify-center">{certsMain?.eyebrow || t("profilePage.certs.eyebrow")}</p>
+          <p className="eyebrow text-primary mb-6 justify-center">{certsMain?.eyebrow}</p>
           <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight">
-            {certsMain?.titleA || t("profilePage.certs.titleA")}{" "}
-            <span className="text-gradient-primary">{certsMain?.titleB || t("profilePage.certs.titleB")}</span>.
+            {certsMain?.titleA}{" "}
+            <span className="text-gradient-primary">{certsMain?.titleB}</span>.
           </h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -412,12 +349,12 @@ const Profile = () => {
       <Section id="downloads" bg="bg-surface">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           <div className="lg:col-span-5">
-            <p className="eyebrow text-primary mb-6">{downloadsMain?.eyebrow || t("profilePage.dl.eyebrow")}</p>
+            <p className="eyebrow text-primary mb-6">{downloadsMain?.eyebrow}</p>
             <h2 className="font-display text-4xl md:text-5xl font-extrabold leading-[1.05] tracking-tight text-balance">
-              {downloadsMain?.titleA || t("profilePage.dl.titleA")}<br />
-              <span className="text-gradient-primary">{downloadsMain?.titleB || t("profilePage.dl.titleB")}</span>.
+              {downloadsMain?.titleA}<br />
+              <span className="text-gradient-primary">{downloadsMain?.titleB}</span>.
             </h2>
-            <p className="mt-6 text-muted-foreground leading-relaxed">{downloadsMain?.paragraph1 || t("profilePage.dl.desc")}</p>
+            <p className="mt-6 text-muted-foreground leading-relaxed">{downloadsMain?.paragraph1}</p>
           </div>
           <div className="lg:col-span-7 space-y-3">
             {downloads.map((d, i) => (
