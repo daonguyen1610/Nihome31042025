@@ -38,6 +38,14 @@ type DownloadItem = { name: string; size: string; type: string; url?: string; so
 const hasOrganizationMembers = (items: { board: readonly unknown[]; directors: readonly unknown[] }) =>
   items.board.length > 0 || items.directors.length > 0;
 
+const normalizeLeadershipItems = (items: Array<Partial<LeaderItem>>): LeaderItem[] =>
+  items.map((item) => ({
+    role: item.role ?? "",
+    name: item.name ?? "",
+    isActive: item.isActive ?? true,
+    sortOrder: item.sortOrder,
+  }));
+
 const parseItems = <T,>(value: string | null | undefined, fallback: T): T => {
   if (!value) return fallback;
 
@@ -174,7 +182,14 @@ const Profile = () => {
     }
 
     const parsed = parseOrganizationContent(organizationMain.itemsJson);
-    return hasOrganizationMembers(parsed) ? parsed : defaultLeadershipData;
+    if (!hasOrganizationMembers(parsed)) {
+      return defaultLeadershipData;
+    }
+
+    return {
+      board: normalizeLeadershipItems(parsed.board),
+      directors: normalizeLeadershipItems(parsed.directors),
+    };
   }, [defaultLeadershipData, organizationMain?.itemsJson]);
   const certifications = sortItemsBySortOrder(parseItems<CertificationItem[]>(certsMain?.itemsJson, defaultCertifications));
   const downloads = sortItemsBySortOrder(parseItems<DownloadItem[]>(downloadsMain?.itemsJson, defaultDownloads));
