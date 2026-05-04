@@ -1414,5 +1414,789 @@
     "en": "Order",
     "zh": "顺序",
     "ja": "順序"
+  },
+  {
+    "key": "aboutAdmin.pageDesc",
+    "category": "aboutAdmin",
+    "vi": "Quản lý đầy đủ các block hiển thị trên trang client `/profile` bằng form trực quan cho từng phần.",
+    "en": "Manage all content blocks displayed on the `/profile` page using an intuitive form for each section.",
+    "zh": "通过直观的表单管理 `/profile` 页面上显示的所有内容块。",
+    "ja": "`/profile` ページに表示されるすべてのコンテンツブロックを直感的なフォームで管理します。"
+  },
+  {
+    "key": "aboutAdmin.tab.intro",
+    "category": "aboutAdmin",
+    "vi": "Giới thiệu",
+    "en": "Introduction",
+    "zh": "介绍",
+    "ja": "紹介"
+  },
+  {
+    "key": "aboutAdmin.tab.stats",
+    "category": "aboutAdmin",
+    "vi": "Chỉ số",
+    "en": "Stats",
+    "zh": "统计",
+    "ja": "統計"
+  },
+  {
+    "key": "aboutAdmin.tab.values",
+    "category": "aboutAdmin",
+    "vi": "Giá trị cốt lõi",
+    "en": "Core Values",
+    "zh": "核心价值",
+    "ja": "コアバリュー"
+  },
+  {
+    "key": "aboutAdmin.tab.strategy",
+    "category": "aboutAdmin",
+    "vi": "Chiến lược",
+    "en": "Strategy",
+    "zh": "战略",
+    "ja": "戦略"
+  },
+  {
+    "key": "aboutAdmin.tab.organization",
+    "category": "aboutAdmin",
+    "vi": "Tổ chức",
+    "en": "Organization",
+    "zh": "组织",
+    "ja": "組織"
+  },
+  {
+    "key": "aboutAdmin.tab.timeline",
+    "category": "aboutAdmin",
+    "vi": "Lịch sử",
+    "en": "History",
+    "zh": "历史",
+    "ja": "歴史"
+  },
+  {
+    "key": "aboutAdmin.tab.certs",
+    "category": "aboutAdmin",
+    "vi": "Chứng nhận",
+    "en": "Certifications",
+    "zh": "认证",
+    "ja": "認定"
+  },
+  {
+    "key": "aboutAdmin.tab.downloads",
+    "category": "aboutAdmin",
+    "vi": "Tài liệu",
+    "en": "Documents",
+    "zh": "文档",
+    "ja": "ドキュメント"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.intro",
+    "category": "aboutAdmin",
+    "vi": "Block mở đầu của trang Về Chúng Tôi.",
+    "en": "Opening block of the About Us page.",
+    "zh": "关于我们页面的开头块。",
+    "ja": "会社概要ページの冒頭ブロック。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.stats",
+    "category": "aboutAdmin",
+    "vi": "Các chỉ số nổi bật nằm ngay dưới phần giới thiệu.",
+    "en": "Key metrics displayed just below the introduction.",
+    "zh": "紧接在介绍下方显示的关键指标。",
+    "ja": "紹介文の直下に表示される主要指標。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.values",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và danh sách thẻ giá trị cốt lõi.",
+    "en": "Section heading and list of core value cards.",
+    "zh": "版块标题和核心价值卡片列表。",
+    "ja": "セクション見出しとコアバリューカードのリスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.strategy",
+    "category": "aboutAdmin",
+    "vi": "Section chiến lược và các lĩnh vực hoạt động.",
+    "en": "Strategy section and areas of operation.",
+    "zh": "战略版块和业务领域。",
+    "ja": "戦略セクションと事業領域。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.organization",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và danh sách nhân sự điều hành.",
+    "en": "Section heading and list of executive personnel.",
+    "zh": "版块标题和管理人员列表。",
+    "ja": "セクション見出しと経営陣リスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.timeline",
+    "category": "aboutAdmin",
+    "vi": "Timeline lịch sử phát triển và hình minh họa.",
+    "en": "Development history timeline and illustration.",
+    "zh": "发展历史时间线和插图。",
+    "ja": "発展の歴史タイムラインとイラスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.certs",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề và danh sách chứng nhận.",
+    "en": "Heading and list of certifications.",
+    "zh": "标题和认证列表。",
+    "ja": "見出しと認定リスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.downloads",
+    "category": "aboutAdmin",
+    "vi": "Section tài liệu tải xuống và danh sách file.",
+    "en": "Downloadable documents section and file list.",
+    "zh": "可下载文档版块和文件列表。",
+    "ja": "ダウンロード可能なドキュメントセクションとファイルリスト。"
+  },
+  {
+    "key": "aboutAdmin.statsList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách chỉ số",
+    "en": "Stats list",
+    "zh": "指标列表",
+    "ja": "統計リスト"
+  },
+  {
+    "key": "aboutAdmin.addStat",
+    "category": "aboutAdmin",
+    "vi": "Thêm chỉ số",
+    "en": "Add stat",
+    "zh": "添加指标",
+    "ja": "統計を追加"
+  },
+  {
+    "key": "aboutAdmin.addStatNew",
+    "category": "aboutAdmin",
+    "vi": "Thêm chỉ số mới",
+    "en": "Add new stat",
+    "zh": "添加新指标",
+    "ja": "新しい統計を追加"
+  },
+  {
+    "key": "aboutAdmin.noStats",
+    "category": "aboutAdmin",
+    "vi": "Chưa có chỉ số nào. Nhấn \"Thêm chỉ số\" để thêm.",
+    "en": "No stats yet. Click \"Add stat\" to add one.",
+    "zh": "暂无指标。点击\"添加指标\"来添加。",
+    "ja": "統計がありません。\"統計を追加\"をクリックして追加してください。"
+  },
+  {
+    "key": "aboutAdmin.maxStats",
+    "category": "aboutAdmin",
+    "vi": "Đã đạt tối đa 4 chỉ số. Xóa một chỉ số nếu muốn thêm chỉ số mới.",
+    "en": "Maximum 4 stats reached. Delete one to add a new stat.",
+    "zh": "已达到最多 4 个指标。删除一个以添加新指标。",
+    "ja": "最大4つの統計に達しました。新しい統計を追加するには1つ削除してください。"
+  },
+  {
+    "key": "aboutAdmin.editStat",
+    "category": "aboutAdmin",
+    "vi": "Chỉnh sửa chỉ số",
+    "en": "Edit stat",
+    "zh": "编辑指标",
+    "ja": "統計を編集"
+  },
+  {
+    "key": "aboutAdmin.editStatDesc",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật icon, giá trị, mô tả và trạng thái hiển thị cho chỉ số đang chọn.",
+    "en": "Update the icon, value, description and visibility for the selected stat.",
+    "zh": "更新所选指标的图标、数值、描述和显示状态。",
+    "ja": "選択した統計のアイコン、値、説明、表示状態を更新します。"
+  },
+  {
+    "key": "aboutAdmin.statValue",
+    "category": "aboutAdmin",
+    "vi": "Giá trị (ví dụ: 18+, 150+, ISO)",
+    "en": "Value (e.g. 18+, 150+, ISO)",
+    "zh": "数值（例如：18+、150+、ISO）",
+    "ja": "値（例：18+、150+、ISO）"
+  },
+  {
+    "key": "aboutAdmin.statLabel",
+    "category": "aboutAdmin",
+    "vi": "Mô tả (ví dụ: Năm kinh nghiệm)",
+    "en": "Description (e.g. Years of experience)",
+    "zh": "描述（例如：年经验）",
+    "ja": "説明（例：経験年数）"
+  },
+  {
+    "key": "aboutAdmin.placeholderStatValue",
+    "category": "aboutAdmin",
+    "vi": "18+",
+    "en": "18+",
+    "zh": "18+",
+    "ja": "18+"
+  },
+  {
+    "key": "aboutAdmin.placeholderStatLabel",
+    "category": "aboutAdmin",
+    "vi": "Năm kinh nghiệm",
+    "en": "Years of experience",
+    "zh": "经验年限",
+    "ja": "経験年数"
+  },
+  {
+    "key": "aboutAdmin.previewTitle",
+    "category": "aboutAdmin",
+    "vi": "Xem trước trên trang khách hàng",
+    "en": "Preview on client page",
+    "zh": "在客户端页面预览",
+    "ja": "クライアントページでプレビュー"
+  },
+  {
+    "key": "aboutAdmin.previewLive",
+    "category": "aboutAdmin",
+    "vi": "Trực tiếp",
+    "en": "Live",
+    "zh": "实时",
+    "ja": "ライブ"
+  },
+  {
+    "key": "aboutAdmin.valuesList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách giá trị",
+    "en": "Values list",
+    "zh": "价值列表",
+    "ja": "価値リスト"
+  },
+  {
+    "key": "aboutAdmin.addValue",
+    "category": "aboutAdmin",
+    "vi": "Thêm giá trị",
+    "en": "Add value",
+    "zh": "添加价值",
+    "ja": "価値を追加"
+  },
+  {
+    "key": "aboutAdmin.strategyList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách lĩnh vực",
+    "en": "Areas list",
+    "zh": "领域列表",
+    "ja": "分野リスト"
+  },
+  {
+    "key": "aboutAdmin.addStrategy",
+    "category": "aboutAdmin",
+    "vi": "Thêm lĩnh vực",
+    "en": "Add area",
+    "zh": "添加领域",
+    "ja": "分野を追加"
+  },
+  {
+    "key": "aboutAdmin.boardList",
+    "category": "aboutAdmin",
+    "vi": "Hội đồng quản trị",
+    "en": "Board of Directors",
+    "zh": "董事会",
+    "ja": "取締役会"
+  },
+  {
+    "key": "aboutAdmin.directorsList",
+    "category": "aboutAdmin",
+    "vi": "Ban điều hành",
+    "en": "Executive Board",
+    "zh": "执行委员会",
+    "ja": "執行委員会"
+  },
+  {
+    "key": "aboutAdmin.addMember",
+    "category": "aboutAdmin",
+    "vi": "Thêm thành viên",
+    "en": "Add member",
+    "zh": "添加成员",
+    "ja": "メンバーを追加"
+  },
+  {
+    "key": "aboutAdmin.timelineList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách mốc thời gian",
+    "en": "Timeline milestones",
+    "zh": "时间线里程碑",
+    "ja": "タイムラインのマイルストーン"
+  },
+  {
+    "key": "aboutAdmin.addMilestone",
+    "category": "aboutAdmin",
+    "vi": "Thêm mốc",
+    "en": "Add milestone",
+    "zh": "添加里程碑",
+    "ja": "マイルストーンを追加"
+  },
+  {
+    "key": "aboutAdmin.certsList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách chứng nhận",
+    "en": "Certifications list",
+    "zh": "认证列表",
+    "ja": "認定リスト"
+  },
+  {
+    "key": "aboutAdmin.addCert",
+    "category": "aboutAdmin",
+    "vi": "Thêm chứng nhận",
+    "en": "Add certification",
+    "zh": "添加认证",
+    "ja": "認定を追加"
+  },
+  {
+    "key": "aboutAdmin.downloadsList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách tài liệu",
+    "en": "Documents list",
+    "zh": "文档列表",
+    "ja": "ドキュメントリスト"
+  },
+  {
+    "key": "aboutAdmin.addDownload",
+    "category": "aboutAdmin",
+    "vi": "Thêm tài liệu",
+    "en": "Add document",
+    "zh": "添加文档",
+    "ja": "ドキュメントを追加"
+  },
+  {
+    "key": "aboutAdmin.fieldIcon",
+    "category": "aboutAdmin",
+    "vi": "Icon",
+    "en": "Icon",
+    "zh": "图标",
+    "ja": "アイコン"
+  },
+  {
+    "key": "aboutAdmin.fieldStatus",
+    "category": "aboutAdmin",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "aboutAdmin.statusActive",
+    "category": "aboutAdmin",
+    "vi": "Hoạt động",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "aboutAdmin.statusHidden",
+    "category": "aboutAdmin",
+    "vi": "Tạm ẩn",
+    "en": "Hidden",
+    "zh": "隐藏",
+    "ja": "非表示"
+  },
+  {
+    "key": "aboutAdmin.visibleHint",
+    "category": "aboutAdmin",
+    "vi": "Hiển thị trên trang khách hàng",
+    "en": "Visible on the client page",
+    "zh": "显示在客户端页面",
+    "ja": "クライアントページに表示"
+  },
+  {
+    "key": "aboutAdmin.hiddenHint",
+    "category": "aboutAdmin",
+    "vi": "Ẩn khỏi trang khách hàng",
+    "en": "Hidden from the client page",
+    "zh": "从客户端页面隐藏",
+    "ja": "クライアントページから非表示"
+  },
+  {
+    "key": "aboutAdmin.fieldTitle",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "aboutAdmin.fieldDesc",
+    "category": "aboutAdmin",
+    "vi": "Mô tả",
+    "en": "Description",
+    "zh": "描述",
+    "ja": "説明"
+  },
+  {
+    "key": "aboutAdmin.fieldRole",
+    "category": "aboutAdmin",
+    "vi": "Chức danh",
+    "en": "Role",
+    "zh": "职位",
+    "ja": "役職"
+  },
+  {
+    "key": "aboutAdmin.fieldName",
+    "category": "aboutAdmin",
+    "vi": "Họ tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "aboutAdmin.fieldYear",
+    "category": "aboutAdmin",
+    "vi": "Năm",
+    "en": "Year",
+    "zh": "年份",
+    "ja": "年"
+  },
+  {
+    "key": "aboutAdmin.fieldCertName",
+    "category": "aboutAdmin",
+    "vi": "Tên chứng nhận",
+    "en": "Certification name",
+    "zh": "认证名称",
+    "ja": "認定名"
+  },
+  {
+    "key": "aboutAdmin.fieldDocName",
+    "category": "aboutAdmin",
+    "vi": "Tên tài liệu",
+    "en": "Document name",
+    "zh": "文档名称",
+    "ja": "ドキュメント名"
+  },
+  {
+    "key": "aboutAdmin.fieldFileSize",
+    "category": "aboutAdmin",
+    "vi": "Dung lượng",
+    "en": "File size",
+    "zh": "文件大小",
+    "ja": "ファイルサイズ"
+  },
+  {
+    "key": "aboutAdmin.fieldFileType",
+    "category": "aboutAdmin",
+    "vi": "Loại file",
+    "en": "File type",
+    "zh": "文件类型",
+    "ja": "ファイル種別"
+  },
+  {
+    "key": "aboutAdmin.fieldUrl",
+    "category": "aboutAdmin",
+    "vi": "Đường dẫn",
+    "en": "URL",
+    "zh": "链接",
+    "ja": "URL"
+  },
+  {
+    "key": "aboutAdmin.fieldSlug",
+    "category": "aboutAdmin",
+    "vi": "Mã phần",
+    "en": "Section slug",
+    "zh": "版块标识",
+    "ja": "セクションスラッグ"
+  },
+  {
+    "key": "aboutAdmin.fieldSortOrder",
+    "category": "aboutAdmin",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "表示順"
+  },
+  {
+    "key": "aboutAdmin.fieldVisible",
+    "category": "aboutAdmin",
+    "vi": "Hiển thị",
+    "en": "Visible",
+    "zh": "显示",
+    "ja": "表示"
+  },
+  {
+    "key": "aboutAdmin.fieldEyebrow",
+    "category": "aboutAdmin",
+    "vi": "Nhãn nhỏ",
+    "en": "Eyebrow label",
+    "zh": "小标签",
+    "ja": "アイブロウラベル"
+  },
+  {
+    "key": "aboutAdmin.fieldTitleA",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề dòng 1",
+    "en": "Title line 1",
+    "zh": "标题第1行",
+    "ja": "タイトル行1"
+  },
+  {
+    "key": "aboutAdmin.fieldTitleB",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề dòng 2 hoặc phần nhấn mạnh",
+    "en": "Title line 2 or emphasis",
+    "zh": "标题第2行或强调部分",
+    "ja": "タイトル行2または強調"
+  },
+  {
+    "key": "aboutAdmin.fieldParagraph1",
+    "category": "aboutAdmin",
+    "vi": "Mô tả 1",
+    "en": "Description 1",
+    "zh": "描述 1",
+    "ja": "説明 1"
+  },
+  {
+    "key": "aboutAdmin.fieldParagraph2",
+    "category": "aboutAdmin",
+    "vi": "Mô tả 2",
+    "en": "Description 2",
+    "zh": "描述 2",
+    "ja": "説明 2"
+  },
+  {
+    "key": "aboutAdmin.fieldImage",
+    "category": "aboutAdmin",
+    "vi": "Hình ảnh",
+    "en": "Image",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "aboutAdmin.placeholderSlug",
+    "category": "aboutAdmin",
+    "vi": "stats-main",
+    "en": "stats-main",
+    "zh": "stats-main",
+    "ja": "stats-main"
+  },
+  {
+    "key": "aboutAdmin.placeholderEyebrow",
+    "category": "aboutAdmin",
+    "vi": "VỀ CHÚNG TÔI",
+    "en": "ABOUT US",
+    "zh": "关于我们",
+    "ja": "私たちについて"
+  },
+  {
+    "key": "aboutAdmin.placeholderTitleA",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề chính",
+    "en": "Main title",
+    "zh": "主标题",
+    "ja": "メインタイトル"
+  },
+  {
+    "key": "aboutAdmin.placeholderTitleB",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề nhấn mạnh",
+    "en": "Highlighted title",
+    "zh": "强调标题",
+    "ja": "強調タイトル"
+  },
+  {
+    "key": "aboutAdmin.placeholderParagraph1",
+    "category": "aboutAdmin",
+    "vi": "Đoạn mô tả 1",
+    "en": "Description paragraph 1",
+    "zh": "描述段落 1",
+    "ja": "説明段落 1"
+  },
+  {
+    "key": "aboutAdmin.placeholderParagraph2",
+    "category": "aboutAdmin",
+    "vi": "Đoạn mô tả 2",
+    "en": "Description paragraph 2",
+    "zh": "描述段落 2",
+    "ja": "説明段落 2"
+  },
+  {
+    "key": "aboutAdmin.placeholderImagePath",
+    "category": "aboutAdmin",
+    "vi": "/images/upload/...",
+    "en": "/images/upload/...",
+    "zh": "/images/upload/...",
+    "ja": "/images/upload/..."
+  },
+  {
+    "key": "aboutAdmin.iconCurrentLabel",
+    "category": "aboutAdmin",
+    "vi": "Icon hiện tại",
+    "en": "Current icon",
+    "zh": "当前图标",
+    "ja": "現在のアイコン"
+  },
+  {
+    "key": "aboutAdmin.statPosition",
+    "category": "aboutAdmin",
+    "vi": "Vị trí",
+    "en": "Position",
+    "zh": "位置",
+    "ja": "位置"
+  },
+  {
+    "key": "aboutAdmin.saving",
+    "category": "aboutAdmin",
+    "vi": "Đang lưu...",
+    "en": "Saving...",
+    "zh": "保存中...",
+    "ja": "保存中..."
+  },
+  {
+    "key": "aboutAdmin.ready",
+    "category": "aboutAdmin",
+    "vi": "Sẵn sàng cập nhật",
+    "en": "Ready to update",
+    "zh": "准备更新",
+    "ja": "更新準備完了"
+  },
+  {
+    "key": "aboutAdmin.upload",
+    "category": "aboutAdmin",
+    "vi": "Tải lên",
+    "en": "Upload",
+    "zh": "上传",
+    "ja": "アップロード"
+  },
+  {
+    "key": "aboutAdmin.chooseIcon",
+    "category": "aboutAdmin",
+    "vi": "Chọn icon",
+    "en": "Choose icon",
+    "zh": "选择图标",
+    "ja": "アイコンを選択"
+  },
+  {
+    "key": "aboutAdmin.validationStat",
+    "category": "aboutAdmin",
+    "vi": "Vui lòng nhập đầy đủ giá trị và mô tả chỉ số.",
+    "en": "Please enter both the stat value and description.",
+    "zh": "请输入完整的指标数值和描述。",
+    "ja": "統計の値と説明を入力してください。"
+  },
+  {
+    "key": "aboutAdmin.validationItem",
+    "category": "aboutAdmin",
+    "vi": "Vui lòng nhập tiêu đề và mô tả.",
+    "en": "Please enter both the title and description.",
+    "zh": "请输入标题和描述。",
+    "ja": "タイトルと説明を入力してください。"
+  },
+  {
+    "key": "aboutAdmin.iconDialogHint",
+    "category": "aboutAdmin",
+    "vi": "Chỉnh sửa icon, thứ tự hiển thị và trạng thái trong popup để giữ logic đồng nhất giữa admin và trang client.",
+    "en": "Edit icon, display order, and visibility in the popup so admin and client stay aligned.",
+    "zh": "在弹窗中编辑图标、显示顺序和可见状态，以保持管理端与客户端逻辑一致。",
+    "ja": "管理画面とクライアントのロジックを一致させるため、ポップアップ内でアイコン、表示順、表示状態を編集します。"
+  },
+  {
+    "key": "aboutAdmin.noItems",
+    "category": "aboutAdmin",
+    "vi": "Chưa có dữ liệu. Hãy thêm item mới để bắt đầu.",
+    "en": "No items yet. Add a new item to get started.",
+    "zh": "暂无数据。请先添加一个新项目。",
+    "ja": "まだデータがありません。新しい項目を追加してください。"
+  },
+  {
+    "key": "aboutAdmin.emptyValue",
+    "category": "aboutAdmin",
+    "vi": "(chưa có)",
+    "en": "(empty)",
+    "zh": "（暂无）",
+    "ja": "（未設定）"
+  },
+  {
+    "key": "aboutAdmin.defaultStatValue",
+    "category": "aboutAdmin",
+    "vi": "Chỉ số mới",
+    "en": "New stat",
+    "zh": "新指标",
+    "ja": "新しい統計"
+  },
+  {
+    "key": "aboutAdmin.defaultStatLabel",
+    "category": "aboutAdmin",
+    "vi": "Mô tả chỉ số",
+    "en": "Stat description",
+    "zh": "指标描述",
+    "ja": "統計の説明"
+  },
+  {
+    "key": "aboutAdmin.defaultItemTitle",
+    "category": "aboutAdmin",
+    "vi": "Nội dung mới",
+    "en": "New item",
+    "zh": "新内容",
+    "ja": "新しい項目"
+  },
+  {
+    "key": "aboutAdmin.defaultItemDesc",
+    "category": "aboutAdmin",
+    "vi": "Mô tả sẽ hiển thị ở đây.",
+    "en": "Description will appear here.",
+    "zh": "描述会显示在这里。",
+    "ja": "説明がここに表示されます。"
+  },
+  {
+    "key": "aboutAdmin.addStatDialog",
+    "category": "aboutAdmin",
+    "vi": "Thêm chỉ số",
+    "en": "Add stat",
+    "zh": "添加指标",
+    "ja": "統計を追加"
+  },
+  {
+    "key": "aboutAdmin.editStatDialog",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật chỉ số",
+    "en": "Update stat",
+    "zh": "更新指标",
+    "ja": "統計を更新"
+  },
+  {
+    "key": "aboutAdmin.editStatDialogDesc",
+    "category": "aboutAdmin",
+    "vi": "Điều chỉnh thứ tự, icon và trạng thái hiển thị cho block chỉ số.",
+    "en": "Adjust order, icon, and visibility for the stats block.",
+    "zh": "调整指标区块的顺序、图标和显示状态。",
+    "ja": "統計ブロックの順序、アイコン、表示状態を調整します。"
+  },
+  {
+    "key": "aboutAdmin.editValueDialog",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật giá trị cốt lõi",
+    "en": "Update core value",
+    "zh": "更新核心价值",
+    "ja": "コアバリューを更新"
+  },
+  {
+    "key": "aboutAdmin.editStrategyDialog",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật lĩnh vực hoạt động",
+    "en": "Update operating area",
+    "zh": "更新业务领域",
+    "ja": "事業領域を更新"
+  },
+  {
+    "key": "aboutAdmin.editItemDialogDesc",
+    "category": "aboutAdmin",
+    "vi": "Chọn icon, chỉnh thứ tự hiển thị và nội dung giống flow cũ trong manage settings.",
+    "en": "Choose an icon, adjust display order, and edit content in the same flow as the old manage settings.",
+    "zh": "按照旧版 manage settings 的流程选择图标、调整显示顺序并编辑内容。",
+    "ja": "旧 manage settings と同じ流れで、アイコン選択、表示順変更、内容編集を行います。"
+  },
+  {
+    "key": "aboutAdmin.saveStat",
+    "category": "aboutAdmin",
+    "vi": "Lưu chỉ số",
+    "en": "Save stat",
+    "zh": "保存指标",
+    "ja": "統計を保存"
+  },
+  {
+    "key": "aboutAdmin.saveItem",
+    "category": "aboutAdmin",
+    "vi": "Lưu nội dung",
+    "en": "Save item",
+    "zh": "保存内容",
+    "ja": "項目を保存"
   }
 ]

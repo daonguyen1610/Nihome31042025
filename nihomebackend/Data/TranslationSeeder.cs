@@ -10,9 +10,8 @@ public static class TranslationSeeder
 
     public static void Seed(AppDbContext db)
     {
-        var existingKeys = db.Translations
-            .Select(t => t.Key + "|" + t.LanguageCode)
-            .ToHashSet();
+        var existingRows = db.Translations.ToList()
+            .ToDictionary(t => t.Key + "|" + t.LanguageCode);
 
         var assembly = Assembly.GetExecutingAssembly();
         var seedResources = assembly.GetManifestResourceNames()
@@ -23,7 +22,8 @@ public static class TranslationSeeder
         if (seedResources.Count == 0) return;
 
         var now = DateTime.UtcNow;
-        var allTranslations = new List<Translation>();
+        var newTranslations = new List<Translation>();
+        var hasUpdates = false;
 
         foreach (var resourceName in seedResources)
         {
@@ -42,9 +42,20 @@ public static class TranslationSeeder
                     if (string.IsNullOrEmpty(value)) continue;
 
                     var compositeKey = key + "|" + lang;
-                    if (existingKeys.Contains(compositeKey)) continue;
+                    if (existingRows.TryGetValue(compositeKey, out var existing))
+                    {
+                        if (existing.Value != value || existing.Category != category)
+                        {
+                            existing.Value = value;
+                            existing.Category = category;
+                            existing.UpdatedAt = now;
+                            hasUpdates = true;
+                        }
 
-                    allTranslations.Add(new Translation
+                        continue;
+                    }
+
+                    newTranslations.Add(new Translation
                     {
                         Key = key,
                         LanguageCode = lang,
@@ -57,9 +68,14 @@ public static class TranslationSeeder
             }
         }
 
-        if (allTranslations.Count > 0)
+        if (newTranslations.Count > 0)
         {
-            db.Translations.AddRange(allTranslations);
+            db.Translations.AddRange(newTranslations);
+            hasUpdates = true;
+        }
+
+        if (hasUpdates)
+        {
             db.SaveChanges();
         }
     }

@@ -1,14 +1,24 @@
 import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/PageHeader";
 import {
-  Award, Building2, Users, Calendar, Target, Heart, Compass, Shield,
-  Briefcase, Users2, Hammer, Layers, Wrench, Download, FileText
+  Award,
+  Download,
+  FileText,
 } from "lucide-react";
 import leadership from "@/assets/profile-leadership.jpg";
 import activitiesImg from "@/assets/profile-activities.jpg";
 import { useI18n } from "@/lib/i18n";
 import { contentApi, type AboutSectionResponse } from "@/services/contentApi";
 import { useEffect, useMemo, useState } from "react";
+import {
+  ABOUT_ICON_META,
+  DEFAULT_STATS_ICON_KEYS,
+  DEFAULT_STRATEGY_ICON_KEYS,
+  DEFAULT_VALUE_ICON_KEYS,
+  parseOrganizationContent,
+  resolveAboutIconKey,
+  sortItemsBySortOrder,
+} from "@/lib/aboutSectionContent";
 
 const Section = ({ id, children, bg = "bg-background" }: { id?: string; children: React.ReactNode; bg?: string }) => (
   <section id={id} className={`py-20 lg:py-28 ${bg} scroll-mt-24`}>
@@ -17,13 +27,15 @@ const Section = ({ id, children, bg = "bg-background" }: { id?: string; children
 );
 
 type SimpleItem = { title: string; desc: string };
-type StatIconKey = "calendar" | "building" | "users" | "award";
-type StatItem = { iconKey?: StatIconKey; num: string; label: string; isActive?: boolean };
-type LeaderItem = { role: string; name: string };
+type IconTextItem = { iconKey?: string; iconClass?: string; title: string; desc: string; isActive?: boolean; sortOrder?: number };
+type StatItem = { iconKey?: string; iconClass?: string; num: string; label: string; isActive?: boolean; sortOrder?: number };
+type LeaderItem = { role: string; name: string; isActive?: boolean; sortOrder?: number };
 type OrganizationItems = { board: LeaderItem[]; directors: LeaderItem[] };
-type TimelineItem = { year: string; title: string; desc: string };
-type CertificationItem = { name: string; desc: string };
-type DownloadItem = { name: string; size: string; type: string; url?: string };
+type TimelineItem = { year: string; title: string; desc: string; sortOrder?: number };
+type CertificationItem = { name: string; desc: string; sortOrder?: number };
+type DownloadItem = { name: string; size: string; type: string; url?: string; sortOrder?: number };
+
+const hasOrganizationMembers = (items: OrganizationItems) => items.board.length > 0 || items.directors.length > 0;
 
 const parseItems = <T,>(value: string | null | undefined, fallback: T): T => {
   if (!value) return fallback;
@@ -97,43 +109,46 @@ const Profile = () => {
     { year: "2024", title: t("profilePage.ms.2024.t"), desc: t("profilePage.ms.2024.d") },
   ];
 
-  const defaultValues: SimpleItem[] = [
-    { icon: Target, title: t("profilePage.v1.title"), desc: t("profilePage.v1.desc") },
-    { icon: Shield, title: t("profilePage.v2.title"), desc: t("profilePage.v2.desc") },
-    { icon: Compass, title: t("profilePage.v3.title"), desc: t("profilePage.v3.desc") },
-    { icon: Heart, title: t("profilePage.v4.title"), desc: t("profilePage.v4.desc") },
-  ].map(({ title, desc }) => ({ title, desc }));
+  const defaultValues: IconTextItem[] = [
+    { iconKey: DEFAULT_VALUE_ICON_KEYS[0], title: t("profilePage.v1.title"), desc: t("profilePage.v1.desc"), sortOrder: 0, isActive: true },
+    { iconKey: DEFAULT_VALUE_ICON_KEYS[1], title: t("profilePage.v2.title"), desc: t("profilePage.v2.desc"), sortOrder: 1, isActive: true },
+    { iconKey: DEFAULT_VALUE_ICON_KEYS[2], title: t("profilePage.v3.title"), desc: t("profilePage.v3.desc"), sortOrder: 2, isActive: true },
+    { iconKey: DEFAULT_VALUE_ICON_KEYS[3], title: t("profilePage.v4.title"), desc: t("profilePage.v4.desc"), sortOrder: 3, isActive: true },
+  ];
 
   const defaultStats: StatItem[] = [
-    { num: t("profilePage.stat.yearsValue"), label: t("profilePage.stat.years"), icon: Calendar },
-    { num: t("profilePage.stat.projectsValue"), label: t("profilePage.stat.projects"), icon: Building2 },
-    { num: t("profilePage.stat.clientsValue"), label: t("profilePage.stat.clients"), icon: Users },
-    { num: t("profilePage.stat.isoTop"), label: t("profilePage.stat.isoBottom"), icon: Award },
-  ].map(({ num, label }) => ({ num, label }));
+    { num: t("profilePage.stat.yearsValue"), label: t("profilePage.stat.years"), iconKey: DEFAULT_STATS_ICON_KEYS[0], sortOrder: 0, isActive: true },
+    { num: t("profilePage.stat.projectsValue"), label: t("profilePage.stat.projects"), iconKey: DEFAULT_STATS_ICON_KEYS[1], sortOrder: 1, isActive: true },
+    { num: t("profilePage.stat.clientsValue"), label: t("profilePage.stat.clients"), iconKey: DEFAULT_STATS_ICON_KEYS[2], sortOrder: 2, isActive: true },
+    { num: t("profilePage.stat.isoTop"), label: t("profilePage.stat.isoBottom"), iconKey: DEFAULT_STATS_ICON_KEYS[3], sortOrder: 3, isActive: true },
+  ];
 
-  const defaultBusinessLines: SimpleItem[] = [
-    { icon: Building2, title: t("profilePage.bl1.title"), desc: t("profilePage.bl1.desc") },
-    { icon: Hammer, title: t("profilePage.bl2.title"), desc: t("profilePage.bl2.desc") },
-    { icon: Layers, title: t("profilePage.bl3.title"), desc: t("profilePage.bl3.desc") },
-    { icon: Wrench, title: t("profilePage.bl4.title"), desc: t("profilePage.bl4.desc") },
-    { icon: Briefcase, title: t("profilePage.bl5.title"), desc: t("profilePage.bl5.desc") },
-    { icon: Users2, title: t("profilePage.bl6.title"), desc: t("profilePage.bl6.desc") },
-  ].map(({ title, desc }) => ({ title, desc }));
+  const defaultBusinessLines: IconTextItem[] = [
+    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[0], title: t("profilePage.bl1.title"), desc: t("profilePage.bl1.desc"), sortOrder: 0, isActive: true },
+    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[1], title: t("profilePage.bl2.title"), desc: t("profilePage.bl2.desc"), sortOrder: 1, isActive: true },
+    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[2], title: t("profilePage.bl3.title"), desc: t("profilePage.bl3.desc"), sortOrder: 2, isActive: true },
+    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[3], title: t("profilePage.bl4.title"), desc: t("profilePage.bl4.desc"), sortOrder: 3, isActive: true },
+    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[4], title: t("profilePage.bl5.title"), desc: t("profilePage.bl5.desc"), sortOrder: 4, isActive: true },
+    { iconKey: DEFAULT_STRATEGY_ICON_KEYS[5], title: t("profilePage.bl6.title"), desc: t("profilePage.bl6.desc"), sortOrder: 5, isActive: true },
+  ];
 
-  const defaultLeadershipData: OrganizationItems = {
-    board: [
-      { role: t("profilePage.ld.role.chair"), name: t("profilePage.ld.name.chair") },
-      { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair1") },
-      { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair2") },
-      { role: t("profilePage.ld.role.secretary"), name: t("profilePage.ld.name.secretary") },
-    ],
-    directors: [
-      { role: t("profilePage.ld.role.ceo"), name: t("profilePage.ld.name.ceo") },
-      { role: t("profilePage.ld.role.bdJp"), name: t("profilePage.ld.name.bdJp") },
-      { role: t("profilePage.ld.role.bdAsia"), name: t("profilePage.ld.name.bdAsia") },
-      { role: t("profilePage.ld.role.design"), name: t("profilePage.ld.name.design") },
-    ],
-  };
+  const defaultLeadershipData = useMemo<OrganizationItems>(
+    () => ({
+      board: [
+        { role: t("profilePage.ld.role.chair"), name: t("profilePage.ld.name.chair") },
+        { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair1") },
+        { role: t("profilePage.ld.role.viceChair"), name: t("profilePage.ld.name.viceChair2") },
+        { role: t("profilePage.ld.role.secretary"), name: t("profilePage.ld.name.secretary") },
+      ],
+      directors: [
+        { role: t("profilePage.ld.role.ceo"), name: t("profilePage.ld.name.ceo") },
+        { role: t("profilePage.ld.role.bdJp"), name: t("profilePage.ld.name.bdJp") },
+        { role: t("profilePage.ld.role.bdAsia"), name: t("profilePage.ld.name.bdAsia") },
+        { role: t("profilePage.ld.role.design"), name: t("profilePage.ld.name.design") },
+      ],
+    }),
+    [t],
+  );
 
   const defaultCertifications: CertificationItem[] = [
     { name: t("profilePage.cert.iso2008.n"), desc: t("profilePage.cert.iso2008.d") },
@@ -148,21 +163,22 @@ const Profile = () => {
     { name: t("profilePage.dl.f4"), size: t("profilePage.dl.f4.size"), type: t("profilePage.dl.f4.type"), url: "#" },
   ];
 
-  const milestones = parseItems<TimelineItem[]>(timelineMain?.itemsJson, defaultMilestones);
-  const values = parseItems<SimpleItem[]>(valuesMain?.itemsJson, defaultValues);
-  const stats = parseItems<StatItem[]>(statsMain?.itemsJson, defaultStats).filter((item) => item.isActive !== false);
-  const businessLines = parseItems<SimpleItem[]>(strategyMain?.itemsJson, defaultBusinessLines);
-  const leadershipData = parseItems<OrganizationItems>(organizationMain?.itemsJson, defaultLeadershipData);
-  const certifications = parseItems<CertificationItem[]>(certsMain?.itemsJson, defaultCertifications);
-  const downloads = parseItems<DownloadItem[]>(downloadsMain?.itemsJson, defaultDownloads);
-  const statIcons: Record<StatIconKey, typeof Calendar> = {
-    calendar: Calendar,
-    building: Building2,
-    users: Users,
-    award: Award,
-  };
-  const valueIcons = [Target, Shield, Compass, Heart];
-  const businessLineIcons = [Building2, Hammer, Layers, Wrench, Briefcase, Users2];
+  const milestones = sortItemsBySortOrder(parseItems<TimelineItem[]>(timelineMain?.itemsJson, defaultMilestones));
+  const values = sortItemsBySortOrder(parseItems<IconTextItem[]>(valuesMain?.itemsJson, defaultValues)).filter((item) => item.isActive !== false);
+  const stats = sortItemsBySortOrder(parseItems<StatItem[]>(statsMain?.itemsJson, defaultStats)).filter((item) => item.isActive !== false);
+  const businessLines = sortItemsBySortOrder(parseItems<IconTextItem[]>(strategyMain?.itemsJson, defaultBusinessLines)).filter((item) => item.isActive !== false);
+  const leadershipData = useMemo(() => {
+    if (!organizationMain?.itemsJson?.trim()) {
+      return defaultLeadershipData;
+    }
+
+    const parsed = parseOrganizationContent(organizationMain.itemsJson);
+    return hasOrganizationMembers(parsed) ? parsed : defaultLeadershipData;
+  }, [defaultLeadershipData, organizationMain?.itemsJson]);
+  const certifications = sortItemsBySortOrder(parseItems<CertificationItem[]>(certsMain?.itemsJson, defaultCertifications));
+  const downloads = sortItemsBySortOrder(parseItems<DownloadItem[]>(downloadsMain?.itemsJson, defaultDownloads));
+  const boardMembers = sortItemsBySortOrder(leadershipData.board).filter((item) => item.isActive !== false);
+  const directors = sortItemsBySortOrder(leadershipData.directors).filter((item) => item.isActive !== false);
 
   const navItems = [
     { href: "#about", label: t("profilePage.nav.about") },
@@ -220,7 +236,7 @@ const Profile = () => {
           {stats.map((s, i) => (
             <div key={`${s.iconKey ?? "calendar"}-${s.num}-${s.label}-${i}`} className="bg-card border border-border rounded-3xl p-7 text-center hover-lift">
               {(() => {
-                const Icon = statIcons[s.iconKey ?? "calendar"] ?? Award;
+                const Icon = ABOUT_ICON_META[resolveAboutIconKey(s.iconKey ?? s.iconClass, DEFAULT_STATS_ICON_KEYS[i] ?? "award")].icon ?? Award;
                 return <Icon className="w-7 h-7 text-primary mx-auto mb-4" strokeWidth={1.5} />;
               })()}
               <p className="font-display text-4xl font-extrabold text-gradient-primary mb-1">{s.num}</p>
@@ -244,7 +260,7 @@ const Profile = () => {
             <div key={i} className="bg-card border border-border rounded-3xl p-7 hover-lift">
               <div className="w-14 h-14 rounded-2xl bg-gradient-primary text-white flex items-center justify-center mb-5 shadow-glow">
                 {(() => {
-                  const Icon = valueIcons[i] ?? Target;
+                  const Icon = ABOUT_ICON_META[resolveAboutIconKey(v.iconKey ?? v.iconClass, DEFAULT_VALUE_ICON_KEYS[i] ?? "target")].icon;
                   return <Icon className="w-6 h-6" strokeWidth={1.75} />;
                 })()}
               </div>
@@ -276,7 +292,7 @@ const Profile = () => {
             <div key={i} className="bg-card rounded-3xl border border-border p-7 hover-lift">
               <div className="w-12 h-12 rounded-2xl bg-gradient-soft text-primary flex items-center justify-center mb-5">
                 {(() => {
-                  const Icon = businessLineIcons[i] ?? Building2;
+                  const Icon = ABOUT_ICON_META[resolveAboutIconKey(b.iconKey ?? b.iconClass, DEFAULT_STRATEGY_ICON_KEYS[i] ?? "building")].icon;
                   return <Icon className="w-6 h-6" strokeWidth={1.75} />;
                 })()}
               </div>
@@ -302,7 +318,7 @@ const Profile = () => {
               <span className="w-2 h-2 rounded-full bg-primary" /> {t("profilePage.org.board")}
             </h3>
             <ul className="divide-y divide-border">
-              {leadershipData.board.map((p, i) => (
+              {boardMembers.map((p, i) => (
                 <li key={i} className="py-3 flex justify-between gap-4">
                   <span className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{p.role}</span>
                   <span className="font-display font-extrabold text-right">{p.name}</span>
@@ -315,7 +331,7 @@ const Profile = () => {
               <span className="w-2 h-2 rounded-full bg-accent-orange" /> {t("profilePage.org.exec")}
             </h3>
             <ul className="divide-y divide-border">
-              {leadershipData.directors.map((p, i) => (
+              {directors.map((p, i) => (
                 <li key={i} className="py-3 flex justify-between gap-4">
                   <span className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{p.role}</span>
                   <span className="font-display font-extrabold text-right">{p.name}</span>
