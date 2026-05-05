@@ -257,7 +257,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                   <a
                     href={item.href}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-flex max-w-full min-w-0 items-center gap-1 text-xs mt-1.5"
                     style={{ color: "hsl(var(--admin-primary))" }}
                   >
