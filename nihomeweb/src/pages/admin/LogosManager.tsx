@@ -85,6 +85,15 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const hasImage = form.imageUrl.trim().length > 0;
   const isBusy = submitting || uploading;
   const isAwards = kind === "awards";
+  const gridClassName = isAwards
+    ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
+    : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4";
+  const cardClassName = isAwards
+    ? "logo-grid-card rounded-2xl border p-4 card-hover"
+    : "logo-grid-card rounded-xl border p-3 card-hover";
+  const imageFrameClassName = isAwards
+    ? "aspect-[4/3] rounded-xl border bg-white flex items-center justify-center overflow-hidden mb-3"
+    : "aspect-[16/10] rounded-lg border bg-white flex items-center justify-center overflow-hidden mb-2.5";
 
   const updateForm = <K extends keyof LogoFormData>(key: K, value: LogoFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -224,15 +233,15 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
         {items.length === 0 ? (
           <PageEmpty message={t("common.noData")} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className={gridClassName}>
             {items.map((item) => (
               <div
                 key={item.id}
-                className="logo-grid-card rounded-2xl border p-4 card-hover"
+                className={cardClassName}
                 style={{ borderColor: "hsl(var(--admin-border))" }}
               >
                 <div
-                  className="aspect-[4/3] rounded-xl border bg-white flex items-center justify-center overflow-hidden mb-3"
+                  className={imageFrameClassName}
                   style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
                   <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain p-2" />
@@ -249,27 +258,27 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                     href={item.href}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs mt-1.5"
+                    className="inline-flex max-w-full min-w-0 items-center gap-1 text-xs mt-1.5"
                     style={{ color: "hsl(var(--admin-primary))" }}
                   >
-                    <ExternalLink className="w-3 h-3" /> {item.href}
+                    <ExternalLink className="w-3 h-3 shrink-0" /> <span className="truncate">{item.href}</span>
                   </a>
                 )}
 
-                <div className="grid grid-cols-2 gap-2 mt-3">
+                <div className="grid grid-cols-2 gap-1.5 mt-3">
                   <button
                     onClick={() => startEdit(item)}
-                    className="inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg border hover:bg-muted"
+                    className="inline-flex min-w-0 items-center justify-center gap-1.5 text-xs font-bold py-2 px-2 rounded-lg border hover:bg-muted"
                     style={{ borderColor: "hsl(var(--admin-border))" }}
                   >
-                    <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
+                    <Pencil className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{t("common.edit")}</span>
                   </button>
                   <button
                     onClick={() => remove(item)}
-                    className="inline-flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-lg border hover:bg-destructive/10"
+                    className="inline-flex min-w-0 items-center justify-center gap-1.5 text-xs font-bold py-2 px-2 rounded-lg border hover:bg-destructive/10"
                     style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
+                    <Trash2 className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{t("common.delete")}</span>
                   </button>
                 </div>
               </div>
