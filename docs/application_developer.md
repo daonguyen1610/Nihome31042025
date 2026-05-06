@@ -187,7 +187,7 @@ cd nihomebackend
 dotnet watch run
 ```
 
-When you run the backend directly from `nihomebackend/`, the API starts on `http://localhost:5067`.
+When you run the backend directly from `nihomebackend/`, the API starts on `http://localhost:5043`.
 
 ### 4.2.1 Swagger Access
 
@@ -199,11 +199,11 @@ For the standard Docker Compose development setup, use:
 - OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
 - API base path: `http://localhost:5043/api`
 
-If you run the backend directly with `dotnet run` or `dotnet watch run`, use:
+If you run the backend directly with `dotnet run` or `dotnet watch run`, use the same URLs:
 
-- Swagger UI: `http://localhost:5067/swagger`
-- OpenAPI JSON: `http://localhost:5067/swagger/v1/swagger.json`
-- API base path: `http://localhost:5067/api`
+- Swagger UI: `http://localhost:5043/swagger`
+- OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
+- API base path: `http://localhost:5043/api`
 
 ### 4.3 Running the Frontend Locally
 
