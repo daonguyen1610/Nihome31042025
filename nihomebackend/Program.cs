@@ -67,6 +67,12 @@ builder.Services.AddScoped<TimeService>();
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
