@@ -1004,8 +1004,6 @@ Interactive API documentation is available at:
 - Swagger UI: `http://localhost:5043/swagger`
 - OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
 
-If you run the backend directly outside Docker, use the corresponding `http://localhost:5067` URLs instead.
-
 Protected endpoints require the access token in the `Authorization` header:
 
 ```
