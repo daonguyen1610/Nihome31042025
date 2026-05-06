@@ -53,15 +53,15 @@ Best for development because it recompiles automatically when you modify files.
 
 Swagger is enabled only in the `Development` environment.
 
-If you run the backend locally with `dotnet run` or `dotnet watch run`, use:
-
-- Swagger UI: `http://localhost:5067/swagger`
-- OpenAPI JSON: `http://localhost:5067/swagger/v1/swagger.json`
-
-If you run the backend with Docker Compose, use:
+For the standard development setup in this repository, use:
 
 - Swagger UI: `http://localhost:5043/swagger`
 - OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
+
+If you run the backend directly with `dotnet run` or `dotnet watch run`, use:
+
+- Swagger UI: `http://localhost:5067/swagger`
+- OpenAPI JSON: `http://localhost:5067/swagger/v1/swagger.json`
 
 Check the SQL Server database is created
 
