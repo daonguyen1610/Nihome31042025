@@ -997,7 +997,14 @@ Job applications support CV file uploads. The CV file URL is stored with the app
 
 ## 14. API Reference
 
-The backend API is served at `http://localhost:5043/api`. All request and response bodies use JSON format.
+For the standard Docker Compose development setup, the backend API is served at `http://localhost:5043/api`. All request and response bodies use JSON format.
+
+Interactive API documentation is available at:
+
+- Swagger UI: `http://localhost:5043/swagger`
+- OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
+
+If you run the backend directly outside Docker, use the corresponding `http://localhost:5067` URLs instead.
 
 Protected endpoints require the access token in the `Authorization` header:
 
