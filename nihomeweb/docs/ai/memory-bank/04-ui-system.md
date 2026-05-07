@@ -1,6 +1,6 @@
 # UI System
 
-Last reviewed: 2026-04-25
+Last reviewed: 2026-05-07
 
 ## Visual Direction
 
@@ -35,6 +35,7 @@ New work should preserve the NICON / Nihome design language already encoded in `
 - Start simple while the app is small, but do not let repeated route-local UI harden into inconsistent one-off patterns.
 - Keep visual wrappers, content logic, and data-loading concerns reasonably separated.
 - The current baseline ships with a public layout, admin layout, language toggle, page header, and shadcn primitives.
+- Admin list exports use the shared `AdminExportButton` pattern and should export the current filtered list instead of adding route-local download button variants.
 
 ## Responsiveness and Accessibility
 

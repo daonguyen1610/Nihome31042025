@@ -8,6 +8,8 @@ import { adminApi, type UpsertLogoRequest } from "@/services/adminApi";
 import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 type Kind = "clients" | "partners" | "suppliers" | "awards";
 
@@ -202,6 +204,21 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv({
+      filename: createCsvFilename(`admin-${kind}`),
+      columns: [
+        { header: "ID", value: "id" },
+        { header: t("logoAdmin.fieldName"), value: "name" },
+        { header: "Kind", value: "kind" },
+        { header: t("logoAdmin.fieldImage"), value: "imageUrl" },
+        { header: t("logoAdmin.fieldHref"), value: (row) => row.href ?? "" },
+        { header: t("logoAdmin.fieldSortOrder"), value: (row) => row.sortOrder ?? 0 },
+      ],
+      rows: items,
+    });
+  };
+
   if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
   if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
 
@@ -215,9 +232,12 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
             {items.length} {t("logoAdmin.logoNoun")}
           </p>
         </div>
-        <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
-          <Plus className="w-4 h-4" /> {t("logoAdmin.add")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminExportButton onClick={handleExport} disabled={items.length === 0} />
+          <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
+            <Plus className="w-4 h-4" /> {t("logoAdmin.add")}
+          </button>
+        </div>
       </div>
 
       <div className="admin-card p-4">

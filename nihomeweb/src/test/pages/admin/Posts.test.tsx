@@ -7,6 +7,7 @@ import AdminPosts from "@/pages/admin/Posts";
 const mockUseActivities = vi.fn();
 const mockToast = vi.fn();
 const mockDeleteActivity = vi.fn();
+const mockDownloadCsv = vi.fn();
 
 vi.mock("@/hooks/useContentApi", () => ({
   useActivities: () => mockUseActivities(),
@@ -29,6 +30,11 @@ vi.mock("@/components/layout/AdminLayout", () => ({
 vi.mock("@/components/PageState", () => ({
   PageLoading: () => <div>loading-state</div>,
   PageError: ({ message }: { message: string }) => <div>error-state:{message}</div>,
+}));
+
+vi.mock("@/lib/exportCsv", () => ({
+  createCsvFilename: () => "admin-posts-2026-05-07.csv",
+  downloadCsv: (...args: unknown[]) => mockDownloadCsv(...args),
 }));
 
 const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
@@ -90,6 +96,56 @@ describe("Admin Posts page", () => {
     expect(screen.getByText("First Post")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: /first post/i });
     expect(link).toHaveAttribute("href", "/admin/posts/post-slug-1");
+  });
+
+  it("exports the currently filtered posts", () => {
+    mockUseActivities.mockReturnValue({
+      data: [
+        {
+          id: 1,
+          slug: "first-post",
+          date: "25.04.2026",
+          imageUrl: "/img.jpg",
+          category: "Updates",
+          author: "Admin",
+          title: "First Post",
+          excerpt: "Excerpt",
+          content: ["line"],
+        },
+        {
+          id: 2,
+          slug: "second-post",
+          date: "26.04.2026",
+          imageUrl: "/img2.jpg",
+          category: "Events",
+          author: "Editor",
+          title: "Second Post",
+          excerpt: "Other",
+          content: ["other line"],
+        },
+      ],
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter future={ROUTER_FUTURE}>
+        <I18nProvider>
+          <AdminPosts />
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Updates" }));
+    fireEvent.click(screen.getByRole("button", { name: /export excel/i }));
+
+    expect(mockDownloadCsv).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filename: "admin-posts-2026-05-07.csv",
+        rows: [expect.objectContaining({ title: "First Post" })],
+      }),
+    );
   });
 
   it("deletes a post and refetches", async () => {
