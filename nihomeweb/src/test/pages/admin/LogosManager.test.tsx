@@ -172,7 +172,7 @@ describe("Admin LogosManager page", () => {
     renderComponent("awards");
 
     fireEvent.click(screen.getByText("logoAdmin.add"));
-    fireEvent.change(screen.getByPlaceholderText("logoAdmin.placeholderName"), { target: { value: "Top 10 Brands" } });
+    fireEvent.change(screen.getByPlaceholderText("Enter award name"), { target: { value: "Top 10 Brands" } });
     fireEvent.change(screen.getByPlaceholderText("/images/upload/..."), { target: { value: "/images/upload/award-new.png" } });
     fireEvent.click(screen.getByRole("button", { name: /create/i }));
 
