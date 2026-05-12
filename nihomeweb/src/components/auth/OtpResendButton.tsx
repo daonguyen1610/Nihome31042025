@@ -19,9 +19,13 @@ const OtpResendButton = ({
   const handleClick = async () => {
     if (!canResend || loading) return;
 
-    const resent = await onResend();
-    if (resent) {
-      restart();
+    try {
+      const resent = await onResend();
+      if (resent) {
+        restart();
+      }
+    } catch {
+      // Treat resend errors as a non-resent outcome; parent code can handle user-facing errors.
     }
   };
 
