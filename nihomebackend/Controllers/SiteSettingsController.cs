@@ -16,7 +16,9 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<OtpSettingsResponse>> GetOtpSettings()
     {
-        var settings = await svc.GetAsync() ?? new SiteSettings();
+        var settings = await svc.GetAsync();
+        if (settings == null) return NotFound();
+
         return Ok(ToOtpSettingsResponse(settings));
     }
 
