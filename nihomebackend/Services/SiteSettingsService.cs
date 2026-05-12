@@ -31,4 +31,19 @@ public class SiteSettingsService(AppDbContext db)
         await db.SaveChangesAsync();
         return settings;
     }
+
+    public async Task<SiteSettings> UpdateOtpSettingsAsync(
+        bool enableOtpForRegistration,
+        bool enableOtpForForgotPassword)
+    {
+        var settings = await db.SiteSettings.FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
+
+        settings.EnableOtpForRegistration = enableOtpForRegistration;
+        settings.EnableOtpForForgotPassword = enableOtpForForgotPassword;
+        settings.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+        return settings;
+    }
 }

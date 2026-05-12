@@ -189,4 +189,24 @@ public class EmailTemplateFormatterTests
         Assert.Contains("{{coverLetter}}", body);
         Assert.Contains("{{appliedAt}}", body);
     }
+
+    [Fact]
+    public void DefaultOtpBody_UsesRedOrangeBrandColors()
+    {
+        var body = EmailTemplateFormatter.DefaultOtpBody;
+
+        Assert.DoesNotContain("#7c3aed", body);
+        Assert.Contains("#e5394a", body);
+        Assert.Contains("#f97316", body);
+    }
+
+    [Fact]
+    public void IsLegacyDefaultOtpBody_DetectsOnlyLegacyDefaultBody()
+    {
+        Assert.True(EmailTemplateFormatter.IsLegacyDefaultOtpBody(EmailTemplateFormatter.LegacyDefaultOtpBody));
+        Assert.True(EmailTemplateFormatter.IsLegacyDefaultOtpBody(
+            EmailTemplateFormatter.LegacyDefaultOtpBody.Replace("\n", "\r\n")));
+        Assert.False(EmailTemplateFormatter.IsLegacyDefaultOtpBody(EmailTemplateFormatter.DefaultOtpBody));
+        Assert.False(EmailTemplateFormatter.IsLegacyDefaultOtpBody("<p style='color:#7c3aed'>Custom {{otpCode}}</p>"));
+    }
 }

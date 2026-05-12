@@ -94,7 +94,8 @@ public static class DbSeeder
                 updated = true;
             }
 
-            if (string.IsNullOrWhiteSpace(existingSettings.OtpEmailBodyTemplate))
+            if (string.IsNullOrWhiteSpace(existingSettings.OtpEmailBodyTemplate) ||
+                EmailTemplateFormatter.IsLegacyDefaultOtpBody(existingSettings.OtpEmailBodyTemplate))
             {
                 existingSettings.OtpEmailBodyTemplate = EmailTemplateFormatter.DefaultOtpBody;
                 updated = true;

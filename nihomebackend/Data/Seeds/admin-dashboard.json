@@ -776,6 +776,78 @@
     "ja": "セキュリティ"
   },
   {
+    "key": "set.otp.securityTitle",
+    "category": "set",
+    "vi": "Cài đặt bảo mật",
+    "en": "Security settings",
+    "zh": "安全设置",
+    "ja": "セキュリティ設定"
+  },
+  {
+    "key": "set.otp.registrationLabel",
+    "category": "set",
+    "vi": "Bật OTP cho đăng ký",
+    "en": "Enable OTP for registration",
+    "zh": "启用注册 OTP",
+    "ja": "登録用 OTP を有効化"
+  },
+  {
+    "key": "set.otp.registrationDesc",
+    "category": "set",
+    "vi": "Yêu cầu xác thực OTP khi người dùng mới đăng ký",
+    "en": "Require OTP verification when new users register",
+    "zh": "新用户注册时需要 OTP 验证",
+    "ja": "新規ユーザー登録時に OTP 認証を要求"
+  },
+  {
+    "key": "set.otp.forgotLabel",
+    "category": "set",
+    "vi": "Bật OTP cho quên mật khẩu",
+    "en": "Enable OTP for forgot password",
+    "zh": "启用忘记密码 OTP",
+    "ja": "パスワード再設定用 OTP を有効化"
+  },
+  {
+    "key": "set.otp.forgotDesc",
+    "category": "set",
+    "vi": "Yêu cầu xác thực OTP để đặt lại mật khẩu",
+    "en": "Require OTP verification to reset password",
+    "zh": "重置密码时需要 OTP 验证",
+    "ja": "パスワード再設定時に OTP 認証を要求"
+  },
+  {
+    "key": "set.otp.loading",
+    "category": "set",
+    "vi": "Đang tải cấu hình OTP...",
+    "en": "Loading OTP settings...",
+    "zh": "正在加载 OTP 设置...",
+    "ja": "OTP 設定を読み込み中..."
+  },
+  {
+    "key": "set.otp.loadError",
+    "category": "set",
+    "vi": "Không thể tải cấu hình OTP.",
+    "en": "Could not load OTP settings.",
+    "zh": "无法加载 OTP 设置。",
+    "ja": "OTP 設定を読み込めません。"
+  },
+  {
+    "key": "set.otp.saveError",
+    "category": "set",
+    "vi": "Không thể lưu cấu hình OTP.",
+    "en": "Could not save OTP settings.",
+    "zh": "无法保存 OTP 设置。",
+    "ja": "OTP 設定を保存できません。"
+  },
+  {
+    "key": "set.otp.saving",
+    "category": "set",
+    "vi": "Đang lưu...",
+    "en": "Saving...",
+    "zh": "正在保存...",
+    "ja": "保存中..."
+  },
+  {
     "key": "set.section.captcha",
     "category": "set",
     "vi": "CAPTCHA",

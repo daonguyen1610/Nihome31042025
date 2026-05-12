@@ -1,7 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { screen, fireEvent, act } from "@testing-library/react";
 import ForgotPassword from "@/pages/ForgotPassword";
 import { renderWithProviders } from "@/test/helpers/renderWithProviders";
+
+const { mockForgotResendOtp } = vi.hoisted(() => ({
+  mockForgotResendOtp: vi.fn(),
+}));
+
+vi.mock("@/services/authApi", () => ({
+  authApi: {
+    forgotResendOtp: mockForgotResendOtp,
+  },
+}));
 
 vi.mock("@/components/layout/Layout", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="layout">{children}</div>,
@@ -25,6 +35,10 @@ describe("ForgotPassword page", () => {
     vi.clearAllMocks();
     localStorage.clear();
     localStorage.setItem("nicon_lang", "en");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe("phone step", () => {
@@ -92,9 +106,38 @@ describe("ForgotPassword page", () => {
       expect(screen.getByRole("button", { name: /verify/i })).toBeInTheDocument();
     });
 
-    it("shows resend button", () => {
+    it("shows resend countdown and disables resend initially", () => {
+      vi.useFakeTimers();
       renderWithProviders(<ForgotPassword />, { preloadedState: otpState });
-      expect(screen.getByText(/resend code/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /resend in 05:00/i })).toBeDisabled();
+    });
+
+    it("enables resend when the countdown reaches zero", () => {
+      vi.useFakeTimers();
+      renderWithProviders(<ForgotPassword />, { preloadedState: otpState });
+
+      act(() => {
+        vi.advanceTimersByTime(300_000);
+      });
+
+      expect(screen.getByRole("button", { name: /resend code/i })).not.toBeDisabled();
+    });
+
+    it("restarts countdown after a successful resend", async () => {
+      vi.useFakeTimers();
+      mockForgotResendOtp.mockResolvedValueOnce({ data: { message: "OTP resent" } });
+      renderWithProviders(<ForgotPassword />, { preloadedState: otpState });
+
+      act(() => {
+        vi.advanceTimersByTime(300_000);
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /resend code/i }));
+      });
+
+      expect(mockForgotResendOtp).toHaveBeenCalledWith("0901234567");
+      expect(screen.getByRole("button", { name: /resend in 05:00/i })).toBeDisabled();
     });
 
     it("allows typing OTP code", () => {
