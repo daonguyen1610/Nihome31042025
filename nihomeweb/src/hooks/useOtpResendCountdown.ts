@@ -30,14 +30,21 @@ export const useOtpResendCountdown = (
   }, [enabled, initialSeconds]);
 
   useEffect(() => {
-    if (!enabled || remainingSeconds <= 0) return;
+    if (!enabled) return;
 
     const timer = window.setInterval(() => {
-      setRemainingSeconds((current) => Math.max(current - 1, 0));
+      setRemainingSeconds((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+
+        return current - 1;
+      });
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [enabled, remainingSeconds]);
+  }, [enabled, initialSeconds]);
 
   const restart = useCallback(() => {
     setRemainingSeconds(initialSeconds);
