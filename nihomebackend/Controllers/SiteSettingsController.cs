@@ -17,7 +17,15 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     public async Task<ActionResult<OtpSettingsResponse>> GetOtpSettings()
     {
         var settings = await svc.GetAsync();
-        if (settings == null) return NotFound();
+        if (settings == null)
+        {
+            // When settings are not initialized, return default OTP settings (feature enabled by default).
+            return Ok(new OtpSettingsResponse
+            {
+                EnableOtpForRegistration = true,
+                EnableOtpForForgotPassword = true
+            });
+        }
 
         return Ok(ToOtpSettingsResponse(settings));
     }
