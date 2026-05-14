@@ -4,6 +4,8 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, type EmploymentTypeResponse } from "@/services/adminApi";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 type EmploymentTypeFormData = {
   code: string;
@@ -141,6 +143,20 @@ const EmploymentTypes = () => {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv({
+      filename: createCsvFilename("admin-employment-types"),
+      columns: [
+        { header: "ID", value: "id" },
+        { header: "Mã", value: "code" },
+        { header: "Tên hiển thị", value: "name" },
+        { header: "Kích hoạt", value: (row) => (row.isActive ? "Yes" : "No") },
+        { header: "Thứ tự", value: "sortOrder" },
+      ],
+      rows: filtered,
+    });
+  };
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
@@ -150,9 +166,12 @@ const EmploymentTypes = () => {
             {loading ? "..." : `${filtered.length} / ${items.length}`}
           </p>
         </div>
-        <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
-          <Plus className="w-4 h-4" /> Thêm hình thức
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
+          <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
+            <Plus className="w-4 h-4" /> Thêm hình thức
+          </button>
+        </div>
       </div>
 
       <div className="admin-card p-5 mb-5">

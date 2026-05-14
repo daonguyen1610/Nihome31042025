@@ -67,6 +67,7 @@ vi.mock("@/lib/i18n", () => {
     "common.back": "Back",
     "common.notFound": "Not found",
     "common.noResults": "No results found",
+    "common.exportExcel": "Export Excel",
     "common.error": "An error occurred",
     // form
     "form.confirmDelete": "Are you sure?",

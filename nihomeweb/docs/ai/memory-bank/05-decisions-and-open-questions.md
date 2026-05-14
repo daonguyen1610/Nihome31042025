@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-04-25
+Last reviewed: 2026-05-07
 
 ## Decisions
 
@@ -51,6 +51,10 @@ Rationale: They make the UI usable during frontend development but do not define
 ### 2026-05-05 - About/Profile content must be sourced from backend seed and API, not frontend fallbacks
 
 Rationale: Public `Profile` content and admin `AboutContent` should reflect the same source of truth. Frontend hardcoded fallback datasets caused drift between client rendering and admin editing, especially for `organization-main`. The backend `ContentSeeder` and `about-sections` API now define the default content baseline.
+
+### 2026-05-07 - Admin list export uses frontend CSV, not XLSX generation
+
+Rationale: The admin needs fast Excel-compatible exports without adding dependencies. API-backed admin list pages now export the current filtered dataset as UTF-8 BOM CSV files through shared frontend helpers; backend-generated exports can be added later for high-volume datasets.
 
 ## Open Questions
 

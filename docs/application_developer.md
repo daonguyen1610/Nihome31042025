@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 26 April 2026
+Last Updated: 7 May 2026
 
 ---
 
@@ -586,6 +586,12 @@ API calls are organized into three service modules:
 | `npm run test`       | Run tests once                     |
 | `npm run test:watch` | Run tests in watch mode            |
 | `npm run preview`    | Preview production build locally   |
+
+### 8.4 Admin CSV Export
+
+Admin list exports are implemented on the frontend with `src/lib/exportCsv.ts` and `src/components/admin/AdminExportButton.tsx`. The helper writes UTF-8 BOM CSV output so Excel opens Vietnamese, Chinese, and Japanese text correctly without adding an `.xlsx` dependency.
+
+Export buttons should use the current list state after filters are applied and must be disabled when there are no rows. Backend APIs are unchanged; large server-side export endpoints can be added later if data volume outgrows client-side export.
 
 ---
 

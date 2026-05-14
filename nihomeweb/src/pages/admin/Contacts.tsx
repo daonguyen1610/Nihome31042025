@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useContacts } from "@/hooks/useContentApi";
 import { adminApi, type ContactMessageResponse } from "@/services/adminApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 const AdminContacts = () => {
   const { t } = useI18n();
@@ -20,6 +22,28 @@ const AdminContacts = () => {
   if (!list) return null;
 
   const newCount = list.filter((c) => !c.isReplied).length;
+
+  const handleExport = () => {
+    downloadCsv({
+      filename: createCsvFilename("admin-contacts"),
+      columns: [
+        { header: "ID", value: "id" },
+        { header: "Name", value: "name" },
+        { header: "Email", value: "email" },
+        { header: "Phone", value: (row) => row.phone ?? "" },
+        { header: "Subject", value: "subject" },
+        { header: t("contacts.content"), value: "message" },
+        {
+          header: t("common.status"),
+          value: (row) => (row.isReplied ? t("contacts.replied") : t("contacts.new")),
+        },
+        { header: t("log.createdOn"), value: "createdAt" },
+        { header: t("contacts.replyContent"), value: (row) => row.replyContent ?? "" },
+        { header: "Replied at", value: (row) => row.repliedAt ?? "" },
+      ],
+      rows: list,
+    });
+  };
 
   const handleReply = async () => {
     if (!active || !replyText.trim()) return;
@@ -73,11 +97,14 @@ const AdminContacts = () => {
 
   return (
     <AdminLayout>
-      <div className="mb-7">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("contacts.title")}</h1>
-        <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-          {newCount} {t("contacts.new")} · {list.length} {t("common.showing")}
-        </p>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
+        <div>
+          <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("contacts.title")}</h1>
+          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+            {newCount} {t("contacts.new")} · {list.length} {t("common.showing")}
+          </p>
+        </div>
+        <AdminExportButton onClick={handleExport} disabled={list.length === 0} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
