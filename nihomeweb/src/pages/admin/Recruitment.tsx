@@ -6,6 +6,8 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
 import type { JobPositionResponse, JobApplicationResponse, EmploymentTypeResponse } from "@/services/adminApi";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 const APP_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   new: { bg: "hsl(var(--admin-info-soft))", color: "hsl(var(--admin-info))", label: "Mới" },
@@ -112,6 +114,28 @@ const AdminRecruitment = () => {
 
   const activeCount = useMemo(() => positions.filter((p) => p.isActive).length, [positions]);
 
+  const handleExportApplications = () => {
+    downloadCsv({
+      filename: createCsvFilename("admin-recruitment-applications"),
+      columns: [
+        { header: "ID", value: "id" },
+        { header: t("recruit.candidate"), value: "candidateName" },
+        { header: "Email", value: "email" },
+        { header: "Phone", value: (row) => row.phone ?? "" },
+        { header: t("recruit.position"), value: "positionTitle" },
+        { header: t("common.status"), value: (row) => APP_STATUS[row.status]?.label ?? row.status },
+        {
+          header: t("recruit.experience"),
+          value: (row) => (row.experienceYears != null ? String(row.experienceYears) : ""),
+        },
+        { header: t("recruit.appliedOn"), value: (row) => new Date(row.appliedAt).toLocaleString("vi-VN") },
+        { header: "CV URL", value: (row) => row.cvUrl ?? "" },
+        { header: "Cover letter", value: (row) => row.coverLetter ?? "" },
+      ],
+      rows: applications,
+    });
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
@@ -211,7 +235,8 @@ const AdminRecruitment = () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="font-display text-xl font-extrabold">{t("recruit.applications")}</h2>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <AdminExportButton onClick={handleExportApplications} disabled={loadingApps || applications.length === 0} />
           <div className="relative">
             <select
               className="admin-input pr-8 text-sm appearance-none"

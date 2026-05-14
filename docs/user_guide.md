@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 26 April 2026
+Last Updated: 7 May 2026
 
 ---
 
@@ -592,6 +592,7 @@ The full NICON system specification defines the following specialized roles for 
 4. Upon verification, the account is created with the USER role.
 
 OTP verification can be toggled on or off by administrators through site settings. When disabled, registration completes immediately after submission.
+The resend action is disabled while the current OTP is valid and shows a countdown before another code can be requested.
 
 ### 5.2 Login Flow
 
@@ -609,6 +610,8 @@ When the access token expires, the client sends the refresh token to obtain a ne
 2. If OTP verification is enabled, the system sends an OTP code to the registered email.
 3. After OTP verification, the user sets a new password.
 4. If OTP is disabled, the password can be reset directly.
+
+The password reset OTP screen uses the same resend countdown as registration.
 
 ### 5.5 Logout
 
@@ -696,6 +699,12 @@ The main admin page provides an overview of system status and quick access to ma
 | Awards               | `/admin/awards`          | Manage award entries                   |
 | Processes            | `/admin/processes`       | Manage process documents               |
 | System               | `/admin/system/*`        | System maintenance                     |
+
+### 7.3 Export Excel
+
+API-backed admin lists include an **Export Excel** action that downloads the currently filtered data as an Excel-compatible CSV file with UTF-8 encoding. The export is available for contacts, recruitment applications, posts, projects, translations, activity categories, employment types, and logo catalog pages for clients, partners, suppliers, and awards.
+
+The export button is disabled when the current filtered list is empty. Demo/localStorage-only screens and media-heavy editors are intentionally excluded from this export pass.
 
 ---
 
@@ -941,7 +950,7 @@ The platform sends automated emails for the following events:
 
 ### 12.2 Email Templates
 
-OTP and job application notification emails use configurable templates with placeholder substitution.
+OTP and job application notification emails use configurable templates with placeholder substitution. The default OTP template uses the red/orange brand palette.
 
 **OTP Template Placeholders:**
 
@@ -973,6 +982,8 @@ The following settings control email behavior:
 | New Application Email Subject        | Subject template for application notification emails  |
 | New Application Email Body           | Body template for application notification emails     |
 | Notification Email                   | Email address that receives application notifications |
+
+Administrators can toggle registration and forgot-password OTP verification from `/admin/settings` in the General settings tab.
 
 ---
 
@@ -1343,6 +1354,8 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 |--------|--------------------------------------|--------|--------------------------|
 | GET    | `/api/site-settings/email-templates` | Admin  | Get email templates      |
 | PUT    | `/api/site-settings/email-templates` | Admin  | Update email templates   |
+| GET    | `/api/site-settings/otp-settings`    | Public | Get OTP settings         |
+| PUT    | `/api/site-settings/otp-settings`    | Admin  | Update OTP settings      |
 
 #### Update Email Templates Request
 
@@ -1353,6 +1366,15 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
   "notificationEmail": "hr@nihome.vn",
   "otpEmailSubjectTemplate": "[{SiteName}] Your verification code",
   "otpEmailBodyTemplate": "Your OTP code is: {OtpCode}"
+}
+```
+
+#### Update OTP Settings Request
+
+```json
+{
+  "enableOtpForRegistration": true,
+  "enableOtpForForgotPassword": true
 }
 ```
 

@@ -4,6 +4,8 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, type ActivityCategoryResponse } from "@/services/adminApi";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 type CategoryFormData = {
   name: string;
@@ -135,6 +137,19 @@ const Categories = () => {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv({
+      filename: createCsvFilename("admin-activity-categories"),
+      columns: [
+        { header: "ID", value: "id" },
+        { header: t("cat.name"), value: "name" },
+        { header: t("cat.published"), value: (row) => (row.isActive ? "Yes" : "No") },
+        { header: t("cat.order"), value: "sortOrder" },
+      ],
+      rows: filtered,
+    });
+  };
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
@@ -144,9 +159,12 @@ const Categories = () => {
             {loading ? "..." : `${filtered.length} / ${items.length}`}
           </p>
         </div>
-        <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
-          <Plus className="w-4 h-4" /> {t("cat.add")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
+          <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
+            <Plus className="w-4 h-4" /> {t("cat.add")}
+          </button>
+        </div>
       </div>
 
       <div className="admin-card p-5 mb-5">

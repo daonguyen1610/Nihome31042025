@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Phone, Mail, Lock, User, ArrowRight, KeyRound, RotateCw } from "lucide-react";
+import { Phone, Mail, Lock, User, ArrowRight, KeyRound } from "lucide-react";
 import Layout from "@/components/layout/Layout";
+import OtpResendButton from "@/components/auth/OtpResendButton";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n, translateError } from "@/lib/i18n";
 import { isAdminRole } from "@/lib/auth";
@@ -65,13 +66,15 @@ const Register = () => {
     });
   };
 
-  const handleResend = () => {
-    if (!otpPhone) return;
-    dispatch(resendRegisterOtpThunk(otpPhone)).then((res) => {
-      if (res.meta.requestStatus === "fulfilled") {
-        toast({ title: t("auth.otp.resent") });
-      }
-    });
+  const handleResend = async () => {
+    if (!otpPhone) return false;
+
+    const res = await dispatch(resendRegisterOtpThunk(otpPhone));
+    if (res.meta.requestStatus === "fulfilled") {
+      toast({ title: t("auth.otp.resent") });
+      return true;
+    }
+    return false;
   };
 
   // Show OTP form if required
@@ -112,13 +115,11 @@ const Register = () => {
                 </button>
               </form>
 
-              <button
-                onClick={handleResend}
-                disabled={loading}
-                className="flex items-center gap-2 mx-auto mt-4 text-sm text-primary hover:underline disabled:opacity-50"
-              >
-                <RotateCw className="w-3.5 h-3.5" /> {t("auth.otp.resend")}
-              </button>
+              <OtpResendButton
+                countdownEnabled={otpRequired && otpFlow === "register" && !otpVerified}
+                loading={loading}
+                onResend={handleResend}
+              />
             </div>
           </div>
         </section>

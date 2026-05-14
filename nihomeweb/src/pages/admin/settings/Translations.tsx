@@ -15,6 +15,8 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 /* ─── Helpers ───────────────────────────────────── */
 const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions"];
@@ -297,6 +299,22 @@ const TranslationsPage = () => {
     }));
   };
 
+  const handleExportStaticTranslations = () => {
+    downloadCsv({
+      filename: createCsvFilename("admin-translations"),
+      columns: [
+        { header: "Key", value: "key" },
+        { header: "Category", value: (row) => row.category ?? "" },
+        { header: "VI", value: "vietnameseValue" },
+        { header: "EN", value: (row) => row.translations.en ?? "" },
+        { header: "ZH", value: (row) => row.translations.zh ?? "" },
+        { header: "JA", value: (row) => row.translations.ja ?? "" },
+        { header: "Created at", value: "createdAt" },
+      ],
+      rows: pairs,
+    });
+  };
+
   /* ─── Pagination ─── */
   const totalPages = Math.ceil(pairs.length / PAGE_SIZE);
   const paged = pairs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -366,6 +384,7 @@ const TranslationsPage = () => {
               </select>
               <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "hsl(var(--admin-muted))" }} />
             </div>
+            <AdminExportButton onClick={handleExportStaticTranslations} disabled={loading || pairs.length === 0} />
             <button onClick={openAdd} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2 text-sm">
               <Plus className="w-4 h-4" /> Add Key
             </button>

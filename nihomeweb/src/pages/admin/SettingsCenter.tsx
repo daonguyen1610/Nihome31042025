@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Save, Building2, Mail, Phone, MapPin, Globe } from "lucide-react";
+import { Save, Building2, Mail, Phone, MapPin, Globe, ShieldCheck } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { adminApi, type OtpSettingsResponse } from "@/services/adminApi";
 import {
   SettingSection,
   SettingRow,
@@ -24,6 +25,7 @@ import {
 import SlideshowSettings from "./settings/SlideshowSettings";
 
 type Tab = "company" | "general" | "media" | "slideshow";
+type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
   { key: "company", labelKey: "settings.company" },
@@ -31,6 +33,42 @@ const tabs: { key: Tab; labelKey: string }[] = [
   { key: "media", labelKey: "set.media" },
   { key: "slideshow", labelKey: "set.slideshow" },
 ];
+
+const OtpToggleControl = ({
+  label,
+  description,
+  enabled,
+  disabled,
+  saving,
+  savingLabel,
+  onToggle,
+}: {
+  label: string;
+  description: string;
+  enabled: boolean;
+  disabled: boolean;
+  saving: boolean;
+  savingLabel: string;
+  onToggle: (value: boolean) => void;
+}) => (
+  <div
+    className="flex items-start gap-4 rounded-xl px-4 py-4"
+    style={{ background: "hsl(var(--admin-bg))" }}
+  >
+    <div className="pt-1">
+      <Toggle on={enabled} onChange={onToggle} disabled={disabled} ariaLabel={label} />
+    </div>
+    <div className="min-w-0">
+      <p className="text-sm font-bold">{label}</p>
+      <p className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>{description}</p>
+      {saving && (
+        <p className="text-xs mt-2 font-semibold" style={{ color: "hsl(var(--admin-primary))" }}>
+          {savingLabel}
+        </p>
+      )}
+    </div>
+  </div>
+);
 
 /* ─── Company Tab ─── */
 const CompanyTab = () => {
@@ -121,9 +159,57 @@ const GeneralTab = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [s, setS] = useState<GeneralSettings>(() => getGeneralSettings());
+  const [otpSettings, setOtpSettings] = useState<OtpSettingsResponse | null>(null);
+  const [otpLoading, setOtpLoading] = useState(true);
+  const [otpLoadFailed, setOtpLoadFailed] = useState(false);
+  const [otpSavingKey, setOtpSavingKey] = useState<OtpSettingsKey | null>(null);
   const upd = <K extends keyof GeneralSettings>(k: K, v: GeneralSettings[K]) =>
     setS((prev) => ({ ...prev, [k]: v }));
   const save = () => { saveGeneralSettings(s); toast({ title: t("settings.saved") }); };
+
+  const loadOtpSettings = useCallback(async () => {
+    setOtpLoading(true);
+    setOtpLoadFailed(false);
+    try {
+      const { data } = await adminApi.getOtpSettings();
+      setOtpSettings(data);
+    } catch {
+      setOtpLoadFailed(true);
+      setOtpSettings(null);
+    } finally {
+      setOtpLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOtpSettings();
+  }, [loadOtpSettings]);
+
+  const updateOtpSetting = async (key: OtpSettingsKey, value: boolean) => {
+    if (!otpSettings || otpSavingKey) return;
+
+    const previous = otpSettings;
+    const next = { ...previous, [key]: value };
+
+    setOtpSettings(next);
+    setOtpSavingKey(key);
+    setOtpLoadFailed(false);
+
+    try {
+      const { data } = await adminApi.updateOtpSettings(next);
+      setOtpSettings(data);
+      toast({ title: t("settings.saved") });
+    } catch {
+      setOtpSettings(previous);
+      toast({
+        title: t("common.error"),
+        description: t("set.otp.saveError"),
+        variant: "destructive",
+      });
+    } finally {
+      setOtpSavingKey(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -131,6 +217,60 @@ const GeneralTab = () => {
         <button onClick={save} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
           <Save className="w-4 h-4" /> {t("common.save")}
         </button>
+      </div>
+
+      <div className="admin-card p-6">
+        <div
+          className="flex items-center gap-3 border-b pb-4"
+          style={{ borderColor: "hsl(var(--admin-border))" }}
+        >
+          <ShieldCheck className="w-5 h-5" style={{ color: "hsl(var(--admin-primary))" }} />
+          <h2 className="font-display text-lg font-extrabold">{t("set.otp.securityTitle")}</h2>
+        </div>
+
+        {otpLoading ? (
+          <p className="text-sm pt-5" style={{ color: "hsl(var(--admin-muted))" }}>
+            {t("set.otp.loading")}
+          </p>
+        ) : otpLoadFailed || !otpSettings ? (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-5">
+            <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
+              {t("set.otp.loadError")}
+            </p>
+            <button
+              type="button"
+              onClick={loadOtpSettings}
+              className="inline-flex w-fit items-center rounded-lg border px-3 py-2 text-xs font-bold transition"
+              style={{
+                borderColor: "hsl(var(--admin-border))",
+                color: "hsl(var(--admin-primary))",
+              }}
+            >
+              {t("common.retry")}
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 pt-5">
+            <OtpToggleControl
+              label={t("set.otp.registrationLabel")}
+              description={t("set.otp.registrationDesc")}
+              enabled={otpSettings.enableOtpForRegistration}
+              disabled={otpSavingKey !== null}
+              saving={otpSavingKey === "enableOtpForRegistration"}
+              savingLabel={t("set.otp.saving")}
+              onToggle={(value) => updateOtpSetting("enableOtpForRegistration", value)}
+            />
+            <OtpToggleControl
+              label={t("set.otp.forgotLabel")}
+              description={t("set.otp.forgotDesc")}
+              enabled={otpSettings.enableOtpForForgotPassword}
+              disabled={otpSavingKey !== null}
+              saving={otpSavingKey === "enableOtpForForgotPassword"}
+              savingLabel={t("set.otp.saving")}
+              onToggle={(value) => updateOtpSetting("enableOtpForForgotPassword", value)}
+            />
+          </div>
+        )}
       </div>
 
       <SettingSection title={t("set.section.social")}>

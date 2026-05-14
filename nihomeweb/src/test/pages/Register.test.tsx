@@ -1,7 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { screen, fireEvent, act } from "@testing-library/react";
 import Register from "@/pages/Register";
 import { renderWithProviders } from "@/test/helpers/renderWithProviders";
+
+const { mockRegisterResendOtp } = vi.hoisted(() => ({
+  mockRegisterResendOtp: vi.fn(),
+}));
+
+vi.mock("@/services/authApi", () => ({
+  authApi: {
+    registerResendOtp: mockRegisterResendOtp,
+  },
+}));
 
 vi.mock("@/components/layout/Layout", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="layout">{children}</div>,
@@ -12,6 +22,10 @@ describe("Register page", () => {
     vi.clearAllMocks();
     localStorage.clear();
     localStorage.setItem("nicon_lang", "en");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders registration form fields", () => {
@@ -70,7 +84,8 @@ describe("Register page", () => {
     expect(screen.getByRole("button")).toBeDisabled();
   });
 
-  it("shows OTP form when otpRequired and otpFlow is register", () => {
+  it("shows OTP form with resend countdown when otpRequired and otpFlow is register", () => {
+    vi.useFakeTimers();
     renderWithProviders(<Register />, {
       preloadedState: {
         auth: {
@@ -89,9 +104,67 @@ describe("Register page", () => {
     });
     expect(screen.getByPlaceholderText("OTP Code")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /verify/i })).toBeInTheDocument();
-    expect(screen.getByText(/resend code/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /resend in 05:00/i })).toBeDisabled();
     // Registration form fields should not be visible
     expect(screen.queryByPlaceholderText("Full name")).not.toBeInTheDocument();
+  });
+
+  it("enables resend when the countdown reaches zero", () => {
+    vi.useFakeTimers();
+    renderWithProviders(<Register />, {
+      preloadedState: {
+        auth: {
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          loading: false,
+          error: null,
+          otpRequired: true,
+          otpPhone: "0901234567",
+          otpEmail: "test@example.com",
+          otpFlow: "register" as const,
+          otpPassword: "pass123",
+        },
+      },
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(300_000);
+    });
+
+    expect(screen.getByRole("button", { name: /resend code/i })).not.toBeDisabled();
+  });
+
+  it("restarts countdown after a successful resend", async () => {
+    vi.useFakeTimers();
+    mockRegisterResendOtp.mockResolvedValueOnce({ data: { message: "OTP resent" } });
+    renderWithProviders(<Register />, {
+      preloadedState: {
+        auth: {
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          loading: false,
+          error: null,
+          otpRequired: true,
+          otpPhone: "0901234567",
+          otpEmail: "test@example.com",
+          otpFlow: "register" as const,
+          otpPassword: "pass123",
+        },
+      },
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(300_000);
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /resend code/i }));
+    });
+
+    expect(mockRegisterResendOtp).toHaveBeenCalledWith("0901234567");
+    expect(screen.getByRole("button", { name: /resend in 05:00/i })).toBeDisabled();
   });
 
   it("OTP form shows the email address", () => {

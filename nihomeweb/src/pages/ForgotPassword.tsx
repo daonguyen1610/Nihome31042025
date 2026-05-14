@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Phone, Lock, ArrowRight, KeyRound, RotateCw } from "lucide-react";
+import { Phone, Lock, ArrowRight, KeyRound } from "lucide-react";
 import Layout from "@/components/layout/Layout";
+import OtpResendButton from "@/components/auth/OtpResendButton";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n, translateError } from "@/lib/i18n";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -83,13 +84,14 @@ const ForgotPassword = () => {
     });
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     const p = otpPhone ?? phone;
-    dispatch(resendForgotOtpThunk(p)).then((res) => {
-      if (res.meta.requestStatus === "fulfilled") {
-        toast({ title: t("auth.otp.resent") });
-      }
-    });
+    const res = await dispatch(resendForgotOtpThunk(p));
+    if (res.meta.requestStatus === "fulfilled") {
+      toast({ title: t("auth.otp.resent") });
+      return true;
+    }
+    return false;
   };
 
   const cardClass = "max-w-md mx-auto bg-card border border-border rounded-3xl p-8 lg:p-10 shadow-elegant";
@@ -167,13 +169,11 @@ const ForgotPassword = () => {
                   {loading ? t("auth.processing") : <>{t("auth.otp.verify")} <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </form>
-              <button
-                onClick={handleResend}
-                disabled={loading}
-                className="flex items-center gap-2 mx-auto mt-4 text-sm text-primary hover:underline disabled:opacity-50"
-              >
-                <RotateCw className="w-3.5 h-3.5" /> {t("auth.otp.resend")}
-              </button>
+              <OtpResendButton
+                countdownEnabled={step === "otp"}
+                loading={loading}
+                onResend={handleResend}
+              />
             </div>
           ) : (
             <div className={cardClass}>
