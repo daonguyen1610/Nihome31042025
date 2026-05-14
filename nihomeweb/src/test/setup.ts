@@ -68,6 +68,7 @@ vi.mock("@/lib/i18n", () => {
     "common.back": "Back",
     "common.notFound": "Not found",
     "common.noResults": "No results found",
+    "common.exportExcel": "Export Excel",
     "common.error": "An error occurred",
     // admin settings
     "settings.title": "Settings",
@@ -109,6 +110,18 @@ vi.mock("@/lib/i18n", () => {
     "form.update": "Update",
     "form.back": "Back",
     "form.required": "Required",
+    // logo admin
+    "logoAdmin.awardBadge": "AWARD",
+    "logoAdmin.awardCreateDesc": "Add award certification details.",
+    "logoAdmin.awardCreateTitle": "Add award",
+    "logoAdmin.awardEditDesc": "Update award certification details.",
+    "logoAdmin.awardEditTitle": "Edit award",
+    "logoAdmin.awardFieldName": "Award name",
+    "logoAdmin.awardPlaceholderName": "Enter award name",
+    "logoAdmin.logoBadge": "LOGO",
+    "logoAdmin.logoCreateDesc": "Add new logo details.",
+    "logoAdmin.logoEditDesc": "Update logo details.",
+    "logoAdmin.previewTitle": "Preview",
     // not found
     "nf.oops": "Oops! Page not found",
     "nf.home": "Return to home",

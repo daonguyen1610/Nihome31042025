@@ -844,24 +844,181 @@
   transform: translateY(-4px);
   box-shadow: 0 14px 30px -18px hsl(var(--admin-shadow) / 0.35);
 }
-.admin-scope .admin-logo-manager .logo-modal {
-  backdrop-filter: blur(8px);
+
+.admin-scope.logo-modal {
+  display: flex;
+  flex-direction: column;
+  width: calc(100vw - 1rem);
+  max-width: 68rem;
+  max-height: calc(100dvh - 1rem);
+  background: hsl(var(--admin-surface));
+  backdrop-filter: blur(10px);
 }
-.admin-scope .admin-logo-manager .logo-modal-header {
-  border-bottom: 1px solid hsl(var(--admin-border));
+.admin-scope.logo-modal > button {
+  top: 1.1rem;
+  right: 1.15rem;
+  color: hsl(var(--admin-text));
+  opacity: 0.72;
 }
-.admin-scope .admin-logo-manager .logo-upload-wrap {
-  background: linear-gradient(135deg, hsl(var(--admin-bg)), hsl(var(--admin-primary-soft) / 0.28));
+.admin-scope.logo-modal > button:hover {
+  opacity: 1;
 }
-.admin-scope .admin-logo-manager .logo-preview-pane {
-  background: linear-gradient(180deg, hsl(var(--admin-bg)), hsl(var(--admin-bg) / 0.8));
+.admin-scope.logo-modal .logo-modal-header {
+  flex-shrink: 0;
+  color: white;
+  border-bottom: 0;
+  background: linear-gradient(135deg, hsl(var(--admin-primary)), hsl(18 96% 57%));
 }
-.admin-scope .admin-logo-manager .logo-preview-meta {
+.admin-scope.logo-modal .logo-modal-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  color: white;
+}
+.admin-scope.logo-modal .logo-modal-description {
+  color: hsl(0 0% 100% / 0.9);
+}
+.admin-scope.logo-modal .logo-modal-form {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+.admin-scope.logo-modal .logo-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.admin-scope.logo-modal .logo-modal-main {
   background: hsl(var(--admin-surface));
 }
-.admin-scope .admin-logo-manager .logo-name-input {
-  font-size: 1.125rem;
+.admin-scope.logo-modal .logo-upload-wrap {
+  background: transparent;
+}
+.admin-scope.logo-modal .logo-preview-pane {
+  background: hsl(230 25% 97%);
+}
+.admin-scope.logo-modal .logo-preview-meta {
+  background: hsl(var(--admin-surface));
+}
+.admin-scope.logo-modal .logo-styled-input {
+  min-height: 3.35rem;
+  border-radius: 1rem;
+  background: hsl(230 25% 98%);
+  color: hsl(230 22% 30%);
+  font-size: 0.95rem;
+  padding: 0.85rem 1rem;
+}
+.admin-scope.logo-modal .logo-name-input {
+  font-size: 1rem;
   line-height: 1.5rem;
+  font-weight: 600;
+}
+.admin-scope.logo-modal .logo-upload-button {
+  min-height: 3.35rem;
+  border: 0;
+  border-radius: 1rem;
+  background: hsl(var(--admin-danger-soft));
+  color: hsl(var(--admin-primary));
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding-inline: 1.25rem;
+}
+.admin-scope.logo-modal .logo-upload-button:hover {
+  background: hsl(var(--admin-primary-soft));
+  transform: translateY(-1px);
+}
+.admin-scope.logo-modal .logo-modal-footer {
+  flex-shrink: 0;
+  background: hsl(var(--admin-surface));
+}
+.admin-scope.logo-modal .logo-secondary-btn {
+  min-height: 44px;
+  border-radius: 999px;
+  background: hsl(var(--admin-surface));
+  color: hsl(var(--admin-text));
+  font-weight: 700;
+  transition: all 220ms var(--transition-smooth);
+}
+.admin-scope.logo-modal .logo-secondary-btn:hover {
+  color: hsl(var(--admin-primary));
+  background: hsl(var(--admin-primary-soft));
+}
+.admin-scope.logo-modal .logo-secondary-btn,
+.admin-scope.logo-modal .admin-btn-primary {
+  min-height: 3rem;
+  padding-inline: 1.35rem;
+}
+.admin-scope.logo-modal .logo-preview-heading {
+  margin-bottom: 1rem;
+  color: hsl(var(--admin-muted));
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.admin-scope.logo-modal .logo-preview-card {
+  overflow: hidden;
+  border: 1px solid hsl(var(--admin-border) / 0.7);
+  border-radius: 1.25rem;
+  background: white;
+  box-shadow: 0 16px 30px -26px hsl(var(--admin-shadow) / 0.35);
+}
+.admin-scope.logo-modal .logo-preview-topline {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 1rem 1.15rem 0.7rem;
+}
+.admin-scope.logo-modal .logo-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 100%;
+  color: hsl(var(--admin-primary));
+  font-size: 0.85rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.admin-scope.logo-modal .logo-preview-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 11.25rem;
+  overflow: hidden;
+  background: white;
+}
+.admin-scope.logo-modal .logo-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.admin-scope.logo-modal .logo-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: hsl(var(--admin-muted));
+  font-size: 0.9rem;
+}
+.admin-scope.logo-modal .logo-preview-copy {
+  padding: 1rem 1.15rem 1.2rem;
+}
+.admin-scope.logo-modal .logo-preview-copy h3 {
+  color: hsl(var(--admin-text));
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.admin-scope.logo-modal .logo-preview-copy p {
+  margin-top: 0.9rem;
+  color: hsl(var(--admin-muted));
+  font-size: 0.85rem;
   font-weight: 600;
 }
 
@@ -886,14 +1043,29 @@
   padding: 3px 10px;
   margin-bottom: 10px;
 }
-.admin-scope .admin-logo-manager.is-awards .logo-modal-header {
-  background:
-    radial-gradient(at 90% 10%, hsl(var(--admin-primary) / 0.18) 0px, transparent 50%),
-    linear-gradient(135deg, hsl(var(--admin-bg)), hsl(var(--admin-primary-soft) / 0.45));
+
+@media (min-width: 640px) {
+  .admin-scope.logo-modal {
+    width: calc(100vw - 2rem);
+    max-height: calc(100dvh - 2rem);
+  }
 }
-.admin-scope .admin-logo-manager.is-awards .logo-preview-pane {
-  background: linear-gradient(180deg, hsl(var(--admin-primary-soft) / 0.45), hsl(var(--admin-bg)));
+
+@media (max-width: 1023px) {
+  .admin-scope.logo-modal .logo-preview-pane {
+    border-left: 0;
+  }
 }
-.admin-scope .admin-logo-manager.is-awards .logo-preview-meta {
-  background: linear-gradient(135deg, hsl(var(--admin-surface)), hsl(var(--admin-primary-soft) / 0.32));
+
+@media (max-width: 639px) {
+  .admin-scope.logo-modal .logo-modal-header {
+    padding-right: 3.5rem;
+  }
+  .admin-scope.logo-modal .logo-styled-input,
+  .admin-scope.logo-modal .logo-upload-button {
+    min-height: 3.2rem;
+  }
+  .admin-scope.logo-modal .logo-preview-image {
+    height: 10rem;
+  }
 }
