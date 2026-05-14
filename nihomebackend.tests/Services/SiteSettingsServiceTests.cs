@@ -25,6 +25,8 @@ public class SiteSettingsServiceTests : IDisposable
             SiteName = "Nihome",
             PrimaryEmail = "nihome@nihome.vn",
             NotificationEmail = "hr@nihome.vn",
+            EnableOtpForRegistration = true,
+            EnableOtpForForgotPassword = true,
             NewApplicationEmailSubjectTemplate = "Old subject",
             NewApplicationEmailBodyTemplate = "<p>Old body</p>",
             CreatedAt = DateTime.UtcNow,
@@ -117,5 +119,47 @@ public class SiteSettingsServiceTests : IDisposable
 
         var settings = _db.SiteSettings.First();
         Assert.True(settings.UpdatedAt >= before);
+    }
+
+    [Fact]
+    public async Task UpdateOtpSettingsAsync_UpdatesOtpFlags()
+    {
+        SeedSettings();
+
+        var result = await _sut.UpdateOtpSettingsAsync(
+            enableOtpForRegistration: false,
+            enableOtpForForgotPassword: true);
+
+        Assert.False(result.EnableOtpForRegistration);
+        Assert.True(result.EnableOtpForForgotPassword);
+
+        var fromDb = _db.SiteSettings.First();
+        Assert.False(fromDb.EnableOtpForRegistration);
+        Assert.True(fromDb.EnableOtpForForgotPassword);
+    }
+
+    [Fact]
+    public async Task UpdateOtpSettingsAsync_UpdatesTimestamp()
+    {
+        SeedSettings();
+        var before = DateTime.UtcNow;
+
+        await _sut.UpdateOtpSettingsAsync(
+            enableOtpForRegistration: false,
+            enableOtpForForgotPassword: false);
+
+        var settings = _db.SiteSettings.First();
+        Assert.True(settings.UpdatedAt >= before);
+    }
+
+    [Fact]
+    public async Task UpdateOtpSettingsAsync_ThrowsWhenNoSettings()
+    {
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _sut.UpdateOtpSettingsAsync(
+                enableOtpForRegistration: true,
+                enableOtpForForgotPassword: true));
+
+        Assert.Contains("chưa được khởi tạo", ex.Message);
     }
 }

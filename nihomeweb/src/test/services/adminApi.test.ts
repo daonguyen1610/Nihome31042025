@@ -209,6 +209,22 @@ describe("adminApi", () => {
     await adminApi.deleteSlideshow(5);
     expect(mockApi.delete).toHaveBeenCalledWith("/slideshow/5");
   });
+
+  it("getOtpSettings sends correct route", async () => {
+    await adminApi.getOtpSettings();
+    expect(mockApi.get).toHaveBeenCalledWith("/site-settings/otp-settings");
+  });
+
+  it("updateOtpSettings sends correct route and payload", async () => {
+    const payload = {
+      enableOtpForRegistration: true,
+      enableOtpForForgotPassword: false,
+    };
+
+    await adminApi.updateOtpSettings(payload);
+
+    expect(mockApi.put).toHaveBeenCalledWith("/site-settings/otp-settings", payload);
+  });
 });
 
 describe("slugify", () => {

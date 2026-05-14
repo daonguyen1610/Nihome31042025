@@ -52,9 +52,9 @@ Rationale: They make the UI usable during frontend development but do not define
 
 Rationale: Public `Profile` content and admin `AboutContent` should reflect the same source of truth. Frontend hardcoded fallback datasets caused drift between client rendering and admin editing, especially for `organization-main`. The backend `ContentSeeder` and `about-sections` API now define the default content baseline.
 
-### 2026-05-07 - Admin list export uses frontend CSV, not XLSX generation
+### 2026-05-12 - OTP verification toggles are backend-backed site settings
 
-Rationale: The admin needs fast Excel-compatible exports without adding dependencies. API-backed admin list pages now export the current filtered dataset as UTF-8 BOM CSV files through shared frontend helpers; backend-generated exports can be added later for high-volume datasets.
+Rationale: Registration and forgot-password OTP behavior is controlled by existing `SiteSettings` flags. The admin Settings page should read and update those flags through `/api/site-settings/otp-settings` instead of localStorage demo settings.
 
 ## Open Questions
 

@@ -203,6 +203,13 @@ export interface UpdateEmailTemplatesRequest {
   otpEmailBodyTemplate?: string | null;
 }
 
+export interface OtpSettingsResponse {
+  enableOtpForRegistration: boolean;
+  enableOtpForForgotPassword: boolean;
+}
+
+export type UpdateOtpSettingsRequest = OtpSettingsResponse;
+
 export interface ContactMessageResponse {
   id: number;
   name: string;
@@ -348,6 +355,12 @@ export const adminApi = {
     api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
   updateEmailTemplates: (data: UpdateEmailTemplatesRequest) =>
     api.put<EmailTemplatesResponse>("/site-settings/email-templates", data),
+
+  // OTP settings
+  getOtpSettings: () =>
+    api.get<OtpSettingsResponse>("/site-settings/otp-settings"),
+  updateOtpSettings: (data: UpdateOtpSettingsRequest) =>
+    api.put<OtpSettingsResponse>("/site-settings/otp-settings", data),
 
   // Contact messages
   getContacts: (replied?: boolean) => {

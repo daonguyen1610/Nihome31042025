@@ -3,6 +3,7 @@ using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 
@@ -29,6 +30,8 @@ public class SiteSettingsControllerTests : IDisposable
             SiteName = "Nihome",
             PrimaryEmail = "nihome@nihome.vn",
             NotificationEmail = "hr@nihome.vn",
+            EnableOtpForRegistration = true,
+            EnableOtpForForgotPassword = false,
             NewApplicationEmailSubjectTemplate = "[{{siteName}}] New",
             NewApplicationEmailBodyTemplate = "<p>Hello</p>",
             CreatedAt = DateTime.UtcNow,
@@ -42,6 +45,30 @@ public class SiteSettingsControllerTests : IDisposable
     {
         var result = await _sut.GetEmailTemplates();
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task GetOtpSettings_ReturnsDefaults_WhenNoSettings()
+    {
+        var result = await _sut.GetOtpSettings();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var value = Assert.IsType<OtpSettingsResponse>(ok.Value);
+        Assert.True(value.EnableOtpForRegistration);
+        Assert.True(value.EnableOtpForForgotPassword);
+    }
+
+    [Fact]
+    public async Task GetOtpSettings_ReturnsOk_WithOtpFlags()
+    {
+        SeedSettings();
+
+        var result = await _sut.GetOtpSettings();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var value = Assert.IsType<OtpSettingsResponse>(ok.Value);
+        Assert.True(value.EnableOtpForRegistration);
+        Assert.False(value.EnableOtpForForgotPassword);
     }
 
     [Fact]
@@ -78,6 +105,23 @@ public class SiteSettingsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateOtpSettings_ReturnsOk_WithUpdatedFlags()
+    {
+        SeedSettings();
+
+        var result = await _sut.UpdateOtpSettings(new UpdateOtpSettingsRequest
+        {
+            EnableOtpForRegistration = false,
+            EnableOtpForForgotPassword = true
+        });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var value = Assert.IsType<OtpSettingsResponse>(ok.Value);
+        Assert.False(value.EnableOtpForRegistration);
+        Assert.True(value.EnableOtpForForgotPassword);
+    }
+
+    [Fact]
     public async Task UpdateEmailTemplates_ReturnsBadRequest_WhenNoSettings()
     {
         var result = await _sut.UpdateEmailTemplates(new UpdateEmailTemplatesRequest
@@ -88,5 +132,17 @@ public class SiteSettingsControllerTests : IDisposable
         });
 
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdateOtpSettings_ReturnsBadRequest_WhenNoSettings()
+    {
+        var result = await _sut.UpdateOtpSettings(new UpdateOtpSettingsRequest
+        {
+            EnableOtpForRegistration = true,
+            EnableOtpForForgotPassword = true
+        });
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
     }
 }
