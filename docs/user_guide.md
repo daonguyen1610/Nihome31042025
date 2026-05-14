@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 26 April 2026
+Last Updated: 7 May 2026
 
 ---
 
@@ -699,6 +699,12 @@ The main admin page provides an overview of system status and quick access to ma
 | Awards               | `/admin/awards`          | Manage award entries                   |
 | Processes            | `/admin/processes`       | Manage process documents               |
 | System               | `/admin/system/*`        | System maintenance                     |
+
+### 7.3 Export Excel
+
+API-backed admin lists include an **Export Excel** action that downloads the currently filtered data as an Excel-compatible CSV file with UTF-8 encoding. The export is available for contacts, recruitment applications, posts, projects, translations, activity categories, employment types, and logo catalog pages for clients, partners, suppliers, and awards.
+
+The export button is disabled when the current filtered list is empty. Demo/localStorage-only screens and media-heavy editors are intentionally excluded from this export pass.
 
 ---
 

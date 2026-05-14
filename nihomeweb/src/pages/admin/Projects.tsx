@@ -8,6 +8,8 @@ import { useProjects } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import type { ProjectResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 const AdminProjects = () => {
   const { t } = useI18n();
@@ -29,6 +31,37 @@ const AdminProjects = () => {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv({
+      filename: createCsvFilename("admin-projects"),
+      columns: [
+        { header: "ID", value: "id" },
+        { header: "Slug", value: "slug" },
+        { header: t("proj.title"), value: "name" },
+        { header: "Client", value: "client" },
+        { header: "Location", value: "location" },
+        { header: t("proj.scale"), value: "scale" },
+        { header: "Scope", value: "scope" },
+        {
+          header: t("common.status"),
+          value: (row) => (row.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")),
+        },
+        { header: "Year", value: (row) => row.year ?? "" },
+        { header: "Category", value: (row) => row.category ?? "" },
+        { header: "Description", value: (row) => row.description ?? "" },
+        { header: "Challenges", value: (row) => row.challenges ?? [] },
+        { header: "Solutions", value: (row) => row.solutions ?? [] },
+        {
+          header: "Highlights",
+          value: (row) => row.highlights?.map((item) => `${item.label}: ${item.value}`).join("; ") ?? "",
+        },
+        { header: "Image URL", value: "imageUrl" },
+        { header: "Gallery", value: (row) => row.gallery ?? [] },
+      ],
+      rows: filtered,
+    });
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
@@ -38,9 +71,12 @@ const AdminProjects = () => {
             {filtered.length} {t("common.showing")}
           </p>
         </div>
-        <Link to="/admin/projects/new" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> {t("proj.add")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
+          <Link to="/admin/projects/new" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Plus className="w-4 h-4" /> {t("proj.add")}
+          </Link>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6">

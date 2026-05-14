@@ -1416,6 +1416,94 @@
     "ja": "新しいロゴを追加"
   },
   {
+    "key": "logoAdmin.awardEditTitle",
+    "category": "logoAdmin",
+    "vi": "Chỉnh sửa giải thưởng",
+    "en": "Edit award",
+    "zh": "编辑奖项",
+    "ja": "受賞歴を編集"
+  },
+  {
+    "key": "logoAdmin.awardCreateTitle",
+    "category": "logoAdmin",
+    "vi": "Thêm giải thưởng",
+    "en": "Add award",
+    "zh": "添加奖项",
+    "ja": "受賞歴を追加"
+  },
+  {
+    "key": "logoAdmin.awardEditDesc",
+    "category": "logoAdmin",
+    "vi": "Cập nhật thông tin chứng nhận giải thưởng.",
+    "en": "Update award certification details.",
+    "zh": "更新奖项认证信息。",
+    "ja": "受賞認定情報を更新します。"
+  },
+  {
+    "key": "logoAdmin.awardCreateDesc",
+    "category": "logoAdmin",
+    "vi": "Thêm thông tin chứng nhận giải thưởng.",
+    "en": "Add award certification details.",
+    "zh": "添加奖项认证信息。",
+    "ja": "受賞認定情報を追加します。"
+  },
+  {
+    "key": "logoAdmin.logoEditDesc",
+    "category": "logoAdmin",
+    "vi": "Cập nhật thông tin logo.",
+    "en": "Update logo details.",
+    "zh": "更新标识信息。",
+    "ja": "ロゴ情報を更新します。"
+  },
+  {
+    "key": "logoAdmin.logoCreateDesc",
+    "category": "logoAdmin",
+    "vi": "Thêm thông tin logo mới.",
+    "en": "Add new logo details.",
+    "zh": "添加新标识信息。",
+    "ja": "新しいロゴ情報を追加します。"
+  },
+  {
+    "key": "logoAdmin.awardFieldName",
+    "category": "logoAdmin",
+    "vi": "Tên giải thưởng",
+    "en": "Award name",
+    "zh": "奖项名称",
+    "ja": "受賞名"
+  },
+  {
+    "key": "logoAdmin.awardPlaceholderName",
+    "category": "logoAdmin",
+    "vi": "Nhập tên giải thưởng",
+    "en": "Enter award name",
+    "zh": "输入奖项名称",
+    "ja": "受賞名を入力"
+  },
+  {
+    "key": "logoAdmin.previewTitle",
+    "category": "logoAdmin",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "logoAdmin.logoBadge",
+    "category": "logoAdmin",
+    "vi": "LOGO",
+    "en": "LOGO",
+    "zh": "LOGO",
+    "ja": "LOGO"
+  },
+  {
+    "key": "logoAdmin.awardBadge",
+    "category": "logoAdmin",
+    "vi": "AWARD",
+    "en": "AWARD",
+    "zh": "AWARD",
+    "ja": "AWARD"
+  },
+  {
     "key": "logoAdmin.fieldName",
     "category": "logoAdmin",
     "vi": "Tên logo",

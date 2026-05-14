@@ -8,6 +8,8 @@ import { useActivities } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import type { ActivityResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import AdminExportButton from "@/components/admin/AdminExportButton";
+import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 const AdminPosts = () => {
   const { t } = useI18n();
@@ -35,6 +37,24 @@ const AdminPosts = () => {
     }
   };
 
+  const handleExport = () => {
+    downloadCsv({
+      filename: createCsvFilename("admin-posts"),
+      columns: [
+        { header: "ID", value: "id" },
+        { header: "Slug", value: "slug" },
+        { header: t("posts.col.post"), value: "title" },
+        { header: t("posts.col.category"), value: "category" },
+        { header: t("posts.col.author"), value: (row) => row.author ?? "" },
+        { header: t("common.date"), value: "date" },
+        { header: "Excerpt", value: "excerpt" },
+        { header: "Content", value: (row) => row.content.join("\n\n") },
+        { header: "Image URL", value: "imageUrl" },
+      ],
+      rows: filtered,
+    });
+  };
+
   return (
     <AdminLayout>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
@@ -44,9 +64,12 @@ const AdminPosts = () => {
             {filtered.length} {t("common.showing")}
           </p>
         </div>
-        <Link to="/admin/posts/new" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> {t("posts.create")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
+          <Link to="/admin/posts/new" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Plus className="w-4 h-4" /> {t("posts.create")}
+          </Link>
+        </div>
       </div>
 
       {loading ? (
