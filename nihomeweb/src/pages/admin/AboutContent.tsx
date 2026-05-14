@@ -252,6 +252,11 @@ const parseItems = <T,>(value: string | null | undefined, fallback: T): T => {
   }
 };
 
+const parseItemArray = <T,>(value: string | null | undefined): T[] => {
+  const parsed = parseItems<unknown>(value, []);
+  return Array.isArray(parsed) ? (parsed as T[]) : [];
+};
+
 const serializeItems = (value: unknown) => JSON.stringify(value, null, 2);
 const createLocalId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 const normalizeSortOrder = (value: number | undefined, fallback: number) => (Number.isFinite(value) ? value ?? fallback : fallback);
@@ -260,7 +265,7 @@ const nextSortOrder = <T extends { sortOrder?: number }>(items: T[]) =>
 
 const normalizeStatItems = (raw: string | null | undefined): StatItem[] =>
   sortItemsBySortOrder(
-    parseItems<StatItem[]>(raw, []).map((item, index) => ({
+    parseItemArray<StatItem>(raw).map((item, index) => ({
       id: item.id ?? createLocalId("stat"),
       iconKey: resolveAboutIconKey(item.iconKey ?? item.iconClass, DEFAULT_STATS_ICON_KEYS[index] ?? "calendar"),
       num: item.num ?? "",
@@ -276,7 +281,7 @@ const normalizeIconTextItems = (
   fallbackIcons: AboutIconKey[],
 ): IconTextItem[] =>
   sortItemsBySortOrder(
-    parseItems<IconTextItem[]>(raw, []).map((item, index) => ({
+    parseItemArray<IconTextItem>(raw).map((item, index) => ({
       id: item.id ?? createLocalId(prefix),
       iconKey: resolveAboutIconKey(item.iconKey ?? item.iconClass, fallbackIcons[index] ?? "star"),
       title: item.title ?? "",
@@ -307,7 +312,7 @@ const normalizeOrganizationItems = (raw: string | null | undefined): Organizatio
 
 const normalizeTimelineItems = (raw: string | null | undefined): TimelineItem[] =>
   sortItemsBySortOrder(
-    parseItems<TimelineItem[]>(raw, []).map((item, index) => ({
+    parseItemArray<TimelineItem>(raw).map((item, index) => ({
       id: item.id ?? createLocalId("timeline"),
       year: item.year ?? "",
       title: item.title ?? "",
@@ -318,7 +323,7 @@ const normalizeTimelineItems = (raw: string | null | undefined): TimelineItem[] 
 
 const normalizeCertItems = (raw: string | null | undefined): CertItem[] =>
   sortItemsBySortOrder(
-    parseItems<CertItem[]>(raw, []).map((item, index) => ({
+    parseItemArray<CertItem>(raw).map((item, index) => ({
       id: item.id ?? createLocalId("cert"),
       name: item.name ?? "",
       desc: item.desc ?? "",
@@ -328,7 +333,7 @@ const normalizeCertItems = (raw: string | null | undefined): CertItem[] =>
 
 const normalizeDownloadItems = (raw: string | null | undefined): DownloadItem[] =>
   sortItemsBySortOrder(
-    parseItems<DownloadItem[]>(raw, []).map((item, index) => ({
+    parseItemArray<DownloadItem>(raw).map((item, index) => ({
       id: item.id ?? createLocalId("download"),
       name: item.name ?? "",
       size: item.size ?? "",
