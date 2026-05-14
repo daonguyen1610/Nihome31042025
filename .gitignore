@@ -1,6 +1,7 @@
 # Ignore backend build artifacts
 nihomebackend/bin/**
 nihomebackend/obj/**
+nihomebackend/wwwroot/process-assets/**
 nihomebackend.tests/bin/**
 nihomebackend.tests/obj/**
 .amazonq

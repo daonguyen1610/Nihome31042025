@@ -17,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ServiceItem> ServiceItems => Set<ServiceItem>();
     public DbSet<ClientLogo> ClientLogos => Set<ClientLogo>();
     public DbSet<ProcessDocument> ProcessDocuments => Set<ProcessDocument>();
+    public DbSet<ProcessAsset> ProcessAssets => Set<ProcessAsset>();
     public DbSet<SlideshowItem> SlideshowItems => Set<SlideshowItem>();
     public DbSet<AboutSectionContent> AboutSectionContents => Set<AboutSectionContent>();
     public DbSet<ActivityCategory> ActivityCategories => Set<ActivityCategory>();
@@ -88,6 +89,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ProcessDocument>().ToTable("process_documents");
         modelBuilder.Entity<ProcessDocument>().HasKey(p => p.Id);
         modelBuilder.Entity<ProcessDocument>().HasIndex(p => p.GroupKey);
+        modelBuilder.Entity<ProcessDocument>()
+            .HasMany(p => p.Assets)
+            .WithOne(a => a.ProcessDocument)
+            .HasForeignKey(a => a.ProcessDocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProcessAsset>().ToTable("process_assets");
+        modelBuilder.Entity<ProcessAsset>().HasKey(a => a.Id);
+        modelBuilder.Entity<ProcessAsset>().HasIndex(a => a.ProcessDocumentId);
+        modelBuilder.Entity<ProcessAsset>().HasIndex(a => new { a.ProcessDocumentId, a.Type, a.SortOrder });
+        modelBuilder.Entity<ProcessAsset>()
+            .Property(a => a.Type)
+            .HasConversion<string>()
+            .HasMaxLength(20);
 
         modelBuilder.Entity<SlideshowItem>().ToTable("slideshow_items");
         modelBuilder.Entity<SlideshowItem>().HasKey(s => s.Id);

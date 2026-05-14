@@ -8,4 +8,5 @@ public class ProcessDocument
     public string Title { get; set; } = "";
     public int SortOrder { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public List<ProcessAsset> Assets { get; set; } = [];
 }

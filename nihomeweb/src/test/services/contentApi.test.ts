@@ -100,6 +100,28 @@ describe("contentApi", () => {
     expect(mockApi.get).toHaveBeenCalledWith("/processes");
   });
 
+  it("resolves process asset URLs", async () => {
+    mockApi.get.mockResolvedValueOnce({
+      data: {
+        general: [
+          {
+            id: 1,
+            groupKey: "general",
+            title: "Process",
+            sortOrder: 0,
+            images: [{ id: 1, type: "image", displayName: "Preview", url: "/process-assets/images/a.jpg", originalFileName: "a.jpg", fileSizeBytes: 10, sortOrder: 0 }],
+            files: [{ id: 2, type: "file", displayName: "Template.doc", url: "/process-assets/files/t.doc", originalFileName: "t.doc", fileSizeBytes: 20, sortOrder: 0 }],
+          },
+        ],
+      },
+    });
+
+    const result = await contentApi.getProcesses();
+
+    expect(result.data.general[0].images[0].url).toContain("/process-assets/images/a.jpg");
+    expect(result.data.general[0].files[0].url).toContain("/process-assets/files/t.doc");
+  });
+
   // ── Slideshow ─────────────────────────────────────────────────
 
   it("getSlideshow calls correct route with default lang", async () => {

@@ -58,6 +58,28 @@ For the standard development setup in this repository, use:
 - Swagger UI: `http://localhost:5043/swagger`
 - OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
 
+## WorkProcesses legacy import
+
+Process images and downloadable files are stored on disk under `nihomebackend/wwwroot/process-assets` and referenced from SQL Server through `process_assets` metadata rows. In Docker, this path is backed by the `nihome_process_assets` named volume; include that volume in backups together with the database.
+
+To import legacy WorkProcesses from `https://nicon.vn`, set credentials outside git:
+
+```bash
+export NICON_LEGACY_EMAIL="admin@example.com"
+export NICON_LEGACY_PASSWORD="..."
+```
+
+Then call the admin-only endpoint:
+
+```bash
+curl -X POST http://localhost:5043/api/processes/import/legacy \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"dryRun":true}'
+```
+
+Run with `{"dryRun":false}` only after reviewing the dry-run counts and taking a DB backup. The apply run replaces the existing process rows for the 8 legacy groups.
+
 Check the SQL Server database is created
 
 ```bash

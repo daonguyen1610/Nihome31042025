@@ -178,6 +178,28 @@ describe("adminApi", () => {
     expect(mockApi.delete).toHaveBeenCalledWith("/processes/11");
   });
 
+  it("uploadProcessAsset sends multipart form data", async () => {
+    const file = new File(["doc"], "template.doc", { type: "application/msword" });
+    await adminApi.uploadProcessAsset(3, "file", file, "Template");
+
+    const [url, formData] = mockApi.post.mock.calls[0];
+    expect(url).toBe("/processes/3/assets");
+    expect(formData).toBeInstanceOf(FormData);
+    expect((formData as FormData).get("file")).toBe(file);
+    expect((formData as FormData).get("type")).toBe("file");
+    expect((formData as FormData).get("displayName")).toBe("Template");
+  });
+
+  it("deleteProcessAsset sends correct route", async () => {
+    await adminApi.deleteProcessAsset(3, 9);
+    expect(mockApi.delete).toHaveBeenCalledWith("/processes/3/assets/9");
+  });
+
+  it("importLegacyProcesses sends dry-run flag", async () => {
+    await adminApi.importLegacyProcesses(false);
+    expect(mockApi.post).toHaveBeenCalledWith("/processes/import/legacy", { dryRun: false });
+  });
+
   it("createSlideshow sends correct route and payload", async () => {
     const payload = {
       slug: "hero-slide",

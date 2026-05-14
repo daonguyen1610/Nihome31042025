@@ -8,6 +8,8 @@ const mockUseProcesses = vi.fn();
 const mockCreateProcess = vi.fn();
 const mockUpdateProcess = vi.fn();
 const mockDeleteProcess = vi.fn();
+const mockUploadProcessAsset = vi.fn();
+const mockDeleteProcessAsset = vi.fn();
 
 vi.mock("@/hooks/useContentApi", () => ({
   useProcesses: () => mockUseProcesses(),
@@ -18,6 +20,8 @@ vi.mock("@/services/adminApi", () => ({
     createProcess: (...args: unknown[]) => mockCreateProcess(...args),
     updateProcess: (...args: unknown[]) => mockUpdateProcess(...args),
     deleteProcess: (...args: unknown[]) => mockDeleteProcess(...args),
+    uploadProcessAsset: (...args: unknown[]) => mockUploadProcessAsset(...args),
+    deleteProcessAsset: (...args: unknown[]) => mockDeleteProcessAsset(...args),
   },
 }));
 
@@ -29,8 +33,8 @@ const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true } a
 
 const makeProcessData = (overrides: Record<string, unknown>[] = []) => ({
   design: [
-    { id: 1, groupKey: "design", title: "Step One", code: "D01" },
-    { id: 2, groupKey: "design", title: "Step Two", code: "D02" },
+    { id: 1, groupKey: "design", title: "Step One", code: "D01", sortOrder: 0, images: [], files: [] },
+    { id: 2, groupKey: "design", title: "Step Two", code: "D02", sortOrder: 1, images: [], files: [] },
     ...overrides,
   ],
 });
@@ -140,5 +144,28 @@ describe("Admin ProcessList page", () => {
         expect.objectContaining({ title: "New Step", groupKey: "design" }),
       );
     });
+  });
+
+  it("shows process assets in the detail panel", () => {
+    mockUseProcesses.mockReturnValue({
+      data: makeProcessData([
+        {
+          id: 3,
+          groupKey: "design",
+          title: "Asset Step",
+          sortOrder: 2,
+          images: [{ id: 1, type: "image", displayName: "Preview", url: "/process-assets/images/a.jpg", originalFileName: "a.jpg", fileSizeBytes: 100, sortOrder: 0 }],
+          files: [{ id: 2, type: "file", displayName: "Template.doc", url: "/process-assets/files/t.doc", originalFileName: "t.doc", fileSizeBytes: 2048, sortOrder: 0 }],
+        },
+      ]),
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    renderComponent();
+    fireEvent.click(screen.getAllByText("View details")[2]);
+    expect(screen.getByAltText("Preview")).toBeInTheDocument();
+    expect(screen.getByText("Template.doc")).toBeInTheDocument();
   });
 });

@@ -38,6 +38,7 @@ Last reviewed: 2026-04-25
 - Do not document env variables that are not actually committed or configured.
 - Do not hardcode backend base URLs in presentational UI.
 - If the frontend depends on backend proxying or Vite dev-server configuration, commit that configuration and document it in the same task.
+- Admin WorkProcess routes use authenticated backend data from `/api/processes`; process asset URLs under `/process-assets` should be resolved through the shared API URL helper.
 
 ## Runtime Direction
 

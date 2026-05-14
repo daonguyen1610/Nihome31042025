@@ -93,6 +93,14 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/files/cv"
 });
 
+var processAssetsPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "process-assets");
+Directory.CreateDirectory(processAssetsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(processAssetsPath),
+    RequestPath = "/process-assets"
+});
+
 app.Use(async (context, next) =>
 {
     if (!context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))

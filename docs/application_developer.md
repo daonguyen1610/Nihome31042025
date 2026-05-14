@@ -521,7 +521,9 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `JobApplicationService`    | Submit, list, and manage job applications                |
 | `ContactMessageService`    | Submit, list, and reply to contact messages              |
 | `LogoService`              | CRUD for logos grouped by type                           |
-| `ProcessService`           | CRUD for process documents grouped by category           |
+| `ProcessService`           | CRUD for process documents grouped by category and assets |
+| `ProcessAssetStorageService` | Stores process images/files under `wwwroot/process-assets` |
+| `LegacyProcessImportService` | Imports legacy WorkProcesses from `nicon.vn` with dry-run support |
 | `SiteSettingsService`      | Get and update site settings and email templates         |
 | `TranslationService`       | Manage static UI translations                            |
 | `EntityTranslationService` | Manage dynamic content translations (polymorphic)        |

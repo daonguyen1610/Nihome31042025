@@ -59,6 +59,29 @@ export interface UpsertProcessRequest {
   sortOrder?: number;
 }
 
+export type ProcessAssetType = "image" | "file";
+
+export interface ProcessAssetResponse {
+  id: number;
+  type: ProcessAssetType;
+  displayName: string;
+  url: string;
+  originalFileName: string;
+  contentType?: string;
+  fileSizeBytes: number;
+  sortOrder: number;
+}
+
+export interface LegacyProcessImportResponse {
+  dryRun: boolean;
+  groups: number;
+  processes: number;
+  images: number;
+  files: number;
+  skippedAssets: number;
+  message: string;
+}
+
 export interface UpsertSlideshowRequest {
   slug: string;
   imageUrl: string;
@@ -296,6 +319,19 @@ export const adminApi = {
     api.put(`/processes/${id}`, data),
   deleteProcess: (id: number) =>
     api.delete(`/processes/${id}`),
+  uploadProcessAsset: (processId: number, type: ProcessAssetType, file: File, displayName?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", type);
+    if (displayName) {
+      formData.append("displayName", displayName);
+    }
+    return api.post<ProcessAssetResponse>(`/processes/${processId}/assets`, formData);
+  },
+  deleteProcessAsset: (processId: number, assetId: number) =>
+    api.delete(`/processes/${processId}/assets/${assetId}`),
+  importLegacyProcesses: (dryRun = true) =>
+    api.post<LegacyProcessImportResponse>("/processes/import/legacy", { dryRun }),
 
   // Slideshow
   getSlideshow: (lang = "vi", activeOnly = false) =>

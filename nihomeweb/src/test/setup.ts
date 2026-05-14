@@ -96,6 +96,23 @@ vi.mock("@/lib/i18n", () => {
     "proj.ongoing": "Ongoing",
     "proj.completed": "Completed",
     "proj.empty": "No projects found.",
+    // processes
+    "proc.add": "Add process",
+    "proc.searchPh": "Search by title or code...",
+    "proc.empty": "No processes yet.",
+    "proc.title": "Process title",
+    "proc.code": "Process code",
+    "proc.view": "View details",
+    "proc.edit": "Edit process",
+    "proc.download": "Download",
+    "proc.uploadImage": "Upload image",
+    "proc.uploadFile": "Upload file",
+    "proc.images": "Images",
+    "proc.files": "Files",
+    "proc.noImages": "No process images yet.",
+    "proc.noFiles": "No downloadable files yet.",
+    "proc.save": "Save",
+    "proc.cancel": "Cancel",
   };
 
   return {

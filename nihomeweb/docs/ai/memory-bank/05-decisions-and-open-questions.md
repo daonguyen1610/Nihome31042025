@@ -52,6 +52,10 @@ Rationale: They make the UI usable during frontend development but do not define
 
 Rationale: Public `Profile` content and admin `AboutContent` should reflect the same source of truth. Frontend hardcoded fallback datasets caused drift between client rendering and admin editing, especially for `organization-main`. The backend `ContentSeeder` and `about-sections` API now define the default content baseline.
 
+### 2026-05-14 - WorkProcesses are admin-only backend content with file-backed assets
+
+Rationale: Legacy WorkProcess pages contain internal procedure images and document downloads. The frontend should use the authenticated `/api/processes` contract, while binary process assets live under backend static storage (`/process-assets`) with metadata in SQL Server.
+
 ## Open Questions
 
 ### Should the `legacy/` reference folders remain long term?
