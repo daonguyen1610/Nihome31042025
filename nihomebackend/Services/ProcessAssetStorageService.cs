@@ -169,7 +169,10 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
                 string.IsNullOrWhiteSpace(contentType) ? null : contentType,
                 actualSize);
         }
-        catch
+        catch (Exception ex) when (ex is IOException
+                                   or InvalidOperationException
+                                   or NotSupportedException
+                                   or OperationCanceledException)
         {
             if (File.Exists(filePath))
             {
