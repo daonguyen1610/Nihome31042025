@@ -109,6 +109,7 @@ public class ProcessAssetStorageServiceTests : IDisposable
             }
 
             var bytesToRead = (int)Math.Min(count, length - _position);
+            buffer.AsSpan(offset, bytesToRead).Clear();
             _position += bytesToRead;
             return bytesToRead;
         }
@@ -130,6 +131,7 @@ public class ProcessAssetStorageServiceTests : IDisposable
             }
 
             var bytesToRead = (int)Math.Min(buffer.Length, length - _position);
+            buffer[..bytesToRead].Clear();
             _position += bytesToRead;
             return bytesToRead;
         }
