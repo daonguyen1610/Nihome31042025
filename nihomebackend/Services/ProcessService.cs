@@ -157,7 +157,17 @@ public class ProcessService
         };
 
         db.ProcessAssets.Add(asset);
-        await db.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            assetStorage.DeleteIfManagedAsset(stored.Url);
+            throw;
+        }
+
         Logger.LogInformation("Added process asset {AssetId} to process {ProcessId}", asset.Id, processId);
         return MapAsset(asset);
     }
