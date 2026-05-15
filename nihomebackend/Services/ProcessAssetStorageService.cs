@@ -57,8 +57,26 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
             return;
         }
 
-        var relativePath = url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", relativePath);
+        var managedRoot = Path.GetFullPath(Path.Combine(env.ContentRootPath, "wwwroot", "process-assets"));
+        var managedRootPrefix = $"{managedRoot.TrimEnd(Path.DirectorySeparatorChar)}{Path.DirectorySeparatorChar}";
+        var relativePath = url[ManagedAssetPrefix.Length..].TrimStart('/');
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return;
+        }
+
+        var fullPath = Path.GetFullPath(Path.Combine(
+            managedRoot,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+        var comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        if (!fullPath.StartsWith(managedRootPrefix, comparison))
+        {
+            return;
+        }
+
         if (File.Exists(fullPath))
         {
             File.Delete(fullPath);
