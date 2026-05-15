@@ -39,13 +39,24 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
         ProcessAssetType type,
         CancellationToken cancellationToken)
     {
+        ValidateAssetExtension(originalFileName, type, isLegacy: true);
+
+        var maxSizeBytes = GetMaxSizeBytes(type);
         var size = contentLength ?? 0;
-        if (size > GetMaxSizeBytes(type))
+        if (size > maxSizeBytes)
         {
             throw new InvalidOperationException("Legacy process asset is too large.");
         }
 
-        return await SaveAsync(stream, originalFileName, contentType, size, type, cancellationToken);
+        return await SaveAsync(
+            stream,
+            originalFileName,
+            contentType,
+            size,
+            type,
+            cancellationToken,
+            maxSizeBytes,
+            "Legacy process asset is too large.");
     }
 
     public void DeleteIfManagedAsset(string? url)
@@ -110,7 +121,9 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
         string? contentType,
         long contentLength,
         ProcessAssetType type,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        long? maxSizeBytes = null,
+        string? maxSizeExceededMessage = null)
     {
         var safeOriginalName = Path.GetFileName(originalFileName);
         if (string.IsNullOrWhiteSpace(safeOriginalName))
@@ -132,14 +145,39 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
         var filePath = Path.Combine(uploadDir, fileName);
 
         await using var fileStream = new FileStream(filePath, FileMode.CreateNew);
-        await stream.CopyToAsync(fileStream, cancellationToken);
+        long totalBytesWritten = 0;
+        var buffer = new byte[81920];
 
-        var actualSize = contentLength > 0 ? contentLength : fileStream.Length;
-        return new StoredProcessAsset(
-            $"/process-assets/{typeFolder}/{fileName}",
-            safeOriginalName,
-            string.IsNullOrWhiteSpace(contentType) ? null : contentType,
-            actualSize);
+        try
+        {
+            int bytesRead;
+            while ((bytesRead = await stream.ReadAsync(buffer, cancellationToken)) > 0)
+            {
+                totalBytesWritten += bytesRead;
+                if (maxSizeBytes.HasValue && totalBytesWritten > maxSizeBytes.Value)
+                {
+                    throw new InvalidOperationException(maxSizeExceededMessage ?? "File too large.");
+                }
+
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+            }
+
+            var actualSize = contentLength > 0 ? contentLength : totalBytesWritten;
+            return new StoredProcessAsset(
+                $"/process-assets/{typeFolder}/{fileName}",
+                safeOriginalName,
+                string.IsNullOrWhiteSpace(contentType) ? null : contentType,
+                actualSize);
+        }
+        catch
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+
+            throw;
+        }
     }
 
     private static void ValidateUpload(IFormFile file, ProcessAssetType type)
@@ -156,19 +194,34 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
                 : "File quá lớn (tối đa 25MB)");
         }
 
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        var allowedExtensions = type == ProcessAssetType.Image
-            ? AllowedImageExtensions
-            : AllowedDocumentExtensions;
-
-        if (string.IsNullOrWhiteSpace(extension) || !allowedExtensions.Contains(extension))
-        {
-            throw new InvalidOperationException(type == ProcessAssetType.Image
-                ? "Invalid image format"
-                : "Chỉ chấp nhận file PDF, DOC, DOCX, XLS, XLSX");
-        }
+        ValidateAssetExtension(file.FileName, type, isLegacy: false);
     }
 
     private static long GetMaxSizeBytes(ProcessAssetType type) =>
         type == ProcessAssetType.Image ? MaxImageSizeBytes : MaxDocumentSizeBytes;
+
+    private static void ValidateAssetExtension(
+        string fileName,
+        ProcessAssetType type,
+        bool isLegacy)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        var allowedExtensions = type == ProcessAssetType.Image
+            ? AllowedImageExtensions
+            : AllowedDocumentExtensions;
+
+        if (!string.IsNullOrWhiteSpace(extension) && allowedExtensions.Contains(extension))
+        {
+            return;
+        }
+
+        if (isLegacy)
+        {
+            throw new InvalidOperationException("Legacy process asset has unsupported file extension.");
+        }
+
+        throw new InvalidOperationException(type == ProcessAssetType.Image
+            ? "Invalid image format"
+            : "Chỉ chấp nhận file PDF, DOC, DOCX, XLS, XLSX");
+    }
 }

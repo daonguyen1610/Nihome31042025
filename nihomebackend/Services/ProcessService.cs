@@ -74,18 +74,25 @@ public class ProcessService
         entity.Code = req.Code;
         entity.Title = req.Title;
         entity.SortOrder = req.SortOrder;
+        var assetUrlsToDeleteAfterSave = new List<string>();
 
         if (req.Images != null)
         {
-            ReplaceAssetInputs(entity, req.Images, ProcessAssetType.Image);
+            ReplaceAssetInputs(entity, req.Images, ProcessAssetType.Image, assetUrlsToDeleteAfterSave);
         }
 
         if (req.Files != null)
         {
-            ReplaceAssetInputs(entity, req.Files, ProcessAssetType.File);
+            ReplaceAssetInputs(entity, req.Files, ProcessAssetType.File, assetUrlsToDeleteAfterSave);
         }
 
         await db.SaveChangesAsync();
+
+        foreach (var assetUrl in assetUrlsToDeleteAfterSave)
+        {
+            assetStorage?.DeleteIfManagedAsset(assetUrl);
+        }
+
         Logger.LogInformation("Updated process document {ProcessId}", id);
         return MapToResponse(entity);
     }
@@ -162,7 +169,7 @@ public class ProcessService
         {
             await db.SaveChangesAsync(cancellationToken);
         }
-        catch
+        catch (DbUpdateException)
         {
             assetStorage.DeleteIfManagedAsset(stored.Url);
             throw;
@@ -237,13 +244,14 @@ public class ProcessService
     private void ReplaceAssetInputs(
         ProcessDocument entity,
         IReadOnlyCollection<UpsertProcessAssetRequest> assetInputs,
-        ProcessAssetType type)
+        ProcessAssetType type,
+        List<string> assetUrlsToDeleteAfterSave)
     {
         var oldAssets = entity.Assets.Where(a => a.Type == type).ToList();
         foreach (var oldAsset in oldAssets)
         {
             entity.Assets.Remove(oldAsset);
-            assetStorage?.DeleteIfManagedAsset(oldAsset.Url);
+            assetUrlsToDeleteAfterSave.Add(oldAsset.Url);
         }
 
         ApplyAssetInputs(entity, assetInputs, type);
