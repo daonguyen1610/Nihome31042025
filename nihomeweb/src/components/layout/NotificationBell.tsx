@@ -187,6 +187,11 @@ export function NotificationBell() {
                     type="button"
                     aria-label={t("notify.delete")}
                     onClick={(event) => handleDelete(event, notification.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.stopPropagation();
+                      }
+                    }}
                     className="rounded-md p-1.5 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
