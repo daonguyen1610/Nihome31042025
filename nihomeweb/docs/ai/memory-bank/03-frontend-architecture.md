@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-Last reviewed: 2026-04-25
+Last reviewed: 2026-05-16
 
 ## Core Direction
 
@@ -30,6 +30,8 @@ Last reviewed: 2026-04-25
 - TanStack Query is already installed and wrapped at the app level; evaluate it before adding another server-state library.
 - If real API calls are introduced, centralize request handling and document the API/environment contract in the same task.
 - Avoid route-local `useEffect` fetch blocks becoming the default integration style.
+- Auth state is centralized in Redux. Route protection uses `src/components/auth/ProtectedRoute.tsx`, which refreshes persisted cookie tokens before deciding redirects.
+- API-backed admin service functions belong in `src/services/adminApi.ts`; Users/RBAC follows that existing service boundary.
 
 ## Environment and Integration Rules
 

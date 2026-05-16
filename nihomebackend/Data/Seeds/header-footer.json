@@ -176,6 +176,22 @@
     "ja": "ユーザー"
   },
   {
+    "key": "nav.userManagement",
+    "category": "nav",
+    "vi": "Quản lý người dùng",
+    "en": "User management",
+    "zh": "用户管理",
+    "ja": "ユーザー管理"
+  },
+  {
+    "key": "nav.roleManagement",
+    "category": "nav",
+    "vi": "Quản lý vai trò",
+    "en": "Role management",
+    "zh": "角色管理",
+    "ja": "ロール管理"
+  },
+  {
     "key": "nav.customers",
     "category": "nav",
     "vi": "Danh sách người dùng",
