@@ -1,6 +1,6 @@
 # Current State
 
-Last reviewed: 2026-04-25
+Last reviewed: 2026-05-16
 
 ## Stack
 
@@ -65,6 +65,7 @@ Public route groups:
 Admin route groups:
 
 - `/admin`
+- `/admin/users` and `/admin/roles` for super-admin user and role management
 - `/admin/posts`, post create/view/edit routes
 - `/admin/projects`, project create/view/edit routes
 - `/admin/contacts`
@@ -84,8 +85,8 @@ The catch-all route renders `src/pages/NotFound.tsx`.
 - `src/App.tsx` wraps the app in `QueryClientProvider`, `I18nProvider`, `TooltipProvider`, toast providers, and `BrowserRouter`.
 - Public pages use the public header/footer layout where implemented.
 - Admin pages use `AdminLayout` for sidebar navigation, admin topbar behavior, and language controls.
-- `/login` and `/register` use mock localStorage auth from `src/lib/auth.ts`.
-- Admin pages are currently demo routes; production route protection is not implemented.
+- `/login` and `/register` use the backend auth API through Redux auth state.
+- Admin routes are protected with `ProtectedRoute`; `ADMIN` and `SUPER_ADMIN` can enter the admin area, while `/admin/users` and `/admin/roles` require `SUPER_ADMIN`.
 
 ## Current Config Reality
 
@@ -100,8 +101,8 @@ The catch-all route renders `src/pages/NotFound.tsx`.
 
 ## Current Gaps
 
-- No real auth provider or backend session model is implemented yet.
-- No production API client or server-state contract is established yet.
+- Production auth is partially implemented with backend JWT/refresh APIs and Redux token state.
+- API-backed admin modules exist for content/settings and Users/RBAC, but not every legacy/demo admin screen has been migrated.
 - Admin content/settings persistence is still localStorage-backed demo behavior.
 - No documented deployment/environment contract is committed yet.
 - Legacy source under `legacy/` has not been deleted because it remains useful as reference material during the refactor.
