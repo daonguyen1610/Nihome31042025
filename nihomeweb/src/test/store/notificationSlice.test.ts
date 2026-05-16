@@ -75,7 +75,7 @@ describe("notificationSlice", () => {
     expect(store.getState().notifications.unreadCount).toBe(5);
   });
 
-  it("markNotificationRead optimistically marks one notification read", async () => {
+  it("markNotificationRead updates state after request success", async () => {
     vi.mocked(notificationApi.getAll).mockResolvedValueOnce({ data: [unread] } as never);
     vi.mocked(notificationApi.getUnreadCount).mockResolvedValueOnce({ data: { count: 1 } } as never);
     vi.mocked(notificationApi.markRead).mockResolvedValueOnce({ data: { ...unread, isRead: true } } as never);
@@ -83,13 +83,13 @@ describe("notificationSlice", () => {
     await store.dispatch(fetchNotifications());
     await store.dispatch(fetchUnreadCount());
 
-    const promise = store.dispatch(markNotificationRead(unread.id));
+    await store.dispatch(markNotificationRead(unread.id));
+
     expect(store.getState().notifications.items[0].isRead).toBe(true);
     expect(store.getState().notifications.unreadCount).toBe(0);
-    await promise;
   });
 
-  it("markAllNotificationsRead optimistically marks all notifications read", async () => {
+  it("markAllNotificationsRead updates all items after request success", async () => {
     vi.mocked(notificationApi.getAll).mockResolvedValueOnce({ data: [unread, { ...unread, id: 3 }] } as never);
     vi.mocked(notificationApi.getUnreadCount).mockResolvedValueOnce({ data: { count: 2 } } as never);
     vi.mocked(notificationApi.markAllRead).mockResolvedValueOnce({ data: { count: 2 } } as never);
@@ -97,13 +97,13 @@ describe("notificationSlice", () => {
     await store.dispatch(fetchNotifications());
     await store.dispatch(fetchUnreadCount());
 
-    const promise = store.dispatch(markAllNotificationsRead());
+    await store.dispatch(markAllNotificationsRead());
+
     expect(store.getState().notifications.unreadCount).toBe(0);
     expect(store.getState().notifications.items.every((item) => item.isRead)).toBe(true);
-    await promise;
   });
 
-  it("removeNotification optimistically removes an unread notification", async () => {
+  it("removeNotification updates state after request success", async () => {
     vi.mocked(notificationApi.getAll).mockResolvedValueOnce({ data: [unread, read] } as never);
     vi.mocked(notificationApi.getUnreadCount).mockResolvedValueOnce({ data: { count: 1 } } as never);
     vi.mocked(notificationApi.delete).mockResolvedValueOnce({ data: {} } as never);
@@ -111,9 +111,51 @@ describe("notificationSlice", () => {
     await store.dispatch(fetchNotifications());
     await store.dispatch(fetchUnreadCount());
 
-    const promise = store.dispatch(removeNotification(unread.id));
+    await store.dispatch(removeNotification(unread.id));
+
     expect(store.getState().notifications.items).toEqual([read]);
     expect(store.getState().notifications.unreadCount).toBe(0);
-    await promise;
+  });
+
+  it("keeps markNotificationRead state unchanged when request fails", async () => {
+    vi.mocked(notificationApi.getAll).mockResolvedValueOnce({ data: [unread] } as never);
+    vi.mocked(notificationApi.getUnreadCount).mockResolvedValueOnce({ data: { count: 1 } } as never);
+    vi.mocked(notificationApi.markRead).mockRejectedValueOnce(new Error("fail"));
+    const store = createTestStore();
+    await store.dispatch(fetchNotifications());
+    await store.dispatch(fetchUnreadCount());
+
+    await store.dispatch(markNotificationRead(unread.id));
+
+    expect(store.getState().notifications.items[0].isRead).toBe(false);
+    expect(store.getState().notifications.unreadCount).toBe(1);
+  });
+
+  it("keeps markAllNotificationsRead state unchanged when request fails", async () => {
+    vi.mocked(notificationApi.getAll).mockResolvedValueOnce({ data: [unread, { ...unread, id: 3 }] } as never);
+    vi.mocked(notificationApi.getUnreadCount).mockResolvedValueOnce({ data: { count: 2 } } as never);
+    vi.mocked(notificationApi.markAllRead).mockRejectedValueOnce(new Error("fail"));
+    const store = createTestStore();
+    await store.dispatch(fetchNotifications());
+    await store.dispatch(fetchUnreadCount());
+
+    await store.dispatch(markAllNotificationsRead());
+
+    expect(store.getState().notifications.unreadCount).toBe(2);
+    expect(store.getState().notifications.items.every((item) => !item.isRead)).toBe(true);
+  });
+
+  it("keeps removeNotification state unchanged when request fails", async () => {
+    vi.mocked(notificationApi.getAll).mockResolvedValueOnce({ data: [unread, read] } as never);
+    vi.mocked(notificationApi.getUnreadCount).mockResolvedValueOnce({ data: { count: 1 } } as never);
+    vi.mocked(notificationApi.delete).mockRejectedValueOnce(new Error("fail"));
+    const store = createTestStore();
+    await store.dispatch(fetchNotifications());
+    await store.dispatch(fetchUnreadCount());
+
+    await store.dispatch(removeNotification(unread.id));
+
+    expect(store.getState().notifications.items).toEqual([unread, read]);
+    expect(store.getState().notifications.unreadCount).toBe(1);
   });
 });

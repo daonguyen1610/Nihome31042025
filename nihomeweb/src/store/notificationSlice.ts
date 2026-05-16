@@ -122,14 +122,12 @@ const notificationSlice = createSlice({
       state.error = payload as string;
     });
 
-    builder.addCase(markNotificationRead.pending, (state, { meta }) => {
-      const item = state.items.find((notification) => notification.id === meta.arg);
-      if (item && !item.isRead) {
-        item.isRead = true;
+    builder.addCase(markNotificationRead.fulfilled, (state, { payload }) => {
+      const item = state.items.find((notification) => notification.id === payload.id);
+      if (item && !item.isRead && payload.isRead) {
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       }
-    });
-    builder.addCase(markNotificationRead.fulfilled, (state, { payload }) => {
+
       const index = state.items.findIndex((notification) => notification.id === payload.id);
       if (index >= 0) state.items[index] = payload;
     });
@@ -137,7 +135,7 @@ const notificationSlice = createSlice({
       state.error = payload as string;
     });
 
-    builder.addCase(markAllNotificationsRead.pending, (state) => {
+    builder.addCase(markAllNotificationsRead.fulfilled, (state) => {
       state.items.forEach((item) => {
         item.isRead = true;
       });
@@ -147,12 +145,12 @@ const notificationSlice = createSlice({
       state.error = payload as string;
     });
 
-    builder.addCase(removeNotification.pending, (state, { meta }) => {
-      const item = state.items.find((notification) => notification.id === meta.arg);
+    builder.addCase(removeNotification.fulfilled, (state, { payload }) => {
+      const item = state.items.find((notification) => notification.id === payload);
       if (item && !item.isRead) {
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       }
-      state.items = state.items.filter((notification) => notification.id !== meta.arg);
+      state.items = state.items.filter((notification) => notification.id !== payload);
     });
     builder.addCase(removeNotification.rejected, (state, { payload }) => {
       state.error = payload as string;
