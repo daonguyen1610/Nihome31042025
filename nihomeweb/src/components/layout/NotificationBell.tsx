@@ -27,23 +27,43 @@ import type { NotificationDto } from "@/services/notificationApi";
 
 const POLL_INTERVAL_MS = 30_000;
 
+function resolveCurrentLocale() {
+  if (typeof document !== "undefined" && document.documentElement.lang) {
+    return document.documentElement.lang;
+  }
+
+  if (typeof navigator !== "undefined" && navigator.language) {
+    return navigator.language;
+  }
+
+  return "vi-VN";
+}
+
 function formatRelativeTime(value: string) {
-  const timestamp = new Date(value).getTime();
+  const date = new Date(value);
+  const timestamp = date.getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return "";
+  }
+
+  const locale = resolveCurrentLocale();
   const diffSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  const relativeTimeFormatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 
-  if (diffSeconds < 60) return "Vừa xong";
+  if (diffSeconds < 60) return relativeTimeFormatter.format(0, "second");
   const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+  if (diffMinutes < 60) return relativeTimeFormatter.format(-diffMinutes, "minute");
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} giờ trước`;
+  if (diffHours < 24) return relativeTimeFormatter.format(-diffHours, "hour");
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffDays < 7) return relativeTimeFormatter.format(-diffDays, "day");
 
-  return new Intl.DateTimeFormat("vi-VN", {
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function moduleIcon(notification: NotificationDto) {
