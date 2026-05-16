@@ -9,6 +9,7 @@ namespace NihomeBackend.Services;
 public class ContactMessageService(
     AppDbContext db,
     IEmailService emailService,
+    INotificationService notificationService,
     ILogger<ContactMessageService> logger)
 {
     public async Task<List<ContactMessageResponse>> GetAllAsync(bool? replied = null)
@@ -70,6 +71,19 @@ public class ContactMessageService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send contact notification email for contact {Id}", entity.Id);
+        }
+
+        try
+        {
+            await notificationService.CreateForAdminsAsync(
+                "Contact",
+                $"Liên hệ mới từ {entity.Name}",
+                entity.Subject,
+                "/admin/contacts");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create in-app notification for contact {Id}", entity.Id);
         }
 
         return MapToResponse(entity);

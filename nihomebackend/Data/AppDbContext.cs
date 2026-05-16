@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<RegistrationOtp> RegistrationOtps => Set<RegistrationOtp>();
     public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     // Content
     public DbSet<Activity> Activities => Set<Activity>();
@@ -60,6 +61,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<SiteSettings>().ToTable("site_settings");
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);
+
+        modelBuilder.Entity<Notification>().ToTable("notifications");
+        modelBuilder.Entity<Notification>().HasKey(n => n.Id);
+        modelBuilder.Entity<Notification>().Property(n => n.Module).HasMaxLength(50);
+        modelBuilder.Entity<Notification>().Property(n => n.Title).HasMaxLength(200);
+        modelBuilder.Entity<Notification>().Property(n => n.Body).HasMaxLength(1000);
+        modelBuilder.Entity<Notification>().Property(n => n.LinkUrl).HasMaxLength(500);
+        modelBuilder.Entity<Notification>().HasIndex(n => n.UserId);
+        modelBuilder.Entity<Notification>().HasIndex(n => n.IsRead);
+        modelBuilder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany(u => u.Notifications)
+            .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         // Content tables
         modelBuilder.Entity<Activity>().ToTable("activities");

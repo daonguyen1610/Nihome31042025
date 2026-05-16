@@ -56,6 +56,10 @@ Rationale: Public `Profile` content and admin `AboutContent` should reflect the 
 
 Rationale: Registration and forgot-password OTP behavior is controlled by existing `SiteSettings` flags. The admin Settings page should read and update those flags through `/api/site-settings/otp-settings` instead of localStorage demo settings.
 
+### 2026-05-16 - Admin notifications use backend API plus Redux shell state
+
+Rationale: In-app notification badge state is shared by the admin layout, uses the existing Vite React SPA and Axios API client, and needs optimistic mark-read/delete behavior. The MVP uses polling against `/api/notifications` instead of SignalR.
+
 ## Open Questions
 
 ### Should the `legacy/` reference folders remain long term?
@@ -66,9 +70,9 @@ Why it matters: they are useful during transition but can confuse future agents 
 
 Why it matters: route protection, login flows, permissions, and session ownership all depend on it.
 
-### What API access pattern should the frontend adopt?
+### What API access pattern should the remaining frontend modules adopt?
 
-Why it matters: future modules need a clear decision on API base URL handling, request wrappers, TanStack Query usage, and error/auth behavior before real data work begins.
+Why it matters: notifications now use the existing Axios wrapper plus Redux for shell-level badge state, but broader server-state modules still need a consistent choice between Redux, TanStack Query, or focused hooks.
 
 ### What persistence model should replace localStorage admin stores?
 

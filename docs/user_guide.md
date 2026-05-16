@@ -113,6 +113,7 @@ The platform is being developed incrementally. The following components are curr
 | Email system (OTP, notifications, contact replies) | Implemented |
 | File upload (images, CV documents) | Implemented |
 | Site settings and email template configuration | Implemented |
+| In-app admin notifications | Implemented |
 | CRM module (customers, leads, opportunities) | Not yet implemented |
 | Quotation management (direct and tender) | Not yet implemented |
 | Site survey digitization | Not yet implemented |
@@ -527,7 +528,7 @@ Progress reports comparing planned vs. actual (S-Curve). Acceptance reports show
 | Navigation | Error Pages | 404, 403, 500 pages with navigation guidance | 0.5 days |
 | Workflow | Approval Configuration | Drag-drop step builder, role assignment, skip conditions | 4 days |
 | Permissions | Roles and Permissions | Admin, Sales, Design, PM, QS, Accounting, Warehouse, Management | 3.5 days |
-| Notifications | Notification Center | Pull-down panel, module categorization, mark as read, link to record | 2 days |
+| Notifications | Notification Center | Pull-down panel, module categorization, mark as read, link to record | Implemented |
 | Search | Global Search and Filter | Cross-module search, advanced filter, saved filter presets | 2 days |
 | Audit Log | Audit Log Viewer | Filter by user, action, module, date range; view change details | 1.5 days |
 | Master Data | Reference Data Management | CRUD for statuses, lead sources, contract types, material types, checklist templates | 2.5 days |

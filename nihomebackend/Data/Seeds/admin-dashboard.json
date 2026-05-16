@@ -2358,5 +2358,69 @@
     "en": "Save item",
     "zh": "保存内容",
     "ja": "項目を保存"
+  },
+  {
+    "key": "notify.open",
+    "category": "notify",
+    "vi": "Mở thông báo",
+    "en": "Open notifications",
+    "zh": "打开通知",
+    "ja": "通知を開く"
+  },
+  {
+    "key": "notify.title",
+    "category": "notify",
+    "vi": "Thông báo",
+    "en": "Notifications",
+    "zh": "通知",
+    "ja": "通知"
+  },
+  {
+    "key": "notify.unreadCount",
+    "category": "notify",
+    "vi": "{count} chưa đọc",
+    "en": "{count} unread",
+    "zh": "{count} 条未读",
+    "ja": "{count} 件未読"
+  },
+  {
+    "key": "notify.markAllRead",
+    "category": "notify",
+    "vi": "Đã đọc tất cả",
+    "en": "Mark all read",
+    "zh": "全部标为已读",
+    "ja": "すべて既読"
+  },
+  {
+    "key": "notify.loading",
+    "category": "notify",
+    "vi": "Đang tải thông báo...",
+    "en": "Loading notifications...",
+    "zh": "正在加载通知...",
+    "ja": "通知を読み込み中..."
+  },
+  {
+    "key": "notify.error",
+    "category": "notify",
+    "vi": "Không thể tải thông báo",
+    "en": "Unable to load notifications",
+    "zh": "无法加载通知",
+    "ja": "通知を読み込めません"
+  },
+  {
+    "key": "notify.empty",
+    "category": "notify",
+    "vi": "Chưa có thông báo nào",
+    "en": "No notifications yet",
+    "zh": "暂无通知",
+    "ja": "通知はまだありません"
+  },
+  {
+    "key": "notify.delete",
+    "category": "notify",
+    "vi": "Xóa thông báo",
+    "en": "Delete notification",
+    "zh": "删除通知",
+    "ja": "通知を削除"
   }
 ]
