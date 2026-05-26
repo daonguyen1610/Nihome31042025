@@ -10,7 +10,6 @@ import {
   LogOut,
   ExternalLink,
   Search,
-  Bell,
   Menu,
   X,
   PanelLeftClose,
@@ -18,6 +17,8 @@ import {
   ChevronDown,
   FolderTree,
   Users,
+  UserCog,
+  ShieldCheck,
   History,
   Award,
   Handshake,
@@ -36,11 +37,14 @@ import {
   ScrollText,
   AlertTriangle,
   Wrench,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCurrentUser, logout } from "@/lib/auth";
+import { logout } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { useAppSelector } from "@/store";
 import LanguageToggle from "@/components/LanguageToggle";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import logoNicon from "@/assets/logo-nicon.png";
 import type { LucideIcon } from "lucide-react";
 
@@ -53,13 +57,19 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const user = getCurrentUser();
+  const user = useAppSelector((state) => state.auth.user);
+  const isSuperAdmin = user?.role?.toUpperCase() === "SUPER_ADMIN";
 
   const dashboardItem: NavItem = {
     to: "/admin",
     label: t("nav.dashboard"),
     icon: LayoutDashboard,
     end: true,
+  };
+  const notificationsItem: NavItem = {
+    to: "/admin/notifications",
+    label: t("notify.title"),
+    icon: Bell,
   };
 
   const groups: NavGroup[] = useMemo(
@@ -108,6 +118,12 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.users"),
         icon: Users,
         items: [
+          ...(isSuperAdmin
+            ? [
+                { to: "/admin/users", label: t("nav.userManagement"), icon: UserCog },
+                { to: "/admin/roles", label: t("nav.roleManagement"), icon: ShieldCheck },
+              ]
+            : []),
           { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History },
         ],
       },
@@ -135,7 +151,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         ],
       },
     ],
-    [t],
+    [isSuperAdmin, t],
   );
 
   // Group expand/collapse: keep group containing active route open
@@ -220,6 +236,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         <nav className="flex-1 overflow-y-auto px-4 pb-6 space-y-1">
           {/* Dashboard */}
           {renderItem(dashboardItem)}
+          {renderItem(notificationsItem)}
 
           {/* Groups */}
           {groups.map((g) => {
@@ -331,13 +348,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           </div>
           <div className="ml-auto flex items-center gap-3">
             <LanguageToggle />
-            <button
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition"
-              style={{ color: "hsl(var(--admin-sidebar-text))" }}
-              aria-label="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-            </button>
+            <NotificationBell />
             <div
               className="hidden md:flex items-center gap-3 pl-3 border-l"
               style={{ borderColor: "hsl(var(--admin-border))" }}
@@ -349,10 +360,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                     "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
                 }}
               >
-                {user?.name?.[0]?.toUpperCase() ?? "A"}
+                {user?.fullName?.[0]?.toUpperCase() ?? "A"}
               </div>
               <div className="text-xs">
-                <p className="font-bold leading-tight">{user?.name ?? "Admin"}</p>
+                <p className="font-bold leading-tight">{user?.fullName ?? "Admin"}</p>
                 <p style={{ color: "hsl(var(--admin-muted))" }}>
                   {user?.email ?? "admin@nicon.vn"}
                 </p>

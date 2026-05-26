@@ -24,6 +24,30 @@
     "ja": "応募総数"
   },
   {
+    "key": "dash.postsOverTime",
+    "category": "dash",
+    "vi": "Bài đăng theo thời gian",
+    "en": "Posts over time",
+    "zh": "帖子趋势",
+    "ja": "投稿の推移"
+  },
+  {
+    "key": "dash.projectsByStatus",
+    "category": "dash",
+    "vi": "Dự án theo trạng thái",
+    "en": "Projects by status",
+    "zh": "项目状态分布",
+    "ja": "ステータス別プロジェクト"
+  },
+  {
+    "key": "dash.applicationsByPos",
+    "category": "dash",
+    "vi": "Đơn ứng tuyển theo vị trí",
+    "en": "Applications by position",
+    "zh": "按职位的申请",
+    "ja": "職種別の応募"
+  },
+  {
     "key": "dash.moreInfo",
     "category": "dash",
     "vi": "Xem thêm",
@@ -2358,5 +2382,101 @@
     "en": "Save item",
     "zh": "保存内容",
     "ja": "項目を保存"
+  },
+  {
+    "key": "notify.open",
+    "category": "notify",
+    "vi": "Mở thông báo",
+    "en": "Open notifications",
+    "zh": "打开通知",
+    "ja": "通知を開く"
+  },
+  {
+    "key": "notify.title",
+    "category": "notify",
+    "vi": "Thông báo",
+    "en": "Notifications",
+    "zh": "通知",
+    "ja": "通知"
+  },
+  {
+    "key": "notify.unreadCount",
+    "category": "notify",
+    "vi": "{count} chưa đọc",
+    "en": "{count} unread",
+    "zh": "{count} 条未读",
+    "ja": "{count} 件未読"
+  },
+  {
+    "key": "notify.markAllRead",
+    "category": "notify",
+    "vi": "Đã đọc tất cả",
+    "en": "Mark all read",
+    "zh": "全部标为已读",
+    "ja": "すべて既読"
+  },
+  {
+    "key": "notify.loading",
+    "category": "notify",
+    "vi": "Đang tải thông báo...",
+    "en": "Loading notifications...",
+    "zh": "正在加载通知...",
+    "ja": "通知を読み込み中..."
+  },
+  {
+    "key": "notify.error",
+    "category": "notify",
+    "vi": "Không thể tải thông báo",
+    "en": "Unable to load notifications",
+    "zh": "无法加载通知",
+    "ja": "通知を読み込めません"
+  },
+  {
+    "key": "notify.empty",
+    "category": "notify",
+    "vi": "Chưa có thông báo nào",
+    "en": "No notifications yet",
+    "zh": "暂无通知",
+    "ja": "通知はまだありません"
+  },
+  {
+    "key": "notify.delete",
+    "category": "notify",
+    "vi": "Xóa thông báo",
+    "en": "Delete notification",
+    "zh": "删除通知",
+    "ja": "通知を削除"
+  },
+  {
+    "key": "notify.viewAll",
+    "category": "notify",
+    "vi": "Xem tất cả thông báo",
+    "en": "View all notifications",
+    "zh": "查看所有通知",
+    "ja": "すべての通知を見る"
+  },
+  {
+    "key": "notify.pageTitle",
+    "category": "notify",
+    "vi": "Trung tâm thông báo",
+    "en": "Notification center",
+    "zh": "通知中心",
+    "ja": "通知センター"
+  },
+  {
+    "key": "notify.refresh",
+    "category": "notify",
+    "vi": "Làm mới",
+    "en": "Refresh",
+    "zh": "刷新",
+    "ja": "更新"
+  },
+  {
+    "key": "notify.loadMore",
+    "category": "notify",
+    "vi": "Tải thêm",
+    "en": "Load more",
+    "zh": "加载更多",
+    "ja": "さらに読み込む"
   }
 ]

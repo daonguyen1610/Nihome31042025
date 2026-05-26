@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-05-07
+Last reviewed: 2026-05-16
 
 ## Decisions
 
@@ -56,6 +56,18 @@ Rationale: Public `Profile` content and admin `AboutContent` should reflect the 
 
 Rationale: WorkProcess pages contain internal procedure images and document downloads. The frontend should use the authenticated `/api/processes` contract, while binary process assets live under backend static storage (`/process-assets`) with metadata in SQL Server. Legacy scraping belongs to the offline `tools/workprocess_legacy_scraper.py` utility, not runtime backend services or API endpoints.
 
+### 2026-05-16 - Admin notifications use backend API plus Redux shell state
+
+Rationale: In-app notification badge state is shared by the admin layout, uses the existing Vite React SPA and Axios API client, and needs optimistic mark-read/delete behavior. The MVP uses polling against `/api/notifications` instead of SignalR.
+
+### 2026-05-26 - Admin notifications stay on lightweight polling for this phase
+
+Rationale: To reduce backend load without widening scope to SignalR, the admin shell polls only unread counts on a slower cadence, loads notification lists on demand, and supports a dedicated `/admin/notifications` page for paged review.
+
+### 2026-05-16 - Users/RBAC admin management is backend-backed
+
+Rationale: User and role management now uses the ASP.NET Core `/api/users` contract, existing `UserRole` enum values, and Redux-backed auth route guards. Roles remain fixed system roles in this phase; no dynamic role table is introduced.
+
 ## Open Questions
 
 ### Should the `legacy/` reference folders remain long term?
@@ -64,11 +76,12 @@ Why it matters: they are useful during transition but can confuse future agents 
 
 ### Which auth strategy should NICON / Nihome use after the demo baseline?
 
-Why it matters: route protection, login flows, permissions, and session ownership all depend on it.
+Why it matters: basic JWT/refresh auth and admin route protection now exist, but longer-term requirements such as token storage hardening, user profile refresh cadence, audit logging, and permission expansion still need explicit product decisions.
 
-### What API access pattern should the frontend adopt?
+### What API access pattern should the remaining frontend modules adopt?
 
-Why it matters: future modules need a clear decision on API base URL handling, request wrappers, TanStack Query usage, and error/auth behavior before real data work begins.
+Why it matters: notifications now use the existing Axios wrapper plus Redux for shell-level badge state, but broader server-state modules still need a consistent choice between Redux, TanStack Query, or focused hooks.
+Why it matters: `src/lib/api.ts` and typed functions under `src/services/` are now the active pattern for backend calls. The remaining question is whether future server state should move to TanStack Query consistently or continue with page-local loading state for smaller admin modules.
 
 ### What persistence model should replace localStorage admin stores?
 

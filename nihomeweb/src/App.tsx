@@ -6,6 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/lib/i18n";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Profile from "./pages/Profile.tsx";
 import Services from "./pages/Services.tsx";
@@ -23,6 +24,9 @@ import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import AdminDashboard from "./pages/admin/Dashboard.tsx";
+import AdminNotifications from "./pages/admin/Notifications.tsx";
+import AdminUsers from "./pages/admin/users/UserList.tsx";
+import AdminRoles from "./pages/admin/users/RoleList.tsx";
 import AdminPosts from "./pages/admin/Posts.tsx";
 import AdminProjects from "./pages/admin/Projects.tsx";
 import AdminContacts from "./pages/admin/Contacts.tsx";
@@ -76,69 +80,76 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/posts" element={<AdminPosts />} />
-            <Route path="/admin/posts/new" element={<PostForm mode="create" />} />
-            <Route path="/admin/posts/:slug" element={<PostView />} />
-            <Route path="/admin/posts/:slug/edit" element={<PostForm mode="edit" />} />
-            <Route path="/admin/projects" element={<AdminProjects />} />
-            <Route path="/admin/projects/new" element={<ProjectForm mode="create" />} />
-            <Route path="/admin/projects/:slug" element={<ProjectView />} />
-            <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
-            <Route path="/admin/contacts" element={<AdminContacts />} />
-            <Route path="/admin/recruitment" element={<AdminRecruitment />} />
-            <Route path="/admin/recruitment/employment-types" element={<EmploymentTypes />} />
-            <Route path="/admin/recruitment/new" element={<JobPositionForm mode="create" />} />
-            <Route path="/admin/recruitment/:id/edit" element={<JobPositionForm mode="edit" />} />
-            <Route path="/admin/email-templates" element={<EmailTemplateConfig />} />
-            <Route path="/admin/settings" element={<SettingsCenter />} />
-            <Route path="/admin/languages" element={<LanguagesPage />} />
-            <Route path="/admin/translations" element={<TranslationsPage />} />
-            <Route path="/admin/categories" element={<AdminCategories />} />
-            <Route path="/admin/activity-log" element={<AdminActivityLog />} />
-            <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
-            <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />
-            <Route path="/admin/suppliers" element={<AdminLogosManager kind="suppliers" titleKey="nav.suppliers" />} />
-            <Route path="/admin/awards" element={<AdminLogosManager kind="awards" titleKey="nav.awards" />} />
-            <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
-            <Route path="/admin/map" element={<AdminSimplePage titleKey="nav.map" />} />
-            <Route path="/admin/about" element={<AboutContent />} />
-            <Route path="/admin/help" element={<HelpPage />} />
-            <Route path="/admin/system/log" element={<SystemLog />} />
-            <Route path="/admin/system/warnings" element={<WarningsPage />} />
-            <Route path="/admin/system/maintenance" element={<MaintenancePage />} />
-            <Route
-              path="/admin/processes/general"
-              element={<ProcessList groupKey="general" titleKey="proc.general" />}
-            />
-            <Route
-              path="/admin/processes/ptcskh"
-              element={<ProcessList groupKey="ptcskh" titleKey="proc.ptcskh" />}
-            />
-            <Route
-              path="/admin/processes/dt"
-              element={<ProcessList groupKey="dt" titleKey="proc.dt" />}
-            />
-            <Route
-              path="/admin/processes/tk"
-              element={<ProcessList groupKey="tk" titleKey="proc.tk" />}
-            />
-            <Route
-              path="/admin/processes/tc"
-              element={<ProcessList groupKey="tc" titleKey="proc.tc" />}
-            />
-            <Route
-              path="/admin/processes/ttqtct"
-              element={<ProcessList groupKey="ttqtct" titleKey="proc.ttqtct" />}
-            />
-            <Route
-              path="/admin/processes/qlns"
-              element={<ProcessList groupKey="qlns" titleKey="proc.qlns" />}
-            />
-            <Route
-              path="/admin/processes/mhdgncu"
-              element={<ProcessList groupKey="mhdgncu" titleKey="proc.mhdgncu" />}
-            />
+            <Route element={<ProtectedRoute roles={["ADMIN", "SUPER_ADMIN"]} />}>
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/notifications" element={<AdminNotifications />} />
+              <Route element={<ProtectedRoute roles={["SUPER_ADMIN"]} />}>
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/roles" element={<AdminRoles />} />
+              </Route>
+              <Route path="/admin/posts" element={<AdminPosts />} />
+              <Route path="/admin/posts/new" element={<PostForm mode="create" />} />
+              <Route path="/admin/posts/:slug" element={<PostView />} />
+              <Route path="/admin/posts/:slug/edit" element={<PostForm mode="edit" />} />
+              <Route path="/admin/projects" element={<AdminProjects />} />
+              <Route path="/admin/projects/new" element={<ProjectForm mode="create" />} />
+              <Route path="/admin/projects/:slug" element={<ProjectView />} />
+              <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
+              <Route path="/admin/contacts" element={<AdminContacts />} />
+              <Route path="/admin/recruitment" element={<AdminRecruitment />} />
+              <Route path="/admin/recruitment/employment-types" element={<EmploymentTypes />} />
+              <Route path="/admin/recruitment/new" element={<JobPositionForm mode="create" />} />
+              <Route path="/admin/recruitment/:id/edit" element={<JobPositionForm mode="edit" />} />
+              <Route path="/admin/email-templates" element={<EmailTemplateConfig />} />
+              <Route path="/admin/settings" element={<SettingsCenter />} />
+              <Route path="/admin/languages" element={<LanguagesPage />} />
+              <Route path="/admin/translations" element={<TranslationsPage />} />
+              <Route path="/admin/categories" element={<AdminCategories />} />
+              <Route path="/admin/activity-log" element={<AdminActivityLog />} />
+              <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
+              <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />
+              <Route path="/admin/suppliers" element={<AdminLogosManager kind="suppliers" titleKey="nav.suppliers" />} />
+              <Route path="/admin/awards" element={<AdminLogosManager kind="awards" titleKey="nav.awards" />} />
+              <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
+              <Route path="/admin/map" element={<AdminSimplePage titleKey="nav.map" />} />
+              <Route path="/admin/about" element={<AboutContent />} />
+              <Route path="/admin/help" element={<HelpPage />} />
+              <Route path="/admin/system/log" element={<SystemLog />} />
+              <Route path="/admin/system/warnings" element={<WarningsPage />} />
+              <Route path="/admin/system/maintenance" element={<MaintenancePage />} />
+              <Route
+                path="/admin/processes/general"
+                element={<ProcessList groupKey="general" titleKey="proc.general" />}
+              />
+              <Route
+                path="/admin/processes/ptcskh"
+                element={<ProcessList groupKey="ptcskh" titleKey="proc.ptcskh" />}
+              />
+              <Route
+                path="/admin/processes/dt"
+                element={<ProcessList groupKey="dt" titleKey="proc.dt" />}
+              />
+              <Route
+                path="/admin/processes/tk"
+                element={<ProcessList groupKey="tk" titleKey="proc.tk" />}
+              />
+              <Route
+                path="/admin/processes/tc"
+                element={<ProcessList groupKey="tc" titleKey="proc.tc" />}
+              />
+              <Route
+                path="/admin/processes/ttqtct"
+                element={<ProcessList groupKey="ttqtct" titleKey="proc.ttqtct" />}
+              />
+              <Route
+                path="/admin/processes/qlns"
+                element={<ProcessList groupKey="qlns" titleKey="proc.qlns" />}
+              />
+              <Route
+                path="/admin/processes/mhdgncu"
+                element={<ProcessList groupKey="mhdgncu" titleKey="proc.mhdgncu" />}
+              />
+            </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

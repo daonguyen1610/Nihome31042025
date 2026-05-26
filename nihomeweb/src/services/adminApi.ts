@@ -236,6 +236,60 @@ export interface ContactMessageResponse {
   createdAt: string;
 }
 
+export type UserRole = "SUPER_ADMIN" | "ADMIN" | "USER";
+
+export interface UserListItemResponse {
+  id: number;
+  phoneNumber: string;
+  fullName?: string;
+  email?: string;
+  role: UserRole;
+  isActive: boolean;
+  avatarUrl?: string;
+}
+
+export interface UserDetailResponse extends UserListItemResponse {
+  refreshTokenCount: number;
+}
+
+export interface UserListResponse {
+  items: UserListItemResponse[];
+  total: number;
+}
+
+export interface CreateUserRequest {
+  phoneNumber: string;
+  fullName: string;
+  email?: string;
+  password: string;
+  role: UserRole;
+}
+
+export interface UpdateUserRequest {
+  fullName?: string;
+  email?: string;
+  role?: UserRole;
+  isActive?: boolean;
+}
+
+export interface RoleMetadataResponse {
+  role: UserRole;
+  labelKey: string;
+  descriptionKey: string;
+  userCount: number;
+  isSystemRole: boolean;
+}
+
+export interface PermissionMatrixRowResponse {
+  moduleKey: string;
+  accessByRole: Record<UserRole, boolean>;
+}
+
+export interface RoleCatalogResponse {
+  roles: RoleMetadataResponse[];
+  permissionMatrix: PermissionMatrixRowResponse[];
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
@@ -398,6 +452,22 @@ export const adminApi = {
     api.patch<ContactMessageResponse>(`/contacts/${id}/mark-replied`),
   deleteContact: (id: number) =>
     api.delete(`/contacts/${id}`),
+
+  // Users / RBAC
+  getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>
+    api.get<UserListResponse>("/users", { params }),
+  getUser: (id: number) =>
+    api.get<UserDetailResponse>(`/users/${id}`),
+  createUser: (data: CreateUserRequest) =>
+    api.post<UserDetailResponse>("/users", data),
+  updateUser: (id: number, data: UpdateUserRequest) =>
+    api.put<UserDetailResponse>(`/users/${id}`, data),
+  toggleUserActive: (id: number) =>
+    api.patch<UserDetailResponse>(`/users/${id}/toggle-active`),
+  deleteUser: (id: number) =>
+    api.delete(`/users/${id}`),
+  getUserRoles: () =>
+    api.get<RoleCatalogResponse>("/users/roles"),
 };
 
 // ─── Slug helper ─────────────────────────────────────────────

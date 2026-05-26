@@ -9,6 +9,7 @@ namespace NihomeBackend.Services;
 public class JobApplicationService(
     AppDbContext db,
     IEmailService emailService,
+    INotificationService notificationService,
     ILogger<JobApplicationService> logger)
 {
     private static readonly HashSet<string> ValidStatuses = ["new", "interview", "hired", "rejected"];
@@ -79,6 +80,19 @@ public class JobApplicationService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send new application notification email for application {Id}", entity.Id);
+        }
+
+        try
+        {
+            await notificationService.CreateForAdminsAsync(
+                "JobApplication",
+                $"Đơn ứng tuyển mới từ {entity.CandidateName}",
+                $"{entity.CandidateName} đã ứng tuyển vị trí {entity.JobPosition?.Title ?? "tuyển dụng"}.",
+                "/admin/recruitment");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to create in-app notification for application {Id}", entity.Id);
         }
 
         return MapToResponse(entity);
