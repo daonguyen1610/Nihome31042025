@@ -1050,6 +1050,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.Notification", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
+                        .WithMany("Notifications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ApplicationUser", b =>
                 {
                     b.Navigation("Notifications");
