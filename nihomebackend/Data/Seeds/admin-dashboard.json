@@ -24,6 +24,30 @@
     "ja": "応募総数"
   },
   {
+    "key": "dash.postsOverTime",
+    "category": "dash",
+    "vi": "Bài đăng theo thời gian",
+    "en": "Posts over time",
+    "zh": "帖子趋势",
+    "ja": "投稿の推移"
+  },
+  {
+    "key": "dash.projectsByStatus",
+    "category": "dash",
+    "vi": "Dự án theo trạng thái",
+    "en": "Projects by status",
+    "zh": "项目状态分布",
+    "ja": "ステータス別プロジェクト"
+  },
+  {
+    "key": "dash.applicationsByPos",
+    "category": "dash",
+    "vi": "Đơn ứng tuyển theo vị trí",
+    "en": "Applications by position",
+    "zh": "按职位的申请",
+    "ja": "職種別の応募"
+  },
+  {
     "key": "dash.moreInfo",
     "category": "dash",
     "vi": "Xem thêm",

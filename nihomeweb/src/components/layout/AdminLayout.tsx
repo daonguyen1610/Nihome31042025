@@ -17,6 +17,8 @@ import {
   ChevronDown,
   FolderTree,
   Users,
+  UserCog,
+  ShieldCheck,
   History,
   Award,
   Handshake,
@@ -37,8 +39,9 @@ import {
   Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCurrentUser, logout } from "@/lib/auth";
+import { logout } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { useAppSelector } from "@/store";
 import LanguageToggle from "@/components/LanguageToggle";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import logoNicon from "@/assets/logo-nicon.png";
@@ -53,7 +56,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const user = getCurrentUser();
+  const user = useAppSelector((state) => state.auth.user);
+  const isSuperAdmin = user?.role?.toUpperCase() === "SUPER_ADMIN";
 
   const dashboardItem: NavItem = {
     to: "/admin",
@@ -108,6 +112,12 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.users"),
         icon: Users,
         items: [
+          ...(isSuperAdmin
+            ? [
+                { to: "/admin/users", label: t("nav.userManagement"), icon: UserCog },
+                { to: "/admin/roles", label: t("nav.roleManagement"), icon: ShieldCheck },
+              ]
+            : []),
           { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History },
         ],
       },
@@ -135,7 +145,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         ],
       },
     ],
-    [t],
+    [isSuperAdmin, t],
   );
 
   // Group expand/collapse: keep group containing active route open
@@ -343,10 +353,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                     "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
                 }}
               >
-                {user?.name?.[0]?.toUpperCase() ?? "A"}
+                {user?.fullName?.[0]?.toUpperCase() ?? "A"}
               </div>
               <div className="text-xs">
-                <p className="font-bold leading-tight">{user?.name ?? "Admin"}</p>
+                <p className="font-bold leading-tight">{user?.fullName ?? "Admin"}</p>
                 <p style={{ color: "hsl(var(--admin-muted))" }}>
                   {user?.email ?? "admin@nicon.vn"}
                 </p>

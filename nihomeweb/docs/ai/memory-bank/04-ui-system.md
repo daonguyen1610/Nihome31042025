@@ -50,3 +50,7 @@ New work should preserve the NICON / Nihome design language already encoded in `
 - Name shared UI pieces by role, not by page location, once they become reusable.
 - Avoid creating near-duplicate components with slightly different styling tokens unless the design system explicitly allows the variation.
 - If a task introduces a new reusable pattern, record it here when it becomes part of the expected UI language.
+
+## Updates
+
+- 2026-05-15: Added recharts (via shadcn chart wrapper) for admin dashboard charts. Charts include posts over time (bar), projects by status (donut), and applications by position (horizontal bar). Data derives from existing admin hooks.

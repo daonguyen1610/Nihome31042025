@@ -140,6 +140,41 @@ describe("adminApi", () => {
     expect(mockApi.delete).toHaveBeenCalledWith("/projects/9");
   });
 
+  // ── Users / RBAC ──────────────────────────────────────────────
+
+  it("getUsers sends query params to users endpoint", async () => {
+    const params = { skip: 20, take: 20, search: "admin", role: "ADMIN" };
+    await adminApi.getUsers(params);
+    expect(mockApi.get).toHaveBeenCalledWith("/users", { params });
+  });
+
+  it("createUser sends correct route and payload", async () => {
+    const payload = {
+      phoneNumber: "0901234567",
+      fullName: "Test Admin",
+      password: "Secret123",
+      role: "ADMIN" as const,
+    };
+    await adminApi.createUser(payload);
+    expect(mockApi.post).toHaveBeenCalledWith("/users", payload);
+  });
+
+  it("updateUser sends correct route and payload", async () => {
+    const payload = { fullName: "Updated", role: "USER" as const, isActive: false };
+    await adminApi.updateUser(12, payload);
+    expect(mockApi.put).toHaveBeenCalledWith("/users/12", payload);
+  });
+
+  it("toggleUserActive sends correct route", async () => {
+    await adminApi.toggleUserActive(12);
+    expect(mockApi.patch).toHaveBeenCalledWith("/users/12/toggle-active");
+  });
+
+  it("getUserRoles sends correct route", async () => {
+    await adminApi.getUserRoles();
+    expect(mockApi.get).toHaveBeenCalledWith("/users/roles");
+  });
+
   // ── Logos ─────────────────────────────────────────────────────
 
   it("createLogo sends correct route and payload", async () => {

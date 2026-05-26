@@ -80,6 +80,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<JwtService>();
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<OtpService>();
+        services.AddScoped<UserService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<HostedImageService>();
