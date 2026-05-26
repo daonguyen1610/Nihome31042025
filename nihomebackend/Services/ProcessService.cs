@@ -197,50 +197,6 @@ public class ProcessService
         return true;
     }
 
-    public async Task ReplaceGroupDataAsync(
-        IReadOnlyCollection<LegacyProcessGroupImport> groups,
-        CancellationToken cancellationToken)
-    {
-        var groupKeys = groups.Select(g => g.GroupKey).ToList();
-        var existing = await db.ProcessDocuments
-            .Include(p => p.Assets)
-            .Where(p => groupKeys.Contains(p.GroupKey))
-            .ToListAsync(cancellationToken);
-
-        var oldAssetUrls = existing.SelectMany(p => p.Assets).Select(a => a.Url).ToList();
-        db.ProcessDocuments.RemoveRange(existing);
-
-        var newProcesses = groups
-            .SelectMany(group => group.Processes.Select((process, index) => new ProcessDocument
-            {
-                GroupKey = group.GroupKey,
-                Code = process.Code,
-                Title = process.Title,
-                SortOrder = index,
-                Assets = process.Assets.Select(asset => new ProcessAsset
-                {
-                    Type = asset.Type,
-                    DisplayName = asset.DisplayName,
-                    Url = asset.Url,
-                    OriginalFileName = asset.OriginalFileName,
-                    ContentType = asset.ContentType,
-                    FileSizeBytes = asset.FileSizeBytes,
-                    SortOrder = asset.SortOrder,
-                }).ToList(),
-            }))
-            .ToList();
-
-        db.ProcessDocuments.AddRange(newProcesses);
-        await db.SaveChangesAsync(cancellationToken);
-
-        foreach (var oldAssetUrl in oldAssetUrls)
-        {
-            assetStorage?.DeleteIfManagedAsset(oldAssetUrl);
-        }
-
-        Logger.LogInformation("Replaced legacy process data for {GroupCount} groups", groups.Count);
-    }
-
     private void ReplaceAssetInputs(
         ProcessDocument entity,
         IReadOnlyCollection<UpsertProcessAssetRequest> assetInputs,
@@ -315,21 +271,3 @@ public class ProcessService
         SortOrder = asset.SortOrder,
     };
 }
-
-public record LegacyProcessGroupImport(
-    string GroupKey,
-    IReadOnlyCollection<LegacyProcessDocumentImport> Processes);
-
-public record LegacyProcessDocumentImport(
-    string Title,
-    string? Code,
-    IReadOnlyCollection<LegacyProcessAssetImport> Assets);
-
-public record LegacyProcessAssetImport(
-    ProcessAssetType Type,
-    string DisplayName,
-    string Url,
-    string OriginalFileName,
-    string? ContentType,
-    long FileSizeBytes,
-    int SortOrder);

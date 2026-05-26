@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Moq;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
@@ -52,100 +53,18 @@ public class ProcessAssetStorageServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveLegacyAsync_Throws_WhenExtensionIsNotAllowed()
+    public async Task SaveUploadAsync_Throws_WhenExtensionIsNotAllowed()
     {
         await using var stream = new MemoryStream([1, 2, 3]);
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.SaveLegacyAsync(
-            stream,
-            "malware.exe",
-            "application/octet-stream",
-            stream.Length,
-            ProcessAssetType.File,
-            CancellationToken.None));
-
-        Assert.Equal("Legacy process asset has unsupported file extension.", ex.Message);
-    }
-
-    [Fact]
-    public async Task SaveLegacyAsync_Throws_WhenStreamExceedsConfiguredMaxSizeWithoutContentLength()
-    {
-        const long maxDocumentBytes = 25 * 1024 * 1024;
-        await using var stream = new FixedLengthReadStream(maxDocumentBytes + 1);
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.SaveLegacyAsync(
-            stream,
-            "oversized.pdf",
-            "application/pdf",
-            null,
-            ProcessAssetType.File,
-            CancellationToken.None));
-
-        Assert.Equal("Legacy process asset is too large.", ex.Message);
-
-        var filesDir = Path.Combine(_contentRootPath, "wwwroot", "process-assets", "files");
-        Assert.False(Directory.Exists(filesDir) && Directory.EnumerateFiles(filesDir).Any());
-    }
-
-    private sealed class FixedLengthReadStream(long length) : Stream
-    {
-        private long _position;
-
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => length;
-        public override long Position
+        var file = new FormFile(stream, 0, stream.Length, "file", "malware.exe")
         {
-            get => _position;
-            set => throw new NotSupportedException();
-        }
+            Headers = new HeaderDictionary(),
+            ContentType = "application/octet-stream"
+        };
 
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            if (_position >= length)
-            {
-                return 0;
-            }
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sut.SaveUploadAsync(file, ProcessAssetType.File, CancellationToken.None));
 
-            var bytesToRead = (int)Math.Min(count, length - _position);
-            buffer.AsSpan(offset, bytesToRead).Clear();
-            _position += bytesToRead;
-            return bytesToRead;
-        }
-
-        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-            => Task.FromResult(Read(buffer, offset, count));
-
-        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
-        {
-            var bytesRead = Read(buffer.Span);
-            return ValueTask.FromResult(bytesRead);
-        }
-
-        public override int Read(Span<byte> buffer)
-        {
-            if (_position >= length)
-            {
-                return 0;
-            }
-
-            var bytesToRead = (int)Math.Min(buffer.Length, length - _position);
-            buffer[..bytesToRead].Clear();
-            _position += bytesToRead;
-            return bytesToRead;
-        }
-
-        public override void Flush()
-            => throw new NotSupportedException();
-
-        public override long Seek(long offset, SeekOrigin origin)
-            => throw new NotSupportedException();
-
-        public override void SetLength(long value)
-            => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count)
-            => throw new NotSupportedException();
+        Assert.Equal("Chỉ chấp nhận file PDF, DOC, DOCX, XLS, XLSX", ex.Message);
     }
 }

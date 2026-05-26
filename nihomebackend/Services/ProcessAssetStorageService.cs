@@ -31,34 +31,6 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
         return await SaveAsync(stream, file.FileName, file.ContentType, file.Length, type, cancellationToken);
     }
 
-    public async Task<StoredProcessAsset> SaveLegacyAsync(
-        Stream stream,
-        string originalFileName,
-        string? contentType,
-        long? contentLength,
-        ProcessAssetType type,
-        CancellationToken cancellationToken)
-    {
-        ValidateAssetExtension(originalFileName, type, isLegacy: true);
-
-        var maxSizeBytes = GetMaxSizeBytes(type);
-        var size = contentLength ?? 0;
-        if (size > maxSizeBytes)
-        {
-            throw new InvalidOperationException("Legacy process asset is too large.");
-        }
-
-        return await SaveAsync(
-            stream,
-            originalFileName,
-            contentType,
-            size,
-            type,
-            cancellationToken,
-            maxSizeBytes,
-            "Legacy process asset is too large.");
-    }
-
     public void DeleteIfManagedAsset(string? url)
     {
         url = NormalizeAssetUrl(url);
@@ -121,9 +93,7 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
         string? contentType,
         long contentLength,
         ProcessAssetType type,
-        CancellationToken cancellationToken,
-        long? maxSizeBytes = null,
-        string? maxSizeExceededMessage = null)
+        CancellationToken cancellationToken)
     {
         var safeOriginalName = Path.GetFileName(originalFileName);
         if (string.IsNullOrWhiteSpace(safeOriginalName))
@@ -154,11 +124,6 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
             while ((bytesRead = await stream.ReadAsync(buffer, cancellationToken)) > 0)
             {
                 totalBytesWritten += bytesRead;
-                if (maxSizeBytes.HasValue && totalBytesWritten > maxSizeBytes.Value)
-                {
-                    throw new InvalidOperationException(maxSizeExceededMessage ?? "File too large.");
-                }
-
                 await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
             }
 
@@ -197,7 +162,7 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
                 : "File quá lớn (tối đa 25MB)");
         }
 
-        ValidateAssetExtension(file.FileName, type, isLegacy: false);
+        ValidateAssetExtension(file.FileName, type);
     }
 
     private static long GetMaxSizeBytes(ProcessAssetType type) =>
@@ -205,8 +170,7 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
 
     private static void ValidateAssetExtension(
         string fileName,
-        ProcessAssetType type,
-        bool isLegacy)
+        ProcessAssetType type)
     {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         var allowedExtensions = type == ProcessAssetType.Image
@@ -216,11 +180,6 @@ public class ProcessAssetStorageService(IWebHostEnvironment env)
         if (!string.IsNullOrWhiteSpace(extension) && allowedExtensions.Contains(extension))
         {
             return;
-        }
-
-        if (isLegacy)
-        {
-            throw new InvalidOperationException("Legacy process asset has unsupported file extension.");
         }
 
         throw new InvalidOperationException(type == ProcessAssetType.Image

@@ -22,14 +22,3 @@ public class ProcessAssetResponse
     public long FileSizeBytes { get; set; }
     public int SortOrder { get; set; }
 }
-
-public class LegacyProcessImportResponse
-{
-    public bool DryRun { get; set; }
-    public int Groups { get; set; }
-    public int Processes { get; set; }
-    public int Images { get; set; }
-    public int Files { get; set; }
-    public int SkippedAssets { get; set; }
-    public string Message { get; set; } = "";
-}

@@ -22,8 +22,3 @@ public class UpsertProcessAssetRequest
     public long FileSizeBytes { get; set; }
     public int SortOrder { get; set; }
 }
-
-public class LegacyProcessImportRequest
-{
-    public bool DryRun { get; set; } = true;
-}

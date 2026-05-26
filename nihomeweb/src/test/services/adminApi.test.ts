@@ -195,11 +195,6 @@ describe("adminApi", () => {
     expect(mockApi.delete).toHaveBeenCalledWith("/processes/3/assets/9");
   });
 
-  it("importLegacyProcesses sends dry-run flag", async () => {
-    await adminApi.importLegacyProcesses(false);
-    expect(mockApi.post).toHaveBeenCalledWith("/processes/import/legacy", { dryRun: false });
-  });
-
   it("createSlideshow sends correct route and payload", async () => {
     const payload = {
       slug: "hero-slide",

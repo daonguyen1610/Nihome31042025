@@ -96,7 +96,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<LogoService>();
         services.AddScoped<ProcessService>();
         services.AddScoped<ProcessAssetStorageService>();
-        services.AddScoped<LegacyProcessImportService>();
         services.AddScoped<SlideshowService>();
         services.AddScoped<AboutSectionService>();
         services.AddScoped<ContactMessageService>();

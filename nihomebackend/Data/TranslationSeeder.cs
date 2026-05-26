@@ -29,10 +29,21 @@ public static class TranslationSeeder
         {
             using var stream = assembly.GetManifestResourceStream(resourceName)!;
             using var doc = JsonDocument.Parse(stream);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array ||
+                !doc.RootElement.EnumerateArray().Any(e => e.ValueKind == JsonValueKind.Object &&
+                    e.TryGetProperty("key", out _)))
+            {
+                continue;
+            }
 
             foreach (var entry in doc.RootElement.EnumerateArray())
             {
-                var key = entry.GetProperty("key").GetString()!;
+                if (!entry.TryGetProperty("key", out var keyProp))
+                {
+                    continue;
+                }
+
+                var key = keyProp.GetString()!;
                 var category = entry.TryGetProperty("category", out var catProp) ? catProp.GetString() : null;
 
                 foreach (var lang in LanguageCodes)

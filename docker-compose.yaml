@@ -20,9 +20,6 @@ services:
       ASPNETCORE_URLS: http://0.0.0.0:5043
       DOTNET_USE_POLLING_FILE_WATCHER: "1"
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;
-      NICON_LEGACY_EMAIL: ${NICON_LEGACY_EMAIL:-}
-      NICON_LEGACY_PASSWORD: ${NICON_LEGACY_PASSWORD:-}
-      NICON_LEGACY_BASE_URL: ${NICON_LEGACY_BASE_URL:-https://nicon.vn}
     volumes:
       - ./nihomebackend:/app
       - ./nihomeweb:/nihomeweb

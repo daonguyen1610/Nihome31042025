@@ -10,9 +10,7 @@ namespace NihomeBackend.Controllers;
 [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
 [Route("api/processes")]
 [Route("api/v1/processes")]
-public class ProcessesController(
-    ProcessService svc,
-    LegacyProcessImportService? legacyImportService = null) : ControllerBase
+public class ProcessesController(ProcessService svc) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll() => Ok(await svc.GetAllGroupedAsync());
@@ -72,26 +70,5 @@ public class ProcessesController(
     public async Task<IActionResult> DeleteAsset(int processId, int assetId)
     {
         return await svc.DeleteAssetAsync(processId, assetId) ? NoContent() : NotFound();
-    }
-
-    [HttpPost("import/legacy")]
-    public async Task<IActionResult> ImportLegacy(
-        [FromBody] LegacyProcessImportRequest? request,
-        CancellationToken cancellationToken)
-    {
-        if (legacyImportService == null)
-        {
-            return StatusCode(500, new { message = "Legacy process import service is not configured" });
-        }
-
-        try
-        {
-            var result = await legacyImportService.ImportAsync(request?.DryRun ?? true, cancellationToken);
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
     }
 }

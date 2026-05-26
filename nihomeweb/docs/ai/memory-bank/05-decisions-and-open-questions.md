@@ -54,7 +54,7 @@ Rationale: Public `Profile` content and admin `AboutContent` should reflect the 
 
 ### 2026-05-14 - WorkProcesses are admin-only backend content with file-backed assets
 
-Rationale: Legacy WorkProcess pages contain internal procedure images and document downloads. The frontend should use the authenticated `/api/processes` contract, while binary process assets live under backend static storage (`/process-assets`) with metadata in SQL Server.
+Rationale: WorkProcess pages contain internal procedure images and document downloads. The frontend should use the authenticated `/api/processes` contract, while binary process assets live under backend static storage (`/process-assets`) with metadata in SQL Server. Legacy scraping belongs to the offline `tools/workprocess_legacy_scraper.py` utility, not runtime backend services or API endpoints.
 
 ## Open Questions
 

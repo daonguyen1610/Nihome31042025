@@ -72,16 +72,6 @@ export interface ProcessAssetResponse {
   sortOrder: number;
 }
 
-export interface LegacyProcessImportResponse {
-  dryRun: boolean;
-  groups: number;
-  processes: number;
-  images: number;
-  files: number;
-  skippedAssets: number;
-  message: string;
-}
-
 export interface UpsertSlideshowRequest {
   slug: string;
   imageUrl: string;
@@ -337,8 +327,6 @@ export const adminApi = {
   },
   deleteProcessAsset: (processId: number, assetId: number) =>
     api.delete(`/processes/${processId}/assets/${assetId}`),
-  importLegacyProcesses: (dryRun = true) =>
-    api.post<LegacyProcessImportResponse>("/processes/import/legacy", { dryRun }),
 
   // Slideshow
   getSlideshow: (lang = "vi", activeOnly = false) =>

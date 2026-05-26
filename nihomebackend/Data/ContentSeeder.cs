@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
@@ -501,25 +502,71 @@ public static class ContentSeeder
     {
         if (db.ProcessDocuments.Any()) return;
 
-        var items = new List<ProcessDocument>();
-
-        void AddGroup(string key, (string? code, string title)[] entries)
+        var assembly = Assembly.GetExecutingAssembly();
+        const string resourceName = "nihomebackend.Data.Seeds.processes.json";
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
         {
-            for (var j = 0; j < entries.Length; j++)
-                items.Add(new ProcessDocument { GroupKey = key, Code = entries[j].code, Title = entries[j].title, SortOrder = j });
+            return;
         }
 
-        AddGroup("general", [(null, "Quy trình kiểm soát tài liệu"), (null, "Quy trình đánh giá nội bộ"), (null, "Quy trình cải tiến"), (null, "Quy trình đánh giá rủi ro - cơ hội"), (null, "Quy trình xác định bối cảnh")]);
-        AddGroup("ptcskh", [(null, "Quy trình phát triển và chăm sóc khách hàng"), (null, "Quy trình giải quyết khiếu nại của khách hàng"), (null, "Quy trình đo lường sự thỏa mãn của khách hàng")]);
-        AddGroup("dt", [(null, "Quy trình đấu thầu"), ("DT-M02", "Phân chia công việc đấu thầu"), ("DT-M03", "Yêu cầu báo giá"), ("DT-M04", "Bảng phân chia công việc đấu thầu"), ("DT-M05", "Yêu cầu báo giá nhà cung cấp"), ("DT-M07", "Hợp đồng"), ("QLTC-QT01", "Quy trình tổng thể đấu thầu")]);
-        AddGroup("tk", [("TK-M01", "Phiếu thu thập thông tin"), ("TK-PL1", "Hồ sơ thiết kế sơ bộ"), ("TK-PL2", "Thuyết minh thiết kế sơ bộ"), ("TK-BM02", "Biên bản nghiệm thu hồ sơ"), ("BM-BLĐ-QT01-08", "Biên bản bàn giao hồ sơ"), ("KT-M01", "Kiểm tra thiết kế kỹ thuật"), ("KT-BM02", "Biên bản nghiệm thu hồ sơ TKKT"), ("TK-M03", "Bàn giao hồ sơ thi công")]);
-        AddGroup("tc", [("QLTC-QT02-01", "Thi công - Nghiệm thu - Bàn giao"), (null, "QT - Chuẩn bị"), (null, "QT - Duyệt mẫu vật tư và đề xuất vật tư"), (null, "QT - Duyệt và kiểm soát bản vẽ shopdrawings"), (null, "QT - Duyệt và kiểm soát tiến độ"), (null, "Danh mục hồ sơ nghiệm thu công việc"), (null, "QT - NT.Công việc"), (null, "QT - NT.Giai đoạn"), (null, "QT - NT.Bàn giao"), (null, "QT - Quản lý - điều động - bảo trì thiết bị"), (null, "Phụ lục các nguyên tắc an toàn thi công"), (null, "QT - ATLĐ_VSMT"), ("TC-M28", "Biên bản nghiệm thu nội bộ"), (null, "QT - Thầu phụ"), (null, "QT - Quản lý kho công trường"), (null, "QT - Phát sinh"), (null, "QT - Xử lý tình huống khẩn cấp"), (null, "QT - Xử lý kỷ luật")]);
-        AddGroup("ttqtct", [("01.TQT-QT", "Quy trình thanh toán, quyết toán"), ("MH-M04", "Đề nghị thanh toán"), ("TC-M14", "Yêu cầu thanh toán bằng tháng"), ("TQT-M01", "Bảng tổng hợp"), ("TQT-M02", "Đề nghị thanh toán"), ("TQT-M03", "Phiếu chi"), ("TQT-M04", "Quyết toán khách hàng"), ("TQT-M06", "BB Thanh lý hợp đồng"), ("TQT-M07", "Đề nghị tạm ứng"), ("TQT-M08", "Thông báo thanh toán"), ("TQT-M09", "Công văn thanh toán")]);
-        AddGroup("qlns", [(null, "Quy trình hoạch định và tuyển dụng nhân sự"), (null, "Quy trình tuyển dụng - đào tạo"), (null, "Quy trình thử việc"), (null, "Quy trình xin nghỉ việc - nghỉ phép"), ("QLNS-M01", "Phiếu yêu cầu tuyển dụng"), ("QLNS-M02", "Phiếu đăng ký dự tuyển"), ("QLNS-M03", "Hợp đồng thử việc"), ("QLNS-M04", "Bảng đánh giá thử việc"), ("QLNS-M05", "Hợp đồng lao động"), ("QLNS-M06", "Quyết định bổ nhiệm"), ("QLNS-M07", "Quyết định khen thưởng / kỷ luật"), ("QLNS-M08", "Đơn xin nghỉ phép"), ("QLNS-M09", "Đơn xin thôi việc")]);
-        AddGroup("mhdgncu", [(null, "Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ"), ("MH-M02", "Yêu cầu báo giá"), ("MH-M03", "Đơn đặt hàng"), ("MH-M04", "Đề nghị thanh toán"), ("MH-M05", "Phiếu yêu cầu đánh giá NCC"), ("MH-M06", "Danh sách NCC ban đầu"), ("MH-M07", "Phiếu đánh giá NCC"), ("MH-M08", "Danh sách NCC được duyệt"), ("TC-DM-M04", "Phiếu yêu cầu vật tư")]);
+        var seedItems = JsonSerializer.Deserialize<List<ProcessSeedItem>>(
+            stream,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+
+        var items = seedItems.Select(seed => new ProcessDocument
+        {
+            GroupKey = seed.GroupKey,
+            Code = seed.Code,
+            Title = seed.Title,
+            SortOrder = seed.SortOrder,
+            Assets = seed.Images.Concat(seed.Files)
+                .Select(asset => new ProcessAsset
+                {
+                    Type = ParseProcessAssetType(asset.Type),
+                    DisplayName = asset.DisplayName,
+                    Url = asset.Url,
+                    OriginalFileName = asset.OriginalFileName,
+                    ContentType = asset.ContentType,
+                    FileSizeBytes = asset.FileSizeBytes,
+                    SortOrder = asset.SortOrder,
+                })
+                .ToList(),
+        }).ToList();
 
         db.ProcessDocuments.AddRange(items);
         db.SaveChanges();
+    }
+
+    private static ProcessAssetType ParseProcessAssetType(string type)
+    {
+        if (Enum.TryParse<ProcessAssetType>(type, ignoreCase: true, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException($"Invalid process asset type in seed data: {type}");
+    }
+
+    private sealed class ProcessSeedItem
+    {
+        public string GroupKey { get; set; } = "";
+        public string? Code { get; set; }
+        public string Title { get; set; } = "";
+        public int SortOrder { get; set; }
+        public List<ProcessAssetSeedItem> Images { get; set; } = [];
+        public List<ProcessAssetSeedItem> Files { get; set; } = [];
+    }
+
+    private sealed class ProcessAssetSeedItem
+    {
+        public string Type { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string OriginalFileName { get; set; } = "";
+        public string? ContentType { get; set; }
+        public long FileSizeBytes { get; set; }
+        public int SortOrder { get; set; }
     }
 
     // ─── Slideshow ──────────────────────────────────────────────────
