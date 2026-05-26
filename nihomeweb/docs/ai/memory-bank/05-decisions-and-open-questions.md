@@ -59,6 +59,11 @@ Rationale: Registration and forgot-password OTP behavior is controlled by existi
 ### 2026-05-16 - Admin notifications use backend API plus Redux shell state
 
 Rationale: In-app notification badge state is shared by the admin layout, uses the existing Vite React SPA and Axios API client, and needs optimistic mark-read/delete behavior. The MVP uses polling against `/api/notifications` instead of SignalR.
+
+### 2026-05-26 - Admin notifications stay on lightweight polling for this phase
+
+Rationale: To reduce backend load without widening scope to SignalR, the admin shell polls only unread counts on a slower cadence, loads notification lists on demand, and supports a dedicated `/admin/notifications` page for paged review.
+
 ### 2026-05-16 - Users/RBAC admin management is backend-backed
 
 Rationale: User and role management now uses the ASP.NET Core `/api/users` contract, existing `UserRole` enum values, and Redux-backed auth route guards. Roles remain fixed system roles in this phase; no dynamic role table is introduced.

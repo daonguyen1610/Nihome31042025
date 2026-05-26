@@ -68,8 +68,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Notification>().Property(n => n.Title).HasMaxLength(200);
         modelBuilder.Entity<Notification>().Property(n => n.Body).HasMaxLength(1000);
         modelBuilder.Entity<Notification>().Property(n => n.LinkUrl).HasMaxLength(500);
-        modelBuilder.Entity<Notification>().HasIndex(n => n.UserId);
-        modelBuilder.Entity<Notification>().HasIndex(n => n.IsRead);
+        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.CreatedAt, n.Id });
+        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.IsRead });
         modelBuilder.Entity<Notification>()
             .HasOne(n => n.User)
             .WithMany(u => u.Notifications)

@@ -1,14 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
-  Briefcase,
   CheckCheck,
   Loader2,
-  Mail,
   Trash2,
-  Wrench,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,59 +21,16 @@ import {
 } from "@/store/notificationSlice";
 import { useAppDispatch, useAppSelector } from "@/store";
 import type { NotificationDto } from "@/services/notificationApi";
+import { formatRelativeTime, moduleIcon } from "@/components/layout/notificationUtils";
 
-const POLL_INTERVAL_MS = 30_000;
-
-function resolveCurrentLocale() {
-  if (typeof document !== "undefined" && document.documentElement.lang) {
-    return document.documentElement.lang;
-  }
-
-  if (typeof navigator !== "undefined" && navigator.language) {
-    return navigator.language;
-  }
-
-  return "vi-VN";
-}
-
-function formatRelativeTime(value: string) {
-  const date = new Date(value);
-  const timestamp = date.getTime();
-
-  if (Number.isNaN(timestamp)) {
-    return "";
-  }
-
-  const locale = resolveCurrentLocale();
-  const diffSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
-  const relativeTimeFormatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-
-  if (diffSeconds < 60) return relativeTimeFormatter.format(0, "second");
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  if (diffMinutes < 60) return relativeTimeFormatter.format(-diffMinutes, "minute");
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return relativeTimeFormatter.format(-diffHours, "hour");
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return relativeTimeFormatter.format(-diffDays, "day");
-
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-function moduleIcon(notification: NotificationDto) {
-  if (notification.module === "JobApplication") return Briefcase;
-  if (notification.module === "Contact") return Mail;
-  return Wrench;
-}
+const POLL_INTERVAL_MS = 60_000;
 
 export function NotificationBell() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const countRequestRef = useRef(false);
   const accessToken = useAppSelector((state) => state.auth.accessToken);
   const { items, unreadCount, loading, error } = useAppSelector((state) => state.notifications);
 
@@ -86,16 +40,26 @@ export function NotificationBell() {
       return;
     }
 
-    void dispatch(fetchNotifications());
-    void dispatch(fetchUnreadCount());
+    const refreshUnreadCount = () => {
+      if (countRequestRef.current || document.hidden) return;
+      countRequestRef.current = true;
+      void dispatch(fetchUnreadCount()).finally(() => {
+        countRequestRef.current = false;
+      });
+    };
 
-    const interval = window.setInterval(() => {
-      void dispatch(fetchNotifications());
-      void dispatch(fetchUnreadCount());
-    }, POLL_INTERVAL_MS);
+    refreshUnreadCount();
+
+    const interval = window.setInterval(refreshUnreadCount, POLL_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
   }, [accessToken, dispatch]);
+
+  useEffect(() => {
+    if (open && accessToken) {
+      void dispatch(fetchNotifications({ skip: 0, take: 20 }));
+    }
+  }, [accessToken, dispatch, open]);
 
   const unreadLabel = useMemo(() => {
     if (unreadCount > 99) return "99+";
@@ -111,6 +75,11 @@ export function NotificationBell() {
       setOpen(false);
       navigate(notification.linkUrl);
     }
+  };
+
+  const handleViewAll = () => {
+    setOpen(false);
+    navigate("/admin/notifications");
   };
 
   const handleDelete = (event: MouseEvent<HTMLButtonElement>, id: number) => {
@@ -155,6 +124,15 @@ export function NotificationBell() {
           >
             <CheckCheck className="w-3.5 h-3.5" />
             {t("notify.markAllRead")}
+          </button>
+        </div>
+        <div className="border-b px-4 py-2">
+          <button
+            type="button"
+            onClick={handleViewAll}
+            className="text-xs font-semibold text-primary transition hover:underline"
+          >
+            {t("notify.viewAll")}
           </button>
         </div>
 

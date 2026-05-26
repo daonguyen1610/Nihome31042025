@@ -37,6 +37,7 @@ import {
   ScrollText,
   AlertTriangle,
   Wrench,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -64,6 +65,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     label: t("nav.dashboard"),
     icon: LayoutDashboard,
     end: true,
+  };
+  const notificationsItem: NavItem = {
+    to: "/admin/notifications",
+    label: t("notify.title"),
+    icon: Bell,
   };
 
   const groups: NavGroup[] = useMemo(
@@ -230,6 +236,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         <nav className="flex-1 overflow-y-auto px-4 pb-6 space-y-1">
           {/* Dashboard */}
           {renderItem(dashboardItem)}
+          {renderItem(notificationsItem)}
 
           {/* Groups */}
           {groups.map((g) => {

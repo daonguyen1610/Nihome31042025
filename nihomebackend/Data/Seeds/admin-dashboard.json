@@ -2446,5 +2446,37 @@
     "en": "Delete notification",
     "zh": "删除通知",
     "ja": "通知を削除"
+  },
+  {
+    "key": "notify.viewAll",
+    "category": "notify",
+    "vi": "Xem tất cả thông báo",
+    "en": "View all notifications",
+    "zh": "查看所有通知",
+    "ja": "すべての通知を見る"
+  },
+  {
+    "key": "notify.pageTitle",
+    "category": "notify",
+    "vi": "Trung tâm thông báo",
+    "en": "Notification center",
+    "zh": "通知中心",
+    "ja": "通知センター"
+  },
+  {
+    "key": "notify.refresh",
+    "category": "notify",
+    "vi": "Làm mới",
+    "en": "Refresh",
+    "zh": "刷新",
+    "ja": "更新"
+  },
+  {
+    "key": "notify.loadMore",
+    "category": "notify",
+    "vi": "Tải thêm",
+    "en": "Load more",
+    "zh": "加载更多",
+    "ja": "さらに読み込む"
   }
 ]

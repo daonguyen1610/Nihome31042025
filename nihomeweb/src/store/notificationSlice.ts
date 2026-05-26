@@ -6,14 +6,22 @@ interface NotificationState {
   items: NotificationDto[];
   unreadCount: number;
   loading: boolean;
+  countLoading: boolean;
   error: string | null;
+  pageSize: number;
+  loadedCount: number;
+  hasMore: boolean;
 }
 
 const initialState: NotificationState = {
   items: [],
   unreadCount: 0,
   loading: false,
+  countLoading: false,
   error: null,
+  pageSize: 20,
+  loadedCount: 0,
+  hasMore: true,
 };
 
 function extractError(err: unknown): string {
@@ -31,8 +39,10 @@ export const fetchNotifications = createAsyncThunk(
   "notifications/fetchAll",
   async (payload: { skip?: number; take?: number } | undefined, { rejectWithValue }) => {
     try {
-      const { data } = await notificationApi.getAll(payload?.skip ?? 0, payload?.take ?? 20);
-      return data;
+      const skip = payload?.skip ?? 0;
+      const take = payload?.take ?? 20;
+      const { data } = await notificationApi.getAll(skip, take);
+      return { items: data, skip, take };
     } catch (err) {
       return rejectWithValue(extractError(err));
     }
@@ -98,7 +108,10 @@ const notificationSlice = createSlice({
       state.items = [];
       state.unreadCount = 0;
       state.loading = false;
+      state.countLoading = false;
       state.error = null;
+      state.loadedCount = 0;
+      state.hasMore = true;
     },
   },
   extraReducers: (builder) => {
@@ -108,17 +121,30 @@ const notificationSlice = createSlice({
     });
     builder.addCase(fetchNotifications.fulfilled, (state, { payload }) => {
       state.loading = false;
-      state.items = payload;
+      if (payload.skip === 0) {
+        state.items = payload.items;
+      } else {
+        const existingIds = new Set(state.items.map((item) => item.id));
+        state.items.push(...payload.items.filter((item) => !existingIds.has(item.id)));
+      }
+      state.pageSize = payload.take;
+      state.loadedCount = payload.skip + payload.items.length;
+      state.hasMore = payload.items.length === payload.take;
     });
     builder.addCase(fetchNotifications.rejected, (state, { payload }) => {
       state.loading = false;
       state.error = payload as string;
     });
 
+    builder.addCase(fetchUnreadCount.pending, (state) => {
+      state.countLoading = true;
+    });
     builder.addCase(fetchUnreadCount.fulfilled, (state, { payload }) => {
+      state.countLoading = false;
       state.unreadCount = payload;
     });
     builder.addCase(fetchUnreadCount.rejected, (state, { payload }) => {
+      state.countLoading = false;
       state.error = payload as string;
     });
 
@@ -151,6 +177,7 @@ const notificationSlice = createSlice({
         state.unreadCount = Math.max(0, state.unreadCount - 1);
       }
       state.items = state.items.filter((notification) => notification.id !== payload);
+      state.loadedCount = state.items.length;
     });
     builder.addCase(removeNotification.rejected, (state, { payload }) => {
       state.error = payload as string;

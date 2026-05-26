@@ -528,7 +528,7 @@ Progress reports comparing planned vs. actual (S-Curve). Acceptance reports show
 | Navigation | Error Pages | 404, 403, 500 pages with navigation guidance | 0.5 days |
 | Workflow | Approval Configuration | Drag-drop step builder, role assignment, skip conditions | 4 days |
 | Permissions | Roles and Permissions | Admin, Sales, Design, PM, QS, Accounting, Warehouse, Management | 3.5 days |
-| Notifications | Notification Center | Pull-down panel, module categorization, mark as read, link to record | Implemented |
+| Notifications | Notification Center | Pull-down panel, full-page notification list, module categorization, mark as read, delete, link to record | Implemented |
 | Search | Global Search and Filter | Cross-module search, advanced filter, saved filter presets | 2 days |
 | Audit Log | Audit Log Viewer | Filter by user, action, module, date range; view change details | 1.5 days |
 | Master Data | Reference Data Management | CRUD for statuses, lead sources, contract types, material types, checklist templates | 2.5 days |

@@ -59,6 +59,37 @@ public class NotificationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetForUserAsync_ReturnsRequestedPageInNewestOrder()
+    {
+        var user = await SeedUserAsync(UserRole.ADMIN);
+        var baseDate = new DateTime(2026, 5, 26, 0, 0, 0, DateTimeKind.Utc);
+        await SeedNotificationAsync(user.Id, "Oldest", baseDate);
+        await SeedNotificationAsync(user.Id, "Middle", baseDate.AddMinutes(1));
+        await SeedNotificationAsync(user.Id, "Newest", baseDate.AddMinutes(2));
+
+        var result = await _sut.GetForUserAsync(user.Id, skip: 1, take: 1);
+
+        Assert.Single(result);
+        Assert.Equal("Middle", result[0].Title);
+    }
+
+    [Fact]
+    public async Task GetForUserAsync_ClampsPageSize()
+    {
+        var user = await SeedUserAsync(UserRole.ADMIN);
+        var baseDate = new DateTime(2026, 5, 26, 0, 0, 0, DateTimeKind.Utc);
+        for (var index = 0; index < 105; index++)
+        {
+            await SeedNotificationAsync(user.Id, $"Notification {index}", baseDate.AddMinutes(index));
+        }
+
+        var result = await _sut.GetForUserAsync(user.Id, skip: -10, take: 500);
+
+        Assert.Equal(100, result.Count);
+        Assert.Equal("Notification 104", result[0].Title);
+    }
+
+    [Fact]
     public async Task GetUnreadCountAsync_CountsUnreadForUser()
     {
         var user = await SeedUserAsync(UserRole.ADMIN);
@@ -125,5 +156,18 @@ public class NotificationServiceTests : IDisposable
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
         return user;
+    }
+
+    private async Task SeedNotificationAsync(int userId, string title, DateTime createdAt)
+    {
+        _db.Notifications.Add(new Notification
+        {
+            UserId = userId,
+            Module = "System",
+            Title = title,
+            CreatedAt = createdAt,
+        });
+
+        await _db.SaveChangesAsync();
     }
 }

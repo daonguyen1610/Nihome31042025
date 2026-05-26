@@ -54,6 +54,22 @@ describe("notificationSlice", () => {
 
     expect(store.getState().notifications.items).toEqual([unread, read]);
     expect(store.getState().notifications.unreadCount).toBe(0);
+    expect(store.getState().notifications.loadedCount).toBe(2);
+    expect(store.getState().notifications.hasMore).toBe(false);
+  });
+
+  it("fetchNotifications appends later pages without duplicates", async () => {
+    vi.mocked(notificationApi.getAll)
+      .mockResolvedValueOnce({ data: [unread, read] } as never)
+      .mockResolvedValueOnce({ data: [read, { ...unread, id: 3 }] } as never);
+    const store = createTestStore();
+
+    await store.dispatch(fetchNotifications({ skip: 0, take: 2 }));
+    await store.dispatch(fetchNotifications({ skip: 2, take: 2 }));
+
+    expect(store.getState().notifications.items.map((item) => item.id)).toEqual([1, 2, 3]);
+    expect(store.getState().notifications.loadedCount).toBe(4);
+    expect(store.getState().notifications.hasMore).toBe(true);
   });
 
   it("fetchNotifications stores error on failure", async () => {
@@ -73,6 +89,7 @@ describe("notificationSlice", () => {
     await store.dispatch(fetchUnreadCount());
 
     expect(store.getState().notifications.unreadCount).toBe(5);
+    expect(store.getState().notifications.countLoading).toBe(false);
   });
 
   it("markNotificationRead updates state after request success", async () => {

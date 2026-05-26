@@ -24,6 +24,7 @@ import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
 import AdminDashboard from "./pages/admin/Dashboard.tsx";
+import AdminNotifications from "./pages/admin/Notifications.tsx";
 import AdminUsers from "./pages/admin/users/UserList.tsx";
 import AdminRoles from "./pages/admin/users/RoleList.tsx";
 import AdminPosts from "./pages/admin/Posts.tsx";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route element={<ProtectedRoute roles={["ADMIN", "SUPER_ADMIN"]} />}>
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/notifications" element={<AdminNotifications />} />
               <Route element={<ProtectedRoute roles={["SUPER_ADMIN"]} />}>
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/roles" element={<AdminRoles />} />

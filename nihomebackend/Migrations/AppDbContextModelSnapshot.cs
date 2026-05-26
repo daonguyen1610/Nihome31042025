@@ -566,9 +566,9 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("IsRead");
+                    b.HasIndex("UserId", "CreatedAt", "Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "IsRead");
 
                     b.ToTable("notifications", (string)null);
                 });
