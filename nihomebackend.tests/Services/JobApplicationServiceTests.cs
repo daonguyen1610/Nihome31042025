@@ -12,16 +12,64 @@ public class JobApplicationServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly Mock<INotificationService> _notificationServiceMock;
     private readonly JobApplicationService _sut;
 
     public JobApplicationServiceTests()
     {
         _db = DbContextFactory.Create();
         _emailServiceMock = new Mock<IEmailService>();
+        _notificationServiceMock = new Mock<INotificationService>();
         _sut = new JobApplicationService(
             _db,
             _emailServiceMock.Object,
+            _notificationServiceMock.Object,
             Mock.Of<ILogger<JobApplicationService>>());
+    }
+
+    [Fact]
+    public async Task SubmitAsync_CreatesAdminNotification_WhenApplicationSaved()
+    {
+        SeedSiteSettings(notificationEmail: null);
+        var pos = await SeedActivePosition("Designer");
+
+        await _sut.SubmitAsync(new SubmitJobApplicationRequest
+        {
+            JobPositionId = pos.Id,
+            CandidateName = "Lan",
+            Email = "lan@test.com"
+        });
+
+        _notificationServiceMock.Verify(
+            n => n.CreateForAdminsAsync(
+                "JobApplication",
+                It.Is<string>(title => title.Contains("Lan")),
+                It.Is<string>(body => body.Contains("Designer")),
+                "/admin/recruitment"),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_DoesNotFail_WhenNotificationCreationFails()
+    {
+        SeedSiteSettings(notificationEmail: null);
+        var pos = await SeedActivePosition();
+        _notificationServiceMock
+            .Setup(n => n.CreateForAdminsAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string?>(),
+                It.IsAny<string?>()))
+            .ThrowsAsync(new InvalidOperationException("notification failed"));
+
+        var result = await _sut.SubmitAsync(new SubmitJobApplicationRequest
+        {
+            JobPositionId = pos.Id,
+            CandidateName = "A",
+            Email = "a@t.com"
+        });
+
+        Assert.Equal("A", result.CandidateName);
     }
 
     public void Dispose() => _db.Dispose();

@@ -23,6 +23,7 @@ public class JobApplicationsControllerTests : IDisposable
         var svc = new JobApplicationService(
             _db,
             _emailServiceMock.Object,
+            Mock.Of<INotificationService>(),
             Mock.Of<ILogger<JobApplicationService>>());
         _sut = new JobApplicationsController(svc);
     }

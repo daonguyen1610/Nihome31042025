@@ -10,7 +10,6 @@ import {
   LogOut,
   ExternalLink,
   Search,
-  Bell,
   Menu,
   X,
   PanelLeftClose,
@@ -38,12 +37,14 @@ import {
   ScrollText,
   AlertTriangle,
   Wrench,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
 import LanguageToggle from "@/components/LanguageToggle";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import logoNicon from "@/assets/logo-nicon.png";
 import type { LucideIcon } from "lucide-react";
 
@@ -64,6 +65,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     label: t("nav.dashboard"),
     icon: LayoutDashboard,
     end: true,
+  };
+  const notificationsItem: NavItem = {
+    to: "/admin/notifications",
+    label: t("notify.title"),
+    icon: Bell,
   };
 
   const groups: NavGroup[] = useMemo(
@@ -230,6 +236,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         <nav className="flex-1 overflow-y-auto px-4 pb-6 space-y-1">
           {/* Dashboard */}
           {renderItem(dashboardItem)}
+          {renderItem(notificationsItem)}
 
           {/* Groups */}
           {groups.map((g) => {
@@ -341,13 +348,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           </div>
           <div className="ml-auto flex items-center gap-3">
             <LanguageToggle />
-            <button
-              className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition"
-              style={{ color: "hsl(var(--admin-sidebar-text))" }}
-              aria-label="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-            </button>
+            <NotificationBell />
             <div
               className="hidden md:flex items-center gap-3 pl-3 border-l"
               style={{ borderColor: "hsl(var(--admin-border))" }}
