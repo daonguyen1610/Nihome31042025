@@ -93,6 +93,9 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/files/cv"
 });
 
+var processAssetsPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "process-assets");
+Directory.CreateDirectory(processAssetsPath);
+
 app.Use(async (context, next) =>
 {
     if (!context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
@@ -123,6 +126,35 @@ app.UseRouting();
 app.UseCors(FrontendCorsExtensions.PolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Path.StartsWithSegments("/process-assets", StringComparison.OrdinalIgnoreCase))
+    {
+        await next();
+        return;
+    }
+
+    if (context.User.Identity?.IsAuthenticated != true)
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return;
+    }
+
+    if (!context.User.IsInRole("ADMIN") && !context.User.IsInRole("SUPER_ADMIN"))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
+
+    await next();
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(processAssetsPath),
+    RequestPath = "/process-assets"
+});
 
 app.MigrateDatabase();
 

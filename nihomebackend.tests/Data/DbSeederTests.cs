@@ -36,6 +36,17 @@ public class DbSeederTests : IDisposable
         Assert.Equal(customBody, settings.OtpEmailBodyTemplate);
     }
 
+    [Fact]
+    public void Seed_AddsProcessAssetMetadataFromSeedJson()
+    {
+        DbSeeder.Seed(_db);
+
+        Assert.Equal(29, _db.ProcessDocuments.Count());
+        Assert.Equal(353, _db.ProcessAssets.Count());
+        Assert.Equal(55, _db.ProcessAssets.Count(a => a.Type == ProcessAssetType.Image));
+        Assert.Equal(298, _db.ProcessAssets.Count(a => a.Type == ProcessAssetType.File));
+    }
+
     private static SiteSettings CreateSettings(string otpEmailBodyTemplate)
     {
         var now = DateTime.UtcNow;

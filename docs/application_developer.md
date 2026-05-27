@@ -521,10 +521,15 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `JobApplicationService`    | Submit, list, and manage job applications                |
 | `ContactMessageService`    | Submit, list, and reply to contact messages              |
 | `LogoService`              | CRUD for logos grouped by type                           |
-| `ProcessService`           | CRUD for process documents grouped by category           |
+| `ProcessService`           | CRUD for process documents grouped by category and assets |
+| `ProcessAssetStorageService` | Stores process images/files under `wwwroot/process-assets` |
 | `SiteSettingsService`      | Get and update site settings and email templates         |
 | `TranslationService`       | Manage static UI translations                            |
 | `EntityTranslationService` | Manage dynamic content translations (polymorphic)        |
+
+WorkProcesses legacy scraping is intentionally offline-only. Use
+`tools/workprocess_legacy_scraper.py` to regenerate static assets and
+`Data/Seeds/processes.json`; runtime backend services must not call `nicon.vn`.
 
 ### 7.3 Adding a New Entity
 

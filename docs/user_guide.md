@@ -811,7 +811,7 @@ Each logo entry includes a name, image URL, optional hyperlink, kind classificat
 
 ### 8.8 Process Documents
 
-Process documents are internal procedure descriptions grouped by category (using a `GroupKey`). Each document has a code, title, and sort order within its group.
+Process documents are internal procedure descriptions grouped by category (using a `GroupKey`). Each document has a code, title, sort order, ordered preview images, and downloadable files. WorkProcess assets are admin-only and are stored as server files with database metadata.
 
 ---
 

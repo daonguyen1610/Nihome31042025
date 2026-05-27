@@ -86,6 +86,20 @@ export interface ProcessResponse {
   groupKey: string;
   code?: string;
   title: string;
+  sortOrder: number;
+  images: ProcessAssetResponse[];
+  files: ProcessAssetResponse[];
+}
+
+export interface ProcessAssetResponse {
+  id: number;
+  type: "image" | "file";
+  displayName: string;
+  url: string;
+  originalFileName: string;
+  contentType?: string;
+  fileSizeBytes: number;
+  sortOrder: number;
 }
 
 export interface SlideshowResponse {
@@ -264,6 +278,19 @@ function mapSlideshow(item: SlideshowResponse): SlideshowResponse {
   return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
 }
 
+function mapProcessAsset(item: ProcessAssetResponse): ProcessAssetResponse {
+  return { ...item, url: resolveImageUrl(item.url) };
+}
+
+function mapProcess(item: ProcessResponse): ProcessResponse {
+  return {
+    ...item,
+    sortOrder: item.sortOrder ?? 0,
+    images: (item.images ?? []).map(mapProcessAsset),
+    files: (item.files ?? []).map(mapProcessAsset),
+  };
+}
+
 function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {
   return {
     clients: data.clients.map(mapLogo),
@@ -319,7 +346,14 @@ export const contentApi = {
       .then((res) => ({ ...res, data: mapLogosGrouped(res.data) })),
 
   // Processes
-  getProcesses: () => api.get<Record<string, ProcessResponse[]>>("/processes"),
+  getProcesses: () =>
+    api.get<Record<string, ProcessResponse[]>>("/processes")
+      .then((res) => ({
+        ...res,
+        data: Object.fromEntries(
+          Object.entries(res.data).map(([key, items]) => [key, items.map(mapProcess)]),
+        ),
+      })),
 
   // Slideshow
   getSlideshow: (lang = "vi") =>

@@ -1,17 +1,13 @@
 import { useMemo, useState } from "react";
-import { Plus, Search as SearchIcon, Pencil, Trash2, X } from "lucide-react";
+import { Download, Eye, FileText, Image as ImageIcon, Plus, Search as SearchIcon, Pencil, Trash2, Upload, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { useProcesses } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
+import type { ProcessAssetResponse, ProcessResponse } from "@/services/contentApi";
 
-type ProcessItem = {
-  id: number;
-  groupKey: string;
-  title: string;
-  code?: string;
-};
+type ProcessItem = ProcessResponse;
 
 type Props = {
   groupKey: string;
@@ -30,6 +26,8 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
   const { t } = useI18n();
   const [q, setQ] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [assetBusy, setAssetBusy] = useState<string | null>(null);
   const [editor, setEditor] = useState<EditorState>({
     open: false,
     mode: "create",
@@ -112,6 +110,79 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
     }
   };
 
+  const uploadAsset = async (
+    p: ProcessItem,
+    type: "image" | "file",
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.currentTarget.files?.[0];
+    e.currentTarget.value = "";
+    if (!file) return;
+
+    const busyKey = `${p.id}-${type}`;
+    setAssetBusy(busyKey);
+    try {
+      await adminApi.uploadProcessAsset(p.id, type, file, file.name);
+      toast.success(t("form.updated"));
+      await refetch();
+      setExpandedId(p.id);
+    } catch {
+      toast.error(t("common.error"));
+    } finally {
+      setAssetBusy(null);
+    }
+  };
+
+  const deleteAsset = async (p: ProcessItem, asset: ProcessAssetResponse) => {
+    if (!window.confirm(t("form.confirmDelete"))) return;
+
+    setAssetBusy(`${p.id}-${asset.id}`);
+    try {
+      await adminApi.deleteProcessAsset(p.id, asset.id);
+      toast.success(t("form.deleted"));
+      await refetch();
+      setExpandedId(p.id);
+    } catch {
+      toast.error(t("common.error"));
+    } finally {
+      setAssetBusy(null);
+    }
+  };
+
+  const formatSize = (size: number) => {
+    if (!size) return "";
+    if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  const AssetUpload = ({ p, type }: { p: ProcessItem; type: "image" | "file" }) => {
+    const isImage = type === "image";
+    const busy = assetBusy === `${p.id}-${type}`;
+    return (
+      <label
+        className="admin-btn-ghost inline-flex items-center gap-2 px-3 py-2 text-sm cursor-pointer"
+        role="button"
+        tabIndex={busy ? -1 : 0}
+        aria-disabled={busy}
+        onKeyDown={(e) => {
+          if (busy || (e.key !== "Enter" && e.key !== " ")) return;
+          e.preventDefault();
+          e.currentTarget.querySelector<HTMLInputElement>("input")?.click();
+        }}
+      >
+        <Upload className="w-4 h-4" />
+        <span>{busy ? t("common.loading") : isImage ? t("proc.uploadImage") : t("proc.uploadFile")}</span>
+        <input
+          className="sr-only"
+          type="file"
+          accept={isImage ? "image/*" : ".pdf,.doc,.docx,.xls,.xlsx"}
+          disabled={busy}
+          onChange={(e) => void uploadAsset(p, type, e)}
+        />
+      </label>
+    );
+  };
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
@@ -159,43 +230,144 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
               {t("proc.empty")}
             </div>
           ) : (
-            filtered.map((p) => (
+            filtered.map((p) => {
+              const images = p.images ?? [];
+              const files = p.files ?? [];
+              const isExpanded = expandedId === p.id;
+
+              return (
               <div
                 key={p.id}
-                className="admin-card flex items-center gap-4 px-5 py-4 hover:shadow-md transition"
+                className="admin-card px-5 py-4 hover:shadow-md transition"
               >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, hsl(var(--admin-primary) / 0.12), hsl(22 95% 58% / 0.1))",
-                    color: "hsl(var(--admin-primary))",
-                  }}
-                >
-                  <Pencil className="w-5 h-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold truncate" style={{ color: "hsl(var(--admin-primary))" }}>
-                    {p.code ? `${p.code} — ${p.title}` : p.title}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => openEdit(p)}
-                    className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, hsl(var(--admin-primary) / 0.12), hsl(22 95% 58% / 0.1))",
+                      color: "hsl(var(--admin-primary))",
+                    }}
                   >
-                    <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
-                  </button>
-                  <button
-                    onClick={() => remove(p)}
-                    className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
-                    style={{ color: "hsl(var(--admin-danger))" }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
-                  </button>
+                    <Pencil className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold truncate" style={{ color: "hsl(var(--admin-primary))" }}>
+                      {p.code ? `${p.code} — ${p.title}` : p.title}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+                      <span className="inline-flex items-center gap-1">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        {images.length} {t("proc.images")}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5" />
+                        {files.length} {t("proc.files")}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> {t("proc.view")}
+                    </button>
+                    <button
+                      onClick={() => openEdit(p)}
+                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
+                    </button>
+                    <button
+                      onClick={() => remove(p)}
+                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                      style={{ color: "hsl(var(--admin-danger))" }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
+                    </button>
+                  </div>
                 </div>
+
+                {isExpanded && (
+                  <div className="mt-5 border-t pt-5 space-y-6">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} />
+                        <h3 className="font-bold">{t("proc.images")}</h3>
+                      </div>
+                      <AssetUpload p={p} type="image" />
+                    </div>
+
+                    {images.length === 0 ? (
+                      <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{t("proc.noImages")}</p>
+                    ) : (
+                      <div className="max-h-[70vh] overflow-auto rounded-lg border bg-white">
+                        {images.map((image) => (
+                          <div key={image.id} className="relative border-b last:border-b-0">
+                            <img src={image.url} alt={image.displayName} className="block w-full h-auto" loading="lazy" />
+                            <button
+                              onClick={() => void deleteAsset(p, image)}
+                              disabled={assetBusy === `${p.id}-${image.id}`}
+                              className="absolute top-2 right-2 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/90 shadow hover:bg-white"
+                              style={{ color: "hsl(var(--admin-danger))" }}
+                              aria-label={t("common.delete")}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} />
+                        <h3 className="font-bold">{t("proc.files")}</h3>
+                      </div>
+                      <AssetUpload p={p} type="file" />
+                    </div>
+
+                    {files.length === 0 ? (
+                      <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{t("proc.noFiles")}</p>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border">
+                        <table className="min-w-full text-sm">
+                          <tbody className="divide-y">
+                            {files.map((file) => (
+                              <tr key={file.id}>
+                                <td className="px-4 py-3 font-medium">{file.displayName}</td>
+                                <td className="px-4 py-3 whitespace-nowrap" style={{ color: "hsl(var(--admin-muted))" }}>
+                                  {formatSize(file.fileSizeBytes)}
+                                </td>
+                                <td className="px-4 py-3 text-right whitespace-nowrap">
+                                  <a
+                                    href={file.url}
+                                    download={file.displayName}
+                                    className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                                  >
+                                    <Download className="w-3.5 h-3.5" /> {t("proc.download")}
+                                  </a>
+                                  <button
+                                    onClick={() => void deleteAsset(p, file)}
+                                    disabled={assetBusy === `${p.id}-${file.id}`}
+                                    className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+                                    style={{ color: "hsl(var(--admin-danger))" }}
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ))
+            );
+            })
           )}
         </div>
       )}

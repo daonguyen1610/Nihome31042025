@@ -29,7 +29,52 @@ public class ProcessesControllerTests : IDisposable
     {
         var result = await _sut.GetAll();
         var ok = Assert.IsType<OkObjectResult>(result);
-        Assert.NotNull(ok.Value);
+        var data = Assert.IsType<Dictionary<string, List<ProcessResponse>>>(ok.Value);
+        Assert.Empty(data);
+    }
+
+    [Fact]
+    public async Task GetAll_ReturnsAssets_WhenDataExists()
+    {
+        var process = new ProcessDocument
+        {
+            Title = "Documented Process",
+            GroupKey = "assets",
+            SortOrder = 1,
+            Assets =
+            [
+                new ProcessAsset
+                {
+                    Type = ProcessAssetType.Image,
+                    DisplayName = "Preview 1",
+                    Url = "/process-assets/images/a.jpg",
+                    OriginalFileName = "a.jpg",
+                    SortOrder = 0
+                },
+                new ProcessAsset
+                {
+                    Type = ProcessAssetType.File,
+                    DisplayName = "Template.doc",
+                    Url = "/process-assets/files/template.doc",
+                    OriginalFileName = "template.doc",
+                    ContentType = "application/msword",
+                    FileSizeBytes = 123,
+                    SortOrder = 0
+                }
+            ]
+        };
+        _db.ProcessDocuments.Add(process);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.GetAll();
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var data = Assert.IsType<Dictionary<string, List<ProcessResponse>>>(ok.Value);
+        var saved = Assert.Single(data["assets"]);
+
+        Assert.Single(saved.Images);
+        Assert.Equal("Preview 1", saved.Images[0].DisplayName);
+        Assert.Single(saved.Files);
+        Assert.Equal("Template.doc", saved.Files[0].DisplayName);
     }
 
     [Fact]

@@ -416,6 +416,46 @@
     "ja": "画像をアップロード"
   },
   {
+    "key": "proc.uploadFile",
+    "category": "proc",
+    "vi": "Tải file lên",
+    "en": "Upload file",
+    "zh": "上传文件",
+    "ja": "ファイルをアップロード"
+  },
+  {
+    "key": "proc.images",
+    "category": "proc",
+    "vi": "Ảnh",
+    "en": "Images",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "proc.files",
+    "category": "proc",
+    "vi": "Tài liệu",
+    "en": "Files",
+    "zh": "文件",
+    "ja": "ファイル"
+  },
+  {
+    "key": "proc.noImages",
+    "category": "proc",
+    "vi": "Chưa có ảnh quy trình.",
+    "en": "No process images yet.",
+    "zh": "暂无流程图片。",
+    "ja": "プロセス画像がありません。"
+  },
+  {
+    "key": "proc.noFiles",
+    "category": "proc",
+    "vi": "Chưa có tài liệu tải xuống.",
+    "en": "No downloadable files yet.",
+    "zh": "暂无可下载文件。",
+    "ja": "ダウンロード可能なファイルがありません。"
+  },
+  {
     "key": "proc.imageUrl",
     "category": "proc",
     "vi": "Hoặc dán URL ảnh",

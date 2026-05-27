@@ -52,9 +52,9 @@ Rationale: They make the UI usable during frontend development but do not define
 
 Rationale: Public `Profile` content and admin `AboutContent` should reflect the same source of truth. Frontend hardcoded fallback datasets caused drift between client rendering and admin editing, especially for `organization-main`. The backend `ContentSeeder` and `about-sections` API now define the default content baseline.
 
-### 2026-05-12 - OTP verification toggles are backend-backed site settings
+### 2026-05-14 - WorkProcesses are admin-only backend content with file-backed assets
 
-Rationale: Registration and forgot-password OTP behavior is controlled by existing `SiteSettings` flags. The admin Settings page should read and update those flags through `/api/site-settings/otp-settings` instead of localStorage demo settings.
+Rationale: WorkProcess pages contain internal procedure images and document downloads. The frontend should use the authenticated `/api/processes` contract, while binary process assets live under backend static storage (`/process-assets`) with metadata in SQL Server. Legacy scraping belongs to the offline `tools/workprocess_legacy_scraper.py` utility, not runtime backend services or API endpoints.
 
 ### 2026-05-16 - Admin notifications use backend API plus Redux shell state
 

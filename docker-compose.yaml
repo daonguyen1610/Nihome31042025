@@ -25,6 +25,7 @@ services:
       - ./nihomeweb:/nihomeweb
       - nihomebackend_bin:/app/bin
       - nihomebackend_obj:/app/obj
+      - nihome_process_assets:/app/wwwroot/process-assets
       - nihomeweb_node_modules:/nihomeweb/node_modules
       - nihomeweb_dist:/nihomeweb/dist
       - nuget_packages:/root/.nuget/packages
@@ -57,6 +58,7 @@ volumes:
   nihomeweb_dist:
   nihomebackend_bin:
   nihomebackend_obj:
+  nihome_process_assets:
   nuget_packages:
   sqlserver_data:
 
