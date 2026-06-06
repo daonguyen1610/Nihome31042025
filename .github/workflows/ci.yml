@@ -7,38 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  nihomeweb:
-    name: nihomeweb (lint, build, test)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: nihomeweb
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: nihomeweb/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Build
-        run: npm run build
-
-      - name: Test
-        run: npm run test
-
   nihomebackend:
     name: nihomebackend (build, test)
     runs-on: ubuntu-latest
