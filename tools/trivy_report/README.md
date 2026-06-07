@@ -87,5 +87,5 @@ When there are no findings:
 ```markdown
 ## 🛡️ Trivy Security Scan (CRITICAL / HIGH)
 
-✅ No CRITICAL or HIGH findings with available fixes.
+✅ No CRITICAL or HIGH findings.
 ```
