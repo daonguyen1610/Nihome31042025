@@ -302,6 +302,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                 imageUrl={data.imageUrl}
                 pendingPreview={pendingImagePreview}
                 pendingFileName={pendingImageFile?.name}
+                onUrlChange={(url) => update("imageUrl", url)}
                 onFileSelected={(file) => {
                   setPendingImageFile(file);
                   toast({ title: t("form.updated"), description: file.name });
@@ -313,9 +314,9 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
           </div>
 
           <div className="admin-card p-6">
-            <h2 className="font-bold mb-1">Thư viện ảnh</h2>
+            <h2 className="font-bold mb-1">{t("media.gallery.title")}</h2>
             <p className="text-xs mb-4" style={{ color: "hsl(var(--admin-muted))" }}>
-              Tải lên nhiều hình ảnh phụ cho dự án.
+              {t("media.gallery.descProject")}
             </p>
             <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
           </div>
