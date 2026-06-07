@@ -1,0 +1,2 @@
+# Accepted: backend container intentionally runs as root for build/runtime tooling.
+DS-0002
