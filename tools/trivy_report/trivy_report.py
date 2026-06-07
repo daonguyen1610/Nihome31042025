@@ -2,8 +2,7 @@
 """Generate a Markdown report from a Trivy JSON scan result.
 
 Usage:
-    python tools/trivy_report.py <trivy-results.json> [--output report.md]
-
+    python tools/trivy_report/trivy_report.py <trivy-results.json> [--output report.md]
 Exit code:
     0 when no CRITICAL/HIGH findings are present.
     1 when at least one CRITICAL or HIGH finding is present (so CI fails).
