@@ -6,6 +6,8 @@ public class NewsArticle
     public string Slug { get; set; } = "";
     public string Date { get; set; } = "";
     public string ImageUrl { get; set; } = "";
+    /// <summary>JSON array of additional gallery image URLs.</summary>
+    public string? GalleryJson { get; set; }
     public string Category { get; set; } = "";
     public string Title { get; set; } = "";
     public string Excerpt { get; set; } = "";

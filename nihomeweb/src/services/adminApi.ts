@@ -6,6 +6,7 @@ export interface UpsertActivityRequest {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
   author?: string;
   title: string;
@@ -18,6 +19,7 @@ export interface UpsertNewsRequest {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
   title: string;
   excerpt: string;

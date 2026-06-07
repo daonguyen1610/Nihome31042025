@@ -54,6 +54,7 @@ public class ActivityService(
             Slug = req.Slug,
             Date = req.Date,
             ImageUrl = normalizedImageUrl ?? string.Empty,
+            GalleryJson = SerializeGallery(req.Gallery),
             Category = req.Category,
             Author = req.Author,
             Title = req.Title,
@@ -78,12 +79,14 @@ public class ActivityService(
 
         var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
+        var previousGallery = DeserializeGallery(entity.GalleryJson);
 
         await EnsureCategoryExistsAsync(req.Category);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;
         entity.ImageUrl = nextImageUrl ?? string.Empty;
+        entity.GalleryJson = SerializeGallery(req.Gallery);
         entity.Category = req.Category;
         entity.Author = req.Author;
         entity.Title = req.Title;
@@ -98,6 +101,7 @@ public class ActivityService(
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
             Logger.LogInformation("Updated activity {ActivityId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
+        DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
         Logger.LogInformation("Updated activity {ActivityId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity, new Dictionary<string, string>());
     }
@@ -111,9 +115,14 @@ public class ActivityService(
             return false;
         }
         var imageUrl = entity.ImageUrl;
+        var gallery = DeserializeGallery(entity.GalleryJson);
         db.Activities.Remove(entity);
         await db.SaveChangesAsync();
         hostedImageService.DeleteIfManagedUpload(imageUrl);
+        foreach (var url in gallery)
+        {
+            hostedImageService.DeleteIfManagedUpload(url);
+        }
         await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.Activity, id);
         Logger.LogInformation("Deleted activity {ActivityId}", id);
         return true;
@@ -125,6 +134,7 @@ public class ActivityService(
         Slug = a.Slug,
         Date = a.Date,
         ImageUrl = a.ImageUrl,
+        Gallery = string.IsNullOrEmpty(a.GalleryJson) ? null : JsonSerializer.Deserialize<string[]>(a.GalleryJson),
         Category = a.Category,
         Author = a.Author,
         Title = t.GetValueOrDefault("Title", a.Title),
@@ -133,6 +143,40 @@ public class ActivityService(
             ? JsonSerializer.Deserialize<string[]>(c) ?? []
             : JsonSerializer.Deserialize<string[]>(a.ContentJson) ?? [],
     };
+
+    private string? SerializeGallery(string[]? gallery)
+    {
+        if (gallery == null || gallery.Length == 0)
+        {
+            return null;
+        }
+        var normalized = gallery
+            .Select(url => hostedImageService.NormalizeImageUrl(url) ?? string.Empty)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToArray();
+        return normalized.Length == 0 ? null : JsonSerializer.Serialize(normalized);
+    }
+
+    private static string[] DeserializeGallery(string? galleryJson)
+    {
+        if (string.IsNullOrEmpty(galleryJson))
+        {
+            return [];
+        }
+        return JsonSerializer.Deserialize<string[]>(galleryJson) ?? [];
+    }
+
+    private void DeleteRemovedGalleryImages(string[] previous, string[] current)
+    {
+        var kept = new HashSet<string>(current, StringComparer.OrdinalIgnoreCase);
+        foreach (var url in previous)
+        {
+            if (!kept.Contains(url))
+            {
+                hostedImageService.DeleteIfManagedUpload(url);
+            }
+        }
+    }
 
     private async Task EnsureCategoryExistsAsync(string categoryName)
     {

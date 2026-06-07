@@ -36,7 +36,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         {
             Slug = req.Slug,
             ImageUrl = normalizedImageUrl ?? string.Empty,
-            GalleryJson = req.Gallery != null ? JsonSerializer.Serialize(req.Gallery) : null,
+            GalleryJson = SerializeGallery(req.Gallery),
             Name = req.Name,
             Client = req.Client,
             Location = req.Location,
@@ -68,10 +68,11 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
 
         var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
+        var previousGallery = DeserializeGallery(entity.GalleryJson);
 
         entity.Slug = req.Slug;
         entity.ImageUrl = nextImageUrl ?? string.Empty;
-        entity.GalleryJson = req.Gallery != null ? JsonSerializer.Serialize(req.Gallery) : null;
+        entity.GalleryJson = SerializeGallery(req.Gallery);
         entity.Name = req.Name;
         entity.Client = req.Client;
         entity.Location = req.Location;
@@ -93,6 +94,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
             Logger.LogInformation("Updated project {ProjectId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
+        DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
         Logger.LogInformation("Updated project {ProjectId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity);
     }
@@ -106,9 +108,14 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
             return false;
         }
         var imageUrl = entity.ImageUrl;
+        var gallery = DeserializeGallery(entity.GalleryJson);
         db.Projects.Remove(entity);
         await db.SaveChangesAsync();
         hostedImageService.DeleteIfManagedUpload(imageUrl);
+        foreach (var url in gallery)
+        {
+            hostedImageService.DeleteIfManagedUpload(url);
+        }
         Logger.LogInformation("Deleted project {ProjectId}", id);
         return true;
     }
@@ -132,4 +139,38 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         Solutions = string.IsNullOrEmpty(p.SolutionsJson) ? null : JsonSerializer.Deserialize<string[]>(p.SolutionsJson),
         Highlights = string.IsNullOrEmpty(p.HighlightsJson) ? null : JsonSerializer.Deserialize<JsonElement>(p.HighlightsJson),
     };
+
+    private string? SerializeGallery(string[]? gallery)
+    {
+        if (gallery == null || gallery.Length == 0)
+        {
+            return null;
+        }
+        var normalized = gallery
+            .Select(url => hostedImageService.NormalizeImageUrl(url) ?? string.Empty)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToArray();
+        return normalized.Length == 0 ? null : JsonSerializer.Serialize(normalized);
+    }
+
+    private static string[] DeserializeGallery(string? galleryJson)
+    {
+        if (string.IsNullOrEmpty(galleryJson))
+        {
+            return [];
+        }
+        return JsonSerializer.Deserialize<string[]>(galleryJson) ?? [];
+    }
+
+    private void DeleteRemovedGalleryImages(string[] previous, string[] current)
+    {
+        var kept = new HashSet<string>(current, StringComparer.OrdinalIgnoreCase);
+        foreach (var url in previous)
+        {
+            if (!kept.Contains(url))
+            {
+                hostedImageService.DeleteIfManagedUpload(url);
+            }
+        }
+    }
 }

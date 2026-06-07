@@ -67,6 +67,21 @@ const NewsDetail = () => {
         </div>
       </section>
 
+      {item.gallery && item.gallery.length > 0 && (
+        <section className="pb-20 bg-background">
+          <div className="container-custom">
+            <p className="eyebrow text-primary mb-6">{t("newsDetail.gallery")}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {item.gallery.map((g, i) => (
+                <div key={i} className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted">
+                  <img src={g} alt={`${item.title} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Related */}
       {related.length > 0 && (
         <section className="py-20 bg-surface border-t border-border">

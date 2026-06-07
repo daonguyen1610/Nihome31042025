@@ -7,6 +7,7 @@ export interface ActivityResponse {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
   author?: string;
   title: string;
@@ -19,6 +20,7 @@ export interface NewsResponse {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
   title: string;
   excerpt: string;

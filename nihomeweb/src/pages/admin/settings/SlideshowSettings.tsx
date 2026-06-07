@@ -279,20 +279,6 @@ const SlideshowSettings = () => {
               />
             </Field>
 
-            <Field label={`${t("set.slideshow.fieldMediaUrl")} *`}>
-              <input
-                className="admin-input"
-                value={draft.imageUrl}
-                onChange={(e) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    imageUrl: e.target.value,
-                    mediaKind: getMediaKind(e.target.value),
-                  }))}
-                placeholder={t("set.slideshow.placeholderMediaUrl")}
-              />
-            </Field>
-
             <div className="grid grid-cols-2 gap-3">
               <Field label={t("set.slideshow.fieldMediaType")}>
                 <select

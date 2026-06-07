@@ -68,6 +68,21 @@ const ActivityDetail = () => {
         </div>
       </article>
 
+      {a.gallery && a.gallery.length > 0 && (
+        <section className="py-16 bg-surface">
+          <div className="container-custom">
+            <p className="eyebrow text-primary mb-6">{t("actDetail.gallery")}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {a.gallery.map((g, i) => (
+                <div key={i} className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted">
+                  <img src={g} alt={`${a.title} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="py-16 bg-surface">
         <div className="container-custom">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">

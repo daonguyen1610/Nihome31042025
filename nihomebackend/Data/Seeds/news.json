@@ -78,5 +78,13 @@
     "en": "Read more",
     "zh": "阅读更多",
     "ja": "もっと読む"
+  },
+  {
+    "key": "newsDetail.gallery",
+    "category": "newsDetail",
+    "vi": "Hình ảnh bài viết",
+    "en": "Article gallery",
+    "zh": "文章相册",
+    "ja": "記事ギャラリー"
   }
 ]

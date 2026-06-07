@@ -8,11 +8,14 @@ import { adminApi, slugify } from "@/services/adminApi";
 import type { UpsertProjectRequest } from "@/services/adminApi";
 import { useProject, useProjects } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import GalleryEditor from "@/components/admin/GalleryEditor";
+import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
 
 interface FormData {
   id: number;
   slug: string;
   imageUrl: string;
+  gallery: string[];
   name: string;
   client: string;
   location: string;
@@ -30,6 +33,7 @@ const empty: FormData = {
   id: 0,
   slug: "",
   imageUrl: "",
+  gallery: [],
   name: "",
   client: "",
   location: "",
@@ -67,6 +71,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       id: existing.id,
       slug: existing.slug,
       imageUrl: existing.imageUrl,
+      gallery: existing.gallery ?? [],
       name: existing.name,
       client: existing.client,
       location: existing.location,
@@ -95,14 +100,6 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
     return () => URL.revokeObjectURL(objectUrl);
   }, [pendingImageFile]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPendingImageFile(file);
-    e.target.value = "";
-    toast({ title: t("form.updated"), description: file.name });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.name.trim()) {
@@ -125,6 +122,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       const payload: UpsertProjectRequest = {
         slug: data.slug || slugify(data.name),
         imageUrl,
+        gallery: data.gallery.length ? data.gallery : undefined,
         name: data.name,
         client: data.client,
         location: data.location,
@@ -299,27 +297,27 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
         <div className="space-y-5">
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.media")}</h2>
-            <Field label={t("proj.field.image")}>
-              <div className="space-y-2">
-                <input
-                  className="admin-input"
-                  value={data.imageUrl}
-                  onChange={(e) => update("imageUrl", e.target.value)}
-                  placeholder="/images/upload/..."
-                />
-                <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} />
-              </div>
+            <Field label={t("proj.field.image") + " *"}>
+              <FeaturedImageUploader
+                imageUrl={data.imageUrl}
+                pendingPreview={pendingImagePreview}
+                pendingFileName={pendingImageFile?.name}
+                onFileSelected={(file) => {
+                  setPendingImageFile(file);
+                  toast({ title: t("form.updated"), description: file.name });
+                }}
+                onClearPending={() => setPendingImageFile(null)}
+                disabled={uploadingImage}
+              />
             </Field>
-            {(pendingImagePreview || data.imageUrl) && (
-              <div className="mt-4 aspect-[16/10] rounded-xl overflow-hidden bg-muted">
-                <img
-                  src={pendingImagePreview ?? data.imageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                />
-              </div>
-            )}
+          </div>
+
+          <div className="admin-card p-6">
+            <h2 className="font-bold mb-1">Thư viện ảnh</h2>
+            <p className="text-xs mb-4" style={{ color: "hsl(var(--admin-muted))" }}>
+              Tải lên nhiều hình ảnh phụ cho dự án.
+            </p>
+            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
           </div>
 
           <button

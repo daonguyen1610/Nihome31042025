@@ -62,5 +62,13 @@
     "en": "Activities",
     "zh": "活动",
     "ja": "活動"
+  },
+  {
+    "key": "actDetail.gallery",
+    "category": "actDetail",
+    "vi": "Hình ảnh hoạt động",
+    "en": "Activity gallery",
+    "zh": "活动相册",
+    "ja": "アクティビティギャラリー"
   }
 ]

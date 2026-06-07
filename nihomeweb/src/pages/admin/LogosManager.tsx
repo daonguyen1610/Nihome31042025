@@ -434,29 +434,20 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
                   <Field label={`${t("logoAdmin.fieldImage")} *`}>
                     <div className="logo-upload-wrap logo-upload-row">
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <input
-                          className="admin-input logo-styled-input w-full flex-1 bg-white"
-                          value={form.imageUrl}
-                          onChange={(e) =>
-                            updateForm("imageUrl", e.target.value)
-                          }
-                          placeholder="/images/upload/..."
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={uploadImage}
-                          disabled={uploading}
-                          className="logo-upload-button inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60 sm:min-w-[148px]"
-                          style={{ borderColor: "hsl(var(--admin-border))" }}
-                        >
-                          <Upload className="w-4 h-4" />{" "}
-                          {uploading
-                            ? t("logoAdmin.uploading")
+                      <button
+                        type="button"
+                        onClick={uploadImage}
+                        disabled={uploading}
+                        className="logo-upload-button w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60"
+                        style={{ borderColor: "hsl(var(--admin-border))" }}
+                      >
+                        <Upload className="w-4 h-4" />{" "}
+                        {uploading
+                          ? t("logoAdmin.uploading")
+                          : form.imageUrl
+                            ? t("logoAdmin.upload")
                             : t("logoAdmin.upload")}
-                        </button>
-                      </div>
+                      </button>
                     </div>
                   </Field>
 

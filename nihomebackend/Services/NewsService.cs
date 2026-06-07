@@ -52,6 +52,7 @@ public class NewsService(
             Slug = req.Slug,
             Date = req.Date,
             ImageUrl = normalizedImageUrl ?? string.Empty,
+            GalleryJson = SerializeGallery(req.Gallery),
             Category = req.Category,
             Title = req.Title,
             Excerpt = req.Excerpt,
@@ -75,10 +76,12 @@ public class NewsService(
 
         var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
+        var previousGallery = DeserializeGallery(entity.GalleryJson);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;
         entity.ImageUrl = nextImageUrl ?? string.Empty;
+        entity.GalleryJson = SerializeGallery(req.Gallery);
         entity.Category = req.Category;
         entity.Title = req.Title;
         entity.Excerpt = req.Excerpt;
@@ -92,6 +95,7 @@ public class NewsService(
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
             Logger.LogInformation("Updated news {NewsId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
+        DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
         Logger.LogInformation("Updated news article {NewsId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity, new Dictionary<string, string>());
     }
@@ -105,9 +109,14 @@ public class NewsService(
             return false;
         }
         var imageUrl = entity.ImageUrl;
+        var gallery = DeserializeGallery(entity.GalleryJson);
         db.NewsArticles.Remove(entity);
         await db.SaveChangesAsync();
         hostedImageService.DeleteIfManagedUpload(imageUrl);
+        foreach (var url in gallery)
+        {
+            hostedImageService.DeleteIfManagedUpload(url);
+        }
         await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.News, id);
         Logger.LogInformation("Deleted news article {NewsId}", id);
         return true;
@@ -119,6 +128,7 @@ public class NewsService(
         Slug = a.Slug,
         Date = a.Date,
         ImageUrl = a.ImageUrl,
+        Gallery = string.IsNullOrEmpty(a.GalleryJson) ? null : JsonSerializer.Deserialize<string[]>(a.GalleryJson),
         Category = a.Category,
         Title = t.GetValueOrDefault("Title", a.Title),
         Excerpt = t.GetValueOrDefault("Excerpt", a.Excerpt),
@@ -126,4 +136,38 @@ public class NewsService(
             ? JsonSerializer.Deserialize<string[]>(c) ?? []
             : JsonSerializer.Deserialize<string[]>(a.ContentJson) ?? [],
     };
+
+    private string? SerializeGallery(string[]? gallery)
+    {
+        if (gallery == null || gallery.Length == 0)
+        {
+            return null;
+        }
+        var normalized = gallery
+            .Select(url => hostedImageService.NormalizeImageUrl(url) ?? string.Empty)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToArray();
+        return normalized.Length == 0 ? null : JsonSerializer.Serialize(normalized);
+    }
+
+    private static string[] DeserializeGallery(string? galleryJson)
+    {
+        if (string.IsNullOrEmpty(galleryJson))
+        {
+            return [];
+        }
+        return JsonSerializer.Deserialize<string[]>(galleryJson) ?? [];
+    }
+
+    private void DeleteRemovedGalleryImages(string[] previous, string[] current)
+    {
+        var kept = new HashSet<string>(current, StringComparer.OrdinalIgnoreCase);
+        foreach (var url in previous)
+        {
+            if (!kept.Contains(url))
+            {
+                hostedImageService.DeleteIfManagedUpload(url);
+            }
+        }
+    }
 }
