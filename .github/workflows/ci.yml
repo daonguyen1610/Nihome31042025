@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   nihomebackend:
     name: nihomebackend (build, test)
@@ -32,10 +35,103 @@ jobs:
         run: dotnet test --no-build -c Release --verbosity normal
         working-directory: nihomebackend.tests
 
+  trivy:
+    name: Trivy vulnerability scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run Trivy filesystem scan (JSON)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+          format: json
+          output: trivy-results.json
+
+      - name: Generate Markdown report
+        id: report
+        run: |
+          set +e
+          python tools/trivy_report/trivy_report.py trivy-results.json --output trivy-report.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Publish report to job summary
+        if: always()
+        run: cat trivy-report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comment report on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- trivy-report -->';
+            const body = marker + '\n' + fs.readFileSync('trivy-report.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number });
+            const existing = comments.find(c => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Generate SARIF report
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy
+
+      - name: Upload Trivy artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: |
+            trivy-report.md
+            trivy-results.json
+            trivy-results.sarif
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Fail job if CRITICAL/HIGH findings exist
+        if: always() && steps.report.outputs.exit_code != '0'
+        run: |
+          echo "::error::Trivy found CRITICAL or HIGH findings. See job summary or PR comment."
+          exit 1
+
   publish:
     name: Publish Nicon
     runs-on: ubuntu-latest
-    needs: nihomebackend
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
