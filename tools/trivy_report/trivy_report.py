@@ -164,7 +164,7 @@ def build_report(report: dict) -> tuple[str, int]:
 
     lines = ["## 🛡️ Trivy Security Scan (CRITICAL / HIGH)", ""]
     if total == 0:
-        lines.append("✅ No CRITICAL or HIGH findings with available fixes.")
+        lines.append("✅ No CRITICAL or HIGH findings.")
         return "\n".join(lines) + "\n", 0
 
     crit = sum(1 for r in blocking_vulns + blocking_secrets + blocking_misconfigs if r["severity"] == "CRITICAL")
