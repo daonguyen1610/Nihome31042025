@@ -6,7 +6,7 @@ Usage:
 Exit code:
     0 when no CRITICAL/HIGH findings are present.
     1 when at least one CRITICAL or HIGH finding is present (so CI fails).
-"""
+    2 when the input file is missing or not valid JSON.
 
 from __future__ import annotations
 
