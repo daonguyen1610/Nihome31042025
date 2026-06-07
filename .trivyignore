@@ -1,2 +1,3 @@
-# Accepted: backend container intentionally runs as root for build/runtime tooling.
+# Accepted: this Dockerfile is for local development/testing only, not production.
+# Running as root is fine here; suppress DS-0002 "Image user should not be 'root'".
 DS-0002
