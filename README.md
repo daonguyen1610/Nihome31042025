@@ -141,3 +141,10 @@ https://endava-team-nawxok20.atlassian.net/jira/software/projects/NIH/boards/3
 
 ## SQL Schema
 ![Nicon DB Schema](./nicon_sql_schema.png)
+
+## For convience, run the auto-deployment.sh to auto script
+```bash
+$ ./auto-deployment.sh
+```
+
+Use the output `publish-release.zip` in deployment-config/ to upload the hosting.
