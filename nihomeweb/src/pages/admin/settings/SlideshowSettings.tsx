@@ -353,6 +353,23 @@ const SlideshowSettings = () => {
                 />
               </label>
 
+              <details>
+                <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                  {t("media.url.toggleWithVideo")}
+                </summary>
+                <input
+                  className="admin-input mt-2"
+                  value={draft.imageUrl}
+                  onChange={(e) =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      imageUrl: e.target.value,
+                      mediaKind: getMediaKind(e.target.value),
+                    }))}
+                  placeholder={t("set.slideshow.placeholderMediaUrl")}
+                />
+              </details>
+
               {draft.imageUrl && (
                 <div className="rounded-xl overflow-hidden bg-muted aspect-video">
                   {draft.mediaKind === "video" ? (

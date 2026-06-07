@@ -433,7 +433,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                   </Field>
 
                   <Field label={`${t("logoAdmin.fieldImage")} *`}>
-                    <div className="logo-upload-wrap logo-upload-row">
+                    <div className="logo-upload-wrap logo-upload-row space-y-2">
                       <button
                         type="button"
                         onClick={uploadImage}
@@ -444,10 +444,19 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                         <Upload className="w-4 h-4" />{" "}
                         {uploading
                           ? t("logoAdmin.uploading")
-                          : form.imageUrl
-                            ? t("logoAdmin.upload")
-                            : t("logoAdmin.upload")}
+                          : t("logoAdmin.upload")}
                       </button>
+                      <details>
+                        <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                          {t("media.url.toggle")}
+                        </summary>
+                        <input
+                          className="admin-input logo-styled-input w-full bg-white mt-2"
+                          value={form.imageUrl}
+                          onChange={(e) => updateForm("imageUrl", e.target.value)}
+                          placeholder={t("media.url.placeholder")}
+                        />
+                      </details>
                     </div>
                   </Field>
 

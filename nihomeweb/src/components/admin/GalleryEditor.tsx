@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2, Upload, Plus } from "lucide-react";
 import { adminApi } from "@/services/adminApi";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [manualUrl, setManualUrl] = useState("");
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -25,7 +26,7 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
         uploaded.push(res.data.imageUrl);
       }
       onChange([...items, ...uploaded]);
-      toast({ title: t("form.updated"), description: `${uploaded.length} ảnh` });
+      toast({ title: t("form.updated"), description: t("media.gallery.countToast").replace("{count}", String(uploaded.length)) });
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
@@ -38,6 +39,13 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
     onChange(items.filter((_, i) => i !== index));
   };
 
+  const addManual = () => {
+    const url = manualUrl.trim();
+    if (!url) return;
+    onChange([...items, url]);
+    setManualUrl("");
+  };
+
   return (
     <div className="space-y-3">
       <button
@@ -48,7 +56,7 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
         style={{ borderColor: "hsl(var(--admin-border))" }}
       >
         <Upload className="w-3.5 h-3.5" />
-        {uploading ? "Đang tải..." : "Tải nhiều ảnh"}
+        {uploading ? t("media.gallery.uploading") : t("media.gallery.uploadMulti")}
       </button>
       <input
         ref={inputRef}
@@ -59,8 +67,37 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
         onChange={(e) => handleFiles(e.target.files)}
       />
 
+      <details>
+        <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+          {t("media.url.toggle")}
+        </summary>
+        <div className="flex items-center gap-1 mt-2">
+          <input
+            className="admin-input flex-1"
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+            placeholder={t("media.url.placeholder")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addManual();
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={addManual}
+            className="p-2 border rounded-lg hover:bg-muted"
+            style={{ borderColor: "hsl(var(--admin-border))" }}
+            aria-label={t("media.url.add")}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </details>
+
       {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic">Chưa có ảnh nào. Bấm "Tải nhiều ảnh" để thêm.</p>
+        <p className="text-xs text-muted-foreground italic">{t("media.gallery.empty")}</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {items.map((url, idx) => (
@@ -75,7 +112,7 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
                 type="button"
                 onClick={() => remove(idx)}
                 className="absolute top-1 right-1 p-1.5 rounded-md bg-white/90 text-red-600 opacity-0 group-hover:opacity-100 transition shadow"
-                aria-label="Xóa"
+                aria-label={t("media.gallery.delete")}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
