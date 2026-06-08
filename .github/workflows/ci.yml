@@ -158,10 +158,15 @@ jobs:
           chmod +x ./auto-deployment.sh
           ./auto-deployment.sh
 
-      - name: Upload publish-release.zip artifact
+      - name: Prepare publish-release artifact folder
+        run: |
+          rm -rf publish-release
+          cp -R deployment-config/output/publish-release ./publish-release
+
+      - name: Upload publish-release artifact
         uses: actions/upload-artifact@v4
         with:
           name: publish-release
-          path: deployment-config/publish-release.zip
+          path: publish-release
           if-no-files-found: error
           retention-days: 30

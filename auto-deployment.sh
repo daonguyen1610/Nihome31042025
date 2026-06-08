@@ -8,17 +8,39 @@
 # In that case, we need to run this script to update the publish folder in deployment-config.
 # So we need to fetch the images/ folder from host to reupdate and then run this script.
 
+ROOT_DIR=$(git rev-parse --show-toplevel)
+BACKEND_DIR=$ROOT_DIR/nihomebackend
+DEPLOYMENT_CONFIG_DIR=$ROOT_DIR/deployment-config
+OUTPUT_DIR=$DEPLOYMENT_CONFIG_DIR/output
+PUBLISH_RELEASE_DIR=$OUTPUT_DIR/publish-release
+
 die() {
     echo "$1" >&2
     exit 1
 }
 
+cleanup() {
+    echo "Cleaning up the publish folder in deployment-config..."
+    echo "Cleaning up the previous publish folder..."
+    rm -rf $BACKEND_DIR/publish \
+        || die "Failed to clean up the publish folder in nihomebackend."
+    rm -rf $OUTPUT_DIR \
+        || die "Failed to clean up the output directory."
+    echo "Cleanup completed."
+}
+
+init_output() {
+    echo "Initializing the output directory..."
+    cleanup
+    mkdir -p $OUTPUT_DIR \
+        || die "Failed to create the output directory."
+    echo "Output directory initialized."
+}
+
+init_output
+
 # Step 1: Build the publish folder from nihomebackend
-ROOT_DIR=$(git rev-parse --show-toplevel)
-BACKEND_DIR=$ROOT_DIR/nihomebackend
 cd $BACKEND_DIR
-echo "Cleaning up the previous publish folder..."
-rm -rf $BACKEND_DIR/publish
 echo "Building the publish folder from nihomebackend..."
 dotnet publish -c Release -o publish \
     || die "Failed to build the publish folder."
@@ -26,8 +48,6 @@ echo "Publish folder built successfully."
 
 # Step 2: Copy the publish folder to deployment-config
 echo "Copying publish folder to deployment-config..."
-DEPLOYMENT_CONFIG_DIR=$ROOT_DIR/deployment-config
-PUBLISH_RELEASE_DIR=$DEPLOYMENT_CONFIG_DIR/publish-release
 cp -r $BACKEND_DIR/publish $PUBLISH_RELEASE_DIR \
     || die "Failed to copy the $PUBLISH_RELEASE_DIR folder."
 echo "Publish folder copied to deployment-config."

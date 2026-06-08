@@ -11,5 +11,5 @@ nihomebackend.tests/obj/**
 .agents
 skills-lock.json
 # Deployment config
-deployment-config/publish-release/
-deployment-config/publish-release.zip
+deployment-config/output/publish-release/
+deployment-config/output/publish-release.zip
