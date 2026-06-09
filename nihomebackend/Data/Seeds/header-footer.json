@@ -184,14 +184,6 @@
     "ja": "プロジェクトカテゴリ"
   },
   {
-    "key": "nav.categories",
-    "category": "nav",
-    "vi": "Danh mục",
-    "en": "Categories",
-    "zh": "分类",
-    "ja": "カテゴリ"
-  },
-  {
     "key": "nav.users",
     "category": "nav",
     "vi": "Người dùng",
