@@ -8,6 +8,7 @@ import { adminApi, type ContactMessageResponse } from "@/services/adminApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 
 const AdminContacts = () => {
   const { t } = useI18n();
@@ -26,17 +27,16 @@ const AdminContacts = () => {
   const newCount = list.filter((c) => !c.isReplied).length;
 
   const filteredList = (() => {
-    const needle = q.trim().toLowerCase();
     return list.filter((c) => {
       if (statusFilter === "new" && c.isReplied) return false;
       if (statusFilter === "replied" && !c.isReplied) return false;
-      if (!needle) return true;
+      if (!q.trim()) return true;
       return (
-        c.name.toLowerCase().includes(needle) ||
-        c.email.toLowerCase().includes(needle) ||
-        c.subject.toLowerCase().includes(needle) ||
-        (c.phone ?? "").toLowerCase().includes(needle) ||
-        c.message.toLowerCase().includes(needle)
+        matchesSearch(c.name, q) ||
+        matchesSearch(c.email, q) ||
+        matchesSearch(c.subject, q) ||
+        matchesSearch(c.phone, q) ||
+        matchesSearch(c.message, q)
       );
     });
   })();
