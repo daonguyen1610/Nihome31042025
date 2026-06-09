@@ -1424,6 +1424,14 @@
     "ja": "ロゴを追加"
   },
   {
+    "key": "logoAdmin.searchPlaceholder",
+    "category": "logoAdmin",
+    "vi": "Tìm logo theo tên hoặc đường dẫn...",
+    "en": "Search logos by name or link...",
+    "zh": "按名称或链接搜索标识...",
+    "ja": "名前またはリンクでロゴを検索..."
+  },
+  {
     "key": "logoAdmin.editTitle",
     "category": "logoAdmin",
     "vi": "Chỉnh sửa logo",

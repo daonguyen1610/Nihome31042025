@@ -9,6 +9,7 @@ import {
   Save,
   Trophy,
   X,
+  Search,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -93,15 +94,24 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [openModal, setOpenModal] = useState(false);
+  const [q, setQ] = useState("");
 
   const items = useMemo(() => {
     const source = logos?.[kind] ?? [];
-    return [...source].sort(
+    const sorted = [...source].sort(
       (a, b) =>
         (a.sortOrder ?? Number.MAX_SAFE_INTEGER) -
         (b.sortOrder ?? Number.MAX_SAFE_INTEGER),
     );
-  }, [logos, kind]);
+    const needle = q.trim().toLowerCase();
+    if (!needle) return sorted;
+    return sorted.filter((item) =>
+      item.name.toLowerCase().includes(needle) ||
+      (item.href ?? "").toLowerCase().includes(needle),
+    );
+  }, [logos, kind, q]);
+
+  const totalCount = (logos?.[kind] ?? []).length;
 
   const isEditing = form.id != null;
   const isBusy = submitting || uploading;
@@ -306,11 +316,23 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
               className="text-sm mt-1"
               style={{ color: "hsl(var(--admin-muted))" }}
             >
-              {items.length} {t("logoAdmin.logoNoun")}
+              {q.trim() ? `${items.length} / ${totalCount}` : totalCount} {t("logoAdmin.logoNoun")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <AdminExportButton onClick={handleExport} disabled={items.length === 0} />
+            <div
+              className="flex items-center gap-2 rounded-full px-3 py-2 border"
+              style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+            >
+              <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("logoAdmin.searchPlaceholder")}
+                className="bg-transparent outline-none text-sm w-48 placeholder:opacity-60"
+              />
+            </div>
+            <AdminExportButton onClick={handleExport} disabled={totalCount === 0} />
             <button
               onClick={startCreate}
               className="admin-btn-primary inline-flex items-center gap-2"

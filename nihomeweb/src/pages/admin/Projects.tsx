@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, MapPin, Maximize2, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, MapPin, Maximize2, Edit, Trash2, Eye, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -15,10 +15,24 @@ const AdminProjects = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [tab, setTab] = useState<"all" | "ongoing" | "completed">("all");
+  const [q, setQ] = useState("");
   const { data: items, loading, error, refetch } = useProjects();
 
-  const list = items ?? [];
-  const filtered = list.filter((p) => tab === "all" || p.status === tab);
+  const list = useMemo(() => items ?? [], [items]);
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return list.filter((p) => {
+      if (tab !== "all" && p.status !== tab) return false;
+      if (!needle) return true;
+      return (
+        p.name.toLowerCase().includes(needle) ||
+        p.slug.toLowerCase().includes(needle) ||
+        (p.location ?? "").toLowerCase().includes(needle) ||
+        (p.client ?? "").toLowerCase().includes(needle) ||
+        (p.category ?? "").toLowerCase().includes(needle)
+      );
+    });
+  }, [list, tab, q]);
 
   const handleDelete = async (p: ProjectResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;
@@ -79,35 +93,53 @@ const AdminProjects = () => {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-6">
-        {[
-          { id: "all", label: t("common.all") },
-          { id: "ongoing", label: t("proj.ongoing") },
-          { id: "completed", label: t("proj.completed") },
-        ].map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id as typeof tab)}
-            className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition"
-            style={
-              tab === tb.id
-                ? {
-                    background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
-                    color: "white",
-                    boxShadow: "0 8px 18px -6px hsl(var(--admin-primary) / 0.45)",
-                  }
-                : { background: "white", color: "hsl(var(--admin-sidebar-text))", border: "1px solid hsl(var(--admin-border))" }
-            }
-          >
-            {tb.label}
-          </button>
-        ))}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
+        <div
+          className="flex items-center gap-2 rounded-full px-4 py-2 border w-full lg:w-80"
+          style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+        >
+          <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t("proj.searchPlaceholder")}
+            className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: t("common.all") },
+            { id: "ongoing", label: t("proj.ongoing") },
+            { id: "completed", label: t("proj.completed") },
+          ].map((tb) => (
+            <button
+              key={tb.id}
+              onClick={() => setTab(tb.id as typeof tab)}
+              className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition"
+              style={
+                tab === tb.id
+                  ? {
+                      background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
+                      color: "white",
+                      boxShadow: "0 8px 18px -6px hsl(var(--admin-primary) / 0.45)",
+                    }
+                  : { background: "white", color: "hsl(var(--admin-sidebar-text))", border: "1px solid hsl(var(--admin-border))" }
+              }
+            >
+              {tb.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <PageLoading />
       ) : error ? (
         <PageError message={error} onRetry={refetch} />
+      ) : filtered.length === 0 ? (
+        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+          {t("common.noData")}
+        </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((p) => (

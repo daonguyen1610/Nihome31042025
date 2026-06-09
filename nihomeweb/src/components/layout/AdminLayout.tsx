@@ -9,7 +9,6 @@ import {
   Settings as SettingsIcon,
   LogOut,
   ExternalLink,
-  Search,
   Menu,
   X,
   PanelLeftClose,
@@ -331,21 +330,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           >
             {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>
-          <div className="hidden md:block max-w-xs w-full">
-            <div
-              className="flex items-center gap-2 rounded-full px-4 py-2 border"
-              style={{
-                background: "hsl(var(--admin-bg))",
-                borderColor: "hsl(var(--admin-border))",
-              }}
-            >
-              <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-              <input
-                placeholder={t("common.search")}
-                className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60 min-w-0"
-              />
-            </div>
-          </div>
           <div className="ml-auto flex items-center gap-3">
             <LanguageToggle />
             <NotificationBell />

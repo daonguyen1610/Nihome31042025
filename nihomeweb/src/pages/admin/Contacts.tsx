@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Mail, Phone, CheckCircle2, Clock, Trash2, Send } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Mail, Phone, CheckCircle2, Clock, Trash2, Send, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -16,12 +16,30 @@ const AdminContacts = () => {
   const [active, setActive] = useState<ContactMessageResponse | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "new" | "replied">("all");
 
   if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
   if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
   if (!list) return null;
 
   const newCount = list.filter((c) => !c.isReplied).length;
+
+  const filteredList = (() => {
+    const needle = q.trim().toLowerCase();
+    return list.filter((c) => {
+      if (statusFilter === "new" && c.isReplied) return false;
+      if (statusFilter === "replied" && !c.isReplied) return false;
+      if (!needle) return true;
+      return (
+        c.name.toLowerCase().includes(needle) ||
+        c.email.toLowerCase().includes(needle) ||
+        c.subject.toLowerCase().includes(needle) ||
+        (c.phone ?? "").toLowerCase().includes(needle) ||
+        c.message.toLowerCase().includes(needle)
+      );
+    });
+  })();
 
   const handleExport = () => {
     downloadCsv({
@@ -110,15 +128,49 @@ const AdminContacts = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* List */}
         <div className="admin-card lg:col-span-5 xl:col-span-4 p-3 max-h-[calc(100vh-240px)] overflow-y-auto">
-          <p className="px-3 py-2 text-[10px] uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-muted))" }}>
-            {t("contacts.inbox")} ({list.length})
-          </p>
-          {list.length === 0 && (
+          <div className="px-2 pt-1 pb-2 space-y-2 sticky top-0 z-10" style={{ background: "hsl(var(--admin-card))" }}>
+            <div
+              className="flex items-center gap-2 rounded-full px-3 py-2 border"
+              style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+            >
+              <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("contacts.searchPlaceholder")}
+                className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60"
+              />
+            </div>
+            <div className="flex gap-1">
+              {([
+                { id: "all" as const, label: t("common.all") },
+                { id: "new" as const, label: t("contacts.new") },
+                { id: "replied" as const, label: t("contacts.replied") },
+              ]).map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setStatusFilter(opt.id)}
+                  className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition"
+                  style={
+                    statusFilter === opt.id
+                      ? { background: "hsl(var(--admin-primary-soft))", color: "hsl(var(--admin-primary))" }
+                      : { background: "transparent", color: "hsl(var(--admin-muted))" }
+                  }
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <p className="px-1 text-[10px] uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-muted))" }}>
+              {t("contacts.inbox")} ({filteredList.length}/{list.length})
+            </p>
+          </div>
+          {filteredList.length === 0 && (
             <p className="px-3 py-8 text-center text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
               {t("contacts.empty") || "Không có tin nhắn nào"}
             </p>
           )}
-          {list.map((c) => (
+          {filteredList.map((c) => (
             <button
               key={c.id}
               onClick={() => { setActive(c); setReplyText(""); }}
