@@ -590,5 +590,13 @@
     "en": "Reply content",
     "zh": "回复内容",
     "ja": "返信内容"
+  },
+  {
+    "key": "contacts.searchPlaceholder",
+    "category": "contacts",
+    "vi": "Tìm theo tên, email, chủ đề, số điện thoại...",
+    "en": "Search by name, email, subject, phone...",
+    "zh": "按姓名、邮箱、主题、电话搜索...",
+    "ja": "名前、メール、件名、電話で検索..."
   }
 ]

@@ -334,5 +334,13 @@
     "en": "Add new project",
     "zh": "添加新项目",
     "ja": "新規プロジェクトを追加"
+  },
+  {
+    "key": "proj.searchPlaceholder",
+    "category": "proj",
+    "vi": "Tìm dự án theo tên, slug, vị trí, khách hàng...",
+    "en": "Search projects by name, slug, location, client...",
+    "zh": "按名称、别名、位置、客户搜索项目...",
+    "ja": "名前、スラグ、場所、顧客でプロジェクトを検索..."
   }
 ]
