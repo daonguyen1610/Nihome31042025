@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 
 type CategoryKind = "posts" | "projects";
 
@@ -271,39 +272,50 @@ const Categories = () => {
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="admin-scope sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingId == null ? t("cat.add") : t("common.edit")}</DialogTitle>
+            <DialogTitle className="font-display text-xl font-extrabold">
+              {editingId == null ? t("cat.add") : t("common.edit")}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={submitForm} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold mb-1">{t("cat.name")}</label>
+              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="cat-name">
+                {t("cat.name")}
+              </label>
               <input
+                id="cat-name"
                 value={form.name}
                 onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder={t("cat.name")}
-                className="admin-input w-full"
+                className="admin-input mt-1 w-full"
                 autoFocus
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">{t("cat.order")}</label>
+              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="cat-order">
+                {t("cat.order")}
+              </label>
               <input
+                id="cat-order"
                 type="number"
                 value={form.sortOrder}
                 onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
-                className="admin-input w-full"
+                className="admin-input mt-1 w-full"
               />
             </div>
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-              />
+            <div
+              className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+              style={{ borderColor: "hsl(var(--admin-border))" }}
+            >
               <span className="text-sm font-semibold">{t("cat.published")}</span>
-            </label>
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
+                aria-label={t("cat.published")}
+              />
+            </div>
             <DialogFooter>
               <button
                 type="button"
@@ -314,7 +326,7 @@ const Categories = () => {
                 {t("common.cancel")}
               </button>
               <button type="submit" className="admin-btn-primary" disabled={submitting}>
-                {editingId == null ? t("form.create") : t("form.update")}
+                {submitting ? t("common.loading") : editingId == null ? t("form.create") : t("form.update")}
               </button>
             </DialogFooter>
           </form>
