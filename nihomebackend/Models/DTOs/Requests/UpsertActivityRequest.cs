@@ -8,7 +8,7 @@ public class UpsertActivityRequest
     [Required] public string Date { get; set; } = "";
     [Required] public string ImageUrl { get; set; } = "";
     public string[]? Gallery { get; set; }
-    [Required] public string Category { get; set; } = "";
+    public string? Category { get; set; }
     public int? CategoryId { get; set; }
     public string? Author { get; set; }
     [Required] public string Title { get; set; } = "";
