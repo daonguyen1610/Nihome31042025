@@ -40,7 +40,6 @@ import ProjectView from "./pages/admin/ProjectView.tsx";
 import PostForm from "./pages/admin/PostForm.tsx";
 import PostView from "./pages/admin/PostView.tsx";
 import AdminCategories from "./pages/admin/Categories.tsx";
-import AdminProjectCategories from "./pages/admin/ProjectCategories.tsx";
 import AdminActivityLog from "./pages/admin/ActivityLog.tsx";
 import AdminLogosManager from "./pages/admin/LogosManager.tsx";
 import AdminSimplePage from "./pages/admin/SimplePage.tsx";
@@ -106,7 +105,7 @@ const App = () => (
               <Route path="/admin/languages" element={<LanguagesPage />} />
               <Route path="/admin/translations" element={<TranslationsPage />} />
               <Route path="/admin/categories" element={<AdminCategories />} />
-              <Route path="/admin/project-categories" element={<AdminProjectCategories />} />
+              <Route path="/admin/project-categories" element={<Navigate to="/admin/categories?tab=projects" replace />} />
               <Route path="/admin/activity-log" element={<AdminActivityLog />} />
               <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
               <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />

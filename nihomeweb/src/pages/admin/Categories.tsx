@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi, type ActivityCategoryResponse } from "@/services/adminApi";
+import {
+  adminApi,
+  type ActivityCategoryResponse,
+  type ProjectCategoryResponse,
+  type UpsertActivityCategoryRequest,
+  type UpsertProjectCategoryRequest,
+} from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+
+type CategoryKind = "posts" | "projects";
+
+type CategoryItem = ActivityCategoryResponse | ProjectCategoryResponse;
 
 type CategoryFormData = {
   name: string;
@@ -38,10 +49,16 @@ const getErrorMessage = (error: unknown) => {
   return undefined;
 };
 
+const parseTab = (raw: string | null): CategoryKind =>
+  raw === "projects" ? "projects" : "posts";
+
 const Categories = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const [items, setItems] = useState<ActivityCategoryResponse[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const kind = parseTab(searchParams.get("tab"));
+
+  const [items, setItems] = useState<CategoryItem[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -51,16 +68,22 @@ const Categories = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await adminApi.getActivityCategories(true);
+      const result =
+        kind === "projects"
+          ? await adminApi.getProjectCategories(true)
+          : await adminApi.getActivityCategories(true);
       setItems(result.data);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [t, toast]);
+  }, [kind, t, toast]);
 
   useEffect(() => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setQ("");
     loadData();
   }, [loadData]);
 
@@ -69,12 +92,23 @@ const Categories = () => {
     [items, q],
   );
 
+  const switchTab = (next: CategoryKind) => {
+    if (next === kind) return;
+    const params = new URLSearchParams(searchParams);
+    if (next === "posts") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    setSearchParams(params, { replace: true });
+  };
+
   const startCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm, sortOrder: items.length + 1 });
   };
 
-  const startEdit = (item: ActivityCategoryResponse) => {
+  const startEdit = (item: CategoryItem) => {
     setEditingId(item.id);
     setForm({
       name: item.name,
@@ -93,17 +127,25 @@ const Categories = () => {
 
     setSubmitting(true);
     try {
-      const payload = {
+      const payload: UpsertActivityCategoryRequest | UpsertProjectCategoryRequest = {
         name: form.name.trim(),
         isActive: form.isActive,
         sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
       };
 
       if (editingId == null) {
-        await adminApi.createActivityCategory(payload);
+        if (kind === "projects") {
+          await adminApi.createProjectCategory(payload);
+        } else {
+          await adminApi.createActivityCategory(payload);
+        }
         toast({ title: t("form.created") });
       } else {
-        await adminApi.updateActivityCategory(editingId, payload);
+        if (kind === "projects") {
+          await adminApi.updateProjectCategory(editingId, payload);
+        } else {
+          await adminApi.updateActivityCategory(editingId, payload);
+        }
         toast({ title: t("form.updated") });
       }
 
@@ -121,11 +163,15 @@ const Categories = () => {
     }
   };
 
-  const remove = async (item: ActivityCategoryResponse) => {
+  const remove = async (item: CategoryItem) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
 
     try {
-      await adminApi.deleteActivityCategory(item.id);
+      if (kind === "projects") {
+        await adminApi.deleteProjectCategory(item.id);
+      } else {
+        await adminApi.deleteActivityCategory(item.id);
+      }
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       toast({ title: t("form.deleted") });
     } catch (error: unknown) {
@@ -139,7 +185,9 @@ const Categories = () => {
 
   const handleExport = () => {
     downloadCsv({
-      filename: createCsvFilename("admin-activity-categories"),
+      filename: createCsvFilename(
+        kind === "projects" ? "admin-project-categories" : "admin-activity-categories",
+      ),
       columns: [
         { header: "ID", value: "id" },
         { header: t("cat.name"), value: "name" },
@@ -149,6 +197,11 @@ const Categories = () => {
       rows: filtered,
     });
   };
+
+  const tabs: { key: CategoryKind; label: string }[] = [
+    { key: "posts", label: t("cat.tabPosts") },
+    { key: "projects", label: t("cat.tabProjects") },
+  ];
 
   return (
     <AdminLayout>
@@ -165,6 +218,26 @@ const Categories = () => {
             <Plus className="w-4 h-4" /> {t("cat.add")}
           </button>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-b mb-5" style={{ borderColor: "hsl(var(--admin-border))" }}>
+        {tabs.map((tab) => {
+          const active = tab.key === kind;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => switchTab(tab.key)}
+              className="px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors"
+              style={{
+                borderColor: active ? "hsl(var(--admin-primary))" : "transparent",
+                color: active ? "hsl(var(--admin-primary))" : "hsl(var(--admin-muted))",
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="admin-card p-5 mb-5">

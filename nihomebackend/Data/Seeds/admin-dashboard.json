@@ -440,6 +440,22 @@
     "ja": "プロジェクトカテゴリ管理"
   },
   {
+    "key": "cat.tabPosts",
+    "category": "cat",
+    "vi": "Bài đăng",
+    "en": "Posts",
+    "zh": "文章",
+    "ja": "投稿"
+  },
+  {
+    "key": "cat.tabProjects",
+    "category": "cat",
+    "vi": "Dự án",
+    "en": "Projects",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
     "key": "log.title",
     "category": "log",
     "vi": "Activity Log",
