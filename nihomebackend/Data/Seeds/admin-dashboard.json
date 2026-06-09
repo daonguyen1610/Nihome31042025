@@ -432,6 +432,14 @@
     "ja": "カテゴリがありません。"
   },
   {
+    "key": "projCat.title",
+    "category": "cat",
+    "vi": "Quản lý danh mục dự án",
+    "en": "Manage project categories",
+    "zh": "管理项目分类",
+    "ja": "プロジェクトカテゴリ管理"
+  },
+  {
     "key": "log.title",
     "category": "log",
     "vi": "Activity Log",

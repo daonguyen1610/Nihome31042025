@@ -19,6 +19,70 @@ public static class ContentSeeder
         SeedRecruitment(db);
         SeedContactMessages(db);
         SeedEntityTranslations(db);
+        LinkCategories(db);
+    }
+
+    private static void LinkCategories(AppDbContext db)
+    {
+        // Ensure ActivityCategory rows exist for every distinct Activity.Category
+        var activityCategoryNames = db.Activities
+            .Select(a => a.Category)
+            .Where(c => !string.IsNullOrEmpty(c))
+            .Distinct()
+            .ToList();
+        var existingActivityNames = db.ActivityCategories
+            .Select(c => c.Name.ToLower())
+            .ToHashSet();
+        var nextOrder = (db.ActivityCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
+        foreach (var name in activityCategoryNames)
+        {
+            var trimmed = name.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+            if (existingActivityNames.Contains(trimmed.ToLower())) continue;
+            db.ActivityCategories.Add(new ActivityCategory { Name = trimmed, IsActive = true, SortOrder = nextOrder++ });
+            existingActivityNames.Add(trimmed.ToLower());
+        }
+
+        // Ensure ProjectCategory rows exist for every distinct Project.Category
+        var projectCategoryNames = db.Projects
+            .Select(p => p.Category)
+            .Where(c => !string.IsNullOrEmpty(c))
+            .Distinct()
+            .ToList();
+        var existingProjectNames = db.ProjectCategories
+            .Select(c => c.Name.ToLower())
+            .ToHashSet();
+        var nextProjectOrder = (db.ProjectCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
+        foreach (var name in projectCategoryNames)
+        {
+            var trimmed = (name ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+            if (existingProjectNames.Contains(trimmed.ToLower())) continue;
+            db.ProjectCategories.Add(new ProjectCategory { Name = trimmed, IsActive = true, SortOrder = nextProjectOrder++ });
+            existingProjectNames.Add(trimmed.ToLower());
+        }
+        db.SaveChanges();
+
+        // Backfill FK on Activity rows
+        var activityCategoryMap = db.ActivityCategories.ToDictionary(c => c.Name.ToLower(), c => c.Id);
+        foreach (var activity in db.Activities.Where(a => a.ActivityCategoryId == null && a.Category != ""))
+        {
+            if (activityCategoryMap.TryGetValue(activity.Category.Trim().ToLower(), out var id))
+            {
+                activity.ActivityCategoryId = id;
+            }
+        }
+
+        // Backfill FK on Project rows
+        var projectCategoryMap = db.ProjectCategories.ToDictionary(c => c.Name.ToLower(), c => c.Id);
+        foreach (var project in db.Projects.Where(p => p.ProjectCategoryId == null && p.Category != null && p.Category != ""))
+        {
+            if (projectCategoryMap.TryGetValue(project.Category!.Trim().ToLower(), out var id))
+            {
+                project.ProjectCategoryId = id;
+            }
+        }
+        db.SaveChanges();
     }
 
     // ─── Activities (Vietnamese default) ────────────────────────────

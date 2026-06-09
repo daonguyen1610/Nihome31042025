@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify } from "@/services/adminApi";
 import type { UpsertProjectRequest } from "@/services/adminApi";
-import { useProject, useProjects } from "@/hooks/useContentApi";
+import { useProject, useProjectCategories } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
@@ -53,7 +53,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { data: existing, loading, error, refetch } = useProject(mode === "edit" ? (slug ?? "") : "");
-  const { data: allProjects } = useProjects();
+  const { data: categories } = useProjectCategories(true);
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -62,8 +62,8 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
 
   const categoryOptions = useMemo(
-    () => Array.from(new Set((allProjects ?? []).map((p) => p.category).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b, "vi")),
-    [allProjects],
+    () => (categories ?? []).map((c) => c.name).sort((a, b) => a.localeCompare(b, "vi")),
+    [categories],
   );
 
   if (mode === "edit" && existing && !initialized) {
@@ -131,6 +131,10 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
         status: data.status,
         year: data.year || undefined,
         category: data.category || undefined,
+        categoryId:
+          (categories ?? []).find(
+            (c) => c.name.toLowerCase() === (data.category || "").trim().toLowerCase(),
+          )?.id ?? null,
         description: data.description || undefined,
         challenges: data.challenges.length ? data.challenges : undefined,
         solutions: data.solutions.length ? data.solutions : undefined,

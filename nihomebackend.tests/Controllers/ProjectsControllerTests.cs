@@ -27,7 +27,8 @@ public class ProjectsControllerTests : IDisposable
 
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var service = new ProjectService(_db, hostedImageService);
+        var categoryService = new ProjectCategoryService(_db);
+        var service = new ProjectService(_db, hostedImageService, categoryService);
         _sut = new ProjectsController(service);
     }
 

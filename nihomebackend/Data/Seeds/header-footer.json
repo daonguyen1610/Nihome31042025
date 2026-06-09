@@ -168,6 +168,22 @@
     "ja": "カテゴリ"
   },
   {
+    "key": "nav.postCategories",
+    "category": "nav",
+    "vi": "Danh mục bài đăng",
+    "en": "Post categories",
+    "zh": "文章分类",
+    "ja": "投稿カテゴリ"
+  },
+  {
+    "key": "nav.projectCategories",
+    "category": "nav",
+    "vi": "Danh mục dự án",
+    "en": "Project categories",
+    "zh": "项目分类",
+    "ja": "プロジェクトカテゴリ"
+  },
+  {
     "key": "nav.users",
     "category": "nav",
     "vi": "Người dùng",

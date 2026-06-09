@@ -16,6 +16,7 @@ public class UpsertProjectRequest
     [Required] public string Status { get; set; } = "ongoing";
     public string? Year { get; set; }
     public string? Category { get; set; }
+    public int? CategoryId { get; set; }
     public string? Description { get; set; }
     public string[]? Challenges { get; set; }
     public string[]? Solutions { get; set; }

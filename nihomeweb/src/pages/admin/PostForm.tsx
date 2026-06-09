@@ -135,6 +135,10 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
       imageUrl,
       gallery: data.gallery.length ? data.gallery : undefined,
       category: data.category,
+      categoryId:
+        (categories ?? []).find(
+          (c) => c.name.toLowerCase() === data.category.trim().toLowerCase(),
+        )?.id ?? null,
       author: data.author || undefined,
       title: data.title,
       excerpt: data.excerpt,
