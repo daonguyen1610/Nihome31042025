@@ -8,6 +8,7 @@ import { adminApi } from "@/services/adminApi";
 import type { JobPositionResponse, JobApplicationResponse, EmploymentTypeResponse } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 
 const APP_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   new: { bg: "hsl(var(--admin-info-soft))", color: "hsl(var(--admin-info))", label: "Mới" },
@@ -79,23 +80,21 @@ const AdminRecruitment = () => {
   }, [employmentTypes]);
 
   const filteredPositions = useMemo(() => {
-    const needle = positionQuery.trim().toLowerCase();
-    if (!needle) return positions;
+    if (!positionQuery.trim()) return positions;
     return positions.filter((p) =>
-      p.title.toLowerCase().includes(needle) ||
-      (p.department ?? "").toLowerCase().includes(needle) ||
-      (p.location ?? "").toLowerCase().includes(needle),
+      matchesSearch(p.title, positionQuery) ||
+      matchesSearch(p.department, positionQuery) ||
+      matchesSearch(p.location, positionQuery),
     );
   }, [positions, positionQuery]);
 
   const filteredApplications = useMemo(() => {
-    const needle = appQuery.trim().toLowerCase();
-    if (!needle) return applications;
+    if (!appQuery.trim()) return applications;
     return applications.filter((a) =>
-      a.candidateName.toLowerCase().includes(needle) ||
-      a.email.toLowerCase().includes(needle) ||
-      (a.phone ?? "").toLowerCase().includes(needle) ||
-      (a.positionTitle ?? "").toLowerCase().includes(needle),
+      matchesSearch(a.candidateName, appQuery) ||
+      matchesSearch(a.email, appQuery) ||
+      matchesSearch(a.phone, appQuery) ||
+      matchesSearch(a.positionTitle, appQuery),
     );
   }, [applications, appQuery]);
 

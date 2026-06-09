@@ -10,6 +10,7 @@ import type { ProjectResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 
 const AdminProjects = () => {
   const { t } = useI18n();
@@ -20,16 +21,15 @@ const AdminProjects = () => {
 
   const list = useMemo(() => items ?? [], [items]);
   const filtered = useMemo(() => {
-    const needle = q.trim().toLowerCase();
     return list.filter((p) => {
       if (tab !== "all" && p.status !== tab) return false;
-      if (!needle) return true;
+      if (!q.trim()) return true;
       return (
-        p.name.toLowerCase().includes(needle) ||
-        p.slug.toLowerCase().includes(needle) ||
-        (p.location ?? "").toLowerCase().includes(needle) ||
-        (p.client ?? "").toLowerCase().includes(needle) ||
-        (p.category ?? "").toLowerCase().includes(needle)
+        matchesSearch(p.name, q) ||
+        matchesSearch(p.slug, q) ||
+        matchesSearch(p.location, q) ||
+        matchesSearch(p.client, q) ||
+        matchesSearch(p.category, q)
       );
     });
   }, [list, tab, q]);

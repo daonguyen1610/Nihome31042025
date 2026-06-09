@@ -20,6 +20,7 @@ import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -103,11 +104,10 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
         (a.sortOrder ?? Number.MAX_SAFE_INTEGER) -
         (b.sortOrder ?? Number.MAX_SAFE_INTEGER),
     );
-    const needle = q.trim().toLowerCase();
-    if (!needle) return sorted;
+    if (!q.trim()) return sorted;
     return sorted.filter((item) =>
-      item.name.toLowerCase().includes(needle) ||
-      (item.href ?? "").toLowerCase().includes(needle),
+      matchesSearch(item.name, q) ||
+      matchesSearch(item.href, q),
     );
   }, [logos, kind, q]);
 
