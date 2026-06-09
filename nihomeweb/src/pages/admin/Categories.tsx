@@ -13,6 +13,13 @@ import {
 } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type CategoryKind = "posts" | "projects";
 
@@ -64,6 +71,7 @@ const Categories = () => {
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<CategoryFormData>(emptyForm);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -83,6 +91,7 @@ const Categories = () => {
   useEffect(() => {
     setEditingId(null);
     setForm(emptyForm);
+    setDialogOpen(false);
     setQ("");
     loadData();
   }, [loadData]);
@@ -106,6 +115,7 @@ const Categories = () => {
   const startCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm, sortOrder: items.length + 1 });
+    setDialogOpen(true);
   };
 
   const startEdit = (item: CategoryItem) => {
@@ -115,6 +125,13 @@ const Categories = () => {
       isActive: item.isActive,
       sortOrder: item.sortOrder,
     });
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const submitForm = async (e: React.FormEvent) => {
@@ -151,6 +168,7 @@ const Categories = () => {
 
       setEditingId(null);
       setForm(emptyForm);
+      setDialogOpen(false);
       await loadData();
     } catch (error: unknown) {
       toast({
@@ -241,48 +259,6 @@ const Categories = () => {
       </div>
 
       <div className="admin-card p-5 mb-5">
-        <form onSubmit={submitForm} className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">
-          <input
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder={t("cat.name")}
-            className="admin-input"
-            required
-          />
-          <input
-            type="number"
-            value={form.sortOrder}
-            onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
-            placeholder={t("cat.order")}
-            className="admin-input"
-          />
-          <label className="inline-flex items-center gap-2 px-3 rounded-xl border" style={{ borderColor: "hsl(var(--admin-border))" }}>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-            />
-            <span className="text-sm font-semibold">{t("cat.published")}</span>
-          </label>
-          <div className="flex items-center gap-2">
-            <button type="submit" className="admin-btn-primary" disabled={submitting}>
-              {editingId == null ? t("form.create") : t("form.update")}
-            </button>
-            {editingId != null && (
-              <button
-                type="button"
-                className="admin-btn-primary opacity-70"
-                onClick={() => {
-                  setEditingId(null);
-                  setForm(emptyForm);
-                }}
-              >
-                {t("common.cancel")}
-              </button>
-            )}
-          </div>
-        </form>
-
         <div className="flex items-center gap-2 max-w-md">
           <SearchIcon className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
           <input
@@ -293,6 +269,57 @@ const Categories = () => {
           />
         </div>
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingId == null ? t("cat.add") : t("common.edit")}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={submitForm} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold mb-1">{t("cat.name")}</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder={t("cat.name")}
+                className="admin-input w-full"
+                autoFocus
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">{t("cat.order")}</label>
+              <input
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
+                className="admin-input w-full"
+              />
+            </div>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+              />
+              <span className="text-sm font-semibold">{t("cat.published")}</span>
+            </label>
+            <DialogFooter>
+              <button
+                type="button"
+                className="admin-btn-primary opacity-70"
+                onClick={closeDialog}
+                disabled={submitting}
+              >
+                {t("common.cancel")}
+              </button>
+              <button type="submit" className="admin-btn-primary" disabled={submitting}>
+                {editingId == null ? t("form.create") : t("form.update")}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="admin-card overflow-hidden">
         <table className="w-full text-sm">
