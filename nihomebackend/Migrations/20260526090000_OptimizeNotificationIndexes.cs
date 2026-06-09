@@ -1,10 +1,15 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using NihomeBackend.Data;
 
 #nullable disable
 
 namespace nihomebackend.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260526090000_OptimizeNotificationIndexes")]
     public partial class OptimizeNotificationIndexes : Migration
     {
         /// <inheritdoc />

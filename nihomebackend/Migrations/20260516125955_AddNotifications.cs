@@ -1,11 +1,15 @@
 ﻿using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using NihomeBackend.Data;
 
 #nullable disable
 
 namespace nihomebackend.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
     [Migration("20260516125955_AddNotifications")]
     public partial class AddNotifications : Migration
     {
