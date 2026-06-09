@@ -103,18 +103,32 @@ const AdminProjects = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
-        <div
-          className="flex items-center gap-2 rounded-full px-4 py-2 border w-full lg:w-80"
-          style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
-        >
-          <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("proj.searchPlaceholder")}
-            className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60"
-          />
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            className="flex items-center gap-2 rounded-full px-4 py-2 border w-full sm:w-80"
+            style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+          >
+            <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("proj.searchPlaceholder")}
+              className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60"
+            />
+          </div>
+          <select
+            value={cat}
+            onChange={(e) => setCat(e.target.value)}
+            className="admin-input w-full sm:w-56 sm:ml-auto"
+          >
+            <option value="all">{t("common.all")}</option>
+            {categoryOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex flex-wrap gap-2">
           {[
@@ -140,18 +154,6 @@ const AdminProjects = () => {
             </button>
           ))}
         </div>
-        <select
-          value={cat}
-          onChange={(e) => setCat(e.target.value)}
-          className="admin-input w-full lg:w-56"
-        >
-          <option value="all">{t("common.all")}</option>
-          {categoryOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
       </div>
 
       {loading ? (
