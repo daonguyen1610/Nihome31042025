@@ -9,6 +9,8 @@ public class Activity
     /// <summary>JSON array of additional gallery image URLs.</summary>
     public string? GalleryJson { get; set; }
     public string Category { get; set; } = "";
+    public int? ActivityCategoryId { get; set; }
+    public ActivityCategory? CategoryRef { get; set; }
     public string? Author { get; set; }
     public string Title { get; set; } = "";
     public string Excerpt { get; set; } = "";

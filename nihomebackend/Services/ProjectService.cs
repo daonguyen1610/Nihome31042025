@@ -8,7 +8,7 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProjectService(AppDbContext db, HostedImageService hostedImageService)
+public class ProjectService(AppDbContext db, HostedImageService hostedImageService, ProjectCategoryService categorySvc)
 {
     private ILogger<ProjectService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProjectService>();
 
@@ -31,6 +31,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
 
     public async Task<ProjectResponse> CreateAsync(UpsertProjectRequest req)
     {
+        var (categoryId, categoryName) = await categorySvc.ResolveAsync(req.CategoryId, req.Category);
         var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var entity = new Project
         {
@@ -44,7 +45,8 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
             Scope = req.Scope,
             Status = req.Status,
             Year = req.Year,
-            Category = req.Category,
+            Category = string.IsNullOrWhiteSpace(categoryName) ? null : categoryName,
+            ProjectCategoryId = categoryId,
             Description = req.Description,
             ChallengesJson = req.Challenges != null ? JsonSerializer.Serialize(req.Challenges) : null,
             SolutionsJson = req.Solutions != null ? JsonSerializer.Serialize(req.Solutions) : null,
@@ -70,6 +72,8 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var previousGallery = DeserializeGallery(entity.GalleryJson);
 
+        var (categoryId, categoryName) = await categorySvc.ResolveAsync(req.CategoryId, req.Category);
+
         entity.Slug = req.Slug;
         entity.ImageUrl = nextImageUrl ?? string.Empty;
         entity.GalleryJson = SerializeGallery(req.Gallery);
@@ -80,7 +84,8 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         entity.Scope = req.Scope;
         entity.Status = req.Status;
         entity.Year = req.Year;
-        entity.Category = req.Category;
+        entity.Category = string.IsNullOrWhiteSpace(categoryName) ? null : categoryName;
+        entity.ProjectCategoryId = categoryId;
         entity.Description = req.Description;
         entity.ChallengesJson = req.Challenges != null ? JsonSerializer.Serialize(req.Challenges) : null;
         entity.SolutionsJson = req.Solutions != null ? JsonSerializer.Serialize(req.Solutions) : null;
@@ -134,6 +139,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         Status = p.Status,
         Year = p.Year,
         Category = p.Category,
+        CategoryId = p.ProjectCategoryId,
         Description = p.Description,
         Challenges = string.IsNullOrEmpty(p.ChallengesJson) ? null : JsonSerializer.Deserialize<string[]>(p.ChallengesJson),
         Solutions = string.IsNullOrEmpty(p.SolutionsJson) ? null : JsonSerializer.Deserialize<string[]>(p.SolutionsJson),

@@ -4,7 +4,7 @@ import { Plus, MapPin, Maximize2, Edit, Trash2, Eye, Search } from "lucide-react
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { useProjects } from "@/hooks/useContentApi";
+import { useProjects, useProjectCategories } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import type { ProjectResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -16,13 +16,23 @@ const AdminProjects = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [tab, setTab] = useState<"all" | "ongoing" | "completed">("all");
+  const [cat, setCat] = useState("all");
   const [q, setQ] = useState("");
   const { data: items, loading, error, refetch } = useProjects();
+  const { data: categoryMaster } = useProjectCategories(true);
 
   const list = useMemo(() => items ?? [], [items]);
+  const categoryOptions = useMemo(() => {
+    const fromMaster = (categoryMaster ?? []).map((c) => c.name);
+    const fromProjects = list.map((p) => p.category ?? "").filter(Boolean);
+    return Array.from(new Set([...fromMaster, ...fromProjects])).sort((a, b) =>
+      a.localeCompare(b, "vi"),
+    );
+  }, [categoryMaster, list]);
   const filtered = useMemo(() => {
     return list.filter((p) => {
       if (tab !== "all" && p.status !== tab) return false;
+      if (cat !== "all" && (p.category ?? "") !== cat) return false;
       if (!q.trim()) return true;
       return (
         matchesSearch(p.name, q) ||
@@ -32,7 +42,7 @@ const AdminProjects = () => {
         matchesSearch(p.category, q)
       );
     });
-  }, [list, tab, q]);
+  }, [list, tab, cat, q]);
 
   const handleDelete = async (p: ProjectResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;
@@ -130,6 +140,18 @@ const AdminProjects = () => {
             </button>
           ))}
         </div>
+        <select
+          value={cat}
+          onChange={(e) => setCat(e.target.value)}
+          className="admin-input w-full lg:w-56"
+        >
+          <option value="all">{t("common.all")}</option>
+          {categoryOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </div>
 
       {loading ? (

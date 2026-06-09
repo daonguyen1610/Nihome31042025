@@ -15,6 +15,8 @@ public class Project
     public string Status { get; set; } = "ongoing";
     public string? Year { get; set; }
     public string? Category { get; set; }
+    public int? ProjectCategoryId { get; set; }
+    public ProjectCategory? CategoryRef { get; set; }
     public string? Description { get; set; }
     /// <summary>JSON array of challenge strings.</summary>
     public string? ChallengesJson { get; set; }

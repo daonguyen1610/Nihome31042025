@@ -67,7 +67,7 @@ public class ActivityCategoryService(AppDbContext db)
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
-        await UpdateActivitiesForRenamedCategoryAsync(previousName, normalizedName);
+        await UpdateActivitiesForRenamedCategoryAsync(id, previousName, normalizedName);
 
         await db.SaveChangesAsync();
 
@@ -84,10 +84,9 @@ public class ActivityCategoryService(AppDbContext db)
             return false;
         }
 
-        var normalizedName = entity.Name.Trim().ToLower();
         var inUse = await db.Activities
             .AsNoTracking()
-            .AnyAsync(a => a.Category.ToLower() == normalizedName);
+            .AnyAsync(a => a.ActivityCategoryId == id);
 
         if (inUse)
         {
@@ -151,16 +150,15 @@ public class ActivityCategoryService(AppDbContext db)
         }
     }
 
-    private async Task UpdateActivitiesForRenamedCategoryAsync(string previousName, string nextName)
+    private async Task UpdateActivitiesForRenamedCategoryAsync(int categoryId, string previousName, string nextName)
     {
         if (string.Equals(previousName, nextName, StringComparison.Ordinal))
         {
             return;
         }
 
-        var previousNormalized = previousName.Trim().ToLower();
         var activities = await db.Activities
-            .Where(a => a.Category.ToLower() == previousNormalized)
+            .Where(a => a.ActivityCategoryId == categoryId)
             .ToListAsync();
 
         foreach (var activity in activities)
