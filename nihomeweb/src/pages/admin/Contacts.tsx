@@ -20,14 +20,10 @@ const AdminContacts = () => {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "new" | "replied">("all");
 
-  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
-  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
-  if (!list) return null;
-
-  const newCount = list.filter((c) => !c.isReplied).length;
-
-  const filteredList = (() => {
-    return list.filter((c) => {
+  const safeList = useMemo(() => list ?? [], [list]);
+  const newCount = useMemo(() => safeList.filter((c) => !c.isReplied).length, [safeList]);
+  const filteredList = useMemo(() => {
+    return safeList.filter((c) => {
       if (statusFilter === "new" && c.isReplied) return false;
       if (statusFilter === "replied" && !c.isReplied) return false;
       if (!q.trim()) return true;
@@ -39,7 +35,11 @@ const AdminContacts = () => {
         matchesSearch(c.message, q)
       );
     });
-  })();
+  }, [safeList, statusFilter, q]);
+
+  if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
+  if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
+  if (!list) return null;
 
   const handleExport = () => {
     downloadCsv({

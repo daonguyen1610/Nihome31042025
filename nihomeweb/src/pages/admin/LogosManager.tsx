@@ -332,7 +332,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                 className="bg-transparent outline-none text-sm w-48 placeholder:opacity-60"
               />
             </div>
-            <AdminExportButton onClick={handleExport} disabled={totalCount === 0} />
+            <AdminExportButton onClick={handleExport} disabled={items.length === 0} />
             <button
               onClick={startCreate}
               className="admin-btn-primary inline-flex items-center gap-2"
