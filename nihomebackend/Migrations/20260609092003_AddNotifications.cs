@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace nihomebackend.Migrations
 {
     /// <inheritdoc />
-    [Migration("20260516125955_AddNotifications")]
     public partial class AddNotifications : Migration
     {
         /// <inheritdoc />
@@ -38,14 +37,14 @@ namespace nihomebackend.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_notifications_IsRead",
+                name: "IX_notifications_UserId_CreatedAt_Id",
                 table: "notifications",
-                column: "IsRead");
+                columns: new[] { "UserId", "CreatedAt", "Id" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_notifications_UserId",
+                name: "IX_notifications_UserId_IsRead",
                 table: "notifications",
-                column: "UserId");
+                columns: new[] { "UserId", "IsRead" });
         }
 
         /// <inheritdoc />
