@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar, Tag } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useProject, useProjects } from "@/hooks/useContentApi";
@@ -31,6 +31,15 @@ const ProjectDetail = () => {
   }
 
   const related = (allProjects ?? []).filter((p) => p.slug !== project.slug).slice(0, 3);
+  const highlightItems =
+    project.highlights && project.highlights.length > 0
+      ? project.highlights
+      : [
+          { label: t("proj.field.category"), value: project.category ?? "" },
+          { label: t("proj.field.scope"), value: project.scope ?? "" },
+          { label: t("proj.scale"), value: project.scale ?? "" },
+          { label: t("proj.field.year"), value: project.year ?? "" },
+        ].filter((item) => item.value.trim());
 
   return (
     <Layout>
@@ -61,6 +70,7 @@ const ProjectDetail = () => {
               { icon: Maximize2, label: t("projDetail.scale"), value: project.scale },
               { icon: Briefcase, label: t("projDetail.scope"), value: project.scope },
               { icon: Calendar, label: t("projDetail.year"), value: project.year ?? "—" },
+              { icon: Tag, label: t("proj.field.category"), value: project.category ?? "—" },
             ].map((m, i) => (
               <div key={i} className="flex items-start gap-4">
                 <div className="w-11 h-11 rounded-2xl bg-gradient-primary text-white flex items-center justify-center shrink-0">
@@ -118,7 +128,7 @@ const ProjectDetail = () => {
             <div className="sticky top-28 bg-surface rounded-3xl border border-border p-7">
               <p className="eyebrow text-primary mb-5">{t("projDetail.highlights")}</p>
               <div className="grid grid-cols-2 gap-4">
-                {project.highlights?.map((h, i) => (
+                {highlightItems.map((h, i) => (
                   <div key={i} className="bg-card rounded-2xl p-4 border border-border">
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{h.label}</p>
                     <p className="font-display text-lg font-extrabold text-gradient-primary mt-1">{h.value}</p>
