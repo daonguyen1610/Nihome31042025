@@ -27,6 +27,7 @@ interface FormData {
   description: string;
   challenges: string[];
   solutions: string[];
+  highlights: { label: string; value: string }[];
 }
 
 const empty: FormData = {
@@ -45,6 +46,7 @@ const empty: FormData = {
   description: "",
   challenges: [],
   solutions: [],
+  highlights: [],
 };
 
 const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
@@ -83,6 +85,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       description: existing.description ?? "",
       challenges: existing.challenges ?? [],
       solutions: existing.solutions ?? [],
+      highlights: existing.highlights ?? [],
     });
     setInitialized(true);
   }
@@ -138,6 +141,9 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
         description: data.description || undefined,
         challenges: data.challenges.length ? data.challenges : undefined,
         solutions: data.solutions.length ? data.solutions : undefined,
+        highlights: data.highlights.length
+          ? data.highlights.filter((item) => item.label.trim() || item.value.trim())
+          : undefined,
       };
       if (mode === "create") {
         await adminApi.createProject(payload);
@@ -295,6 +301,14 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               />
             </div>
           </div>
+
+          <div className="admin-card p-6">
+            <h2 className="font-bold mb-4">{t("projDetail.highlights")}</h2>
+            <HighlightsEditor
+              items={data.highlights}
+              onChange={(items) => update("highlights", items)}
+            />
+          </div>
         </div>
 
         {/* ── Sidebar ── */}
@@ -401,6 +415,60 @@ const ListEditor = ({
           {placeholder ? `+ ${placeholder}` : "+ Thêm"}
         </button>
       </div>
+    </div>
+  );
+};
+
+const HighlightsEditor = ({
+  items,
+  onChange,
+}: {
+  items: { label: string; value: string }[];
+  onChange: (items: { label: string; value: string }[]) => void;
+}) => {
+  const addItem = () => onChange([...items, { label: "", value: "" }]);
+  const updateItem = (index: number, key: "label" | "value", value: string) => {
+    const next = [...items];
+    next[index] = { ...next[index], [key]: value };
+    onChange(next);
+  };
+  const removeItem = (index: number) => onChange(items.filter((_, idx) => idx !== index));
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+          <input
+            className="admin-input"
+            value={item.label}
+            onChange={(e) => updateItem(index, "label", e.target.value)}
+            placeholder="Nhãn (ví dụ: Diện tích)"
+          />
+          <input
+            className="admin-input"
+            value={item.value}
+            onChange={(e) => updateItem(index, "value", e.target.value)}
+            placeholder="Giá trị (ví dụ: 250.000 m²)"
+          />
+          <button
+            type="button"
+            onClick={() => removeItem(index)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg border text-destructive hover:bg-destructive/10 transition"
+            style={{ borderColor: "hsl(var(--admin-border))" }}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addItem}
+        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-sm transition hover:bg-muted"
+        style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))" }}
+      >
+        <Plus className="w-3.5 h-3.5" />
+        + Thêm điểm nổi bật
+      </button>
     </div>
   );
 };
