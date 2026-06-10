@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useProject, useProjects } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const ProjectDetail = () => {
   const { t } = useI18n();
   const { slug } = useParams();
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { data: project, loading, error, refetch } = useProject(slug ?? "");
   const { data: allProjects } = useProjects();
 
@@ -140,14 +143,31 @@ const ProjectDetail = () => {
             <p className="eyebrow text-primary mb-6">{t("projDetail.gallery")}</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {project.gallery.map((g, i) => (
-                <div key={i} className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted">
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSelectedImage(g)}
+                  className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left"
+                >
                   <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                </div>
+                </button>
               ))}
             </div>
           </div>
         </section>
       )}
+
+      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="p-1 sm:max-w-6xl bg-transparent border-0 shadow-none">
+          {selectedImage ? (
+            <img
+              src={selectedImage}
+              alt={project.name}
+              className="w-full max-h-[85vh] object-contain rounded-xl"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* Related */}
       <section className="py-20 bg-background">
