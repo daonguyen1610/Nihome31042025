@@ -7,7 +7,9 @@ export interface ActivityResponse {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
+  categoryId?: number | null;
   author?: string;
   title: string;
   excerpt: string;
@@ -19,6 +21,7 @@ export interface NewsResponse {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
   title: string;
   excerpt: string;
@@ -43,6 +46,7 @@ export interface ProjectResponse {
   status: string;
   year?: string;
   category?: string;
+  categoryId?: number | null;
   description?: string;
   challenges?: string[];
   solutions?: string[];
@@ -115,6 +119,13 @@ export interface SlideshowResponse {
 }
 
 export interface ActivityCategoryResponse {
+  id: number;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface ProjectCategoryResponse {
   id: number;
   name: string;
   isActive: boolean;
@@ -314,6 +325,9 @@ export const contentApi = {
 
   getActivityCategories: (includeInactive = false) =>
     api.get<ActivityCategoryResponse[]>(`/activity-categories?includeInactive=${includeInactive}`),
+
+  getProjectCategories: (includeInactive = false) =>
+    api.get<ProjectCategoryResponse[]>(`/project-categories?includeInactive=${includeInactive}`),
 
   getEmploymentTypes: (includeInactive = false) =>
     api.get<EmploymentTypeResponse[]>(`/employment-types?includeInactive=${includeInactive}`),

@@ -398,5 +398,157 @@
     "en": "Preview",
     "zh": "预览",
     "ja": "プレビュー"
+  },
+  {
+    "key": "media.featured.change",
+    "category": "media",
+    "vi": "Thay đổi ảnh",
+    "en": "Change image",
+    "zh": "更换图片",
+    "ja": "画像を変更"
+  },
+  {
+    "key": "media.featured.changeAnother",
+    "category": "media",
+    "vi": "Đổi ảnh khác",
+    "en": "Pick another image",
+    "zh": "更换其他图片",
+    "ja": "別の画像を選択"
+  },
+  {
+    "key": "media.featured.empty.title",
+    "category": "media",
+    "vi": "Bấm để chọn ảnh đại diện",
+    "en": "Click to select featured image",
+    "zh": "点击选择封面图片",
+    "ja": "アイキャッチ画像を選択"
+  },
+  {
+    "key": "media.featured.empty.hint",
+    "category": "media",
+    "vi": "JPG, PNG, WEBP (tối đa 5MB)",
+    "en": "JPG, PNG, WEBP (max 5MB)",
+    "zh": "JPG、PNG、WEBP(最大 5MB)",
+    "ja": "JPG, PNG, WEBP(最大 5MB)"
+  },
+  {
+    "key": "media.featured.pendingBadge",
+    "category": "media",
+    "vi": "Chưa lưu",
+    "en": "Unsaved",
+    "zh": "未保存",
+    "ja": "未保存"
+  },
+  {
+    "key": "media.featured.pendingHint",
+    "category": "media",
+    "vi": "Đã chọn: {name} — bấm \"Cập nhật\" để lưu.",
+    "en": "Selected: {name} — click \"Update\" to save.",
+    "zh": "已选择:{name} — 点击“更新”保存。",
+    "ja": "選択中: {name} — 「更新」を押して保存。"
+  },
+  {
+    "key": "media.featured.cancelPending",
+    "category": "media",
+    "vi": "Hủy ảnh đang chọn",
+    "en": "Cancel selected image",
+    "zh": "取消已选图片",
+    "ja": "選択をキャンセル"
+  },
+  {
+    "key": "media.url.toggle",
+    "category": "media",
+    "vi": "Hoặc dán URL ảnh từ internet",
+    "en": "Or paste an image URL from the internet",
+    "zh": "或粘贴互联网图片 URL",
+    "ja": "またはインターネットの画像 URL を貼り付け"
+  },
+  {
+    "key": "media.url.toggleWithVideo",
+    "category": "media",
+    "vi": "Hoặc dán URL ảnh/video từ internet",
+    "en": "Or paste an image/video URL from the internet",
+    "zh": "或粘贴互联网图片/视频 URL",
+    "ja": "またはインターネットの画像/動画 URL を貼り付け"
+  },
+  {
+    "key": "media.url.placeholder",
+    "category": "media",
+    "vi": "https://... hoặc /images/upload/...",
+    "en": "https://... or /images/upload/...",
+    "zh": "https://... 或 /images/upload/...",
+    "ja": "https://... または /images/upload/..."
+  },
+  {
+    "key": "media.url.add",
+    "category": "media",
+    "vi": "Thêm URL",
+    "en": "Add URL",
+    "zh": "添加 URL",
+    "ja": "URL を追加"
+  },
+  {
+    "key": "media.gallery.title",
+    "category": "media",
+    "vi": "Thư viện ảnh",
+    "en": "Image gallery",
+    "zh": "图片库",
+    "ja": "画像ギャラリー"
+  },
+  {
+    "key": "media.gallery.descPost",
+    "category": "media",
+    "vi": "Tải lên nhiều hình ảnh phụ cho bài đăng.",
+    "en": "Upload additional images for this post.",
+    "zh": "为此帖子上传多张附加图片。",
+    "ja": "この投稿に追加の画像をアップロード。"
+  },
+  {
+    "key": "media.gallery.descProject",
+    "category": "media",
+    "vi": "Tải lên nhiều hình ảnh phụ cho dự án.",
+    "en": "Upload additional images for this project.",
+    "zh": "为此项目上传多张附加图片。",
+    "ja": "このプロジェクトに追加の画像をアップロード。"
+  },
+  {
+    "key": "media.gallery.uploadMulti",
+    "category": "media",
+    "vi": "Tải nhiều ảnh",
+    "en": "Upload multiple",
+    "zh": "批量上传",
+    "ja": "複数アップロード"
+  },
+  {
+    "key": "media.gallery.uploading",
+    "category": "media",
+    "vi": "Đang tải...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "media.gallery.empty",
+    "category": "media",
+    "vi": "Chưa có ảnh nào. Bấm \"Tải nhiều ảnh\" để thêm.",
+    "en": "No images yet. Click \"Upload multiple\" to add.",
+    "zh": "尚无图片。点击“批量上传”添加。",
+    "ja": "画像がまだありません。「複数アップロード」で追加。"
+  },
+  {
+    "key": "media.gallery.delete",
+    "category": "media",
+    "vi": "Xóa",
+    "en": "Delete",
+    "zh": "删除",
+    "ja": "削除"
+  },
+  {
+    "key": "media.gallery.countToast",
+    "category": "media",
+    "vi": "{count} ảnh",
+    "en": "{count} image(s)",
+    "zh": "{count} 张图片",
+    "ja": "{count} 枚の画像"
   }
 ]

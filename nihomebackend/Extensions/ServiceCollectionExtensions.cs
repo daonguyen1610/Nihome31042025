@@ -94,6 +94,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<SiteSettingsService>();
         services.AddScoped<NewsService>();
         services.AddScoped<ProjectService>();
+        services.AddScoped<ProjectCategoryService>();
         services.AddScoped<ServiceItemService>();
         services.AddScoped<LogoService>();
         services.AddScoped<ProcessService>();

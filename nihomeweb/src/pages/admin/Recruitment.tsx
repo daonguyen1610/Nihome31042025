@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Briefcase, MapPin, Eye, CheckCircle2, X, Pencil, Trash2, ChevronDown, Users, FileDown } from "lucide-react";
+import { Plus, Briefcase, MapPin, Eye, CheckCircle2, X, Pencil, Trash2, ChevronDown, Users, FileDown, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -8,6 +8,7 @@ import { adminApi } from "@/services/adminApi";
 import type { JobPositionResponse, JobApplicationResponse, EmploymentTypeResponse } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 
 const APP_STATUS: Record<string, { bg: string; color: string; label: string }> = {
   new: { bg: "hsl(var(--admin-info-soft))", color: "hsl(var(--admin-info))", label: "Mới" },
@@ -36,6 +37,8 @@ const AdminRecruitment = () => {
   const [employmentTypes, setEmploymentTypes] = useState<EmploymentTypeResponse[]>([]);
   const [filterPosition, setFilterPosition] = useState<number | "">("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [positionQuery, setPositionQuery] = useState("");
+  const [appQuery, setAppQuery] = useState("");
 
   const loadPositions = useCallback(async () => {
     setLoadingPositions(true);
@@ -75,6 +78,25 @@ const AdminRecruitment = () => {
   const employmentTypeMap = useMemo(() => {
     return new Map(employmentTypes.map((item) => [item.code, item.name]));
   }, [employmentTypes]);
+
+  const filteredPositions = useMemo(() => {
+    if (!positionQuery.trim()) return positions;
+    return positions.filter((p) =>
+      matchesSearch(p.title, positionQuery) ||
+      matchesSearch(p.department, positionQuery) ||
+      matchesSearch(p.location, positionQuery),
+    );
+  }, [positions, positionQuery]);
+
+  const filteredApplications = useMemo(() => {
+    if (!appQuery.trim()) return applications;
+    return applications.filter((a) =>
+      matchesSearch(a.candidateName, appQuery) ||
+      matchesSearch(a.email, appQuery) ||
+      matchesSearch(a.phone, appQuery) ||
+      matchesSearch(a.positionTitle, appQuery),
+    );
+  }, [applications, appQuery]);
 
   const deletePosition = async (id: number, title: string) => {
     if (!confirm(`Xóa vị trí "${title}"? Tất cả đơn ứng tuyển liên quan cũng sẽ bị xóa.`)) return;
@@ -162,18 +184,32 @@ const AdminRecruitment = () => {
         </div>
       </div>
 
-      <h2 className="font-display text-xl font-extrabold mb-4">{t("recruit.positions")}</h2>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+        <h2 className="font-display text-xl font-extrabold">{t("recruit.positions")}</h2>
+        <div
+          className="flex items-center gap-2 rounded-full px-4 py-2 border w-full lg:w-80"
+          style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+        >
+          <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+          <input
+            value={positionQuery}
+            onChange={(e) => setPositionQuery(e.target.value)}
+            placeholder={t("recruit.searchPositionPlaceholder")}
+            className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60"
+          />
+        </div>
+      </div>
       {loadingPositions ? (
         <div className="flex justify-center py-10">
           <div className="w-7 h-7 border-4 rounded-full animate-spin" style={{ borderColor: "hsl(var(--admin-primary))", borderTopColor: "transparent" }} />
         </div>
-      ) : positions.length === 0 ? (
+      ) : filteredPositions.length === 0 ? (
         <div className="admin-card p-10 text-center mb-10" style={{ color: "hsl(var(--admin-muted))" }}>
-          Chưa có vị trí tuyển dụng nào.
+          {positions.length === 0 ? "Chưa có vị trí tuyển dụng nào." : t("common.noData")}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-10">
-          {positions.map((p) => (
+          {filteredPositions.map((p) => (
             <div key={p.id} className="admin-card p-6 flex flex-col">
               <div className="flex items-start justify-between mb-4">
                 <div
@@ -235,7 +271,19 @@ const AdminRecruitment = () => {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="font-display text-xl font-extrabold">{t("recruit.applications")}</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex items-center gap-2 rounded-full px-3 py-1.5 border"
+            style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+          >
+            <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+            <input
+              value={appQuery}
+              onChange={(e) => setAppQuery(e.target.value)}
+              placeholder={t("recruit.searchApplicationPlaceholder")}
+              className="bg-transparent outline-none text-sm w-44 placeholder:opacity-60"
+            />
+          </div>
           <AdminExportButton onClick={handleExportApplications} disabled={loadingApps || applications.length === 0} />
           <div className="relative">
             <select
@@ -272,9 +320,9 @@ const AdminRecruitment = () => {
           <div className="flex justify-center py-10">
             <div className="w-7 h-7 border-4 rounded-full animate-spin" style={{ borderColor: "hsl(var(--admin-primary))", borderTopColor: "transparent" }} />
           </div>
-        ) : applications.length === 0 ? (
+        ) : filteredApplications.length === 0 ? (
           <div className="p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-            Chưa có đơn ứng tuyển nào.
+            {applications.length === 0 ? "Chưa có đơn ứng tuyển nào." : t("common.noData")}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -290,7 +338,7 @@ const AdminRecruitment = () => {
                 </tr>
               </thead>
               <tbody>
-                {applications.map((a) => {
+                {filteredApplications.map((a) => {
                   const st = APP_STATUS[a.status] ?? APP_STATUS.new;
                   return (
                     <tr key={a.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>

@@ -105,6 +105,7 @@ const App = () => (
               <Route path="/admin/languages" element={<LanguagesPage />} />
               <Route path="/admin/translations" element={<TranslationsPage />} />
               <Route path="/admin/categories" element={<AdminCategories />} />
+              <Route path="/admin/project-categories" element={<Navigate to="/admin/categories?tab=projects" replace />} />
               <Route path="/admin/activity-log" element={<AdminActivityLog />} />
               <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
               <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />

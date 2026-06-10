@@ -4,12 +4,13 @@ import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { useActivities } from "@/hooks/useContentApi";
+import { useActivities, useActivityCategories } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import type { ActivityResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 
 const AdminPosts = () => {
   const { t } = useI18n();
@@ -17,14 +18,27 @@ const AdminPosts = () => {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const { data: items, loading, error, refetch } = useActivities();
+  const { data: categoryMaster } = useActivityCategories(true);
 
   const list = useMemo(() => items ?? [], [items]);
-  const categories = useMemo(() => ["all", ...Array.from(new Set(list.map((a) => a.category)))], [list]);
-  const filtered = list.filter((a) => {
-    const matchQ = !q || a.title.toLowerCase().includes(q.toLowerCase());
-    const matchCat = cat === "all" || a.category === cat;
-    return matchQ && matchCat;
-  });
+  const categories = useMemo(() => {
+    const fromMaster = (categoryMaster ?? []).map((c) => c.name);
+    const fromPosts = list.map((a) => a.category).filter(Boolean);
+    const unique = Array.from(new Set([...fromMaster, ...fromPosts])).sort((a, b) =>
+      a.localeCompare(b, "vi"),
+    );
+    return ["all", ...unique];
+  }, [categoryMaster, list]);
+  const filtered = useMemo(
+    () =>
+      list.filter((a) => {
+        const matchCat = cat === "all" || a.category === cat;
+        if (!matchCat) return false;
+        if (!q.trim()) return true;
+        return matchesSearch(a.title, q) || matchesSearch(a.category, q) || matchesSearch(a.slug, q);
+      }),
+    [list, cat, q],
+  );
 
   const handleDelete = async (a: ActivityResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;

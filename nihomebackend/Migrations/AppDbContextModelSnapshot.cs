@@ -89,6 +89,9 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ActivityCategoryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Author")
                         .HasColumnType("nvarchar(max)");
 
@@ -111,6 +114,9 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("GalleryJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -130,6 +136,8 @@ namespace nihomebackend.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActivityCategoryId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -503,6 +511,9 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("GalleryJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -566,9 +577,9 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "CreatedAt", "Id");
-
                     b.HasIndex("UserId", "IsRead");
+
+                    b.HasIndex("UserId", "CreatedAt", "Id");
 
                     b.ToTable("notifications", (string)null);
                 });
@@ -696,6 +707,9 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("ProjectCategoryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Scale")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -726,10 +740,44 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ProjectCategoryId");
+
                     b.HasIndex("Slug")
                         .IsUnique();
 
                     b.ToTable("projects", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("project_categories", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.RefreshToken", b =>
@@ -1008,6 +1056,16 @@ namespace nihomebackend.Migrations
                     b.ToTable("translations", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.Activity", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ActivityCategory", "CategoryRef")
+                        .WithMany()
+                        .HasForeignKey("ActivityCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CategoryRef");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.JobApplication", b =>
                 {
                     b.HasOne("NihomeBackend.Models.JobPosition", "JobPosition")
@@ -1019,10 +1077,10 @@ namespace nihomebackend.Migrations
                     b.Navigation("JobPosition");
                 });
 
-            modelBuilder.Entity("NihomeBackend.Models.RefreshToken", b =>
+            modelBuilder.Entity("NihomeBackend.Models.Notification", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
-                        .WithMany("RefreshTokens")
+                        .WithMany("Notifications")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1041,10 +1099,20 @@ namespace nihomebackend.Migrations
                     b.Navigation("ProcessDocument");
                 });
 
-            modelBuilder.Entity("NihomeBackend.Models.Notification", b =>
+            modelBuilder.Entity("NihomeBackend.Models.Project", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ProjectCategory", "CategoryRef")
+                        .WithMany()
+                        .HasForeignKey("ProjectCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CategoryRef");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.RefreshToken", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
-                        .WithMany("Notifications")
+                        .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

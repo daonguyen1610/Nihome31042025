@@ -1,11 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi, type ActivityCategoryResponse } from "@/services/adminApi";
+import {
+  adminApi,
+  type ActivityCategoryResponse,
+  type ProjectCategoryResponse,
+  type UpsertActivityCategoryRequest,
+  type UpsertProjectCategoryRequest,
+} from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+
+type CategoryKind = "posts" | "projects";
+
+type CategoryItem = ActivityCategoryResponse | ProjectCategoryResponse;
 
 type CategoryFormData = {
   name: string;
@@ -38,29 +57,43 @@ const getErrorMessage = (error: unknown) => {
   return undefined;
 };
 
+const parseTab = (raw: string | null): CategoryKind =>
+  raw === "projects" ? "projects" : "posts";
+
 const Categories = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const [items, setItems] = useState<ActivityCategoryResponse[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const kind = parseTab(searchParams.get("tab"));
+
+  const [items, setItems] = useState<CategoryItem[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<CategoryFormData>(emptyForm);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await adminApi.getActivityCategories(true);
+      const result =
+        kind === "projects"
+          ? await adminApi.getProjectCategories(true)
+          : await adminApi.getActivityCategories(true);
       setItems(result.data);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [t, toast]);
+  }, [kind, t, toast]);
 
   useEffect(() => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setDialogOpen(false);
+    setQ("");
     loadData();
   }, [loadData]);
 
@@ -69,18 +102,37 @@ const Categories = () => {
     [items, q],
   );
 
+  const switchTab = (next: CategoryKind) => {
+    if (next === kind) return;
+    const params = new URLSearchParams(searchParams);
+    if (next === "posts") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    setSearchParams(params, { replace: true });
+  };
+
   const startCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm, sortOrder: items.length + 1 });
+    setDialogOpen(true);
   };
 
-  const startEdit = (item: ActivityCategoryResponse) => {
+  const startEdit = (item: CategoryItem) => {
     setEditingId(item.id);
     setForm({
       name: item.name,
       isActive: item.isActive,
       sortOrder: item.sortOrder,
     });
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const submitForm = async (e: React.FormEvent) => {
@@ -93,22 +145,31 @@ const Categories = () => {
 
     setSubmitting(true);
     try {
-      const payload = {
+      const payload: UpsertActivityCategoryRequest | UpsertProjectCategoryRequest = {
         name: form.name.trim(),
         isActive: form.isActive,
         sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
       };
 
       if (editingId == null) {
-        await adminApi.createActivityCategory(payload);
+        if (kind === "projects") {
+          await adminApi.createProjectCategory(payload);
+        } else {
+          await adminApi.createActivityCategory(payload);
+        }
         toast({ title: t("form.created") });
       } else {
-        await adminApi.updateActivityCategory(editingId, payload);
+        if (kind === "projects") {
+          await adminApi.updateProjectCategory(editingId, payload);
+        } else {
+          await adminApi.updateActivityCategory(editingId, payload);
+        }
         toast({ title: t("form.updated") });
       }
 
       setEditingId(null);
       setForm(emptyForm);
+      setDialogOpen(false);
       await loadData();
     } catch (error: unknown) {
       toast({
@@ -121,11 +182,15 @@ const Categories = () => {
     }
   };
 
-  const remove = async (item: ActivityCategoryResponse) => {
+  const remove = async (item: CategoryItem) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
 
     try {
-      await adminApi.deleteActivityCategory(item.id);
+      if (kind === "projects") {
+        await adminApi.deleteProjectCategory(item.id);
+      } else {
+        await adminApi.deleteActivityCategory(item.id);
+      }
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       toast({ title: t("form.deleted") });
     } catch (error: unknown) {
@@ -139,7 +204,9 @@ const Categories = () => {
 
   const handleExport = () => {
     downloadCsv({
-      filename: createCsvFilename("admin-activity-categories"),
+      filename: createCsvFilename(
+        kind === "projects" ? "admin-project-categories" : "admin-activity-categories",
+      ),
       columns: [
         { header: "ID", value: "id" },
         { header: t("cat.name"), value: "name" },
@@ -149,6 +216,11 @@ const Categories = () => {
       rows: filtered,
     });
   };
+
+  const tabs: { key: CategoryKind; label: string }[] = [
+    { key: "posts", label: t("cat.tabPosts") },
+    { key: "projects", label: t("cat.tabProjects") },
+  ];
 
   return (
     <AdminLayout>
@@ -167,49 +239,27 @@ const Categories = () => {
         </div>
       </div>
 
-      <div className="admin-card p-5 mb-5">
-        <form onSubmit={submitForm} className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">
-          <input
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder={t("cat.name")}
-            className="admin-input"
-            required
-          />
-          <input
-            type="number"
-            value={form.sortOrder}
-            onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
-            placeholder={t("cat.order")}
-            className="admin-input"
-          />
-          <label className="inline-flex items-center gap-2 px-3 rounded-xl border" style={{ borderColor: "hsl(var(--admin-border))" }}>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-            />
-            <span className="text-sm font-semibold">{t("cat.published")}</span>
-          </label>
-          <div className="flex items-center gap-2">
-            <button type="submit" className="admin-btn-primary" disabled={submitting}>
-              {editingId == null ? t("form.create") : t("form.update")}
+      <div className="flex items-center gap-2 border-b mb-5" style={{ borderColor: "hsl(var(--admin-border))" }}>
+        {tabs.map((tab) => {
+          const active = tab.key === kind;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => switchTab(tab.key)}
+              className="px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors"
+              style={{
+                borderColor: active ? "hsl(var(--admin-primary))" : "transparent",
+                color: active ? "hsl(var(--admin-primary))" : "hsl(var(--admin-muted))",
+              }}
+            >
+              {tab.label}
             </button>
-            {editingId != null && (
-              <button
-                type="button"
-                className="admin-btn-primary opacity-70"
-                onClick={() => {
-                  setEditingId(null);
-                  setForm(emptyForm);
-                }}
-              >
-                {t("common.cancel")}
-              </button>
-            )}
-          </div>
-        </form>
+          );
+        })}
+      </div>
 
+      <div className="admin-card p-5 mb-5">
         <div className="flex items-center gap-2 max-w-md">
           <SearchIcon className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
           <input
@@ -220,6 +270,68 @@ const Categories = () => {
           />
         </div>
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
+        <DialogContent className="admin-scope sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl font-extrabold">
+              {editingId == null ? t("cat.add") : t("common.edit")}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={submitForm} className="space-y-4">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="cat-name">
+                {t("cat.name")}
+              </label>
+              <input
+                id="cat-name"
+                value={form.name}
+                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder={t("cat.name")}
+                className="admin-input mt-1 w-full"
+                autoFocus
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="cat-order">
+                {t("cat.order")}
+              </label>
+              <input
+                id="cat-order"
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
+                className="admin-input mt-1 w-full"
+              />
+            </div>
+            <div
+              className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+              style={{ borderColor: "hsl(var(--admin-border))" }}
+            >
+              <span className="text-sm font-semibold">{t("cat.published")}</span>
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
+                aria-label={t("cat.published")}
+              />
+            </div>
+            <DialogFooter>
+              <button
+                type="button"
+                className="admin-btn-primary opacity-70"
+                onClick={closeDialog}
+                disabled={submitting}
+              >
+                {t("common.cancel")}
+              </button>
+              <button type="submit" className="admin-btn-primary" disabled={submitting}>
+                {submitting ? t("common.loading") : editingId == null ? t("form.create") : t("form.update")}
+              </button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="admin-card overflow-hidden">
         <table className="w-full text-sm">

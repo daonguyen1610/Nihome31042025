@@ -89,12 +89,14 @@ public class ActivityCategoriesControllerTests : IDisposable
     {
         var category = new ActivityCategory { Name = "Events", IsActive = true, SortOrder = 1 };
         _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
         _db.Activities.Add(new Activity
         {
             Slug = "post-1",
             Date = "25.04.2026",
             ImageUrl = "/images/post-1.jpg",
             Category = "events",
+            ActivityCategoryId = category.Id,
             Title = "Post 1",
             Excerpt = "Post 1",
             ContentJson = "[]",

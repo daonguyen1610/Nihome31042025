@@ -9,6 +9,7 @@ import {
   Save,
   Trophy,
   X,
+  Search,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -19,6 +20,7 @@ import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -93,15 +95,23 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [openModal, setOpenModal] = useState(false);
+  const [q, setQ] = useState("");
 
   const items = useMemo(() => {
     const source = logos?.[kind] ?? [];
-    return [...source].sort(
+    const sorted = [...source].sort(
       (a, b) =>
         (a.sortOrder ?? Number.MAX_SAFE_INTEGER) -
         (b.sortOrder ?? Number.MAX_SAFE_INTEGER),
     );
-  }, [logos, kind]);
+    if (!q.trim()) return sorted;
+    return sorted.filter((item) =>
+      matchesSearch(item.name, q) ||
+      matchesSearch(item.href, q),
+    );
+  }, [logos, kind, q]);
+
+  const totalCount = (logos?.[kind] ?? []).length;
 
   const isEditing = form.id != null;
   const isBusy = submitting || uploading;
@@ -306,10 +316,22 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
               className="text-sm mt-1"
               style={{ color: "hsl(var(--admin-muted))" }}
             >
-              {items.length} {t("logoAdmin.logoNoun")}
+              {q.trim() ? `${items.length} / ${totalCount}` : totalCount} {t("logoAdmin.logoNoun")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="flex items-center gap-2 rounded-full px-3 py-2 border"
+              style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+            >
+              <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("logoAdmin.searchPlaceholder")}
+                className="bg-transparent outline-none text-sm w-48 placeholder:opacity-60"
+              />
+            </div>
             <AdminExportButton onClick={handleExport} disabled={items.length === 0} />
             <button
               onClick={startCreate}
@@ -433,30 +455,30 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                   </Field>
 
                   <Field label={`${t("logoAdmin.fieldImage")} *`}>
-                    <div className="logo-upload-wrap logo-upload-row">
-                      <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="logo-upload-wrap logo-upload-row space-y-2">
+                      <button
+                        type="button"
+                        onClick={uploadImage}
+                        disabled={uploading}
+                        className="logo-upload-button w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60"
+                        style={{ borderColor: "hsl(var(--admin-border))" }}
+                      >
+                        <Upload className="w-4 h-4" />{" "}
+                        {uploading
+                          ? t("logoAdmin.uploading")
+                          : t("logoAdmin.upload")}
+                      </button>
+                      <details>
+                        <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                          {t("media.url.toggle")}
+                        </summary>
                         <input
-                          className="admin-input logo-styled-input w-full flex-1 bg-white"
+                          className="admin-input logo-styled-input w-full bg-white mt-2"
                           value={form.imageUrl}
-                          onChange={(e) =>
-                            updateForm("imageUrl", e.target.value)
-                          }
-                          placeholder="/images/upload/..."
-                          required
+                          onChange={(e) => updateForm("imageUrl", e.target.value)}
+                          placeholder={t("media.url.placeholder")}
                         />
-                        <button
-                          type="button"
-                          onClick={uploadImage}
-                          disabled={uploading}
-                          className="logo-upload-button inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60 sm:min-w-[148px]"
-                          style={{ borderColor: "hsl(var(--admin-border))" }}
-                        >
-                          <Upload className="w-4 h-4" />{" "}
-                          {uploading
-                            ? t("logoAdmin.uploading")
-                            : t("logoAdmin.upload")}
-                        </button>
-                      </div>
+                      </details>
                     </div>
                   </Field>
 

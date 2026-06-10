@@ -1,24 +1,48 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, MapPin, Maximize2, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, MapPin, Maximize2, Edit, Trash2, Eye, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { useProjects } from "@/hooks/useContentApi";
+import { useProjects, useProjectCategories } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import type { ProjectResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { matchesSearch } from "@/lib/utils";
 
 const AdminProjects = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [tab, setTab] = useState<"all" | "ongoing" | "completed">("all");
+  const [cat, setCat] = useState("all");
+  const [q, setQ] = useState("");
   const { data: items, loading, error, refetch } = useProjects();
+  const { data: categoryMaster } = useProjectCategories(true);
 
-  const list = items ?? [];
-  const filtered = list.filter((p) => tab === "all" || p.status === tab);
+  const list = useMemo(() => items ?? [], [items]);
+  const categoryOptions = useMemo(() => {
+    const fromMaster = (categoryMaster ?? []).map((c) => c.name);
+    const fromProjects = list.map((p) => p.category ?? "").filter(Boolean);
+    return Array.from(new Set([...fromMaster, ...fromProjects])).sort((a, b) =>
+      a.localeCompare(b, "vi"),
+    );
+  }, [categoryMaster, list]);
+  const filtered = useMemo(() => {
+    return list.filter((p) => {
+      if (tab !== "all" && p.status !== tab) return false;
+      if (cat !== "all" && (p.category ?? "") !== cat) return false;
+      if (!q.trim()) return true;
+      return (
+        matchesSearch(p.name, q) ||
+        matchesSearch(p.slug, q) ||
+        matchesSearch(p.location, q) ||
+        matchesSearch(p.client, q) ||
+        matchesSearch(p.category, q)
+      );
+    });
+  }, [list, tab, cat, q]);
 
   const handleDelete = async (p: ProjectResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;
@@ -79,35 +103,67 @@ const AdminProjects = () => {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-6">
-        {[
-          { id: "all", label: t("common.all") },
-          { id: "ongoing", label: t("proj.ongoing") },
-          { id: "completed", label: t("proj.completed") },
-        ].map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id as typeof tab)}
-            className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition"
-            style={
-              tab === tb.id
-                ? {
-                    background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
-                    color: "white",
-                    boxShadow: "0 8px 18px -6px hsl(var(--admin-primary) / 0.45)",
-                  }
-                : { background: "white", color: "hsl(var(--admin-sidebar-text))", border: "1px solid hsl(var(--admin-border))" }
-            }
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            className="flex items-center gap-2 rounded-full px-4 py-2 border w-full sm:w-80"
+            style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
           >
-            {tb.label}
-          </button>
-        ))}
+            <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("proj.searchPlaceholder")}
+              className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60"
+            />
+          </div>
+          <select
+            value={cat}
+            onChange={(e) => setCat(e.target.value)}
+            className="admin-input w-full sm:w-56 sm:ml-auto"
+          >
+            <option value="all">{t("common.all")}</option>
+            {categoryOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "all", label: t("common.all") },
+            { id: "ongoing", label: t("proj.ongoing") },
+            { id: "completed", label: t("proj.completed") },
+          ].map((tb) => (
+            <button
+              key={tb.id}
+              onClick={() => setTab(tb.id as typeof tab)}
+              className="px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition"
+              style={
+                tab === tb.id
+                  ? {
+                      background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
+                      color: "white",
+                      boxShadow: "0 8px 18px -6px hsl(var(--admin-primary) / 0.45)",
+                    }
+                  : { background: "white", color: "hsl(var(--admin-sidebar-text))", border: "1px solid hsl(var(--admin-border))" }
+              }
+            >
+              {tb.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <PageLoading />
       ) : error ? (
         <PageError message={error} onRetry={refetch} />
+      ) : filtered.length === 0 ? (
+        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+          {t("common.noData")}
+        </div>
       ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((p) => (

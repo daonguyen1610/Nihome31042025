@@ -2,8 +2,15 @@
 nihomebackend/bin/**
 nihomebackend/obj/**
 nihomebackend/wwwroot/process-assets/**
+# Ignore publish folder since we will generate it from the source code and deploy to hosting
+nihomebackend/publish
+nihomebackend/bin/
+nihomebackend/obj/
 nihomebackend.tests/bin/**
 nihomebackend.tests/obj/**
 .amazonq
 .agents
 skills-lock.json
+# Deployment config
+deployment-config/output/publish-release/
+deployment-config/output/publish-release.zip

@@ -46,7 +46,7 @@ public class ActivityService(
 
     public async Task<ActivityResponse> CreateAsync(UpsertActivityRequest req)
     {
-        await EnsureCategoryExistsAsync(req.Category);
+        var (categoryId, categoryName) = await ResolveCategoryAsync(req.CategoryId, req.Category);
         var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
 
         var entity = new Activity
@@ -54,7 +54,9 @@ public class ActivityService(
             Slug = req.Slug,
             Date = req.Date,
             ImageUrl = normalizedImageUrl ?? string.Empty,
-            Category = req.Category,
+            GalleryJson = SerializeGallery(req.Gallery),
+            Category = categoryName,
+            ActivityCategoryId = categoryId,
             Author = req.Author,
             Title = req.Title,
             Excerpt = req.Excerpt,
@@ -78,13 +80,16 @@ public class ActivityService(
 
         var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
+        var previousGallery = DeserializeGallery(entity.GalleryJson);
 
-        await EnsureCategoryExistsAsync(req.Category);
+        var (categoryId, categoryName) = await ResolveCategoryAsync(req.CategoryId, req.Category);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;
         entity.ImageUrl = nextImageUrl ?? string.Empty;
-        entity.Category = req.Category;
+        entity.GalleryJson = SerializeGallery(req.Gallery);
+        entity.Category = categoryName;
+        entity.ActivityCategoryId = categoryId;
         entity.Author = req.Author;
         entity.Title = req.Title;
         entity.Excerpt = req.Excerpt;
@@ -98,6 +103,7 @@ public class ActivityService(
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
             Logger.LogInformation("Updated activity {ActivityId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
+        DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
         Logger.LogInformation("Updated activity {ActivityId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity, new Dictionary<string, string>());
     }
@@ -111,9 +117,14 @@ public class ActivityService(
             return false;
         }
         var imageUrl = entity.ImageUrl;
+        var gallery = DeserializeGallery(entity.GalleryJson);
         db.Activities.Remove(entity);
         await db.SaveChangesAsync();
         hostedImageService.DeleteIfManagedUpload(imageUrl);
+        foreach (var url in gallery)
+        {
+            hostedImageService.DeleteIfManagedUpload(url);
+        }
         await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.Activity, id);
         Logger.LogInformation("Deleted activity {ActivityId}", id);
         return true;
@@ -125,7 +136,9 @@ public class ActivityService(
         Slug = a.Slug,
         Date = a.Date,
         ImageUrl = a.ImageUrl,
+        Gallery = string.IsNullOrEmpty(a.GalleryJson) ? null : JsonSerializer.Deserialize<string[]>(a.GalleryJson),
         Category = a.Category,
+        CategoryId = a.ActivityCategoryId,
         Author = a.Author,
         Title = t.GetValueOrDefault("Title", a.Title),
         Excerpt = t.GetValueOrDefault("Excerpt", a.Excerpt),
@@ -134,21 +147,64 @@ public class ActivityService(
             : JsonSerializer.Deserialize<string[]>(a.ContentJson) ?? [],
     };
 
-    private async Task EnsureCategoryExistsAsync(string categoryName)
+    private string? SerializeGallery(string[]? gallery)
     {
+        if (gallery == null || gallery.Length == 0)
+        {
+            return null;
+        }
+        var normalized = gallery
+            .Select(url => hostedImageService.NormalizeImageUrl(url) ?? string.Empty)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .ToArray();
+        return normalized.Length == 0 ? null : JsonSerializer.Serialize(normalized);
+    }
+
+    private static string[] DeserializeGallery(string? galleryJson)
+    {
+        if (string.IsNullOrEmpty(galleryJson))
+        {
+            return [];
+        }
+        return JsonSerializer.Deserialize<string[]>(galleryJson) ?? [];
+    }
+
+    private void DeleteRemovedGalleryImages(string[] previous, string[] current)
+    {
+        var kept = new HashSet<string>(current, StringComparer.OrdinalIgnoreCase);
+        foreach (var url in previous)
+        {
+            if (!kept.Contains(url))
+            {
+                hostedImageService.DeleteIfManagedUpload(url);
+            }
+        }
+    }
+
+    private async Task<(int? Id, string Name)> ResolveCategoryAsync(int? categoryId, string? categoryName)
+    {
+        if (categoryId.HasValue)
+        {
+            var byId = await db.ActivityCategories.FindAsync(categoryId.Value);
+            if (byId == null)
+            {
+                throw new InvalidOperationException("Danh mục bài đăng không tồn tại.");
+            }
+            return (byId.Id, byId.Name);
+        }
+
         var normalizedName = (categoryName ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(normalizedName))
         {
-            return;
+            return (null, string.Empty);
         }
 
-        var exists = await db.ActivityCategories
-            .AsNoTracking()
-            .AnyAsync(c => c.Name.ToLower() == normalizedName.ToLower());
+        var existing = await db.ActivityCategories
+            .FirstOrDefaultAsync(c => c.Name.ToLower() == normalizedName.ToLower());
 
-        if (exists)
+        if (existing != null)
         {
-            return;
+            return (existing.Id, existing.Name);
         }
 
         var maxSortOrder = await db.ActivityCategories
@@ -156,14 +212,15 @@ public class ActivityService(
             .Select(c => (int?)c.SortOrder)
             .MaxAsync() ?? 0;
 
-        db.ActivityCategories.Add(new ActivityCategory
+        var created = new ActivityCategory
         {
             Name = normalizedName,
             IsActive = true,
             SortOrder = maxSortOrder + 1,
-        });
-
+        };
+        db.ActivityCategories.Add(created);
         await db.SaveChangesAsync();
         Logger.LogInformation("Auto-created activity category {CategoryName} from activity payload", normalizedName);
+        return (created.Id, created.Name);
     }
 }

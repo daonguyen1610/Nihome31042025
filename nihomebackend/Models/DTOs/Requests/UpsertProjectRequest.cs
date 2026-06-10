@@ -11,11 +11,12 @@ public class UpsertProjectRequest
     [Required] public string Name { get; set; } = "";
     [Required] public string Client { get; set; } = "";
     [Required] public string Location { get; set; } = "";
-    [Required] public string Scale { get; set; } = "";
+    public string Scale { get; set; } = "";
     [Required] public string Scope { get; set; } = "";
     [Required] public string Status { get; set; } = "ongoing";
     public string? Year { get; set; }
     public string? Category { get; set; }
+    public int? CategoryId { get; set; }
     public string? Description { get; set; }
     public string[]? Challenges { get; set; }
     public string[]? Solutions { get; set; }

@@ -6,7 +6,9 @@ export interface UpsertActivityRequest {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
+  categoryId?: number | null;
   author?: string;
   title: string;
   excerpt: string;
@@ -18,6 +20,7 @@ export interface UpsertNewsRequest {
   slug: string;
   date: string;
   imageUrl: string;
+  gallery?: string[];
   category: string;
   title: string;
   excerpt: string;
@@ -37,6 +40,7 @@ export interface UpsertProjectRequest {
   status: string;
   year?: string;
   category?: string;
+  categoryId?: number | null;
   description?: string;
   challenges?: string[];
   solutions?: string[];
@@ -129,6 +133,19 @@ export interface UpsertActivityCategoryRequest {
 }
 
 export interface ActivityCategoryResponse {
+  id: number;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface UpsertProjectCategoryRequest {
+  name: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface ProjectCategoryResponse {
   id: number;
   name: string;
   isActive: boolean;
@@ -328,6 +345,16 @@ export const adminApi = {
     api.put<ActivityCategoryResponse>(`/activity-categories/${id}`, data),
   deleteActivityCategory: (id: number) =>
     api.delete(`/activity-categories/${id}`),
+
+  // Project categories
+  getProjectCategories: (includeInactive = false) =>
+    api.get<ProjectCategoryResponse[]>(`/project-categories?includeInactive=${includeInactive}`),
+  createProjectCategory: (data: UpsertProjectCategoryRequest) =>
+    api.post<ProjectCategoryResponse>("/project-categories", data),
+  updateProjectCategory: (id: number, data: UpsertProjectCategoryRequest) =>
+    api.put<ProjectCategoryResponse>(`/project-categories/${id}`, data),
+  deleteProjectCategory: (id: number) =>
+    api.delete(`/project-categories/${id}`),
 
   // Employment types
   getEmploymentTypes: (includeInactive = false) =>

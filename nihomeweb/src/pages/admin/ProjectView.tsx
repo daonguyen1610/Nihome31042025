@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit, Trash2, MapPin, Maximize2, Calendar, Building, Tag } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -6,12 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useProject } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const ProjectView = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { data: project, loading, error, refetch } = useProject(slug ?? "");
 
   if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
@@ -114,6 +117,31 @@ const ProjectView = () => {
               ) : null}
             </div>
           ) : null}
+
+          {project.gallery && project.gallery.length > 0 ? (
+            <div className="admin-card p-6">
+              <h2 className="font-bold mb-4">{t("media.gallery.label")}</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {project.gallery.map((imageUrl, index) => (
+                  <button
+                    key={`${imageUrl}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedImage(imageUrl)}
+                    className="group relative aspect-[4/3] rounded-xl overflow-hidden border bg-muted text-left"
+                    style={{ borderColor: "hsl(var(--admin-border))" }}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`${project.name} ${index + 1}`}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="admin-card p-6 h-fit">
@@ -140,6 +168,18 @@ const ProjectView = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="p-1 sm:max-w-5xl bg-transparent border-0 shadow-none">
+          {selectedImage ? (
+            <img
+              src={selectedImage}
+              alt={project.name}
+              className="w-full max-h-[82vh] object-contain rounded-xl"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

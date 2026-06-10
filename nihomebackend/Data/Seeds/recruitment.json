@@ -382,5 +382,21 @@
     "en": "Hiring",
     "zh": "招聘中",
     "ja": "採用中"
+  },
+  {
+    "key": "recruit.searchPositionPlaceholder",
+    "category": "recruit",
+    "vi": "Tìm vị trí theo tên, phòng ban, địa điểm...",
+    "en": "Search positions by title, department, location...",
+    "zh": "按职位名称、部门、位置搜索...",
+    "ja": "ポジション名、部門、場所で検索..."
+  },
+  {
+    "key": "recruit.searchApplicationPlaceholder",
+    "category": "recruit",
+    "vi": "Tìm ứng viên theo tên, email, điện thoại...",
+    "en": "Search candidates by name, email, phone...",
+    "zh": "按候选人姓名、邮箱、电话搜索...",
+    "ja": "候補者を名前、メール、電話で検索..."
   }
 ]

@@ -99,6 +99,7 @@ public class ActivityCategoryServiceTests : IDisposable
     {
         var category = new ActivityCategory { Name = "Old Name", IsActive = true, SortOrder = 1 };
         _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
         _db.Activities.AddRange(
             new Activity
             {
@@ -106,6 +107,7 @@ public class ActivityCategoryServiceTests : IDisposable
                 Date = "25.04.2026",
                 ImageUrl = "/images/linked-1.jpg",
                 Category = "old name",
+                ActivityCategoryId = category.Id,
                 Title = "Linked 1",
                 Excerpt = "Linked 1",
                 ContentJson = "[]",
@@ -116,6 +118,7 @@ public class ActivityCategoryServiceTests : IDisposable
                 Date = "25.04.2026",
                 ImageUrl = "/images/linked-2.jpg",
                 Category = "Old Name",
+                ActivityCategoryId = category.Id,
                 Title = "Linked 2",
                 Excerpt = "Linked 2",
                 ContentJson = "[]",
@@ -138,12 +141,14 @@ public class ActivityCategoryServiceTests : IDisposable
     {
         var category = new ActivityCategory { Name = "In Use", IsActive = true, SortOrder = 1 };
         _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
         _db.Activities.Add(new Activity
         {
             Slug = "linked",
             Date = "25.04.2026",
             ImageUrl = "/images/linked.jpg",
             Category = "in use",
+            ActivityCategoryId = category.Id,
             Title = "Linked",
             Excerpt = "Linked",
             ContentJson = "[]",

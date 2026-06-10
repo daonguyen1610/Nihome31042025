@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SlideshowItem> SlideshowItems => Set<SlideshowItem>();
     public DbSet<AboutSectionContent> AboutSectionContents => Set<AboutSectionContent>();
     public DbSet<ActivityCategory> ActivityCategories => Set<ActivityCategory>();
+    public DbSet<ProjectCategory> ProjectCategories => Set<ProjectCategory>();
 
     // Recruitment
     public DbSet<JobPosition> JobPositions => Set<JobPosition>();
@@ -81,6 +82,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Activity>().ToTable("activities");
         modelBuilder.Entity<Activity>().HasKey(a => a.Id);
         modelBuilder.Entity<Activity>().HasIndex(a => a.Slug).IsUnique();
+        modelBuilder.Entity<Activity>()
+            .HasOne(a => a.CategoryRef)
+            .WithMany()
+            .HasForeignKey(a => a.ActivityCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<NewsArticle>().ToTable("news_articles");
         modelBuilder.Entity<NewsArticle>().HasKey(n => n.Id);
@@ -89,6 +95,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Project>().ToTable("projects");
         modelBuilder.Entity<Project>().HasKey(p => p.Id);
         modelBuilder.Entity<Project>().HasIndex(p => p.Slug).IsUnique();
+        modelBuilder.Entity<Project>()
+            .HasOne(p => p.CategoryRef)
+            .WithMany()
+            .HasForeignKey(p => p.ProjectCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ServiceItem>().ToTable("service_items");
         modelBuilder.Entity<ServiceItem>().HasKey(s => s.Id);
@@ -120,6 +131,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(20);
 
         modelBuilder.Entity<SlideshowItem>().ToTable("slideshow_items");
+
+        modelBuilder.Entity<ProjectCategory>().ToTable("project_categories");
+        modelBuilder.Entity<ProjectCategory>().HasKey(c => c.Id);
+        modelBuilder.Entity<ProjectCategory>().HasIndex(c => c.Name).IsUnique();
         modelBuilder.Entity<SlideshowItem>().HasKey(s => s.Id);
         modelBuilder.Entity<SlideshowItem>().HasIndex(s => s.Slug).IsUnique();
 

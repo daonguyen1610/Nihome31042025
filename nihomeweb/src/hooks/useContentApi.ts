@@ -6,6 +6,7 @@ import {
   type EmploymentTypeResponse,
   type ActivityResponse,
   type NewsResponse,
+  type ProjectCategoryResponse,
   type ProjectResponse,
   type ServiceResponse,
   type LogosGroupedResponse,
@@ -64,6 +65,13 @@ export function useActivity(slug: string) {
 export function useActivityCategories(includeInactive = false) {
   return useFetch<ActivityCategoryResponse[]>(
     () => contentApi.getActivityCategories(includeInactive),
+    [includeInactive],
+  );
+}
+
+export function useProjectCategories(includeInactive = false) {
+  return useFetch<ProjectCategoryResponse[]>(
+    () => contentApi.getProjectCategories(includeInactive),
     [includeInactive],
   );
 }
