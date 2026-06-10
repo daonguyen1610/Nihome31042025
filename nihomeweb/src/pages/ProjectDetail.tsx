@@ -51,9 +51,21 @@ const ProjectDetail = () => {
           <Link to="/projects" className="inline-flex items-center gap-2 text-white/80 hover:text-white text-xs uppercase tracking-[0.22em] font-bold mb-6 w-fit">
             <ArrowLeft className="w-4 h-4" /> {t("projDetail.back")}
           </Link>
-          <span className={`chip ${project.status === "ongoing" ? "chip-orange" : "chip-success"} bg-white/95 mb-6 w-fit`}>
-            {project.status === "ongoing" ? t("projDetail.statusOngoing") : t("projDetail.statusDone")}
-          </span>
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            <span className={`chip ${project.status === "ongoing" ? "chip-orange" : "chip-success"} bg-white/95`}>
+              {project.status === "ongoing" ? t("projDetail.statusOngoing") : t("projDetail.statusDone")}
+            </span>
+            {project.category && (
+              <span className="chip chip-primary bg-white/95">
+                {project.category}
+              </span>
+            )}
+            {project.scope && (
+              <span className="chip bg-white/90 text-foreground/80 border border-white/50">
+                {project.scope}
+              </span>
+            )}
+          </div>
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-extrabold text-white leading-[1.05] tracking-tight max-w-4xl text-balance">
             {project.name}
           </h1>
