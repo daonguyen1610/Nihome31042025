@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RegistrationOtp> RegistrationOtps => Set<RegistrationOtp>();
     public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
 
     // Content
     public DbSet<Activity> Activities => Set<Activity>();
@@ -75,6 +76,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasOne(n => n.User)
             .WithMany(u => u.Notifications)
             .HasForeignKey(n => n.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserDocument>().ToTable("user_documents");
+        modelBuilder.Entity<UserDocument>().HasKey(d => d.Id);
+        modelBuilder.Entity<UserDocument>()
+            .Property(d => d.DocumentType)
+            .HasConversion<string>()
+            .HasMaxLength(20);
+        modelBuilder.Entity<UserDocument>().HasIndex(d => new { d.UserId, d.CreatedAt });
+        modelBuilder.Entity<UserDocument>()
+            .HasOne(d => d.User)
+            .WithMany(u => u.Documents)
+            .HasForeignKey(d => d.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         // Content tables
