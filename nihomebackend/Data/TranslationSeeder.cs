@@ -32,7 +32,11 @@ public static class TranslationSeeder
 
             foreach (var entry in doc.RootElement.EnumerateArray())
             {
-                var key = entry.GetProperty("key").GetString()!;
+                if (!entry.TryGetProperty("key", out var keyProp)) continue;
+
+                var key = keyProp.GetString();
+                if (string.IsNullOrWhiteSpace(key)) continue;
+
                 var category = entry.TryGetProperty("category", out var catProp) ? catProp.GetString() : null;
 
                 foreach (var lang in LanguageCodes)

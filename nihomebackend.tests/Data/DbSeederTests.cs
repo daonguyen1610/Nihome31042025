@@ -36,6 +36,18 @@ public class DbSeederTests : IDisposable
         Assert.Equal(customBody, settings.OtpEmailBodyTemplate);
     }
 
+    [Fact]
+    public void Seed_AddsProcessDocumentsFromSeedJson()
+    {
+        DbSeeder.Seed(_db);
+
+        Assert.Equal(29, _db.ProcessDocuments.Count());
+        Assert.Contains(_db.ProcessDocuments, p =>
+            p.GroupKey == "dt" &&
+            p.Title == "Quy trình đấu thầu" &&
+            p.SortOrder == 0);
+    }
+
     private static SiteSettings CreateSettings(string otpEmailBodyTemplate)
     {
         var now = DateTime.UtcNow;
