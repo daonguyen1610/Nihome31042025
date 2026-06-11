@@ -9,6 +9,8 @@ import { I18nProvider } from "@/lib/i18n";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index.tsx";
 import Profile from "./pages/Profile.tsx";
+import UserProfile from "./pages/UserProfile.tsx";
+import ProfileSettings from "./pages/ProfileSettings.tsx";
 import Services from "./pages/Services.tsx";
 import ServiceDetail from "./pages/ServiceDetail.tsx";
 import Projects from "./pages/Projects.tsx";
@@ -80,6 +82,11 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            {/* Protected user routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/my-profile" element={<UserProfile />} />
+              <Route path="/profile-settings" element={<ProfileSettings />} />
+            </Route>
             <Route element={<ProtectedRoute roles={["ADMIN", "SUPER_ADMIN"]} />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/notifications" element={<AdminNotifications />} />

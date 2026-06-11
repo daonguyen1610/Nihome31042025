@@ -1,0 +1,226 @@
+[
+  {
+    "key": "profile.myProfile",
+    "category": "profile",
+    "vi": "Hồ sơ của tôi",
+    "en": "My Profile",
+    "zh": "我的资料",
+    "ja": "自分のプロフィール"
+  },
+  {
+    "key": "profile.manageYourInfo",
+    "category": "profile",
+    "vi": "Quản lý thông tin cá nhân",
+    "en": "Manage your personal information",
+    "zh": "管理你的个人信息",
+    "ja": "個人情報を管理"
+  },
+  {
+    "key": "profile.personalInfo",
+    "category": "profile",
+    "vi": "Thông tin cá nhân",
+    "en": "Personal Information",
+    "zh": "个人信息",
+    "ja": "個人情報"
+  },
+  {
+    "key": "profile.uploadAvatar",
+    "category": "profile",
+    "vi": "Tải ảnh lên",
+    "en": "Upload Photo",
+    "zh": "上传照片",
+    "ja": "写真をアップロード"
+  },
+  {
+    "key": "profile.fullName",
+    "category": "profile",
+    "vi": "Họ và tên",
+    "en": "Full Name",
+    "zh": "全名",
+    "ja": "フルネーム"
+  },
+  {
+    "key": "profile.email",
+    "category": "profile",
+    "vi": "Email",
+    "en": "Email",
+    "zh": "邮箱",
+    "ja": "メール"
+  },
+  {
+    "key": "profile.phone",
+    "category": "profile",
+    "vi": "Số điện thoại",
+    "en": "Phone",
+    "zh": "电话",
+    "ja": "電話"
+  },
+  {
+    "key": "profile.address",
+    "category": "profile",
+    "vi": "Địa chỉ",
+    "en": "Address",
+    "zh": "地址",
+    "ja": "住所"
+  },
+  {
+    "key": "profile.settings",
+    "category": "profile",
+    "vi": "Cài đặt",
+    "en": "Settings",
+    "zh": "设置",
+    "ja": "設定"
+  },
+  {
+    "key": "profile.manageAccount",
+    "category": "profile",
+    "vi": "Quản lý tài khoản của bạn",
+    "en": "Manage your account",
+    "zh": "管理您的账户",
+    "ja": "アカウントを管理"
+  },
+  {
+    "key": "profile.logout",
+    "category": "profile",
+    "vi": "Đăng xuất",
+    "en": "Logout",
+    "zh": "登出",
+    "ja": "ログアウト"
+  },
+  {
+    "key": "profile.viewProfile",
+    "category": "profile",
+    "vi": "Xem hồ sơ",
+    "en": "View Profile",
+    "zh": "查看资料",
+    "ja": "プロフィールを見る"
+  },
+  {
+    "key": "profile.accountInfo",
+    "category": "profile",
+    "vi": "Thông tin tài khoản",
+    "en": "Account Information",
+    "zh": "账户信息",
+    "ja": "アカウント情報"
+  },
+  {
+    "key": "profile.role",
+    "category": "profile",
+    "vi": "Vai trò",
+    "en": "Role",
+    "zh": "角色",
+    "ja": "役割"
+  },
+  {
+    "key": "profile.memberSince",
+    "category": "profile",
+    "vi": "Thành viên kể từ",
+    "en": "Member Since",
+    "zh": "成员从",
+    "ja": "メンバー以来"
+  },
+  {
+    "key": "password.change",
+    "category": "profile",
+    "vi": "Đổi mật khẩu",
+    "en": "Change Password",
+    "zh": "更改密码",
+    "ja": "パスワード変更"
+  },
+  {
+    "key": "password.current",
+    "category": "profile",
+    "vi": "Mật khẩu hiện tại",
+    "en": "Current Password",
+    "zh": "当前密码",
+    "ja": "現在のパスワード"
+  },
+  {
+    "key": "password.currentRequired",
+    "category": "profile",
+    "vi": "Vui lòng nhập mật khẩu hiện tại",
+    "en": "Please enter your current password",
+    "zh": "请输入当前密码",
+    "ja": "現在のパスワードを入力してください"
+  },
+  {
+    "key": "password.new",
+    "category": "profile",
+    "vi": "Mật khẩu mới",
+    "en": "New Password",
+    "zh": "新密码",
+    "ja": "新しいパスワード"
+  },
+  {
+    "key": "password.newRequired",
+    "category": "profile",
+    "vi": "Vui lòng nhập mật khẩu mới",
+    "en": "Please enter a new password",
+    "zh": "请输入新密码",
+    "ja": "新しいパスワードを入力してください"
+  },
+  {
+    "key": "password.confirm",
+    "category": "profile",
+    "vi": "Xác nhận mật khẩu",
+    "en": "Confirm Password",
+    "zh": "确认密码",
+    "ja": "パスワードを確認"
+  },
+  {
+    "key": "password.minLength",
+    "category": "profile",
+    "vi": "Ít nhất 6 ký tự",
+    "en": "At least 6 characters",
+    "zh": "至少6个字符",
+    "ja": "最低6文字"
+  },
+  {
+    "key": "password.notMatch",
+    "category": "profile",
+    "vi": "Mật khẩu xác nhận không khớp",
+    "en": "Passwords do not match",
+    "zh": "密码不匹配",
+    "ja": "パスワードが一致しません"
+  },
+  {
+    "key": "password.sameCurrent",
+    "category": "profile",
+    "vi": "Mật khẩu mới không được trùng với hiện tại",
+    "en": "New password cannot be the same as current",
+    "zh": "新密码不能与当前密码相同",
+    "ja": "新しいパスワードは現在のパスワードと同じにできません"
+  },
+  {
+    "key": "password.changeSucess",
+    "category": "profile",
+    "vi": "Đổi mật khẩu thành công!",
+    "en": "Password changed successfully!",
+    "zh": "密码修改成功!",
+    "ja": "パスワード変更成功!"
+  },
+  {
+    "key": "password.changeError",
+    "category": "profile",
+    "vi": "Có lỗi khi đổi mật khẩu",
+    "en": "Error changing password",
+    "zh": "更改密码出错",
+    "ja": "パスワード変更エラー"
+  },
+  {
+    "key": "password.update",
+    "category": "profile",
+    "vi": "Cập nhật mật khẩu",
+    "en": "Update Password",
+    "zh": "更新密码",
+    "ja": "パスワード更新"
+  },
+  {
+    "key": "admin.dashboard",
+    "category": "profile",
+    "vi": "Admin",
+    "en": "Admin",
+    "zh": "管理",
+    "ja": "管理"
+  }
+]
