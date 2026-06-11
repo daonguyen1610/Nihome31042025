@@ -1,0 +1,122 @@
+[
+  {
+    "key": "profile.myProfile",
+    "category": "profile",
+    "vi": "Hồ sơ của tôi",
+    "en": "My profile",
+    "zh": "我的资料",
+    "ja": "マイプロフィール"
+  },
+  {
+    "key": "profile.adminDashboard",
+    "category": "profile",
+    "vi": "Trang quản trị",
+    "en": "Admin dashboard",
+    "zh": "管理后台",
+    "ja": "管理画面"
+  },
+  {
+    "key": "profile.logout",
+    "category": "profile",
+    "vi": "Đăng xuất",
+    "en": "Log out",
+    "zh": "退出登录",
+    "ja": "ログアウト"
+  },
+  {
+    "key": "profile.manageInfo",
+    "category": "profile",
+    "vi": "Quản lý thông tin tài khoản của bạn",
+    "en": "Manage your account information",
+    "zh": "管理您的账户信息",
+    "ja": "アカウント情報を管理します"
+  },
+  {
+    "key": "profile.personalInfo",
+    "category": "profile",
+    "vi": "Thông tin cá nhân",
+    "en": "Personal information",
+    "zh": "个人信息",
+    "ja": "個人情報"
+  },
+  {
+    "key": "profile.fullName",
+    "category": "profile",
+    "vi": "Họ và tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "profile.email",
+    "category": "profile",
+    "vi": "Email",
+    "en": "Email",
+    "zh": "电子邮箱",
+    "ja": "メール"
+  },
+  {
+    "key": "profile.phone",
+    "category": "profile",
+    "vi": "Số điện thoại",
+    "en": "Phone number",
+    "zh": "电话号码",
+    "ja": "電話番号"
+  },
+  {
+    "key": "profile.phoneLocked",
+    "category": "profile",
+    "vi": "Số điện thoại được sử dụng để đăng nhập và không thể thay đổi.",
+    "en": "Phone number is used for login and cannot be changed.",
+    "zh": "电话号码用于登录,无法更改。",
+    "ja": "電話番号はログインに使用され、変更できません。"
+  },
+  {
+    "key": "profile.account",
+    "category": "profile",
+    "vi": "Tài khoản",
+    "en": "Account",
+    "zh": "账户",
+    "ja": "アカウント"
+  },
+  {
+    "key": "profile.role",
+    "category": "profile",
+    "vi": "Vai trò",
+    "en": "Role",
+    "zh": "角色",
+    "ja": "ロール"
+  },
+  {
+    "key": "profile.status",
+    "category": "profile",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "profile.active",
+    "category": "profile",
+    "vi": "Đang hoạt động",
+    "en": "Active",
+    "zh": "已激活",
+    "ja": "有効"
+  },
+  {
+    "key": "profile.inactive",
+    "category": "profile",
+    "vi": "Tạm khoá",
+    "en": "Inactive",
+    "zh": "已停用",
+    "ja": "無効"
+  },
+  {
+    "key": "profile.updated",
+    "category": "profile",
+    "vi": "Đã cập nhật hồ sơ",
+    "en": "Profile updated",
+    "zh": "资料已更新",
+    "ja": "プロフィールを更新しました"
+  }
+]
