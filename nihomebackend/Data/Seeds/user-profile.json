@@ -1,0 +1,370 @@
+[
+  {
+    "key": "profile.myProfile",
+    "category": "profile",
+    "vi": "Hồ sơ của tôi",
+    "en": "My profile",
+    "zh": "我的资料",
+    "ja": "マイプロフィール"
+  },
+  {
+    "key": "profile.adminDashboard",
+    "category": "profile",
+    "vi": "Trang quản trị",
+    "en": "Admin dashboard",
+    "zh": "管理后台",
+    "ja": "管理画面"
+  },
+  {
+    "key": "profile.logout",
+    "category": "profile",
+    "vi": "Đăng xuất",
+    "en": "Log out",
+    "zh": "退出登录",
+    "ja": "ログアウト"
+  },
+  {
+    "key": "profile.manageInfo",
+    "category": "profile",
+    "vi": "Quản lý thông tin tài khoản của bạn",
+    "en": "Manage your account information",
+    "zh": "管理您的账户信息",
+    "ja": "アカウント情報を管理します"
+  },
+  {
+    "key": "profile.personalInfo",
+    "category": "profile",
+    "vi": "Thông tin cá nhân",
+    "en": "Personal information",
+    "zh": "个人信息",
+    "ja": "個人情報"
+  },
+  {
+    "key": "profile.fullName",
+    "category": "profile",
+    "vi": "Họ và tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "profile.email",
+    "category": "profile",
+    "vi": "Email",
+    "en": "Email",
+    "zh": "电子邮箱",
+    "ja": "メール"
+  },
+  {
+    "key": "profile.phone",
+    "category": "profile",
+    "vi": "Số điện thoại",
+    "en": "Phone number",
+    "zh": "电话号码",
+    "ja": "電話番号"
+  },
+  {
+    "key": "profile.phoneLocked",
+    "category": "profile",
+    "vi": "Số điện thoại được sử dụng để đăng nhập và không thể thay đổi.",
+    "en": "Phone number is used for login and cannot be changed.",
+    "zh": "电话号码用于登录,无法更改。",
+    "ja": "電話番号はログインに使用され、変更できません。"
+  },
+  {
+    "key": "profile.account",
+    "category": "profile",
+    "vi": "Tài khoản",
+    "en": "Account",
+    "zh": "账户",
+    "ja": "アカウント"
+  },
+  {
+    "key": "profile.role",
+    "category": "profile",
+    "vi": "Vai trò",
+    "en": "Role",
+    "zh": "角色",
+    "ja": "ロール"
+  },
+  {
+    "key": "profile.status",
+    "category": "profile",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "profile.active",
+    "category": "profile",
+    "vi": "Đang hoạt động",
+    "en": "Active",
+    "zh": "已激活",
+    "ja": "有効"
+  },
+  {
+    "key": "profile.inactive",
+    "category": "profile",
+    "vi": "Tạm khoá",
+    "en": "Inactive",
+    "zh": "已停用",
+    "ja": "無効"
+  },
+  {
+    "key": "profile.updated",
+    "category": "profile",
+    "vi": "Đã cập nhật hồ sơ",
+    "en": "Profile updated",
+    "zh": "资料已更新",
+    "ja": "プロフィールを更新しました"
+  },
+  {
+    "key": "profile.updateFailed",
+    "category": "profile",
+    "vi": "Cập nhật thất bại",
+    "en": "Update failed",
+    "zh": "更新失败",
+    "ja": "更新に失敗しました"
+  },
+  {
+    "key": "profile.personalInfoHint",
+    "category": "profile",
+    "vi": "Cập nhật thông tin liên hệ của bạn",
+    "en": "Update your contact information",
+    "zh": "更新您的联系信息",
+    "ja": "連絡先情報を更新します"
+  },
+  {
+    "key": "profile.accountHint",
+    "category": "profile",
+    "vi": "Quyền và trạng thái",
+    "en": "Permissions and status",
+    "zh": "权限与状态",
+    "ja": "権限とステータス"
+  },
+  {
+    "key": "profile.myDocuments",
+    "category": "profile",
+    "vi": "Tài liệu của tôi",
+    "en": "My documents",
+    "zh": "我的文件",
+    "ja": "マイドキュメント"
+  },
+  {
+    "key": "profile.myDocumentsHint",
+    "category": "profile",
+    "vi": "Tải lên các tài liệu cá nhân (CCCD, hộ chiếu, giấy tờ)",
+    "en": "Upload personal documents (ID card, passport, papers)",
+    "zh": "上传个人证件(身份证、护照、文件)",
+    "ja": "個人書類をアップロード(身分証、パスポート、書類)"
+  },
+  {
+    "key": "profile.docType",
+    "category": "profile",
+    "vi": "Loại tài liệu",
+    "en": "Document type",
+    "zh": "文件类型",
+    "ja": "書類の種類"
+  },
+  {
+    "key": "profile.docType.cccd",
+    "category": "profile",
+    "vi": "CCCD",
+    "en": "ID card",
+    "zh": "身份证",
+    "ja": "身分証"
+  },
+  {
+    "key": "profile.docType.passport",
+    "category": "profile",
+    "vi": "Hộ chiếu",
+    "en": "Passport",
+    "zh": "护照",
+    "ja": "パスポート"
+  },
+  {
+    "key": "profile.docType.other",
+    "category": "profile",
+    "vi": "Giấy tờ khác",
+    "en": "Other documents",
+    "zh": "其他文件",
+    "ja": "その他の書類"
+  },
+  {
+    "key": "profile.dragDrop",
+    "category": "profile",
+    "vi": "Nhấn hoặc kéo thả ảnh vào đây",
+    "en": "Click or drop images here",
+    "zh": "点击或拖放图片到此处",
+    "ja": "ここをクリックまたは画像をドロップ"
+  },
+  {
+    "key": "profile.formatsHint",
+    "category": "profile",
+    "vi": "Hỗ trợ: JPEG, PNG, GIF, WebP (tối đa 10MB)",
+    "en": "Supported: JPEG, PNG, GIF, WebP (max 10MB)",
+    "zh": "支持:JPEG, PNG, GIF, WebP(最大 10MB)",
+    "ja": "対応: JPEG, PNG, GIF, WebP(最大 10MB)"
+  },
+  {
+    "key": "profile.uploading",
+    "category": "profile",
+    "vi": "Đang tải lên...",
+    "en": "Uploading...",
+    "zh": "正在上传...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "profile.uploaded",
+    "category": "profile",
+    "vi": "Đã tải lên",
+    "en": "Uploaded",
+    "zh": "已上传",
+    "ja": "アップロード済み"
+  },
+  {
+    "key": "profile.fileSuffix",
+    "category": "profile",
+    "vi": "tệp",
+    "en": "file(s)",
+    "zh": "个文件",
+    "ja": "ファイル"
+  },
+  {
+    "key": "profile.uploadFailed",
+    "category": "profile",
+    "vi": "Tải lên thất bại",
+    "en": "Upload failed",
+    "zh": "上传失败",
+    "ja": "アップロードに失敗しました"
+  },
+  {
+    "key": "profile.noDocuments",
+    "category": "profile",
+    "vi": "Bạn chưa tải lên tài liệu nào",
+    "en": "You haven't uploaded any documents",
+    "zh": "您还未上传任何文件",
+    "ja": "まだ書類がアップロードされていません"
+  },
+  {
+    "key": "profile.deleted",
+    "category": "profile",
+    "vi": "Đã xoá",
+    "en": "Deleted",
+    "zh": "已删除",
+    "ja": "削除しました"
+  },
+  {
+    "key": "profile.deleteFailed",
+    "category": "profile",
+    "vi": "Xoá thất bại",
+    "en": "Delete failed",
+    "zh": "删除失败",
+    "ja": "削除に失敗しました"
+  },
+  {
+    "key": "profile.security",
+    "category": "profile",
+    "vi": "Bảo mật tài khoản",
+    "en": "Account security",
+    "zh": "账户安全",
+    "ja": "アカウントセキュリティ"
+  },
+  {
+    "key": "profile.securityHint",
+    "category": "profile",
+    "vi": "Thay đổi mật khẩu để bảo vệ tài khoản",
+    "en": "Change your password to protect your account",
+    "zh": "更改密码以保护您的账户",
+    "ja": "アカウント保護のためパスワードを変更"
+  },
+  {
+    "key": "profile.currentPassword",
+    "category": "profile",
+    "vi": "Mật khẩu hiện tại",
+    "en": "Current password",
+    "zh": "当前密码",
+    "ja": "現在のパスワード"
+  },
+  {
+    "key": "profile.currentPasswordPlaceholder",
+    "category": "profile",
+    "vi": "Nhập mật khẩu hiện tại",
+    "en": "Enter current password",
+    "zh": "请输入当前密码",
+    "ja": "現在のパスワードを入力"
+  },
+  {
+    "key": "profile.newPassword",
+    "category": "profile",
+    "vi": "Mật khẩu mới",
+    "en": "New password",
+    "zh": "新密码",
+    "ja": "新しいパスワード"
+  },
+  {
+    "key": "profile.newPasswordPlaceholder",
+    "category": "profile",
+    "vi": "Tối thiểu 6 ký tự",
+    "en": "At least 6 characters",
+    "zh": "至少 6 个字符",
+    "ja": "6文字以上"
+  },
+  {
+    "key": "profile.confirmPassword",
+    "category": "profile",
+    "vi": "Xác nhận mật khẩu",
+    "en": "Confirm password",
+    "zh": "确认密码",
+    "ja": "パスワード確認"
+  },
+  {
+    "key": "profile.confirmPasswordPlaceholder",
+    "category": "profile",
+    "vi": "Nhập lại mật khẩu mới",
+    "en": "Re-enter new password",
+    "zh": "请再次输入新密码",
+    "ja": "新しいパスワードを再入力"
+  },
+  {
+    "key": "profile.changePassword",
+    "category": "profile",
+    "vi": "Đổi mật khẩu",
+    "en": "Change password",
+    "zh": "更改密码",
+    "ja": "パスワード変更"
+  },
+  {
+    "key": "profile.passwordChanged",
+    "category": "profile",
+    "vi": "Đổi mật khẩu thành công",
+    "en": "Password changed",
+    "zh": "密码已更改",
+    "ja": "パスワードを変更しました"
+  },
+  {
+    "key": "profile.passwordChangeFailed",
+    "category": "profile",
+    "vi": "Đổi mật khẩu thất bại",
+    "en": "Failed to change password",
+    "zh": "更改密码失败",
+    "ja": "パスワード変更に失敗しました"
+  },
+  {
+    "key": "profile.passwordTooShort",
+    "category": "profile",
+    "vi": "Mật khẩu mới phải có ít nhất 6 ký tự",
+    "en": "New password must be at least 6 characters",
+    "zh": "新密码至少 6 个字符",
+    "ja": "新しいパスワードは6文字以上必要です"
+  },
+  {
+    "key": "profile.passwordMismatch",
+    "category": "profile",
+    "vi": "Mật khẩu xác nhận không khớp",
+    "en": "Confirmation password does not match",
+    "zh": "确认密码不一致",
+    "ja": "確認パスワードが一致しません"
+  }
+]

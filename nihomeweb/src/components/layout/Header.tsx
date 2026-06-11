@@ -1,15 +1,25 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X, Search, User } from "lucide-react";
+import { Menu, X, Search, User, LogOut, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isAdminRole } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { useAppSelector } from "@/store";
+import { useAppSelector, useAppDispatch } from "@/store";
+import { logoutThunk } from "@/store/authSlice";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import LanguageToggle from "@/components/LanguageToggle";
 import logoNicon from "@/assets/logo-nicon.png";
 
 const Header = () => {
   const { t } = useI18n();
+  const dispatch = useAppDispatch();
   const authUser = useAppSelector((s) => s.auth.user);
   const isAdmin = authUser ? isAdminRole(authUser.role) : false;
   const nav = useMemo(
@@ -108,18 +118,55 @@ const Header = () => {
             </button>
             <LanguageToggle variant={transparent ? "dark" : "light"} />
             {authUser ? (
-              <Link
-                to={isAdmin ? "/admin" : "/profile"}
-                className={cn(
-                  "flex items-center gap-1.5 pl-2.5 pr-3 2xl:pl-3 2xl:pr-4 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap",
-                  transparent
-                    ? "bg-white text-foreground hover:shadow-glow"
-                    : "bg-foreground text-background hover:bg-primary"
-                )}
-              >
-                <User className="w-3.5 h-3.5" />
-                {isAdmin ? "Admin" : authUser.fullName}
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className={cn(
+                    "flex items-center gap-1.5 pl-2.5 pr-3 2xl:pl-3 2xl:pr-4 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    transparent
+                      ? "bg-white text-foreground hover:shadow-glow"
+                      : "bg-foreground text-background hover:bg-primary"
+                  )}
+                >
+                  <User className="w-3.5 h-3.5" />
+                  {isAdmin ? "Admin" : authUser.fullName}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-semibold truncate">{authUser.fullName}</span>
+                      {authUser.email && (
+                        <span className="text-xs text-muted-foreground truncate">{authUser.email}</span>
+                      )}
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {isAdmin ? (
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="cursor-pointer">
+                        <LayoutDashboard className="w-4 h-4 mr-2" />
+                        {t("profile.adminDashboard") || "Trang quản trị"}
+                      </Link>
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem asChild>
+                      <Link to="/my-profile" className="cursor-pointer">
+                        <User className="w-4 h-4 mr-2" />
+                        {t("profile.myProfile") || "Hồ sơ của tôi"}
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      void dispatch(logoutThunk());
+                    }}
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {t("profile.logout") || "Đăng xuất"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Link
                 to="/login"
@@ -175,13 +222,26 @@ const Header = () => {
           <div className="pt-3 mt-2 border-t border-border flex items-center justify-between gap-3">
             <LanguageToggle />
             {authUser ? (
-              <Link
-                to={isAdmin ? "/admin" : "/profile"}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-full text-xs uppercase tracking-wider font-bold whitespace-nowrap bg-foreground text-background hover:bg-primary transition-all"
-              >
-                <User className="w-3.5 h-3.5" />
-                {isAdmin ? "Admin" : authUser.fullName}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  to={isAdmin ? "/admin" : "/my-profile"}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs uppercase tracking-wider font-bold whitespace-nowrap bg-foreground text-background hover:bg-primary transition-all"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  {isAdmin ? "Admin" : authUser.fullName}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    void dispatch(logoutThunk());
+                  }}
+                  aria-label={t("profile.logout") || "Đăng xuất"}
+                  className="w-10 h-10 rounded-full flex items-center justify-center bg-secondary text-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
             ) : (
               <Link
                 to="/login"

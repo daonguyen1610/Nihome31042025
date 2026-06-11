@@ -28,4 +28,5 @@ public class ApplicationUser
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+    public ICollection<UserDocument> Documents { get; set; } = new List<UserDocument>();
 }

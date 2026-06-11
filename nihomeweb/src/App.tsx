@@ -23,6 +23,7 @@ import Contact from "./pages/Contact.tsx";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import ForgotPassword from "./pages/ForgotPassword.tsx";
+import MyProfile from "./pages/MyProfile.tsx";
 import AdminDashboard from "./pages/admin/Dashboard.tsx";
 import AdminNotifications from "./pages/admin/Notifications.tsx";
 import AdminUsers from "./pages/admin/users/UserList.tsx";
@@ -80,6 +81,9 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/my-profile" element={<MyProfile />} />
+            </Route>
             <Route element={<ProtectedRoute roles={["ADMIN", "SUPER_ADMIN"]} />}>
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/notifications" element={<AdminNotifications />} />
