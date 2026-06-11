@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 7 May 2026
+Last Updated: 12 June 2026
 
 ---
 
@@ -366,7 +366,7 @@ The platform uses SQL Server 2022 with Entity Framework Core 8 as the ORM. The d
 | `job_applications`     | Candidate applications (FK to job_positions, cascade delete) |
 | `contact_messages`     | Messages submitted through the contact form         |
 | `client_logos`         | Logos for clients, partners, and suppliers           |
-| `process_documents`    | Internal process documentation entries              |
+| `process_documents`    | Internal process documentation entries with optional image/file asset metadata stored as JSON columns |
 | `translations`         | Static UI translation strings (unique key + language) |
 | `entity_translations`  | Dynamic content translations (polymorphic)          |
 
@@ -418,6 +418,18 @@ dotnet ef migrations list
 
 Always review migration files before applying them.
 
+#### Manual Migrations (when dotnet CLI is unavailable)
+
+If `dotnet ef` is not available on the host (e.g., when developing purely inside Docker), create migration files manually in `nihomebackend/Migrations/`. The migration class must carry two attributes so that EF Core discovers it at runtime:
+
+```csharp
+[DbContext(typeof(AppDbContext))]
+[Migration("20260611000001_MigrationName")]
+public partial class MigrationName : Migration { ... }
+```
+
+Also update `AppDbContextModelSnapshot.cs` to add the new properties to the affected entity block so that future `dotnet ef` commands compute diffs correctly.
+
 ### 6.5 Data Seeding
 
 On application startup, the following seeders execute in order:
@@ -425,6 +437,28 @@ On application startup, the following seeders execute in order:
 1. **DbSeeder** -- Creates default users and site settings if they do not exist.
 2. **ContentSeeder** -- Seeds initial activities and other content data.
 3. **TranslationSeeder** -- Loads UI translation strings from embedded JSON resource files in `Data/Seeds/`.
+
+#### Process Document Seeder Guard
+
+The process document seeder uses a two-condition guard to decide whether to re-seed:
+
+```
+if (count matches AND (no asset data in seed OR DB rows already have assets)) → skip
+```
+
+This means the seeder re-runs automatically after a migration that adds `ImagesJson`/`FilesJson` columns even when the row count has not changed. After the re-seed, subsequent restarts skip again because the DB rows now have asset data.
+
+#### Static Asset Files for Process Documents
+
+Physical image and file assets are stored outside the database and served as static files:
+
+```
+nihomebackend/wwwroot/process-assets/
+  images/     -- JPEG/PNG images referenced by ImagesJson
+  files/      -- DOC/PDF/etc files referenced by FilesJson
+```
+
+These files must be present on the server before the URLs in `processes.json` can resolve. They are not tracked in git (binary files); the authoritative source is a backup archive. In development, copy the contents of the backup to `nihomebackend/wwwroot/process-assets/`.
 
 Translation seed files are embedded resources (`*.json` files in `Data/Seeds/`).
 

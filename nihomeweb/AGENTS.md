@@ -138,6 +138,28 @@ Use role-specialized helpers, not separate sources of truth:
 - use Claude for drafting, summarizing, reviewing, and product or UI thinking
 - both must follow the same repo docs instead of inventing parallel rule sets
 
+## i18n and Translation Rules
+
+These rules apply to every frontend task that introduces user-visible text.
+
+**Never hardcode display strings in React components.** All user-visible text must use `t("key")` via `useI18n()`.
+
+When you add a new string to any component:
+
+1. Choose or create a key with the correct prefix (`proc.*`, `common.*`, `nav.*`, etc.).
+2. Add the key to the matching seed file in `nihomebackend/Data/Seeds/`:
+   - `common.json` — for `common.*` keys
+   - `admin-system.json` — for `proc.*`, `nav.*`, admin UI keys
+   - other category files as appropriate
+3. Provide translations for **all four languages**: `vi`, `en`, `zh`, `ja`.
+4. Restart the backend so `TranslationSeeder` upserts the new keys into the DB.
+
+**Do not reuse keys from unrelated sections** (e.g. do not use `adminUsers.previous` for a lightbox button — add a proper `common.prev` key instead).
+
+**No hardcoded category values, group keys, or option lists** in React — these must be fetched from the backend API.
+
+This is a non-negotiable quality gate. A task that adds UI strings without updating the seed files is not done.
+
 ## Done Criteria
 
 A task is only considered done correctly when:
@@ -148,6 +170,7 @@ A task is only considered done correctly when:
 - no stale documentation was knowingly left behind
 - the result passes the review expectations in `docs/ai/frontend-playbook.md`
 - relevant checks were run or the skipped checks were explained
+- **all new UI strings are translated and added to seed files** (see i18n rules above)
 - Claude and Codex would reach the same understanding by reading the repo docs alone
 
 Keep repo-facing rules and memory in English for consistency across Claude, Codex, and Vercel skill guidance.

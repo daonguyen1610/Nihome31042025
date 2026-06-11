@@ -811,7 +811,23 @@ Each logo entry includes a name, image URL, optional hyperlink, kind classificat
 
 ### 8.8 Process Documents
 
-Process documents are internal procedure descriptions grouped by category (using a `GroupKey`). Each document has a code, title, and sort order within its group.
+Process documents are internal procedure descriptions grouped by category (using a `GroupKey`). Each document has a code, title, sort order, and optional attached assets (images and files).
+
+The process document admin page is read-only. Administrators can search documents and browse their attached assets; editing is not available through the admin interface (data is managed through the seed pipeline).
+
+**Viewing images:**
+- Each document that has image assets displays a thumbnail grid below its title.
+- Clicking any thumbnail opens a fullscreen lightbox with previous/next navigation.
+- A toggle button switches between the default thumbnail grid and a vertical stack view that shows all images at full width.
+
+**Downloading files:**
+- Each document that has file assets displays a downloadable file list.
+- Clicking a file entry downloads it directly from the server.
+
+**Asset storage:**
+- Physical asset files are served as static files from `nihomebackend/wwwroot/process-assets/`.
+- Images are served from `/process-assets/images/` and files from `/process-assets/files/`.
+- Asset metadata (display name, URL, MIME type, file size, sort order) is stored as JSON in the `ImagesJson` and `FilesJson` columns on the `process_documents` table and seeded from `nihomebackend/Data/Seeds/processes.json`.
 
 ---
 
@@ -1338,6 +1354,38 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 | PUT    | `/api/processes/{id}`  | Admin  | Update process document              |
 | DELETE | `/api/processes/{id}`  | Admin  | Delete process document              |
 
+#### GET Response (per item)
+
+```json
+{
+  "id": 1,
+  "groupKey": "quality-control",
+  "code": "QC-001",
+  "title": "Material Inspection Procedure",
+  "sortOrder": 1,
+  "images": [
+    {
+      "displayName": "Inspection checklist",
+      "url": "/process-assets/images/abc123.jpg",
+      "originalFileName": "checklist.jpg",
+      "contentType": "image/jpeg",
+      "fileSizeBytes": 204800,
+      "sortOrder": 1
+    }
+  ],
+  "files": [
+    {
+      "displayName": "Inspection form template",
+      "url": "/process-assets/files/def456.docx",
+      "originalFileName": "form-template.docx",
+      "contentType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "fileSizeBytes": 51200,
+      "sortOrder": 1
+    }
+  ]
+}
+```
+
 #### Create/Update Process Request
 
 ```json
@@ -1622,14 +1670,27 @@ Same structure as Activity.
 
 ### 15.11 Process Document
 
-| Field     | Type     | Description                          |
-|-----------|----------|--------------------------------------|
-| Id        | int      | Primary key                          |
-| GroupKey  | string   | Category grouping key                |
-| Code      | string   | Document code                        |
-| Title     | string   | Document title                       |
-| SortOrder | int      | Display order within group           |
-| CreatedAt | datetime | Creation timestamp                   |
+| Field      | Type     | Description                                              |
+|------------|----------|----------------------------------------------------------|
+| Id         | int      | Primary key                                              |
+| GroupKey   | string   | Category grouping key                                    |
+| Code       | string   | Document code                                            |
+| Title      | string   | Document title                                           |
+| SortOrder  | int      | Display order within group                               |
+| ImagesJson | string?  | JSON array of `ProcessAssetInfo` objects (images)        |
+| FilesJson  | string?  | JSON array of `ProcessAssetInfo` objects (file downloads)|
+| CreatedAt  | datetime | Creation timestamp                                       |
+
+`ProcessAssetInfo` object shape:
+
+| Field            | Type   | Description                        |
+|------------------|--------|------------------------------------|
+| displayName      | string | Human-readable label               |
+| url              | string | Relative URL served as static file |
+| originalFileName | string | Original uploaded file name        |
+| contentType      | string | MIME type                          |
+| fileSizeBytes    | long   | File size in bytes                 |
+| sortOrder        | int    | Display order within the asset list|
 
 ### 15.12 Translation
 

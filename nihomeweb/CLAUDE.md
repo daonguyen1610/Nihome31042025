@@ -11,3 +11,5 @@ Use the memory bank for durable project context, decisions, and handoffs rather 
 Use `docs/ai/working-procedure.md` as the day-to-day checklist for ownership, boundaries, reviews, and handoffs.
 
 Remember that this repo is a Vite + React SPA using React Router, Tailwind, shadcn/ui, Radix UI, TanStack Query, and localStorage-backed demo stores. Do not apply the old Next.js, Materialize starter-kit, or full admin template assumptions unless a future migration is explicitly documented.
+
+**i18n is mandatory.** Never hardcode user-visible strings in components — always use `t("key")` and add the key to `nihomebackend/Data/Seeds/` with vi/en/zh/ja translations. See the `## i18n and Translation Rules` section in `AGENTS.md` for the full checklist. Also read root `AGENTS.md` (one level up) for project-wide rules including the no-hardcode policy.
