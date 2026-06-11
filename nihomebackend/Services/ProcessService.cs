@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
@@ -9,6 +10,8 @@ namespace NihomeBackend.Services;
 
 public class ProcessService(AppDbContext db)
 {
+    private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
+
     private ILogger<ProcessService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProcessService>();
 
     public async Task<Dictionary<string, List<ProcessResponse>>> GetAllGroupedAsync()
@@ -73,5 +76,12 @@ public class ProcessService(AppDbContext db)
         GroupKey = p.GroupKey,
         Code = p.Code,
         Title = p.Title,
+        SortOrder = p.SortOrder,
+        Images = p.ImagesJson != null
+            ? JsonSerializer.Deserialize<List<ProcessAssetInfo>>(p.ImagesJson, JsonOpts) ?? []
+            : [],
+        Files = p.FilesJson != null
+            ? JsonSerializer.Deserialize<List<ProcessAssetInfo>>(p.FilesJson, JsonOpts) ?? []
+            : [],
     };
 }

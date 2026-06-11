@@ -598,9 +598,15 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FilesJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("GroupKey")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ImagesJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");

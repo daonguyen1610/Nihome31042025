@@ -85,11 +85,23 @@ export interface LogosGroupedResponse {
   awards: LogoResponse[];
 }
 
+export interface ProcessAssetInfo {
+  displayName: string;
+  url: string;
+  originalFileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  sortOrder: number;
+}
+
 export interface ProcessResponse {
   id: number;
   groupKey: string;
   code?: string;
   title: string;
+  sortOrder: number;
+  images: ProcessAssetInfo[];
+  files: ProcessAssetInfo[];
 }
 
 export interface SlideshowResponse {

@@ -456,6 +456,70 @@
     "ja": "キャンセル"
   },
   {
+    "key": "proc.images",
+    "category": "proc",
+    "vi": "Ảnh",
+    "en": "Images",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "proc.files",
+    "category": "proc",
+    "vi": "Tài liệu",
+    "en": "Documents",
+    "zh": "文件",
+    "ja": "ファイル"
+  },
+  {
+    "key": "proc.noImages",
+    "category": "proc",
+    "vi": "Chưa có ảnh quy trình.",
+    "en": "No process images yet.",
+    "zh": "暂无流程图片。",
+    "ja": "流程画像がありません。"
+  },
+  {
+    "key": "proc.noFiles",
+    "category": "proc",
+    "vi": "Chưa có tài liệu tải xuống.",
+    "en": "No files to download.",
+    "zh": "暂无可下载文件。",
+    "ja": "ダウンロードファイルがありません。"
+  },
+  {
+    "key": "proc.uploadFile",
+    "category": "proc",
+    "vi": "Tải file lên",
+    "en": "Upload file",
+    "zh": "上传文件",
+    "ja": "ファイルをアップロード"
+  },
+  {
+    "key": "proc.hide",
+    "category": "proc",
+    "vi": "Ẩn",
+    "en": "Hide",
+    "zh": "收起",
+    "ja": "非表示"
+  },
+  {
+    "key": "proc.stackView",
+    "category": "proc",
+    "vi": "Ghép dọc",
+    "en": "Stack view",
+    "zh": "垂直视图",
+    "ja": "縦積み表示"
+  },
+  {
+    "key": "proc.gridView",
+    "category": "proc",
+    "vi": "Lưới",
+    "en": "Grid",
+    "zh": "网格",
+    "ja": "グリッド"
+  },
+  {
     "key": "sys.log.title",
     "category": "sys",
     "vi": "Log hệ thống",

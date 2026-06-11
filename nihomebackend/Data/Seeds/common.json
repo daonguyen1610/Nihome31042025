@@ -550,5 +550,21 @@
     "en": "{count} image(s)",
     "zh": "{count} 张图片",
     "ja": "{count} 枚の画像"
+  },
+  {
+    "key": "common.prev",
+    "category": "common",
+    "vi": "Trước",
+    "en": "Previous",
+    "zh": "上一个",
+    "ja": "前へ"
+  },
+  {
+    "key": "common.next",
+    "category": "common",
+    "vi": "Sau",
+    "en": "Next",
+    "zh": "下一个",
+    "ja": "次へ"
   }
 ]

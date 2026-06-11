@@ -564,19 +564,21 @@ public static class ContentSeeder
 
     private static void SeedProcesses(AppDbContext db)
     {
-        if (db.ProcessDocuments.Any()) return;
-
         var assembly = Assembly.GetExecutingAssembly();
         const string resourceName = "nihomebackend.Data.Seeds.processes.json";
         using var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream == null)
-        {
-            return;
-        }
+        if (stream == null) return;
 
-        var seedItems = JsonSerializer.Deserialize<List<ProcessSeedItem>>(
-            stream,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var seedItems = JsonSerializer.Deserialize<List<ProcessSeedItem>>(stream, opts) ?? [];
+
+        // Re-seed when count mismatches OR when asset JSON columns haven't been populated yet
+        var seedWithAssets = seedItems.Any(s => s.Images.Count > 0 || s.Files.Count > 0);
+        var dbHasAssets = db.ProcessDocuments.Any(p => p.ImagesJson != null || p.FilesJson != null);
+        if (db.ProcessDocuments.Count() == seedItems.Count && (!seedWithAssets || dbHasAssets)) return;
+
+        db.ProcessDocuments.RemoveRange(db.ProcessDocuments);
+        db.SaveChanges();
 
         var items = seedItems.Select(seed => new ProcessDocument
         {
@@ -584,6 +586,8 @@ public static class ContentSeeder
             Code = seed.Code,
             Title = seed.Title,
             SortOrder = seed.SortOrder,
+            ImagesJson = seed.Images.Count > 0 ? JsonSerializer.Serialize(seed.Images) : null,
+            FilesJson = seed.Files.Count > 0 ? JsonSerializer.Serialize(seed.Files) : null,
         }).ToList();
 
         db.ProcessDocuments.AddRange(items);
@@ -595,6 +599,18 @@ public static class ContentSeeder
         public string GroupKey { get; set; } = "";
         public string? Code { get; set; }
         public string Title { get; set; } = "";
+        public int SortOrder { get; set; }
+        public List<ProcessAssetSeedItem> Images { get; set; } = [];
+        public List<ProcessAssetSeedItem> Files { get; set; } = [];
+    }
+
+    private sealed class ProcessAssetSeedItem
+    {
+        public string DisplayName { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string OriginalFileName { get; set; } = "";
+        public string ContentType { get; set; } = "";
+        public long FileSizeBytes { get; set; }
         public int SortOrder { get; set; }
     }
 
