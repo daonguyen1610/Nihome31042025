@@ -47,7 +47,6 @@ import AboutContent from "./pages/admin/AboutContent.tsx";
 import ProcessList from "./pages/admin/ProcessList.tsx";
 import LanguagesPage from "./pages/admin/settings/Languages.tsx";
 import TranslationsPage from "./pages/admin/settings/Translations.tsx";
-import HelpPage from "./pages/admin/Help.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -113,7 +112,6 @@ const App = () => (
               <Route path="/admin/awards" element={<AdminLogosManager kind="awards" titleKey="nav.awards" />} />
               <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
               <Route path="/admin/about" element={<AboutContent />} />
-              <Route path="/admin/help" element={<HelpPage />} />
               <Route
                 path="/admin/processes/general"
                 element={<ProcessList groupKey="general" titleKey="proc.general" />}

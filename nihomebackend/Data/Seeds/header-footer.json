@@ -234,8 +234,8 @@
   {
     "key": "nav.activityLog",
     "category": "nav",
-    "vi": "Activity Log",
-    "en": "Activity Log",
+    "vi": "Nhật ký hoạt động",
+    "en": "Activity log",
     "zh": "活动日志",
     "ja": "アクティビティログ"
   },
@@ -310,14 +310,6 @@
     "en": "System",
     "zh": "系统",
     "ja": "システム"
-  },
-  {
-    "key": "nav.help",
-    "category": "nav",
-    "vi": "Trợ giúp",
-    "en": "Help",
-    "zh": "帮助",
-    "ja": "ヘルプ"
   },
   {
     "key": "nav.processes",
