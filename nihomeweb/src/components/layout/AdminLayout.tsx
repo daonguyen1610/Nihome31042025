@@ -123,7 +123,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                 { to: "/admin/roles", label: t("nav.roleManagement"), icon: ShieldCheck },
               ]
             : []),
-          { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History },
         ],
       },
       {
@@ -142,6 +141,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.system"),
         icon: HardDrive,
         items: [
+          { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History },
           { to: "/admin/system/log", label: t("sys.log.title"), icon: ScrollText },
           { to: "/admin/system/warnings", label: t("sys.warn.title"), icon: AlertTriangle },
           { to: "/admin/system/maintenance", label: t("sys.maint.title"), icon: Wrench },
