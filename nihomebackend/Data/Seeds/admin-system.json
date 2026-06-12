@@ -520,6 +520,94 @@
     "ja": "グリッド"
   },
   {
+    "key": "proc.createTitle",
+    "category": "proc",
+    "vi": "Thêm quy trình mới",
+    "en": "Add new process",
+    "zh": "添加新流程",
+    "ja": "新しいプロセスを追加"
+  },
+  {
+    "key": "proc.editTitle",
+    "category": "proc",
+    "vi": "Chỉnh sửa quy trình",
+    "en": "Edit process",
+    "zh": "编辑流程",
+    "ja": "プロセスを編集"
+  },
+  {
+    "key": "proc.fieldCode",
+    "category": "proc",
+    "vi": "Mã quy trình",
+    "en": "Process code",
+    "zh": "流程编号",
+    "ja": "プロセスコード"
+  },
+  {
+    "key": "proc.fieldTitle",
+    "category": "proc",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "proc.fieldSortOrder",
+    "category": "proc",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "並び順"
+  },
+  {
+    "key": "proc.codePh",
+    "category": "proc",
+    "vi": "Ví dụ: QT-01",
+    "en": "e.g. QT-01",
+    "zh": "例如：QT-01",
+    "ja": "例：QT-01"
+  },
+  {
+    "key": "proc.titlePh",
+    "category": "proc",
+    "vi": "Nhập tiêu đề quy trình...",
+    "en": "Enter process title...",
+    "zh": "输入流程标题...",
+    "ja": "プロセスタイトルを入力..."
+  },
+  {
+    "key": "proc.confirmDelete",
+    "category": "proc",
+    "vi": "Xoá quy trình này?",
+    "en": "Delete this process?",
+    "zh": "确定删除此流程？",
+    "ja": "このプロセスを削除しますか？"
+  },
+  {
+    "key": "proc.delete",
+    "category": "proc",
+    "vi": "Xoá quy trình",
+    "en": "Delete process",
+    "zh": "删除流程",
+    "ja": "プロセスを削除"
+  },
+  {
+    "key": "proc.requiredTitle",
+    "category": "proc",
+    "vi": "Vui lòng nhập tiêu đề quy trình.",
+    "en": "Please enter a process title.",
+    "zh": "请输入流程标题。",
+    "ja": "プロセスタイトルを入力してください。"
+  },
+  {
+    "key": "proc.fallbackError",
+    "category": "proc",
+    "vi": "Không thể lưu quy trình. Vui lòng thử lại.",
+    "en": "Failed to save process. Please try again.",
+    "zh": "保存流程失败，请重试。",
+    "ja": "プロセスの保存に失敗しました。もう一度お試しください。"
+  },
+  {
     "key": "sys.log.title",
     "category": "sys",
     "vi": "Log hệ thống",
