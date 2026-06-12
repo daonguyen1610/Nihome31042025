@@ -101,7 +101,7 @@ const DetailDrawer = ({ item, onClose }: { item: AuditLogItem; onClose: () => vo
     >
       <div
         className="h-full w-full max-w-2xl overflow-y-auto p-6 shadow-2xl"
-        style={{ background: "hsl(var(--admin-card))" }}
+        style={{ background: "hsl(var(--admin-surface))" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
