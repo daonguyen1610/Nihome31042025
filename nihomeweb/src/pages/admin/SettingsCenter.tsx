@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Save, Building2, Mail, Phone, MapPin, Globe, ShieldCheck } from "lucide-react";
+import { Save, Building2, Mail, Phone, MapPin, Globe, ShieldCheck, Map as MapIcon } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -24,7 +24,7 @@ import {
 } from "@/lib/settingsStore";
 import SlideshowSettings from "./settings/SlideshowSettings";
 
-type Tab = "company" | "general" | "media" | "slideshow";
+type Tab = "company" | "general" | "media" | "slideshow" | "map";
 type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
@@ -32,6 +32,7 @@ const tabs: { key: Tab; labelKey: string }[] = [
   { key: "general", labelKey: "set.general" },
   { key: "media", labelKey: "set.media" },
   { key: "slideshow", labelKey: "set.slideshow" },
+  { key: "map", labelKey: "settings.map.tab" },
 ];
 
 const OtpToggleControl = ({
@@ -401,6 +402,146 @@ const MediaTab = () => {
   );
 };
 
+/* ─── Map Tab ─── */
+const MapTab = () => {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const [url, setUrl] = useState<string>("");
+  const [savedUrl, setSavedUrl] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await adminApi.getMapEmbed();
+        if (cancelled) return;
+        const value = data.mapEmbedUrl ?? "";
+        setUrl(value);
+        setSavedUrl(value);
+      } catch {
+        if (!cancelled) {
+          toast({
+            title: t("common.error"),
+            description: t("settings.map.loadError"),
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [toast, t]);
+
+  const save = async () => {
+    const trimmed = url.trim();
+    setSaving(true);
+    try {
+      const { data } = await adminApi.updateMapEmbed({ mapEmbedUrl: trimmed ? trimmed : null });
+      const value = data.mapEmbedUrl ?? "";
+      setUrl(value);
+      setSavedUrl(value);
+      toast({ title: t("settings.map.saved") });
+    } catch {
+      toast({
+        title: t("common.error"),
+        description: t("settings.map.saveError"),
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const previewUrl = savedUrl || url.trim();
+
+  return (
+    <div className="space-y-5">
+      <div className="admin-card p-7">
+        <div
+          className="flex items-center gap-3 border-b pb-4 mb-5"
+          style={{ borderColor: "hsl(var(--admin-border))" }}
+        >
+          <MapIcon className="w-5 h-5" style={{ color: "hsl(var(--admin-primary))" }} />
+          <div>
+            <h2 className="font-display text-lg font-extrabold">{t("settings.map.title")}</h2>
+            <p className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+              {t("settings.map.urlHint")}
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
+            {t("common.loading")}
+          </p>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label
+                className="text-xs uppercase tracking-wider font-bold mb-2 block"
+                style={{ color: "hsl(var(--admin-muted))" }}
+              >
+                {t("settings.map.url")}
+              </label>
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://www.google.com/maps/embed?pb=..."
+                className="w-full rounded-xl px-4 py-3 border bg-transparent text-sm outline-none font-medium"
+                style={{
+                  background: "hsl(var(--admin-bg))",
+                  borderColor: "hsl(var(--admin-border))",
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={save}
+                disabled={saving || url === savedUrl}
+                className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" /> {saving ? t("common.saving") : t("common.save")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="admin-card p-7">
+        <h3 className="font-display text-base font-extrabold mb-4">{t("settings.map.preview")}</h3>
+        {previewUrl ? (
+          <iframe
+            key={previewUrl}
+            src={previewUrl}
+            title="Map preview"
+            className="w-full h-96 rounded-2xl border"
+            style={{ borderColor: "hsl(var(--admin-border))" }}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            allowFullScreen
+          />
+        ) : (
+          <div
+            className="w-full h-96 rounded-2xl border flex items-center justify-center text-sm"
+            style={{
+              borderColor: "hsl(var(--admin-border))",
+              color: "hsl(var(--admin-muted))",
+              background: "hsl(var(--admin-bg))",
+            }}
+          >
+            {t("settings.map.previewEmpty")}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /* ─── Settings Center ─── */
 const SettingsCenter = () => {
   const { t } = useI18n();
@@ -455,6 +596,7 @@ const SettingsCenter = () => {
       {activeTab === "general" && <GeneralTab />}
       {activeTab === "media" && <MediaTab />}
       {activeTab === "slideshow" && <SlideshowSettings />}
+      {activeTab === "map" && <MapTab />}
     </AdminLayout>
   );
 };

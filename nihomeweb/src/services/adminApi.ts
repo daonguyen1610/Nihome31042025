@@ -246,6 +246,14 @@ export interface OtpSettingsResponse {
 
 export type UpdateOtpSettingsRequest = OtpSettingsResponse;
 
+export interface MapEmbedResponse {
+  mapEmbedUrl: string | null;
+}
+
+export interface UpdateMapEmbedRequest {
+  mapEmbedUrl: string | null;
+}
+
 export interface ContactMessageResponse {
   id: number;
   name: string;
@@ -534,6 +542,12 @@ export const adminApi = {
     api.get<OtpSettingsResponse>("/site-settings/otp-settings"),
   updateOtpSettings: (data: UpdateOtpSettingsRequest) =>
     api.put<OtpSettingsResponse>("/site-settings/otp-settings", data),
+
+  // Map embed (Google Maps URL shown on Contact page)
+  getMapEmbed: () =>
+    api.get<MapEmbedResponse>("/site-settings/map-embed"),
+  updateMapEmbed: (data: UpdateMapEmbedRequest) =>
+    api.put<MapEmbedResponse>("/site-settings/map-embed", data),
 
   // Contact messages
   getContacts: (replied?: boolean) => {

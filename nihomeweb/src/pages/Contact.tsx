@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/PageHeader";
 import { MapPin, Phone, Mail, Clock, Send, Facebook, Linkedin, Youtube } from "lucide-react";
@@ -6,11 +6,32 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { contentApi } from "@/services/contentApi";
 
+const FALLBACK_MAP_URL =
+  "https://www.openstreetmap.org/export/embed.html?bbox=106.7%2C10.78%2C106.82%2C10.85&layer=mapnik";
+
 const Contact = () => {
   const { toast } = useToast();
   const { t } = useI18n();
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
+  const [mapUrl, setMapUrl] = useState<string>(FALLBACK_MAP_URL);
+
+  useEffect(() => {
+    let cancelled = false;
+    contentApi
+      .getMapEmbed()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const v = data.mapEmbedUrl?.trim();
+        if (v) setMapUrl(v);
+      })
+      .catch(() => {
+        /* keep fallback */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const offices = [
     { city: t("contact.office.hq"), address: t("contact.office.hqAddr"), phone: "+84 28 7300 1234", email: "info@nicon.vn" },
@@ -161,9 +182,11 @@ const Contact = () => {
           <div className="aspect-[21/9] rounded-3xl overflow-hidden border border-border">
             <iframe
               title="NICON map"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=106.7%2C10.78%2C106.82%2C10.85&layer=mapnik"
+              src={mapUrl}
               className="w-full h-full"
               loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
             />
           </div>
         </div>

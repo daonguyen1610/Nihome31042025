@@ -46,4 +46,22 @@ public class SiteSettingsService(AppDbContext db)
         await db.SaveChangesAsync();
         return settings;
     }
+
+    public async Task<SiteSettings> UpdateMapEmbedAsync(string? mapEmbedUrl)
+    {
+        var settings = await db.SiteSettings.FirstOrDefaultAsync()
+            ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
+
+        var trimmed = mapEmbedUrl?.Trim();
+        if (!string.IsNullOrEmpty(trimmed) && trimmed.Length > 1000)
+        {
+            throw new InvalidOperationException("MapEmbedUrl không được vượt quá 1000 ký tự.");
+        }
+
+        settings.MapEmbedUrl = string.IsNullOrEmpty(trimmed) ? null : trimmed;
+        settings.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+        return settings;
+    }
 }

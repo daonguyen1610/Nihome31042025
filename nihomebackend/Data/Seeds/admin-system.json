@@ -664,188 +664,76 @@
     "ja": "複数のファイルを同時に選択できます。"
   },
   {
-    "key": "sys.log.title",
-    "category": "sys",
-    "vi": "Log hệ thống",
-    "en": "System log",
-    "zh": "系统日志",
-    "ja": "システムログ"
+    "key": "settings.map.tab",
+    "category": "settings",
+    "vi": "Bản đồ",
+    "en": "Map",
+    "zh": "地图",
+    "ja": "地図"
   },
   {
-    "key": "sys.log.level",
-    "category": "sys",
-    "vi": "Mức độ",
-    "en": "Log level",
-    "zh": "级别",
-    "ja": "レベル"
+    "key": "settings.map.title",
+    "category": "settings",
+    "vi": "Google Maps nhúng",
+    "en": "Google Maps embed",
+    "zh": "嵌入式 Google 地图",
+    "ja": "Google マップ埋め込み"
   },
   {
-    "key": "sys.log.shortMessage",
-    "category": "sys",
-    "vi": "Nội dung ngắn",
-    "en": "Short message",
-    "zh": "简短消息",
-    "ja": "短いメッセージ"
+    "key": "settings.map.url",
+    "category": "settings",
+    "vi": "URL nhúng bản đồ",
+    "en": "Map embed URL",
+    "zh": "地图嵌入网址",
+    "ja": "地図埋め込み URL"
   },
   {
-    "key": "sys.log.fullMessage",
-    "category": "sys",
-    "vi": "Nội dung đầy đủ",
-    "en": "Full message",
-    "zh": "完整消息",
-    "ja": "完全なメッセージ"
+    "key": "settings.map.urlHint",
+    "category": "settings",
+    "vi": "Dán URL nhúng từ Google Maps (Share → Embed a map → Copy HTML, lấy giá trị src). URL này sẽ hiển thị trên trang Liên hệ.",
+    "en": "Paste the embed URL from Google Maps (Share → Embed a map → Copy HTML, take the src value). It is shown on the public Contact page.",
+    "zh": "从 Google 地图复制嵌入网址（分享 → 嵌入地图 → 复制 HTML，取 src 值）。将显示在公开的联系页。",
+    "ja": "Google マップから埋め込み URL を貼り付けます（共有 → 地図を埋め込む → HTML をコピー → src の値）。公開のお問い合わせページに表示されます。"
   },
   {
-    "key": "sys.log.message",
-    "category": "sys",
-    "vi": "Tin nhắn",
-    "en": "Message",
-    "zh": "消息",
-    "ja": "メッセージ"
+    "key": "settings.map.preview",
+    "category": "settings",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
   },
   {
-    "key": "sys.log.pageUrl",
-    "category": "sys",
-    "vi": "URL trang",
-    "en": "Page URL",
-    "zh": "页面URL",
-    "ja": "ページURL"
+    "key": "settings.map.previewEmpty",
+    "category": "settings",
+    "vi": "Chưa cấu hình URL bản đồ.",
+    "en": "No map URL configured yet.",
+    "zh": "尚未配置地图网址。",
+    "ja": "地図 URL がまだ設定されていません。"
   },
   {
-    "key": "sys.log.clear",
-    "category": "sys",
-    "vi": "Xoá tất cả",
-    "en": "Clear log",
-    "zh": "清除日志",
-    "ja": "ログをクリア"
+    "key": "settings.map.saved",
+    "category": "settings",
+    "vi": "Đã lưu cấu hình bản đồ.",
+    "en": "Map setting saved.",
+    "zh": "地图设置已保存。",
+    "ja": "地図設定を保存しました。"
   },
   {
-    "key": "sys.warn.title",
-    "category": "sys",
-    "vi": "Cảnh báo hệ thống",
-    "en": "Warnings",
-    "zh": "系统警告",
-    "ja": "システム警告"
+    "key": "settings.map.saveError",
+    "category": "settings",
+    "vi": "Không lưu được cấu hình bản đồ.",
+    "en": "Failed to save map setting.",
+    "zh": "保存地图设置失败。",
+    "ja": "地図設定の保存に失敗しました。"
   },
   {
-    "key": "sys.maint.title",
-    "category": "sys",
-    "vi": "Bảo trì",
-    "en": "Maintenance",
-    "zh": "维护",
-    "ja": "メンテナンス"
-  },
-  {
-    "key": "sys.maint.deleteGuests",
-    "category": "sys",
-    "vi": "Xoá khách vãng lai",
-    "en": "Deleting guest customers",
-    "zh": "删除访客用户",
-    "ja": "ゲストユーザーを削除"
-  },
-  {
-    "key": "sys.maint.deleteCarts",
-    "category": "sys",
-    "vi": "Xoá giỏ hàng đã bỏ",
-    "en": "Deleting abandoned shopping carts",
-    "zh": "删除废弃购物车",
-    "ja": "放棄されたカートを削除"
-  },
-  {
-    "key": "sys.maint.deleteExports",
-    "category": "sys",
-    "vi": "Xoá file xuất cũ",
-    "en": "Deleting old exported files",
-    "zh": "删除旧导出文件",
-    "ja": "古いエクスポートファイルを削除"
-  },
-  {
-    "key": "sys.maint.startDate",
-    "category": "sys",
-    "vi": "Từ ngày",
-    "en": "Start date",
-    "zh": "开始日期",
-    "ja": "開始日"
-  },
-  {
-    "key": "sys.maint.endDate",
-    "category": "sys",
-    "vi": "Đến ngày",
-    "en": "End date",
-    "zh": "结束日期",
-    "ja": "終了日"
-  },
-  {
-    "key": "sys.maint.createdBefore",
-    "category": "sys",
-    "vi": "Tạo trước ngày",
-    "en": "Created before",
-    "zh": "创建于此日期之前",
-    "ja": "この日付より前に作成"
-  },
-  {
-    "key": "sys.maint.onlyEmptyCart",
-    "category": "sys",
-    "vi": "Chỉ khi không có giỏ hàng",
-    "en": "Only without shopping cart",
-    "zh": "仅无购物车",
-    "ja": "カートがない場合のみ"
-  },
-  {
-    "key": "sys.maint.backups",
-    "category": "sys",
-    "vi": "Sao lưu CSDL",
-    "en": "Database backups",
-    "zh": "数据库备份",
-    "ja": "データベースバックアップ"
-  },
-  {
-    "key": "sys.maint.backupNow",
-    "category": "sys",
-    "vi": "Sao lưu ngay",
-    "en": "Backup now",
-    "zh": "立即备份",
-    "ja": "今すぐバックアップ"
-  },
-  {
-    "key": "sys.maint.backupOk",
-    "category": "sys",
-    "vi": "Đã tạo bản sao lưu",
-    "en": "Backup created",
-    "zh": "备份已创建",
-    "ja": "バックアップを作成しました"
-  },
-  {
-    "key": "sys.maint.fileName",
-    "category": "sys",
-    "vi": "Tên file",
-    "en": "File name",
-    "zh": "文件名",
-    "ja": "ファイル名"
-  },
-  {
-    "key": "sys.maint.fileSize",
-    "category": "sys",
-    "vi": "Kích thước",
-    "en": "File size",
-    "zh": "文件大小",
-    "ja": "ファイルサイズ"
-  },
-  {
-    "key": "sys.maint.download",
-    "category": "sys",
-    "vi": "Tải về",
-    "en": "Download",
-    "zh": "下载",
-    "ja": "ダウンロード"
-  },
-  {
-    "key": "sys.maint.restore",
-    "category": "sys",
-    "vi": "Khôi phục",
-    "en": "Restore",
-    "zh": "恢复",
-    "ja": "復元"
+    "key": "settings.map.loadError",
+    "category": "settings",
+    "vi": "Không tải được cấu hình bản đồ.",
+    "en": "Failed to load map setting.",
+    "zh": "无法加载地图设置。",
+    "ja": "地図設定を読み込めません。"
   },
   {
     "key": "sys.queue.title",
