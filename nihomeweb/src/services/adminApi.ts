@@ -371,6 +371,7 @@ export interface ListAuditLogParams {
   resourceType?: string;
   resourceId?: string;
   correlationId?: string;
+  search?: string;
 }
 
 export interface DeleteAuditRangeParams {
@@ -592,6 +593,7 @@ export const adminApi = {
     if (params.resourceType) query.append("resourceType", params.resourceType);
     if (params.resourceId) query.append("resourceId", params.resourceId);
     if (params.correlationId) query.append("correlationId", params.correlationId);
+    if (params.search) query.append("search", params.search);
     return api.get<AuditLogPage>(`/audit-logs?${query}`);
   },
   deleteAuditLog: (id: number) =>

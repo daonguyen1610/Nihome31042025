@@ -552,6 +552,22 @@
     "ja": "電話番号..."
   },
   {
+    "key": "log.search",
+    "category": "log",
+    "vi": "Tìm kiếm",
+    "en": "Search",
+    "zh": "搜索",
+    "ja": "検索"
+  },
+  {
+    "key": "log.searchPlaceholder",
+    "category": "log",
+    "vi": "Tìm theo nội dung, hành động, đối tượng, người thực hiện...",
+    "en": "Search by message, action, resource, actor...",
+    "zh": "按消息、操作、资源、操作者搜索...",
+    "ja": "メッセージ、アクション、リソース、実行者で検索..."
+  },
+  {
     "key": "log.entries",
     "category": "log",
     "vi": "bản ghi",

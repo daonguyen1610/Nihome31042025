@@ -70,7 +70,7 @@ public class AuditLogsControllerTests : IDisposable
     [Fact]
     public async Task Get_NoData_ReturnsEmptyPage()
     {
-        var result = await _sut.Get(null, null, null, null, null, null, null, null, null, 1, 50);
+        var result = await _sut.Get(null, null, null, null, null, null, null, null, null, null, 1, 50);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var page = Assert.IsType<AuditLogsController.AuditLogPage>(ok.Value);
 
@@ -88,7 +88,7 @@ public class AuditLogsControllerTests : IDisposable
             Make(action: "c", createdAt: DateTime.UtcNow.AddMinutes(-20)));
         await _db.SaveChangesAsync();
 
-        var result = await _sut.Get(null, null, null, null, null, null, null, null, null, 1, 50);
+        var result = await _sut.Get(null, null, null, null, null, null, null, null, null, null, 1, 50);
         var page = (AuditLogsController.AuditLogPage)((OkObjectResult)result.Result!).Value!;
 
         Assert.Equal(3, page.Total);
@@ -106,7 +106,7 @@ public class AuditLogsControllerTests : IDisposable
             Make(action: "user.logout"));
         await _db.SaveChangesAsync();
 
-        var result = await _sut.Get(null, null, "user.login", null, null, null, null, null, null, 1, 50);
+        var result = await _sut.Get(null, null, "user.login", null, null, null, null, null, null, null, 1, 50);
         var page = (AuditLogsController.AuditLogPage)((OkObjectResult)result.Result!).Value!;
 
         Assert.Equal(1, page.Total);
@@ -122,7 +122,7 @@ public class AuditLogsControllerTests : IDisposable
             Make(status: AuditStatus.Failure));
         await _db.SaveChangesAsync();
 
-        var result = await _sut.Get(null, null, null, null, null, AuditStatus.Failure, null, null, null, 1, 50);
+        var result = await _sut.Get(null, null, null, null, null, AuditStatus.Failure, null, null, null, null, 1, 50);
         var page = (AuditLogsController.AuditLogPage)((OkObjectResult)result.Result!).Value!;
 
         Assert.Equal(2, page.Total);
@@ -138,7 +138,7 @@ public class AuditLogsControllerTests : IDisposable
             Make(resourceType: "News", resourceId: "1"));
         await _db.SaveChangesAsync();
 
-        var result = await _sut.Get(null, null, null, null, null, null, "Process", "1", null, 1, 50);
+        var result = await _sut.Get(null, null, null, null, null, null, "Process", "1", null, null, 1, 50);
         var page = (AuditLogsController.AuditLogPage)((OkObjectResult)result.Result!).Value!;
 
         Assert.Equal(1, page.Total);
@@ -154,11 +154,37 @@ public class AuditLogsControllerTests : IDisposable
             Make(correlationId: "corr-2"));
         await _db.SaveChangesAsync();
 
-        var result = await _sut.Get(null, null, null, null, null, null, null, null, "corr-1", 1, 50);
+        var result = await _sut.Get(null, null, null, null, null, null, null, null, "corr-1", null, 1, 50);
         var page = (AuditLogsController.AuditLogPage)((OkObjectResult)result.Result!).Value!;
 
         Assert.Equal(1, page.Total);
         Assert.Equal("corr-1", page.Items[0].CorrelationId);
+    }
+
+    [Fact]
+    public async Task Get_FreeTextSearch_MatchesMessageActionAndActor()
+    {
+        var a = Make(action: "auth.login", actorPhone: "0335240370");
+        a.Message = "User 0335240370 logged in";
+        var b = Make(action: "news.create");
+        b.Message = "Created article about housing";
+        var c = Make(action: "auth.logout");
+        c.Message = "Goodbye";
+        _db.AuditLogs.AddRange(a, b, c);
+        await _db.SaveChangesAsync();
+
+        var byMessage = await _sut.Get(null, null, null, null, null, null, null, null, null, "housing", 1, 50);
+        var p1 = (AuditLogsController.AuditLogPage)((OkObjectResult)byMessage.Result!).Value!;
+        Assert.Equal(1, p1.Total);
+        Assert.Equal("news.create", p1.Items[0].Action);
+
+        var byActionPartial = await _sut.Get(null, null, null, null, null, null, null, null, null, "auth.", 1, 50);
+        var p2 = (AuditLogsController.AuditLogPage)((OkObjectResult)byActionPartial.Result!).Value!;
+        Assert.Equal(2, p2.Total);
+
+        var byActorPartial = await _sut.Get(null, null, null, null, null, null, null, null, null, "033524", 1, 50);
+        var p3 = (AuditLogsController.AuditLogPage)((OkObjectResult)byActorPartial.Result!).Value!;
+        Assert.Equal(1, p3.Total);
     }
 
     [Fact]
@@ -169,11 +195,11 @@ public class AuditLogsControllerTests : IDisposable
             Make(actorPhone: "0335240371", ip: "10.0.0.6"));
         await _db.SaveChangesAsync();
 
-        var byPhone = await _sut.Get(null, null, null, "0335240370", null, null, null, null, null, 1, 50);
+        var byPhone = await _sut.Get(null, null, null, "0335240370", null, null, null, null, null, null, 1, 50);
         var p1 = (AuditLogsController.AuditLogPage)((OkObjectResult)byPhone.Result!).Value!;
         Assert.Equal(1, p1.Total);
 
-        var byIp = await _sut.Get(null, null, null, null, "10.0.0.6", null, null, null, null, 1, 50);
+        var byIp = await _sut.Get(null, null, null, null, "10.0.0.6", null, null, null, null, null, 1, 50);
         var p2 = (AuditLogsController.AuditLogPage)((OkObjectResult)byIp.Result!).Value!;
         Assert.Equal(1, p2.Total);
     }
@@ -184,7 +210,7 @@ public class AuditLogsControllerTests : IDisposable
         for (var i = 0; i < 5; i++) _db.AuditLogs.Add(Make());
         await _db.SaveChangesAsync();
 
-        var result = await _sut.Get(null, null, null, null, null, null, null, null, null, 1, 99999);
+        var result = await _sut.Get(null, null, null, null, null, null, null, null, null, null, 1, 99999);
         var page = (AuditLogsController.AuditLogPage)((OkObjectResult)result.Result!).Value!;
         Assert.Equal(200, page.PageSize);
     }
