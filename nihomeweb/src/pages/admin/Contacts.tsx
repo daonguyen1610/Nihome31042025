@@ -128,7 +128,7 @@ const AdminContacts = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* List */}
         <div className="admin-card lg:col-span-5 xl:col-span-4 p-3 max-h-[calc(100vh-240px)] overflow-y-auto">
-          <div className="px-2 pt-1 pb-2 space-y-2 sticky top-0 z-10" style={{ background: "hsl(var(--admin-card))" }}>
+          <div className="px-2 pt-1 pb-2 space-y-2 sticky top-0 z-10" style={{ background: "hsl(var(--admin-surface))" }}>
             <div
               className="flex items-center gap-2 rounded-full px-3 py-2 border"
               style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
