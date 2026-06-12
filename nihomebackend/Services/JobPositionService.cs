@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,11 +8,14 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class JobPositionService(AppDbContext db, EmploymentTypeService employmentTypeService)
+public class JobPositionService(
+    AppDbContext db,
+    EmploymentTypeService employmentTypeService,
+    EntityTranslationService translationSvc)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
 
-    public async Task<List<JobPositionResponse>> GetAllAsync(bool includeInactive = false)
+    public async Task<List<JobPositionResponse>> GetAllAsync(bool includeInactive = false, string lang = "vi")
     {
         var query = db.JobPositions
             .AsNoTracking()
@@ -22,16 +26,26 @@ public class JobPositionService(AppDbContext db, EmploymentTypeService employmen
             : query.Where(j => j.IsActive).OrderBy(j => j.SortOrder).ThenBy(j => j.Title))
             .ToListAsync();
 
-        return items.Select(MapToResponse).ToList();
+        var translations = await translationSvc.GetBatchTranslationsAsync(
+            EntityTypes.JobPosition, items.Select(j => j.Id), lang);
+
+        return items.Select(j =>
+        {
+            var t = translations.GetValueOrDefault(j.Id, new Dictionary<string, string>());
+            return MapToResponse(j, t);
+        }).ToList();
     }
 
-    public async Task<JobPositionResponse?> GetByIdAsync(int id)
+    public async Task<JobPositionResponse?> GetByIdAsync(int id, string lang = "vi")
     {
         var entity = await db.JobPositions
             .AsNoTracking()
             .Include(j => j.Applications)
             .FirstOrDefaultAsync(j => j.Id == id);
-        return entity == null ? null : MapToResponse(entity);
+        if (entity == null) return null;
+
+        var t = await translationSvc.GetEntityTranslationsAsync(EntityTypes.JobPosition, id, lang);
+        return MapToResponse(entity, t);
     }
 
     public async Task<JobPositionResponse> CreateAsync(UpsertJobPositionRequest req)
@@ -54,7 +68,7 @@ public class JobPositionService(AppDbContext db, EmploymentTypeService employmen
 
         db.JobPositions.Add(entity);
         await db.SaveChangesAsync();
-        return MapToResponse(entity);
+        return MapToResponse(entity, new Dictionary<string, string>());
     }
 
     public async Task<JobPositionResponse?> UpdateAsync(int id, UpsertJobPositionRequest req)
@@ -77,7 +91,7 @@ public class JobPositionService(AppDbContext db, EmploymentTypeService employmen
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
-        return MapToResponse(entity);
+        return MapToResponse(entity, new Dictionary<string, string>());
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -87,24 +101,31 @@ public class JobPositionService(AppDbContext db, EmploymentTypeService employmen
 
         db.JobPositions.Remove(entity);
         await db.SaveChangesAsync();
+        await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.JobPosition, id);
         return true;
     }
 
-    private static JobPositionResponse MapToResponse(JobPosition j)
+    private static JobPositionResponse MapToResponse(JobPosition j, Dictionary<string, string> t)
     {
         List<string> reqs;
-        try { reqs = JsonSerializer.Deserialize<List<string>>(j.RequirementsJson) ?? []; }
+        try
+        {
+            var rawReqs = t.TryGetValue("Requirements", out var reqJson)
+                ? reqJson
+                : j.RequirementsJson;
+            reqs = JsonSerializer.Deserialize<List<string>>(rawReqs) ?? [];
+        }
         catch { reqs = []; }
 
         return new JobPositionResponse
         {
             Id = j.Id,
-            Title = j.Title,
-            Department = j.Department,
+            Title = t.GetValueOrDefault("Title", j.Title),
+            Department = t.GetValueOrDefault("Department", j.Department),
             Location = j.Location,
             EmploymentType = j.EmploymentType,
             ExperienceLevel = j.ExperienceLevel,
-            Description = j.Description,
+            Description = t.TryGetValue("Description", out var desc) ? desc : j.Description,
             Requirements = reqs,
             IsActive = j.IsActive,
             SortOrder = j.SortOrder,

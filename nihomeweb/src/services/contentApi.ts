@@ -358,8 +358,8 @@ export const contentApi = {
       .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveImageUrl(x.imageUrl) })) })),
 
   // Job positions (public)
-  getJobPositions: () =>
-    api.get<JobPositionResponse[]>("/job-positions"),
+  getJobPositions: (lang = "vi") =>
+    api.get<JobPositionResponse[]>(`/job-positions?lang=${lang}`),
 
   uploadCv: (file: File) => {
     const formData = new FormData();

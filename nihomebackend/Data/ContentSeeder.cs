@@ -456,7 +456,7 @@ public static class ContentSeeder
         {
             string[][] clients = [
                 ["CLOTEX", "/images/logos/clients/clotex.png"],
-                ["SCON", "/images/logos/clients/scon.jpeg"],
+                ["SBMT", "/images/logos/clients/sbmt.png"],
                 ["SMITH MULLER", "/images/logos/clients/smith-muller.jpeg"],
                 ["LAM HIEP HUNG", "/images/logos/clients/lam-hiep-hung.jpeg"],
                 ["NESTLE", "/images/logos/clients/nestle.jpeg"],
@@ -466,14 +466,13 @@ public static class ContentSeeder
                 ["WATTENS", "/images/logos/clients/wattens.jpeg"],
                 ["GREAT LOTUS", "/images/logos/clients/great-lotus.jpeg"],
                 ["ADVANCED CASTING ASIA", "/images/logos/clients/advanced-casting-asia.jpeg"],
-                ["AMPHACO", "/images/logos/clients/amphaco.jpeg"],
                 ["EVERGREEN", "/images/logos/clients/evergreen.jpeg"],
                 ["APM SPRINGS", "/images/logos/clients/apm-springs.jpeg"],
                 ["RED BULL", "/images/logos/clients/red-bull.png"],
                 ["SALADSTOP", "/images/logos/clients/saladstop.jpeg"],
                 ["BMT GROUP", "/images/logos/clients/bmt-group.jpeg"],
                 ["LAVIE", "/images/logos/clients/lavie.jpeg"],
-                ["AKATI WOOD", "/images/logos/clients/akati-wood.png"],
+                ["DOMINSNANT", "/images/logos/clients/akati-wood.png"],
                 ["TLC", "/images/logos/clients/tlc.png"],
                 ["JAPAN PLUS", "/images/logos/clients/japan-plus.jpeg"],
                 ["AMPHARCO U.S.A", "/images/logos/clients/ampharco-usa.png"],
@@ -519,19 +518,10 @@ public static class ContentSeeder
         if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Supplier))
         {
             string[][] suppliers = [
-                ["Seamasterpaint", "/images/logos/suppliers/seamasterpaint.jpeg"],
                 ["MPE-Inc", "/images/logos/suppliers/mpe-inc.jpeg"],
                 ["Chi Thanh Steel", "/images/logos/suppliers/chi-thanh-steel.jpeg"],
-                ["Nippon", "/images/logos/suppliers/nippon.jpeg"],
-                ["Vicem Cement", "/images/logos/suppliers/vicem-cement.png"],
-                ["Fico Cement", "/images/logos/suppliers/fico-cement.png"],
-                ["Dong Tam Group", "/images/logos/suppliers/dong-tam-group.png"],
                 ["Hoa Phat Steel", "/images/logos/suppliers/hoa-phat-steel.jpeg"],
-                ["Dulux", "/images/logos/suppliers/dulux.jpeg"],
-                ["Sika", "/images/logos/suppliers/sika.jpeg"],
-                ["Shell", "/images/logos/suppliers/shell.jpeg"],
                 ["Cadivi", "/images/logos/suppliers/cadivi.png"],
-                ["VN Steel", "/images/logos/suppliers/vn-steel.png"],
                 ["EVN", "/images/logos/suppliers/evn.png"],
                 ["Schneider", "/images/logos/suppliers/schneider.png"],
                 ["Thinh Phat", "/images/logos/suppliers/thinh-phat.jpeg"],
@@ -539,15 +529,11 @@ public static class ContentSeeder
                 ["Posco VN", "/images/logos/suppliers/posco-vn.png"],
                 ["WhiteHorse Ceramic", "/images/logos/suppliers/whitehorse-ceramic.png"],
                 ["Minh Viet Son", "/images/logos/suppliers/minh-viet-son.jpeg"],
-                ["QSB Steel", "/images/logos/suppliers/qsb-steel.jpeg"],
                 ["Song Hop Luc", "/images/logos/suppliers/song-hop-luc.jpeg"],
                 ["Duhal Led", "/images/logos/suppliers/duhal-led.jpeg"],
                 ["Eurowindow", "/images/logos/suppliers/eurowindow.jpeg"],
                 ["SINO", "/images/logos/suppliers/sino.jpeg"],
-                ["Zamil Steel", "/images/logos/suppliers/zamil-steel.jpeg"],
-                ["BlueScope", "/images/logos/suppliers/bluescope.jpeg"],
                 ["Caesar", "/images/logos/suppliers/caesar.jpeg"],
-                ["TungShin", "/images/logos/suppliers/tungshin.jpeg"],
                 ["Tai Truong Thanh", "/images/logos/suppliers/tai-truong-thanh.jpeg"],
                 ["Holcim", "/images/logos/suppliers/holcim.jpeg"],
                 ["Viglacera", "/images/logos/suppliers/viglacera.jpeg"],
@@ -555,6 +541,8 @@ public static class ContentSeeder
                 ["Vina Kyoei", "/images/logos/suppliers/vina-kyoei.jpeg"],
                 ["Binh Minh", "/images/logos/suppliers/binh-minh.jpeg"],
                 ["Taicera", "/images/logos/suppliers/taicera.jpeg"],
+                ["LHC", "/images/logos/suppliers/lhc.png"],
+                ["ACG", "/images/logos/suppliers/acg.png"],
             ];
             i = 0;
             foreach (var s in suppliers)
@@ -578,6 +566,105 @@ public static class ContentSeeder
             db.ClientLogos.AddRange(logos);
             db.SaveChanges();
         }
+
+        // Always-run upserts: replace CLOTEX → BIDV, SCON → SBMT, AKATI WOOD → DOMINSNANT, remove AMPHACO
+        var amphacoLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "AMPHACO" && l.Kind == LogoKind.Client);
+        if (amphacoLogo != null)
+            db.ClientLogos.Remove(amphacoLogo);
+
+        var akatiLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "AKATI WOOD" && l.Kind == LogoKind.Client);
+        if (akatiLogo != null)
+        {
+            akatiLogo.Name = "DOMINSNANT";
+            akatiLogo.ImageUrl = "/images/logos/clients/akati-wood.png";
+        }
+
+        var sconLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "SCON" && l.Kind == LogoKind.Client);
+        if (sconLogo != null)
+        {
+            sconLogo.Name = "SBMT";
+            sconLogo.ImageUrl = "/images/logos/clients/sbmt.png";
+        }
+
+        var clotexLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "CLOTEX" && l.Kind == LogoKind.Client);
+        if (clotexLogo != null)
+        {
+            clotexLogo.Name = "BIDV";
+            clotexLogo.ImageUrl = "/images/logos/clients/bidv.png";
+        }
+
+        if (!db.ClientLogos.Any(l => l.Name == "MEDICARE" && l.Kind == LogoKind.Client))
+        {
+            var maxOrder = db.ClientLogos
+                .Where(l => l.Kind == LogoKind.Client)
+                .Max(l => (int?)l.SortOrder) ?? 0;
+            db.ClientLogos.Add(new ClientLogo
+            {
+                Name = "MEDICARE",
+                ImageUrl = "/images/logos/clients/medicare.png",
+                Kind = LogoKind.Client,
+                SortOrder = maxOrder + 1,
+            });
+        }
+
+        // Ensure AGC partner logo exists
+        if (!db.ClientLogos.Any(l => l.Name == "AGC" && l.Kind == LogoKind.Partner))
+        {
+            var maxPartnerOrder = db.ClientLogos
+                .Where(l => l.Kind == LogoKind.Partner)
+                .Max(l => (int?)l.SortOrder) ?? 0;
+            db.ClientLogos.Add(new ClientLogo
+            {
+                Name = "AGC",
+                ImageUrl = "/images/logos/partners/agc.png",
+                Kind = LogoKind.Partner,
+                SortOrder = maxPartnerOrder + 1,
+            });
+        }
+
+        // Remove obsolete supplier logos
+        string[] obsoleteSuppliers = [
+            "Seamasterpaint", "Nippon", "Vicem Cement", "Fico Cement",
+            "Dong Tam Group", "Dulux", "Sika", "Shell",
+            "VN Steel", "QSB Steel", "Zamil Steel", "BlueScope", "TungShin",
+        ];
+        var toRemove = db.ClientLogos
+            .Where(l => l.Kind == LogoKind.Supplier && obsoleteSuppliers.Contains(l.Name))
+            .ToList();
+        if (toRemove.Count > 0)
+            db.ClientLogos.RemoveRange(toRemove);
+
+        // Add LHC supplier if not present
+        if (!db.ClientLogos.Any(l => l.Name == "LHC" && l.Kind == LogoKind.Supplier))
+        {
+            var maxSupOrder = db.ClientLogos
+                .Where(l => l.Kind == LogoKind.Supplier)
+                .Max(l => (int?)l.SortOrder) ?? 0;
+            db.ClientLogos.Add(new ClientLogo
+            {
+                Name = "LHC",
+                ImageUrl = "/images/logos/suppliers/lhc.png",
+                Kind = LogoKind.Supplier,
+                SortOrder = maxSupOrder + 1,
+            });
+        }
+
+        // Add ACG supplier if not present
+        if (!db.ClientLogos.Any(l => l.Name == "ACG" && l.Kind == LogoKind.Supplier))
+        {
+            var maxSupOrder = db.ClientLogos
+                .Where(l => l.Kind == LogoKind.Supplier)
+                .Max(l => (int?)l.SortOrder) ?? 0;
+            db.ClientLogos.Add(new ClientLogo
+            {
+                Name = "ACG",
+                ImageUrl = "/images/logos/suppliers/acg.png",
+                Kind = LogoKind.Supplier,
+                SortOrder = maxSupOrder + 1,
+            });
+        }
+
+        db.SaveChanges();
     }
 
     // ─── Processes ──────────────────────────────────────────────────
@@ -1685,6 +1772,187 @@ public static class ContentSeeder
         Add(EntityTypes.Slideshow, 5, "Title", "ja", "モダンオフィスインテリア");
         Add(EntityTypes.Slideshow, 5, "Subtitle", "ja", "ミニマリスト — オープンスペース — 国際基準");
         Add(EntityTypes.Slideshow, 5, "LinkText", "ja", "プロジェクトを見る");
+
+        // --- Job Positions ---
+        var jobPositions = db.JobPositions.Select(p => new { p.Id, p.Title }).ToList();
+        int jobId(string title) => jobPositions.FirstOrDefault(p => p.Title == title)?.Id ?? 0;
+
+        // Position 1: Kỹ sư Xây dựng (Site Engineer)
+        var jpSiteEng = jobId("Kỹ sư Xây dựng (Site Engineer)");
+        if (jpSiteEng > 0)
+        {
+            Add(EntityTypes.JobPosition, jpSiteEng, "Title", "en", "Site Engineer");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Title", "zh", "施工工程师");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Title", "ja", "現場エンジニア");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Department", "en", "Construction Dept.");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Department", "zh", "施工部");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Department", "ja", "施工部門");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Description", "en", "Directly supervise construction on-site, inspect material quality, and ensure schedule and occupational safety in accordance with ISO 9001:2015 standards.");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Description", "zh", "直接驻场监督施工，检验材料质量，按ISO 9001:2015标准确保施工进度与安全。");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Description", "ja", "現場で直接施工を監督し、資材品質を検査、ISO 9001:2015基準に基づき工程と労働安全を確保します。");
+            Add(EntityTypes.JobPosition, jpSiteEng, "Requirements", "en", JsonSerializer.Serialize(new[] {
+                "University degree in Civil & Industrial Construction Engineering",
+                "At least 2 years' experience in workshop or factory construction",
+                "Ability to read structural, architectural and MEP drawings",
+                "Proficient in AutoCAD and MS Project",
+                "Ability to work outdoors and handle schedule pressure"
+            }));
+            Add(EntityTypes.JobPosition, jpSiteEng, "Requirements", "zh", JsonSerializer.Serialize(new[] {
+                "土木与工业建筑专业大学学历",
+                "至少2年厂房/工厂施工经验",
+                "能读懂结构、建筑及MEP图纸",
+                "熟练使用AutoCAD、MS Project",
+                "能在户外工作并承受进度压力"
+            }));
+            Add(EntityTypes.JobPosition, jpSiteEng, "Requirements", "ja", JsonSerializer.Serialize(new[] {
+                "建築・工業建設工学専攻の大学卒業",
+                "工場・倉庫建設2年以上の経験",
+                "構造・建築・MEP図面の読解能力",
+                "AutoCAD、MS Project習熟",
+                "屋外作業・スケジュールプレッシャーへの対応能力"
+            }));
+        }
+
+        // Position 2: Kiến trúc sư Thiết kế
+        var jpArchitect = jobId("Kiến trúc sư Thiết kế");
+        if (jpArchitect > 0)
+        {
+            Add(EntityTypes.JobPosition, jpArchitect, "Title", "en", "Architectural Designer");
+            Add(EntityTypes.JobPosition, jpArchitect, "Title", "zh", "建筑设计师");
+            Add(EntityTypes.JobPosition, jpArchitect, "Title", "ja", "建築デザイナー");
+            Add(EntityTypes.JobPosition, jpArchitect, "Department", "en", "Design Dept.");
+            Add(EntityTypes.JobPosition, jpArchitect, "Department", "zh", "设计部");
+            Add(EntityTypes.JobPosition, jpArchitect, "Department", "ja", "設計部門");
+            Add(EntityTypes.JobPosition, jpArchitect, "Description", "en", "Design architecture for industrial workshop, office and civil construction projects. Collaborate with structural and MEP teams to finalize design documents.");
+            Add(EntityTypes.JobPosition, jpArchitect, "Description", "zh", "为工业厂房、办公及民用建筑项目进行建筑设计，与结构和MEP团队协作完善设计文件。");
+            Add(EntityTypes.JobPosition, jpArchitect, "Description", "ja", "工業工場・オフィス・民間建築プロジェクトの建築設計を担当。構造・MEPチームと連携して設計書類を完成させます。");
+            Add(EntityTypes.JobPosition, jpArchitect, "Requirements", "en", JsonSerializer.Serialize(new[] {
+                "University degree in Architecture",
+                "Proficient in Revit, AutoCAD, SketchUp, Photoshop",
+                "Experience in industrial construction design is an advantage",
+                "Creative thinking, up-to-date with new design trends",
+                "Good communication skills with clients and internal teams"
+            }));
+            Add(EntityTypes.JobPosition, jpArchitect, "Requirements", "zh", JsonSerializer.Serialize(new[] {
+                "建筑专业大学学历",
+                "熟练使用Revit、AutoCAD、SketchUp、Photoshop",
+                "有工业建筑设计经验者优先",
+                "思维创新，紧跟新设计潮流",
+                "与客户及内部团队沟通能力强"
+            }));
+            Add(EntityTypes.JobPosition, jpArchitect, "Requirements", "ja", JsonSerializer.Serialize(new[] {
+                "建築専攻の大学卒業",
+                "Revit、AutoCAD、SketchUp、Photoshop習熟",
+                "工業建築設計経験は優遇",
+                "革新的思考と最新デザイントレンドへの対応",
+                "クライアント・社内チームとの良好なコミュニケーション能力"
+            }));
+        }
+
+        // Position 3: Nhân viên Kinh doanh Dự án
+        var jpSales = jobId("Nhân viên Kinh doanh Dự án");
+        if (jpSales > 0)
+        {
+            Add(EntityTypes.JobPosition, jpSales, "Title", "en", "Project Sales Executive");
+            Add(EntityTypes.JobPosition, jpSales, "Title", "zh", "项目销售专员");
+            Add(EntityTypes.JobPosition, jpSales, "Title", "ja", "プロジェクト営業担当");
+            Add(EntityTypes.JobPosition, jpSales, "Department", "en", "Sales Dept.");
+            Add(EntityTypes.JobPosition, jpSales, "Department", "zh", "销售部");
+            Add(EntityTypes.JobPosition, jpSales, "Department", "ja", "営業部門");
+            Add(EntityTypes.JobPosition, jpSales, "Description", "en", "Find and develop corporate clients, advise on turnkey construction solutions, and follow up with clients from initial contact to contract signing.");
+            Add(EntityTypes.JobPosition, jpSales, "Description", "zh", "开发企业客户，提供全包建设解决方案咨询，从初次接触到签约全程跟进维护客户关系。");
+            Add(EntityTypes.JobPosition, jpSales, "Description", "ja", "法人クライアントの開拓・育成、ターンキー建設ソリューションの提案、初期接触から契約締結まで顧客フォローを担当します。");
+            Add(EntityTypes.JobPosition, jpSales, "Requirements", "en", JsonSerializer.Serialize(new[] {
+                "University degree in Business Administration, Marketing or Civil Engineering",
+                "Excellent communication and presentation skills",
+                "Own a motorbike and willing to travel",
+                "B2B sales experience in the construction industry preferred",
+                "English or Japanese language skills are a major advantage"
+            }));
+            Add(EntityTypes.JobPosition, jpSales, "Requirements", "zh", JsonSerializer.Serialize(new[] {
+                "工商管理、市场营销或建筑专业大学学历",
+                "出色的沟通与演示能力",
+                "自备摩托车，可出差",
+                "有建筑行业B2B销售经验优先",
+                "英语或日语能力是很大优势"
+            }));
+            Add(EntityTypes.JobPosition, jpSales, "Requirements", "ja", JsonSerializer.Serialize(new[] {
+                "経営学・マーケティング・建築専攻の大学卒業",
+                "優れたコミュニケーション・プレゼンテーション能力",
+                "バイク所持・出張可",
+                "建設業界B2B営業経験者優遇",
+                "英語または日本語能力は大きな強み"
+            }));
+        }
+
+        // Position 4: Kỹ sư MEP
+        var jpMep = jobId("Kỹ sư MEP (Cơ điện)");
+        if (jpMep > 0)
+        {
+            Add(EntityTypes.JobPosition, jpMep, "Title", "en", "MEP Engineer");
+            Add(EntityTypes.JobPosition, jpMep, "Title", "zh", "MEP工程师");
+            Add(EntityTypes.JobPosition, jpMep, "Title", "ja", "MEPエンジニア");
+            Add(EntityTypes.JobPosition, jpMep, "Department", "en", "Design Dept.");
+            Add(EntityTypes.JobPosition, jpMep, "Department", "zh", "设计部");
+            Add(EntityTypes.JobPosition, jpMep, "Department", "ja", "設計部門");
+            Add(EntityTypes.JobPosition, jpMep, "Description", "en", "Design and supervise MEP systems (electrical, plumbing, HVAC, fire protection) for large-scale industrial workshop and office projects.");
+            Add(EntityTypes.JobPosition, jpMep, "Description", "zh", "为大型工业厂房和办公项目设计和监督MEP系统（电气、给排水、HVAC、消防）。");
+            Add(EntityTypes.JobPosition, jpMep, "Description", "ja", "大規模工業工場・オフィスプロジェクトのMEPシステム（電気・給排水・HVAC・消防）の設計・監督を担当します。");
+            Add(EntityTypes.JobPosition, jpMep, "Requirements", "en", JsonSerializer.Serialize(new[] {
+                "University degree in Electrical, Mechanical or Building Services Engineering",
+                "Minimum 5 years' MEP design experience",
+                "Proficient in Revit MEP and AutoCAD MEP",
+                "Familiar with fire safety standards and QCVN for electrical and plumbing systems",
+                "Experience in factory or industrial park projects is mandatory"
+            }));
+            Add(EntityTypes.JobPosition, jpMep, "Requirements", "zh", JsonSerializer.Serialize(new[] {
+                "电气、机械或建筑设备专业大学学历",
+                "至少5年MEP设计经验",
+                "熟练使用Revit MEP和AutoCAD MEP",
+                "熟悉消防标准及电气、给排水系统QCVN规范",
+                "工厂/工业园区项目经验必须具备"
+            }));
+            Add(EntityTypes.JobPosition, jpMep, "Requirements", "ja", JsonSerializer.Serialize(new[] {
+                "電気・機械・建築設備専攻の大学卒業",
+                "MEP設計5年以上の経験",
+                "Revit MEP、AutoCAD MEP習熟",
+                "消防基準・電気/給排水QCVNへの精通",
+                "工場/工業団地プロジェクト経験必須"
+            }));
+        }
+
+        // Position 5: Thực tập sinh Kỹ thuật
+        var jpIntern = jobId("Thực tập sinh Kỹ thuật");
+        if (jpIntern > 0)
+        {
+            Add(EntityTypes.JobPosition, jpIntern, "Title", "en", "Engineering Intern");
+            Add(EntityTypes.JobPosition, jpIntern, "Title", "zh", "技术实习生");
+            Add(EntityTypes.JobPosition, jpIntern, "Title", "ja", "技術インターン");
+            Add(EntityTypes.JobPosition, jpIntern, "Department", "en", "Construction Dept.");
+            Add(EntityTypes.JobPosition, jpIntern, "Department", "zh", "施工部");
+            Add(EntityTypes.JobPosition, jpIntern, "Department", "ja", "施工部門");
+            Add(EntityTypes.JobPosition, jpIntern, "Description", "en", "Support the site engineering team with surveying, inspection and as-built documentation. Opportunity to learn hands-on at large-scale workshop construction sites.");
+            Add(EntityTypes.JobPosition, jpIntern, "Description", "zh", "协助现场工程师团队进行测量、验收和竣工档案整理，在大型厂房建设工地获得实际学习机会。");
+            Add(EntityTypes.JobPosition, jpIntern, "Description", "ja", "現場エンジニアチームの測量・検査・竣工図書作成をサポート。大規模工場建設現場での実践的な学習機会。");
+            Add(EntityTypes.JobPosition, jpIntern, "Requirements", "en", JsonSerializer.Serialize(new[] {
+                "Final-year student in Construction, Architecture or a related field",
+                "Ability to intern full-time for at least 3 months",
+                "Hardworking, eager to learn, willing to commute",
+                "Basic AutoCAD skills"
+            }));
+            Add(EntityTypes.JobPosition, jpIntern, "Requirements", "zh", JsonSerializer.Serialize(new[] {
+                "建筑、建筑学或相关专业大四学生",
+                "可全职实习至少3个月",
+                "勤奋、好学、能接受通勤",
+                "基本AutoCAD操作能力"
+            }));
+            Add(EntityTypes.JobPosition, jpIntern, "Requirements", "ja", JsonSerializer.Serialize(new[] {
+                "建築・建築学または関連分野の最終学年生",
+                "最低3か月フルタイムインターン可能",
+                "勤勉・学習意欲旺盛・通勤可能",
+                "基本的なAutoCAD操作スキル"
+            }));
+        }
 
         db.EntityTranslations.AddRange(translations);
         db.SaveChanges();

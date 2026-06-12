@@ -398,5 +398,229 @@
     "en": "Search candidates by name, email, phone...",
     "zh": "按候选人姓名、邮箱、电话搜索...",
     "ja": "候補者を名前、メール、電話で検索..."
+  },
+  {
+    "key": "rec.exp.student",
+    "category": "rec",
+    "vi": "Sinh viên",
+    "en": "Student",
+    "zh": "学生",
+    "ja": "学生"
+  },
+  {
+    "key": "rec.exp.junior",
+    "category": "rec",
+    "vi": "0-2 năm",
+    "en": "0-2 years",
+    "zh": "0-2年",
+    "ja": "0-2年"
+  },
+  {
+    "key": "rec.exp.mid",
+    "category": "rec",
+    "vi": "2-5 năm",
+    "en": "2-5 years",
+    "zh": "2-5年",
+    "ja": "2-5年"
+  },
+  {
+    "key": "rec.exp.senior",
+    "category": "rec",
+    "vi": "5+ năm",
+    "en": "5+ years",
+    "zh": "5年以上",
+    "ja": "5年以上"
+  },
+  {
+    "key": "rec.loading",
+    "category": "rec",
+    "vi": "Đang tải vị trí tuyển dụng...",
+    "en": "Loading positions...",
+    "zh": "正在加载职位...",
+    "ja": "求人を読み込み中..."
+  },
+  {
+    "key": "rec.retry",
+    "category": "rec",
+    "vi": "Tải lại",
+    "en": "Retry",
+    "zh": "重试",
+    "ja": "再試行"
+  },
+  {
+    "key": "rec.noPositions",
+    "category": "rec",
+    "vi": "Hiện chưa có vị trí tuyển dụng đang mở. Bạn có thể để lại nhu cầu tại trang liên hệ.",
+    "en": "No open positions at the moment. You can leave your inquiry on the contact page.",
+    "zh": "目前暂无开放职位。您可以在联系页面留下您的意向。",
+    "ja": "現在募集中のポジションはありません。お問い合わせページからご連絡ください。"
+  },
+  {
+    "key": "rec.form.eyebrow",
+    "category": "rec",
+    "vi": "Ứng tuyển trực tuyến",
+    "en": "Apply online",
+    "zh": "在线申请",
+    "ja": "オンライン応募"
+  },
+  {
+    "key": "rec.form.noPosition",
+    "category": "rec",
+    "vi": "Chọn vị trí phù hợp",
+    "en": "Select a position",
+    "zh": "选择合适的职位",
+    "ja": "ポジションを選択"
+  },
+  {
+    "key": "rec.form.noPositionHint",
+    "category": "rec",
+    "vi": "Chọn một vị trí ở danh sách bên trái để gửi hồ sơ ngay trên website.",
+    "en": "Choose a position from the list on the left to apply directly on the website.",
+    "zh": "请从左侧列表中选择一个职位以直接在网站上申请。",
+    "ja": "左のリストからポジションを選択してウェブサイトから直接応募できます。"
+  },
+  {
+    "key": "rec.form.positionHint",
+    "category": "rec",
+    "vi": "{dept} • {loc}",
+    "en": "{dept} • {loc}",
+    "zh": "{dept} • {loc}",
+    "ja": "{dept} • {loc}"
+  },
+  {
+    "key": "rec.form.nameLabel",
+    "category": "rec",
+    "vi": "Họ và tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "rec.form.namePlaceholder",
+    "category": "rec",
+    "vi": "Nguyễn Văn A",
+    "en": "John Smith",
+    "zh": "张伟",
+    "ja": "山田太郎"
+  },
+  {
+    "key": "rec.form.emailLabel",
+    "category": "rec",
+    "vi": "Email",
+    "en": "Email",
+    "zh": "电子邮件",
+    "ja": "メール"
+  },
+  {
+    "key": "rec.form.phoneLabel",
+    "category": "rec",
+    "vi": "Số điện thoại",
+    "en": "Phone number",
+    "zh": "电话号码",
+    "ja": "電話番号"
+  },
+  {
+    "key": "rec.form.phonePlaceholder",
+    "category": "rec",
+    "vi": "090...",
+    "en": "+84 90...",
+    "zh": "+84 90...",
+    "ja": "+84 90..."
+  },
+  {
+    "key": "rec.form.expLabel",
+    "category": "rec",
+    "vi": "Số năm kinh nghiệm",
+    "en": "Years of experience",
+    "zh": "工作年限",
+    "ja": "経験年数"
+  },
+  {
+    "key": "rec.form.coverLabel",
+    "category": "rec",
+    "vi": "Giới thiệu ngắn",
+    "en": "Cover letter",
+    "zh": "自我介绍",
+    "ja": "カバーレター"
+  },
+  {
+    "key": "rec.form.coverPlaceholder",
+    "category": "rec",
+    "vi": "Giới thiệu ngắn về kinh nghiệm, dự án đã tham gia, thế mạnh của bạn...",
+    "en": "Brief introduction about your experience, projects, and strengths...",
+    "zh": "请简要介绍您的经历、参与项目及优势...",
+    "ja": "経歴・参加プロジェクト・強みを簡単にご紹介ください..."
+  },
+  {
+    "key": "rec.form.cvLabel",
+    "category": "rec",
+    "vi": "CV / Hồ sơ (PDF, DOC, DOCX)",
+    "en": "CV / Resume (PDF, DOC, DOCX)",
+    "zh": "简历 (PDF, DOC, DOCX)",
+    "ja": "履歴書 (PDF, DOC, DOCX)"
+  },
+  {
+    "key": "rec.form.cvPlaceholder",
+    "category": "rec",
+    "vi": "Chọn file...",
+    "en": "Choose file...",
+    "zh": "选择文件...",
+    "ja": "ファイルを選択..."
+  },
+  {
+    "key": "rec.form.submit",
+    "category": "rec",
+    "vi": "Gửi hồ sơ",
+    "en": "Submit application",
+    "zh": "提交申请",
+    "ja": "応募を送信"
+  },
+  {
+    "key": "rec.form.submitting",
+    "category": "rec",
+    "vi": "Đang gửi...",
+    "en": "Submitting...",
+    "zh": "提交中...",
+    "ja": "送信中..."
+  },
+  {
+    "key": "rec.toast.selectPosition",
+    "category": "rec",
+    "vi": "Vui lòng chọn vị trí ứng tuyển.",
+    "en": "Please select a position to apply for.",
+    "zh": "请选择申请职位。",
+    "ja": "応募職種を選択してください。"
+  },
+  {
+    "key": "rec.toast.fillRequired",
+    "category": "rec",
+    "vi": "Vui lòng nhập họ tên và email.",
+    "en": "Please enter your name and email.",
+    "zh": "请填写姓名和邮箱。",
+    "ja": "お名前とメールアドレスを入力してください。"
+  },
+  {
+    "key": "rec.toast.successTitle",
+    "category": "rec",
+    "vi": "Đã gửi hồ sơ",
+    "en": "Application submitted",
+    "zh": "申请已提交",
+    "ja": "応募を送信しました"
+  },
+  {
+    "key": "rec.toast.successDesc",
+    "category": "rec",
+    "vi": "Ứng tuyển vị trí",
+    "en": "Applied for",
+    "zh": "已申请职位",
+    "ja": "応募職種"
+  },
+  {
+    "key": "rec.toast.errorDesc",
+    "category": "rec",
+    "vi": "Không thể gửi hồ sơ lúc này.",
+    "en": "Unable to submit application at this time.",
+    "zh": "目前无法提交申请。",
+    "ja": "現在、応募を送信できません。"
   }
 ]

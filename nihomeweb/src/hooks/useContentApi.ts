@@ -117,9 +117,10 @@ export function useProcesses() {
   return useFetch<Record<string, ProcessResponse[]>>(() => contentApi.getProcesses(), []);
 }
 
-  export function useJobPositions() {
-    return useFetch<JobPositionResponse[]>(() => contentApi.getJobPositions(), []);
-  }
+export function useJobPositions() {
+  const { lang } = useI18n();
+  return useFetch<JobPositionResponse[]>(() => contentApi.getJobPositions(lang), [lang]);
+}
 
 export function useSlideshow() {
   const { lang } = useI18n();

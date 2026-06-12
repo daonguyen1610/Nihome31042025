@@ -9,4 +9,5 @@ public static class EntityTypes
     public const string ClientLogo = "ClientLogo";
     public const string ProcessDocument = "ProcessDocument";
     public const string Slideshow = "Slideshow";
+    public const string JobPosition = "JobPosition";
 }

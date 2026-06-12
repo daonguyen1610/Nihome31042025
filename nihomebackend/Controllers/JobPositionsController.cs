@@ -12,18 +12,18 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
 {
     /// <summary>Public: list active positions. Admin: optionally include inactive.</summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
+    public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false, [FromQuery] string lang = "vi")
     {
         // Only admin can see inactive positions
         if (includeInactive && !User.Identity?.IsAuthenticated == true)
-            return Ok(await svc.GetAllAsync(false));
-        return Ok(await svc.GetAllAsync(includeInactive));
+            return Ok(await svc.GetAllAsync(false, lang));
+        return Ok(await svc.GetAllAsync(includeInactive, lang));
     }
 
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(int id, [FromQuery] string lang = "vi")
     {
-        var item = await svc.GetByIdAsync(id);
+        var item = await svc.GetByIdAsync(id, lang);
         return item == null ? NotFound() : Ok(item);
     }
 

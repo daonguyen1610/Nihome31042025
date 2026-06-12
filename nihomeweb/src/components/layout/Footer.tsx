@@ -27,15 +27,15 @@ const Footer = () => {
               {t("footer.newsletter.title")}
             </h3>
           </div>
-          <form className="lg:col-span-5 flex gap-2 p-2 bg-white/10 backdrop-blur-md rounded-full border border-white/15">
+          <form className="lg:col-span-5 flex flex-col sm:flex-row gap-2 p-2 bg-white/10 backdrop-blur-md rounded-2xl sm:rounded-full border border-white/15">
             <input
               type="email"
               placeholder={t("footer.newsletter.placeholder")}
-              className="flex-1 bg-transparent px-5 py-2 text-sm placeholder:text-white/50 focus:outline-none"
+              className="flex-1 min-w-0 bg-transparent px-5 py-2 text-sm placeholder:text-white/50 focus:outline-none"
             />
             <button
               type="submit"
-              className="btn-gradient text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-wider font-bold inline-flex items-center gap-2"
+              className="btn-gradient text-white px-5 py-2.5 rounded-full text-xs uppercase tracking-wider font-bold inline-flex items-center justify-center gap-2 shrink-0"
             >
               {t("footer.newsletter.subscribe")} <Send className="w-3.5 h-3.5" />
             </button>

@@ -442,10 +442,10 @@
   {
     "key": "contact.office.hqAddr",
     "category": "contact",
-    "vi": "Tòa nhà NICON, Đường Mai Chí Thọ, Thủ Đức, TP.HCM",
-    "en": "NICON Building, Mai Chi Tho St., Thu Duc, HCMC",
-    "zh": "胡志明市守德区梅志寿街 NICON 大楼",
-    "ja": "ホーチミン市トゥドゥック区マイチートー通りNICONビル"
+    "vi": "92 Đường 56, Phường Bình Trưng, Thành phố Hồ Chí Minh",
+    "en": "92 Street 56, Binh Trung Ward, Ho Chi Minh City",
+    "zh": "胡志明市平征坊56路92号",
+    "ja": "ホーチミン市ビンチュン坊56番通り92号"
   },
   {
     "key": "contact.office.bd",

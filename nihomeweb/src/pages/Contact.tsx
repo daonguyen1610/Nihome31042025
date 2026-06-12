@@ -30,8 +30,8 @@ const Contact = () => {
   }, []);
 
   const offices = [
-    { city: t("contact.office.hq"), address: t("contact.office.hqAddr"), phone: "+84 28 7300 1234", email: "info@nicon.vn" },
-    { city: t("contact.office.bd"), address: t("contact.office.bdAddr"), phone: "+84 274 365 4321", email: "binhduong@nicon.vn" },
+    { city: t("contact.office.hq"), address: t("contact.office.hqAddr"), phone: "+84 909 450 266", email: "sale@nicon.vn" },
+    // { city: t("contact.office.bd"), address: t("contact.office.bdAddr"), phone: "+84 274 365 4321", email: "binhduong@nicon.vn" },
   ];
 
   const submit = async (e: React.FormEvent) => {

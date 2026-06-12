@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import Layout from "@/components/layout/Layout";
-import { Link } from "react-router-dom";
 import { ArrowUpRight, MapPin, Clock, Briefcase, Sparkles, Heart, GraduationCap, Coffee, Send, Paperclip } from "lucide-react";
 import recruitHero from "@/assets/recruit-hero.jpg";
 import culture1 from "@/assets/recruit-culture-1.jpg";
@@ -27,12 +26,12 @@ const emptyForm: ApplicationForm = {
   coverLetter: "",
 };
 
-function getExperienceLabel(value: string) {
+function getExperienceLabel(value: string, t: (key: string) => string) {
   switch (value) {
-    case "student": return "Sinh viên";
-    case "junior": return "0-2 năm";
-    case "mid": return "2-5 năm";
-    case "senior": return "5+ năm";
+    case "student": return t("rec.exp.student");
+    case "junior": return t("rec.exp.junior");
+    case "mid": return t("rec.exp.mid");
+    case "senior": return t("rec.exp.senior");
     default: return value;
   }
 }
@@ -74,12 +73,12 @@ const Recruitment = () => {
   const submitApplication = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedPosition) {
-      toast({ title: t("common.error"), description: "Vui lòng chọn vị trí ứng tuyển.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("rec.toast.selectPosition"), variant: "destructive" });
       return;
     }
 
     if (!form.candidateName.trim() || !form.email.trim()) {
-      toast({ title: t("common.error"), description: "Vui lòng nhập họ tên và email.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("rec.toast.fillRequired"), variant: "destructive" });
       return;
     }
 
@@ -100,14 +99,14 @@ const Recruitment = () => {
         coverLetter: form.coverLetter.trim() || undefined,
         cvUrl,
       });
-      toast({ title: "Đã gửi hồ sơ", description: `Ứng tuyển vị trí ${selectedPosition.title}` });
+      toast({ title: t("rec.toast.successTitle"), description: `${t("rec.toast.successDesc")} ${selectedPosition.title}` });
       setForm(emptyForm);
       setCvFile(null);
     } catch (submitError) {
       const message = submitError && typeof submitError === "object" && "response" in submitError
         ? (submitError as { response?: { data?: { message?: string } } }).response?.data?.message
         : undefined;
-      toast({ title: t("common.error"), description: message ?? "Không thể gửi hồ sơ lúc này.", variant: "destructive" });
+      toast({ title: t("common.error"), description: message ?? t("rec.toast.errorDesc"), variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -131,9 +130,9 @@ const Recruitment = () => {
             <a href="#positions" className="btn-pill btn-gradient text-white px-8 py-4 text-sm uppercase tracking-wider">
               {t("rec.cta1")} <ArrowUpRight className="w-4 h-4" />
             </a>
-            <Link to="/contact" className="btn-pill bg-secondary border border-border px-8 py-4 text-sm uppercase tracking-wider hover:bg-foreground hover:text-background">
+            <a href="#apply-form" className="btn-pill bg-secondary border border-border px-8 py-4 text-sm uppercase tracking-wider hover:bg-foreground hover:text-background">
               {t("rec.cta2")}
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -186,17 +185,17 @@ const Recruitment = () => {
             </div>
           </div>
           {loading ? (
-            <div className="py-12 text-center text-muted-foreground">Đang tải vị trí tuyển dụng...</div>
+            <div className="py-12 text-center text-muted-foreground">{t("rec.loading")}</div>
           ) : error ? (
             <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-3">
               <p className="text-muted-foreground">{error}</p>
               <button onClick={refetch} className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider">
-                Tải lại
+                {t("rec.retry")}
               </button>
             </div>
           ) : positions.length === 0 ? (
             <div className="bg-card border border-border rounded-2xl p-8 text-center text-muted-foreground">
-              Hiện chưa có vị trí tuyển dụng đang mở. Bạn có thể để lại nhu cầu tại trang liên hệ.
+              {t("rec.noPositions")}
             </div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] gap-6 items-start">
@@ -219,18 +218,18 @@ const Recruitment = () => {
                           <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{position.description}</p>
                         )}
                       </div>
-                      <button
-                        type="button"
+                      <a
+                        href="#apply-form"
                         onClick={() => setSelectedPositionId(position.id)}
                         className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider shrink-0"
                       >
                         {t("rec.apply")} <ArrowUpRight className="w-4 h-4" />
-                      </button>
+                      </a>
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {position.location}</span>
                       <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {employmentTypeMap.get(position.employmentType) ?? position.employmentType}</span>
-                      <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {getExperienceLabel(position.experienceLevel)}</span>
+                      <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {getExperienceLabel(position.experienceLevel, t)}</span>
                     </div>
                     {position.requirements.length > 0 && (
                       <ul className="grid gap-2 text-sm text-muted-foreground">
@@ -246,46 +245,46 @@ const Recruitment = () => {
                 ))}
               </div>
 
-              <div className="bg-card border border-border rounded-3xl p-6 lg:p-7 sticky top-24">
-                <p className="eyebrow text-primary mb-4">Ứng tuyển trực tuyến</p>
+              <div id="apply-form" className="bg-card border border-border rounded-3xl p-6 lg:p-7 sticky top-24">
+                <p className="eyebrow text-primary mb-4">{t("rec.form.eyebrow")}</p>
                 <h3 className="font-display text-2xl font-extrabold mb-2">
-                  {selectedPosition?.title ?? "Chọn vị trí phù hợp"}
+                  {selectedPosition?.title ?? t("rec.form.noPosition")}
                 </h3>
                 <p className="text-sm text-muted-foreground mb-6">
                   {selectedPosition
                     ? `${selectedPosition.department} • ${selectedPosition.location}`
-                    : "Chọn một vị trí ở danh sách bên trái để gửi hồ sơ ngay trên website."}
+                    : t("rec.form.noPositionHint")}
                 </p>
 
                 <form className="space-y-4" onSubmit={submitApplication}>
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Họ và tên</label>
-                    <input className="admin-input w-full" value={form.candidateName} onChange={(e) => updateForm("candidateName", e.target.value)} placeholder="Nguyễn Văn A" />
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t("rec.form.nameLabel")}</label>
+                    <input className="admin-input w-full" value={form.candidateName} onChange={(e) => updateForm("candidateName", e.target.value)} placeholder={t("rec.form.namePlaceholder")} />
                   </div>
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Email</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t("rec.form.emailLabel")}</label>
                     <input type="email" className="admin-input w-full" value={form.email} onChange={(e) => updateForm("email", e.target.value)} placeholder="email@company.com" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Số điện thoại</label>
-                      <input className="admin-input w-full" value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} placeholder="090..." />
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t("rec.form.phoneLabel")}</label>
+                      <input className="admin-input w-full" value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} placeholder={t("rec.form.phonePlaceholder")} />
                     </div>
                     <div>
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Số năm kinh nghiệm</label>
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t("rec.form.expLabel")}</label>
                       <input type="number" min="0" className="admin-input w-full" value={form.experienceYears} onChange={(e) => updateForm("experienceYears", e.target.value)} placeholder="3" />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">Giới thiệu ngắn</label>
-                    <textarea className="admin-input w-full min-h-28" value={form.coverLetter} onChange={(e) => updateForm("coverLetter", e.target.value)} placeholder="Giới thiệu ngắn về kinh nghiệm, dự án đã tham gia, thế mạnh của bạn..." />
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t("rec.form.coverLabel")}</label>
+                    <textarea className="admin-input w-full min-h-28" value={form.coverLetter} onChange={(e) => updateForm("coverLetter", e.target.value)} placeholder={t("rec.form.coverPlaceholder")} />
                   </div>
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">CV / Hồ sơ (PDF, DOC, DOCX)</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t("rec.form.cvLabel")}</label>
                     <label className="flex items-center gap-2 cursor-pointer admin-input w-full text-sm">
                       <Paperclip className="w-4 h-4 text-muted-foreground shrink-0" />
                       <span className={cvFile ? "text-foreground" : "text-muted-foreground"}>
-                        {cvFile ? cvFile.name : "Chọn file..."}
+                        {cvFile ? cvFile.name : t("rec.form.cvPlaceholder")}
                       </span>
                       <input
                         type="file"
@@ -296,7 +295,7 @@ const Recruitment = () => {
                     </label>
                   </div>
                   <button disabled={submitting || !selectedPosition} className="btn-pill btn-gradient text-white px-6 py-3 text-xs uppercase tracking-wider w-full disabled:opacity-50 disabled:cursor-not-allowed">
-                    Gửi hồ sơ <Send className="w-4 h-4" />
+                    {submitting ? t("rec.form.submitting") : t("rec.form.submit")} <Send className="w-4 h-4" />
                   </button>
                 </form>
               </div>
