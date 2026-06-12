@@ -9,16 +9,61 @@ import {
   Grid2x2,
   FileText,
   Download,
+  Plus,
+  Trash2,
+  Save,
+  X,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
 import { useProcesses } from "@/hooks/useContentApi";
 import type { ProcessResponse, ProcessAssetInfo } from "@/services/contentApi";
+import { adminApi, type UpsertProcessRequest } from "@/services/adminApi";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Props = {
   groupKey: string;
   titleKey: string;
 };
+
+type FormState = {
+  id: number | null;
+  code: string;
+  title: string;
+  sortOrder: number;
+};
+
+const emptyForm: FormState = { id: null, code: "", title: "", sortOrder: 0 };
+
+function getErrorMessage(error: unknown): string | null {
+  if (typeof error === "object" && error !== null) {
+    const e = error as {
+      message?: unknown;
+      response?: { data?: { message?: unknown; title?: unknown; errors?: Record<string, unknown> } };
+    };
+    const data = e.response?.data;
+    if (typeof data?.message === "string") return data.message;
+    if (data?.errors) {
+      for (const v of Object.values(data.errors)) {
+        if (typeof v === "string" && v.trim()) return v;
+        if (Array.isArray(v)) {
+          const first = v.find((x) => typeof x === "string" && x.trim());
+          if (typeof first === "string") return first;
+        }
+      }
+    }
+    if (typeof data?.title === "string") return data.title;
+    if (typeof e.message === "string") return e.message;
+  }
+  return null;
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -210,7 +255,15 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
   );
 }
 
-function ProcessCard({ p }: { p: ProcessResponse }) {
+function ProcessCard({
+  p,
+  onEdit,
+  onDelete,
+}: {
+  p: ProcessResponse;
+  onEdit: (p: ProcessResponse) => void;
+  onDelete: (p: ProcessResponse) => void;
+}) {
   const { t } = useI18n();
   const hasAssets = p.images.length > 0 || p.files.length > 0;
   const [expanded, setExpanded] = useState(false);
@@ -240,16 +293,36 @@ function ProcessCard({ p }: { p: ProcessResponse }) {
             </p>
           )}
         </div>
-        {hasAssets && (
+        <div className="flex items-center gap-1 shrink-0">
+          {hasAssets && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
+              style={{ color: "hsl(var(--admin-muted))" }}
+            >
+              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {expanded ? t("proc.hide") : t("common.view")}
+            </button>
+          )}
           <button
-            onClick={() => setExpanded((v) => !v)}
-            className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted shrink-0"
+            onClick={() => onEdit(p)}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted"
             style={{ color: "hsl(var(--admin-muted))" }}
+            title={t("proc.editTitle")}
+            aria-label={t("proc.editTitle")}
           >
-            {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            {expanded ? t("proc.hide") : t("common.view")}
+            <Pencil className="w-4 h-4" />
           </button>
-        )}
+          <button
+            onClick={() => onDelete(p)}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted"
+            style={{ color: "hsl(var(--admin-danger))" }}
+            title={t("proc.delete")}
+            aria-label={t("proc.delete")}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {expanded && <AssetPanel process={p} />}
@@ -259,9 +332,13 @@ function ProcessCard({ p }: { p: ProcessResponse }) {
 
 const ProcessList = ({ groupKey, titleKey }: Props) => {
   const { t } = useI18n();
+  const { toast } = useToast();
   const [q, setQ] = useState("");
+  const [openModal, setOpenModal] = useState(false);
+  const [form, setForm] = useState<FormState>(emptyForm);
+  const [submitting, setSubmitting] = useState(false);
 
-  const { data, loading, error } = useProcesses();
+  const { data, loading, error, refetch } = useProcesses();
   const items = useMemo(() => (data?.[groupKey] ?? []) as ProcessResponse[], [data, groupKey]);
 
   const filtered = useMemo(
@@ -274,15 +351,96 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
     [items, q],
   );
 
+  const isEditing = form.id != null;
+
+  const startCreate = () => {
+    const maxSort = items.reduce((m, it) => Math.max(m, it.sortOrder ?? 0), 0);
+    setForm({ ...emptyForm, sortOrder: maxSort + 1 });
+    setOpenModal(true);
+  };
+
+  const startEdit = (p: ProcessResponse) => {
+    setForm({
+      id: p.id,
+      code: p.code ?? "",
+      title: p.title,
+      sortOrder: p.sortOrder ?? 0,
+    });
+    setOpenModal(true);
+  };
+
+  const remove = async (p: ProcessResponse) => {
+    if (!window.confirm(`${t("proc.confirmDelete")}\n\n${p.code ? `${p.code} — ` : ""}${p.title}`)) return;
+    try {
+      await adminApi.deleteProcess(p.id);
+      toast({ title: t("form.deleted"), description: p.title });
+      await refetch();
+    } catch (err) {
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(err) ?? t("proc.fallbackError"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.title.trim()) {
+      toast({ title: t("form.required"), description: t("proc.requiredTitle"), variant: "destructive" });
+      return;
+    }
+    const payload: UpsertProcessRequest = {
+      groupKey,
+      code: form.code.trim() || undefined,
+      title: form.title.trim(),
+      sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
+    };
+    setSubmitting(true);
+    try {
+      if (isEditing && form.id != null) {
+        await adminApi.updateProcess(form.id, payload);
+        toast({ title: t("form.updated"), description: form.title.trim() });
+      } else {
+        await adminApi.createProcess(payload);
+        toast({ title: t("form.created"), description: form.title.trim() });
+      }
+      setOpenModal(false);
+      setForm(emptyForm);
+      await refetch();
+    } catch (err) {
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(err) ?? t("proc.fallbackError"),
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-          {t(titleKey)}
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-          {filtered.length} / {items.length}
-        </p>
+      <div className="mb-6 flex items-start gap-3">
+        <div className="flex-1">
+          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
+            {t(titleKey)}
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+            {filtered.length} / {items.length}
+          </p>
+        </div>
+        <button
+          onClick={startCreate}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm shrink-0"
+          style={{
+            background: "hsl(var(--admin-primary))",
+            color: "white",
+          }}
+        >
+          <Plus className="w-4 h-4" />
+          {t("proc.add")}
+        </button>
       </div>
 
       <div className="admin-card p-5 mb-5">
@@ -312,10 +470,74 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
               {t("proc.empty")}
             </div>
           ) : (
-            filtered.map((p) => <ProcessCard key={p.id} p={p} />)
+            filtered.map((p) => (
+              <ProcessCard key={p.id} p={p} onEdit={startEdit} onDelete={remove} />
+            ))
           )}
         </div>
       )}
+
+      <Dialog open={openModal} onOpenChange={setOpenModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{isEditing ? t("proc.editTitle") : t("proc.createTitle")}</DialogTitle>
+            <DialogDescription>{t(titleKey)}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={save} className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold mb-1.5">{t("proc.fieldCode")}</label>
+              <input
+                value={form.code}
+                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                placeholder={t("proc.codePh")}
+                className="admin-input w-full"
+                maxLength={40}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1.5">
+                {t("proc.fieldTitle")} <span style={{ color: "hsl(var(--admin-danger))" }}>*</span>
+              </label>
+              <input
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder={t("proc.titlePh")}
+                className="admin-input w-full"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-1.5">{t("proc.fieldSortOrder")}</label>
+              <input
+                type="number"
+                value={form.sortOrder}
+                onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
+                className="admin-input w-32"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                disabled={submitting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm border border-border hover:bg-muted disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+                {t("common.cancel")}
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50"
+                style={{ background: "hsl(var(--admin-primary))", color: "white" }}
+              >
+                <Save className="w-4 h-4" />
+                {submitting ? t("common.loading") : t("common.save")}
+              </button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
