@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<AuditOutbox> AuditOutbox => Set<AuditOutbox>();
 
     // Content
     public DbSet<Activity> Activities => Set<Activity>();
@@ -108,6 +109,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<AuditLog>().HasIndex(a => new { a.ResourceType, a.ResourceId });
         modelBuilder.Entity<AuditLog>().HasIndex(a => a.CorrelationId);
         modelBuilder.Entity<AuditLog>().HasIndex(a => a.Status);
+
+        modelBuilder.Entity<AuditOutbox>().ToTable("audit_outbox");
+        modelBuilder.Entity<AuditOutbox>().HasKey(o => o.Id);
+        modelBuilder.Entity<AuditOutbox>().Property(o => o.AuditId).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<AuditOutbox>().Property(o => o.Payload).HasColumnType("nvarchar(max)").IsRequired();
+        modelBuilder.Entity<AuditOutbox>().Property(o => o.LastError).HasMaxLength(500);
+        modelBuilder.Entity<AuditOutbox>().HasIndex(o => o.Id);
+        modelBuilder.Entity<AuditOutbox>().HasIndex(o => o.AuditId).IsUnique();
 
         modelBuilder.Entity<UserDocument>().ToTable("user_documents");
         modelBuilder.Entity<UserDocument>().HasKey(d => d.Id);

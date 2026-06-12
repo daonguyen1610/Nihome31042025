@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Data;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
@@ -9,7 +10,7 @@ namespace NihomeBackend.Controllers;
 [ApiController]
 [Route("api/processes")]
 [Route("api/v1/processes")]
-public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IAuditLogger audit, ILogger<ProcessesController> logger) : ControllerBase
+public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IAuditLogger audit, AppDbContext db, ILogger<ProcessesController> logger) : ControllerBase
 {
     private static readonly HashSet<string> AllowedImageExtensions =
         [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
@@ -25,21 +26,25 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] UpsertProcessRequest req)
     {
+        await using var tx = await db.Database.BeginTransactionAsync();
         var result = await svc.CreateAsync(req);
-        audit.Log(new AuditEvent
+        audit.LogTransactional(new AuditEvent
         {
             Action = "process.create",
             ResourceType = "ProcessDocument",
             ResourceId = result.Id.ToString(),
             Message = $"Created process '{result.Title}' (group={result.GroupKey})",
             NewValue = result,
-        });
+        }, db);
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
         return Created("", result);
     }
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertProcessRequest req)
     {
+        await using var tx = await db.Database.BeginTransactionAsync();
         var result = await svc.UpdateAsync(id, req);
         if (result == null)
         {
@@ -54,20 +59,23 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
             });
             return NotFound();
         }
-        audit.Log(new AuditEvent
+        audit.LogTransactional(new AuditEvent
         {
             Action = "process.update",
             ResourceType = "ProcessDocument",
             ResourceId = id.ToString(),
             Message = $"Updated process '{result.Title}'",
             NewValue = result,
-        });
+        }, db);
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
         return Ok(result);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
+        await using var tx = await db.Database.BeginTransactionAsync();
         var ok = await svc.DeleteAsync(id);
         if (!ok)
         {
@@ -82,7 +90,15 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
             });
             return NotFound();
         }
-        audit.Log("process.delete", "ProcessDocument", id.ToString(), $"Deleted process {id}");
+        audit.LogTransactional(new AuditEvent
+        {
+            Action = "process.delete",
+            ResourceType = "ProcessDocument",
+            ResourceId = id.ToString(),
+            Message = $"Deleted process {id}",
+        }, db);
+        await db.SaveChangesAsync();
+        await tx.CommitAsync();
         return NoContent();
     }
 

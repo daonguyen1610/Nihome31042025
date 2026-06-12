@@ -197,15 +197,19 @@ public class AuthController : ControllerBase
         }
 
         _logger.LogInformation("Login successful for {PhoneNumber}", request.PhoneNumber);
-        _audit.Log(new AuditEvent
+        await using var tx = await _db.Database.BeginTransactionAsync();
+        var response = await BuildAuthResponseAsync(user);
+        _audit.LogTransactional(new AuditEvent
         {
             Action = "auth.login",
             ResourceType = "User",
             ResourceId = user.Id.ToString(),
             Message = $"User {user.PhoneNumber} logged in",
             Status = AuditStatus.Success,
-        });
-        return Ok(await BuildAuthResponseAsync(user));
+        }, _db);
+        await _db.SaveChangesAsync();
+        await tx.CommitAsync();
+        return Ok(response);
     }
 
     [HttpPost("refresh")]
@@ -233,15 +237,18 @@ public class AuthController : ControllerBase
         var refreshToken = await _refreshTokenService.ValidateAsync(request.RefreshToken);
         if (refreshToken != null)
         {
+            await using var tx = await _db.Database.BeginTransactionAsync();
             await _refreshTokenService.RevokeAsync(refreshToken);
-            _audit.Log(new AuditEvent
+            _audit.LogTransactional(new AuditEvent
             {
                 Action = "auth.logout",
                 ResourceType = "User",
                 ResourceId = refreshToken.UserId.ToString(),
                 Message = "User logged out",
                 Status = AuditStatus.Success,
-            });
+            }, _db);
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
         }
 
         return Ok(new { message = "Logout successful." });

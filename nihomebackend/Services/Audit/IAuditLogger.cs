@@ -76,9 +76,19 @@ public sealed class AuditEvent
 
 public interface IAuditLogger
 {
-    /// <summary>Backwards-compatible quick-log helper.</summary>
+    /// <summary>Backwards-compatible quick-log helper (channel / at-most-once).</summary>
     void Log(string action, string resourceType, string? resourceId, string message);
 
-    /// <summary>Full-fidelity log call. Never throws.</summary>
+    /// <summary>Full-fidelity log call (channel / at-most-once). Never throws.</summary>
     void Log(AuditEvent evt);
+
+    /// <summary>
+    /// Transactional outbox path. Adds an <c>AuditOutbox</c> row to the supplied
+    /// <c>AppDbContext</c> change-tracker so it commits atomically with the caller's
+    /// business mutation on the next <c>SaveChangesAsync()</c>. A background drain
+    /// worker promotes the row into <c>audit_logs</c>. Use this for any state
+    /// change that must never be lost (create/update/delete on business entities).
+    /// Never throws.
+    /// </summary>
+    void LogTransactional(AuditEvent evt, NihomeBackend.Data.AppDbContext db);
 }

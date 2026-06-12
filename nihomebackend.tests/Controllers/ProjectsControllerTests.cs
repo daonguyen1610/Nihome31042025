@@ -29,7 +29,7 @@ public class ProjectsControllerTests : IDisposable
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
         var categoryService = new ProjectCategoryService(_db);
         var service = new ProjectService(_db, hostedImageService, categoryService);
-        _sut = new ProjectsController(service, new NoOpAuditLogger());
+        _sut = new ProjectsController(service, new NoOpAuditLogger(), _db);
     }
 
     public void Dispose() => _db.Dispose();

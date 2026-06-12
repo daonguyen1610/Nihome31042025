@@ -114,6 +114,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Services.Audit.IAuditLogger, Services.Audit.AuditLogger>();
         services.AddHostedService<Services.Audit.AuditLogWriterService>();
         services.AddHostedService<Services.Audit.AuditLogRetentionService>();
+        services.AddHostedService<Services.Audit.AuditOutboxDrainService>();
 
         return services;
     }
