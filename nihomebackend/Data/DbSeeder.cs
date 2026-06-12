@@ -69,7 +69,8 @@ public static class DbSeeder
                 SecondaryEmail = "booking@nihome.vn",
                 PrimaryPhone = "1900 3311",
                 SecondaryPhone = "+84 987 654 321",
-                Address = "123 Đường Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh, Việt Nam",
+                Address = "92 Đường 56, Bình Trưng, Hồ Chí Minh 700000, Vietnam",
+                MapEmbedUrl = "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed",
                 EnableOtpForRegistration = true,
                 EnableOtpForForgotPassword = true,
                 OtpEmailSubjectTemplate = EmailTemplateFormatter.DefaultOtpSubject,
@@ -116,6 +117,12 @@ public static class DbSeeder
             if (string.IsNullOrWhiteSpace(existingSettings.NotificationEmail))
             {
                 existingSettings.NotificationEmail = existingSettings.PrimaryEmail ?? "nihome@nihome.vn";
+                updated = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(existingSettings.MapEmbedUrl))
+            {
+                existingSettings.MapEmbedUrl = "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed";
                 updated = true;
             }
 

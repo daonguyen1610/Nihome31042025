@@ -7,7 +7,7 @@ import { useI18n } from "@/lib/i18n";
 import { contentApi } from "@/services/contentApi";
 
 const FALLBACK_MAP_URL =
-  "https://www.openstreetmap.org/export/embed.html?bbox=106.7%2C10.78%2C106.82%2C10.85&layer=mapnik";
+  "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed";
 
 const Contact = () => {
   const { toast } = useToast();
