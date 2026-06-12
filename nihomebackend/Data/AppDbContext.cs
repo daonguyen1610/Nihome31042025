@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     // Content
     public DbSet<Activity> Activities => Set<Activity>();
@@ -77,6 +78,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany(u => u.Notifications)
             .HasForeignKey(n => n.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AuditLog>().ToTable("audit_logs");
+        modelBuilder.Entity<AuditLog>().HasKey(a => a.Id);
+        modelBuilder.Entity<AuditLog>().Property(a => a.AuditId).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.Action).HasMaxLength(100).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.ResourceType).HasMaxLength(80).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.ResourceId).HasMaxLength(100);
+        modelBuilder.Entity<AuditLog>().Property(a => a.Message).HasMaxLength(500).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.ActorType).HasMaxLength(20).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.ActorPhone).HasMaxLength(30);
+        modelBuilder.Entity<AuditLog>().Property(a => a.ActorRole).HasMaxLength(30);
+        modelBuilder.Entity<AuditLog>().Property(a => a.SourceSystem).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.TargetSystem).HasMaxLength(40);
+        modelBuilder.Entity<AuditLog>().Property(a => a.Channel).HasMaxLength(20).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.IpAddress).HasMaxLength(64);
+        modelBuilder.Entity<AuditLog>().Property(a => a.UserAgent).HasMaxLength(300);
+        modelBuilder.Entity<AuditLog>().Property(a => a.Status).HasMaxLength(20).IsRequired();
+        modelBuilder.Entity<AuditLog>().Property(a => a.FailureReason).HasMaxLength(500);
+        modelBuilder.Entity<AuditLog>().Property(a => a.CorrelationId).HasMaxLength(80);
+        modelBuilder.Entity<AuditLog>().Property(a => a.RequestId).HasMaxLength(80);
+        modelBuilder.Entity<AuditLog>().Property(a => a.OldValueJson).HasColumnType("nvarchar(max)");
+        modelBuilder.Entity<AuditLog>().Property(a => a.NewValueJson).HasColumnType("nvarchar(max)");
+        modelBuilder.Entity<AuditLog>().Property(a => a.MetadataJson).HasColumnType("nvarchar(max)");
+        modelBuilder.Entity<AuditLog>().HasIndex(a => a.AuditId).IsUnique();
+        modelBuilder.Entity<AuditLog>().HasIndex(a => a.CreatedAt);
+        modelBuilder.Entity<AuditLog>().HasIndex(a => new { a.Action, a.CreatedAt });
+        modelBuilder.Entity<AuditLog>().HasIndex(a => new { a.ActorUserId, a.CreatedAt });
+        modelBuilder.Entity<AuditLog>().HasIndex(a => new { a.ResourceType, a.ResourceId });
+        modelBuilder.Entity<AuditLog>().HasIndex(a => a.CorrelationId);
+        modelBuilder.Entity<AuditLog>().HasIndex(a => a.Status);
 
         modelBuilder.Entity<UserDocument>().ToTable("user_documents");
         modelBuilder.Entity<UserDocument>().HasKey(d => d.Id);

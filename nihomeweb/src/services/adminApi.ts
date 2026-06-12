@@ -313,6 +313,63 @@ export interface RoleCatalogResponse {
   permissionMatrix: PermissionMatrixRowResponse[];
 }
 
+export interface AuditLogItem {
+  id: number;
+  auditId: string;
+  createdAt: string;
+  action: string;
+  resourceType: string;
+  resourceId: string | null;
+  message: string;
+  actorUserId: number | null;
+  actorPhone: string | null;
+  actorRole: string | null;
+  actorType: string;
+  sourceSystem: string;
+  targetSystem: string | null;
+  channel: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  status: string;
+  failureReason: string | null;
+  correlationId: string | null;
+  requestId: string | null;
+  oldValueJson: string | null;
+  newValueJson: string | null;
+  metadataJson: string | null;
+}
+
+export interface AuditLogPage {
+  page: number;
+  pageSize: number;
+  total: number;
+  actions: string[];
+  items: AuditLogItem[];
+}
+
+export interface AuditConfigDto {
+  retentionMinutes: number;
+}
+
+export interface ListAuditLogParams {
+  page?: number;
+  pageSize?: number;
+  from?: string;
+  to?: string;
+  action?: string;
+  actorPhone?: string;
+  ip?: string;
+  status?: string;
+  resourceType?: string;
+  resourceId?: string;
+  correlationId?: string;
+}
+
+export interface DeleteAuditRangeParams {
+  before?: string;
+  action?: string;
+}
+
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
@@ -506,6 +563,35 @@ export const adminApi = {
     api.delete(`/users/${id}`),
   getUserRoles: () =>
     api.get<RoleCatalogResponse>("/users/roles"),
+
+  // Audit log
+  listAuditLogs: (params: ListAuditLogParams = {}) => {
+    const query = new URLSearchParams();
+    if (params.page) query.append("page", String(params.page));
+    if (params.pageSize) query.append("pageSize", String(params.pageSize));
+    if (params.from) query.append("from", params.from);
+    if (params.to) query.append("to", params.to);
+    if (params.action) query.append("action", params.action);
+    if (params.actorPhone) query.append("actorPhone", params.actorPhone);
+    if (params.ip) query.append("ip", params.ip);
+    if (params.status) query.append("status", params.status);
+    if (params.resourceType) query.append("resourceType", params.resourceType);
+    if (params.resourceId) query.append("resourceId", params.resourceId);
+    if (params.correlationId) query.append("correlationId", params.correlationId);
+    return api.get<AuditLogPage>(`/audit-logs?${query}`);
+  },
+  deleteAuditLog: (id: number) =>
+    api.delete(`/audit-logs/${id}`),
+  deleteAuditLogRange: (params: DeleteAuditRangeParams) => {
+    const query = new URLSearchParams();
+    if (params.before) query.append("before", params.before);
+    if (params.action) query.append("action", params.action);
+    return api.delete<{ deleted: number }>(`/audit-logs?${query}`);
+  },
+  getAuditConfig: () =>
+    api.get<AuditConfigDto>("/audit-logs/config"),
+  updateAuditConfig: (data: AuditConfigDto) =>
+    api.put<AuditConfigDto>("/audit-logs/config", data),
 };
 
 // ─── Slug helper ─────────────────────────────────────────────

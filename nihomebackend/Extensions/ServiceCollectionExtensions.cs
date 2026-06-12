@@ -108,6 +108,13 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<UploadedImageCleanupService>();
 
+        // Audit logging (non-blocking queue + background writer + retention sweeper)
+        services.AddHttpContextAccessor();
+        services.AddSingleton<Services.Audit.AuditLogQueue>();
+        services.AddSingleton<Services.Audit.IAuditLogger, Services.Audit.AuditLogger>();
+        services.AddHostedService<Services.Audit.AuditLogWriterService>();
+        services.AddHostedService<Services.Audit.AuditLogRetentionService>();
+
         return services;
     }
 }

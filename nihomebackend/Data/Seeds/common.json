@@ -184,6 +184,38 @@
     "ja": "再試行"
   },
   {
+    "key": "common.refresh",
+    "category": "common",
+    "vi": "Tải lại",
+    "en": "Refresh",
+    "zh": "刷新",
+    "ja": "更新"
+  },
+  {
+    "key": "common.empty",
+    "category": "common",
+    "vi": "Chưa có dữ liệu",
+    "en": "No data",
+    "zh": "暂无数据",
+    "ja": "データがありません"
+  },
+  {
+    "key": "common.reset",
+    "category": "common",
+    "vi": "Xoá bộ lọc",
+    "en": "Reset filters",
+    "zh": "重置筛选",
+    "ja": "フィルターをリセット"
+  },
+  {
+    "key": "common.rowsPerPage",
+    "category": "common",
+    "vi": "Số dòng / trang",
+    "en": "Rows per page",
+    "zh": "每页行数",
+    "ja": "1ページあたりの行数"
+  },
+  {
     "key": "site.nav.home",
     "category": "site",
     "vi": "Trang chủ",
@@ -358,6 +390,22 @@
     "en": "Are you sure you want to delete this?",
     "zh": "确定要删除此项吗？",
     "ja": "このアイテムを削除してもよろしいですか？"
+  },
+  {
+    "key": "form.error",
+    "category": "form",
+    "vi": "Đã xảy ra lỗi",
+    "en": "Something went wrong",
+    "zh": "出现错误",
+    "ja": "エラーが発生しました"
+  },
+  {
+    "key": "form.saved",
+    "category": "form",
+    "vi": "Đã lưu",
+    "en": "Saved",
+    "zh": "已保存",
+    "ja": "保存しました"
   },
   {
     "key": "form.required",

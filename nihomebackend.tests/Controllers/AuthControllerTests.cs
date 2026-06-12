@@ -68,6 +68,7 @@ public class AuthControllerTests : IDisposable
             _otpService,
             _mapper,
             Options.Create(_jwtOptions),
+            new NoOpAuditLogger(),
             Mock.Of<ILogger<AuthController>>());
     }
 

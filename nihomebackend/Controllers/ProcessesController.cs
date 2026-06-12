@@ -2,13 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
+using NihomeBackend.Services.Audit;
 
 namespace NihomeBackend.Controllers;
 
 [ApiController]
 [Route("api/processes")]
 [Route("api/v1/processes")]
-public class ProcessesController(ProcessService svc, IWebHostEnvironment env, ILogger<ProcessesController> logger) : ControllerBase
+public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IAuditLogger audit, ILogger<ProcessesController> logger) : ControllerBase
 {
     private static readonly HashSet<string> AllowedImageExtensions =
         [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
@@ -25,6 +26,14 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IL
     public async Task<IActionResult> Create([FromBody] UpsertProcessRequest req)
     {
         var result = await svc.CreateAsync(req);
+        audit.Log(new AuditEvent
+        {
+            Action = "process.create",
+            ResourceType = "ProcessDocument",
+            ResourceId = result.Id.ToString(),
+            Message = $"Created process '{result.Title}' (group={result.GroupKey})",
+            NewValue = result,
+        });
         return Created("", result);
     }
 
@@ -32,13 +41,49 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IL
     public async Task<IActionResult> Update(int id, [FromBody] UpsertProcessRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
-        return result == null ? NotFound() : Ok(result);
+        if (result == null)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "process.update",
+                ResourceType = "ProcessDocument",
+                ResourceId = id.ToString(),
+                Message = $"Update failed: process {id} not found",
+                Status = AuditStatus.Failure,
+                FailureReason = "not_found",
+            });
+            return NotFound();
+        }
+        audit.Log(new AuditEvent
+        {
+            Action = "process.update",
+            ResourceType = "ProcessDocument",
+            ResourceId = id.ToString(),
+            Message = $"Updated process '{result.Title}'",
+            NewValue = result,
+        });
+        return Ok(result);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        return await svc.DeleteAsync(id) ? NoContent() : NotFound();
+        var ok = await svc.DeleteAsync(id);
+        if (!ok)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "process.delete",
+                ResourceType = "ProcessDocument",
+                ResourceId = id.ToString(),
+                Message = $"Delete failed: process {id} not found",
+                Status = AuditStatus.Failure,
+                FailureReason = "not_found",
+            });
+            return NotFound();
+        }
+        audit.Log("process.delete", "ProcessDocument", id.ToString(), $"Deleted process {id}");
+        return NoContent();
     }
 
     [HttpPost("upload-image")]

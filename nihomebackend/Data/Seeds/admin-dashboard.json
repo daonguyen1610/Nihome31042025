@@ -528,6 +528,278 @@
     "ja": "作成日"
   },
   {
+    "key": "log.action",
+    "category": "log",
+    "vi": "Hành động",
+    "en": "Action",
+    "zh": "操作",
+    "ja": "アクション"
+  },
+  {
+    "key": "log.actor",
+    "category": "log",
+    "vi": "Người thực hiện",
+    "en": "Actor",
+    "zh": "操作者",
+    "ja": "実行者"
+  },
+  {
+    "key": "log.actorPlaceholder",
+    "category": "log",
+    "vi": "Số điện thoại...",
+    "en": "Phone number...",
+    "zh": "电话号码...",
+    "ja": "電話番号..."
+  },
+  {
+    "key": "log.entries",
+    "category": "log",
+    "vi": "bản ghi",
+    "en": "entries",
+    "zh": "条记录",
+    "ja": "件"
+  },
+  {
+    "key": "log.clearBefore",
+    "category": "log",
+    "vi": "Xoá trước ngày",
+    "en": "Clear before date",
+    "zh": "删除指定日期前",
+    "ja": "指定日付前を削除"
+  },
+  {
+    "key": "log.selectBefore",
+    "category": "log",
+    "vi": "Vui lòng chọn ngày 'Từ' trước",
+    "en": "Please pick a 'From' date first",
+    "zh": "请先选择起始日期",
+    "ja": "先に「開始」日付を選択してください"
+  },
+  {
+    "key": "log.confirmClearBefore",
+    "category": "log",
+    "vi": "Xác nhận xoá toàn bộ nhật ký trước ngày đã chọn?",
+    "en": "Confirm delete all logs before the selected date?",
+    "zh": "确认删除指定日期前的所有日志?",
+    "ja": "選択日付以前のすべてのログを削除しますか?"
+  },
+  {
+    "key": "log.retentionConfig",
+    "category": "log",
+    "vi": "Cấu hình lưu trữ",
+    "en": "Retention configuration",
+    "zh": "保留配置",
+    "ja": "保持期間設定"
+  },
+  {
+    "key": "log.retentionHint",
+    "category": "log",
+    "vi": "Nhật ký cũ hơn sẽ tự động bị xoá định kỳ. Đặt 0 để giữ vĩnh viễn.",
+    "en": "Older logs are purged on a schedule. Set 0 to keep forever.",
+    "zh": "超过保留期的日志将自动清理。设为 0 表示永久保留。",
+    "ja": "保持期間を超えたログは定期的に削除されます。0 で無期限保持。"
+  },
+  {
+    "key": "log.retentionAmount",
+    "category": "log",
+    "vi": "Số lượng",
+    "en": "Amount",
+    "zh": "数量",
+    "ja": "数量"
+  },
+  {
+    "key": "log.retentionUnit",
+    "category": "log",
+    "vi": "Đơn vị",
+    "en": "Unit",
+    "zh": "单位",
+    "ja": "単位"
+  },
+  {
+    "key": "log.retentionForever",
+    "category": "log",
+    "vi": "Giữ vĩnh viễn",
+    "en": "Keep forever",
+    "zh": "永久保留",
+    "ja": "無期限"
+  },
+  {
+    "key": "log.currentRetention",
+    "category": "log",
+    "vi": "Đang giữ",
+    "en": "Current retention",
+    "zh": "当前保留",
+    "ja": "現在の保持期間"
+  },
+  {
+    "key": "log.saveConfig",
+    "category": "log",
+    "vi": "Lưu cấu hình",
+    "en": "Save config",
+    "zh": "保存配置",
+    "ja": "設定を保存"
+  },
+  {
+    "key": "log.unit.minutes",
+    "category": "log",
+    "vi": "phút",
+    "en": "minutes",
+    "zh": "分钟",
+    "ja": "分"
+  },
+  {
+    "key": "log.unit.hours",
+    "category": "log",
+    "vi": "giờ",
+    "en": "hours",
+    "zh": "小时",
+    "ja": "時間"
+  },
+  {
+    "key": "log.unit.days",
+    "category": "log",
+    "vi": "ngày",
+    "en": "days",
+    "zh": "天",
+    "ja": "日"
+  },
+  {
+    "key": "log.detail.title",
+    "category": "log",
+    "vi": "Chi tiết nhật ký",
+    "en": "Log details",
+    "zh": "日志详情",
+    "ja": "ログ詳細"
+  },
+  {
+    "key": "log.detail.status",
+    "category": "log",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "log.detail.failureReason",
+    "category": "log",
+    "vi": "Lý do thất bại",
+    "en": "Failure reason",
+    "zh": "失败原因",
+    "ja": "失敗理由"
+  },
+  {
+    "key": "log.detail.resource",
+    "category": "log",
+    "vi": "Đối tượng",
+    "en": "Resource",
+    "zh": "对象",
+    "ja": "リソース"
+  },
+  {
+    "key": "log.detail.resourceType",
+    "category": "log",
+    "vi": "Loại đối tượng",
+    "en": "Resource type",
+    "zh": "对象类型",
+    "ja": "リソース種別"
+  },
+  {
+    "key": "log.detail.resourceId",
+    "category": "log",
+    "vi": "Mã đối tượng",
+    "en": "Resource ID",
+    "zh": "对象 ID",
+    "ja": "リソース ID"
+  },
+  {
+    "key": "log.detail.actorRole",
+    "category": "log",
+    "vi": "Vai trò",
+    "en": "Actor role",
+    "zh": "角色",
+    "ja": "ロール"
+  },
+  {
+    "key": "log.detail.actorType",
+    "category": "log",
+    "vi": "Loại người dùng",
+    "en": "Actor type",
+    "zh": "操作者类型",
+    "ja": "実行者タイプ"
+  },
+  {
+    "key": "log.detail.channel",
+    "category": "log",
+    "vi": "Kênh",
+    "en": "Channel",
+    "zh": "通道",
+    "ja": "チャネル"
+  },
+  {
+    "key": "log.detail.sourceSystem",
+    "category": "log",
+    "vi": "Hệ thống nguồn",
+    "en": "Source system",
+    "zh": "源系统",
+    "ja": "ソースシステム"
+  },
+  {
+    "key": "log.detail.targetSystem",
+    "category": "log",
+    "vi": "Hệ thống đích",
+    "en": "Target system",
+    "zh": "目标系统",
+    "ja": "ターゲットシステム"
+  },
+  {
+    "key": "log.detail.requestId",
+    "category": "log",
+    "vi": "Request ID",
+    "en": "Request ID",
+    "zh": "请求 ID",
+    "ja": "リクエスト ID"
+  },
+  {
+    "key": "log.detail.correlationId",
+    "category": "log",
+    "vi": "Correlation ID",
+    "en": "Correlation ID",
+    "zh": "关联 ID",
+    "ja": "相関 ID"
+  },
+  {
+    "key": "log.detail.userAgent",
+    "category": "log",
+    "vi": "User agent",
+    "en": "User agent",
+    "zh": "User agent",
+    "ja": "ユーザーエージェント"
+  },
+  {
+    "key": "log.detail.oldValue",
+    "category": "log",
+    "vi": "Giá trị cũ",
+    "en": "Old value",
+    "zh": "旧值",
+    "ja": "旧値"
+  },
+  {
+    "key": "log.detail.newValue",
+    "category": "log",
+    "vi": "Giá trị mới",
+    "en": "New value",
+    "zh": "新值",
+    "ja": "新値"
+  },
+  {
+    "key": "log.detail.metadata",
+    "category": "log",
+    "vi": "Metadata",
+    "en": "Metadata",
+    "zh": "元数据",
+    "ja": "メタデータ"
+  },
+  {
     "key": "dash.welcome",
     "category": "dash",
     "vi": "Chào mừng trở lại",

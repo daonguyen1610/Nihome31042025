@@ -26,7 +26,7 @@ public class NewsControllerTests : IDisposable
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
         var service = new NewsService(_db, entityTranslationSvc, hostedImageService);
-        _sut = new NewsController(service);
+        _sut = new NewsController(service, new NoOpAuditLogger());
     }
 
     public void Dispose() => _db.Dispose();

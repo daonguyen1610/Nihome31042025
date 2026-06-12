@@ -32,6 +32,8 @@ public class SiteSettings
 
     public string? NotificationEmail { get; set; }
 
+    public int AuditLogRetentionMinutes { get; set; } = 43200;
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }

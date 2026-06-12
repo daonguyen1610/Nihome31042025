@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
+using NihomeBackend.Services.Audit;
 
 namespace NihomeBackend.Controllers;
 
 [ApiController]
 [Route("api/news")]
 [Route("api/v1/news")]
-public class NewsController(NewsService svc) : ControllerBase
+public class NewsController(NewsService svc, IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string lang = "vi") => Ok(await svc.GetAllAsync(lang));
@@ -23,6 +24,14 @@ public class NewsController(NewsService svc) : ControllerBase
     public async Task<IActionResult> Create([FromBody] UpsertNewsRequest req)
     {
         var result = await svc.CreateAsync(req);
+        audit.Log(new AuditEvent
+        {
+            Action = "news.create",
+            ResourceType = "NewsArticle",
+            ResourceId = result.Id.ToString(),
+            Message = $"Created news '{result.Title}'",
+            NewValue = result,
+        });
         return CreatedAtAction(nameof(GetBySlug), new { slug = result.Slug }, result);
     }
 
@@ -30,12 +39,48 @@ public class NewsController(NewsService svc) : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpsertNewsRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
-        return result == null ? NotFound() : Ok(result);
+        if (result == null)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "news.update",
+                ResourceType = "NewsArticle",
+                ResourceId = id.ToString(),
+                Message = $"Update failed: news {id} not found",
+                Status = AuditStatus.Failure,
+                FailureReason = "not_found",
+            });
+            return NotFound();
+        }
+        audit.Log(new AuditEvent
+        {
+            Action = "news.update",
+            ResourceType = "NewsArticle",
+            ResourceId = id.ToString(),
+            Message = $"Updated news '{result.Title}'",
+            NewValue = result,
+        });
+        return Ok(result);
     }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        return await svc.DeleteAsync(id) ? NoContent() : NotFound();
+        var ok = await svc.DeleteAsync(id);
+        if (!ok)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "news.delete",
+                ResourceType = "NewsArticle",
+                ResourceId = id.ToString(),
+                Message = $"Delete failed: news {id} not found",
+                Status = AuditStatus.Failure,
+                FailureReason = "not_found",
+            });
+            return NotFound();
+        }
+        audit.Log("news.delete", "NewsArticle", id.ToString(), $"Deleted news {id}");
+        return NoContent();
     }
 }

@@ -7,6 +7,7 @@ using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests.Auth;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
+using NihomeBackend.Services.Audit;
 
 namespace NihomeBackend.Controllers;
 
@@ -22,6 +23,7 @@ public class AuthController : ControllerBase
     private readonly OtpService _otpService;
     private readonly IMapper _mapper;
     private readonly JwtOptions _jwtOptions;
+    private readonly IAuditLogger _audit;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
@@ -32,6 +34,7 @@ public class AuthController : ControllerBase
         OtpService otpService,
         IMapper mapper,
         IOptions<JwtOptions> jwtOptions,
+        IAuditLogger audit,
         ILogger<AuthController> logger)
     {
         _db = db;
@@ -41,6 +44,7 @@ public class AuthController : ControllerBase
         _otpService = otpService;
         _mapper = mapper;
         _jwtOptions = jwtOptions.Value;
+        _audit = audit;
         _logger = logger;
     }
 
@@ -165,15 +169,42 @@ public class AuthController : ControllerBase
         var user = await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
         if (user == null || !_passwordService.Verify(user, request.Password))
         {
+            _audit.Log(new AuditEvent
+            {
+                Action = "auth.login",
+                ResourceType = "User",
+                ResourceId = user?.Id.ToString(),
+                Message = $"Failed login for {request.PhoneNumber}",
+                Status = AuditStatus.Failure,
+                FailureReason = "invalid_credentials",
+                Metadata = new { phoneNumber = request.PhoneNumber },
+            });
             return Unauthorized(new { message = "Invalid credentials." });
         }
 
         if (!user.IsActive)
         {
+            _audit.Log(new AuditEvent
+            {
+                Action = "auth.login",
+                ResourceType = "User",
+                ResourceId = user.Id.ToString(),
+                Message = $"Inactive account login attempt for {user.PhoneNumber}",
+                Status = AuditStatus.Denied,
+                FailureReason = "account_inactive",
+            });
             return Unauthorized(new { message = "Account is inactive." });
         }
 
         _logger.LogInformation("Login successful for {PhoneNumber}", request.PhoneNumber);
+        _audit.Log(new AuditEvent
+        {
+            Action = "auth.login",
+            ResourceType = "User",
+            ResourceId = user.Id.ToString(),
+            Message = $"User {user.PhoneNumber} logged in",
+            Status = AuditStatus.Success,
+        });
         return Ok(await BuildAuthResponseAsync(user));
     }
 
@@ -203,6 +234,14 @@ public class AuthController : ControllerBase
         if (refreshToken != null)
         {
             await _refreshTokenService.RevokeAsync(refreshToken);
+            _audit.Log(new AuditEvent
+            {
+                Action = "auth.logout",
+                ResourceType = "User",
+                ResourceId = refreshToken.UserId.ToString(),
+                Message = "User logged out",
+                Status = AuditStatus.Success,
+            });
         }
 
         return Ok(new { message = "Logout successful." });
