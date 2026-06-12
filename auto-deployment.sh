@@ -53,14 +53,25 @@ cp -r $BACKEND_DIR/publish $PUBLISH_RELEASE_DIR \
 echo "Publish folder copied to deployment-config."
 
 # Step 3: Copy the deployment-config/images, appsettings.json, and web.config to deployment publish-extract
-echo "Copying images, appsettings.json, and web.config to $PUBLISH_RELEASE_DIR..."
-cp -rf $DEPLOYMENT_CONFIG_DIR/images $PUBLISH_RELEASE_DIR/wwwroot/images \
+echo "Copying images, process-assets, processes, appsettings.json, and web.config to $PUBLISH_RELEASE_DIR..."
+# Copy images (data). Use src/. + mkdir -p so re-runs don't nest dirs
+# (cp -r src dest copies INTO dest when dest already exists on BSD/macOS).
+mkdir -p $PUBLISH_RELEASE_DIR/wwwroot/images $PUBLISH_RELEASE_DIR/wwwroot/process-assets $PUBLISH_RELEASE_DIR/wwwroot/processes \
+    || die "Failed to create wwwroot data directories."
+cp -rf $DEPLOYMENT_CONFIG_DIR/images/. $PUBLISH_RELEASE_DIR/wwwroot/images/ \
     || die "Failed to copy images to $PUBLISH_RELEASE_DIR."
+# Copy process-assets, processes (data)
+cp -rf $DEPLOYMENT_CONFIG_DIR/process-assets/. $PUBLISH_RELEASE_DIR/wwwroot/process-assets/ \
+    || die "Failed to copy process-assets to $PUBLISH_RELEASE_DIR."
+cp -rf $DEPLOYMENT_CONFIG_DIR/processes/. $PUBLISH_RELEASE_DIR/wwwroot/processes/ \
+    || die "Failed to copy processes to $PUBLISH_RELEASE_DIR."
+
+# Copy appsettings.json and web.config (config files)
 cp -f $DEPLOYMENT_CONFIG_DIR/appsettings.json $PUBLISH_RELEASE_DIR/appsettings.json \
     || die "Failed to copy appsettings.json to $PUBLISH_RELEASE_DIR."
 cp -f $DEPLOYMENT_CONFIG_DIR/web.config $PUBLISH_RELEASE_DIR/web.config \
     || die "Failed to copy web.config to $PUBLISH_RELEASE_DIR."
-echo "Images, appsettings.json, and web.config copied successfully."
+echo "Images, process-assets, processes, appsettings.json, and web.config copied successfully."
 
 # Step 4: Zip the publish-release folder
 echo "Zipping the $PUBLISH_RELEASE_DIR folder..."
