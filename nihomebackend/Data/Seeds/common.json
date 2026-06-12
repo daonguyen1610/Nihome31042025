@@ -32,6 +32,14 @@
     "ja": "変更を保存"
   },
   {
+    "key": "common.saving",
+    "category": "common",
+    "vi": "Đang lưu...",
+    "en": "Saving...",
+    "zh": "保存中...",
+    "ja": "保存中..."
+  },
+  {
     "key": "common.cancel",
     "category": "common",
     "vi": "Huỷ",

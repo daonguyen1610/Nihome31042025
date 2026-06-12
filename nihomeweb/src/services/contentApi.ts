@@ -377,6 +377,10 @@ export const contentApi = {
   // Contact messages (public)
   submitContact: (data: SubmitContactRequest) =>
     api.post<ContactMessageResponse>("/contacts", data),
+
+  // Public map embed URL configured in admin Settings
+  getMapEmbed: () =>
+    api.get<{ mapEmbedUrl: string | null }>("/site-settings/map-embed"),
 };
 
 // --- Translation API (admin-managed) ---

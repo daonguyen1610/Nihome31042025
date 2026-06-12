@@ -1004,6 +1004,10 @@ namespace nihomebackend.Migrations
                     b.Property<bool>("EnableOtpForRegistration")
                         .HasColumnType("bit");
 
+                    b.Property<string>("MapEmbedUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("NewApplicationEmailBodyTemplate")
                         .HasColumnType("nvarchar(max)");
 

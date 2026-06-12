@@ -288,14 +288,6 @@
     "ja": "スライドショーとメディア"
   },
   {
-    "key": "nav.map",
-    "category": "nav",
-    "vi": "Bản đồ",
-    "en": "Map",
-    "zh": "地图",
-    "ja": "マップ"
-  },
-  {
     "key": "nav.about",
     "category": "nav",
     "vi": "Về chúng tôi",

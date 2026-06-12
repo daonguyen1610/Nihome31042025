@@ -101,4 +101,29 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         EnableOtpForRegistration = settings.EnableOtpForRegistration,
         EnableOtpForForgotPassword = settings.EnableOtpForForgotPassword
     };
+
+    /// <summary>Get the embedded Google Map URL used on the public Contact page.</summary>
+    [HttpGet("map-embed")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetMapEmbed()
+    {
+        var settings = await svc.GetAsync();
+        return Ok(new { mapEmbedUrl = settings?.MapEmbedUrl });
+    }
+
+    /// <summary>Update the embedded Google Map URL.</summary>
+    [HttpPut("map-embed")]
+    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    public async Task<IActionResult> UpdateMapEmbed([FromBody] UpdateMapEmbedRequest req)
+    {
+        try
+        {
+            var settings = await svc.UpdateMapEmbedAsync(req.MapEmbedUrl);
+            return Ok(new { mapEmbedUrl = settings.MapEmbedUrl });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

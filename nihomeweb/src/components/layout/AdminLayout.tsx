@@ -23,7 +23,6 @@ import {
   Handshake,
   Building,
   Image as ImageIcon,
-  Map as MapIcon,
   Info,
   Cog,
   HardDrive,
@@ -33,9 +32,6 @@ import {
   Mail,
   Languages,
   SlidersHorizontal,
-  ScrollText,
-  AlertTriangle,
-  Wrench,
   Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -142,10 +138,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         icon: HardDrive,
         items: [
           { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History },
-          { to: "/admin/system/log", label: t("sys.log.title"), icon: ScrollText },
-          { to: "/admin/system/warnings", label: t("sys.warn.title"), icon: AlertTriangle },
-          { to: "/admin/system/maintenance", label: t("sys.maint.title"), icon: Wrench },
-          { to: "/admin/map", label: t("nav.map"), icon: MapIcon },
           { to: "/admin/help", label: t("nav.help"), icon: HelpCircle },
         ],
       },

@@ -64,6 +64,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<SiteSettings>().ToTable("site_settings");
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);
+        modelBuilder.Entity<SiteSettings>().Property(s => s.MapEmbedUrl).HasMaxLength(1000);
 
         modelBuilder.Entity<Notification>().ToTable("notifications");
         modelBuilder.Entity<Notification>().HasKey(n => n.Id);

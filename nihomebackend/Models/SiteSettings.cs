@@ -18,6 +18,8 @@ public class SiteSettings
 
     public string? Address { get; set; }
 
+    public string? MapEmbedUrl { get; set; }
+
     public bool EnableOtpForRegistration { get; set; } = true;
 
     public bool EnableOtpForForgotPassword { get; set; } = true;

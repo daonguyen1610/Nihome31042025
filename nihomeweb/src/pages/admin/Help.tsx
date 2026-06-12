@@ -32,10 +32,6 @@ const FAQS = [
     q: { vi: "Làm sao để xoá hàng loạt email trong hàng đợi?", en: "How to bulk delete queued emails?" },
     a: { vi: "Vào Hệ thống → Hàng đợi email, tick các email cần xoá rồi bấm \"Xoá mục đã chọn\", hoặc \"Xoá tất cả\".", en: "Go to System → Message queue, tick emails to delete and click \"Delete selected\" or \"Delete all\"." },
   },
-  {
-    q: { vi: "Sao lưu dữ liệu hệ thống ở đâu?", en: "Where to back up system data?" },
-    a: { vi: "Hệ thống → Bảo trì → mục Sao lưu CSDL → bấm \"Sao lưu ngay\" để tạo bản backup.", en: "System → Maintenance → Database backups → click \"Backup now\" to create a backup." },
-  },
 ];
 
 const GUIDES = [
