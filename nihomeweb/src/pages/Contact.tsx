@@ -6,15 +6,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { contentApi } from "@/services/contentApi";
 
-const FALLBACK_MAP_URL =
-  "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed";
-
 const Contact = () => {
   const { toast } = useToast();
   const { t } = useI18n();
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
-  const [mapUrl, setMapUrl] = useState<string>(FALLBACK_MAP_URL);
+  const [mapUrl, setMapUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,11 +19,10 @@ const Contact = () => {
       .getMapEmbed()
       .then(({ data }) => {
         if (cancelled) return;
-        const v = data.mapEmbedUrl?.trim();
-        if (v) setMapUrl(v);
+        setMapUrl(data.mapEmbedUrl?.trim() || null);
       })
       .catch(() => {
-        /* keep fallback */
+        /* ignore: map section just won't render */
       });
     return () => {
       cancelled = true;
@@ -177,20 +173,22 @@ const Contact = () => {
       </section>
 
       {/* Map */}
-      <section className="pb-20 bg-background">
-        <div className="container-custom">
-          <div className="aspect-[21/9] rounded-3xl overflow-hidden border border-border">
-            <iframe
-              title="NICON map"
-              src={mapUrl}
-              className="w-full h-full"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              allowFullScreen
-            />
+      {mapUrl && (
+        <section className="pb-20 bg-background">
+          <div className="container-custom">
+            <div className="aspect-[21/9] rounded-3xl overflow-hidden border border-border">
+              <iframe
+                title="NICON map"
+                src={mapUrl}
+                className="w-full h-full"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </Layout>
   );
 };
