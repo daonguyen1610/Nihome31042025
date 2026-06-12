@@ -546,53 +546,64 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
       )}
 
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
-            <DialogTitle className="text-xl">
-              {isEditing ? t("proc.editTitle") : t("proc.createTitle")}
-            </DialogTitle>
-            <DialogDescription>{t(titleKey)}</DialogDescription>
+        <DialogContent className="admin-scope max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
+          {/* Gradient header */}
+          <DialogHeader className="relative px-6 py-5 text-left space-y-1 bg-gradient-to-br from-rose-500 via-rose-500 to-orange-500 text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
+                {isEditing ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-lg sm:text-xl font-extrabold tracking-tight">
+                  {isEditing ? t("proc.editTitle") : t("proc.createTitle")}
+                </DialogTitle>
+                <DialogDescription className="text-white/85 text-xs sm:text-sm mt-0.5">
+                  {t(titleKey)}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
-          <form onSubmit={save} className="flex flex-col flex-1 overflow-hidden">
+          <form onSubmit={save} className="flex flex-col flex-1 overflow-hidden bg-slate-50">
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
               {/* Basic info */}
-              <section>
-                <h3 className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "hsl(var(--admin-muted))" }}>
+              <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                  <span className="w-1 h-4 rounded-full bg-rose-500" />
                   {t("proc.basicInfo")}
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-bold mb-1.5">
-                      {t("proc.fieldTitle")} <span style={{ color: "hsl(var(--admin-danger))" }}>*</span>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      {t("proc.fieldTitle")} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       value={form.title}
                       onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                       placeholder={t("proc.titlePh")}
-                      className="admin-input w-full"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
                       required
                       autoFocus
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-bold mb-1.5">{t("proc.fieldCode")}</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t("proc.fieldCode")}</label>
                       <input
                         value={form.code}
                         onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
                         placeholder={t("proc.codePh")}
-                        className="admin-input w-full"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
                         maxLength={40}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold mb-1.5">{t("proc.fieldSortOrder")}</label>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t("proc.fieldSortOrder")}</label>
                       <input
                         type="number"
                         value={form.sortOrder}
                         onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
-                        className="admin-input w-full"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
                       />
                     </div>
                   </div>
@@ -600,27 +611,31 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
               </section>
 
               {/* Assets */}
-              <section>
-                <h3 className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "hsl(var(--admin-muted))" }}>
+              <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                  <span className="w-1 h-4 rounded-full bg-rose-500" />
                   {t("proc.assets")}
                 </h3>
 
                 {/* Images */}
                 <div className="mb-5">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-bold flex items-center gap-1.5">
-                      <ImageIcon className="w-4 h-4" />
-                      {t("proc.images")} ({form.images.length})
+                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-rose-500" />
+                      {t("proc.images")}
+                      <span className="text-xs font-bold text-slate-400 ml-1">({form.images.length})</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      disabled={uploadingImages}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-border hover:bg-muted disabled:opacity-50"
-                    >
-                      {uploadingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      {uploadingImages ? t("proc.uploading") : t("proc.addImages")}
-                    </button>
+                    {form.images.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={uploadingImages}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-rose-300 disabled:opacity-50 transition"
+                      >
+                        {uploadingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        {uploadingImages ? t("proc.uploading") : t("proc.addImages")}
+                      </button>
+                    )}
                     <input
                       ref={imageInputRef}
                       type="file"
@@ -634,28 +649,39 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                     />
                   </div>
                   {form.images.length === 0 ? (
-                    <div className="text-xs italic px-3 py-3 rounded-lg border border-dashed border-border" style={{ color: "hsl(var(--admin-muted))" }}>
-                      {t("proc.uploadHint")}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => !uploadingImages && imageInputRef.current?.click()}
+                      disabled={uploadingImages}
+                      className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center group-hover:scale-110 transition">
+                        {uploadingImages ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                      </div>
+                      <div className="text-sm font-semibold text-slate-700">
+                        {uploadingImages ? t("proc.uploading") : t("proc.addImages")}
+                      </div>
+                      <div className="text-xs text-slate-500">{t("proc.uploadHint")}</div>
+                    </button>
                   ) : (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {form.images.map((img, i) => (
-                        <div key={i} className="relative group rounded-lg overflow-hidden border border-border">
+                        <div key={i} className="relative group rounded-xl overflow-hidden border border-slate-200 bg-white">
                           <img
                             src={`${apiBase}${img.url}`}
                             alt={img.displayName}
-                            className="w-full h-20 object-cover"
+                            className="w-full h-24 object-cover"
                           />
                           <button
                             type="button"
                             onClick={() => removeAsset("images", i)}
-                            className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600"
                             title={t("proc.removeAsset")}
                             aria-label={t("proc.removeAsset")}
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
-                          <div className="px-1.5 py-1 text-[10px] truncate bg-muted/50" title={img.displayName}>
+                          <div className="px-2 py-1 text-[10px] truncate text-slate-600 bg-slate-50 border-t border-slate-100" title={img.displayName}>
                             {img.displayName}
                           </div>
                         </div>
@@ -667,19 +693,22 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                 {/* Files */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-bold flex items-center gap-1.5">
-                      <FileText className="w-4 h-4" />
-                      {t("proc.files")} ({form.files.length})
+                    <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-rose-500" />
+                      {t("proc.files")}
+                      <span className="text-xs font-bold text-slate-400 ml-1">({form.files.length})</span>
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingFiles}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-border hover:bg-muted disabled:opacity-50"
-                    >
-                      {uploadingFiles ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      {uploadingFiles ? t("proc.uploading") : t("proc.addFiles")}
-                    </button>
+                    {form.files.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingFiles}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-rose-300 disabled:opacity-50 transition"
+                      >
+                        {uploadingFiles ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                        {uploadingFiles ? t("proc.uploading") : t("proc.addFiles")}
+                      </button>
+                    )}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -693,29 +722,41 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                     />
                   </div>
                   {form.files.length === 0 ? (
-                    <div className="text-xs italic px-3 py-3 rounded-lg border border-dashed border-border" style={{ color: "hsl(var(--admin-muted))" }}>
-                      {t("proc.uploadHint")}
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => !uploadingFiles && fileInputRef.current?.click()}
+                      disabled={uploadingFiles}
+                      className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center group-hover:scale-110 transition">
+                        {uploadingFiles ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                      </div>
+                      <div className="text-sm font-semibold text-slate-700">
+                        {uploadingFiles ? t("proc.uploading") : t("proc.addFiles")}
+                      </div>
+                      <div className="text-xs text-slate-500">{t("proc.uploadHint")}</div>
+                    </button>
                   ) : (
                     <div className="space-y-1.5">
                       {form.files.map((file, i) => (
-                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/30">
-                          <FileText className="w-4 h-4 shrink-0" style={{ color: "hsl(var(--admin-muted))" }} />
-                          <span className="text-sm truncate flex-1" title={file.originalFileName}>
-                            {file.displayName}
-                          </span>
-                          <span className="text-xs shrink-0" style={{ color: "hsl(var(--admin-muted))" }}>
-                            {formatBytes(file.fileSizeBytes)}
-                          </span>
+                        <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-rose-200 transition">
+                          <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-slate-800 truncate" title={file.originalFileName}>
+                              {file.displayName}
+                            </div>
+                            <div className="text-xs text-slate-500">{formatBytes(file.fileSizeBytes)}</div>
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeAsset("files", i)}
-                            className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50"
-                            style={{ color: "hsl(var(--admin-danger))" }}
+                            className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
                             title={t("proc.removeAsset")}
                             aria-label={t("proc.removeAsset")}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
@@ -725,12 +766,12 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
               </section>
             </div>
 
-            <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-end gap-2">
+            <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setOpenModal(false)}
                 disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm border border-border bg-background hover:bg-muted disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
               >
                 <X className="w-4 h-4" />
                 {t("common.cancel")}
@@ -738,8 +779,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
               <button
                 type="submit"
                 disabled={submitting || uploadingImages || uploadingFiles}
-                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg font-bold text-sm disabled:opacity-50"
-                style={{ background: "hsl(var(--admin-primary))", color: "white" }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-br from-rose-500 to-orange-500 shadow-md shadow-rose-500/30 hover:shadow-lg hover:shadow-rose-500/40 hover:brightness-105 disabled:opacity-50 disabled:shadow-none transition"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {submitting ? t("common.loading") : t("common.save")}
