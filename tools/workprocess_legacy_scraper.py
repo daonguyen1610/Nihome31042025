@@ -223,7 +223,6 @@ def download_asset(opener, base_url: str, asset: ParsedAsset, asset_type: str, a
         "url": f"/process-assets/{target_folder}/{file_name}",
         "originalFileName": clean_file_name(asset.display_name, file_name),
         "contentType": content_type,
-        "fileSizeBytes": len(body),
         "sortOrder": asset.sort_order,
     }
 
