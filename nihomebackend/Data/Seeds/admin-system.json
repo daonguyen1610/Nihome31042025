@@ -608,6 +608,62 @@
     "ja": "プロセスの保存に失敗しました。もう一度お試しください。"
   },
   {
+    "key": "proc.basicInfo",
+    "category": "proc",
+    "vi": "Thông tin cơ bản",
+    "en": "Basic information",
+    "zh": "基本信息",
+    "ja": "基本情報"
+  },
+  {
+    "key": "proc.assets",
+    "category": "proc",
+    "vi": "Hình ảnh & Tài liệu",
+    "en": "Images & Documents",
+    "zh": "图片与文件",
+    "ja": "画像と文書"
+  },
+  {
+    "key": "proc.addImages",
+    "category": "proc",
+    "vi": "Thêm ảnh",
+    "en": "Add images",
+    "zh": "添加图片",
+    "ja": "画像を追加"
+  },
+  {
+    "key": "proc.addFiles",
+    "category": "proc",
+    "vi": "Thêm tài liệu",
+    "en": "Add documents",
+    "zh": "添加文件",
+    "ja": "文書を追加"
+  },
+  {
+    "key": "proc.removeAsset",
+    "category": "proc",
+    "vi": "Gỡ",
+    "en": "Remove",
+    "zh": "移除",
+    "ja": "削除"
+  },
+  {
+    "key": "proc.uploading",
+    "category": "proc",
+    "vi": "Đang tải lên...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "proc.uploadHint",
+    "category": "proc",
+    "vi": "Có thể chọn nhiều tệp cùng lúc.",
+    "en": "You can select multiple files at once.",
+    "zh": "可以一次选择多个文件。",
+    "ja": "複数のファイルを同時に選択できます。"
+  },
+  {
     "key": "sys.log.title",
     "category": "sys",
     "vi": "Log hệ thống",

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import {
   Search as SearchIcon,
   Pencil,
@@ -13,13 +13,15 @@ import {
   Trash2,
   Save,
   X,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useProcesses } from "@/hooks/useContentApi";
 import type { ProcessResponse, ProcessAssetInfo } from "@/services/contentApi";
-import { adminApi, type UpsertProcessRequest } from "@/services/adminApi";
+import { adminApi, type UpsertProcessRequest, type ProcessAssetInput } from "@/services/adminApi";
 import {
   Dialog,
   DialogContent,
@@ -33,14 +35,18 @@ type Props = {
   titleKey: string;
 };
 
+type DraftAsset = ProcessAssetInput & { fileSizeBytes: number };
+
 type FormState = {
   id: number | null;
   code: string;
   title: string;
   sortOrder: number;
+  images: DraftAsset[];
+  files: DraftAsset[];
 };
 
-const emptyForm: FormState = { id: null, code: "", title: "", sortOrder: 0 };
+const emptyForm: FormState = { id: null, code: "", title: "", sortOrder: 0, images: [], files: [] };
 
 function getErrorMessage(error: unknown): string | null {
   if (typeof error === "object" && error !== null) {
@@ -337,6 +343,11 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
   const [openModal, setOpenModal] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
   const { data, loading, error, refetch } = useProcesses();
   const items = useMemo(() => (data?.[groupKey] ?? []) as ProcessResponse[], [data, groupKey]);
@@ -353,6 +364,15 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
 
   const isEditing = form.id != null;
 
+  const toDraft = (a: ProcessAssetInfo): DraftAsset => ({
+    displayName: a.displayName,
+    url: a.url,
+    originalFileName: a.originalFileName,
+    contentType: a.contentType,
+    sortOrder: a.sortOrder,
+    fileSizeBytes: a.fileSizeBytes,
+  });
+
   const startCreate = () => {
     const maxSort = items.reduce((m, it) => Math.max(m, it.sortOrder ?? 0), 0);
     setForm({ ...emptyForm, sortOrder: maxSort + 1 });
@@ -365,6 +385,8 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
       code: p.code ?? "",
       title: p.title,
       sortOrder: p.sortOrder ?? 0,
+      images: p.images.map(toDraft),
+      files: p.files.map(toDraft),
     });
     setOpenModal(true);
   };
@@ -384,17 +406,63 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
     }
   };
 
+  const handleAssetUpload = async (
+    files: FileList | null,
+    kind: "images" | "files",
+  ) => {
+    if (!files || files.length === 0) return;
+    const setBusy = kind === "images" ? setUploadingImages : setUploadingFiles;
+    setBusy(true);
+    try {
+      const uploader = kind === "images" ? adminApi.uploadProcessImage : adminApi.uploadProcessFile;
+      const uploaded: DraftAsset[] = [];
+      for (const f of Array.from(files)) {
+        const res = await uploader(f, groupKey);
+        uploaded.push({
+          displayName: res.data.displayName,
+          url: res.data.url,
+          originalFileName: res.data.originalFileName,
+          contentType: res.data.contentType,
+          sortOrder: 0,
+          fileSizeBytes: res.data.fileSizeBytes,
+        });
+      }
+      setForm((f) => ({ ...f, [kind]: [...f[kind], ...uploaded] }));
+    } catch (err) {
+      toast({
+        title: t("common.error"),
+        description: getErrorMessage(err) ?? t("proc.fallbackError"),
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeAsset = (kind: "images" | "files", idx: number) => {
+    setForm((f) => ({ ...f, [kind]: f[kind].filter((_, i) => i !== idx) }));
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) {
       toast({ title: t("form.required"), description: t("proc.requiredTitle"), variant: "destructive" });
       return;
     }
+    const stripFileSize = (a: DraftAsset, i: number): ProcessAssetInput => ({
+      displayName: a.displayName,
+      url: a.url,
+      originalFileName: a.originalFileName,
+      contentType: a.contentType,
+      sortOrder: i,
+    });
     const payload: UpsertProcessRequest = {
       groupKey,
       code: form.code.trim() || undefined,
       title: form.title.trim(),
       sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
+      images: form.images.map(stripFileSize),
+      files: form.files.map(stripFileSize),
     };
     setSubmitting(true);
     try {
@@ -478,60 +546,202 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
       )}
 
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? t("proc.editTitle") : t("proc.createTitle")}</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="text-xl">
+              {isEditing ? t("proc.editTitle") : t("proc.createTitle")}
+            </DialogTitle>
             <DialogDescription>{t(titleKey)}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={save} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1.5">{t("proc.fieldCode")}</label>
-              <input
-                value={form.code}
-                onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                placeholder={t("proc.codePh")}
-                className="admin-input w-full"
-                maxLength={40}
-              />
+
+          <form onSubmit={save} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              {/* Basic info */}
+              <section>
+                <h3 className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "hsl(var(--admin-muted))" }}>
+                  {t("proc.basicInfo")}
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-bold mb-1.5">
+                      {t("proc.fieldTitle")} <span style={{ color: "hsl(var(--admin-danger))" }}>*</span>
+                    </label>
+                    <input
+                      value={form.title}
+                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                      placeholder={t("proc.titlePh")}
+                      className="admin-input w-full"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-bold mb-1.5">{t("proc.fieldCode")}</label>
+                      <input
+                        value={form.code}
+                        onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+                        placeholder={t("proc.codePh")}
+                        className="admin-input w-full"
+                        maxLength={40}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold mb-1.5">{t("proc.fieldSortOrder")}</label>
+                      <input
+                        type="number"
+                        value={form.sortOrder}
+                        onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
+                        className="admin-input w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Assets */}
+              <section>
+                <h3 className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: "hsl(var(--admin-muted))" }}>
+                  {t("proc.assets")}
+                </h3>
+
+                {/* Images */}
+                <div className="mb-5">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4" />
+                      {t("proc.images")} ({form.images.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploadingImages}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-border hover:bg-muted disabled:opacity-50"
+                    >
+                      {uploadingImages ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {uploadingImages ? t("proc.uploading") : t("proc.addImages")}
+                    </button>
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        handleAssetUpload(e.target.files, "images");
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                  {form.images.length === 0 ? (
+                    <div className="text-xs italic px-3 py-3 rounded-lg border border-dashed border-border" style={{ color: "hsl(var(--admin-muted))" }}>
+                      {t("proc.uploadHint")}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {form.images.map((img, i) => (
+                        <div key={i} className="relative group rounded-lg overflow-hidden border border-border">
+                          <img
+                            src={`${apiBase}${img.url}`}
+                            alt={img.displayName}
+                            className="w-full h-20 object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeAsset("images", i)}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                            title={t("proc.removeAsset")}
+                            aria-label={t("proc.removeAsset")}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                          <div className="px-1.5 py-1 text-[10px] truncate bg-muted/50" title={img.displayName}>
+                            {img.displayName}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Files */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-bold flex items-center gap-1.5">
+                      <FileText className="w-4 h-4" />
+                      {t("proc.files")} ({form.files.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingFiles}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border border-border hover:bg-muted disabled:opacity-50"
+                    >
+                      {uploadingFiles ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {uploadingFiles ? t("proc.uploading") : t("proc.addFiles")}
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.txt"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => {
+                        handleAssetUpload(e.target.files, "files");
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                  {form.files.length === 0 ? (
+                    <div className="text-xs italic px-3 py-3 rounded-lg border border-dashed border-border" style={{ color: "hsl(var(--admin-muted))" }}>
+                      {t("proc.uploadHint")}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {form.files.map((file, i) => (
+                        <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-muted/30">
+                          <FileText className="w-4 h-4 shrink-0" style={{ color: "hsl(var(--admin-muted))" }} />
+                          <span className="text-sm truncate flex-1" title={file.originalFileName}>
+                            {file.displayName}
+                          </span>
+                          <span className="text-xs shrink-0" style={{ color: "hsl(var(--admin-muted))" }}>
+                            {formatBytes(file.fileSizeBytes)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeAsset("files", i)}
+                            className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-50"
+                            style={{ color: "hsl(var(--admin-danger))" }}
+                            title={t("proc.removeAsset")}
+                            aria-label={t("proc.removeAsset")}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
             </div>
-            <div>
-              <label className="block text-sm font-bold mb-1.5">
-                {t("proc.fieldTitle")} <span style={{ color: "hsl(var(--admin-danger))" }}>*</span>
-              </label>
-              <input
-                value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                placeholder={t("proc.titlePh")}
-                className="admin-input w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1.5">{t("proc.fieldSortOrder")}</label>
-              <input
-                type="number"
-                value={form.sortOrder}
-                onChange={(e) => setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))}
-                className="admin-input w-32"
-              />
-            </div>
-            <div className="flex items-center justify-end gap-2 pt-2">
+
+            <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setOpenModal(false)}
                 disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm border border-border hover:bg-muted disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm border border-border bg-background hover:bg-muted disabled:opacity-50"
               >
                 <X className="w-4 h-4" />
                 {t("common.cancel")}
               </button>
               <button
                 type="submit"
-                disabled={submitting}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50"
+                disabled={submitting || uploadingImages || uploadingFiles}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg font-bold text-sm disabled:opacity-50"
                 style={{ background: "hsl(var(--admin-primary))", color: "white" }}
               >
-                <Save className="w-4 h-4" />
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {submitting ? t("common.loading") : t("common.save")}
               </button>
             </div>

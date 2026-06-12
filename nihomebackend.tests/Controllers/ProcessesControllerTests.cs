@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -18,8 +21,9 @@ public class ProcessesControllerTests : IDisposable
     public ProcessesControllerTests()
     {
         _db = DbContextFactory.Create();
-        var service = new ProcessService(_db);
-        _sut = new ProcessesController(service);
+        var env = Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp");
+        var service = new ProcessService(_db, env);
+        _sut = new ProcessesController(service, env, NullLogger<ProcessesController>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

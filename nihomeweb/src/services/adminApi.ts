@@ -61,6 +61,25 @@ export interface UpsertProcessRequest {
   code?: string;
   title: string;
   sortOrder?: number;
+  images?: ProcessAssetInput[];
+  files?: ProcessAssetInput[];
+}
+
+export interface ProcessAssetInput {
+  displayName: string;
+  url: string;
+  originalFileName: string;
+  contentType: string;
+  sortOrder: number;
+}
+
+export interface ProcessAssetUploadResponse {
+  displayName: string;
+  url: string;
+  originalFileName: string;
+  contentType: string;
+  fileSizeBytes: number;
+  sortOrder: number;
 }
 
 export interface UpsertSlideshowRequest {
@@ -384,6 +403,22 @@ export const adminApi = {
     api.put(`/processes/${id}`, data),
   deleteProcess: (id: number) =>
     api.delete(`/processes/${id}`),
+  uploadProcessImage: (file: File, groupKey: string) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("groupKey", groupKey);
+    return api.post<ProcessAssetUploadResponse>("/processes/upload-image", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  uploadProcessFile: (file: File, groupKey: string) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("groupKey", groupKey);
+    return api.post<ProcessAssetUploadResponse>("/processes/upload-file", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 
   // Slideshow
   getSlideshow: (lang = "vi", activeOnly = false) =>

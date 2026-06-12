@@ -35,6 +35,8 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
             Code = req.Code,
             Title = req.Title,
             SortOrder = req.SortOrder,
+            ImagesJson = SerializeAssets(req.Images),
+            FilesJson = SerializeAssets(req.Files),
         };
         db.ProcessDocuments.Add(entity);
         await db.SaveChangesAsync();
@@ -55,6 +57,8 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
         entity.Code = req.Code;
         entity.Title = req.Title;
         entity.SortOrder = req.SortOrder;
+        entity.ImagesJson = SerializeAssets(req.Images);
+        entity.FilesJson = SerializeAssets(req.Files);
 
         await db.SaveChangesAsync();
         Logger.LogInformation("Updated process document {ProcessId}", id);
@@ -95,6 +99,24 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
             a.FileSizeBytes = ResolveFileSize(a.Url);
         }
         return list;
+    }
+
+    private static string? SerializeAssets(List<ProcessAssetInput>? assets)
+    {
+        if (assets == null || assets.Count == 0) return null;
+        var ordered = assets
+            .Where(a => !string.IsNullOrWhiteSpace(a.Url))
+            .Select((a, i) => new
+            {
+                a.DisplayName,
+                a.Url,
+                a.OriginalFileName,
+                a.ContentType,
+                SortOrder = a.SortOrder == 0 ? i : a.SortOrder,
+            })
+            .OrderBy(a => a.SortOrder)
+            .ToList();
+        return ordered.Count == 0 ? null : JsonSerializer.Serialize(ordered);
     }
 
     private long ResolveFileSize(string url)
