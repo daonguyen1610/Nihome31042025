@@ -170,6 +170,7 @@ const ActivityLog = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [resourceType, setResourceType] = useState("");
   const [correlationId, setCorrelationId] = useState("");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -196,6 +197,7 @@ const ActivityLog = () => {
         status: statusFilter || undefined,
         resourceType: resourceType || undefined,
         correlationId: correlationId || undefined,
+        search: search.trim() || undefined,
       });
       setData(res.data);
     } catch {
@@ -203,7 +205,7 @@ const ActivityLog = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, from, to, actionFilter, actorPhone, ip, statusFilter, resourceType, correlationId, t]);
+  }, [page, pageSize, from, to, actionFilter, actorPhone, ip, statusFilter, resourceType, correlationId, search, t]);
 
   const fetchConfig = useCallback(async () => {
     try {
@@ -230,7 +232,7 @@ const ActivityLog = () => {
   const onRefresh = () => (page !== 1 ? setPage(1) : fetchLogs());
   const onResetFilters = () => {
     setFrom(""); setTo(""); setIp(""); setActorPhone(""); setActionFilter("");
-    setStatusFilter(""); setResourceType(""); setCorrelationId(""); setPage(1);
+    setStatusFilter(""); setResourceType(""); setCorrelationId(""); setSearch(""); setPage(1);
   };
 
   const onDeleteOne = async (id: number) => {
@@ -333,6 +335,16 @@ const ActivityLog = () => {
       )}
 
       <div className="admin-card p-5 mb-5">
+        <div className="mb-3">
+          <Filter label={t("log.search")}>
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="admin-input w-full"
+              placeholder={t("log.searchPlaceholder")}
+            />
+          </Filter>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <Filter label={t("log.from")}>
             <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} className="admin-input w-full" />

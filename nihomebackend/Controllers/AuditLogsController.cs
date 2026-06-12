@@ -65,6 +65,7 @@ public class AuditLogsController(AppDbContext db, IAuditLogger audit) : Controll
         [FromQuery] string? resourceType,
         [FromQuery] string? resourceId,
         [FromQuery] string? correlationId,
+        [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
@@ -82,6 +83,17 @@ public class AuditLogsController(AppDbContext db, IAuditLogger audit) : Controll
         if (!string.IsNullOrWhiteSpace(resourceType)) q = q.Where(a => a.ResourceType == resourceType);
         if (!string.IsNullOrWhiteSpace(resourceId)) q = q.Where(a => a.ResourceId == resourceId);
         if (!string.IsNullOrWhiteSpace(correlationId)) q = q.Where(a => a.CorrelationId == correlationId);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            q = q.Where(a =>
+                a.Message.Contains(s) ||
+                a.Action.Contains(s) ||
+                a.ResourceType.Contains(s) ||
+                (a.ActorPhone != null && a.ActorPhone.Contains(s)) ||
+                (a.ResourceId != null && a.ResourceId.Contains(s)) ||
+                (a.CorrelationId != null && a.CorrelationId.Contains(s)));
+        }
 
         var total = await q.CountAsync();
         var items = await q.OrderByDescending(a => a.CreatedAt)
