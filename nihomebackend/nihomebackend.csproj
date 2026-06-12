@@ -43,6 +43,10 @@
     <EmbeddedResource Include="Data/Seeds/*.json" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="nihomebackend.tests" />
+  </ItemGroup>
+
   <Target
     Name="RestoreNihomeWeb"
     BeforeTargets="BuildNihomeWeb"

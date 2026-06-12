@@ -1,3 +1,4 @@
+using NihomeBackend.Data;
 using NihomeBackend.Services.Audit;
 
 namespace nihomebackend.tests.Helpers;
@@ -7,4 +8,5 @@ public sealed class NoOpAuditLogger : IAuditLogger
 {
     public void Log(string action, string resourceType, string? resourceId, string message) { }
     public void Log(AuditEvent evt) { }
+    public void LogTransactional(AuditEvent evt, AppDbContext db) { }
 }
