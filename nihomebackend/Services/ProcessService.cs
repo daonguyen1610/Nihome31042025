@@ -13,9 +13,20 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
-    private readonly string _webRoot = !string.IsNullOrEmpty(env?.WebRootPath)
-        ? env!.WebRootPath
-        : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+    private readonly string _webRoot = ResolveWebRoot(env);
+
+    private static string ResolveWebRoot(IWebHostEnvironment? env)
+    {
+        if (!string.IsNullOrEmpty(env?.ContentRootPath))
+        {
+            return Path.Combine(env.ContentRootPath, "wwwroot");
+        }
+        if (!string.IsNullOrEmpty(env?.WebRootPath))
+        {
+            return env.WebRootPath;
+        }
+        return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+    }
 
     private ILogger<ProcessService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProcessService>();
 
