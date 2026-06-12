@@ -73,8 +73,9 @@ cp -f $DEPLOYMENT_CONFIG_DIR/web.config $PUBLISH_RELEASE_DIR/web.config \
     || die "Failed to copy web.config to $PUBLISH_RELEASE_DIR."
 echo "Images, process-assets, processes, appsettings.json, and web.config copied successfully."
 
-# Step 4: Zip the publish-release folder
+# Step 4: Zip the publish-release folder (cd into parent so paths inside
+# the archive are relative — extracting won't re-create the absolute path).
 echo "Zipping the $PUBLISH_RELEASE_DIR folder..."
-zip -r $PUBLISH_RELEASE_DIR $DEPLOYMENT_CONFIG_DIR > /dev/null \
+(cd $OUTPUT_DIR && zip -r publish-release.zip publish-release > /dev/null) \
     || die "Failed to zip the $PUBLISH_RELEASE_DIR folder."
-echo "Publish folder zipped successfully."
+echo "Publish folder zipped successfully: $OUTPUT_DIR/publish-release.zip"
