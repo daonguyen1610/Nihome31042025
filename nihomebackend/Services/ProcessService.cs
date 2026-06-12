@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
@@ -8,9 +9,13 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProcessService(AppDbContext db)
+public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
+
+    private readonly string _webRoot = !string.IsNullOrEmpty(env?.WebRootPath)
+        ? env!.WebRootPath
+        : Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
 
     private ILogger<ProcessService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProcessService>();
 
@@ -70,18 +75,33 @@ public class ProcessService(AppDbContext db)
         return true;
     }
 
-    private static ProcessResponse MapToResponse(ProcessDocument p) => new()
+    private ProcessResponse MapToResponse(ProcessDocument p) => new()
     {
         Id = p.Id,
         GroupKey = p.GroupKey,
         Code = p.Code,
         Title = p.Title,
         SortOrder = p.SortOrder,
-        Images = p.ImagesJson != null
-            ? JsonSerializer.Deserialize<List<ProcessAssetInfo>>(p.ImagesJson, JsonOpts) ?? []
-            : [],
-        Files = p.FilesJson != null
-            ? JsonSerializer.Deserialize<List<ProcessAssetInfo>>(p.FilesJson, JsonOpts) ?? []
-            : [],
+        Images = Hydrate(p.ImagesJson),
+        Files = Hydrate(p.FilesJson),
     };
+
+    private List<ProcessAssetInfo> Hydrate(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return [];
+        var list = JsonSerializer.Deserialize<List<ProcessAssetInfo>>(json, JsonOpts) ?? [];
+        foreach (var a in list)
+        {
+            a.FileSizeBytes = ResolveFileSize(a.Url);
+        }
+        return list;
+    }
+
+    private long ResolveFileSize(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return 0;
+        var relative = url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var path = Path.Combine(_webRoot, relative);
+        return File.Exists(path) ? new FileInfo(path).Length : 0;
+    }
 }
