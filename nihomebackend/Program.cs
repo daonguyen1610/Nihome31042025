@@ -124,10 +124,17 @@ app.UseCors(FrontendCorsExtensions.PolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MigrateDatabase();
+// In integration tests the WebApplicationFactory provisions and seeds the database itself,
+// so we skip the production migrate/seed path that targets SQL Server.
+if (!string.Equals(app.Environment.EnvironmentName, "IntegrationTests", StringComparison.OrdinalIgnoreCase))
+{
+    app.MigrateDatabase();
+}
 
 app.MapControllers();
 
 app.MapFallbackToFile("{*path:regex(^(?!api($|/)).*$)}", "index.html");
 
 app.Run();
+
+public partial class Program { }

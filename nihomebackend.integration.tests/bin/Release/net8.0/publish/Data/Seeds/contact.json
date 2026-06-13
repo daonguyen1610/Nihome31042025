@@ -1,0 +1,602 @@
+[
+  {
+    "key": "contactPage.eyebrow",
+    "category": "contactPage",
+    "vi": "Liên hệ",
+    "en": "Contact",
+    "zh": "联系",
+    "ja": "お問い合わせ"
+  },
+  {
+    "key": "contactPage.title",
+    "category": "contactPage",
+    "vi": "Bắt đầu dự án của bạn cùng NICON.",
+    "en": "Start your project with NICON.",
+    "zh": "与 NICON 一起启动您的项目。",
+    "ja": "NICONとあなたのプロジェクトを始めましょう。"
+  },
+  {
+    "key": "contactPage.desc",
+    "category": "contactPage",
+    "vi": "Để lại thông tin, đội ngũ tư vấn của chúng tôi sẽ liên hệ trong vòng 24 giờ để trao đổi chi tiết về nhu cầu của bạn.",
+    "en": "Leave your details and our advisors will reach out within 24 hours to discuss your needs.",
+    "zh": "留下您的信息,我们的顾问将在24小时内与您联系并讨论您的需求。",
+    "ja": "情報をご記入ください。24時間以内に担当者がご連絡いたします。"
+  },
+  {
+    "key": "contactPage.formEyebrow",
+    "category": "contactPage",
+    "vi": "Gửi yêu cầu",
+    "en": "Send request",
+    "zh": "发送请求",
+    "ja": "リクエストを送信"
+  },
+  {
+    "key": "contactPage.formTitle",
+    "category": "contactPage",
+    "vi": "Tư vấn miễn phí 24/7.",
+    "en": "Free consultation 24/7.",
+    "zh": "全天候免费咨询。",
+    "ja": "24時間無料相談。"
+  },
+  {
+    "key": "contactPage.f.name",
+    "category": "contactPage",
+    "vi": "Họ và tên *",
+    "en": "Full name *",
+    "zh": "姓名 *",
+    "ja": "お名前 *"
+  },
+  {
+    "key": "contactPage.f.namePh",
+    "category": "contactPage",
+    "vi": "Nguyễn Văn A",
+    "en": "John Doe",
+    "zh": "张三",
+    "ja": "山田 太郎"
+  },
+  {
+    "key": "contactPage.f.phone",
+    "category": "contactPage",
+    "vi": "Số điện thoại",
+    "en": "Phone",
+    "zh": "电话",
+    "ja": "電話番号"
+  },
+  {
+    "key": "contactPage.f.phonePh",
+    "category": "contactPage",
+    "vi": "0123 456 789",
+    "en": "0123 456 789",
+    "zh": "0123 456 789",
+    "ja": "0123 456 789"
+  },
+  {
+    "key": "contactPage.f.email",
+    "category": "contactPage",
+    "vi": "Email *",
+    "en": "Email *",
+    "zh": "邮箱 *",
+    "ja": "メール *"
+  },
+  {
+    "key": "contactPage.f.emailPh",
+    "category": "contactPage",
+    "vi": "ban@congty.com",
+    "en": "you@company.com",
+    "zh": "you@company.com",
+    "ja": "you@company.com"
+  },
+  {
+    "key": "contactPage.f.subject",
+    "category": "contactPage",
+    "vi": "Chủ đề",
+    "en": "Subject",
+    "zh": "主题",
+    "ja": "件名"
+  },
+  {
+    "key": "contactPage.f.subjectPh",
+    "category": "contactPage",
+    "vi": "Chọn nhu cầu...",
+    "en": "Choose a topic...",
+    "zh": "选择需求...",
+    "ja": "件名を選択..."
+  },
+  {
+    "key": "contactPage.f.s1",
+    "category": "contactPage",
+    "vi": "Thiết kế nhà máy / nhà xưởng",
+    "en": "Factory / workshop design",
+    "zh": "工厂/车间设计",
+    "ja": "工場/倉庫の設計"
+  },
+  {
+    "key": "contactPage.f.s2",
+    "category": "contactPage",
+    "vi": "Thi công trọn gói (D&B)",
+    "en": "Turnkey construction (D&B)",
+    "zh": "全包施工 (D&B)",
+    "ja": "一括施工 (D&B)"
+  },
+  {
+    "key": "contactPage.f.s3",
+    "category": "contactPage",
+    "vi": "Tư vấn dự án dân dụng",
+    "en": "Civil project consulting",
+    "zh": "民用项目咨询",
+    "ja": "民間プロジェクト相談"
+  },
+  {
+    "key": "contactPage.f.s4",
+    "category": "contactPage",
+    "vi": "Hợp tác đầu tư",
+    "en": "Investment partnership",
+    "zh": "投资合作",
+    "ja": "投資パートナーシップ"
+  },
+  {
+    "key": "contactPage.f.s5",
+    "category": "contactPage",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
+  },
+  {
+    "key": "contactPage.f.message",
+    "category": "contactPage",
+    "vi": "Nội dung *",
+    "en": "Message *",
+    "zh": "消息 *",
+    "ja": "メッセージ *"
+  },
+  {
+    "key": "contactPage.f.messagePh",
+    "category": "contactPage",
+    "vi": "Mô tả ngắn về nhu cầu của bạn...",
+    "en": "Briefly describe your needs...",
+    "zh": "简要描述您的需求...",
+    "ja": "ご要望を簡潔にご記入ください..."
+  },
+  {
+    "key": "contactPage.f.submit",
+    "category": "contactPage",
+    "vi": "Gửi yêu cầu",
+    "en": "Send request",
+    "zh": "发送请求",
+    "ja": "送信"
+  },
+  {
+    "key": "contactPage.f.sending",
+    "category": "contactPage",
+    "vi": "Đang gửi...",
+    "en": "Sending...",
+    "zh": "发送中...",
+    "ja": "送信中..."
+  },
+  {
+    "key": "contactPage.toast.title",
+    "category": "contactPage",
+    "vi": "Đã gửi liên hệ",
+    "en": "Message sent",
+    "zh": "消息已发送",
+    "ja": "送信しました"
+  },
+  {
+    "key": "contactPage.toast.desc",
+    "category": "contactPage",
+    "vi": "NICON sẽ phản hồi bạn trong vòng 24 giờ.",
+    "en": "NICON will respond within 24 hours.",
+    "zh": "NICON 将在24小时内回复您。",
+    "ja": "24時間以内にご返信いたします。"
+  },
+  {
+    "key": "contactPage.hours.title",
+    "category": "contactPage",
+    "vi": "Giờ làm việc",
+    "en": "Working hours",
+    "zh": "工作时间",
+    "ja": "営業時間"
+  },
+  {
+    "key": "contactPage.hours.weekday",
+    "category": "contactPage",
+    "vi": "Thứ 2 – Thứ 6: 08:00 – 17:30",
+    "en": "Mon – Fri: 08:00 – 17:30",
+    "zh": "周一至周五: 08:00 – 17:30",
+    "ja": "月〜金: 08:00 – 17:30"
+  },
+  {
+    "key": "contactPage.hours.sat",
+    "category": "contactPage",
+    "vi": "Thứ 7: 08:00 – 12:00",
+    "en": "Sat: 08:00 – 12:00",
+    "zh": "周六: 08:00 – 12:00",
+    "ja": "土: 08:00 – 12:00"
+  },
+  {
+    "key": "contactPage.office1.city",
+    "category": "contactPage",
+    "vi": "Trụ sở chính TP.HCM",
+    "en": "HCMC Headquarters",
+    "zh": "胡志明市总部",
+    "ja": "ホーチミン本社"
+  },
+  {
+    "key": "contactPage.office1.addr",
+    "category": "contactPage",
+    "vi": "Tòa nhà NICON, Đường Mai Chí Thọ, Thủ Đức, TP.HCM",
+    "en": "NICON Building, Mai Chi Tho St., Thu Duc, HCMC",
+    "zh": "胡志明市守德区Mai Chi Tho路NICON大厦",
+    "ja": "ホーチミン市トゥドゥック区マイチートー通りNICONビル"
+  },
+  {
+    "key": "contactPage.office2.city",
+    "category": "contactPage",
+    "vi": "Văn phòng Bình Dương",
+    "en": "Binh Duong Office",
+    "zh": "平阳办事处",
+    "ja": "ビンズン事務所"
+  },
+  {
+    "key": "contactPage.office2.addr",
+    "category": "contactPage",
+    "vi": "KCN VSIP IIA, Phường Vĩnh Tân, Bình Dương",
+    "en": "VSIP IIA IP, Vinh Tan Ward, Binh Duong",
+    "zh": "平阳省永新坊VSIP IIA工业园",
+    "ja": "ビンズン省ビンタン区VSIP IIA工業団地"
+  },
+  {
+    "key": "contact.eyebrow",
+    "category": "contact",
+    "vi": "Liên hệ",
+    "en": "Contact",
+    "zh": "联系",
+    "ja": "お問い合わせ"
+  },
+  {
+    "key": "contact.title",
+    "category": "contact",
+    "vi": "Bắt đầu dự án của bạn cùng NICON.",
+    "en": "Start your project with NICON.",
+    "zh": "与 NICON 一起启动您的项目。",
+    "ja": "NICONと共にプロジェクトを始めましょう。"
+  },
+  {
+    "key": "contact.desc",
+    "category": "contact",
+    "vi": "Để lại thông tin, đội ngũ tư vấn của chúng tôi sẽ liên hệ trong vòng 24 giờ để trao đổi chi tiết về nhu cầu của bạn.",
+    "en": "Leave your details and our consultants will contact you within 24 hours.",
+    "zh": "留下您的资料,我们的顾问将在24小时内与您联系。",
+    "ja": "お問い合わせ情報をお送りください。コンサルタントが24時間以内にご連絡いたします。"
+  },
+  {
+    "key": "contact.form.eyebrow",
+    "category": "contact",
+    "vi": "Gửi yêu cầu",
+    "en": "Send a request",
+    "zh": "发送请求",
+    "ja": "リクエスト送信"
+  },
+  {
+    "key": "contact.form.title",
+    "category": "contact",
+    "vi": "Tư vấn miễn phí 24/7.",
+    "en": "Free 24/7 consultation.",
+    "zh": "24/7 免费咨询。",
+    "ja": "24時間無料相談。"
+  },
+  {
+    "key": "contact.form.name",
+    "category": "contact",
+    "vi": "Họ và tên *",
+    "en": "Full name *",
+    "zh": "姓名 *",
+    "ja": "氏名 *"
+  },
+  {
+    "key": "contact.form.namePh",
+    "category": "contact",
+    "vi": "Nguyễn Văn A",
+    "en": "John Doe",
+    "zh": "张三",
+    "ja": "山田太郎"
+  },
+  {
+    "key": "contact.form.phone",
+    "category": "contact",
+    "vi": "Số điện thoại",
+    "en": "Phone",
+    "zh": "电话",
+    "ja": "電話番号"
+  },
+  {
+    "key": "contact.form.email",
+    "category": "contact",
+    "vi": "Email *",
+    "en": "Email *",
+    "zh": "邮箱 *",
+    "ja": "メール *"
+  },
+  {
+    "key": "contact.form.emailPh",
+    "category": "contact",
+    "vi": "ban@congty.com",
+    "en": "you@company.com",
+    "zh": "you@company.com",
+    "ja": "you@company.com"
+  },
+  {
+    "key": "contact.form.subject",
+    "category": "contact",
+    "vi": "Chủ đề",
+    "en": "Subject",
+    "zh": "主题",
+    "ja": "件名"
+  },
+  {
+    "key": "contact.form.subjectPh",
+    "category": "contact",
+    "vi": "Chọn nhu cầu...",
+    "en": "Select a need...",
+    "zh": "选择需求...",
+    "ja": "ご要望を選択..."
+  },
+  {
+    "key": "contact.form.subj1",
+    "category": "contact",
+    "vi": "Thiết kế nhà máy / nhà xưởng",
+    "en": "Factory / workshop design",
+    "zh": "工厂 / 车间设计",
+    "ja": "工場・倉庫の設計"
+  },
+  {
+    "key": "contact.form.subj2",
+    "category": "contact",
+    "vi": "Thi công trọn gói (D&B)",
+    "en": "Turnkey construction (D&B)",
+    "zh": "全包施工 (D&B)",
+    "ja": "一括施工 (D&B)"
+  },
+  {
+    "key": "contact.form.subj3",
+    "category": "contact",
+    "vi": "Tư vấn dự án dân dụng",
+    "en": "Civil project consulting",
+    "zh": "民用项目咨询",
+    "ja": "民間プロジェクトコンサル"
+  },
+  {
+    "key": "contact.form.subj4",
+    "category": "contact",
+    "vi": "Hợp tác đầu tư",
+    "en": "Investment partnership",
+    "zh": "投资合作",
+    "ja": "投資パートナーシップ"
+  },
+  {
+    "key": "contact.form.subj5",
+    "category": "contact",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
+  },
+  {
+    "key": "contact.form.message",
+    "category": "contact",
+    "vi": "Nội dung *",
+    "en": "Message *",
+    "zh": "内容 *",
+    "ja": "内容 *"
+  },
+  {
+    "key": "contact.form.messagePh",
+    "category": "contact",
+    "vi": "Mô tả ngắn về nhu cầu của bạn...",
+    "en": "Briefly describe your needs...",
+    "zh": "简要描述您的需求...",
+    "ja": "ご要望を簡単にご記入ください..."
+  },
+  {
+    "key": "contact.form.sending",
+    "category": "contact",
+    "vi": "Đang gửi...",
+    "en": "Sending...",
+    "zh": "发送中...",
+    "ja": "送信中..."
+  },
+  {
+    "key": "contact.form.send",
+    "category": "contact",
+    "vi": "Gửi yêu cầu",
+    "en": "Send request",
+    "zh": "发送请求",
+    "ja": "送信"
+  },
+  {
+    "key": "contact.toast.title",
+    "category": "contact",
+    "vi": "Đã gửi liên hệ",
+    "en": "Request sent",
+    "zh": "已发送",
+    "ja": "送信完了"
+  },
+  {
+    "key": "contact.toast.desc",
+    "category": "contact",
+    "vi": "NICON sẽ phản hồi bạn trong vòng 24 giờ.",
+    "en": "NICON will respond within 24 hours.",
+    "zh": "NICON 将在24小时内回复您。",
+    "ja": "NICONは24時間以内にご返信します。"
+  },
+  {
+    "key": "contact.office.hq",
+    "category": "contact",
+    "vi": "Trụ sở chính TP.HCM",
+    "en": "HCMC Headquarters",
+    "zh": "胡志明市总部",
+    "ja": "ホーチミン本社"
+  },
+  {
+    "key": "contact.office.hqAddr",
+    "category": "contact",
+    "vi": "Tòa nhà NICON, Đường Mai Chí Thọ, Thủ Đức, TP.HCM",
+    "en": "NICON Building, Mai Chi Tho St., Thu Duc, HCMC",
+    "zh": "胡志明市守德区梅志寿街 NICON 大楼",
+    "ja": "ホーチミン市トゥドゥック区マイチートー通りNICONビル"
+  },
+  {
+    "key": "contact.office.bd",
+    "category": "contact",
+    "vi": "Văn phòng Bình Dương",
+    "en": "Binh Duong Office",
+    "zh": "平阳办事处",
+    "ja": "ビンズン事務所"
+  },
+  {
+    "key": "contact.office.bdAddr",
+    "category": "contact",
+    "vi": "KCN VSIP IIA, Phường Vĩnh Tân, Bình Dương",
+    "en": "VSIP IIA IP, Vinh Tan Ward, Binh Duong",
+    "zh": "平阳省永新坊 VSIP IIA 工业区",
+    "ja": "ビンズン省ヴィンタン区VSIP IIA工業団地"
+  },
+  {
+    "key": "contact.hours.title",
+    "category": "contact",
+    "vi": "Giờ làm việc",
+    "en": "Working hours",
+    "zh": "工作时间",
+    "ja": "営業時間"
+  },
+  {
+    "key": "contact.hours.weekday",
+    "category": "contact",
+    "vi": "Thứ 2 – Thứ 6: 08:00 – 17:30",
+    "en": "Mon – Fri: 08:00 – 17:30",
+    "zh": "周一至周五: 08:00 – 17:30",
+    "ja": "月〜金: 08:00 – 17:30"
+  },
+  {
+    "key": "contact.hours.sat",
+    "category": "contact",
+    "vi": "Thứ 7: 08:00 – 12:00",
+    "en": "Sat: 08:00 – 12:00",
+    "zh": "周六: 08:00 – 12:00",
+    "ja": "土: 08:00 – 12:00"
+  },
+  {
+    "key": "contacts.title",
+    "category": "contacts",
+    "vi": "Liên hệ khách hàng",
+    "en": "Customer inbox",
+    "zh": "客户联系",
+    "ja": "お客様のお問い合わせ"
+  },
+  {
+    "key": "contacts.inbox",
+    "category": "contacts",
+    "vi": "Hộp thư đến",
+    "en": "Inbox",
+    "zh": "收件箱",
+    "ja": "受信トレイ"
+  },
+  {
+    "key": "contacts.new",
+    "category": "contacts",
+    "vi": "mới",
+    "en": "new",
+    "zh": "新",
+    "ja": "新着"
+  },
+  {
+    "key": "contacts.reply",
+    "category": "contacts",
+    "vi": "Trả lời",
+    "en": "Reply",
+    "zh": "回复",
+    "ja": "返信"
+  },
+  {
+    "key": "contacts.markReplied",
+    "category": "contacts",
+    "vi": "Đánh dấu đã trả lời",
+    "en": "Mark as replied",
+    "zh": "标记为已回复",
+    "ja": "返信済みに設定"
+  },
+  {
+    "key": "contacts.replied",
+    "category": "contacts",
+    "vi": "Đã trả lời",
+    "en": "Replied",
+    "zh": "已回复",
+    "ja": "返信済み"
+  },
+  {
+    "key": "contacts.content",
+    "category": "contacts",
+    "vi": "Nội dung",
+    "en": "Message",
+    "zh": "内容",
+    "ja": "内容"
+  },
+  {
+    "key": "contacts.selectOne",
+    "category": "contacts",
+    "vi": "Chọn một liên hệ để xem chi tiết",
+    "en": "Select a contact to view details",
+    "zh": "选择联系人查看详情",
+    "ja": "連絡先を選択して詳細を表示"
+  },
+  {
+    "key": "contacts.empty",
+    "category": "contacts",
+    "vi": "Không có tin nhắn nào",
+    "en": "No messages",
+    "zh": "没有消息",
+    "ja": "メッセージはありません"
+  },
+  {
+    "key": "contacts.justNow",
+    "category": "contacts",
+    "vi": "Vừa xong",
+    "en": "Just now",
+    "zh": "刚刚",
+    "ja": "たった今"
+  },
+  {
+    "key": "contacts.hoursAgo",
+    "category": "contacts",
+    "vi": "giờ trước",
+    "en": "hours ago",
+    "zh": "小时前",
+    "ja": "時間前"
+  },
+  {
+    "key": "contacts.daysAgo",
+    "category": "contacts",
+    "vi": "ngày trước",
+    "en": "days ago",
+    "zh": "天前",
+    "ja": "日前"
+  },
+  {
+    "key": "contacts.replyContent",
+    "category": "contacts",
+    "vi": "Nội dung phản hồi",
+    "en": "Reply content",
+    "zh": "回复内容",
+    "ja": "返信内容"
+  },
+  {
+    "key": "contacts.searchPlaceholder",
+    "category": "contacts",
+    "vi": "Tìm theo tên, email, chủ đề, số điện thoại...",
+    "en": "Search by name, email, subject, phone...",
+    "zh": "按姓名、邮箱、主题、电话搜索...",
+    "ja": "名前、メール、件名、電話で検索..."
+  }
+]

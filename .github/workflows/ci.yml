@@ -9,6 +9,10 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   nihomebackend:
     name: nihomebackend (build, test)
@@ -34,6 +38,153 @@ jobs:
       - name: Test
         run: dotnet test --no-build -c Release --verbosity normal
         working-directory: nihomebackend.tests
+
+  nihomebackend-integration:
+    name: nihomebackend (integration tests)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
+
+      - name: Test (integration)
+        run: dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
+             --configuration Release
+             --logger "trx;LogFileName=integration-results.trx"
+             --results-directory TestResults
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-backend-results
+          path: TestResults
+          if-no-files-found: ignore
+
+  nihomeweb-lint:
+    name: nihomeweb (lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nihomeweb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: nihomeweb/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  nihomeweb-unit:
+    name: nihomeweb (unit tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nihomeweb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: nihomeweb/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  nihomeweb-build:
+    name: nihomeweb (build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nihomeweb
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: nihomeweb/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  e2e-smoke:
+    name: E2E smoke (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: nihomeweb/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: nihomeweb
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: nihomeweb
+        run: npx playwright install --with-deps chromium
+
+      - name: Start full stack
+        run: docker compose up -d --build
+
+      - name: Wait for backend readiness
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:5043/api/projects > /dev/null; then
+              echo "Backend is up"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Backend did not become ready in time"
+          docker compose logs --tail=300
+          exit 1
+
+      - name: Run Playwright smoke suite
+        working-directory: nihomeweb
+        env:
+          BASE_URL: http://localhost:5043
+          PLAYWRIGHT_SUITE: smoke
+        run: npm run test:e2e:smoke
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: |
+            nihomeweb/playwright-report
+            nihomeweb/test-results
+          if-no-files-found: ignore
+
+      - name: Dump docker logs on failure
+        if: failure()
+        run: docker compose logs --tail=500
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
 
   trivy:
     name: Trivy vulnerability scan
