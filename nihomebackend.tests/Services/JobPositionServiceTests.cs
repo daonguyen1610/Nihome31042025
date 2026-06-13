@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Caching.Memory;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -15,7 +17,8 @@ public class JobPositionServiceTests : IDisposable
     {
         _db = DbContextFactory.Create();
         var employmentTypeService = new EmploymentTypeService(_db);
-        _sut = new JobPositionService(_db, employmentTypeService);
+        var translationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
+        _sut = new JobPositionService(_db, employmentTypeService, translationSvc);
     }
 
     public void Dispose() => _db.Dispose();
