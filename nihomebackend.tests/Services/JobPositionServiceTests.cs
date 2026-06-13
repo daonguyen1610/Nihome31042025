@@ -61,4 +61,28 @@ public class JobPositionServiceTests : IDisposable
 
         Assert.Equal("full-time", result.EmploymentType);
     }
+
+    [Fact]
+    public async Task CreateAsync_StoresBenefits_InBenefitsJson()
+    {
+        _db.EmploymentTypes.Add(new EmploymentType { Code = "full-time", Name = "Toàn thời gian", IsActive = true, SortOrder = 1 });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.CreateAsync(new UpsertJobPositionRequest
+        {
+            Title = "Dev",
+            Department = "IT",
+            Location = "HCM",
+            EmploymentType = "full-time",
+            ExperienceLevel = "mid",
+            Requirements = [],
+            Benefits = ["health-insurance", "training"],
+            IsActive = true,
+            SortOrder = 1,
+        });
+
+        Assert.Equal(2, result.Benefits.Count);
+        Assert.Contains("health-insurance", result.Benefits);
+        Assert.Contains("training", result.Benefits);
+    }
 }

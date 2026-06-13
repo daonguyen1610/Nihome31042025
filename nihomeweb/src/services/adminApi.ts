@@ -181,6 +181,7 @@ export interface UpsertJobPositionRequest {
   experienceLevel: string;
   description?: string;
   requirements: string[];
+  benefits: string[];
   isActive: boolean;
   sortOrder: number;
 }
@@ -194,9 +195,27 @@ export interface JobPositionResponse {
   experienceLevel: string;
   description?: string;
   requirements: string[];
+  benefits: string[];
   isActive: boolean;
   sortOrder: number;
   applicationCount: number;
+}
+
+export interface UpsertRecruitmentDropdownOptionRequest {
+  type: string;
+  code: string;
+  name: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface RecruitmentDropdownOptionResponse {
+  id: number;
+  type: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 export interface JobApplicationResponse {
@@ -437,6 +456,16 @@ export const adminApi = {
     api.put<EmploymentTypeResponse>(`/employment-types/${id}`, data),
   deleteEmploymentType: (id: number) =>
     api.delete(`/employment-types/${id}`),
+
+  // Recruitment dropdown options (experience-level, benefit)
+  getRecruitmentDropdownOptions: (type: string, includeInactive = false) =>
+    api.get<RecruitmentDropdownOptionResponse[]>(`/recruitment-dropdown-options?type=${encodeURIComponent(type)}&includeInactive=${includeInactive}`),
+  createRecruitmentDropdownOption: (data: UpsertRecruitmentDropdownOptionRequest) =>
+    api.post<RecruitmentDropdownOptionResponse>("/recruitment-dropdown-options", data),
+  updateRecruitmentDropdownOption: (id: number, data: UpsertRecruitmentDropdownOptionRequest) =>
+    api.put<RecruitmentDropdownOptionResponse>(`/recruitment-dropdown-options/${id}`, data),
+  deleteRecruitmentDropdownOption: (id: number) =>
+    api.delete(`/recruitment-dropdown-options/${id}`),
 
   // News
   createNews: (data: UpsertNewsRequest) =>

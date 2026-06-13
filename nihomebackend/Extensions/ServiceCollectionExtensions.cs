@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ActivityService>();
         services.AddScoped<ActivityCategoryService>();
         services.AddScoped<EmploymentTypeService>();
+        services.AddScoped<RecruitmentDropdownOptionService>();
         services.AddScoped<JobPositionService>();
         services.AddScoped<JobApplicationService>();
         services.AddScoped<SiteSettingsService>();

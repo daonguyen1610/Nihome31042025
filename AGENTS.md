@@ -39,6 +39,15 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 
 ---
 
+## Git Branching
+
+* Always create a new branch before starting a task unless already on a task branch or instructed otherwise.
+* Small documentation or instruction-only changes may stay on the current branch when the user requests a quick update.
+* Branch from `main` unless instructed otherwise.
+* Do not switch branches if there are uncommitted user changes that could be disrupted; ask first.
+
+---
+
 ## Code Quality Rules
 
 * Keep code readable and maintainable.
@@ -78,6 +87,14 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 * Check `npm run lint` and fix the issues.
 * No hardcode like the category in the React. All need to fetch from the backend API to avoid the hardcode.
 * Follow the nihomeweb/CLAUDE.md for strictly developing the web UI application.
+
+---
+
+## Docker Development
+
+* This project runs in Docker. Do not run `dotnet` or database commands directly on the host.
+* Use `docker exec nihome31042025-backend <command>` for backend tasks.
+* Run migrations inside the container: `docker exec nihome31042025-backend dotnet ef migrations add <Name>`
 
 ---
 
@@ -155,13 +172,14 @@ curl -X GET http://localhost:5000/api/resource
 ### Backend
 
 ```bash
-dotnet build
+docker exec nihome31042025-backend dotnet build
+docker exec nihome31042025-backend dotnet format --verify-no-changes
 ```
 
 ### Frontend
 
 ```bash
-npm run build
+cd nihomeweb && npm run lint && npm run build
 ```
 
 ### Docker

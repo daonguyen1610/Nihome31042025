@@ -23,6 +23,8 @@ public class UpsertJobPositionRequest
 
     public List<string> Requirements { get; set; } = [];
 
+    public List<string> Benefits { get; set; } = [];
+
     public bool IsActive { get; set; } = true;
 
     public int SortOrder { get; set; }

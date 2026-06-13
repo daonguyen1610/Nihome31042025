@@ -36,6 +36,18 @@ function getExperienceLabel(value: string, t: (key: string) => string) {
   }
 }
 
+const EMP_TYPE_KEY_MAP: Record<string, string> = {
+  "full-time": "rec.empType.fullTime",
+  "part-time": "rec.empType.partTime",
+  "intern": "rec.empType.intern",
+};
+
+function getEmploymentTypeLabel(code: string, fallback: string, t: (key: string) => string) {
+  const key = EMP_TYPE_KEY_MAP[code];
+  if (key) return t(key);
+  return fallback || code;
+}
+
 const Recruitment = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -228,12 +240,12 @@ const Recruitment = () => {
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {position.location}</span>
-                      <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {employmentTypeMap.get(position.employmentType) ?? position.employmentType}</span>
+                      <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {getEmploymentTypeLabel(position.employmentType, employmentTypeMap.get(position.employmentType) ?? position.employmentType, t)}</span>
                       <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {getExperienceLabel(position.experienceLevel, t)}</span>
                     </div>
                     {position.requirements.length > 0 && (
                       <ul className="grid gap-2 text-sm text-muted-foreground">
-                        {position.requirements.slice(0, 4).map((requirement, index) => (
+                        {position.requirements.map((requirement, index) => (
                           <li key={`${position.id}-${index}`} className="flex gap-2">
                             <span className="text-primary">•</span>
                             <span>{requirement}</span>
