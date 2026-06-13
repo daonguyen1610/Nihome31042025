@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Mappings;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Responses;
@@ -12,16 +13,18 @@ public class AutoMapperProfileTests
 
     public AutoMapperProfileTests()
     {
-        var config = new MapperConfiguration(cfg =>
-            cfg.AddProfile<AutoMapperProfile>());
+        var config = new MapperConfiguration(
+            cfg => cfg.AddProfile<AutoMapperProfile>(),
+            NullLoggerFactory.Instance);
         _mapper = config.CreateMapper();
     }
 
     [Fact]
     public void Configuration_IsValid()
     {
-        var config = new MapperConfiguration(cfg =>
-            cfg.AddProfile<AutoMapperProfile>());
+        var config = new MapperConfiguration(
+            cfg => cfg.AddProfile<AutoMapperProfile>(),
+            NullLoggerFactory.Instance);
 
         config.AssertConfigurationIsValid();
     }
