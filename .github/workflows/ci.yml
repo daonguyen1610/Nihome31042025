@@ -9,6 +9,11 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -36,8 +41,33 @@ jobs:
         run: dotnet format --no-restore --verify-no-changes
 
       - name: Test
-        run: dotnet test --no-build -c Release --verbosity normal
+        run: dotnet test --no-build -c Release
+             --logger "trx;LogFileName=unit-results.trx"
+             --logger "junit;LogFileName=unit-results.xml"
+             --results-directory ../TestResults/unit
         working-directory: nihomebackend.tests
+
+      - name: Generate HTML report
+        if: always()
+        run: |
+          npx --yes xunit-viewer -r TestResults/unit/unit-results.xml -o TestResults/unit/unit-results.html -t "Backend unit tests"
+
+      - name: Publish test results to PR check
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend unit tests
+          path: TestResults/unit/unit-results.trx
+          reporter: dotnet-trx
+          fail-on-error: false
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-backend-results
+          path: TestResults/unit
+          if-no-files-found: ignore
 
   nihomebackend-integration:
     name: nihomebackend (integration tests)
@@ -65,7 +95,22 @@ jobs:
         run: dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
              --configuration Release
              --logger "trx;LogFileName=integration-results.trx"
+             --logger "junit;LogFileName=integration-results.xml"
              --results-directory TestResults
+
+      - name: Generate HTML report
+        if: always()
+        run: |
+          npx --yes xunit-viewer -r TestResults/integration-results.xml -o TestResults/integration-results.html -t "Backend integration tests"
+
+      - name: Publish test results to PR check
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Backend integration tests
+          path: TestResults/integration-results.trx
+          reporter: dotnet-trx
+          fail-on-error: false
 
       - name: Upload integration test results
         if: always()
@@ -153,6 +198,15 @@ jobs:
         env:
           BASE_URL: http://localhost:5043
         run: npx playwright test
+
+      - name: Publish Playwright results to PR check
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: E2E (Playwright)
+          path: nihomeweb/playwright-report/junit.xml
+          reporter: java-junit
+          fail-on-error: false
 
       - name: Upload Playwright artifacts
         if: always()
