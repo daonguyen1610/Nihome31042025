@@ -169,7 +169,8 @@ A task is only considered done correctly when:
 - durable context was written into the repo instead of left only in chat
 - no stale documentation was knowingly left behind
 - the result passes the review expectations in `docs/ai/frontend-playbook.md`
-- relevant checks were run or the skipped checks were explained
+- `npm run lint` and `npm run build` pass for the changed files
+- **writing frontend tests is NOT required** — do not create new test files for frontend work
 - **all new UI strings are translated and added to seed files** (see i18n rules above)
 - Claude and Codex would reach the same understanding by reading the repo docs alone
 

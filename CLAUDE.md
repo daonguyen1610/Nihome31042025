@@ -36,8 +36,6 @@ Read `AGENTS.md` before any non-trivial work in this repository.
 - **Always commit when a feature or bug fix is complete** — do not leave work uncommitted.
 - Write commit messages following the **50/72 rule**: subject ≤ 50 chars, body lines ≤ 72 chars.
 - Only stage files related to the commit — do not use `git add -A` blindly.
-- After committing, **create a pull request** targeting `main` using `gh pr create` with a descriptive title and body.
-- The development branch should be rebased onto `main` before the PR is opened.
 
 ### Quality gates — run before closing any task
 ```bash

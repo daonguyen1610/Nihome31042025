@@ -192,11 +192,8 @@ Every response MUST include:
 * Focus on practical solutions
 * Highlight risks when needed
 
-## Git commit and push
+## Git commit
 
-* When done about a feature, or bugs fix then automate write commit message and push automatically
-* Please write the git commit follow 50/72 rule
-* Push commit seperate to main branch and create pull request to main branch, please automate to write unique brnnch and easy to remember
-* Only add files related to the commit you write.
-* Ensure the main always latest commit, and rebase the development branch targeting to the main branch
-* Automate create PRs in github using `gh pr create`
+* When a feature or bug fix is complete, commit the work.
+* Write commit messages following the 50/72 rule.
+* Only add files related to the commit — do not use `git add -A` blindly.
