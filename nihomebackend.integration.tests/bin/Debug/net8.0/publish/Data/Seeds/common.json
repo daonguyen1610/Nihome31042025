@@ -1,0 +1,626 @@
+[
+  {
+    "key": "common.search",
+    "category": "common",
+    "vi": "Tìm kiếm...",
+    "en": "Search...",
+    "zh": "搜索...",
+    "ja": "検索..."
+  },
+  {
+    "key": "common.error",
+    "category": "common",
+    "vi": "Đã xảy ra lỗi",
+    "en": "An error occurred",
+    "zh": "发生错误",
+    "ja": "エラーが発生しました"
+  },
+  {
+    "key": "common.loading",
+    "category": "common",
+    "vi": "Đang tải...",
+    "en": "Loading...",
+    "zh": "加载中...",
+    "ja": "読み込み中..."
+  },
+  {
+    "key": "common.save",
+    "category": "common",
+    "vi": "Lưu thay đổi",
+    "en": "Save changes",
+    "zh": "保存更改",
+    "ja": "変更を保存"
+  },
+  {
+    "key": "common.saving",
+    "category": "common",
+    "vi": "Đang lưu...",
+    "en": "Saving...",
+    "zh": "保存中...",
+    "ja": "保存中..."
+  },
+  {
+    "key": "common.cancel",
+    "category": "common",
+    "vi": "Huỷ",
+    "en": "Cancel",
+    "zh": "取消",
+    "ja": "キャンセル"
+  },
+  {
+    "key": "common.edit",
+    "category": "common",
+    "vi": "Sửa",
+    "en": "Edit",
+    "zh": "编辑",
+    "ja": "編集"
+  },
+  {
+    "key": "common.delete",
+    "category": "common",
+    "vi": "Xoá",
+    "en": "Delete",
+    "zh": "删除",
+    "ja": "削除"
+  },
+  {
+    "key": "common.view",
+    "category": "common",
+    "vi": "Xem",
+    "en": "View",
+    "zh": "查看",
+    "ja": "表示"
+  },
+  {
+    "key": "common.all",
+    "category": "common",
+    "vi": "Tất cả",
+    "en": "All",
+    "zh": "全部",
+    "ja": "すべて"
+  },
+  {
+    "key": "common.new",
+    "category": "common",
+    "vi": "Mới",
+    "en": "New",
+    "zh": "新",
+    "ja": "新規"
+  },
+  {
+    "key": "common.actions",
+    "category": "common",
+    "vi": "Thao tác",
+    "en": "Actions",
+    "zh": "操作",
+    "ja": "操作"
+  },
+  {
+    "key": "common.status",
+    "category": "common",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "状態"
+  },
+  {
+    "key": "common.date",
+    "category": "common",
+    "vi": "Ngày",
+    "en": "Date",
+    "zh": "日期",
+    "ja": "日付"
+  },
+  {
+    "key": "common.showing",
+    "category": "common",
+    "vi": "Hiển thị",
+    "en": "Showing",
+    "zh": "显示",
+    "ja": "表示中"
+  },
+  {
+    "key": "common.readMore",
+    "category": "common",
+    "vi": "Đọc tiếp",
+    "en": "Read more",
+    "zh": "阅读更多",
+    "ja": "続きを読む"
+  },
+  {
+    "key": "common.viewAll",
+    "category": "common",
+    "vi": "Xem tất cả",
+    "en": "View all",
+    "zh": "查看全部",
+    "ja": "すべて表示"
+  },
+  {
+    "key": "common.exportExcel",
+    "category": "common",
+    "vi": "Xuất Excel",
+    "en": "Export Excel",
+    "zh": "导出 Excel",
+    "ja": "Excel エクスポート"
+  },
+  {
+    "key": "common.viewDetail",
+    "category": "common",
+    "vi": "Xem chi tiết",
+    "en": "View details",
+    "zh": "查看详情",
+    "ja": "詳細を見る"
+  },
+  {
+    "key": "common.back",
+    "category": "common",
+    "vi": "Quay lại",
+    "en": "Back",
+    "zh": "返回",
+    "ja": "戻る"
+  },
+  {
+    "key": "common.notFound",
+    "category": "common",
+    "vi": "Không tìm thấy",
+    "en": "Not found",
+    "zh": "未找到",
+    "ja": "見つかりません"
+  },
+  {
+    "key": "common.noResults",
+    "category": "common",
+    "vi": "Không có kết quả phù hợp.",
+    "en": "No matching results.",
+    "zh": "没有匹配的结果。",
+    "ja": "一致する結果がありません。"
+  },
+  {
+    "key": "common.contactNow",
+    "category": "common",
+    "vi": "Liên hệ ngay",
+    "en": "Contact us",
+    "zh": "立即联系",
+    "ja": "お問い合わせ"
+  },
+  {
+    "key": "common.retry",
+    "category": "common",
+    "vi": "Thử lại",
+    "en": "Retry",
+    "zh": "重试",
+    "ja": "再試行"
+  },
+  {
+    "key": "common.refresh",
+    "category": "common",
+    "vi": "Tải lại",
+    "en": "Refresh",
+    "zh": "刷新",
+    "ja": "更新"
+  },
+  {
+    "key": "common.empty",
+    "category": "common",
+    "vi": "Chưa có dữ liệu",
+    "en": "No data",
+    "zh": "暂无数据",
+    "ja": "データがありません"
+  },
+  {
+    "key": "common.reset",
+    "category": "common",
+    "vi": "Xoá bộ lọc",
+    "en": "Reset filters",
+    "zh": "重置筛选",
+    "ja": "フィルターをリセット"
+  },
+  {
+    "key": "common.rowsPerPage",
+    "category": "common",
+    "vi": "Số dòng / trang",
+    "en": "Rows per page",
+    "zh": "每页行数",
+    "ja": "1ページあたりの行数"
+  },
+  {
+    "key": "site.nav.home",
+    "category": "site",
+    "vi": "Trang chủ",
+    "en": "Home",
+    "zh": "首页",
+    "ja": "ホーム"
+  },
+  {
+    "key": "site.nav.profile",
+    "category": "site",
+    "vi": "Giới thiệu",
+    "en": "About",
+    "zh": "关于我们",
+    "ja": "会社概要"
+  },
+  {
+    "key": "site.nav.services",
+    "category": "site",
+    "vi": "Dịch vụ",
+    "en": "Services",
+    "zh": "服务",
+    "ja": "サービス"
+  },
+  {
+    "key": "site.nav.projects",
+    "category": "site",
+    "vi": "Dự án",
+    "en": "Projects",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "site.nav.news",
+    "category": "site",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
+  },
+  {
+    "key": "site.nav.activities",
+    "category": "site",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "活動"
+  },
+  {
+    "key": "site.nav.clients",
+    "category": "site",
+    "vi": "Khách hàng",
+    "en": "Clients",
+    "zh": "客户",
+    "ja": "クライアント"
+  },
+  {
+    "key": "site.nav.recruitment",
+    "category": "site",
+    "vi": "Tuyển dụng",
+    "en": "Careers",
+    "zh": "招聘",
+    "ja": "採用情報"
+  },
+  {
+    "key": "site.nav.contact",
+    "category": "site",
+    "vi": "Liên hệ",
+    "en": "Contact",
+    "zh": "联系",
+    "ja": "お問い合わせ"
+  },
+  {
+    "key": "site.nav.search",
+    "category": "site",
+    "vi": "Tìm kiếm",
+    "en": "Search",
+    "zh": "搜索",
+    "ja": "検索"
+  },
+  {
+    "key": "site.nav.login",
+    "category": "site",
+    "vi": "Đăng nhập",
+    "en": "Login",
+    "zh": "登录",
+    "ja": "ログイン"
+  },
+  {
+    "key": "site.nav.menu",
+    "category": "site",
+    "vi": "Menu",
+    "en": "Menu",
+    "zh": "菜单",
+    "ja": "メニュー"
+  },
+  {
+    "key": "nf.title",
+    "category": "nf",
+    "vi": "Không tìm thấy trang",
+    "en": "Page not found",
+    "zh": "页面未找到",
+    "ja": "ページが見つかりません"
+  },
+  {
+    "key": "nf.home",
+    "category": "nf",
+    "vi": "Về trang chủ",
+    "en": "Return to home",
+    "zh": "返回首页",
+    "ja": "ホームに戻る"
+  },
+  {
+    "key": "nf.oops",
+    "category": "nf",
+    "vi": "Rất tiếc! Không tìm thấy trang bạn yêu cầu.",
+    "en": "Oops! Page not found.",
+    "zh": "哎呀!找不到该页面。",
+    "ja": "申し訳ございません。ページが見つかりません。"
+  },
+  {
+    "key": "form.back",
+    "category": "form",
+    "vi": "Quay lại",
+    "en": "Back",
+    "zh": "返回",
+    "ja": "戻る"
+  },
+  {
+    "key": "form.create",
+    "category": "form",
+    "vi": "Tạo mới",
+    "en": "Create",
+    "zh": "新建",
+    "ja": "新規作成"
+  },
+  {
+    "key": "form.update",
+    "category": "form",
+    "vi": "Cập nhật",
+    "en": "Update",
+    "zh": "更新",
+    "ja": "更新"
+  },
+  {
+    "key": "form.created",
+    "category": "form",
+    "vi": "Đã tạo thành công",
+    "en": "Created successfully",
+    "zh": "创建成功",
+    "ja": "作成しました"
+  },
+  {
+    "key": "form.updated",
+    "category": "form",
+    "vi": "Đã cập nhật thành công",
+    "en": "Updated successfully",
+    "zh": "更新成功",
+    "ja": "更新しました"
+  },
+  {
+    "key": "form.deleted",
+    "category": "form",
+    "vi": "Đã xoá",
+    "en": "Deleted",
+    "zh": "已删除",
+    "ja": "削除しました"
+  },
+  {
+    "key": "form.confirmDelete",
+    "category": "form",
+    "vi": "Bạn có chắc muốn xoá mục này?",
+    "en": "Are you sure you want to delete this?",
+    "zh": "确定要删除此项吗？",
+    "ja": "このアイテムを削除してもよろしいですか？"
+  },
+  {
+    "key": "form.error",
+    "category": "form",
+    "vi": "Đã xảy ra lỗi",
+    "en": "Something went wrong",
+    "zh": "出现错误",
+    "ja": "エラーが発生しました"
+  },
+  {
+    "key": "form.saved",
+    "category": "form",
+    "vi": "Đã lưu",
+    "en": "Saved",
+    "zh": "已保存",
+    "ja": "保存しました"
+  },
+  {
+    "key": "form.required",
+    "category": "form",
+    "vi": "Bắt buộc",
+    "en": "Required",
+    "zh": "必填",
+    "ja": "必須"
+  },
+  {
+    "key": "form.basicInfo",
+    "category": "form",
+    "vi": "Thông tin cơ bản",
+    "en": "Basic information",
+    "zh": "基本信息",
+    "ja": "基本情報"
+  },
+  {
+    "key": "form.media",
+    "category": "form",
+    "vi": "Hình ảnh & Media",
+    "en": "Image & Media",
+    "zh": "图片与媒体",
+    "ja": "画像とメディア"
+  },
+  {
+    "key": "form.content",
+    "category": "form",
+    "vi": "Nội dung chi tiết",
+    "en": "Detailed content",
+    "zh": "详细内容",
+    "ja": "詳細内容"
+  },
+  {
+    "key": "form.preview",
+    "category": "form",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "media.featured.change",
+    "category": "media",
+    "vi": "Thay đổi ảnh",
+    "en": "Change image",
+    "zh": "更换图片",
+    "ja": "画像を変更"
+  },
+  {
+    "key": "media.featured.changeAnother",
+    "category": "media",
+    "vi": "Đổi ảnh khác",
+    "en": "Pick another image",
+    "zh": "更换其他图片",
+    "ja": "別の画像を選択"
+  },
+  {
+    "key": "media.featured.empty.title",
+    "category": "media",
+    "vi": "Bấm để chọn ảnh đại diện",
+    "en": "Click to select featured image",
+    "zh": "点击选择封面图片",
+    "ja": "アイキャッチ画像を選択"
+  },
+  {
+    "key": "media.featured.empty.hint",
+    "category": "media",
+    "vi": "JPG, PNG, WEBP (tối đa 5MB)",
+    "en": "JPG, PNG, WEBP (max 5MB)",
+    "zh": "JPG、PNG、WEBP(最大 5MB)",
+    "ja": "JPG, PNG, WEBP(最大 5MB)"
+  },
+  {
+    "key": "media.featured.pendingBadge",
+    "category": "media",
+    "vi": "Chưa lưu",
+    "en": "Unsaved",
+    "zh": "未保存",
+    "ja": "未保存"
+  },
+  {
+    "key": "media.featured.pendingHint",
+    "category": "media",
+    "vi": "Đã chọn: {name} — bấm \"Cập nhật\" để lưu.",
+    "en": "Selected: {name} — click \"Update\" to save.",
+    "zh": "已选择:{name} — 点击“更新”保存。",
+    "ja": "選択中: {name} — 「更新」を押して保存。"
+  },
+  {
+    "key": "media.featured.cancelPending",
+    "category": "media",
+    "vi": "Hủy ảnh đang chọn",
+    "en": "Cancel selected image",
+    "zh": "取消已选图片",
+    "ja": "選択をキャンセル"
+  },
+  {
+    "key": "media.url.toggle",
+    "category": "media",
+    "vi": "Hoặc dán URL ảnh từ internet",
+    "en": "Or paste an image URL from the internet",
+    "zh": "或粘贴互联网图片 URL",
+    "ja": "またはインターネットの画像 URL を貼り付け"
+  },
+  {
+    "key": "media.url.toggleWithVideo",
+    "category": "media",
+    "vi": "Hoặc dán URL ảnh/video từ internet",
+    "en": "Or paste an image/video URL from the internet",
+    "zh": "或粘贴互联网图片/视频 URL",
+    "ja": "またはインターネットの画像/動画 URL を貼り付け"
+  },
+  {
+    "key": "media.url.placeholder",
+    "category": "media",
+    "vi": "https://... hoặc /images/upload/...",
+    "en": "https://... or /images/upload/...",
+    "zh": "https://... 或 /images/upload/...",
+    "ja": "https://... または /images/upload/..."
+  },
+  {
+    "key": "media.url.add",
+    "category": "media",
+    "vi": "Thêm URL",
+    "en": "Add URL",
+    "zh": "添加 URL",
+    "ja": "URL を追加"
+  },
+  {
+    "key": "media.gallery.title",
+    "category": "media",
+    "vi": "Thư viện ảnh",
+    "en": "Image gallery",
+    "zh": "图片库",
+    "ja": "画像ギャラリー"
+  },
+  {
+    "key": "media.gallery.descPost",
+    "category": "media",
+    "vi": "Tải lên nhiều hình ảnh phụ cho bài đăng.",
+    "en": "Upload additional images for this post.",
+    "zh": "为此帖子上传多张附加图片。",
+    "ja": "この投稿に追加の画像をアップロード。"
+  },
+  {
+    "key": "media.gallery.descProject",
+    "category": "media",
+    "vi": "Tải lên nhiều hình ảnh phụ cho dự án.",
+    "en": "Upload additional images for this project.",
+    "zh": "为此项目上传多张附加图片。",
+    "ja": "このプロジェクトに追加の画像をアップロード。"
+  },
+  {
+    "key": "media.gallery.uploadMulti",
+    "category": "media",
+    "vi": "Tải nhiều ảnh",
+    "en": "Upload multiple",
+    "zh": "批量上传",
+    "ja": "複数アップロード"
+  },
+  {
+    "key": "media.gallery.uploading",
+    "category": "media",
+    "vi": "Đang tải...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "media.gallery.empty",
+    "category": "media",
+    "vi": "Chưa có ảnh nào. Bấm \"Tải nhiều ảnh\" để thêm.",
+    "en": "No images yet. Click \"Upload multiple\" to add.",
+    "zh": "尚无图片。点击“批量上传”添加。",
+    "ja": "画像がまだありません。「複数アップロード」で追加。"
+  },
+  {
+    "key": "media.gallery.delete",
+    "category": "media",
+    "vi": "Xóa",
+    "en": "Delete",
+    "zh": "删除",
+    "ja": "削除"
+  },
+  {
+    "key": "media.gallery.countToast",
+    "category": "media",
+    "vi": "{count} ảnh",
+    "en": "{count} image(s)",
+    "zh": "{count} 张图片",
+    "ja": "{count} 枚の画像"
+  },
+  {
+    "key": "common.prev",
+    "category": "common",
+    "vi": "Trước",
+    "en": "Previous",
+    "zh": "上一个",
+    "ja": "前へ"
+  },
+  {
+    "key": "common.next",
+    "category": "common",
+    "vi": "Sau",
+    "en": "Next",
+    "zh": "下一个",
+    "ja": "次へ"
+  }
+]

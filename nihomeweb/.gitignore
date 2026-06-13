@@ -26,6 +26,11 @@ dist-ssr
 # Build output
 .next/
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Local environment files
 # .env
 # .env*.local

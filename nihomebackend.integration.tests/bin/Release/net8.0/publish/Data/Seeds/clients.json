@@ -1,0 +1,162 @@
+[
+  {
+    "key": "cli.eyebrow",
+    "category": "cli",
+    "vi": "Khách hàng – Đối tác – Nhà cung cấp",
+    "en": "Clients – Partners – Suppliers",
+    "zh": "客户 – 合作伙伴 – 供应商",
+    "ja": "クライアント – パートナー – サプライヤー"
+  },
+  {
+    "key": "cli.title",
+    "category": "cli",
+    "vi": "Niềm tin được xây dựng qua từng dự án.",
+    "en": "Trust built one project at a time.",
+    "zh": "信任在每个项目中累积。",
+    "ja": "プロジェクトごとに築かれる信頼。"
+  },
+  {
+    "key": "cli.desc",
+    "category": "cli",
+    "vi": "Hơn 80 doanh nghiệp trong và ngoài nước đã tin tưởng lựa chọn NICON, cùng mạng lưới đối tác KCN và nhà cung cấp vật tư hàng đầu Việt Nam.",
+    "en": "Over 80 domestic and international businesses trust NICON, alongside leading IP partners and material suppliers in Vietnam.",
+    "zh": "超过80家国内外企业信任 NICON,以及越南顶级的工业园合作伙伴与材料供应商网络。",
+    "ja": "国内外80社以上の企業がNICONを信頼。ベトナムの主要工業団地パートナーや資材サプライヤーとも連携しています。"
+  },
+  {
+    "key": "cli.tab.clients",
+    "category": "cli",
+    "vi": "Khách hàng",
+    "en": "Clients",
+    "zh": "客户",
+    "ja": "クライアント"
+  },
+  {
+    "key": "cli.tab.partners",
+    "category": "cli",
+    "vi": "Đối tác",
+    "en": "Partners",
+    "zh": "合作伙伴",
+    "ja": "パートナー"
+  },
+  {
+    "key": "cli.tab.suppliers",
+    "category": "cli",
+    "vi": "Nhà cung cấp",
+    "en": "Suppliers",
+    "zh": "供应商",
+    "ja": "サプライヤー"
+  },
+  {
+    "key": "cli.stat.clients",
+    "category": "cli",
+    "vi": "Khách hàng",
+    "en": "Clients",
+    "zh": "客户",
+    "ja": "クライアント"
+  },
+  {
+    "key": "cli.stat.countries",
+    "category": "cli",
+    "vi": "Quốc gia",
+    "en": "Countries",
+    "zh": "国家",
+    "ja": "国"
+  },
+  {
+    "key": "cli.stat.repeat",
+    "category": "cli",
+    "vi": "Khách quay lại",
+    "en": "Returning clients",
+    "zh": "回头客",
+    "ja": "リピート顧客"
+  },
+  {
+    "key": "cli.network.eyebrow",
+    "category": "cli",
+    "vi": "Mạng lưới NICON",
+    "en": "NICON network",
+    "zh": "NICON 网络",
+    "ja": "NICONのネットワーク"
+  },
+  {
+    "key": "cli.network.titleA",
+    "category": "cli",
+    "vi": "Cộng đồng",
+    "en": "Community of",
+    "zh": "的",
+    "ja": "の"
+  },
+  {
+    "key": "cli.testi.eyebrow",
+    "category": "cli",
+    "vi": "Họ nói về NICON",
+    "en": "What they say",
+    "zh": "客户评价",
+    "ja": "お客様の声"
+  },
+  {
+    "key": "cli.testi.titleA",
+    "category": "cli",
+    "vi": "Lời chứng thực",
+    "en": "Testimonials",
+    "zh": "客户证言",
+    "ja": "推薦の声"
+  },
+  {
+    "key": "cli.testi.titleB",
+    "category": "cli",
+    "vi": "từ khách hàng",
+    "en": "from clients",
+    "zh": "来自客户",
+    "ja": "お客様より"
+  },
+  {
+    "key": "cli.testi.q1",
+    "category": "cli",
+    "vi": "NICON đã đồng hành cùng chúng tôi từ giai đoạn ý tưởng đến khi nhà máy đi vào vận hành. Sự chuyên nghiệp và minh bạch của đội ngũ giúp dự án về đích đúng tiến độ.",
+    "en": "NICON walked with us from concept to plant operation. Their professionalism and transparency kept the project on schedule.",
+    "zh": "NICON 从概念阶段一直陪伴我们到工厂投产,团队的专业与透明让项目按时完工。",
+    "ja": "NICONは構想から稼働までずっと寄り添ってくれました。プロ意識と透明性のおかげで予定通りに完成しました。"
+  },
+  {
+    "key": "cli.testi.q2",
+    "category": "cli",
+    "vi": "Chúng tôi đặc biệt ấn tượng với khả năng quản lý chất lượng theo chuẩn quốc tế của NICON. Đây là đối tác chiến lược dài hạn của Bảo Minh Ân.",
+    "en": "We are especially impressed by NICON's international quality management. They are Bao Minh An's long-term strategic partner.",
+    "zh": "NICON 国际标准的质量管理给我们留下深刻印象,是Bao Minh An长期战略合作伙伴。",
+    "ja": "NICONの国際基準の品質管理に感銘を受けました。Bao Minh Anの長期戦略パートナーです。"
+  },
+  {
+    "key": "cli.testi.q3",
+    "category": "cli",
+    "vi": "Tổ hợp 250.000m² là một thử thách lớn, nhưng NICON đã chứng minh được năng lực quản lý dự án quy mô siêu lớn. Khuyến nghị mạnh mẽ.",
+    "en": "The 250,000m² complex was a major challenge, but NICON proved its capability in mega-scale project management. Highly recommended.",
+    "zh": "25万平方米的综合体是一项巨大挑战,NICON 证明了其超大规模项目管理能力。强烈推荐。",
+    "ja": "25万㎡の複合施設は大きな挑戦でしたが、NICONは超大規模プロジェクト管理の実力を示しました。強くお勧めします。"
+  },
+  {
+    "key": "cli.testi.r1",
+    "category": "cli",
+    "vi": "Giám đốc TriMas Việt Nam",
+    "en": "Director, TriMas Vietnam",
+    "zh": "TriMas 越南总经理",
+    "ja": "TriMasベトナム ディレクター"
+  },
+  {
+    "key": "cli.testi.r2",
+    "category": "cli",
+    "vi": "CEO Bảo Minh Ân Việt Nam",
+    "en": "CEO, Bao Minh An Vietnam",
+    "zh": "Bao Minh An 越南 CEO",
+    "ja": "Bao Minh An ベトナム CEO"
+  },
+  {
+    "key": "cli.testi.r3",
+    "category": "cli",
+    "vi": "Chủ đầu tư Lâm Hiệp Hưng",
+    "en": "Investor, Lam Hiep Hung",
+    "zh": "Lam Hiep Hung 投资方",
+    "ja": "Lam Hiep Hung 投資家"
+  }
+]

@@ -1,0 +1,674 @@
+[
+  {
+    "key": "home.hero.tag",
+    "category": "home",
+    "vi": "Đối tác phát triển · Từ 2003",
+    "en": "Partner of Development · Since 2003",
+    "zh": "发展伙伴 · 自2003年",
+    "ja": "発展のパートナー · 2003年から"
+  },
+  {
+    "key": "home.hero.title1",
+    "category": "home",
+    "vi": "Kiến tạo những",
+    "en": "Building",
+    "zh": "打造",
+    "ja": "創造する"
+  },
+  {
+    "key": "home.hero.title2",
+    "category": "home",
+    "vi": "không gian công nghiệp",
+    "en": "sustainable industrial spaces",
+    "zh": "可持续的工业空间",
+    "ja": "持続可能な工業空間"
+  },
+  {
+    "key": "home.hero.title3",
+    "category": "home",
+    "vi": "bền vững.",
+    "en": ".",
+    "zh": "。",
+    "ja": "。"
+  },
+  {
+    "key": "home.hero.desc",
+    "category": "home",
+    "vi": "Từ thiết kế đến thi công trọn gói. NICON đồng hành cùng chủ đầu tư xây dựng những nhà máy, nhà xưởng và công trình dân dụng đạt chuẩn quốc tế.",
+    "en": "From design to turnkey construction. NICON partners with investors to build factories, workshops and civil works that meet international standards.",
+    "zh": "从设计到全包施工。NICON 与投资方携手建造符合国际标准的工厂、车间与民用工程。",
+    "ja": "設計から一括施工まで。NICONは国際水準の工場・倉庫・民間建築を投資家と共に築きます。"
+  },
+  {
+    "key": "home.hero.cta1",
+    "category": "home",
+    "vi": "Khám phá dự án",
+    "en": "Explore projects",
+    "zh": "探索项目",
+    "ja": "プロジェクトを見る"
+  },
+  {
+    "key": "home.hero.cta2",
+    "category": "home",
+    "vi": "Liên hệ tư vấn",
+    "en": "Get consultation",
+    "zh": "联系咨询",
+    "ja": "ご相談ください"
+  },
+  {
+    "key": "home.hero.prevAlt",
+    "category": "home",
+    "vi": "Ảnh trước",
+    "en": "Previous slide",
+    "zh": "上一张",
+    "ja": "前へ"
+  },
+  {
+    "key": "home.hero.nextAlt",
+    "category": "home",
+    "vi": "Ảnh kế",
+    "en": "Next slide",
+    "zh": "下一张",
+    "ja": "次へ"
+  },
+  {
+    "key": "home.search.type",
+    "category": "home",
+    "vi": "Loại công trình",
+    "en": "Project type",
+    "zh": "工程类型",
+    "ja": "工事タイプ"
+  },
+  {
+    "key": "home.search.typeAll",
+    "category": "home",
+    "vi": "Tất cả loại hình",
+    "en": "All types",
+    "zh": "所有类型",
+    "ja": "すべて"
+  },
+  {
+    "key": "home.search.typeFactory",
+    "category": "home",
+    "vi": "Nhà máy",
+    "en": "Factory",
+    "zh": "工厂",
+    "ja": "工場"
+  },
+  {
+    "key": "home.search.typeWorkshop",
+    "category": "home",
+    "vi": "Nhà xưởng",
+    "en": "Workshop",
+    "zh": "车间",
+    "ja": "倉庫"
+  },
+  {
+    "key": "home.search.typeOffice",
+    "category": "home",
+    "vi": "Văn phòng",
+    "en": "Office",
+    "zh": "办公楼",
+    "ja": "オフィス"
+  },
+  {
+    "key": "home.search.scale",
+    "category": "home",
+    "vi": "Quy mô",
+    "en": "Scale",
+    "zh": "规模",
+    "ja": "規模"
+  },
+  {
+    "key": "home.search.scaleAll",
+    "category": "home",
+    "vi": "Mọi quy mô",
+    "en": "Any scale",
+    "zh": "全部规模",
+    "ja": "すべての規模"
+  },
+  {
+    "key": "home.search.location",
+    "category": "home",
+    "vi": "Địa điểm",
+    "en": "Location",
+    "zh": "地点",
+    "ja": "所在地"
+  },
+  {
+    "key": "home.search.locationAll",
+    "category": "home",
+    "vi": "Toàn quốc",
+    "en": "Nationwide",
+    "zh": "全国",
+    "ja": "全国"
+  },
+  {
+    "key": "home.search.button",
+    "category": "home",
+    "vi": "Tìm kiếm",
+    "en": "Search",
+    "zh": "搜索",
+    "ja": "検索"
+  },
+  {
+    "key": "home.stats.years",
+    "category": "home",
+    "vi": "Năm kinh nghiệm",
+    "en": "Years of experience",
+    "zh": "年经验",
+    "ja": "年の経験"
+  },
+  {
+    "key": "home.stats.projects",
+    "category": "home",
+    "vi": "Dự án hoàn thành",
+    "en": "Completed projects",
+    "zh": "已完成项目",
+    "ja": "完成プロジェクト"
+  },
+  {
+    "key": "home.stats.clients",
+    "category": "home",
+    "vi": "Khách hàng tin tưởng",
+    "en": "Trusting clients",
+    "zh": "信赖客户",
+    "ja": "信頼顧客"
+  },
+  {
+    "key": "home.stats.iso",
+    "category": "home",
+    "vi": "9001:2015 chứng nhận",
+    "en": "9001:2015 certified",
+    "zh": "9001:2015 认证",
+    "ja": "9001:2015 認証"
+  },
+  {
+    "key": "home.intro.eyebrow",
+    "category": "home",
+    "vi": "Về NICON",
+    "en": "About NICON",
+    "zh": "关于 NICON",
+    "ja": "NICONについて"
+  },
+  {
+    "key": "home.intro.titleA",
+    "category": "home",
+    "vi": "Đối tác của",
+    "en": "Partner of",
+    "zh": "发展的",
+    "ja": "発展の"
+  },
+  {
+    "key": "home.intro.titleB",
+    "category": "home",
+    "vi": "sự phát triển",
+    "en": "growth",
+    "zh": "合作伙伴",
+    "ja": "パートナー"
+  },
+  {
+    "key": "home.intro.p1",
+    "category": "home",
+    "vi": "“Khách hàng là tài sản của công ty” — NICON luôn đặt chất lượng dịch vụ lên hàng đầu và thiết lập chính sách chất lượng rõ ràng, nghiêm ngặt.",
+    "en": "“Customers are the company's assets” — NICON puts service quality first and establishes a clear, strict quality policy.",
+    "zh": "「客户是公司的资产」— NICON 将服务质量放在首位,并制定严格清晰的质量政策。",
+    "ja": "「お客様は会社の財産」— NICONはサービス品質を最優先に考え、明確で厳格な品質方針を掲げます。"
+  },
+  {
+    "key": "home.intro.p2",
+    "category": "home",
+    "vi": "Chúng tôi luôn tận tâm là đối tác tốt cho sự phát triển của khách hàng thông qua việc thiết kế và xây dựng các nhà máy với chất lượng tốt nhất và chi phí hợp lý nhất.",
+    "en": "We are committed to being a good partner for our clients' growth by designing and constructing factories with the best quality and most reasonable cost.",
+    "zh": "我们致力于通过以最佳品质与最合理成本设计建造工厂,成为客户成长道路上的好伙伴。",
+    "ja": "最高品質かつ最適コストの工場設計・建設を通じて、お客様の成長に寄り添うパートナーであり続けます。"
+  },
+  {
+    "key": "home.intro.cta",
+    "category": "home",
+    "vi": "Tìm hiểu câu chuyện",
+    "en": "Read our story",
+    "zh": "了解我们的故事",
+    "ja": "ストーリーを見る"
+  },
+  {
+    "key": "home.ongoing.eyebrow",
+    "category": "home",
+    "vi": "Dự án đang thực hiện",
+    "en": "Ongoing projects",
+    "zh": "进行中的项目",
+    "ja": "進行中のプロジェクト"
+  },
+  {
+    "key": "home.ongoing.titleA",
+    "category": "home",
+    "vi": "Những công trình",
+    "en": "Projects",
+    "zh": "正在塑造",
+    "ja": "未来を"
+  },
+  {
+    "key": "home.ongoing.titleB",
+    "category": "home",
+    "vi": "đang định hình",
+    "en": "shaping the",
+    "zh": "未来的",
+    "ja": "形作る"
+  },
+  {
+    "key": "home.ongoing.titleC",
+    "category": "home",
+    "vi": "tương lai",
+    "en": "future",
+    "zh": "工程",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "home.ongoing.titleEnd",
+    "category": "home",
+    "vi": ".",
+    "en": ".",
+    "zh": "。",
+    "ja": "。"
+  },
+  {
+    "key": "home.completed.eyebrow",
+    "category": "home",
+    "vi": "Dự án đã hoàn thành",
+    "en": "Completed projects",
+    "zh": "已完成的项目",
+    "ja": "完成プロジェクト"
+  },
+  {
+    "key": "home.completed.titleA",
+    "category": "home",
+    "vi": "Hơn 150 công trình",
+    "en": "Over 150 projects",
+    "zh": "超过150个项目",
+    "ja": "150以上のプロジェクト"
+  },
+  {
+    "key": "home.completed.titleB",
+    "category": "home",
+    "vi": "đã bàn giao",
+    "en": "delivered",
+    "zh": "已交付",
+    "ja": "を引き渡し"
+  },
+  {
+    "key": "home.completed.statusDone",
+    "category": "home",
+    "vi": "Hoàn thành",
+    "en": "Completed",
+    "zh": "已完成",
+    "ja": "完成"
+  },
+  {
+    "key": "home.cta.eyebrow",
+    "category": "home",
+    "vi": "Dịch vụ trọn gói",
+    "en": "Turnkey services",
+    "zh": "全包服务",
+    "ja": "ワンストップサービス"
+  },
+  {
+    "key": "home.cta.title",
+    "category": "home",
+    "vi": "Sẵn sàng bắt đầu dự án của bạn?",
+    "en": "Ready to start your project?",
+    "zh": "准备好启动您的项目了吗?",
+    "ja": "プロジェクトを始める準備はできましたか?"
+  },
+  {
+    "key": "home.cta.desc",
+    "category": "home",
+    "vi": "Hãy để NICON đồng hành cùng bạn từ những bước đầu tiên.",
+    "en": "Let NICON walk with you from day one.",
+    "zh": "让 NICON 从第一天起就与您同行。",
+    "ja": "最初の一歩からNICONがサポートします。"
+  },
+  {
+    "key": "home.cta.titleA",
+    "category": "home",
+    "vi": "Một đối tác.",
+    "en": "One partner.",
+    "zh": "一个伙伴。",
+    "ja": "一つのパートナー。"
+  },
+  {
+    "key": "home.cta.titleB",
+    "category": "home",
+    "vi": "Toàn bộ quá trình.",
+    "en": "The entire process.",
+    "zh": "完整的流程。",
+    "ja": "全工程をカバー。"
+  },
+  {
+    "key": "home.cta.body",
+    "category": "home",
+    "vi": "Từ khảo sát, lập dự toán, thiết kế, xin phép, thi công đến hoàn thiện và bàn giao — NICON cung cấp giải pháp xây dựng trọn gói tối ưu cho nhà xưởng, nhà máy và dự án dân dụng.",
+    "en": "From survey, estimate, design, permitting and construction to finishing and handover — NICON delivers turnkey solutions for workshops, factories and civil projects.",
+    "zh": "从勘察、预算、设计、许可、施工到精装与交付 — NICON 为车间、工厂与民用项目提供一站式解决方案。",
+    "ja": "調査・見積・設計・許可・施工から仕上げ・引渡しまで — NICONは倉庫・工場・民間建築の一括ソリューションを提供します。"
+  },
+  {
+    "key": "home.cta.button",
+    "category": "home",
+    "vi": "Khám phá dịch vụ",
+    "en": "Explore services",
+    "zh": "探索服务",
+    "ja": "サービスを見る"
+  },
+  {
+    "key": "home.activities.eyebrow",
+    "category": "home",
+    "vi": "Hoạt động gần đây",
+    "en": "Recent activities",
+    "zh": "近期活动",
+    "ja": "最近の活動"
+  },
+  {
+    "key": "home.activities.titleA",
+    "category": "home",
+    "vi": "Những khoảnh khắc",
+    "en": "Memorable",
+    "zh": "难忘的",
+    "ja": "心に残る"
+  },
+  {
+    "key": "home.activities.titleB",
+    "category": "home",
+    "vi": "đáng nhớ",
+    "en": "moments",
+    "zh": "瞬间",
+    "ja": "瞬間"
+  },
+  {
+    "key": "home.activities.viewAll",
+    "category": "home",
+    "vi": "Xem tất cả",
+    "en": "View all",
+    "zh": "查看全部",
+    "ja": "すべて表示"
+  },
+  {
+    "key": "home.partner.strategicEyebrow",
+    "category": "home",
+    "vi": "Đối tác chiến lược",
+    "en": "Strategic partner",
+    "zh": "战略合作伙伴",
+    "ja": "戦略的パートナー"
+  },
+  {
+    "key": "home.partner.strategicName",
+    "category": "home",
+    "vi": "Tập đoàn Mori",
+    "en": "Mori Group",
+    "zh": "Mori 集团",
+    "ja": "Moriグループ"
+  },
+  {
+    "key": "home.partner.strategicDesc",
+    "category": "home",
+    "vi": "Đối tác chính hợp tác với Nicon",
+    "en": "Primary partner of NICON",
+    "zh": "NICON 的主要合作伙伴",
+    "ja": "NICONの主要パートナー"
+  },
+  {
+    "key": "home.partner.brandEyebrow",
+    "category": "home",
+    "vi": "Đại diện thương hiệu",
+    "en": "Brand representative",
+    "zh": "品牌代表",
+    "ja": "ブランドレップ"
+  },
+  {
+    "key": "home.partner.brandName",
+    "category": "home",
+    "vi": "MORI Industry Group",
+    "en": "MORI Industry Group",
+    "zh": "MORI Industry Group",
+    "ja": "MORI Industry Group"
+  },
+  {
+    "key": "home.partner.brandDesc",
+    "category": "home",
+    "vi": "Cùng phát triển bền vững",
+    "en": "Sustainable growth together",
+    "zh": "携手可持续发展",
+    "ja": "共に持続可能な発展へ"
+  },
+  {
+    "key": "home.cat.industrial",
+    "category": "home",
+    "vi": "Industrial",
+    "en": "Industrial",
+    "zh": "工业",
+    "ja": "工業"
+  },
+  {
+    "key": "home.cat.manufacturing",
+    "category": "home",
+    "vi": "Manufacturing",
+    "en": "Manufacturing",
+    "zh": "制造业",
+    "ja": "製造業"
+  },
+  {
+    "key": "home.cat.public",
+    "category": "home",
+    "vi": "Public",
+    "en": "Public",
+    "zh": "公共",
+    "ja": "公共"
+  },
+  {
+    "key": "home.cat.logistics",
+    "category": "home",
+    "vi": "Logistics",
+    "en": "Logistics",
+    "zh": "物流",
+    "ja": "物流"
+  },
+  {
+    "key": "home.cat.interior",
+    "category": "home",
+    "vi": "Interior",
+    "en": "Interior",
+    "zh": "室内",
+    "ja": "内装"
+  },
+  {
+    "key": "home.cat.fnb",
+    "category": "home",
+    "vi": "F&B",
+    "en": "F&B",
+    "zh": "餐饮",
+    "ja": "F&B"
+  },
+  {
+    "key": "home.proj.bma.name",
+    "category": "home",
+    "vi": "Nhà Máy BMA",
+    "en": "BMA Factory",
+    "zh": "BMA 工厂",
+    "ja": "BMA工場"
+  },
+  {
+    "key": "home.proj.bma.loc",
+    "category": "home",
+    "vi": "KCN Hựu Thạnh, Tây Ninh",
+    "en": "Huu Thanh IP, Tay Ninh",
+    "zh": "西宁省 Huu Thanh 工业园",
+    "ja": "タイニン省フウタイン工業団地"
+  },
+  {
+    "key": "home.proj.nbdc.name",
+    "category": "home",
+    "vi": "Nhà Xưởng NBDC",
+    "en": "NBDC Workshop",
+    "zh": "NBDC 车间",
+    "ja": "NBDC倉庫"
+  },
+  {
+    "key": "home.proj.nbdc.loc",
+    "category": "home",
+    "vi": "KCN Giang Điền",
+    "en": "Giang Dien IP",
+    "zh": "Giang Dien 工业园",
+    "ja": "ザンディエン工業団地"
+  },
+  {
+    "key": "home.proj.lhh.name",
+    "category": "home",
+    "vi": "Lâm Hiệp Hưng",
+    "en": "Lam Hiep Hung",
+    "zh": "Lam Hiep Hung",
+    "ja": "Lam Hiep Hung"
+  },
+  {
+    "key": "home.proj.lhh.loc",
+    "category": "home",
+    "vi": "Tỉnh Bình Dương",
+    "en": "Binh Duong Province",
+    "zh": "平阳省",
+    "ja": "ビンズン省"
+  },
+  {
+    "key": "home.proj.sports.name",
+    "category": "home",
+    "vi": "TT Thể Thao Thủ Đức",
+    "en": "Thu Duc Sports Center",
+    "zh": "守德体育中心",
+    "ja": "トゥドゥック スポーツセンター"
+  },
+  {
+    "key": "home.proj.sports.loc",
+    "category": "home",
+    "vi": "Thủ Đức, TP.HCM",
+    "en": "Thu Duc, HCMC",
+    "zh": "胡志明市守德区",
+    "ja": "ホーチミン市トゥドゥック区"
+  },
+  {
+    "key": "home.proj.trimas.name",
+    "category": "home",
+    "vi": "Nhà Máy Trimas Việt Nam",
+    "en": "Trimas Vietnam Factory",
+    "zh": "Trimas 越南工厂",
+    "ja": "Trimasベトナム工場"
+  },
+  {
+    "key": "home.proj.trimas.loc",
+    "category": "home",
+    "vi": "VSIP IIA, TP.HCM",
+    "en": "VSIP IIA, HCMC",
+    "zh": "胡志明市 VSIP IIA",
+    "ja": "ホーチミン市 VSIP IIA"
+  },
+  {
+    "key": "home.proj.apm.name",
+    "category": "home",
+    "vi": "Nhà Kho APM",
+    "en": "APM Warehouse",
+    "zh": "APM 仓库",
+    "ja": "APM倉庫"
+  },
+  {
+    "key": "home.proj.apm.loc",
+    "category": "home",
+    "vi": "KCN VN-Singapore",
+    "en": "VN-Singapore IP",
+    "zh": "越南-新加坡 工业园",
+    "ja": "ベトナム-シンガポール工業団地"
+  },
+  {
+    "key": "home.proj.b37.name",
+    "category": "home",
+    "vi": "Nội Thất Văn Phòng B37",
+    "en": "B37 Office Interior",
+    "zh": "B37 办公室内装",
+    "ja": "B37オフィス内装"
+  },
+  {
+    "key": "home.proj.b37.loc",
+    "category": "home",
+    "vi": "Thủ Đức, TP.HCM",
+    "en": "Thu Duc, HCMC",
+    "zh": "胡志明市守德区",
+    "ja": "ホーチミン市トゥドゥック区"
+  },
+  {
+    "key": "home.proj.stfm.name",
+    "category": "home",
+    "vi": "Nhà Máy STFM",
+    "en": "STFM Factory",
+    "zh": "STFM 工厂",
+    "ja": "STFM工場"
+  },
+  {
+    "key": "home.proj.stfm.loc",
+    "category": "home",
+    "vi": "VSIP II-A, Bình Dương",
+    "en": "VSIP II-A, Binh Duong",
+    "zh": "平阳 VSIP II-A",
+    "ja": "ビンズン VSIP II-A"
+  },
+  {
+    "key": "home.proj.scaleDesign",
+    "category": "home",
+    "vi": "Thiết kế",
+    "en": "Design",
+    "zh": "设计",
+    "ja": "設計"
+  },
+  {
+    "key": "home.act.bma.cat",
+    "category": "home",
+    "vi": "Sự kiện",
+    "en": "Event",
+    "zh": "活动",
+    "ja": "イベント"
+  },
+  {
+    "key": "home.act.bma.title",
+    "category": "home",
+    "vi": "Khởi công Dự án Nhà máy Bảo Minh Ân Việt Nam tại KCN Hựu Thạnh",
+    "en": "Groundbreaking of Bao Minh An Vietnam factory at Huu Thanh IP",
+    "zh": "Bao Minh An 越南工厂在 Huu Thanh 工业园奠基",
+    "ja": "Bao Minh AnベトナムがフウタインIPで起工"
+  },
+  {
+    "key": "home.act.bma.desc",
+    "category": "home",
+    "vi": "NICON tự hào chính thức khởi công dự án nhà máy 15.000 m² tại Tây Ninh.",
+    "en": "NICON proudly broke ground on a 15,000 m² factory project in Tay Ninh.",
+    "zh": "NICON 自豪启动位于西宁省的15,000㎡工厂项目。",
+    "ja": "NICONがタイニン省で15,000㎡工場の起工を執り行いました。"
+  },
+  {
+    "key": "home.act.turnkey.cat",
+    "category": "home",
+    "vi": "Dịch vụ",
+    "en": "Services",
+    "zh": "服务",
+    "ja": "サービス"
+  },
+  {
+    "key": "home.act.turnkey.title",
+    "category": "home",
+    "vi": "Dịch vụ xây dựng trọn gói NICON — Giải pháp tối ưu cho công trình",
+    "en": "NICON turnkey construction — Optimal solution for projects",
+    "zh": "NICON 全包施工 — 项目最佳解决方案",
+    "ja": "NICON一括施工 — プロジェクト最適ソリューション"
+  },
+  {
+    "key": "home.act.turnkey.desc",
+    "category": "home",
+    "vi": "Hình thức chủ đầu tư giao toàn bộ quá trình cho một đơn vị chuyên nghiệp.",
+    "en": "A model where investors entrust the entire process to a single professional.",
+    "zh": "投资方将整个过程交给一家专业单位的模式。",
+    "ja": "投資家がプロセス全体を一社に委ねる方式。"
+  }
+]
