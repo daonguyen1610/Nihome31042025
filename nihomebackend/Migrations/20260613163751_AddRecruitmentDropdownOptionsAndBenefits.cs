@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -16,7 +16,7 @@ namespace nihomebackend.Migrations
                 table: "job_positions",
                 type: "nvarchar(max)",
                 nullable: false,
-                defaultValue: "[]");
+                defaultValue: "");
 
             migrationBuilder.CreateTable(
                 name: "recruitment_dropdown_options",
