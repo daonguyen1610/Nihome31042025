@@ -11,6 +11,8 @@ public class JobPosition
     public string? Description { get; set; }
     /// <summary>JSON array of requirement strings.</summary>
     public string RequirementsJson { get; set; } = "[]";
+    /// <summary>JSON array of benefit codes.</summary>
+    public string BenefitsJson { get; set; } = "[]";
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

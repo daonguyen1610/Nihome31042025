@@ -459,6 +459,46 @@ namespace nihomebackend.Migrations
                     b.ToTable("employment_types", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.RecruitmentDropdownOption", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Type", "Code")
+                        .IsUnique();
+
+                    b.ToTable("recruitment_dropdown_options", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.EntityTranslation", b =>
                 {
                     b.Property<int>("Id")
@@ -583,6 +623,11 @@ namespace nihomebackend.Migrations
                     b.Property<string>("Location")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BenefitsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValue("[]");
 
                     b.Property<string>("RequirementsJson")
                         .IsRequired()

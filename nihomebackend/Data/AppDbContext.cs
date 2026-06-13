@@ -29,6 +29,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<JobPosition> JobPositions => Set<JobPosition>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
     public DbSet<EmploymentType> EmploymentTypes => Set<EmploymentType>();
+    public DbSet<RecruitmentDropdownOption> RecruitmentDropdownOptions => Set<RecruitmentDropdownOption>();
 
     // Contact
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
@@ -191,6 +192,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<EmploymentType>().ToTable("employment_types");
         modelBuilder.Entity<EmploymentType>().HasKey(e => e.Id);
         modelBuilder.Entity<EmploymentType>().HasIndex(e => e.Code).IsUnique();
+
+        modelBuilder.Entity<RecruitmentDropdownOption>().ToTable("recruitment_dropdown_options");
+        modelBuilder.Entity<RecruitmentDropdownOption>().HasKey(r => r.Id);
+        modelBuilder.Entity<RecruitmentDropdownOption>().HasIndex(r => new { r.Type, r.Code }).IsUnique();
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");
         modelBuilder.Entity<ContactMessage>().HasKey(c => c.Id);

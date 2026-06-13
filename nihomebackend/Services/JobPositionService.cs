@@ -62,6 +62,7 @@ public class JobPositionService(
             ExperienceLevel = req.ExperienceLevel,
             Description = req.Description?.Trim(),
             RequirementsJson = JsonSerializer.Serialize(req.Requirements, JsonOpts),
+            BenefitsJson = JsonSerializer.Serialize(req.Benefits, JsonOpts),
             IsActive = req.IsActive,
             SortOrder = req.SortOrder,
         };
@@ -86,6 +87,7 @@ public class JobPositionService(
         entity.ExperienceLevel = req.ExperienceLevel;
         entity.Description = req.Description?.Trim();
         entity.RequirementsJson = JsonSerializer.Serialize(req.Requirements, JsonOpts);
+        entity.BenefitsJson = JsonSerializer.Serialize(req.Benefits, JsonOpts);
         entity.IsActive = req.IsActive;
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
@@ -117,6 +119,10 @@ public class JobPositionService(
         }
         catch { reqs = []; }
 
+        List<string> benefits;
+        try { benefits = JsonSerializer.Deserialize<List<string>>(j.BenefitsJson) ?? []; }
+        catch { benefits = []; }
+
         return new JobPositionResponse
         {
             Id = j.Id,
@@ -127,6 +133,7 @@ public class JobPositionService(
             ExperienceLevel = j.ExperienceLevel,
             Description = t.TryGetValue("Description", out var desc) ? desc : j.Description,
             Requirements = reqs,
+            Benefits = benefits,
             IsActive = j.IsActive,
             SortOrder = j.SortOrder,
             ApplicationCount = j.Applications?.Count ?? 0,

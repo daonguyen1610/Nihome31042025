@@ -3,289 +3,320 @@ import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-rea
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi, type EmploymentTypeResponse } from "@/services/adminApi";
+import { adminApi, type EmploymentTypeResponse, type RecruitmentDropdownOptionResponse } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
-type EmploymentTypeFormData = {
-  code: string;
-  name: string;
-  isActive: boolean;
-  sortOrder: number;
-};
+type Tab = "employment" | "experience" | "benefit";
 
-const emptyForm: EmploymentTypeFormData = {
-  code: "",
-  name: "",
-  isActive: true,
-  sortOrder: 0,
-};
+type EmpTypeFormData = { code: string; name: string; isActive: boolean; sortOrder: number };
+type DropdownFormData = { code: string; name: string; isActive: boolean; sortOrder: number };
 
-const getErrorMessage = (error: unknown) => {
+const emptyEmp: EmpTypeFormData = { code: "", name: "", isActive: true, sortOrder: 0 };
+const emptyDrop: DropdownFormData = { code: "", name: "", isActive: true, sortOrder: 0 };
+
+function getErrorMessage(error: unknown) {
   if (
-    typeof error === "object" &&
-    error !== null &&
+    typeof error === "object" && error !== null &&
     "response" in error &&
-    typeof error.response === "object" &&
-    error.response !== null &&
-    "data" in error.response &&
-    typeof error.response.data === "object" &&
-    error.response.data !== null &&
-    "message" in error.response.data &&
-    typeof error.response.data.message === "string"
+    typeof (error as { response?: { data?: { message?: string } } }).response === "object"
   ) {
-    return error.response.data.message;
+    return (error as { response: { data?: { message?: string } } }).response?.data?.message;
   }
-
   return undefined;
-};
+}
 
 const EmploymentTypes = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const [items, setItems] = useState<EmploymentTypeResponse[]>([]);
-  const [q, setQ] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<EmploymentTypeFormData>(emptyForm);
+  const [activeTab, setActiveTab] = useState<Tab>("employment");
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // --- Employment types state ---
+  const [empItems, setEmpItems] = useState<EmploymentTypeResponse[]>([]);
+  const [empQ, setEmpQ] = useState("");
+  const [empLoading, setEmpLoading] = useState(true);
+  const [empSubmitting, setEmpSubmitting] = useState(false);
+  const [empEditingId, setEmpEditingId] = useState<number | null>(null);
+  const [empForm, setEmpForm] = useState<EmpTypeFormData>(emptyEmp);
+
+  // --- Dropdown options state (experience-level + benefit) ---
+  const [dropItems, setDropItems] = useState<RecruitmentDropdownOptionResponse[]>([]);
+  const [dropQ, setDropQ] = useState("");
+  const [dropLoading, setDropLoading] = useState(false);
+  const [dropSubmitting, setDropSubmitting] = useState(false);
+  const [dropEditingId, setDropEditingId] = useState<number | null>(null);
+  const [dropForm, setDropForm] = useState<DropdownFormData>(emptyDrop);
+
+  const dropType = activeTab === "experience" ? "experience-level" : "benefit";
+
+  // --- Loaders ---
+  const loadEmp = useCallback(async () => {
+    setEmpLoading(true);
     try {
-      const result = await adminApi.getEmploymentTypes(true);
-      setItems(result.data);
+      const res = await adminApi.getEmploymentTypes(true);
+      setEmpItems(res.data);
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
-      setLoading(false);
+      setEmpLoading(false);
     }
   }, [t, toast]);
 
+  const loadDrop = useCallback(async (type: string) => {
+    setDropLoading(true);
+    try {
+      const res = await adminApi.getRecruitmentDropdownOptions(type, true);
+      setDropItems(res.data);
+    } catch {
+      toast({ title: t("common.error"), variant: "destructive" });
+    } finally {
+      setDropLoading(false);
+    }
+  }, [t, toast]);
+
+  useEffect(() => { loadEmp(); }, [loadEmp]);
+
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (activeTab !== "employment") {
+      loadDrop(activeTab === "experience" ? "experience-level" : "benefit");
+      setDropEditingId(null);
+      setDropForm(emptyDrop);
+      setDropQ("");
+    }
+  }, [activeTab, loadDrop]);
 
-  const filtered = useMemo(() => {
-    const normalizedQ = q.trim().toLowerCase();
-    return items.filter((i) =>
-      i.name.toLowerCase().includes(normalizedQ) || i.code.toLowerCase().includes(normalizedQ),
-    );
-  }, [items, q]);
+  // --- Filtered lists ---
+  const filteredEmp = useMemo(() => {
+    const q = empQ.trim().toLowerCase();
+    return q ? empItems.filter((i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : empItems;
+  }, [empItems, empQ]);
 
-  const startCreate = () => {
-    setEditingId(null);
-    setForm({ ...emptyForm, sortOrder: items.length + 1 });
+  const filteredDrop = useMemo(() => {
+    const q = dropQ.trim().toLowerCase();
+    return q ? dropItems.filter((i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q)) : dropItems;
+  }, [dropItems, dropQ]);
+
+  // --- Employment type CRUD ---
+  const startEmpCreate = () => { setEmpEditingId(null); setEmpForm({ ...emptyEmp, sortOrder: empItems.length + 1 }); };
+  const startEmpEdit = (item: EmploymentTypeResponse) => {
+    setEmpEditingId(item.id);
+    setEmpForm({ code: item.code, name: item.name, isActive: item.isActive, sortOrder: item.sortOrder });
   };
-
-  const startEdit = (item: EmploymentTypeResponse) => {
-    setEditingId(item.id);
-    setForm({
-      code: item.code,
-      name: item.name,
-      isActive: item.isActive,
-      sortOrder: item.sortOrder,
-    });
-  };
-
-  const submitForm = async (e: React.FormEvent) => {
+  const submitEmp = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!form.code.trim() || !form.name.trim()) {
-      toast({ title: t("form.required"), description: "Mã và tên không được để trống", variant: "destructive" });
+    if (!empForm.code.trim() || !empForm.name.trim()) {
+      toast({ title: t("form.required"), description: t("empTypes.codeNameRequired"), variant: "destructive" });
       return;
     }
-
-    setSubmitting(true);
+    setEmpSubmitting(true);
     try {
-      const payload = {
-        code: form.code.trim(),
-        name: form.name.trim(),
-        isActive: form.isActive,
-        sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
-      };
-
-      if (editingId == null) {
-        await adminApi.createEmploymentType(payload);
-        toast({ title: t("form.created") });
-      } else {
-        await adminApi.updateEmploymentType(editingId, payload);
-        toast({ title: t("form.updated") });
-      }
-
-      setEditingId(null);
-      setForm(emptyForm);
-      await loadData();
-    } catch (error: unknown) {
-      toast({
-        title: t("common.error"),
-        description: getErrorMessage(error),
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
+      const payload = { code: empForm.code.trim(), name: empForm.name.trim(), isActive: empForm.isActive, sortOrder: empForm.sortOrder || 0 };
+      if (empEditingId == null) { await adminApi.createEmploymentType(payload); toast({ title: t("form.created") }); }
+      else { await adminApi.updateEmploymentType(empEditingId, payload); toast({ title: t("form.updated") }); }
+      setEmpEditingId(null); setEmpForm(emptyEmp); await loadEmp();
+    } catch (error) {
+      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
+    } finally { setEmpSubmitting(false); }
   };
-
-  const remove = async (item: EmploymentTypeResponse) => {
+  const removeEmp = async (item: EmploymentTypeResponse) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
-
     try {
       await adminApi.deleteEmploymentType(item.id);
-      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      setEmpItems((prev) => prev.filter((i) => i.id !== item.id));
       toast({ title: t("form.deleted") });
-    } catch (error: unknown) {
-      toast({
-        title: t("common.error"),
-        description: getErrorMessage(error),
-        variant: "destructive",
-      });
+    } catch (error) {
+      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
     }
   };
 
-  const handleExport = () => {
-    downloadCsv({
-      filename: createCsvFilename("admin-employment-types"),
-      columns: [
-        { header: "ID", value: "id" },
-        { header: "Mã", value: "code" },
-        { header: "Tên hiển thị", value: "name" },
-        { header: "Kích hoạt", value: (row) => (row.isActive ? "Yes" : "No") },
-        { header: "Thứ tự", value: "sortOrder" },
-      ],
-      rows: filtered,
-    });
+  // --- Dropdown option CRUD ---
+  const startDropCreate = () => { setDropEditingId(null); setDropForm({ ...emptyDrop, sortOrder: dropItems.length + 1 }); };
+  const startDropEdit = (item: RecruitmentDropdownOptionResponse) => {
+    setDropEditingId(item.id);
+    setDropForm({ code: item.code, name: item.name, isActive: item.isActive, sortOrder: item.sortOrder });
   };
+  const submitDrop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dropForm.code.trim() || !dropForm.name.trim()) {
+      toast({ title: t("form.required"), description: t("empTypes.codeNameRequired"), variant: "destructive" });
+      return;
+    }
+    setDropSubmitting(true);
+    try {
+      const payload = { type: dropType, code: dropForm.code.trim(), name: dropForm.name.trim(), isActive: dropForm.isActive, sortOrder: dropForm.sortOrder || 0 };
+      if (dropEditingId == null) { await adminApi.createRecruitmentDropdownOption(payload); toast({ title: t("form.created") }); }
+      else { await adminApi.updateRecruitmentDropdownOption(dropEditingId, payload); toast({ title: t("form.updated") }); }
+      setDropEditingId(null); setDropForm(emptyDrop); await loadDrop(dropType);
+    } catch (error) {
+      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
+    } finally { setDropSubmitting(false); }
+  };
+  const removeDrop = async (item: RecruitmentDropdownOptionResponse) => {
+    if (!window.confirm(t("form.confirmDelete"))) return;
+    try {
+      await adminApi.deleteRecruitmentDropdownOption(item.id);
+      setDropItems((prev) => prev.filter((i) => i.id !== item.id));
+      toast({ title: t("form.deleted") });
+    } catch (error) {
+      toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
+    }
+  };
+
+  // --- Export ---
+  const handleExport = () => {
+    if (activeTab === "employment") {
+      downloadCsv({ filename: createCsvFilename("employment-types"), columns: [
+        { header: "ID", value: "id" }, { header: t("empTypes.code"), value: "code" },
+        { header: t("empTypes.displayName"), value: "name" },
+        { header: t("empTypes.active"), value: (r: EmploymentTypeResponse) => r.isActive ? "Yes" : "No" },
+        { header: t("empTypes.sortOrder"), value: "sortOrder" },
+      ], rows: filteredEmp });
+    } else {
+      downloadCsv({ filename: createCsvFilename(`recruitment-${dropType}`), columns: [
+        { header: "ID", value: "id" }, { header: t("empTypes.code"), value: "code" },
+        { header: t("empTypes.displayName"), value: "name" },
+        { header: t("empTypes.active"), value: (r: RecruitmentDropdownOptionResponse) => r.isActive ? "Yes" : "No" },
+        { header: t("empTypes.sortOrder"), value: "sortOrder" },
+      ], rows: filteredDrop });
+    }
+  };
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "employment", label: t("empTypes.employmentTypes") },
+    { key: "experience", label: t("empTypes.experienceRequired") },
+    { key: "benefit", label: t("empTypes.benefits") },
+  ];
+
+  const addLabel = activeTab === "employment" ? t("empTypes.addType") : activeTab === "experience" ? t("empTypes.addExpLevel") : t("empTypes.addBenefit");
+  const isEmp = activeTab === "employment";
+  const loading = isEmp ? empLoading : dropLoading;
+  const filtered = isEmp ? filteredEmp : filteredDrop;
+  const total = isEmp ? empItems.length : dropItems.length;
+  const q = isEmp ? empQ : dropQ;
+  const setQ = isEmp ? setEmpQ : setDropQ;
 
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">Hình thức làm việc</h1>
+          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("empTypes.title")}</h1>
           <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {loading ? "..." : `${filtered.length} / ${items.length}`}
+            {loading ? "..." : `${filtered.length} / ${total}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
-          <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
-            <Plus className="w-4 h-4" /> Thêm hình thức
+          <button
+            onClick={isEmp ? startEmpCreate : startDropCreate}
+            className="admin-btn-primary inline-flex items-center gap-2"
+            type="button"
+          >
+            <Plus className="w-4 h-4" /> {addLabel}
           </button>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 border-b" style={{ borderColor: "hsl(var(--admin-border))" }}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className={[
+              "px-4 py-2.5 text-sm font-semibold border-b-2 transition -mb-px",
+              activeTab === tab.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            ].join(" ")}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Form */}
       <div className="admin-card p-5 mb-5">
-        <form onSubmit={submitForm} className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-4">
-          <input
-            value={form.code}
-            onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-            placeholder="Mã (vd: full-time)"
-            className="admin-input"
-            required
-          />
-          <input
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="Tên hiển thị (vd: Toàn thời gian)"
-            className="admin-input"
-            required
-          />
-          <input
-            type="number"
-            value={form.sortOrder}
-            onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
-            placeholder="Thứ tự"
-            className="admin-input"
-          />
-          <label className="inline-flex items-center gap-2 px-3 rounded-xl border" style={{ borderColor: "hsl(var(--admin-border))" }}>
-            <input
-              type="checkbox"
-              checked={form.isActive}
-              onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-            />
-            <span className="text-sm font-semibold">Kích hoạt</span>
-          </label>
-          <div className="flex items-center gap-2">
-            <button type="submit" className="admin-btn-primary" disabled={submitting}>
-              {editingId == null ? t("form.create") : t("form.update")}
-            </button>
-            {editingId != null && (
-              <button
-                type="button"
-                className="admin-btn-primary opacity-70"
-                onClick={() => {
-                  setEditingId(null);
-                  setForm(emptyForm);
-                }}
-              >
-                {t("common.cancel")}
-              </button>
-            )}
-          </div>
-        </form>
+        {isEmp ? (
+          <form onSubmit={submitEmp} className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-4">
+            <input value={empForm.code} onChange={(e) => setEmpForm((p) => ({ ...p, code: e.target.value }))} placeholder={t("empTypes.codePlaceholder")} className="admin-input" required />
+            <input value={empForm.name} onChange={(e) => setEmpForm((p) => ({ ...p, name: e.target.value }))} placeholder={t("empTypes.namePlaceholder")} className="admin-input" required />
+            <input type="number" value={empForm.sortOrder} onChange={(e) => setEmpForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} placeholder={t("empTypes.sortOrder")} className="admin-input" />
+            <label className="inline-flex items-center gap-2 px-3 rounded-xl border" style={{ borderColor: "hsl(var(--admin-border))" }}>
+              <input type="checkbox" checked={empForm.isActive} onChange={(e) => setEmpForm((p) => ({ ...p, isActive: e.target.checked }))} />
+              <span className="text-sm font-semibold">{t("empTypes.active")}</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <button type="submit" className="admin-btn-primary" disabled={empSubmitting}>{empEditingId == null ? t("form.create") : t("form.update")}</button>
+              {empEditingId != null && (
+                <button type="button" className="admin-btn-primary opacity-70" onClick={() => { setEmpEditingId(null); setEmpForm(emptyEmp); }}>{t("common.cancel")}</button>
+              )}
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={submitDrop} className="grid grid-cols-1 lg:grid-cols-5 gap-3 mb-4">
+            <input value={dropForm.code} onChange={(e) => setDropForm((p) => ({ ...p, code: e.target.value }))} placeholder={t("empTypes.codePlaceholder")} className="admin-input" required />
+            <input value={dropForm.name} onChange={(e) => setDropForm((p) => ({ ...p, name: e.target.value }))} placeholder={t("empTypes.namePlaceholder")} className="admin-input" required />
+            <input type="number" value={dropForm.sortOrder} onChange={(e) => setDropForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} placeholder={t("empTypes.sortOrder")} className="admin-input" />
+            <label className="inline-flex items-center gap-2 px-3 rounded-xl border" style={{ borderColor: "hsl(var(--admin-border))" }}>
+              <input type="checkbox" checked={dropForm.isActive} onChange={(e) => setDropForm((p) => ({ ...p, isActive: e.target.checked }))} />
+              <span className="text-sm font-semibold">{t("empTypes.active")}</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <button type="submit" className="admin-btn-primary" disabled={dropSubmitting}>{dropEditingId == null ? t("form.create") : t("form.update")}</button>
+              {dropEditingId != null && (
+                <button type="button" className="admin-btn-primary opacity-70" onClick={() => { setDropEditingId(null); setDropForm(emptyDrop); }}>{t("common.cancel")}</button>
+              )}
+            </div>
+          </form>
+        )}
 
         <div className="flex items-center gap-2 max-w-md">
           <SearchIcon className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Tìm theo mã hoặc tên"
-            className="admin-input flex-1"
-          />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("empTypes.searchPlaceholder")} className="admin-input flex-1" />
         </div>
       </div>
 
+      {/* Table */}
       <div className="admin-card overflow-hidden">
         <table className="w-full text-sm">
           <thead style={{ background: "hsl(var(--admin-bg))" }}>
             <tr className="text-left">
-              <th className="px-5 py-3 font-semibold">Mã</th>
-              <th className="px-5 py-3 font-semibold">Tên hiển thị</th>
-              <th className="px-5 py-3 font-semibold">Kích hoạt</th>
-              <th className="px-5 py-3 font-semibold">Thứ tự</th>
+              <th className="px-5 py-3 font-semibold">{t("empTypes.code")}</th>
+              <th className="px-5 py-3 font-semibold">{t("empTypes.displayName")}</th>
+              <th className="px-5 py-3 font-semibold">{t("empTypes.active")}</th>
+              <th className="px-5 py-3 font-semibold">{t("empTypes.sortOrder")}</th>
               <th className="px-5 py-3 font-semibold text-right">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                  Loading...
-                </td>
-              </tr>
+              <tr><td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                  Chưa có hình thức làm việc nào.
-                </td>
-              </tr>
-            ) : (
-              filtered.map((item) => (
+              <tr><td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>{t("empTypes.noData")}</td></tr>
+            ) : isEmp ? (
+              (filteredEmp).map((item) => (
                 <tr key={item.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
                   <td className="px-5 py-3 font-mono text-xs">{item.code}</td>
                   <td className="px-5 py-3 font-semibold">{item.name}</td>
-                  <td className="px-5 py-3">
-                    {item.isActive ? (
-                      <Check className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} />
-                    ) : (
-                      <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />
-                    )}
-                  </td>
+                  <td className="px-5 py-3">{item.isActive ? <Check className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} /> : <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />}</td>
                   <td className="px-5 py-3">{item.sortOrder}</td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => startEdit(item)}
-                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted mr-2"
-                    >
-                      <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
-                    </button>
-                    <button
-                      onClick={() => remove(item)}
-                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
-                      style={{ color: "hsl(var(--admin-danger))" }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
-                    </button>
+                    <button onClick={() => startEmpEdit(item)} className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted mr-2"><Pencil className="w-3.5 h-3.5" /> {t("common.edit")}</button>
+                    <button onClick={() => removeEmp(item)} className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted" style={{ color: "hsl(var(--admin-danger))" }}><Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}</button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              (filteredDrop).map((item) => (
+                <tr key={item.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                  <td className="px-5 py-3 font-mono text-xs">{item.code}</td>
+                  <td className="px-5 py-3 font-semibold">{item.name}</td>
+                  <td className="px-5 py-3">{item.isActive ? <Check className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} /> : <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />}</td>
+                  <td className="px-5 py-3">{item.sortOrder}</td>
+                  <td className="px-5 py-3 text-right">
+                    <button onClick={() => startDropEdit(item)} className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted mr-2"><Pencil className="w-3.5 h-3.5" /> {t("common.edit")}</button>
+                    <button onClick={() => removeDrop(item)} className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted" style={{ color: "hsl(var(--admin-danger))" }}><Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}</button>
                   </td>
                 </tr>
               ))

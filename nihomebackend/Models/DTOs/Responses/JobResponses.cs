@@ -10,6 +10,7 @@ public class JobPositionResponse
     public string ExperienceLevel { get; set; } = "";
     public string? Description { get; set; }
     public List<string> Requirements { get; set; } = [];
+    public List<string> Benefits { get; set; } = [];
     public bool IsActive { get; set; }
     public int SortOrder { get; set; }
     public int ApplicationCount { get; set; }

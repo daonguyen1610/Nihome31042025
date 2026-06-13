@@ -4,6 +4,7 @@ import {
   contentApi,
   type ActivityCategoryResponse,
   type EmploymentTypeResponse,
+  type RecruitmentDropdownOptionResponse,
   type ActivityResponse,
   type NewsResponse,
   type ProjectCategoryResponse,
@@ -13,9 +14,9 @@ import {
   type ProcessResponse,
   type SlideshowResponse,
   type ContactMessageResponse,
+  type JobPositionResponse,
 } from "@/services/contentApi";
 import { adminApi } from "@/services/adminApi";
-  import type { JobPositionResponse } from "@/services/contentApi";
 
 /* ------------------------------------------------------------------ */
 /*  Generic fetch hook with loading / error / data pattern            */
@@ -80,6 +81,20 @@ export function useEmploymentTypes(includeInactive = false) {
   return useFetch<EmploymentTypeResponse[]>(
     () => contentApi.getEmploymentTypes(includeInactive),
     [includeInactive],
+  );
+}
+
+export function useExperienceLevelOptions() {
+  return useFetch<RecruitmentDropdownOptionResponse[]>(
+    () => contentApi.getRecruitmentDropdownOptions("experience-level"),
+    [],
+  );
+}
+
+export function useBenefitOptions() {
+  return useFetch<RecruitmentDropdownOptionResponse[]>(
+    () => contentApi.getRecruitmentDropdownOptions("benefit"),
+    [],
   );
 }
 
