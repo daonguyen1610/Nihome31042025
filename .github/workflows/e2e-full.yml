@@ -1,6 +1,8 @@
 name: E2E Full
 
 on:
+  push:
+    branches: [main]
   schedule:
     # Daily at 02:00 UTC
     - cron: "0 2 * * *"
@@ -51,7 +53,7 @@ jobs:
         if: ${{ github.event.inputs.base_url == '' }}
         run: |
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:5043/api/projects > /dev/null; then
+            if curl -fsS http://localhost:5043/api/system/health > /dev/null; then
               echo "Backend is up"
               exit 0
             fi
