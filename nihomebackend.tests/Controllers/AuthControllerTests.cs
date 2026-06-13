@@ -56,8 +56,9 @@ public class AuthControllerTests : IDisposable
         _otpService = new OtpService(
             _db, Mock.Of<ILogger<OtpService>>(), emailServiceMock.Object);
 
-        var mapperConfig = new MapperConfiguration(cfg =>
-            cfg.AddProfile<AutoMapperProfile>());
+        var mapperConfig = new MapperConfiguration(
+            cfg => cfg.AddProfile<AutoMapperProfile>(),
+            Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
         _mapper = mapperConfig.CreateMapper();
 
         _sut = new AuthController(

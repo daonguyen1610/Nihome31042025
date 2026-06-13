@@ -75,7 +75,7 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddAuthorization();
-        services.AddAutoMapper(typeof(Mappings.AutoMapperProfile));
+        services.AddAutoMapper(cfg => cfg.AddProfile<Mappings.AutoMapperProfile>());
         services.AddScoped<PasswordService>();
         services.AddScoped<JwtService>();
         services.AddScoped<RefreshTokenService>();
