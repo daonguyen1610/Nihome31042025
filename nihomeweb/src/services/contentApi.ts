@@ -152,6 +152,15 @@ export interface EmploymentTypeResponse {
   sortOrder: number;
 }
 
+export interface RecruitmentDropdownOptionResponse {
+  id: number;
+  type: string;
+  code: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 export interface JobPositionResponse {
   id: number;
   title: string;
@@ -161,6 +170,7 @@ export interface JobPositionResponse {
   experienceLevel: string;
   description?: string;
   requirements: string[];
+  benefits: string[];
   isActive: boolean;
   sortOrder: number;
   applicationCount: number;
@@ -316,6 +326,9 @@ export const contentApi = {
 
   getEmploymentTypes: (includeInactive = false) =>
     api.get<EmploymentTypeResponse[]>(`/employment-types?includeInactive=${includeInactive}`),
+
+  getRecruitmentDropdownOptions: (type: string) =>
+    api.get<RecruitmentDropdownOptionResponse[]>(`/recruitment-dropdown-options?type=${encodeURIComponent(type)}`),
 
   // News
   getNews: (lang = "vi") =>

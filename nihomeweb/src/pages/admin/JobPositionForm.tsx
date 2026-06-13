@@ -5,7 +5,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
-import type { UpsertJobPositionRequest, JobPositionResponse, EmploymentTypeResponse } from "@/services/adminApi";
+import type { UpsertJobPositionRequest, JobPositionResponse, EmploymentTypeResponse, RecruitmentDropdownOptionResponse } from "@/services/adminApi";
 
 interface FormData {
   id: number;
@@ -16,6 +16,7 @@ interface FormData {
   experienceLevel: string;
   description: string;
   requirements: string[];
+  benefits: string[];
   isActive: boolean;
   sortOrder: number;
 }
@@ -26,9 +27,10 @@ const empty: FormData = {
   department: "",
   location: "",
   employmentType: "",
-  experienceLevel: "mid",
+  experienceLevel: "",
   description: "",
   requirements: [],
+  benefits: [],
   isActive: true,
   sortOrder: 0,
 };
@@ -43,6 +45,8 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const [submitting, setSubmitting] = useState(false);
   const [employmentTypes, setEmploymentTypes] = useState<EmploymentTypeResponse[]>([]);
   const [employmentTypesLoading, setEmploymentTypesLoading] = useState(true);
+  const [experienceLevels, setExperienceLevels] = useState<RecruitmentDropdownOptionResponse[]>([]);
+  const [benefitOptions, setBenefitOptions] = useState<RecruitmentDropdownOptionResponse[]>([]);
 
   useEffect(() => {
     setEmploymentTypesLoading(true);
@@ -50,6 +54,14 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
       .then((res) => setEmploymentTypes(res.data))
       .catch(() => setEmploymentTypes([]))
       .finally(() => setEmploymentTypesLoading(false));
+
+    adminApi.getRecruitmentDropdownOptions("experience-level", true)
+      .then((res) => setExperienceLevels(res.data))
+      .catch(() => setExperienceLevels([]));
+
+    adminApi.getRecruitmentDropdownOptions("benefit", true)
+      .then((res) => setBenefitOptions(res.data))
+      .catch(() => setBenefitOptions([]));
   }, []);
 
   useEffect(() => {
@@ -59,6 +71,14 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
     if (!firstType) return;
     update("employmentType", firstType.code);
   }, [mode, employmentTypes, data.employmentType]);
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (data.experienceLevel) return;
+    const firstLevel = experienceLevels.find((x) => x.isActive) ?? experienceLevels[0];
+    if (!firstLevel) return;
+    update("experienceLevel", firstLevel.code);
+  }, [mode, experienceLevels, data.experienceLevel]);
 
   useEffect(() => {
     if (mode !== "edit" || !idParam) return;
@@ -74,6 +94,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
           experienceLevel: pos.experienceLevel,
           description: pos.description ?? "",
           requirements: pos.requirements ?? [],
+          benefits: pos.benefits ?? [],
           isActive: pos.isActive,
           sortOrder: pos.sortOrder,
         });
@@ -94,6 +115,13 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const removeRequirement = (i: number) =>
     update("requirements", data.requirements.filter((_, idx) => idx !== i));
 
+  const toggleBenefit = (code: string) => {
+    const next = data.benefits.includes(code)
+      ? data.benefits.filter((b) => b !== code)
+      : [...data.benefits, code];
+    update("benefits", next);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.title.trim() || !data.department.trim() || !data.location.trim()) {
@@ -101,15 +129,15 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
       return;
     }
     if (employmentTypesLoading) {
-      toast({ title: "Đang tải hình thức làm việc", description: "Vui lòng thử lại sau vài giây.", variant: "destructive" });
+      toast({ title: t("recruit.jobForm.loadingTypes"), description: t("recruit.jobForm.loadingTypesDesc"), variant: "destructive" });
       return;
     }
     if (employmentTypes.length === 0) {
-      toast({ title: "Thiếu dữ liệu hình thức làm việc", description: "Vui lòng quản lý danh mục trước khi lưu vị trí tuyển dụng.", variant: "destructive" });
+      toast({ title: t("recruit.jobForm.missingTypes"), description: t("recruit.jobForm.missingTypesDesc"), variant: "destructive" });
       return;
     }
     if (!data.employmentType.trim()) {
-      toast({ title: t("form.required"), description: "Vui lòng chọn hình thức làm việc.", variant: "destructive" });
+      toast({ title: t("form.required"), description: t("recruit.jobForm.selectType"), variant: "destructive" });
       return;
     }
     const payload: UpsertJobPositionRequest = {
@@ -120,6 +148,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
       experienceLevel: data.experienceLevel,
       description: data.description || undefined,
       requirements: data.requirements.filter((r) => r.trim()),
+      benefits: data.benefits,
       isActive: data.isActive,
       sortOrder: data.sortOrder,
     };
@@ -161,7 +190,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
         </Link>
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {mode === "create" ? "Đăng vị trí tuyển dụng" : "Chỉnh sửa vị trí tuyển dụng"}
+            {mode === "create" ? t("recruit.jobForm.titleCreate") : t("recruit.jobForm.titleEdit")}
           </h1>
           {mode === "edit" && data.title && (
             <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{data.title}</p>
@@ -176,34 +205,34 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="Chức danh *" className="md:col-span-2">
+              <Field label={t("recruit.jobForm.positionTitle")} className="md:col-span-2">
                 <input
                   className="admin-input"
                   value={data.title}
                   onChange={(e) => update("title", e.target.value)}
-                  placeholder="Kỹ sư kết cấu, Kiến trúc sư..."
+                  placeholder={t("recruit.jobForm.positionTitlePlaceholder")}
                   required
                 />
               </Field>
-              <Field label="Phòng ban *">
+              <Field label={t("recruit.jobForm.department")}>
                 <input
                   className="admin-input"
                   value={data.department}
                   onChange={(e) => update("department", e.target.value)}
-                  placeholder="Thiết kế, Thi công..."
+                  placeholder={t("recruit.jobForm.departmentPlaceholder")}
                   required
                 />
               </Field>
-              <Field label="Địa điểm *">
+              <Field label={t("recruit.jobForm.location")}>
                 <input
                   className="admin-input"
                   value={data.location}
                   onChange={(e) => update("location", e.target.value)}
-                  placeholder="TP.HCM, Toàn quốc..."
+                  placeholder={t("recruit.jobForm.locationPlaceholder")}
                   required
                 />
               </Field>
-              <Field label="Hình thức làm việc">
+              <Field label={t("recruit.jobForm.employmentType")}>
                 <select
                   className="admin-input"
                   value={data.employmentType}
@@ -211,7 +240,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   required
                   disabled={employmentTypes.length === 0}
                 >
-                  {employmentTypes.length === 0 && <option value="">Chưa có dữ liệu</option>}
+                  {employmentTypes.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
                   {employmentTypes.map((type) => (
                     <option key={type.id} value={type.code}>
                       {type.name}
@@ -219,19 +248,22 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   ))}
                 </select>
                 <p className="text-xs mt-1.5" style={{ color: "hsl(var(--admin-muted))" }}>
-                  Quản lý danh mục tại <Link to="/admin/recruitment/employment-types" className="underline">Hình thức làm việc</Link>.
+                  {t("recruit.jobForm.manageAt")} <Link to="/admin/recruitment/employment-types" className="underline">{t("empTypes.employmentTypes")}</Link>.
                 </p>
               </Field>
-              <Field label="Kinh nghiệm yêu cầu">
+              <Field label={t("recruit.jobForm.experienceLevel")}>
                 <select
                   className="admin-input"
                   value={data.experienceLevel}
                   onChange={(e) => update("experienceLevel", e.target.value)}
+                  disabled={experienceLevels.length === 0}
                 >
-                  <option value="student">Sinh viên</option>
-                  <option value="junior">Mới ra trường (0–2 năm)</option>
-                  <option value="mid">Trung cấp (2–5 năm)</option>
-                  <option value="senior">Cao cấp (5+ năm)</option>
+                  {experienceLevels.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
+                  {experienceLevels.map((lvl) => (
+                    <option key={lvl.id} value={lvl.code}>
+                      {lvl.name}
+                    </option>
+                  ))}
                 </select>
               </Field>
             </div>
@@ -239,18 +271,18 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
           {/* Description */}
           <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">Mô tả công việc</h2>
+            <h2 className="font-bold mb-4">{t("recruit.jobForm.description")}</h2>
             <textarea
               className="admin-input min-h-28"
               value={data.description}
               onChange={(e) => update("description", e.target.value)}
-              placeholder="Mô tả chi tiết về vị trí, trách nhiệm công việc..."
+              placeholder={t("recruit.jobForm.descPlaceholder")}
             />
           </div>
 
           {/* Requirements */}
           <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">Yêu cầu ứng viên</h2>
+            <h2 className="font-bold mb-4">{t("recruit.jobForm.requirements")}</h2>
             <div className="space-y-2">
               {data.requirements.map((req, i) => (
                 <div key={i} className="flex gap-2">
@@ -258,7 +290,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                     className="admin-input flex-1"
                     value={req}
                     onChange={(e) => updateRequirement(i, e.target.value)}
-                    placeholder="Tốt nghiệp đại học chuyên ngành..."
+                    placeholder={t("recruit.jobForm.reqPlaceholder")}
                   />
                   <button
                     type="button"
@@ -276,16 +308,36 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                 className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-sm hover:bg-muted transition"
                 style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))" }}
               >
-                <Plus className="w-3.5 h-3.5" /> Thêm yêu cầu
+                <Plus className="w-3.5 h-3.5" /> {t("recruit.jobForm.addReq")}
               </button>
             </div>
           </div>
+
+          {/* Benefits */}
+          {benefitOptions.length > 0 && (
+            <div className="admin-card p-6">
+              <h2 className="font-bold mb-4">{t("recruit.jobForm.benefits")}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {benefitOptions.map((opt) => (
+                  <label key={opt.id} className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={data.benefits.includes(opt.code)}
+                      onChange={() => toggleBenefit(opt.code)}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-sm">{opt.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-5">
           <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">Cài đặt</h2>
+            <h2 className="font-bold mb-4">{t("recruit.jobForm.settings")}</h2>
             <div className="space-y-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -294,9 +346,9 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   onChange={(e) => update("isActive", e.target.checked)}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-sm font-medium">Đang tuyển dụng</span>
+                <span className="text-sm font-medium">{t("recruit.jobForm.isHiring")}</span>
               </label>
-              <Field label="Thứ tự hiển thị">
+              <Field label={t("recruit.jobForm.sortOrder")}>
                 <input
                   type="number"
                   className="admin-input"

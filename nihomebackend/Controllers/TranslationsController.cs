@@ -83,6 +83,7 @@ public class TranslationsController(
             new { type = EntityTypes.News, display = "News", fields = new[] { "Title", "Excerpt", "Content" } },
             new { type = EntityTypes.Project, display = "Projects", fields = new[] { "Name", "Description", "Challenges", "Solutions" } },
             new { type = EntityTypes.Service, display = "Services", fields = new[] { "Title", "ShortTitle", "Tagline", "Intro", "Sections" } },
+            new { type = EntityTypes.JobPosition, display = "Job Positions", fields = new[] { "Title", "Department", "Description", "Requirements" } },
         };
         return Ok(types);
     }
@@ -141,6 +142,16 @@ public class TranslationsController(
                     translationCount = translationCounts.GetValueOrDefault(s.Id, 0),
                     expectedFields = 5
                 }),
+            EntityTypes.JobPosition => (await db.JobPositions.AsNoTracking().OrderBy(j => j.SortOrder).ThenBy(j => j.Title).ToListAsync())
+                .Select(j => new
+                {
+                    id = j.Id,
+                    title = j.Title,
+                    description = j.Department,
+                    hasTranslation = translationCounts.ContainsKey(j.Id),
+                    translationCount = translationCounts.GetValueOrDefault(j.Id, 0),
+                    expectedFields = 4
+                }),
             _ => null
         };
 
@@ -175,6 +186,10 @@ public class TranslationsController(
             case EntityTypes.Service:
                 var svc = await db.ServiceItems.AsNoTracking().FirstOrDefaultAsync(s => s.Id == entityId);
                 if (svc != null) original = new() { ["Title"] = svc.Title, ["ShortTitle"] = svc.ShortTitle ?? "", ["Tagline"] = svc.Tagline ?? "", ["Intro"] = svc.Intro ?? "", ["Sections"] = svc.SectionsJson ?? "" };
+                break;
+            case EntityTypes.JobPosition:
+                var job = await db.JobPositions.AsNoTracking().FirstOrDefaultAsync(j => j.Id == entityId);
+                if (job != null) original = new() { ["Title"] = job.Title, ["Department"] = job.Department, ["Description"] = job.Description ?? "", ["Requirements"] = job.RequirementsJson };
                 break;
         }
 

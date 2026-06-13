@@ -10,11 +10,33 @@ import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
-const APP_STATUS: Record<string, { bg: string; color: string; label: string }> = {
-  new: { bg: "hsl(var(--admin-info-soft))", color: "hsl(var(--admin-info))", label: "Mới" },
-  interview: { bg: "hsl(var(--admin-warning-soft))", color: "hsl(var(--admin-warning))", label: "Phỏng vấn" },
-  hired: { bg: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))", label: "Đã tuyển" },
-  rejected: { bg: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))", label: "Từ chối" },
+const EMP_TYPE_KEY_MAP: Record<string, string> = {
+  "full-time": "rec.empType.fullTime",
+  "part-time": "rec.empType.partTime",
+  "intern": "rec.empType.intern",
+};
+
+function getEmploymentTypeLabel(code: string, fallback: string, t: (key: string) => string) {
+  const key = EMP_TYPE_KEY_MAP[code];
+  if (key) return t(key);
+  return fallback || code;
+}
+
+function getExperienceLabel(code: string, t: (key: string) => string) {
+  switch (code) {
+    case "student": return t("rec.exp.student");
+    case "junior": return t("rec.exp.junior");
+    case "mid": return t("rec.exp.mid");
+    case "senior": return t("rec.exp.senior");
+    default: return code;
+  }
+}
+
+const APP_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
+  new: { bg: "hsl(var(--admin-info-soft))", color: "hsl(var(--admin-info))" },
+  interview: { bg: "hsl(var(--admin-warning-soft))", color: "hsl(var(--admin-warning))" },
+  hired: { bg: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" },
+  rejected: { bg: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))" },
 };
 
 function getErrorMessage(error: unknown) {
@@ -22,7 +44,7 @@ function getErrorMessage(error: unknown) {
     const r = (error as { response?: { data?: { message?: string } } }).response;
     if (r?.data?.message) return r.data.message;
   }
-  return "Có lỗi xảy ra";
+  return undefined;
 }
 
 const AdminRecruitment = () => {
@@ -99,11 +121,11 @@ const AdminRecruitment = () => {
   }, [applications, appQuery]);
 
   const deletePosition = async (id: number, title: string) => {
-    if (!confirm(`Xóa vị trí "${title}"? Tất cả đơn ứng tuyển liên quan cũng sẽ bị xóa.`)) return;
+    if (!confirm(t("recruit.deletePositionConfirm").replace("{title}", title))) return;
     setDeletingId(id);
     try {
       await adminApi.deleteJobPosition(id);
-      toast({ title: "Đã xóa", description: title });
+      toast({ title: t("recruit.deleted"), description: title });
       loadPositions();
       loadApplications();
     } catch (error) {
@@ -117,18 +139,18 @@ const AdminRecruitment = () => {
     try {
       await adminApi.updateApplicationStatus(id, status);
       setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
-      toast({ title: "Cập nhật", description: APP_STATUS[status]?.label ?? status });
+      toast({ title: t("recruit.updated"), description: t(`recruit.status.${status}` as Parameters<typeof t>[0]) });
     } catch (error) {
       toast({ title: t("common.error"), description: getErrorMessage(error), variant: "destructive" });
     }
   };
 
   const deleteApp = async (id: number) => {
-    if (!confirm("Xóa đơn ứng tuyển này?")) return;
+    if (!confirm(t("recruit.deleteAppConfirm"))) return;
     try {
       await adminApi.deleteApplication(id);
       setApplications((prev) => prev.filter((a) => a.id !== id));
-      toast({ title: "Đã xóa" });
+      toast({ title: t("recruit.deleted") });
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     }
@@ -145,7 +167,7 @@ const AdminRecruitment = () => {
         { header: "Email", value: "email" },
         { header: "Phone", value: (row) => row.phone ?? "" },
         { header: t("recruit.position"), value: "positionTitle" },
-        { header: t("common.status"), value: (row) => APP_STATUS[row.status]?.label ?? row.status },
+        { header: t("common.status"), value: (row) => t(`recruit.status.${row.status}` as Parameters<typeof t>[0]) },
         {
           header: t("recruit.experience"),
           value: (row) => (row.experienceYears != null ? String(row.experienceYears) : ""),
@@ -164,7 +186,7 @@ const AdminRecruitment = () => {
         <div>
           <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("recruit.title")}</h1>
           <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {activeCount} {t("recruit.positions")} đang mở · {applications.length} {t("recruit.applications")}
+            {activeCount} {t("recruit.positions")} {t("recruit.positionsOpen")} · {applications.length} {t("recruit.applications")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -205,7 +227,7 @@ const AdminRecruitment = () => {
         </div>
       ) : filteredPositions.length === 0 ? (
         <div className="admin-card p-10 text-center mb-10" style={{ color: "hsl(var(--admin-muted))" }}>
-          {positions.length === 0 ? "Chưa có vị trí tuyển dụng nào." : t("common.noData")}
+          {positions.length === 0 ? t("recruit.noPositions") : t("common.noData")}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-10">
@@ -226,25 +248,23 @@ const AdminRecruitment = () => {
                       : { background: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))" }
                   }
                 >
-                  {p.isActive ? t("recruit.hiring") : "Đóng"}
+                  {p.isActive ? t("recruit.hiring") : t("recruit.closed")}
                 </span>
               </div>
               <h3 className="font-display text-lg font-extrabold mb-0.5">{p.title}</h3>
               <p className="text-xs mb-2" style={{ color: "hsl(var(--admin-muted))" }}>{p.department}</p>
               <div className="flex flex-wrap gap-2 mb-4">
                 <span className="admin-chip text-xs">
-                  {employmentTypeMap.get(p.employmentType) ?? p.employmentType}
+                  {getEmploymentTypeLabel(p.employmentType, employmentTypeMap.get(p.employmentType) ?? p.employmentType, t)}
                 </span>
-                <span className="admin-chip text-xs">
-                  {p.experienceLevel === "student" ? "Sinh viên" : p.experienceLevel === "junior" ? "0–2 năm" : p.experienceLevel === "mid" ? "2–5 năm" : "5+ năm"}
-                </span>
+                <span className="admin-chip text-xs">{getExperienceLabel(p.experienceLevel, t)}</span>
               </div>
               <div className="flex items-center justify-between mt-auto pt-4 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
                 <span className="text-xs flex items-center gap-1.5" style={{ color: "hsl(var(--admin-muted))" }}>
                   <MapPin className="w-3 h-3" /> {p.location}
                 </span>
                 <span className="text-xs font-bold flex items-center gap-1" style={{ color: "hsl(var(--admin-primary))" }}>
-                  <Users className="w-3 h-3" /> {p.applicationCount} ứng viên
+                  <Users className="w-3 h-3" /> {p.applicationCount} {t("recruit.candidateCount")}
                 </span>
               </div>
               <div className="flex gap-2 mt-3">
@@ -253,7 +273,7 @@ const AdminRecruitment = () => {
                   className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs rounded-lg border hover:bg-muted transition"
                   style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
-                  <Pencil className="w-3 h-3" /> Sửa
+                  <Pencil className="w-3 h-3" /> {t("recruit.edit")}
                 </Link>
                 <button
                   onClick={() => deletePosition(p.id, p.title)}
@@ -261,7 +281,7 @@ const AdminRecruitment = () => {
                   className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs rounded-lg border text-destructive hover:bg-destructive/10 transition disabled:opacity-50"
                   style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
-                  <Trash2 className="w-3 h-3" /> Xóa
+                  <Trash2 className="w-3 h-3" /> {t("recruit.delete")}
                 </button>
               </div>
             </div>
@@ -291,7 +311,7 @@ const AdminRecruitment = () => {
               value={filterPosition}
               onChange={(e) => setFilterPosition(e.target.value === "" ? "" : Number(e.target.value))}
             >
-              <option value="">Tất cả vị trí</option>
+              <option value="">{t("recruit.allPositions")}</option>
               {positions.map((p) => (
                 <option key={p.id} value={p.id}>{p.title}</option>
               ))}
@@ -304,11 +324,11 @@ const AdminRecruitment = () => {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
-              <option value="">Tất cả trạng thái</option>
-              <option value="new">Mới</option>
-              <option value="interview">Phỏng vấn</option>
-              <option value="hired">Đã tuyển</option>
-              <option value="rejected">Từ chối</option>
+              <option value="">{t("recruit.allStatuses")}</option>
+              <option value="new">{t("recruit.status.new")}</option>
+              <option value="interview">{t("recruit.status.interview")}</option>
+              <option value="hired">{t("recruit.status.hired")}</option>
+              <option value="rejected">{t("recruit.status.rejected")}</option>
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: "hsl(var(--admin-muted))" }} />
           </div>
@@ -322,7 +342,7 @@ const AdminRecruitment = () => {
           </div>
         ) : filteredApplications.length === 0 ? (
           <div className="p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-            {applications.length === 0 ? "Chưa có đơn ứng tuyển nào." : t("common.noData")}
+            {applications.length === 0 ? t("recruit.noApplications") : t("common.noData")}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -339,7 +359,7 @@ const AdminRecruitment = () => {
               </thead>
               <tbody>
                 {filteredApplications.map((a) => {
-                  const st = APP_STATUS[a.status] ?? APP_STATUS.new;
+                  const st = APP_STATUS_STYLE[a.status] ?? APP_STATUS_STYLE.new;
                   return (
                     <tr key={a.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
                       <td className="px-6 py-4">
@@ -359,7 +379,7 @@ const AdminRecruitment = () => {
                       </td>
                       <td className="px-6 py-4 font-medium">{a.positionTitle}</td>
                       <td className="px-6 py-4" style={{ color: "hsl(var(--admin-muted))" }}>
-                        {a.experienceYears != null ? `${a.experienceYears} năm` : "—"}
+                        {a.experienceYears != null ? `${a.experienceYears} ${t("recruit.expYears")}` : "—"}
                       </td>
                       <td className="px-6 py-4" style={{ color: "hsl(var(--admin-muted))" }}>
                         {new Date(a.appliedAt).toLocaleDateString("vi-VN")}
@@ -372,10 +392,10 @@ const AdminRecruitment = () => {
                             onChange={(e) => updateAppStatus(a.id, e.target.value)}
                             style={{ background: st.bg, color: st.color }}
                           >
-                            <option value="new">Mới</option>
-                            <option value="interview">Phỏng vấn</option>
-                            <option value="hired">Đã tuyển</option>
-                            <option value="rejected">Từ chối</option>
+                            <option value="new">{t("recruit.status.new")}</option>
+                            <option value="interview">{t("recruit.status.interview")}</option>
+                            <option value="hired">{t("recruit.status.hired")}</option>
+                            <option value="rejected">{t("recruit.status.rejected")}</option>
                           </select>
                           <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" style={{ color: st.color }} />
                         </div>
@@ -384,8 +404,8 @@ const AdminRecruitment = () => {
                         <div className="inline-flex gap-1">
                           {a.coverLetter && (
                             <button
-                              onClick={() => alert(`Thư ứng tuyển:\n\n${a.coverLetter}`)}
-                              title="Xem thư ứng tuyển"
+                              onClick={() => alert(a.coverLetter)}
+                              title={t("recruit.candidateCount")}
                               className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
                               style={{ color: "hsl(var(--admin-info))" }}
                             >
@@ -397,7 +417,7 @@ const AdminRecruitment = () => {
                               href={`${import.meta.env.VITE_API_URL ?? ""}${a.cvUrl}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              title="Tải CV"
+                              title="CV"
                               className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
                               style={{ color: "hsl(var(--admin-primary))" }}
                             >
@@ -406,7 +426,7 @@ const AdminRecruitment = () => {
                           )}
                           <button
                             onClick={() => updateAppStatus(a.id, "interview")}
-                            title="Mời phỏng vấn"
+                            title={t("recruit.status.interview")}
                             className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
                             style={{ color: "hsl(var(--admin-success))" }}
                           >
@@ -414,7 +434,7 @@ const AdminRecruitment = () => {
                           </button>
                           <button
                             onClick={() => updateAppStatus(a.id, "rejected")}
-                            title="Từ chối"
+                            title={t("recruit.status.rejected")}
                             className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
                             style={{ color: "hsl(var(--admin-warning))" }}
                           >
@@ -422,7 +442,7 @@ const AdminRecruitment = () => {
                           </button>
                           <button
                             onClick={() => deleteApp(a.id)}
-                            title="Xóa"
+                            title={t("recruit.delete")}
                             className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
                             style={{ color: "hsl(var(--admin-danger))" }}
                           >
