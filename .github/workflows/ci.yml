@@ -107,10 +107,15 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-  e2e-smoke:
-    name: E2E smoke (Playwright)
+  e2e-full:
+    name: E2E full / ${{ matrix.project }} shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [public, admin-auth, admin-crud, cross]
+        shard: [1, 2]
 
     steps:
       - uses: actions/checkout@v4
@@ -145,18 +150,18 @@ jobs:
           docker compose logs --tail=300
           exit 1
 
-      - name: Run Playwright smoke suite
+      - name: Run Playwright full suite (sharded)
         working-directory: nihomeweb
         env:
           BASE_URL: http://localhost:5043
-          PLAYWRIGHT_SUITE: smoke
-        run: npm run test:e2e:smoke
+          PLAYWRIGHT_SUITE: full
+        run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}/2
 
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-smoke-report
+          name: playwright-full-${{ matrix.project }}-shard-${{ matrix.shard }}
           path: |
             nihomeweb/playwright-report
             nihomeweb/test-results
