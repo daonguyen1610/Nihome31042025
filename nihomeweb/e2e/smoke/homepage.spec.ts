@@ -3,9 +3,16 @@ import { test, expect } from "../fixtures/auth";
 test.describe("Public homepage", () => {
   test("renders without console errors and has nav", async ({ page }) => {
     const errors: string[] = [];
-    page.on("pageerror", (err) => errors.push(err.message));
+    const isIgnorable = (text: string) =>
+      /WebSocket connection to .* failed/i.test(text) || // Vite HMR in dev/preview
+      /\[vite\]/i.test(text);
+    page.on("pageerror", (err) => {
+      if (!isIgnorable(err.message)) errors.push(err.message);
+    });
     page.on("console", (msg) => {
-      if (msg.type() === "error") errors.push(msg.text());
+      if (msg.type() !== "error") return;
+      const text = msg.text();
+      if (!isIgnorable(text)) errors.push(text);
     });
 
     await page.goto("/");
