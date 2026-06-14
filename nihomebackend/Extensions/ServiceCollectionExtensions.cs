@@ -81,6 +81,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RefreshTokenService>();
         services.AddScoped<OtpService>();
         services.AddScoped<UserService>();
+        services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<HostedImageService>();
