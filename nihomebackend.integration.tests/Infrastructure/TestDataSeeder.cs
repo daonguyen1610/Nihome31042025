@@ -56,6 +56,10 @@ public static class TestDataSeeder
             db.SaveChanges();
         }
 
+        // Seed RBAC tables (roles, permissions, role_permissions, user-role
+        // backfill) so endpoints depending on them can run.
+        RbacSeeder.Seed(db);
+
         if (!db.SiteSettings.Any())
         {
             db.SiteSettings.Add(new SiteSettings
