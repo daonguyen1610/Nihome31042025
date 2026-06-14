@@ -178,31 +178,24 @@ public sealed class RoleService(
 
         // Anti-escalation: a non-SUPER_ADMIN actor cannot grant any permission
         // they do not themselves hold. Computed against the *current* effective
-        // set so changes are atomic from the actor's perspective.
-        var actorRole = await db.Users.AsNoTracking()
-            .Where(u => u.Id == actorUserId)
-            .Select(u => new { u.RoleEntityId, u.Role })
-            .FirstOrDefaultAsync(ct);
-        var actorIsSuperAdmin = actorRole != null &&
-            await db.Roles.AsNoTracking().AnyAsync(r =>
-                r.Id == (actorRole.RoleEntityId ?? -1) &&
-                r.Code == SystemRoleCodes.SuperAdmin, ct);
-        if (!actorIsSuperAdmin)
-        {
-            var actorPerms = await permissions.GetForUserAsync(actorUserId, ct);
-            var existingCodes = await db.RolePermissions.AsNoTracking()
-                .Where(rp => rp.RoleId == id)
-                .Select(rp => rp.Permission.Module + RbacConventions.CodeSeparator + rp.Permission.Action)
-                .ToListAsync(ct);
-            var existingSet = existingCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // set so changes are atomic from the actor's perspective. Note this
+        // check is self-correcting for SUPER_ADMIN — their effective set is
+        // the full catalog, so escalations is always empty for them.
+        var actorPerms = await permissions.GetForUserAsync(actorUserId, ct);
+        var existingCodes = await db.RolePermissions.AsNoTracking()
+            .Where(rp => rp.RoleId == id)
+            .Select(rp => rp.Permission.Module + RbacConventions.CodeSeparator + rp.Permission.Action)
+            .ToListAsync(ct);
+        var existingSet = existingCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var newlyGranted = requested.Where(c => !existingSet.Contains(c)).ToList();
-            var escalations = newlyGranted.Where(c => !actorPerms.Contains(c)).OrderBy(c => c).ToList();
-            if (escalations.Count > 0)
-                return RoleWriteResult<RolePermissionsResponse>.Escalation(escalations);
-        }
+        var newlyGranted = requested.Where(c => !existingSet.Contains(c)).ToList();
+        var escalations = newlyGranted.Where(c => !actorPerms.Contains(c)).OrderBy(c => c).ToList();
+        if (escalations.Count > 0)
+            return RoleWriteResult<RolePermissionsResponse>.Escalation(escalations);
 
-        // Diff: compute added/removed for audit + change detection.
+        // Diff: compute added/removed for audit + change detection. Reuse the
+        // existingSet computed above where possible — but we need the tracked
+        // entities (with Permission nav) to actually remove rows.
         var existing = await db.RolePermissions
             .Where(rp => rp.RoleId == id)
             .Include(rp => rp.Permission)
