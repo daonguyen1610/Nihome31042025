@@ -1,45 +1,45 @@
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
 
 /// <summary>
 /// Idempotent RBAC bootstrap. Runs on every startup and:
-///   1. Upserts the canonical <see cref="PermissionCatalog"/> into the
-///      <c>permissions</c> table (codes added later still get inserted).
-///   2. Ensures the 3 system roles + default business roles exist. New roles
-///      can ONLY be introduced here — there is no API to create roles.
+///   1. Upserts the effective permission catalog (JSON base ∪ discovered
+///      [RequirePermission] attributes) into the <c>permissions</c> table.
+///   2. Ensures the 3 system roles + business roles from the JSON seed exist.
+///      New roles can ONLY be introduced by editing the JSON seed — there is
+///      no API to create roles.
 ///   3. Force-syncs <c>SUPER_ADMIN</c> to the full permission catalog every
-///      boot. This is a lockout safety net so the role can never be stripped
-///      of access.
-///   4. Seeds the initial permission set for any OTHER role (system or
-///      business) that currently has zero permissions. Once a role has at
-///      least one permission row, admins are the source of truth and the
-///      seeder does not touch it again.
+///      boot. Lockout safety net.
+///   4. Seeds the initial permission set for any OTHER role exactly once
+///      (tracked by <c>Role.InitialPermissionsSeeded</c>). Subsequent admin
+///      edits in the matrix editor are preserved on restart.
 ///   5. Backfills <c>users.RoleEntityId</c> for any user whose enum role maps
 ///      to an existing system role row.
+/// All seed defaults (base catalog, business roles, role × permission
+/// patterns) come from <c>Data/Rbac/rbac-defaults.json</c> via
+/// <see cref="RbacSeedData"/>.
 /// </summary>
 public static class RbacSeeder
 {
-    /// <summary>Seeds RBAC using the default discovery assembly (the backend itself).</summary>
-    public static void Seed(AppDbContext db) => Seed(db, assemblies: null);
+    public static void Seed(AppDbContext db) => Seed(db, assemblies: null, seedData: null);
 
     /// <summary>
-    /// Seeds RBAC using a caller-supplied set of assemblies to scan for
-    /// <see cref="Authorization.RequirePermissionAttribute"/>. Tests pass
-    /// their own assembly so they can verify auto-discovery without polluting
-    /// the runtime catalog.
+    /// Test hook: pass custom assemblies (for [RequirePermission] discovery)
+    /// and/or a custom <see cref="RbacSeedData.Bundle"/> so tests can isolate
+    /// from the shipped defaults.
     /// </summary>
-    public static void Seed(AppDbContext db, IEnumerable<Assembly>? assemblies)
+    public static void Seed(AppDbContext db, IEnumerable<Assembly>? assemblies, RbacSeedData.Bundle? seedData = null)
     {
+        var bundle = seedData ?? RbacSeedData.Default;
         var discovered = PermissionDiscovery.Discover(assemblies);
-        var catalog = PermissionCatalog.Resolve(discovered);
+        var catalog = PermissionCatalog.Resolve(bundle.BaseCatalog, discovered);
 
         SeedPermissions(db, catalog);
-        SeedRoles(db);
+        SeedRoles(db, bundle);
         ForceSyncSuperAdminPermissions(db);
-        SeedInitialRolePermissionsIfMissing(db, catalog);
+        SeedInitialRolePermissionsIfMissing(db, catalog, bundle);
         BackfillUserRoleEntityIds(db);
     }
 
@@ -67,7 +67,7 @@ public static class RbacSeeder
         db.SaveChanges();
     }
 
-    private static void SeedRoles(AppDbContext db)
+    private static void SeedRoles(AppDbContext db, RbacSeedData.Bundle bundle)
     {
         var existingCodes = db.Roles.Select(r => r.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var now = DateTime.UtcNow;
@@ -88,7 +88,7 @@ public static class RbacSeeder
             });
         }
 
-        foreach (var br in PermissionCatalog.DefaultBusinessRoles)
+        foreach (var br in bundle.BusinessRoles)
         {
             if (existingCodes.Contains(br.Code)) continue;
             toAdd.Add(new Role
@@ -114,8 +114,7 @@ public static class RbacSeeder
         if (role == null) return;
 
         var allPermissionIds = db.Permissions.Select(p => p.Id).ToHashSet();
-        var current = db.RolePermissions.Where(rp => rp.RoleId == role.Id).ToList();
-        var currentIds = current.Select(rp => rp.PermissionId).ToHashSet();
+        var currentIds = db.RolePermissions.Where(rp => rp.RoleId == role.Id).Select(rp => rp.PermissionId).ToHashSet();
 
         var toAdd = allPermissionIds
             .Where(id => !currentIds.Contains(id))
@@ -124,31 +123,35 @@ public static class RbacSeeder
         db.SaveChanges();
     }
 
-    private static void SeedInitialRolePermissionsIfMissing(AppDbContext db, IReadOnlyList<PermissionCatalog.Entry> catalog)
+    private static void SeedInitialRolePermissionsIfMissing(
+        AppDbContext db,
+        IReadOnlyList<PermissionCatalog.Entry> catalog,
+        RbacSeedData.Bundle bundle)
     {
         var permissionIdByCode = db.Permissions
             .ToDictionary(p => p.Module + "." + p.Action, p => p.Id, StringComparer.OrdinalIgnoreCase);
         var allCodes = catalog.Select(e => e.Code).ToList();
 
         // Skip SUPER_ADMIN — handled by ForceSyncSuperAdminPermissions.
-        // Once InitialPermissionsSeeded is true, admin edits (including
-        // emptying the role) are preserved forever.
         var roles = db.Roles
             .Where(r => r.Code != SystemRoleCodes.SuperAdmin && !r.InitialPermissionsSeeded)
             .ToList();
 
         foreach (var role in roles)
         {
-            var codes = PermissionCatalog.ExpandPatternsFor(role.Code, allCodes);
-            var rows = codes
-                .Where(permissionIdByCode.ContainsKey)
-                .Select(c => new RolePermission
-                {
-                    RoleId = role.Id,
-                    PermissionId = permissionIdByCode[c],
-                    CreatedAt = DateTime.UtcNow,
-                });
-            db.RolePermissions.AddRange(rows);
+            if (bundle.RolePermissions.TryGetValue(role.Code, out var defaults))
+            {
+                var codes = PermissionCatalog.ExpandPatterns(defaults.Patterns, allCodes, defaults.Deny);
+                var rows = codes
+                    .Where(permissionIdByCode.ContainsKey)
+                    .Select(c => new RolePermission
+                    {
+                        RoleId = role.Id,
+                        PermissionId = permissionIdByCode[c],
+                        CreatedAt = DateTime.UtcNow,
+                    });
+                db.RolePermissions.AddRange(rows);
+            }
 
             role.InitialPermissionsSeeded = true;
         }

@@ -21,7 +21,7 @@ public class RbacSeederTests : IDisposable
     {
         RbacSeeder.Seed(_db);
 
-        var expected = PermissionCatalog.Resolve();
+        var expected = PermissionCatalog.Resolve(RbacSeedData.Default.BaseCatalog);
         Assert.Equal(expected.Count, _db.Permissions.Count());
         foreach (var entry in expected)
         {
@@ -38,7 +38,7 @@ public class RbacSeederTests : IDisposable
         Assert.Contains(_db.Roles, r => r.Code == SystemRoleCodes.Admin && r.IsSystem);
         Assert.Contains(_db.Roles, r => r.Code == SystemRoleCodes.User && r.IsSystem);
 
-        foreach (var br in PermissionCatalog.DefaultBusinessRoles)
+        foreach (var br in RbacSeedData.Default.BusinessRoles)
         {
             Assert.Single(_db.Roles.Where(r => r.Code == br.Code && !r.IsSystem));
         }
@@ -145,6 +145,6 @@ public class RbacSeederTests : IDisposable
 
         RbacSeeder.Seed(_db);
 
-        Assert.Equal(PermissionCatalog.Resolve().Count, _db.Permissions.Count());
+        Assert.Equal(PermissionCatalog.Resolve(RbacSeedData.Default.BaseCatalog).Count, _db.Permissions.Count());
     }
 }
