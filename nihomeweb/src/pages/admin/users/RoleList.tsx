@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
 import { Plus, ShieldCheck, Trash2 } from "lucide-react";
@@ -6,6 +6,16 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -26,8 +36,16 @@ import {
 } from "@/services/rbacApi";
 
 const PERM_MANAGE = "rbac.roles.manage";
+// Mirror of backend CreateRoleRequest regex.
+const ROLE_CODE_RE = /^[A-Z][A-Z0-9_]{1,49}$/;
 
 type DirtyMap = Record<number, Set<string>>;
+
+function setsEqual(a: Set<string>, b: Set<string>) {
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
 
 export default function RoleList() {
   const { t } = useI18n();
@@ -64,30 +82,49 @@ export default function RoleList() {
   }, [rolePermQueries]);
 
   const [draft, setDraft] = useState<DirtyMap>({});
+  // Tracks the server snapshot we last reconciled against, so we can tell
+  // whether a draft is "untouched" (still equal to that snapshot) and is
+  // safe to overwrite when a fresh server payload arrives without clobbering
+  // pending edits.
+  const lastSyncedRef = useRef<DirtyMap>({});
   useEffect(() => {
     setDraft((prev) => {
-      const next = { ...prev };
-      for (const [idStr, set] of Object.entries(serverMap)) {
+      const next: DirtyMap = { ...prev };
+      for (const idStr of Object.keys(serverMap)) {
         const id = Number(idStr);
-        if (!(id in next)) next[id] = new Set(set);
+        const serverSet: Set<string> = serverMap[id]!;
+        const currentDraft = next[id];
+        const prevServer = lastSyncedRef.current[id];
+        if (!currentDraft) {
+          next[id] = new Set<string>(serverSet);
+        } else if (prevServer && setsEqual(currentDraft, prevServer)) {
+          next[id] = new Set<string>(serverSet);
+        }
+      }
+      for (const idStr of Object.keys(next)) {
+        if (!(idStr in serverMap)) delete next[Number(idStr)];
       }
       return next;
     });
+    const snapshot: DirtyMap = {};
+    for (const idStr of Object.keys(serverMap)) {
+      const id = Number(idStr);
+      snapshot[id] = new Set<string>(serverMap[id]!);
+    }
+    lastSyncedRef.current = snapshot;
   }, [serverMap]);
 
   const isDirty = (roleId: number) => {
     const a = draft[roleId];
     const b = serverMap[roleId];
     if (!a || !b) return false;
-    if (a.size !== b.size) return true;
-    for (const c of a) if (!b.has(c)) return true;
-    return false;
+    return !setsEqual(a, b);
   };
 
   const togglePerm = (roleId: number, code: string) => {
     setDraft((prev) => {
-      const next = { ...prev };
-      const set = new Set(next[roleId] ?? new Set());
+      const next: DirtyMap = { ...prev };
+      const set = new Set<string>(next[roleId] ?? []);
       if (set.has(code)) set.delete(code);
       else set.add(code);
       next[roleId] = set;
@@ -143,6 +180,8 @@ export default function RoleList() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createCode, setCreateCode] = useState("");
   const [createName, setCreateName] = useState("");
+  const codeValid = ROLE_CODE_RE.test(createCode.trim());
+  const nameValid = createName.trim().length >= 2;
   const createMutation = useMutation({
     mutationFn: async () =>
       (await rbacApi.createRole({ code: createCode.trim(), name: createName.trim() })).data,
@@ -155,6 +194,8 @@ export default function RoleList() {
     },
     onError: (err) => reportError(err, "adminRbac.toast.createFailed"),
   });
+
+  const [deleteTarget, setDeleteTarget] = useState<RoleResponse | null>(null);
 
   const loading = rolesQuery.isLoading || permsQuery.isLoading;
   const error = rolesQuery.error ?? permsQuery.error;
@@ -199,8 +240,11 @@ export default function RoleList() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left border-b" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <th className="px-4 py-3 font-semibold sticky left-0 bg-white z-10 min-w-[260px]">
+                <tr
+                  className="text-left border-b"
+                  style={{ borderColor: "hsl(var(--admin-border))" }}
+                >
+                  <th className="px-4 py-3 font-semibold sticky left-0 bg-background z-10 min-w-[260px]">
                     {t("adminRbac.permissionColumn")}
                   </th>
                   {roles.map((role) => (
@@ -213,11 +257,16 @@ export default function RoleList() {
                         <ShieldCheck className="w-4 h-4 text-muted-foreground" />
                         <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
                       </div>
-                      <div className="text-[10px] font-normal mt-0.5" style={{ color: "hsl(var(--admin-muted))" }}>
+                      <div
+                        className="text-[10px] font-normal mt-0.5"
+                        style={{ color: "hsl(var(--admin-muted))" }}
+                      >
                         {role.code} · {role.userCount} {t("adminRbac.usersAbbrev")}
                       </div>
                       {role.isSystem ? (
-                        <span className="admin-chip mt-1 inline-block">{t("adminRbac.systemRoleBadge")}</span>
+                        <span className="admin-chip mt-1 inline-block">
+                          {t("adminRbac.systemRoleBadge")}
+                        </span>
                       ) : (
                         <div className="flex items-center justify-center gap-1 mt-1">
                           <Can permission={PERM_MANAGE}>
@@ -247,11 +296,7 @@ export default function RoleList() {
                               size="sm"
                               variant="ghost"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => {
-                                if (window.confirm(t("adminRbac.confirmDelete").replace("{code}", role.code))) {
-                                  deleteMutation.mutate(role.id);
-                                }
-                              }}
+                              onClick={() => setDeleteTarget(role)}
                               data-testid={`rbac-delete-${role.code}`}
                               title={t("adminRbac.deleteRole")}
                             >
@@ -264,12 +309,19 @@ export default function RoleList() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: "hsl(var(--admin-border))" }}>
+              <tbody>
                 {perms.map((perm) => (
-                  <tr key={perm.id}>
-                    <td className="px-4 py-3 font-medium sticky left-0 bg-white z-10">
+                  <tr
+                    key={perm.id}
+                    className="border-t"
+                    style={{ borderColor: "hsl(var(--admin-border))" }}
+                  >
+                    <td className="px-4 py-3 font-medium sticky left-0 bg-background z-10">
                       <div>{t(`rbac.perm.${perm.code}.label`)}</div>
-                      <div className="text-xs font-normal" style={{ color: "hsl(var(--admin-muted))" }}>
+                      <div
+                        className="text-xs font-normal"
+                        style={{ color: "hsl(var(--admin-muted))" }}
+                      >
                         {perm.code}
                       </div>
                     </td>
@@ -311,9 +363,18 @@ export default function RoleList() {
                 value={createCode}
                 onChange={(e) => setCreateCode(e.target.value.toUpperCase())}
                 placeholder="MARKETING"
+                aria-invalid={createCode.length > 0 && !codeValid}
                 data-testid="rbac-create-code"
               />
-              <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+              <p
+                className="text-xs"
+                style={{
+                  color:
+                    createCode.length > 0 && !codeValid
+                      ? "hsl(var(--destructive))"
+                      : "hsl(var(--admin-muted))",
+                }}
+              >
                 {t("adminRbac.codeHint")}
               </p>
             </div>
@@ -334,11 +395,7 @@ export default function RoleList() {
             </Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={
-                createMutation.isPending ||
-                createCode.trim().length < 2 ||
-                createName.trim().length < 2
-              }
+              disabled={createMutation.isPending || !codeValid || !nameValid}
               data-testid="rbac-create-submit"
             >
               {createMutation.isPending ? t("adminRbac.creating") : t("adminRbac.create")}
@@ -346,6 +403,40 @@ export default function RoleList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("adminRbac.deleteRole")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget
+                ? t("adminRbac.confirmDelete").replace("{code}", deleteTarget.code)
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("adminRbac.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteTarget) {
+                  const id = deleteTarget.id;
+                  setDeleteTarget(null);
+                  deleteMutation.mutate(id);
+                }
+              }}
+              data-testid="rbac-delete-confirm"
+            >
+              {t("adminRbac.deleteRole")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
