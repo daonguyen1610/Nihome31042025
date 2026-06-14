@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
@@ -16,6 +17,7 @@ namespace NihomeBackend.Controllers;
 public class MeController(
     AppDbContext db,
     PasswordService passwordService,
+    IPermissionService permissionService,
     IWebHostEnvironment env,
     ILogger<MeController> logger) : ControllerBase
 {
@@ -30,6 +32,25 @@ public class MeController(
         var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null) return NotFound();
         return Ok(MapMe(user));
+    }
+
+    [HttpGet("permissions")]
+    public async Task<ActionResult<MePermissionsResponse>> GetPermissions(CancellationToken ct)
+    {
+        var userId = GetCurrentUserId();
+        var user = await db.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.Id, u.Role, u.RoleEntityId, u.IsActive })
+            .FirstOrDefaultAsync(ct);
+        if (user == null) return NotFound();
+
+        var codes = await permissionService.GetForUserAsync(userId, ct);
+        return Ok(new MePermissionsResponse
+        {
+            Role = user.Role.ToString(),
+            RoleId = user.RoleEntityId,
+            Permissions = codes.OrderBy(c => c, StringComparer.OrdinalIgnoreCase).ToList(),
+        });
     }
 
     [HttpPut]
