@@ -341,5 +341,182 @@
     "en": "Role deleted",
     "zh": "已删除角色",
     "ja": "ロールを削除しました"
+  },
+
+  {
+    "key": "adminRbac.title",
+    "category": "rbac",
+    "vi": "Vai trò & Quyền",
+    "en": "Roles & Permissions",
+    "zh": "角色与权限",
+    "ja": "ロールと権限"
+  },
+  {
+    "key": "adminRbac.description",
+    "category": "rbac",
+    "vi": "Bật/tắt từng quyền cho mỗi vai trò. Các vai trò hệ thống không thể chỉnh sửa.",
+    "en": "Toggle individual permissions per role. System roles are read-only.",
+    "zh": "为每个角色启用或禁用权限。系统角色不可编辑。",
+    "ja": "ロールごとに権限を切り替えます。システムロールは編集できません。"
+  },
+  {
+    "key": "adminRbac.permissionColumn",
+    "category": "rbac",
+    "vi": "Quyền",
+    "en": "Permission",
+    "zh": "权限",
+    "ja": "権限"
+  },
+  {
+    "key": "adminRbac.usersAbbrev",
+    "category": "rbac",
+    "vi": "người dùng",
+    "en": "users",
+    "zh": "用户",
+    "ja": "ユーザー"
+  },
+  {
+    "key": "adminRbac.systemRoleBadge",
+    "category": "rbac",
+    "vi": "Hệ thống",
+    "en": "System",
+    "zh": "系统",
+    "ja": "システム"
+  },
+  {
+    "key": "adminRbac.createRole",
+    "category": "rbac",
+    "vi": "Tạo vai trò",
+    "en": "Create role",
+    "zh": "创建角色",
+    "ja": "ロールを作成"
+  },
+  {
+    "key": "adminRbac.deleteRole",
+    "category": "rbac",
+    "vi": "Xoá vai trò",
+    "en": "Delete role",
+    "zh": "删除角色",
+    "ja": "ロールを削除"
+  },
+  {
+    "key": "adminRbac.confirmDelete",
+    "category": "rbac",
+    "vi": "Xoá vai trò {code}? Hành động này không thể hoàn tác.",
+    "en": "Delete role {code}? This cannot be undone.",
+    "zh": "确定删除角色 {code}？此操作无法撤销。",
+    "ja": "ロール {code} を削除しますか？この操作は取り消せません。"
+  },
+  {
+    "key": "adminRbac.codeLabel",
+    "category": "rbac",
+    "vi": "Mã vai trò",
+    "en": "Role code",
+    "zh": "角色代码",
+    "ja": "ロールコード"
+  },
+  {
+    "key": "adminRbac.codeHint",
+    "category": "rbac",
+    "vi": "Chữ hoa, dấu gạch dưới (VD: MARKETING). Không trùng với vai trò hệ thống.",
+    "en": "Uppercase, underscore-separated (e.g. MARKETING). Cannot collide with system roles.",
+    "zh": "大写字母加下划线（例如 MARKETING），不能与系统角色重复。",
+    "ja": "大文字とアンダースコア（例：MARKETING）。システムロールと重複不可。"
+  },
+  {
+    "key": "adminRbac.nameLabel",
+    "category": "rbac",
+    "vi": "Tên hiển thị",
+    "en": "Display name",
+    "zh": "显示名称",
+    "ja": "表示名"
+  },
+  {
+    "key": "adminRbac.save",
+    "category": "rbac",
+    "vi": "Lưu",
+    "en": "Save",
+    "zh": "保存",
+    "ja": "保存"
+  },
+  {
+    "key": "adminRbac.reset",
+    "category": "rbac",
+    "vi": "Hoàn tác",
+    "en": "Reset",
+    "zh": "重置",
+    "ja": "リセット"
+  },
+  {
+    "key": "adminRbac.cancel",
+    "category": "rbac",
+    "vi": "Huỷ",
+    "en": "Cancel",
+    "zh": "取消",
+    "ja": "キャンセル"
+  },
+  {
+    "key": "adminRbac.create",
+    "category": "rbac",
+    "vi": "Tạo",
+    "en": "Create",
+    "zh": "创建",
+    "ja": "作成"
+  },
+  {
+    "key": "adminRbac.creating",
+    "category": "rbac",
+    "vi": "Đang tạo…",
+    "en": "Creating…",
+    "zh": "创建中…",
+    "ja": "作成中…"
+  },
+  {
+    "key": "adminRbac.toast.saved",
+    "category": "rbac",
+    "vi": "Đã lưu thay đổi",
+    "en": "Changes saved",
+    "zh": "更改已保存",
+    "ja": "変更を保存しました"
+  },
+  {
+    "key": "adminRbac.toast.saveFailed",
+    "category": "rbac",
+    "vi": "Lưu thất bại",
+    "en": "Save failed",
+    "zh": "保存失败",
+    "ja": "保存に失敗しました"
+  },
+  {
+    "key": "adminRbac.toast.created",
+    "category": "rbac",
+    "vi": "Đã tạo vai trò",
+    "en": "Role created",
+    "zh": "已创建角色",
+    "ja": "ロールを作成しました"
+  },
+  {
+    "key": "adminRbac.toast.createFailed",
+    "category": "rbac",
+    "vi": "Tạo vai trò thất bại",
+    "en": "Failed to create role",
+    "zh": "创建角色失败",
+    "ja": "ロールの作成に失敗しました"
+  },
+  {
+    "key": "adminRbac.toast.deleted",
+    "category": "rbac",
+    "vi": "Đã xoá vai trò",
+    "en": "Role deleted",
+    "zh": "已删除角色",
+    "ja": "ロールを削除しました"
+  },
+  {
+    "key": "adminRbac.toast.deleteFailed",
+    "category": "rbac",
+    "vi": "Xoá vai trò thất bại",
+    "en": "Failed to delete role",
+    "zh": "删除角色失败",
+    "ja": "ロールの削除に失敗しました"
   }
 ]
