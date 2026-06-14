@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models.Rbac;
@@ -6,7 +7,8 @@ namespace NihomeBackend.Services;
 
 public sealed class PermissionService(AppDbContext db) : IPermissionService
 {
-    private static readonly HashSet<string> Empty = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly FrozenSet<string> Empty =
+        FrozenSet<string>.Empty.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     public async Task<IReadOnlySet<string>> GetForUserAsync(int userId, CancellationToken ct = default)
     {
@@ -19,15 +21,15 @@ public sealed class PermissionService(AppDbContext db) : IPermissionService
 
         if (user == null || !user.IsActive) return Empty;
 
-        var roleId = await ResolveActiveRoleIdAsync(user.RoleEntityId, user.Role.ToString(), ct);
+        var roleId = await ResolveActiveRoleIdAsync(user.RoleEntityId, UserRoleCodeMapper.ToCode(user.Role), ct);
         if (roleId == null) return Empty;
 
         var codes = await db.RolePermissions.AsNoTracking()
             .Where(rp => rp.RoleId == roleId && rp.Permission.IsActive)
-            .Select(rp => rp.Permission.Module + "." + rp.Permission.Action)
+            .Select(rp => rp.Permission.Module + RbacConventions.CodeSeparator + rp.Permission.Action)
             .ToListAsync(ct);
 
-        return new HashSet<string>(codes, StringComparer.OrdinalIgnoreCase);
+        return codes.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public async Task<bool> HasAsync(int userId, string permissionCode, CancellationToken ct = default)

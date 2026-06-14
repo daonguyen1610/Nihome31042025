@@ -129,7 +129,7 @@ public static class RbacSeeder
         RbacSeedData.Bundle bundle)
     {
         var permissionIdByCode = db.Permissions
-            .ToDictionary(p => p.Module + "." + p.Action, p => p.Id, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(p => RbacConventions.BuildCode(p.Module, p.Action), p => p.Id, StringComparer.OrdinalIgnoreCase);
         var allCodes = catalog.Select(e => e.Code).ToList();
 
         // Skip SUPER_ADMIN — handled by ForceSyncSuperAdminPermissions.
@@ -170,7 +170,7 @@ public static class RbacSeeder
 
         foreach (var u in users)
         {
-            if (roleIdByCode.TryGetValue(u.Role.ToString(), out var id))
+            if (roleIdByCode.TryGetValue(UserRoleCodeMapper.ToCode(u.Role), out var id))
             {
                 u.RoleEntityId = id;
             }

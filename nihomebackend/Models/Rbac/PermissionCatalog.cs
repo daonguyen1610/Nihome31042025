@@ -31,7 +31,7 @@ public static class PermissionCatalog
 {
     public sealed record Entry(string Module, string Action, string DescriptionKey)
     {
-        public string Code => string.Concat(Module, ".", Action);
+        public string Code => RbacConventions.BuildCode(Module, Action);
     }
 
     public sealed record BusinessRole(string Code, string Name, string LabelKey, string DescriptionKey);
