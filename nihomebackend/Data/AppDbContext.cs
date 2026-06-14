@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
 
@@ -12,6 +13,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    // RBAC
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
     // Content
     public DbSet<Activity> Activities => Set<Activity>();
@@ -49,6 +55,41 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .Property(u => u.Role)
             .HasConversion<string>()
             .HasMaxLength(50);
+        modelBuilder.Entity<ApplicationUser>()
+            .HasOne(u => u.RoleEntity)
+            .WithMany()
+            .HasForeignKey(u => u.RoleEntityId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Role>().ToTable("roles");
+        modelBuilder.Entity<Role>().HasKey(r => r.Id);
+        modelBuilder.Entity<Role>().HasIndex(r => r.Code).IsUnique();
+        modelBuilder.Entity<Role>().Property(r => r.Code).HasMaxLength(50).IsRequired();
+        modelBuilder.Entity<Role>().Property(r => r.Name).HasMaxLength(100).IsRequired();
+        modelBuilder.Entity<Role>().Property(r => r.LabelKey).HasMaxLength(150);
+        modelBuilder.Entity<Role>().Property(r => r.DescriptionKey).HasMaxLength(150);
+
+        modelBuilder.Entity<Permission>().ToTable("permissions");
+        modelBuilder.Entity<Permission>().HasKey(p => p.Id);
+        modelBuilder.Entity<Permission>().Property(p => p.Module).HasMaxLength(60).IsRequired();
+        modelBuilder.Entity<Permission>().Property(p => p.Action).HasMaxLength(60).IsRequired();
+        modelBuilder.Entity<Permission>().Property(p => p.DescriptionKey).HasMaxLength(150);
+        modelBuilder.Entity<Permission>().Ignore(p => p.Code);
+        modelBuilder.Entity<Permission>().HasIndex(p => new { p.Module, p.Action }).IsUnique();
+
+        modelBuilder.Entity<RolePermission>().ToTable("role_permissions");
+        modelBuilder.Entity<RolePermission>().HasKey(rp => rp.Id);
+        modelBuilder.Entity<RolePermission>().HasIndex(rp => new { rp.RoleId, rp.PermissionId }).IsUnique();
+        modelBuilder.Entity<RolePermission>()
+            .HasOne(rp => rp.Role)
+            .WithMany(r => r.RolePermissions)
+            .HasForeignKey(rp => rp.RoleId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<RolePermission>()
+            .HasOne(rp => rp.Permission)
+            .WithMany(p => p.RolePermissions)
+            .HasForeignKey(rp => rp.PermissionId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<RefreshToken>().ToTable("refresh_tokens");
         modelBuilder.Entity<RefreshToken>().HasKey(rt => rt.Id);

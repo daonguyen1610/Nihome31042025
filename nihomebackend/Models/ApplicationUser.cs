@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Models;
 
@@ -20,6 +21,13 @@ public class ApplicationUser
 
     [Required]
     public UserRole Role { get; set; } = UserRole.USER;
+
+    // RBAC FK — when set, takes precedence over the legacy enum for permission
+    // resolution. Nullable so existing seed/integration flows that only set the
+    // enum continue to work; PermissionService falls back to the system role
+    // whose Code matches the enum value.
+    public int? RoleEntityId { get; set; }
+    public Role? RoleEntity { get; set; }
 
     public bool IsActive { get; set; } = true;
 
