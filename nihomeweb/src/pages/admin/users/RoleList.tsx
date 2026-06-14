@@ -88,13 +88,19 @@ export default function RoleList() {
   // pending edits.
   const lastSyncedRef = useRef<DirtyMap>({});
   useEffect(() => {
+    // Capture the previous snapshot BEFORE setDraft, because setDraft's
+    // updater runs asynchronously while the ref update below is immediate.
+    // Without this, the updater would see the just-written value and think
+    // the draft is "still in sync" with the new server data, clobbering
+    // pending edits.
+    const prevSynced = lastSyncedRef.current;
     setDraft((prev) => {
       const next: DirtyMap = { ...prev };
       for (const idStr of Object.keys(serverMap)) {
         const id = Number(idStr);
         const serverSet: Set<string> = serverMap[id]!;
         const currentDraft = next[id];
-        const prevServer = lastSyncedRef.current[id];
+        const prevServer = prevSynced[id];
         if (!currentDraft) {
           next[id] = new Set<string>(serverSet);
         } else if (prevServer && setsEqual(currentDraft, prevServer)) {
