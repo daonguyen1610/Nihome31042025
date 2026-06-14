@@ -1,0 +1,345 @@
+[
+  {
+    "key": "rbac.perm.dashboard.view.label",
+    "category": "rbac",
+    "vi": "Xem Dashboard",
+    "en": "View dashboard",
+    "zh": "查看仪表板",
+    "ja": "ダッシュボードを表示"
+  },
+  {
+    "key": "rbac.perm.dashboard.view.description",
+    "category": "rbac",
+    "vi": "Cho phép truy cập trang tổng quan quản trị.",
+    "en": "Grants access to the admin dashboard.",
+    "zh": "允许访问管理仪表板。",
+    "ja": "管理ダッシュボードへのアクセスを許可します。"
+  },
+
+  {
+    "key": "rbac.perm.profile.me.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ cá nhân",
+    "en": "View own profile",
+    "zh": "查看个人资料",
+    "ja": "自分のプロフィールを表示"
+  },
+  {
+    "key": "rbac.perm.profile.me.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem thông tin tài khoản của chính mình.",
+    "en": "Allows viewing the current user's own profile.",
+    "zh": "允许查看自己的账户信息。",
+    "ja": "自分自身のアカウント情報の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.profile.me.update.label",
+    "category": "rbac",
+    "vi": "Cập nhật hồ sơ cá nhân",
+    "en": "Update own profile",
+    "zh": "更新个人资料",
+    "ja": "自分のプロフィールを更新"
+  },
+  {
+    "key": "rbac.perm.profile.me.update.description",
+    "category": "rbac",
+    "vi": "Cho phép tự cập nhật thông tin tài khoản.",
+    "en": "Allows updating the current user's own profile.",
+    "zh": "允许自行更新账户信息。",
+    "ja": "自身のアカウント情報の更新を許可します。"
+  },
+
+  {
+    "key": "rbac.perm.users.view.label",
+    "category": "rbac",
+    "vi": "Xem người dùng",
+    "en": "View users",
+    "zh": "查看用户",
+    "ja": "ユーザーを表示"
+  },
+  {
+    "key": "rbac.perm.users.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết người dùng.",
+    "en": "Allows listing and viewing user details.",
+    "zh": "允许查看用户列表和详细信息。",
+    "ja": "ユーザー一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.users.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý người dùng",
+    "en": "Manage users",
+    "zh": "管理用户",
+    "ja": "ユーザーを管理"
+  },
+  {
+    "key": "rbac.perm.users.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, vô hiệu hoá và phân vai trò người dùng.",
+    "en": "Create, edit, deactivate and assign roles to users.",
+    "zh": "创建、编辑、停用用户并分配角色。",
+    "ja": "ユーザーの作成・編集・無効化・ロール割り当てを行います。"
+  },
+
+  {
+    "key": "rbac.perm.rbac.roles.view.label",
+    "category": "rbac",
+    "vi": "Xem vai trò & quyền",
+    "en": "View roles & permissions",
+    "zh": "查看角色与权限",
+    "ja": "ロールと権限を表示"
+  },
+  {
+    "key": "rbac.perm.rbac.roles.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem ma trận vai trò và danh mục quyền.",
+    "en": "Allows viewing the role matrix and permission catalog.",
+    "zh": "允许查看角色矩阵和权限目录。",
+    "ja": "ロールマトリクスと権限カタログの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.rbac.roles.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý vai trò & quyền",
+    "en": "Manage roles & permissions",
+    "zh": "管理角色与权限",
+    "ja": "ロールと権限を管理"
+  },
+  {
+    "key": "rbac.perm.rbac.roles.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, xoá vai trò và gán quyền (trừ các vai trò hệ thống).",
+    "en": "Create, edit, delete roles and assign permissions (except system roles).",
+    "zh": "创建、编辑、删除角色并分配权限（系统角色除外）。",
+    "ja": "ロールの作成・編集・削除と権限の割り当て（システムロールを除く）。"
+  },
+
+  {
+    "key": "rbac.perm.system.audit.view.label",
+    "category": "rbac",
+    "vi": "Xem nhật ký kiểm toán",
+    "en": "View audit log",
+    "zh": "查看审计日志",
+    "ja": "監査ログを表示"
+  },
+  {
+    "key": "rbac.perm.system.audit.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các sự kiện kiểm toán hệ thống.",
+    "en": "Allows reading system audit events.",
+    "zh": "允许查看系统审计事件。",
+    "ja": "システム監査イベントの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.system.notifications.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý thông báo hệ thống",
+    "en": "Manage system notifications",
+    "zh": "管理系统通知",
+    "ja": "システム通知を管理"
+  },
+  {
+    "key": "rbac.perm.system.notifications.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, đánh dấu đã đọc và xoá thông báo của quản trị viên.",
+    "en": "Create, mark-as-read and delete administrator notifications.",
+    "zh": "创建、标记为已读和删除管理员通知。",
+    "ja": "管理者通知の作成・既読化・削除を行います。"
+  },
+
+  {
+    "key": "rbac.role.SUPER_ADMIN.label",
+    "category": "rbac",
+    "vi": "Super Admin",
+    "en": "Super Admin",
+    "zh": "超级管理员",
+    "ja": "スーパー管理者"
+  },
+  {
+    "key": "rbac.role.SUPER_ADMIN.description",
+    "category": "rbac",
+    "vi": "Toàn quyền hệ thống. Không thể chỉnh sửa qua giao diện.",
+    "en": "Full system access. Cannot be edited via the UI.",
+    "zh": "拥有系统全部权限，不能通过界面修改。",
+    "ja": "システムの完全アクセス権を持ち、UI から変更できません。"
+  },
+  {
+    "key": "rbac.role.ADMIN.label",
+    "category": "rbac",
+    "vi": "Quản trị viên",
+    "en": "Administrator",
+    "zh": "管理员",
+    "ja": "管理者"
+  },
+  {
+    "key": "rbac.role.ADMIN.description",
+    "category": "rbac",
+    "vi": "Quản trị toàn bộ nội dung và vai trò, trừ quyền cấp Super Admin.",
+    "en": "Manages all content and roles, excluding Super Admin level rights.",
+    "zh": "管理所有内容与角色，超级管理员权限除外。",
+    "ja": "スーパー管理者権限を除く全てのコンテンツとロールを管理します。"
+  },
+  {
+    "key": "rbac.role.USER.label",
+    "category": "rbac",
+    "vi": "Người dùng",
+    "en": "User",
+    "zh": "用户",
+    "ja": "ユーザー"
+  },
+  {
+    "key": "rbac.role.USER.description",
+    "category": "rbac",
+    "vi": "Vai trò mặc định cho người dùng đã đăng nhập.",
+    "en": "Default role for authenticated end users.",
+    "zh": "已登录最终用户的默认角色。",
+    "ja": "ログイン済みエンドユーザーの既定ロール。"
+  },
+
+  {
+    "key": "rbac.role.SALE.label",
+    "category": "rbac",
+    "vi": "Kinh doanh",
+    "en": "Sales",
+    "zh": "销售",
+    "ja": "営業"
+  },
+  {
+    "key": "rbac.role.SALE.description",
+    "category": "rbac",
+    "vi": "Phụ trách liên hệ khách hàng và hồ sơ tuyển dụng.",
+    "en": "Handles customer contacts and recruitment applications.",
+    "zh": "负责客户联系和招聘申请。",
+    "ja": "顧客対応と採用応募の管理を担当します。"
+  },
+  {
+    "key": "rbac.role.DESIGN.label",
+    "category": "rbac",
+    "vi": "Thiết kế",
+    "en": "Design",
+    "zh": "设计",
+    "ja": "デザイン"
+  },
+  {
+    "key": "rbac.role.DESIGN.description",
+    "category": "rbac",
+    "vi": "Quản lý nội dung trang web và quy trình thiết kế.",
+    "en": "Manages site content and design processes.",
+    "zh": "管理网站内容和设计流程。",
+    "ja": "サイトコンテンツとデザインプロセスを管理します。"
+  },
+  {
+    "key": "rbac.role.PM.label",
+    "category": "rbac",
+    "vi": "Quản lý dự án",
+    "en": "Project Manager",
+    "zh": "项目经理",
+    "ja": "プロジェクトマネージャー"
+  },
+  {
+    "key": "rbac.role.PM.description",
+    "category": "rbac",
+    "vi": "Quản lý dự án, quy trình và đơn ứng tuyển.",
+    "en": "Manages projects, processes and applications.",
+    "zh": "管理项目、流程和申请。",
+    "ja": "プロジェクト・プロセス・応募の管理を行います。"
+  },
+  {
+    "key": "rbac.role.QS.label",
+    "category": "rbac",
+    "vi": "Bóc tách khối lượng",
+    "en": "Quantity Surveyor",
+    "zh": "造价工程师",
+    "ja": "数量積算"
+  },
+  {
+    "key": "rbac.role.QS.description",
+    "category": "rbac",
+    "vi": "Truy cập dữ liệu dự án và quy trình chỉ đọc.",
+    "en": "Read-only access to projects and processes.",
+    "zh": "对项目和流程的只读访问权限。",
+    "ja": "プロジェクトとプロセスへの読み取り専用アクセスです。"
+  },
+  {
+    "key": "rbac.role.ACCOUNTANT.label",
+    "category": "rbac",
+    "vi": "Kế toán",
+    "en": "Accountant",
+    "zh": "会计",
+    "ja": "経理"
+  },
+  {
+    "key": "rbac.role.ACCOUNTANT.description",
+    "category": "rbac",
+    "vi": "Xem liên hệ khách hàng và nhật ký kiểm toán.",
+    "en": "Views customer contacts and audit log.",
+    "zh": "查看客户联系和审计日志。",
+    "ja": "顧客連絡先と監査ログを閲覧します。"
+  },
+  {
+    "key": "rbac.role.WAREHOUSE.label",
+    "category": "rbac",
+    "vi": "Kho",
+    "en": "Warehouse",
+    "zh": "仓库",
+    "ja": "倉庫"
+  },
+  {
+    "key": "rbac.role.WAREHOUSE.description",
+    "category": "rbac",
+    "vi": "Tham khảo quy trình vận hành.",
+    "en": "Reference access to operational processes.",
+    "zh": "查阅运营流程。",
+    "ja": "業務プロセスの参照アクセスです。"
+  },
+  {
+    "key": "rbac.role.BGD.label",
+    "category": "rbac",
+    "vi": "Ban Giám đốc",
+    "en": "Board of Directors",
+    "zh": "董事会",
+    "ja": "取締役会"
+  },
+  {
+    "key": "rbac.role.BGD.description",
+    "category": "rbac",
+    "vi": "Xem toàn bộ dữ liệu chỉ đọc và nhật ký kiểm toán.",
+    "en": "Read-only access to all data and the audit log.",
+    "zh": "对所有数据和审计日志的只读访问权限。",
+    "ja": "全データと監査ログへの読み取り専用アクセスです。"
+  },
+
+  {
+    "key": "rbac.notification.role-created.title",
+    "category": "rbac",
+    "vi": "Đã tạo vai trò mới",
+    "en": "Role created",
+    "zh": "已创建角色",
+    "ja": "ロールを作成しました"
+  },
+  {
+    "key": "rbac.notification.role-updated.title",
+    "category": "rbac",
+    "vi": "Đã cập nhật vai trò",
+    "en": "Role updated",
+    "zh": "已更新角色",
+    "ja": "ロールを更新しました"
+  },
+  {
+    "key": "rbac.notification.role-permissions-updated.title",
+    "category": "rbac",
+    "vi": "Đã cập nhật quyền của vai trò",
+    "en": "Role permissions updated",
+    "zh": "已更新角色权限",
+    "ja": "ロールの権限を更新しました"
+  },
+  {
+    "key": "rbac.notification.role-deleted.title",
+    "category": "rbac",
+    "vi": "Đã xoá vai trò",
+    "en": "Role deleted",
+    "zh": "已删除角色",
+    "ja": "ロールを削除しました"
+  }
+]
