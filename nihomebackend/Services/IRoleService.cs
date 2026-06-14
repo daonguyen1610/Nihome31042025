@@ -5,9 +5,9 @@ namespace NihomeBackend.Services;
 
 /// <summary>
 /// Manages runtime-editable RBAC roles and their permission assignments.
-/// Roles themselves are introduced only via DbSeeder — this service does not
-/// expose Create or Delete. SUPER_ADMIN is immune to any write. Non-SUPER_ADMIN
-/// actors cannot grant permissions they do not themselves hold (anti-escalation).
+/// System roles (SUPER_ADMIN, ADMIN, USER) are seeder-controlled and immune
+/// to Create/Delete/matrix-edit through this service. Non-SUPER_ADMIN actors
+/// cannot grant permissions they do not themselves hold (anti-escalation).
 /// </summary>
 public interface IRoleService
 {
@@ -16,11 +16,17 @@ public interface IRoleService
     Task<List<PermissionResponse>> ListPermissionsAsync(CancellationToken ct = default);
     Task<RolePermissionsResponse?> GetRolePermissionsAsync(int id, CancellationToken ct = default);
 
+    Task<RoleWriteResult<RoleResponse>> CreateRoleAsync(
+        CreateRoleRequest req, int actorUserId, CancellationToken ct = default);
+
     Task<RoleWriteResult<RoleResponse>> UpdateRoleAsync(
         int id, UpdateRoleRequest req, int actorUserId, CancellationToken ct = default);
 
     Task<RoleWriteResult<RolePermissionsResponse>> UpdateRolePermissionsAsync(
         int id, UpdateRolePermissionsRequest req, int actorUserId, CancellationToken ct = default);
+
+    Task<RoleWriteResult<RoleResponse>> DeleteRoleAsync(
+        int id, int actorUserId, CancellationToken ct = default);
 }
 
 public enum RoleWriteStatus
@@ -31,13 +37,16 @@ public enum RoleWriteStatus
     ForbiddenEscalation,
     InvalidPermissionCodes,
     InvalidRequest,
+    Conflict,
+    InUse,
 }
 
 public sealed record RoleWriteResult<T>(
     RoleWriteStatus Status,
     T? Value = null,
     IReadOnlyList<string>? OffendingCodes = null,
-    string? Error = null) where T : class
+    string? Error = null,
+    int? UserCount = null) where T : class
 {
     public static RoleWriteResult<T> Ok(T value) => new(RoleWriteStatus.Success, value);
     public static RoleWriteResult<T> NotFound() => new(RoleWriteStatus.NotFound);
@@ -48,4 +57,8 @@ public sealed record RoleWriteResult<T>(
         new(RoleWriteStatus.InvalidPermissionCodes, OffendingCodes: codes);
     public static RoleWriteResult<T> Invalid(string error) =>
         new(RoleWriteStatus.InvalidRequest, Error: error);
+    public static RoleWriteResult<T> Conflict(string error) =>
+        new(RoleWriteStatus.Conflict, Error: error);
+    public static RoleWriteResult<T> InUseBy(int userCount) =>
+        new(RoleWriteStatus.InUse, UserCount: userCount);
 }

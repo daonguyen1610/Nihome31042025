@@ -317,4 +317,165 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(RoleWriteStatus.Success, result.Status);
         Assert.Equal(new[] { "dashboard.view" }, result.Value!.Permissions);
     }
+
+    // ---------- CreateRole ----------
+
+    [Fact]
+    public async Task CreateRole_Succeeds_WithoutInitialPermissions()
+    {
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "MARKETING",
+            Name = "Marketing",
+            LabelKey = "rbac.role.marketing.label",
+        }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Success, result.Status);
+        Assert.Equal("MARKETING", result.Value!.Code);
+        Assert.False(result.Value.IsSystem);
+        Assert.Equal(0, result.Value.PermissionCount);
+        Assert.True(_db.Roles.AsNoTracking().Single(r => r.Code == "MARKETING").InitialPermissionsSeeded);
+        _audit.Verify(a => a.Log(It.Is<AuditEvent>(e => e.Action == "rbac.role.create")), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateRole_NormalisesCodeToUpperCase()
+    {
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "marketing",
+            Name = "Marketing",
+        }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Success, result.Status);
+        Assert.Equal("MARKETING", result.Value!.Code);
+    }
+
+    [Theory]
+    [InlineData("SUPER_ADMIN")]
+    [InlineData("ADMIN")]
+    [InlineData("USER")]
+    public async Task CreateRole_RejectsReservedSystemCodes(string code)
+    {
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = code,
+            Name = "x",
+        }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Conflict, result.Status);
+    }
+
+    [Fact]
+    public async Task CreateRole_RejectsDuplicateCode()
+    {
+        var existing = _db.Roles.First(r => !r.IsSystem).Code;
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = existing,
+            Name = "Dup",
+        }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Conflict, result.Status);
+    }
+
+    [Fact]
+    public async Task CreateRole_RejectsUnknownPermissionCodes()
+    {
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "MARKETING",
+            Name = "Marketing",
+            Permissions = ["dashboard.view", "does.not.exist"],
+        }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.InvalidPermissionCodes, result.Status);
+        Assert.False(_db.Roles.AsNoTracking().Any(r => r.Code == "MARKETING"));
+    }
+
+    [Fact]
+    public async Task CreateRole_BlocksEscalationOnInitialPermissions()
+    {
+        // ADMIN doesn't have users.manage; cannot seed it onto a new role.
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "MARKETING",
+            Name = "Marketing",
+            Permissions = ["dashboard.view", "users.manage"],
+        }, AdminUserId());
+
+        Assert.Equal(RoleWriteStatus.ForbiddenEscalation, result.Status);
+        Assert.Contains("users.manage", result.OffendingCodes!);
+        Assert.False(_db.Roles.AsNoTracking().Any(r => r.Code == "MARKETING"));
+    }
+
+    [Fact]
+    public async Task CreateRole_PersistsInitialPermissions_WhenAllowed()
+    {
+        var result = await _svc.CreateRoleAsync(new CreateRoleRequest
+        {
+            Code = "MARKETING",
+            Name = "Marketing",
+            Permissions = ["dashboard.view", "profile.me.view"],
+        }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Success, result.Status);
+        var roleId = _db.Roles.Single(r => r.Code == "MARKETING").Id;
+        var codes = _db.RolePermissions.Include(rp => rp.Permission)
+            .Where(rp => rp.RoleId == roleId)
+            .Select(rp => rp.Permission.Module + "." + rp.Permission.Action)
+            .OrderBy(c => c).ToList();
+        Assert.Equal(new[] { "dashboard.view", "profile.me.view" }, codes);
+    }
+
+    // ---------- DeleteRole ----------
+
+    [Fact]
+    public async Task DeleteRole_NotFound_WhenIdMissing()
+    {
+        var result = await _svc.DeleteRoleAsync(999_999, SuperAdminUserId());
+        Assert.Equal(RoleWriteStatus.NotFound, result.Status);
+    }
+
+    [Theory]
+    [InlineData("SUPER_ADMIN")]
+    [InlineData("ADMIN")]
+    [InlineData("USER")]
+    public async Task DeleteRole_AnySystemRole_Forbidden(string code)
+    {
+        var sys = _db.Roles.Single(r => r.Code == code);
+        var result = await _svc.DeleteRoleAsync(sys.Id, SuperAdminUserId());
+        Assert.Equal(RoleWriteStatus.ForbiddenSystemRole, result.Status);
+        Assert.True(_db.Roles.AsNoTracking().Any(r => r.Id == sys.Id));
+    }
+
+    [Fact]
+    public async Task DeleteRole_Blocked_WhenUsersAssigned()
+    {
+        var biz = _db.Roles.First(r => !r.IsSystem);
+        AddUser("0900000099", UserRole.USER, biz.Id);
+
+        var result = await _svc.DeleteRoleAsync(biz.Id, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.InUse, result.Status);
+        Assert.Equal(1, result.UserCount);
+        Assert.True(_db.Roles.AsNoTracking().Any(r => r.Id == biz.Id));
+    }
+
+    [Fact]
+    public async Task DeleteRole_Succeeds_AndCascadesRolePermissions()
+    {
+        var biz = _db.Roles.First(r => !r.IsSystem);
+        var beforePerms = _db.RolePermissions.Count(rp => rp.RoleId == biz.Id);
+        Assert.True(beforePerms > 0, "seed expectation");
+
+        var result = await _svc.DeleteRoleAsync(biz.Id, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.Success, result.Status);
+        Assert.False(_db.Roles.AsNoTracking().Any(r => r.Id == biz.Id));
+        // EF InMemory honours FK cascades configured via Fluent API.
+        Assert.Equal(0, _db.RolePermissions.Count(rp => rp.RoleId == biz.Id));
+        _audit.Verify(a => a.Log(It.Is<AuditEvent>(e => e.Action == "rbac.role.delete")), Times.Once);
+        _notif.Verify(n => n.CreateForAdminsAsync("rbac", "rbac.notification.role-deleted.title", biz.Code, It.IsAny<string?>()), Times.Once);
+    }
 }

@@ -258,4 +258,145 @@ public sealed class RoleService(
 
         return RoleWriteResult<RolePermissionsResponse>.Ok(response);
     }
+
+    public async Task<RoleWriteResult<RoleResponse>> CreateRoleAsync(
+        CreateRoleRequest req, int actorUserId, CancellationToken ct = default)
+    {
+        var code = (req.Code ?? string.Empty).Trim().ToUpperInvariant();
+        if (SystemRoleCodes.IsSystem(code))
+            return RoleWriteResult<RoleResponse>.Conflict($"Code '{code}' is reserved for a system role.");
+
+        var codeTaken = await db.Roles.AsNoTracking().AnyAsync(r => r.Code == code, ct);
+        if (codeTaken)
+            return RoleWriteResult<RoleResponse>.Conflict($"Role code '{code}' already exists.");
+
+        // Resolve initial permissions (optional) + anti-escalation, same rules
+        // as UpdateRolePermissionsAsync but with an empty "existing" set.
+        var requested = (req.Permissions ?? [])
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, int> idByCode;
+        if (requested.Count > 0)
+        {
+            var catalog = await db.Permissions.AsNoTracking()
+                .Where(p => p.IsActive)
+                .Select(p => new { p.Id, Code = p.Module + RbacConventions.CodeSeparator + p.Action })
+                .ToListAsync(ct);
+            idByCode = catalog.ToDictionary(x => x.Code, x => x.Id, StringComparer.OrdinalIgnoreCase);
+
+            var unknown = requested.Where(c => !idByCode.ContainsKey(c)).OrderBy(c => c).ToList();
+            if (unknown.Count > 0)
+                return RoleWriteResult<RoleResponse>.UnknownCodes(unknown);
+
+            var actorPerms = await permissions.GetForUserAsync(actorUserId, ct);
+            var escalations = requested.Where(c => !actorPerms.Contains(c)).OrderBy(c => c).ToList();
+            if (escalations.Count > 0)
+                return RoleWriteResult<RoleResponse>.Escalation(escalations);
+        }
+        else
+        {
+            idByCode = new(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var now = DateTime.UtcNow;
+        var entity = new Role
+        {
+            Code = code,
+            Name = req.Name.Trim(),
+            LabelKey = req.LabelKey?.Trim(),
+            DescriptionKey = req.DescriptionKey?.Trim(),
+            IsSystem = false,
+            IsActive = true,
+            InitialPermissionsSeeded = true, // RbacSeeder must not retro-seed defaults.
+            CreatedAt = now,
+        };
+        db.Roles.Add(entity);
+        await db.SaveChangesAsync(ct);
+
+        if (requested.Count > 0)
+        {
+            db.RolePermissions.AddRange(requested.Select(c => new RolePermission
+            {
+                RoleId = entity.Id,
+                PermissionId = idByCode[c],
+                CreatedAt = now,
+            }));
+            await db.SaveChangesAsync(ct);
+        }
+
+        var response = (await GetRoleAsync(entity.Id, ct))!;
+
+        audit.Log(new AuditEvent
+        {
+            Action = "rbac.role.create",
+            ResourceType = ResourceType,
+            ResourceId = entity.Code,
+            Message = $"Created role '{entity.Code}' with {requested.Count} permission(s).",
+            Status = "success",
+            NewValue = new { entity.Code, entity.Name, entity.LabelKey, entity.DescriptionKey },
+            Metadata = new { permissions = requested.OrderBy(c => c).ToList() },
+        });
+
+        await notifications.CreateForAdminsAsync(
+            module: "rbac",
+            title: "rbac.notification.role-created.title",
+            body: entity.Code,
+            linkUrl: $"/admin/roles/{entity.Id}");
+
+        return RoleWriteResult<RoleResponse>.Ok(response);
+    }
+
+    public async Task<RoleWriteResult<RoleResponse>> DeleteRoleAsync(
+        int id, int actorUserId, CancellationToken ct = default)
+    {
+        var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (role == null) return RoleWriteResult<RoleResponse>.NotFound();
+        if (role.IsSystem) return RoleWriteResult<RoleResponse>.SystemRole();
+
+        var userCount = await db.Users.CountAsync(u => u.RoleEntityId == id, ct);
+        if (userCount > 0) return RoleWriteResult<RoleResponse>.InUseBy(userCount);
+
+        // Snapshot for audit BEFORE deletion. role_permissions cascade-deletes
+        // via FK config (see AppDbContext) so we don't remove them explicitly.
+        var permCodes = await db.RolePermissions.AsNoTracking()
+            .Where(rp => rp.RoleId == id)
+            .Select(rp => rp.Permission.Module + RbacConventions.CodeSeparator + rp.Permission.Action)
+            .OrderBy(c => c)
+            .ToListAsync(ct);
+        var snapshot = new { role.Code, role.Name, role.LabelKey, role.DescriptionKey };
+
+        db.Roles.Remove(role);
+        await db.SaveChangesAsync(ct);
+
+        audit.Log(new AuditEvent
+        {
+            Action = "rbac.role.delete",
+            ResourceType = ResourceType,
+            ResourceId = role.Code,
+            Message = $"Deleted role '{role.Code}'.",
+            Status = "success",
+            OldValue = snapshot,
+            Metadata = new { permissions = permCodes },
+        });
+
+        await notifications.CreateForAdminsAsync(
+            module: "rbac",
+            title: "rbac.notification.role-deleted.title",
+            body: role.Code,
+            linkUrl: "/admin/roles");
+
+        return RoleWriteResult<RoleResponse>.Ok(new RoleResponse
+        {
+            Id = role.Id,
+            Code = role.Code,
+            Name = role.Name,
+            LabelKey = role.LabelKey,
+            DescriptionKey = role.DescriptionKey,
+            IsSystem = role.IsSystem,
+            IsActive = role.IsActive,
+            UserCount = 0,
+            PermissionCount = 0,
+        });
+    }
 }
