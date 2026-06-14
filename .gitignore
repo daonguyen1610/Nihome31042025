@@ -14,5 +14,5 @@ skills-lock.json
 deployment-config/output/publish-release/
 deployment-config/output/publish-release.zip
 nihomebackend.integration.tests/bin/
-nihomebackend.integration.tests/obj/TestResults/
+nihomebackend.integration.tests/obj/
 TestResults/
