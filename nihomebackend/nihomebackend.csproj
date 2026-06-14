@@ -43,6 +43,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Data/Seeds/*.json" />
+    <EmbeddedResource Include="Data/Rbac/*.json" />
   </ItemGroup>
 
   <Target

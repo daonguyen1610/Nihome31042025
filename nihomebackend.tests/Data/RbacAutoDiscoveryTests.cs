@@ -1,4 +1,3 @@
-using System.Reflection;
 using NihomeBackend.Authorization;
 using NihomeBackend.Data;
 using NihomeBackend.Models.Rbac;
@@ -36,7 +35,7 @@ public class RbacAutoDiscoveryTests : IDisposable
     public void Resolve_MergesBaseCatalogWithDiscoveredEntries()
     {
         var discovered = PermissionDiscovery.Discover(new[] { typeof(RbacAutoDiscoveryTests).Assembly });
-        var catalog = PermissionCatalog.Resolve(discovered);
+        var catalog = PermissionCatalog.Resolve(RbacSeedData.Default.BaseCatalog, discovered);
 
         Assert.Contains(catalog, e => e.Code == "dashboard.view"); // from base
         Assert.Contains(catalog, e => e.Code == "content.testimonials.manage"); // discovered
@@ -95,9 +94,19 @@ public class RbacAutoDiscoveryTests : IDisposable
     public void Expand_SingleStarMatchesOneSegmentOnly()
     {
         var codes = new[] { "content.projects.view", "content.projects.manage", "profile.me.view" };
-        // "content.*.view" should match content.projects.view (1 segment), not profile.me.view
-        var matched = PermissionCatalog.ExpandPatternsFor(SystemRoleCodes.User, codes);
+        // "profile.me.*" should match profile.me.view; "content.*" pattern (single star) must NOT cross dots.
+        var matched = PermissionCatalog.ExpandPatterns(["profile.me.*", "content.*"], codes);
         Assert.Contains("profile.me.view", matched);
         Assert.DoesNotContain("content.projects.view", matched);
+    }
+
+    [Fact]
+    public void Expand_DenyListSubtractsFromAllowMatches()
+    {
+        var codes = new[] { "users.view", "users.manage", "profile.me.view" };
+        var matched = PermissionCatalog.ExpandPatterns(["**"], codes, denyPatterns: ["users.manage"]);
+        Assert.Contains("users.view", matched);
+        Assert.Contains("profile.me.view", matched);
+        Assert.DoesNotContain("users.manage", matched);
     }
 }

@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace NihomeBackend.Models.DTOs.Requests;
 
 // Note: roles cannot be created from the API. New roles are introduced only
-// through DbSeeder / PermissionCatalog.DefaultBusinessRoles. The matrix editor
-// only allows updating labels, the active flag, and the role -> permissions
-// mapping.
+// through DbSeeder (see Data/Rbac/rbac-defaults.json, businessRoles). The
+// matrix editor only allows updating labels, the active flag, and the
+// role -> permissions mapping.
 
 public class UpdateRoleRequest
 {

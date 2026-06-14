@@ -1,0 +1,56 @@
+{
+  "_comment": "RBAC seed data. Loaded once at startup by RbacSeedData. Permission and role label keys follow the conventions rbac.perm.{module}.{action} and rbac.role.{CODE}.{label|description} — no need to repeat them here. Patterns support * (one dot-segment) and ** (any segments). The 'deny' list is subtracted from the expanded matches.",
+
+  "baseCatalog": [
+    { "module": "dashboard", "action": "view" },
+
+    { "module": "system.audit", "action": "view" },
+    { "module": "system.notifications", "action": "manage" },
+
+    { "module": "users", "action": "view" },
+    { "module": "users", "action": "manage" },
+    { "module": "rbac.roles", "action": "view" },
+    { "module": "rbac.roles", "action": "manage" },
+
+    { "module": "profile.me", "action": "view" },
+    { "module": "profile.me", "action": "update" }
+  ],
+
+  "businessRoles": [
+    { "code": "SALE", "name": "Sale" },
+    { "code": "DESIGN", "name": "Design" },
+    { "code": "PM", "name": "Project Manager" },
+    { "code": "QS", "name": "Quantity Surveyor" },
+    { "code": "ACCOUNTANT", "name": "Accountant" },
+    { "code": "WAREHOUSE", "name": "Warehouse" },
+    { "code": "BGD", "name": "Board of Directors" }
+  ],
+
+  "rolePermissions": {
+    "SUPER_ADMIN": { "patterns": ["**"] },
+    "ADMIN":       { "patterns": ["**"], "deny": ["users.manage"] },
+    "USER":        { "patterns": ["profile.me.*"] },
+
+    "SALE": {
+      "patterns": ["dashboard.view", "contacts.*", "recruitment.applications.view", "profile.me.*"]
+    },
+    "DESIGN": {
+      "patterns": ["dashboard.view", "content.**", "processes.view", "profile.me.*"]
+    },
+    "PM": {
+      "patterns": ["dashboard.view", "content.projects.*", "processes.*", "recruitment.applications.view", "profile.me.*"]
+    },
+    "QS": {
+      "patterns": ["dashboard.view", "content.projects.view", "processes.view", "profile.me.*"]
+    },
+    "ACCOUNTANT": {
+      "patterns": ["dashboard.view", "contacts.view", "system.audit.view", "profile.me.*"]
+    },
+    "WAREHOUSE": {
+      "patterns": ["dashboard.view", "processes.view", "profile.me.*"]
+    },
+    "BGD": {
+      "patterns": ["dashboard.view", "**.view", "system.audit.view", "profile.me.*"]
+    }
+  }
+}
