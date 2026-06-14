@@ -157,7 +157,12 @@ public sealed class RoleService(
     {
         var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == id, ct);
         if (role == null) return RoleWriteResult<RolePermissionsResponse>.NotFound();
-        if (string.Equals(role.Code, SystemRoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+        // All 3 system roles (SUPER_ADMIN, ADMIN, USER) have an immutable
+        // matrix: SUPER_ADMIN is re-synced to the full catalog every boot,
+        // ADMIN and USER are sized by the seeder to guarantee no self-lockout
+        // (an admin cannot accidentally drop rbac.roles.manage from ADMIN).
+        // Custom matrices live only on business roles.
+        if (role.IsSystem)
             return RoleWriteResult<RolePermissionsResponse>.SystemRole();
 
         var requested = (req.Permissions ?? [])

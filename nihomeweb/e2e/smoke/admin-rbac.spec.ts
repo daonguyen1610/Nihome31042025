@@ -43,6 +43,22 @@ test("SUPER_ADMIN role itself is immune to permission edits (403)", async ({ api
   expect(res.status()).toBe(403);
 });
 
+test("ADMIN and USER role matrices are immune (prevents self-lockout)", async ({ api, loginAs }) => {
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const c = await authed(api, token);
+
+  const roles = await c.get("/api/admin/rbac/roles").then(r => r.json()) as Array<{ id: number; code: string }>;
+  for (const code of ["ADMIN", "USER"]) {
+    const sys = roles.find(r => r.code === code)!;
+    const res = await c.put(`/api/admin/rbac/roles/${sys.id}/permissions`, {
+      permissions: ["dashboard.view"],
+    });
+    expect(res.status(), `${code} matrix should be immune`).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe("system_role_immutable");
+  }
+});
+
 test("ADMIN cannot escalate privileges via the matrix (403)", async ({ api, loginAs }) => {
   const token = await loginAs(TEST_USERS.admin);
   const c = await authed(api, token);

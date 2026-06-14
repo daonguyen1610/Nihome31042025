@@ -78,7 +78,7 @@ public class RbacController(
         RoleWriteStatus.ForbiddenSystemRole => StatusCode(StatusCodes.Status403Forbidden, new
         {
             error = "system_role_immutable",
-            message = "System role SUPER_ADMIN cannot be modified.",
+            message = "System roles cannot be modified through the API.",
         }),
         RoleWriteStatus.ForbiddenEscalation => StatusCode(StatusCodes.Status403Forbidden, new
         {

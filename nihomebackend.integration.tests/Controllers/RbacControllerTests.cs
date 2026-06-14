@@ -131,6 +131,32 @@ public class RbacControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Theory]
+    [InlineData("ADMIN")]
+    [InlineData("USER")]
+    public async Task UpdateRolePermissions_AnySystemRole_Returns403(string roleCode)
+    {
+        // ADMIN and USER matrices are seeder-controlled to prevent self-lockout
+        // (e.g. dropping rbac.roles.manage from ADMIN). Only business roles
+        // are runtime-editable.
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var roleId = await WithDbAsync(db => Task.FromResult(db.Roles.Single(r => r.Code == roleCode).Id));
+        var before = await WithDbAsync(db => Task.FromResult(
+            db.RolePermissions.Count(rp => rp.RoleId == roleId)));
+
+        var res = await Client.PutAsJsonAsync(
+            $"/api/admin/rbac/roles/{roleId}/permissions",
+            new { permissions = new[] { "dashboard.view" } });
+
+        res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("error").GetString().Should().Be("system_role_immutable");
+
+        var after = await WithDbAsync(db => Task.FromResult(
+            db.RolePermissions.Count(rp => rp.RoleId == roleId)));
+        after.Should().Be(before);
+    }
+
     [Fact]
     public async Task UpdateRolePermissions_UnknownCodes_Returns400_WithOffendingList()
     {

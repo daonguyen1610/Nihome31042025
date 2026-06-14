@@ -186,6 +186,27 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(before, _db.RolePermissions.Count(rp => rp.RoleId == sa.Id));
     }
 
+    [Theory]
+    [InlineData("ADMIN")]
+    [InlineData("USER")]
+    public async Task UpdatePermissions_AnySystemRoleIsImmune_PreventsSelfLockout(string roleCode)
+    {
+        // ADMIN and USER matrices are sized by the seeder so an admin cannot
+        // accidentally drop rbac.roles.manage (self-lockout) or strip USER's
+        // profile.me.* (locks every non-admin user out of their own profile).
+        var sys = _db.Roles.Single(r => r.Code == roleCode);
+        var before = _db.RolePermissions.Where(rp => rp.RoleId == sys.Id)
+            .Select(rp => rp.PermissionId).OrderBy(id => id).ToList();
+
+        var result = await _svc.UpdateRolePermissionsAsync(
+            sys.Id, new UpdateRolePermissionsRequest { Permissions = ["dashboard.view"] }, SuperAdminUserId());
+
+        Assert.Equal(RoleWriteStatus.ForbiddenSystemRole, result.Status);
+        var after = _db.RolePermissions.Where(rp => rp.RoleId == sys.Id)
+            .Select(rp => rp.PermissionId).OrderBy(id => id).ToList();
+        Assert.Equal(before, after);
+    }
+
     [Fact]
     public async Task UpdatePermissions_RejectsUnknownCodes_AndPersistsNothing()
     {
@@ -207,11 +228,12 @@ public class RoleServiceTests : IDisposable
     public async Task UpdatePermissions_BlocksEscalationByNonSuperAdmin()
     {
         // Admin (default policy) does NOT have users.manage. They must not be
-        // able to grant it to any role — including their own.
-        var admin = _db.Roles.Single(r => r.Code == SystemRoleCodes.Admin);
+        // able to grant it to any role — including business roles they can
+        // otherwise edit.
+        var biz = _db.Roles.First(r => !r.IsSystem);
         var actor = AdminUserId();
 
-        var result = await _svc.UpdateRolePermissionsAsync(admin.Id, new UpdateRolePermissionsRequest
+        var result = await _svc.UpdateRolePermissionsAsync(biz.Id, new UpdateRolePermissionsRequest
         {
             Permissions = ["rbac.roles.view", "rbac.roles.manage", "users.manage"],
         }, actor);
@@ -219,7 +241,7 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(RoleWriteStatus.ForbiddenEscalation, result.Status);
         Assert.Contains("users.manage", result.OffendingCodes!);
         Assert.DoesNotContain(_db.RolePermissions.Include(rp => rp.Permission)
-            .Where(rp => rp.RoleId == admin.Id)
+            .Where(rp => rp.RoleId == biz.Id)
             .Select(rp => rp.Permission.Module + "." + rp.Permission.Action),
             c => c == "users.manage");
     }
