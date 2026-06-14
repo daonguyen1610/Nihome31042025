@@ -6,10 +6,12 @@ import type { APIRequestContext } from "@playwright/test";
 // guardrails (SUPER_ADMIN immunity, anti-escalation) hold end-to-end.
 
 async function authed(api: APIRequestContext, token: string) {
+  const auth = { Authorization: `Bearer ${token}` };
   return {
-    get: (path: string) => api.get(path, { headers: { Authorization: `Bearer ${token}` } }),
-    put: (path: string, data: unknown) =>
-      api.put(path, { headers: { Authorization: `Bearer ${token}` }, data }),
+    get: (path: string) => api.get(path, { headers: auth }),
+    put: (path: string, data: unknown) => api.put(path, { headers: auth, data }),
+    post: (path: string, data: unknown) => api.post(path, { headers: auth, data }),
+    del: (path: string) => api.delete(path, { headers: auth }),
   };
 }
 
@@ -89,4 +91,46 @@ test("Unknown permission codes return 400 with offending list", async ({ api, lo
   const body = await res.json();
   expect(body.error).toBe("unknown_permission_codes");
   expect(body.offending).toContain("does.not.exist");
+});
+
+test("SUPER_ADMIN can create and then delete a non-system role", async ({ api, loginAs }) => {
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const c = await authed(api, token);
+
+  const code = `E2E_${Date.now().toString(36).toUpperCase()}`;
+  const created = await c.post("/api/admin/rbac/roles", {
+    code,
+    name: "E2E Throwaway",
+    permissions: ["dashboard.view"],
+  });
+  expect(created.status()).toBe(201);
+  const body = await created.json() as { id: number; code: string; isSystem: boolean };
+  expect(body.code).toBe(code);
+  expect(body.isSystem).toBe(false);
+
+  const del = await c.del(`/api/admin/rbac/roles/${body.id}`);
+  expect(del.status()).toBe(200);
+
+  const after = await c.get(`/api/admin/rbac/roles/${body.id}`);
+  expect(after.status()).toBe(404);
+});
+
+test("Creating a role with a reserved system code returns 409", async ({ api, loginAs }) => {
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const c = await authed(api, token);
+
+  const res = await c.post("/api/admin/rbac/roles", { code: "ADMIN", name: "Nope" });
+  expect(res.status()).toBe(409);
+  const body = await res.json();
+  expect(body.error).toBe("role_code_conflict");
+});
+
+test("Deleting a system role is forbidden (403)", async ({ api, loginAs }) => {
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const c = await authed(api, token);
+
+  const roles = await c.get("/api/admin/rbac/roles").then(r => r.json()) as Array<{ id: number; code: string }>;
+  const admin = roles.find(r => r.code === "ADMIN")!;
+  const res = await c.del(`/api/admin/rbac/roles/${admin.id}`);
+  expect(res.status()).toBe(403);
 });

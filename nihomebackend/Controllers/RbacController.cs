@@ -48,6 +48,19 @@ public class RbacController(
         return rp == null ? NotFound() : Ok(rp);
     }
 
+    [HttpPost("roles")]
+    public async Task<ActionResult<RoleResponse>> CreateRole([FromBody] CreateRoleRequest req, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var actorId = GetCurrentUserId();
+        if (actorId <= 0) return Unauthorized();
+
+        var result = await roles.CreateRoleAsync(req, actorId, ct);
+        if (result.Status == RoleWriteStatus.Success)
+            return CreatedAtAction(nameof(GetRole), new { id = result.Value!.Id }, result.Value);
+        return MapWrite(result);
+    }
+
     [HttpPut("roles/{id:int}")]
     public async Task<ActionResult<RoleResponse>> UpdateRole(int id, [FromBody] UpdateRoleRequest req, CancellationToken ct)
     {
@@ -68,6 +81,17 @@ public class RbacController(
         if (actorId <= 0) return Unauthorized();
 
         var result = await roles.UpdateRolePermissionsAsync(id, req, actorId, ct);
+        return MapWrite(result);
+    }
+
+    [HttpDelete("roles/{id:int}")]
+    public async Task<ActionResult<RoleResponse>> DeleteRole(int id, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var actorId = GetCurrentUserId();
+        if (actorId <= 0) return Unauthorized();
+
+        var result = await roles.DeleteRoleAsync(id, actorId, ct);
         return MapWrite(result);
     }
 
@@ -95,6 +119,17 @@ public class RbacController(
         {
             error = "invalid_request",
             message = result.Error,
+        }),
+        RoleWriteStatus.Conflict => Conflict(new
+        {
+            error = "role_code_conflict",
+            message = result.Error,
+        }),
+        RoleWriteStatus.InUse => Conflict(new
+        {
+            error = "role_in_use",
+            message = "Role is still assigned to users; reassign them before deleting.",
+            userCount = result.UserCount,
         }),
         _ => StatusCode(StatusCodes.Status500InternalServerError),
     };

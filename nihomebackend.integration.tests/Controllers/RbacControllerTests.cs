@@ -236,4 +236,141 @@ public class RbacControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(res);
         body.GetProperty("error").GetString().Should().Be("invalid_request");
     }
+
+    // ---------- CreateRole ----------
+
+    [Fact]
+    public async Task CreateRole_AsSuperAdmin_Returns201_AndIsRetrievable()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var code = $"E2E_{Guid.NewGuid():N}".Substring(0, 18).ToUpperInvariant();
+
+        var res = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new
+        {
+            code,
+            name = "E2E Created",
+            permissions = new[] { "dashboard.view" },
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        res.Headers.Location.Should().NotBeNull();
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("code").GetString().Should().Be(code);
+        body.GetProperty("isSystem").GetBoolean().Should().BeFalse();
+
+        // Side effect: retrievable via GET.
+        var newId = body.GetProperty("id").GetInt32();
+        var get = await Client.GetAsync($"/api/admin/rbac/roles/{newId}");
+        get.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Theory]
+    [InlineData("SUPER_ADMIN")]
+    [InlineData("ADMIN")]
+    [InlineData("USER")]
+    public async Task CreateRole_ReservedCode_Returns409(string code)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var res = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new { code, name = "Reserved" });
+        res.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("error").GetString().Should().Be("role_code_conflict");
+    }
+
+    [Fact]
+    public async Task CreateRole_InvalidCodeFormat_Returns400()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var res = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new
+        {
+            code = "lower-case",
+            name = "Bad",
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateRole_EscalationBlocked_ForAdmin()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var code = $"E2E_{Guid.NewGuid():N}".Substring(0, 18).ToUpperInvariant();
+
+        var res = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new
+        {
+            code,
+            name = "Admin Try",
+            permissions = new[] { "users.manage" },
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("error").GetString().Should().Be("privilege_escalation_blocked");
+    }
+
+    // ---------- DeleteRole ----------
+
+    [Theory]
+    [InlineData("SUPER_ADMIN")]
+    [InlineData("ADMIN")]
+    [InlineData("USER")]
+    public async Task DeleteRole_AnySystemRole_Returns403(string code)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var id = await WithDbAsync(db => Task.FromResult(db.Roles.Single(r => r.Code == code).Id));
+
+        var res = await Client.DeleteAsync($"/api/admin/rbac/roles/{id}");
+        res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var stillExists = await WithDbAsync(db => Task.FromResult(
+            db.Roles.AsNoTracking().Any(r => r.Id == id)));
+        stillExists.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeleteRole_Success_RoundTripCreateThenDelete()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var code = $"E2E_{Guid.NewGuid():N}".Substring(0, 18).ToUpperInvariant();
+
+        var created = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new { code, name = "Throwaway" });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var newId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        var del = await Client.DeleteAsync($"/api/admin/rbac/roles/{newId}");
+        del.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var get = await Client.GetAsync($"/api/admin/rbac/roles/{newId}");
+        get.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteRole_BlockedWhenUsersAssigned_Returns409()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var code = $"E2E_{Guid.NewGuid():N}".Substring(0, 18).ToUpperInvariant();
+        var created = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new { code, name = "Pinned" });
+        var newId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        // Pin a user to it (use seeded customer).
+        await WithDbAsync(async db =>
+        {
+            var u = db.Users.Single(x => x.PhoneNumber == TestDataSeeder.CustomerPhone);
+            u.RoleEntityId = newId;
+            await db.SaveChangesAsync();
+        });
+
+        var del = await Client.DeleteAsync($"/api/admin/rbac/roles/{newId}");
+        del.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await ReadJsonAsync(del);
+        body.GetProperty("error").GetString().Should().Be("role_in_use");
+        body.GetProperty("userCount").GetInt32().Should().Be(1);
+
+        // Cleanup so other tests on this fixture aren't poisoned.
+        await WithDbAsync(async db =>
+        {
+            var u = db.Users.Single(x => x.PhoneNumber == TestDataSeeder.CustomerPhone);
+            u.RoleEntityId = db.Roles.Single(r => r.Code == "USER").Id;
+            await db.SaveChangesAsync();
+        });
+    }
 }
