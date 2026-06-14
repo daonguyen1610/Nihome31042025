@@ -204,7 +204,11 @@ export default function RoleList() {
                     {t("adminRbac.permissionColumn")}
                   </th>
                   {roles.map((role) => (
-                    <th key={role.id} className="px-3 py-3 font-semibold text-center min-w-[160px]">
+                    <th
+                      key={role.id}
+                      className="px-3 py-3 font-semibold text-center min-w-[160px]"
+                      data-testid={`rbac-col-${role.code}`}
+                    >
                       <div className="flex items-center justify-center gap-1.5">
                         <ShieldCheck className="w-4 h-4 text-muted-foreground" />
                         <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
