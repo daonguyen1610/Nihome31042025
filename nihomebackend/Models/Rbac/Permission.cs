@@ -19,7 +19,7 @@ public class Permission
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    public string Code => string.Concat(Module, ".", Action);
+    public string Code => RbacConventions.BuildCode(Module, Action);
 
     public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 }

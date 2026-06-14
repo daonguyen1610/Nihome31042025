@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
@@ -47,7 +48,7 @@ public class MeController(
         var codes = await permissionService.GetForUserAsync(userId, ct);
         return Ok(new MePermissionsResponse
         {
-            Role = user.Role.ToString(),
+            Role = UserRoleCodeMapper.ToCode(user.Role),
             RoleId = user.RoleEntityId,
             Permissions = codes.OrderBy(c => c, StringComparer.OrdinalIgnoreCase).ToList(),
         });
