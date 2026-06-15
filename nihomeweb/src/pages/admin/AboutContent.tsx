@@ -84,6 +84,8 @@ type LeaderItem = {
 type OrganizationItem = {
   board: LeaderItem[];
   directors: LeaderItem[];
+  companyChartUrl?: string;
+  siteChartUrl?: string;
 };
 
 type LeaderItemInput = {
@@ -106,6 +108,7 @@ type CertItem = {
   id?: string;
   name: string;
   desc: string;
+  imageUrl?: string;
   sortOrder?: number;
 };
 
@@ -307,6 +310,8 @@ const normalizeOrganizationItems = (raw: string | null | undefined): Organizatio
   return {
     board: normalizeLeaderItems(parsed.board ?? [], "board"),
     directors: normalizeLeaderItems(parsed.directors ?? [], "director"),
+    companyChartUrl: parsed.companyChartUrl ?? "",
+    siteChartUrl: parsed.siteChartUrl ?? "",
   };
 };
 
@@ -327,6 +332,7 @@ const normalizeCertItems = (raw: string | null | undefined): CertItem[] =>
       id: item.id ?? createLocalId("cert"),
       name: item.name ?? "",
       desc: item.desc ?? "",
+      imageUrl: item.imageUrl ?? "",
       sortOrder: normalizeSortOrder(item.sortOrder, index),
     })),
   );
@@ -693,6 +699,10 @@ const AboutContent = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingCompanyChart, setUploadingCompanyChart] = useState(false);
+  const [uploadingSiteChart, setUploadingSiteChart] = useState(false);
+  const [uploadingCertIds, setUploadingCertIds] = useState<Set<string>>(new Set());
+  const [uploadingDownloadIds, setUploadingDownloadIds] = useState<Set<string>>(new Set());
   const [activeSlug, setActiveSlug] = useState("about-main");
   const [forms, setForms] = useState<Record<string, AboutForm>>({});
   const [statDialogOpen, setStatDialogOpen] = useState(false);
@@ -832,6 +842,72 @@ const AboutContent = () => {
     if (!file) return;
     await handleImageUpload(file);
     e.target.value = "";
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const handleCertImageUpload = async (file: File, certId: string) => {
+    setUploadingCertIds((prev) => new Set([...prev, certId]));
+    try {
+      const response = await adminApi.uploadImage(file);
+      const next = certItems.map((item) =>
+        item.id === certId ? { ...item, imageUrl: response.data.imageUrl } : item,
+      );
+      updateItemsJson(sortItemsBySortOrder(next));
+    } catch {
+      toast({ title: t("auth.error"), variant: "destructive" });
+    } finally {
+      setUploadingCertIds((prev) => {
+        const next = new Set(prev);
+        next.delete(certId);
+        return next;
+      });
+    }
+  };
+
+  const handleDocumentUpload = async (file: File, downloadId: string) => {
+    setUploadingDownloadIds((prev) => new Set([...prev, downloadId]));
+    try {
+      const response = await adminApi.uploadDocument(file);
+      const ext = file.name.split(".").pop()?.toUpperCase() ?? "";
+      const next = downloadItems.map((item) =>
+        item.id === downloadId
+          ? { ...item, url: response.data.cvUrl, size: formatFileSize(file.size), type: ext }
+          : item,
+      );
+      updateItemsJson(sortItemsBySortOrder(next));
+    } catch {
+      toast({ title: t("auth.error"), variant: "destructive" });
+    } finally {
+      setUploadingDownloadIds((prev) => {
+        const next = new Set(prev);
+        next.delete(downloadId);
+        return next;
+      });
+    }
+  };
+
+  const onSelectOrgChart = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: "companyChartUrl" | "siteChartUrl",
+    setUploading: (v: boolean) => void,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const response = await adminApi.uploadImage(file);
+      updateItemsJson({ ...organizationItems, [field]: response.data.imageUrl });
+    } catch {
+      toast({ title: t("auth.error"), variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   const updateStatItems = (nextItems: StatItem[]) => updateItemsJson(sortItemsBySortOrder(nextItems));
@@ -1110,8 +1186,48 @@ const AboutContent = () => {
         </EditorSection>
       );
 
+      const renderChartField = (
+        field: "companyChartUrl" | "siteChartUrl",
+        label: string,
+        isUploading: boolean,
+        setIsUploading: (v: boolean) => void,
+      ) => (
+        <div className="space-y-2">
+          <Field label={label}>
+            <div className="flex items-center gap-2">
+              <input
+                className="admin-input"
+                value={organizationItems[field] ?? ""}
+                onChange={(e) => updateItemsJson({ ...organizationItems, [field]: e.target.value })}
+                placeholder="https://..."
+              />
+              <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm shrink-0">
+                <Upload className="w-4 h-4" />
+                {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.upload")}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={isUploading}
+                  onChange={(e) => void onSelectOrgChart(e, field, setIsUploading)}
+                />
+              </label>
+            </div>
+          </Field>
+          {organizationItems[field] && (
+            <div className="rounded-2xl overflow-hidden border border-border bg-muted/30">
+              <img src={organizationItems[field]} alt={label} className="w-full object-contain max-h-72" />
+            </div>
+          )}
+        </div>
+      );
+
       return (
         <div className="space-y-5">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {renderChartField("companyChartUrl", t("aboutAdmin.org.companyChart"), uploadingCompanyChart, setUploadingCompanyChart)}
+            {renderChartField("siteChartUrl", t("aboutAdmin.org.siteChart"), uploadingSiteChart, setUploadingSiteChart)}
+          </div>
           {renderGroup("board", t("aboutAdmin.boardList"))}
           {renderGroup("directors", t("aboutAdmin.directorsList"))}
         </div>
@@ -1201,58 +1317,96 @@ const AboutContent = () => {
           title={t("aboutAdmin.certsList")}
           actionLabel={t("aboutAdmin.addCert")}
           onAdd={() =>
-            updateItemsJson([...certItems, { id: createLocalId("cert"), name: "", desc: "", sortOrder: nextSortOrder(certItems) }])
+            updateItemsJson([...certItems, { id: createLocalId("cert"), name: "", desc: "", imageUrl: "", sortOrder: nextSortOrder(certItems) }])
           }
         >
           <div className="space-y-3">
-            {certItems.map((item, index) => (
-              <RowCard key={item.id ?? `cert-${index}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Field label={t("aboutAdmin.fieldSortOrder")}>
-                    <input
-                      className="admin-input"
-                      type="number"
-                      value={normalizeSortOrder(item.sortOrder, index)}
+            {certItems.map((item, index) => {
+              const certId = item.id ?? `cert-${index}`;
+              const isUploadingCert = uploadingCertIds.has(certId);
+              return (
+                <RowCard key={certId}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Field label={t("aboutAdmin.fieldSortOrder")}>
+                      <input
+                        className="admin-input"
+                        type="number"
+                        value={normalizeSortOrder(item.sortOrder, index)}
+                        onChange={(e) => {
+                          const next = [...certItems];
+                          next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
+                          updateItemsJson(sortItemsBySortOrder(next));
+                        }}
+                      />
+                    </Field>
+                    <Field label={t("aboutAdmin.fieldCertName")}>
+                      <input
+                        className="admin-input"
+                        value={item.name}
+                        onChange={(e) => {
+                          const next = [...certItems];
+                          next[index] = { ...item, name: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                      />
+                    </Field>
+                  </div>
+                  <Field label={t("aboutAdmin.fieldDesc")}>
+                    <textarea
+                      className="admin-input min-h-24"
+                      value={item.desc}
                       onChange={(e) => {
                         const next = [...certItems];
-                        next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
-                        updateItemsJson(sortItemsBySortOrder(next));
-                      }}
-                    />
-                  </Field>
-                  <Field label={t("aboutAdmin.fieldCertName")}>
-                    <input
-                      className="admin-input"
-                      value={item.name}
-                      onChange={(e) => {
-                        const next = [...certItems];
-                        next[index] = { ...item, name: e.target.value };
+                        next[index] = { ...item, desc: e.target.value };
                         updateItemsJson(next);
                       }}
                     />
                   </Field>
-                </div>
-                <Field label={t("aboutAdmin.fieldDesc")}>
-                  <textarea
-                    className="admin-input min-h-24"
-                    value={item.desc}
-                    onChange={(e) => {
-                      const next = [...certItems];
-                      next[index] = { ...item, desc: e.target.value };
-                      updateItemsJson(next);
-                    }}
-                  />
-                </Field>
-                <button
-                  type="button"
-                  onClick={() => updateItemsJson(certItems.filter((_, i) => i !== index))}
-                  className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {t("common.delete")}
-                </button>
-              </RowCard>
-            ))}
+                  <Field label={t("aboutAdmin.fieldCertImage")}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="admin-input"
+                        value={item.imageUrl ?? ""}
+                        onChange={(e) => {
+                          const next = [...certItems];
+                          next[index] = { ...item, imageUrl: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                        placeholder="/images/upload/..."
+                      />
+                      <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm shrink-0">
+                        <Upload className="w-4 h-4" />
+                        {isUploadingCert ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.upload")}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={isUploadingCert}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleCertImageUpload(file, certId);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {item.imageUrl && (
+                      <div className="mt-2 rounded-xl overflow-hidden border border-border bg-muted/30 max-h-40">
+                        <img src={item.imageUrl} alt={item.name} className="w-full object-contain max-h-40" />
+                      </div>
+                    )}
+                  </Field>
+                  <button
+                    type="button"
+                    onClick={() => updateItemsJson(certItems.filter((_, i) => i !== index))}
+                    className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {t("common.delete")}
+                  </button>
+                </RowCard>
+              );
+            })}
           </div>
         </EditorSection>
       );
@@ -1266,83 +1420,105 @@ const AboutContent = () => {
           onAdd={() =>
             updateItemsJson([
               ...downloadItems,
-              { id: createLocalId("download"), name: "", size: "", type: "", url: "#", sortOrder: nextSortOrder(downloadItems) },
+              { id: createLocalId("download"), name: "", size: "", type: "", url: "", sortOrder: nextSortOrder(downloadItems) },
             ])
           }
         >
           <div className="space-y-3">
-            {downloadItems.map((item, index) => (
-              <RowCard key={item.id ?? `download-${index}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Field label={t("aboutAdmin.fieldSortOrder")}>
-                    <input
-                      className="admin-input"
-                      type="number"
-                      value={normalizeSortOrder(item.sortOrder, index)}
-                      onChange={(e) => {
-                        const next = [...downloadItems];
-                        next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
-                        updateItemsJson(sortItemsBySortOrder(next));
-                      }}
-                    />
-                  </Field>
-                  <Field label={t("aboutAdmin.fieldDocName")}>
-                    <input
-                      className="admin-input"
-                      value={item.name}
-                      onChange={(e) => {
-                        const next = [...downloadItems];
-                        next[index] = { ...item, name: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
-                  </Field>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Field label={t("aboutAdmin.fieldFileSize")}>
-                    <input
-                      className="admin-input"
-                      value={item.size}
-                      onChange={(e) => {
-                        const next = [...downloadItems];
-                        next[index] = { ...item, size: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
-                  </Field>
-                  <Field label={t("aboutAdmin.fieldFileType")}>
-                    <input
-                      className="admin-input"
-                      value={item.type}
-                      onChange={(e) => {
-                        const next = [...downloadItems];
-                        next[index] = { ...item, type: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
-                  </Field>
-                  <Field label={t("aboutAdmin.fieldUrl")}>
-                    <input
-                      className="admin-input"
-                      value={item.url}
-                      onChange={(e) => {
-                        const next = [...downloadItems];
-                        next[index] = { ...item, url: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
-                  </Field>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => updateItemsJson(downloadItems.filter((_, i) => i !== index))}
-                  className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {t("common.delete")}
-                </button>
-              </RowCard>
-            ))}
+            {downloadItems.map((item, index) => {
+              const dlId = item.id ?? `download-${index}`;
+              const isUploadingDoc = uploadingDownloadIds.has(dlId);
+              return (
+                <RowCard key={dlId}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Field label={t("aboutAdmin.fieldSortOrder")}>
+                      <input
+                        className="admin-input"
+                        type="number"
+                        value={normalizeSortOrder(item.sortOrder, index)}
+                        onChange={(e) => {
+                          const next = [...downloadItems];
+                          next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
+                          updateItemsJson(sortItemsBySortOrder(next));
+                        }}
+                      />
+                    </Field>
+                    <Field label={t("aboutAdmin.fieldDocName")}>
+                      <input
+                        className="admin-input"
+                        value={item.name}
+                        onChange={(e) => {
+                          const next = [...downloadItems];
+                          next[index] = { ...item, name: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Field label={t("aboutAdmin.fieldFileSize")}>
+                      <input
+                        className="admin-input"
+                        value={item.size}
+                        onChange={(e) => {
+                          const next = [...downloadItems];
+                          next[index] = { ...item, size: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                      />
+                    </Field>
+                    <Field label={t("aboutAdmin.fieldFileType")}>
+                      <input
+                        className="admin-input"
+                        value={item.type}
+                        onChange={(e) => {
+                          const next = [...downloadItems];
+                          next[index] = { ...item, type: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                      />
+                    </Field>
+                    <Field label={t("aboutAdmin.fieldUrl")}>
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="admin-input"
+                          value={item.url}
+                          onChange={(e) => {
+                            const next = [...downloadItems];
+                            next[index] = { ...item, url: e.target.value };
+                            updateItemsJson(next);
+                          }}
+                          placeholder="/files/cv/..."
+                        />
+                        <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm shrink-0">
+                          <Upload className="w-4 h-4" />
+                          {isUploadingDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.uploadDoc")}
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,image/*"
+                            className="hidden"
+                            disabled={isUploadingDoc}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) void handleDocumentUpload(file, dlId);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </Field>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateItemsJson(downloadItems.filter((_, i) => i !== index))}
+                    className="px-3 py-2 rounded-xl border border-border text-sm inline-flex items-center gap-2 hover:bg-muted"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {t("common.delete")}
+                  </button>
+                </RowCard>
+              );
+            })}
           </div>
         </EditorSection>
       );

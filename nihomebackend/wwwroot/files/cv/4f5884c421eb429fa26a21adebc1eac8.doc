@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- TODO: Set the document title to the name of your application -->
+    <title>Nicon</title>
+    <meta name="description" content="Nicon Redesign is a website redesign project, enhancing user experience and visual appeal.">
+    <meta name="author" content="Nicon" />
+
+    <!-- TODO: Update og:title to match your application name -->
+    
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/src/assets/logo-nicon.png">
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@Nicon" />
+    <meta name="twitter:image" content="/src/assets/logo-nicon.png">
+    
+  
+  
+  
+  
+  
+  
+  
+  <meta property="og:title" content="Nicon">
+  <meta name="twitter:title" content="Nicon">
+  <meta property="og:description" content="Nicon Redesign is a website redesign project, enhancing user experience and visual appeal.">
+  <meta name="twitter:description" content="Nicon Redesign is a website redesign project, enhancing user experience and visual appeal.">
+  <script type="module" crossorigin src="/assets/index-Dv0eKd-x.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BnAp8N-x.css">
+</head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

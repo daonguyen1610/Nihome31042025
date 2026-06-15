@@ -17,7 +17,7 @@ public class SystemController(
     private static readonly HashSet<string> AllowedVideoExtensions =
         [".mp4", ".webm", ".mov", ".m4v"];
     private static readonly HashSet<string> AllowedCvExtensions =
-        [".pdf", ".doc", ".docx"];
+        [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
 
     [HttpGet("health")]
     public ActionResult<HealthResponse> GetHealth()
@@ -131,6 +131,8 @@ public class SystemController(
 
     [HttpPost("upload-cv")]
     [Consumes("multipart/form-data")]
+    [DisableRequestSizeLimit]
+    [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue)]
     public async Task<IActionResult> UploadCv(
         [FromForm] IFormFile? file,
         CancellationToken cancellationToken)
@@ -138,12 +140,9 @@ public class SystemController(
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "No file uploaded" });
 
-        if (file.Length > 10 * 1024 * 1024)
-            return BadRequest(new { message = "File quá lớn (tối đa 10MB)" });
-
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(extension) || !AllowedCvExtensions.Contains(extension))
-            return BadRequest(new { message = "Chỉ chấp nhận file PDF, DOC, DOCX" });
+            return BadRequest(new { message = "Chỉ chấp nhận file PDF, DOC, DOCX, XLS, XLSX và ảnh" });
 
         try
         {

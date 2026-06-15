@@ -168,6 +168,8 @@ type OrganizationLikeItem = {
 type ParsedOrganizationContent = {
   board: OrganizationLikeItem[];
   directors: OrganizationLikeItem[];
+  companyChartUrl?: string;
+  siteChartUrl?: string;
 };
 
 const toOrganizationItemArray = (value: unknown): OrganizationLikeItem[] =>
@@ -241,12 +243,19 @@ export function parseOrganizationContent(raw: string | null | undefined): Parsed
     const board = toOrganizationItemArray(record.board ?? record.boardMembers ?? record.leadership ?? record.members);
     const directors = toOrganizationItemArray(record.directors ?? record.executives ?? record.management ?? record.executiveBoard);
 
+    const companyChartUrl = typeof record.companyChartUrl === "string" ? record.companyChartUrl : undefined;
+    const siteChartUrl = typeof record.siteChartUrl === "string" ? record.siteChartUrl : undefined;
+
     if (board.length > 0 || directors.length > 0) {
-      return { board, directors };
+      return { board, directors, companyChartUrl, siteChartUrl };
     }
 
     const merged = toOrganizationItemArray(record.items ?? record.leaders ?? record.list);
-    return merged.length > 0 ? splitOrganizationList(merged) : { board: [], directors: [] };
+    if (merged.length > 0) {
+      const split = splitOrganizationList(merged);
+      return { ...split, companyChartUrl, siteChartUrl };
+    }
+    return { board: [], directors: [], companyChartUrl, siteChartUrl };
   } catch {
     return { board: [], directors: [] };
   }

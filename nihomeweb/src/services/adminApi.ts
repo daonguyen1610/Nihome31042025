@@ -419,6 +419,12 @@ export const adminApi = {
     return api.post<{ mediaUrl: string }>("/system/upload-video", formData);
   },
 
+  uploadDocument: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<{ cvUrl: string }>("/system/upload-cv", formData);
+  },
+
   // Activities / Posts
   createActivity: (data: UpsertActivityRequest) =>
     api.post("/activities", data),

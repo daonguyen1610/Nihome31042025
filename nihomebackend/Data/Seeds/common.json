@@ -622,5 +622,13 @@
     "en": "Next",
     "zh": "下一个",
     "ja": "次へ"
+  },
+  {
+    "key": "common.close",
+    "category": "common",
+    "vi": "Đóng",
+    "en": "Close",
+    "zh": "关闭",
+    "ja": "閉じる"
   }
 ]
