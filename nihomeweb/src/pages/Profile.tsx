@@ -4,6 +4,7 @@ import {
   Award,
   Download,
   FileText,
+  X,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { contentApi, type AboutSectionResponse } from "@/services/contentApi";
@@ -28,10 +29,15 @@ type SimpleItem = { title: string; desc: string };
 type IconTextItem = { iconKey?: string; iconClass?: string; title: string; desc: string; isActive?: boolean; sortOrder?: number };
 type StatItem = { iconKey?: string; iconClass?: string; num: string; label: string; isActive?: boolean; sortOrder?: number };
 type LeaderItem = { role: string; name: string; isActive?: boolean; sortOrder?: number };
-type OrganizationItems = { board: LeaderItem[]; directors: LeaderItem[] };
 type TimelineItem = { year: string; title: string; desc: string; sortOrder?: number };
-type CertificationItem = { name: string; desc: string; sortOrder?: number };
+type CertificationItem = { name: string; desc: string; imageUrl?: string; sortOrder?: number };
 type DownloadItem = { name: string; size: string; type: string; url?: string; sortOrder?: number };
+
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const resolveUrl = (value: string) => {
+  if (!value || value.startsWith("http") || value.startsWith("data:") || !value.startsWith("/")) return value;
+  try { return `${new URL(API_BASE, window.location.origin).origin}${value}`; } catch { return value; }
+};
 
 const hasOrganizationMembers = (items: { board: readonly unknown[]; directors: readonly unknown[] }) =>
   items.board.length > 0 || items.directors.length > 0;
@@ -57,6 +63,7 @@ const parseItems = <T,>(value: string | null | undefined, fallback: T): T => {
 const Profile = () => {
   const { t } = useI18n();
   const [aboutSections, setAboutSections] = useState<AboutSectionResponse[]>([]);
+  const [certLightbox, setCertLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -113,23 +120,23 @@ const Profile = () => {
   const businessLines = sortItemsBySortOrder(parseItems<IconTextItem[]>(strategyMain?.itemsJson, [])).filter((item) => item.isActive !== false);
   const leadershipData = useMemo(() => {
     if (!organizationMain?.itemsJson?.trim()) {
-      return { board: [], directors: [] } as OrganizationItems;
+      return { board: [], directors: [], companyChartUrl: "", siteChartUrl: "" };
     }
 
     const parsed = parseOrganizationContent(organizationMain.itemsJson);
-    if (!hasOrganizationMembers(parsed)) {
-      return { board: [], directors: [] } as OrganizationItems;
-    }
-
     return {
-      board: normalizeLeadershipItems(parsed.board),
-      directors: normalizeLeadershipItems(parsed.directors),
+      board: hasOrganizationMembers(parsed) ? normalizeLeadershipItems(parsed.board) : [],
+      directors: hasOrganizationMembers(parsed) ? normalizeLeadershipItems(parsed.directors) : [],
+      companyChartUrl: parsed.companyChartUrl ?? "",
+      siteChartUrl: parsed.siteChartUrl ?? "",
     };
   }, [organizationMain?.itemsJson]);
   const certifications = sortItemsBySortOrder(parseItems<CertificationItem[]>(certsMain?.itemsJson, []));
   const downloads = sortItemsBySortOrder(parseItems<DownloadItem[]>(downloadsMain?.itemsJson, []));
   const boardMembers = sortItemsBySortOrder(leadershipData.board).filter((item) => item.isActive !== false);
   const directors = sortItemsBySortOrder(leadershipData.directors).filter((item) => item.isActive !== false);
+  const companyChartUrl = leadershipData.companyChartUrl;
+  const siteChartUrl = leadershipData.siteChartUrl;
 
   const navItems = [
     { href: "#about", label: t("profilePage.nav.about") },
@@ -265,34 +272,64 @@ const Profile = () => {
             <span className="text-gradient-primary">{organizationMain?.titleB}</span>.
           </h2>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-3xl p-8">
-            <h3 className="font-display text-xl font-extrabold mb-6 inline-flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary" /> {t("profilePage.org.board")}
-            </h3>
-            <ul className="divide-y divide-border">
-              {boardMembers.map((p, i) => (
-                <li key={i} className="py-3 flex justify-between gap-4">
-                  <span className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{p.role}</span>
-                  <span className="font-display font-extrabold text-right">{p.name}</span>
-                </li>
-              ))}
-            </ul>
+
+        {(companyChartUrl || siteChartUrl) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+            {companyChartUrl && (
+              <div className="bg-card border border-border rounded-3xl p-6">
+                <h3 className="font-display text-xl font-extrabold mb-5">{t("profilePage.org.companyChart")}</h3>
+                <img
+                  src={companyChartUrl}
+                  alt={t("profilePage.org.companyChart")}
+                  className="w-full object-contain rounded-xl"
+                  loading="lazy"
+                />
+              </div>
+            )}
+            {siteChartUrl && (
+              <div className="bg-card border border-border rounded-3xl p-6">
+                <h3 className="font-display text-xl font-extrabold mb-5">{t("profilePage.org.siteChart")}</h3>
+                <img
+                  src={siteChartUrl}
+                  alt={t("profilePage.org.siteChart")}
+                  className="w-full object-contain rounded-xl"
+                  loading="lazy"
+                />
+              </div>
+            )}
           </div>
-          <div className="bg-card border border-border rounded-3xl p-8">
-            <h3 className="font-display text-xl font-extrabold mb-6 inline-flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-accent-orange" /> {t("profilePage.org.exec")}
-            </h3>
-            <ul className="divide-y divide-border">
-              {directors.map((p, i) => (
-                <li key={i} className="py-3 flex justify-between gap-4">
-                  <span className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{p.role}</span>
-                  <span className="font-display font-extrabold text-right">{p.name}</span>
-                </li>
-              ))}
-            </ul>
+        )}
+
+        {(boardMembers.length > 0 || directors.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-card border border-border rounded-3xl p-8">
+              <h3 className="font-display text-xl font-extrabold mb-6 inline-flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary" /> {t("profilePage.org.board")}
+              </h3>
+              <ul className="divide-y divide-border">
+                {boardMembers.map((p, i) => (
+                  <li key={i} className="py-3 flex justify-between gap-4">
+                    <span className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{p.role}</span>
+                    <span className="font-display font-extrabold text-right">{p.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-card border border-border rounded-3xl p-8">
+              <h3 className="font-display text-xl font-extrabold mb-6 inline-flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-accent-orange" /> {t("profilePage.org.exec")}
+              </h3>
+              <ul className="divide-y divide-border">
+                {directors.map((p, i) => (
+                  <li key={i} className="py-3 flex justify-between gap-4">
+                    <span className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{p.role}</span>
+                    <span className="font-display font-extrabold text-right">{p.name}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
+        )}
       </Section>
 
       {/* Timeline */}
@@ -306,8 +343,8 @@ const Profile = () => {
             </h2>
             {timelineMain?.imageUrl ? <img src={timelineMain.imageUrl} alt="" className="mt-10 rounded-3xl w-full hover-lift" loading="lazy" /> : null}
           </div>
-          <div className="lg:col-span-8 lg:pl-8 relative">
-            <div className="absolute left-[18px] top-2 bottom-2 w-px bg-gradient-to-b from-primary via-accent-orange to-transparent lg:left-7" />
+          <div className="lg:col-span-8 relative">
+            <div className="absolute left-[18px] top-2 bottom-2 w-px bg-gradient-to-b from-primary via-accent-orange to-transparent lg:left-6" />
             <div className="space-y-10">
               {milestones.map((m, i) => (
                 <div key={i} className="relative pl-12 lg:pl-20">
@@ -332,14 +369,21 @@ const Profile = () => {
             <span className="text-gradient-primary">{certsMain?.titleB}</span>.
           </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {certifications.map((c, i) => (
-            <div key={i} className="bg-gradient-soft rounded-3xl border border-border p-8 text-center hover-lift">
-              <div className="w-16 h-16 rounded-full bg-gradient-primary text-white flex items-center justify-center mx-auto mb-5 shadow-glow">
-                <Award className="w-8 h-8" strokeWidth={1.5} />
+            <div
+              key={i}
+              className={`bg-gradient-soft rounded-3xl border border-border p-6 text-center hover-lift${c.imageUrl ? " cursor-pointer" : ""}`}
+              onClick={() => c.imageUrl && setCertLightbox(resolveUrl(c.imageUrl))}
+            >
+              <div className="w-14 h-14 rounded-full bg-gradient-primary text-white flex items-center justify-center mx-auto mb-4 shadow-glow">
+                <Award className="w-7 h-7" strokeWidth={1.5} />
               </div>
-              <h3 className="font-display text-xl font-extrabold mb-2">{c.name}</h3>
-              <p className="text-sm text-muted-foreground">{c.desc}</p>
+              <h3 className="font-display text-base font-extrabold mb-1 leading-tight">{c.name}</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">{c.desc}</p>
+              {c.imageUrl && (
+                <p className="mt-3 text-xs font-bold text-primary uppercase tracking-wider">{t("common.view")}</p>
+              )}
             </div>
           ))}
         </div>
@@ -360,8 +404,10 @@ const Profile = () => {
             {downloads.map((d, i) => (
               <a
                 key={i}
-                href={d.url || "#"}
-                onClick={(e) => e.preventDefault()}
+                href={d.url ? resolveUrl(d.url) : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
                 className="flex items-center gap-5 bg-card rounded-2xl border border-border p-5 hover-lift group"
               >
                 <span className="w-12 h-12 rounded-xl bg-gradient-soft text-primary flex items-center justify-center shrink-0">
@@ -379,6 +425,26 @@ const Profile = () => {
           </div>
         </div>
       </Section>
+      {certLightbox && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setCertLightbox(null)}
+        >
+          <img
+            src={certLightbox}
+            alt=""
+            className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            aria-label={t("common.close")}
+            className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors"
+            onClick={() => setCertLightbox(null)}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </Layout>
   );
 };

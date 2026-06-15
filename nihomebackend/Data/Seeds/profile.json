@@ -10,18 +10,18 @@
   {
     "key": "profilePage.title",
     "category": "profilePage",
-    "vi": "Đối tác của sự phát triển từ 2006.",
-    "en": "Partner of development since 2006.",
-    "zh": "自2006年以来发展的伙伴。",
-    "ja": "2006年から発展のパートナー。"
+    "vi": "Công ty Cổ phần Tư vấn Đầu tư Xây dựng NICON",
+    "en": "NICON Construction Investment Consultancy Joint Stock Company",
+    "zh": "NICON 建筑投资咨询股份公司",
+    "ja": "NICON建設投資コンサルティング株式会社"
   },
   {
     "key": "profilePage.desc",
     "category": "profilePage",
-    "vi": "Hơn 18 năm đồng hành cùng các nhà đầu tư trong và ngoài nước, NICON kiến tạo những công trình công nghiệp và dân dụng đạt chuẩn quốc tế.",
-    "en": "Over 18 years partnering with domestic and foreign investors, NICON delivers industrial and civil works meeting international standards.",
-    "zh": "超过18年与国内外投资者携手,NICON 打造符合国际标准的工业与民用工程。",
-    "ja": "18年以上にわたり国内外の投資家と歩み、国際水準の工業・民間建築を実現しています。"
+    "vi": "Thành lập từ tháng 3 năm 2006, NICON luôn hướng đến mục tiêu trở thành đối tác hàng đầu của các nhà sản xuất và cung cấp những giải pháp tối ưu trong lĩnh vực xây dựng.",
+    "en": "Established in March 2006, NICON consistently aims to become a leading partner for manufacturers and to provide optimal solutions in the construction sector.",
+    "zh": "NICON 成立于2006年3月，始终致力于成为制造商的首选合作伙伴，并提供建筑领域的最佳解决方案。",
+    "ja": "2006年3月に設立されたNICONは、常に製造業者のトップパートナーを目指し、建設分野において最適なソリューションを提供しています。"
   },
   {
     "key": "profilePage.nav.about",
@@ -258,7 +258,7 @@
   {
     "key": "profilePage.org.board",
     "category": "profilePage",
-    "vi": "Hội đồng Quản trị",
+    "vi": "Ban quản lý",
     "en": "Board of Directors",
     "zh": "董事会",
     "ja": "取締役会"
@@ -270,6 +270,22 @@
     "en": "Executive Board",
     "zh": "执行委员会",
     "ja": "経営陣"
+  },
+  {
+    "key": "profilePage.org.companyChart",
+    "category": "profilePage",
+    "vi": "Sơ đồ tổ chức công ty",
+    "en": "Company Organization Chart",
+    "zh": "公司组织架构图",
+    "ja": "会社組織図"
+  },
+  {
+    "key": "profilePage.org.siteChart",
+    "category": "profilePage",
+    "vi": "Sơ đồ tổ chức công trường",
+    "en": "Site Organization Chart",
+    "zh": "工地组织架构图",
+    "ja": "現場組織図"
   },
   {
     "key": "profilePage.timeline.eyebrow",

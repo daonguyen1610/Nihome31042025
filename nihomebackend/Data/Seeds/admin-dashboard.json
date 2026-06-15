@@ -2194,7 +2194,7 @@
   {
     "key": "aboutAdmin.boardList",
     "category": "aboutAdmin",
-    "vi": "Hội đồng quản trị",
+    "vi": "Ban quản lý",
     "en": "Board of Directors",
     "zh": "董事会",
     "ja": "取締役会"
@@ -2202,7 +2202,7 @@
   {
     "key": "aboutAdmin.directorsList",
     "category": "aboutAdmin",
-    "vi": "Ban điều hành",
+    "vi": "Ban giám đốc",
     "en": "Executive Board",
     "zh": "执行委员会",
     "ja": "執行委員会"
@@ -2214,6 +2214,22 @@
     "en": "Add member",
     "zh": "添加成员",
     "ja": "メンバーを追加"
+  },
+  {
+    "key": "aboutAdmin.org.companyChart",
+    "category": "aboutAdmin",
+    "vi": "Sơ đồ tổ chức công ty",
+    "en": "Company Org Chart",
+    "zh": "公司组织架构图",
+    "ja": "会社組織図"
+  },
+  {
+    "key": "aboutAdmin.org.siteChart",
+    "category": "aboutAdmin",
+    "vi": "Sơ đồ tổ chức công trường",
+    "en": "Site Org Chart",
+    "zh": "工地组织架构图",
+    "ja": "現場組織図"
   },
   {
     "key": "aboutAdmin.timelineList",
@@ -2798,5 +2814,21 @@
     "en": "Load more",
     "zh": "加载更多",
     "ja": "さらに読み込む"
+  },
+  {
+    "key": "aboutAdmin.fieldCertImage",
+    "category": "aboutAdmin",
+    "vi": "Ảnh chứng nhận",
+    "en": "Certificate image",
+    "zh": "证书图片",
+    "ja": "証明書の画像"
+  },
+  {
+    "key": "aboutAdmin.uploadDoc",
+    "category": "aboutAdmin",
+    "vi": "Tải tài liệu",
+    "en": "Upload document",
+    "zh": "上传文档",
+    "ja": "文書をアップロード"
   }
 ]
