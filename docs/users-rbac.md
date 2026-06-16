@@ -95,4 +95,8 @@ There is no manual route list to maintain — adding a new `[RequirePermission(.
 
 For per-controller happy-path coverage (admin/SA returns 2xx with a valid payload), use the existing per-controller test files; the dynamic probe intentionally only asserts the deny path so it stays maintenance-free.
 
+### Browser-level RBAC matrix
+
+`nihomeweb/e2e/smoke/admin-rbac-matrix.spec.ts` drives all 9 seeded accounts through every admin route surface and asserts each role can reach exactly its permitted set and gets the inline `<Forbidden />` screen on the rest. Allow/deny sets are kept in sync with `/api/users/me/permissions` returned by the live stack so a drift between `rbac-defaults.json`, the seeder, and the FE `ADMIN_PERMS` map fails the suite. Run with `BASE_URL=http://localhost:5043 npx playwright test admin-rbac-matrix`.
+
 
