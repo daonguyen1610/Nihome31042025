@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
@@ -7,6 +8,7 @@ using NihomeBackend.Services.Audit;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
+[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
 [Route("api/processes")]
 [Route("api/v1/processes")]
 public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IAuditLogger audit, ILogger<ProcessesController> logger) : ControllerBase
@@ -20,6 +22,7 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
     private const long MaxFileBytes = 25 * 1024 * 1024;    // 25 MB
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll() => Ok(await svc.GetAllGroupedAsync());
 
     [HttpPost]
