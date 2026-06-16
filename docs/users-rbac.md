@@ -84,4 +84,15 @@ UPDATE roles SET initial_permissions_seeded = 0 WHERE is_system = 0;
 
 Then restart the backend; `RbacSeeder.SeedInitialBusinessRolePermissionsIfMissing` will rebuild the rows from the current patterns. Integration and E2E suites are unaffected because they start from a fresh DB on every run.
 
+### Lockdown regression safety net
+
+`UnauthorizedMutationProbeTests` (in `nihomebackend.integration.tests/Controllers/`) reflects over every controller via `ProtectedEndpointInventory.Discover()` and emits two theory rows per `[RequirePermission]`-guarded endpoint:
+
+- anonymous caller → `401 Unauthorized`
+- `USER`-role caller (only has `profile.me.*`) → `403 Forbidden`
+
+There is no manual route list to maintain — adding a new `[RequirePermission(...)]` action automatically opts that route into both checks. The scanner currently finds ~79 protected endpoints (`POST/PUT/DELETE` + guarded `GET`s). A sanity `Fact` fails if discovery ever returns fewer than 20 routes (catches reflection breakage in refactors).
+
+For per-controller happy-path coverage (admin/SA returns 2xx with a valid payload), use the existing per-controller test files; the dynamic probe intentionally only asserts the deny path so it stays maintenance-free.
+
 
