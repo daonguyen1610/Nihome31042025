@@ -4,66 +4,72 @@ using System.Net.Http.Json;
 namespace NihomeBackend.IntegrationTests.Controllers;
 
 /// <summary>
-/// Safety net asserting every protected admin/SA mutation endpoint rejects a
-/// USER-role caller with 403 and an anonymous caller with 401. Guards against
-/// regressions when controllers migrate from <c>[Authorize(Roles=...)]</c> to
-/// <c>[RequirePermission]</c> in later RBAC phases.
+/// Safety net asserting every <c>[RequirePermission]</c>-guarded endpoint
+/// (GET + mutations) rejects anonymous callers with 401 and USER-role callers
+/// (whose only permissions are <c>profile.me.*</c>) with 403. The route list
+/// is reflected from controller attributes at runtime by
+/// <see cref="Infrastructure.ProtectedEndpointInventory"/>, so newly added
+/// endpoints get coverage automatically.
 /// </summary>
 public class UnauthorizedMutationProbeTests : IntegrationTestBase
 {
     public UnauthorizedMutationProbeTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
-    public static readonly TheoryData<string, string> ProtectedMutationEndpoints = new()
+    public static TheoryData<string, string, bool> ProtectedEndpoints
     {
-        { "DELETE", "/api/about-sections/1" },
-        { "PUT",    "/api/about-sections/1" },
-        { "DELETE", "/api/news/1" },
-        { "PUT",    "/api/news/1" },
-        { "DELETE", "/api/projects/1" },
-        { "DELETE", "/api/project-categories/1" },
-        { "DELETE", "/api/services/1" },
-        { "DELETE", "/api/logos/1" },
-        { "DELETE", "/api/activities/1" },
-        { "DELETE", "/api/activity-categories/1" },
-        { "DELETE", "/api/processes/1" },
-        { "POST",   "/api/Mail/send" },
-        { "DELETE", "/api/contacts/1" },
-        { "DELETE", "/api/users/1" },
-        { "PUT",    "/api/users/1" },
-        { "DELETE", "/api/audit-logs/1" },
-        { "PUT",    "/api/audit-logs/config" },
-        { "DELETE", "/api/admin/rbac/roles/1" },
-        { "PUT",    "/api/admin/rbac/roles/1" },
-        { "DELETE", "/api/job-positions/1" },
-        { "DELETE", "/api/employment-types/1" },
-        { "PUT",    "/api/site-settings/otp-settings" },
-    };
+        get
+        {
+            var data = new TheoryData<string, string, bool>();
+            foreach (var endpoint in Infrastructure.ProtectedEndpointInventory.Discover())
+            {
+                data.Add(endpoint.HttpMethod, endpoint.Url, endpoint.ExpectsMultipart);
+            }
+            return data;
+        }
+    }
 
     [Theory]
-    [MemberData(nameof(ProtectedMutationEndpoints))]
-    public async Task Anonymous_OnMutation_ReturnsUnauthorized(string method, string url)
+    [MemberData(nameof(ProtectedEndpoints))]
+    public async Task Anonymous_OnProtectedEndpoint_ReturnsUnauthorized(string method, string url, bool multipart)
     {
-        using var req = BuildRequest(method, url);
+        using var req = BuildRequest(method, url, multipart);
         var res = await Client.SendAsync(req);
         res.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
             because: $"{method} {url} must reject anonymous callers");
     }
 
     [Theory]
-    [MemberData(nameof(ProtectedMutationEndpoints))]
-    public async Task Customer_OnMutation_ReturnsForbidden(string method, string url)
+    [MemberData(nameof(ProtectedEndpoints))]
+    public async Task Customer_OnProtectedEndpoint_ReturnsForbidden(string method, string url, bool multipart)
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsCustomerAsync);
 
-        using var req = BuildRequest(method, url);
+        using var req = BuildRequest(method, url, multipart);
         var res = await Client.SendAsync(req);
         res.StatusCode.Should().Be(HttpStatusCode.Forbidden,
             because: $"{method} {url} must reject USER-role callers");
     }
 
-    private static HttpRequestMessage BuildRequest(string method, string url) =>
-        new(new HttpMethod(method), url)
+    [Fact]
+    public void Inventory_ContainsAtLeastTwentyEndpoints()
+    {
+        Infrastructure.ProtectedEndpointInventory.Discover()
+            .Should().HaveCountGreaterThan(20, "scanner must keep discovering controller routes");
+    }
+
+    private static HttpRequestMessage BuildRequest(string method, string url, bool multipart)
+    {
+        var req = new HttpRequestMessage(new HttpMethod(method), url);
+        if (multipart)
         {
-            Content = JsonContent.Create(new { }),
-        };
+            // [Consumes("multipart/form-data")] gates routing via IActionConstraint;
+            // attach a tiny multipart body so the request reaches the auth filter.
+            req.Content = new MultipartFormDataContent($"---boundary-{Guid.NewGuid():N}");
+        }
+        else
+        {
+            req.Content = JsonContent.Create(new { });
+        }
+        return req;
+    }
 }
