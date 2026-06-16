@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
@@ -8,7 +9,8 @@ using NihomeBackend.Services.Audit;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("processes", "view")]
 [Route("api/processes")]
 [Route("api/v1/processes")]
 public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IAuditLogger audit, ILogger<ProcessesController> logger) : ControllerBase
@@ -26,6 +28,7 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
     public async Task<IActionResult> GetAll() => Ok(await svc.GetAllGroupedAsync());
 
     [HttpPost]
+    [RequirePermission("processes", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertProcessRequest req)
     {
         var result = await svc.CreateAsync(req);
@@ -41,6 +44,7 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("processes", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertProcessRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
@@ -69,6 +73,7 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("processes", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         var ok = await svc.DeleteAsync(id);
@@ -90,11 +95,13 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
     }
 
     [HttpPost("upload-image")]
+    [RequirePermission("processes.uploads", "manage")]
     [Consumes("multipart/form-data")]
     public Task<IActionResult> UploadImage([FromForm] IFormFile? file, [FromForm] string? groupKey, CancellationToken ct)
         => SaveUpload(file, groupKey, AllowedImageExtensions, MaxImageBytes, "image", ct);
 
     [HttpPost("upload-file")]
+    [RequirePermission("processes.uploads", "manage")]
     [Consumes("multipart/form-data")]
     public Task<IActionResult> UploadFile([FromForm] IFormFile? file, [FromForm] string? groupKey, CancellationToken ct)
         => SaveUpload(file, groupKey, AllowedFileExtensions, MaxFileBytes, "file", ct);

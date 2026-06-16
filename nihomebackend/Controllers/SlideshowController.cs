@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("content.slideshow", "view")]
 [Route("api/slideshow")]
 [Route("api/v1/slideshow")]
 public class SlideshowController(SlideshowService svc) : ControllerBase
@@ -27,6 +29,7 @@ public class SlideshowController(SlideshowService svc) : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission("content.slideshow", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertSlideshowRequest req)
     {
         var result = await svc.CreateAsync(req);
@@ -34,6 +37,7 @@ public class SlideshowController(SlideshowService svc) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("content.slideshow", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertSlideshowRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
@@ -41,6 +45,7 @@ public class SlideshowController(SlideshowService svc) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("content.slideshow", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         return await svc.DeleteAsync(id) ? NoContent() : NotFound();

@@ -478,6 +478,72 @@
   },
 
   {
+    "key": "rbac.perm.content.translations.view.label",
+    "category": "rbac",
+    "vi": "Xem bản dịch nội dung",
+    "en": "View content translations",
+    "zh": "查看内容翻译",
+    "ja": "コンテンツ翻訳を表示"
+  },
+  {
+    "key": "rbac.perm.content.translations.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các cặp dịch tĩnh và bản dịch của thực thể.",
+    "en": "Allows viewing static translation pairs and entity translations.",
+    "zh": "允许查看静态翻译键值对以及实体翻译。",
+    "ja": "静的翻訳ペアおよびエンティティ翻訳の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.translations.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý bản dịch nội dung",
+    "en": "Manage content translations",
+    "zh": "管理内容翻译",
+    "ja": "コンテンツ翻訳を管理"
+  },
+  {
+    "key": "rbac.perm.content.translations.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá bản dịch tĩnh cũng như bản dịch của thực thể.",
+    "en": "Create, edit and delete static translation pairs and entity translations.",
+    "zh": "创建、编辑和删除静态翻译键值对及实体翻译。",
+    "ja": "静的翻訳ペアおよびエンティティ翻訳の作成・編集・削除を行います。"
+  },
+
+  {
+    "key": "rbac.perm.system.settings.view.label",
+    "category": "rbac",
+    "vi": "Xem cấu hình hệ thống",
+    "en": "View system settings",
+    "zh": "查看系统设置",
+    "ja": "システム設定を表示"
+  },
+  {
+    "key": "rbac.perm.system.settings.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem cấu hình OTP, email mẫu và bản đồ nhúng.",
+    "en": "Allows viewing OTP, email template and embedded map settings.",
+    "zh": "允许查看 OTP、邮件模板及嵌入地图设置。",
+    "ja": "OTP・メールテンプレート・埋め込み地図設定の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.system.settings.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý cấu hình hệ thống",
+    "en": "Manage system settings",
+    "zh": "管理系统设置",
+    "ja": "システム設定を管理"
+  },
+  {
+    "key": "rbac.perm.system.settings.manage.description",
+    "category": "rbac",
+    "vi": "Cập nhật OTP, email mẫu và URL bản đồ nhúng cho trang công khai.",
+    "en": "Update OTP, email templates and embedded map URL for the public site.",
+    "zh": "更新公开站点的 OTP、邮件模板及嵌入地图 URL。",
+    "ja": "公開サイトの OTP・メールテンプレート・埋め込み地図 URL を更新します。"
+  },
+
+  {
     "key": "rbac.perm.processes.view.label",
     "category": "rbac",
     "vi": "Xem quy trình làm việc",

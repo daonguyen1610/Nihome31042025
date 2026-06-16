@@ -13,10 +13,27 @@ public class UsersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task List_AsAdmin_ReturnsForbidden()
+    public async Task List_AsAdmin_ReturnsOk()
+    {
+        // ADMIN has users.view (system role: full catalog minus
+        // users.manage + system.audit.manage) so listing must succeed; the
+        // ability to mutate users is covered by Create_AsAdmin_ReturnsForbidden.
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        (await Client.GetAsync("/api/users")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Create_AsAdmin_ReturnsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        (await Client.GetAsync("/api/users")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var resp = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = "0900000099",
+            fullName = "Blocked",
+            password = "P@ssword1",
+            role = "ADMIN",
+        });
+        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

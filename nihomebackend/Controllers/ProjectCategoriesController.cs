@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("content.project-categories", "view")]
 [Route("api/project-categories")]
 [Route("api/v1/project-categories")]
 public class ProjectCategoriesController(ProjectCategoryService svc) : ControllerBase
@@ -17,6 +19,7 @@ public class ProjectCategoriesController(ProjectCategoryService svc) : Controlle
         => Ok(await svc.GetAllAsync(includeInactive));
 
     [HttpPost]
+    [RequirePermission("content.project-categories", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertProjectCategoryRequest req)
     {
         try
@@ -31,6 +34,7 @@ public class ProjectCategoriesController(ProjectCategoryService svc) : Controlle
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("content.project-categories", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertProjectCategoryRequest req)
     {
         try
@@ -45,6 +49,7 @@ public class ProjectCategoriesController(ProjectCategoryService svc) : Controlle
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("content.project-categories", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         try

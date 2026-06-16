@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 
@@ -28,7 +29,8 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("recruitment.positions", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertJobPositionRequest req)
     {
         try
@@ -43,7 +45,8 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("recruitment.positions", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertJobPositionRequest req)
     {
         try
@@ -58,7 +61,8 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("recruitment.positions", "manage")]
     public async Task<IActionResult> Delete(int id)
         => await svc.DeleteAsync(id) ? NoContent() : NotFound();
 }

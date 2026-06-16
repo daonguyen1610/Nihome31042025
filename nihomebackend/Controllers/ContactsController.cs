@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 
@@ -20,13 +21,15 @@ public class ContactsController(ContactMessageService svc) : ControllerBase
 
     /// <summary>Admin: list all contact messages.</summary>
     [HttpGet]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("contacts", "view")]
     public async Task<IActionResult> GetAll([FromQuery] bool? replied)
         => Ok(await svc.GetAllAsync(replied));
 
     /// <summary>Admin: get a single contact message.</summary>
     [HttpGet("{id:int}")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("contacts", "view")]
     public async Task<IActionResult> GetById(int id)
     {
         var result = await svc.GetByIdAsync(id);
@@ -35,7 +38,8 @@ public class ContactsController(ContactMessageService svc) : ControllerBase
 
     /// <summary>Admin: reply to a contact message (sends email).</summary>
     [HttpPost("{id:int}/reply")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("contacts", "manage")]
     public async Task<IActionResult> Reply(int id, [FromBody] ReplyContactRequest req)
     {
         var result = await svc.ReplyAsync(id, req);
@@ -44,7 +48,8 @@ public class ContactsController(ContactMessageService svc) : ControllerBase
 
     /// <summary>Admin: mark a contact as replied without sending email.</summary>
     [HttpPatch("{id:int}/mark-replied")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("contacts", "manage")]
     public async Task<IActionResult> MarkReplied(int id)
     {
         var result = await svc.MarkRepliedAsync(id);
@@ -53,7 +58,8 @@ public class ContactsController(ContactMessageService svc) : ControllerBase
 
     /// <summary>Admin: delete a contact message.</summary>
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("contacts", "manage")]
     public async Task<IActionResult> Delete(int id)
         => await svc.DeleteAsync(id) ? NoContent() : NotFound();
 }

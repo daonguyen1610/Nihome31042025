@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("content.about", "view")]
 [Route("api/about-sections")]
 [Route("api/v1/about-sections")]
 public class AboutSectionsController(AboutSectionService svc) : ControllerBase
@@ -25,6 +27,7 @@ public class AboutSectionsController(AboutSectionService svc) : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission("content.about", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertAboutSectionRequest req)
     {
         var result = await svc.CreateAsync(req);
@@ -32,6 +35,7 @@ public class AboutSectionsController(AboutSectionService svc) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("content.about", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertAboutSectionRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
@@ -39,6 +43,7 @@ public class AboutSectionsController(AboutSectionService svc) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("content.about", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         return await svc.DeleteAsync(id) ? NoContent() : NotFound();

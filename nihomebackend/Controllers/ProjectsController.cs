@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
@@ -7,7 +8,8 @@ using NihomeBackend.Services.Audit;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("content.projects", "view")]
 [Route("api/projects")]
 [Route("api/v1/projects")]
 public class ProjectsController(ProjectService svc, IAuditLogger audit) : ControllerBase
@@ -25,6 +27,7 @@ public class ProjectsController(ProjectService svc, IAuditLogger audit) : Contro
     }
 
     [HttpPost]
+    [RequirePermission("content.projects", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertProjectRequest req)
     {
         var result = await svc.CreateAsync(req);
@@ -40,6 +43,7 @@ public class ProjectsController(ProjectService svc, IAuditLogger audit) : Contro
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("content.projects", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertProjectRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
@@ -68,6 +72,7 @@ public class ProjectsController(ProjectService svc, IAuditLogger audit) : Contro
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("content.projects", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         var ok = await svc.DeleteAsync(id);
