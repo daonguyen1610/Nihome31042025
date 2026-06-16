@@ -15,6 +15,25 @@ public static class TestDataSeeder
     public const string CustomerPhone = "0900000001";
     public const string DefaultPassword = "Admin@123";
 
+    /// <summary>
+    /// One test user per business role. Keys are the role <c>Code</c> exposed
+    /// by <see cref="NihomeBackend.Data.RbacSeedData"/>; values are stable
+    /// phone numbers reserved for tests. Kept in sync with
+    /// <see cref="NihomeBackend.Data.DbSeeder"/> so dev and tests share the
+    /// same credentials.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string> BusinessRolePhonesByCode =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["SALE"] = "0911000003",
+            ["DESIGN"] = "0911000004",
+            ["PM"] = "0911000005",
+            ["QS"] = "0911000006",
+            ["ACCOUNTANT"] = "0911000007",
+            ["WAREHOUSE"] = "0911000008",
+            ["BGD"] = "0911000009",
+        };
+
     public static void Seed(AppDbContext db)
     {
         var password = new PasswordService();
@@ -60,6 +79,8 @@ public static class TestDataSeeder
         // backfill) so endpoints depending on them can run.
         RbacSeeder.Seed(db);
 
+        SeedBusinessRoleUsers(db, password);
+
         if (!db.SiteSettings.Any())
         {
             db.SiteSettings.Add(new SiteSettings
@@ -81,5 +102,32 @@ public static class TestDataSeeder
             });
             db.SaveChanges();
         }
+    }
+
+    private static void SeedBusinessRoleUsers(AppDbContext db, PasswordService password)
+    {
+        var rolesByCode = db.Roles
+            .Where(r => !r.IsSystem)
+            .ToDictionary(r => r.Code, r => r.Id, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (code, phone) in BusinessRolePhonesByCode)
+        {
+            if (!rolesByCode.TryGetValue(code, out var roleId)) continue;
+            if (db.Users.Any(u => u.PhoneNumber == phone)) continue;
+
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                FullName = $"{code} Tester",
+                Email = $"{code.ToLowerInvariant()}.test@nihome.test",
+                Role = UserRole.USER,
+                RoleEntityId = roleId,
+                IsActive = true,
+            };
+            user.PasswordHash = password.Hash(user, DefaultPassword);
+            db.Users.Add(user);
+        }
+
+        db.SaveChanges();
     }
 }
