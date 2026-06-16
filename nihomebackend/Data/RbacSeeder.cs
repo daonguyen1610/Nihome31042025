@@ -10,9 +10,10 @@ namespace NihomeBackend.Data;
 ///   2. Ensures the 3 system roles + business roles from the JSON seed exist.
 ///      New roles can ONLY be introduced by editing the JSON seed — there is
 ///      no API to create roles.
-///   3. Force-syncs <c>SUPER_ADMIN</c> to the full permission catalog every
-///      boot. Lockout safety net.
-///   4. Seeds the initial permission set for any OTHER role exactly once
+///   3. Force-syncs all SYSTEM roles (SUPER_ADMIN/ADMIN/USER) to the catalog
+///      every boot. System roles are deterministic by design — admins cannot
+///      customise them and new catalog codes must propagate automatically.
+///   4. Seeds the initial permission set for each business role exactly once
 ///      (tracked by <c>Role.InitialPermissionsSeeded</c>). Subsequent admin
 ///      edits in the matrix editor are preserved on restart.
 ///   5. Backfills <c>users.RoleEntityId</c> for any user whose enum role maps
@@ -38,8 +39,8 @@ public static class RbacSeeder
 
         SeedPermissions(db, catalog);
         SeedRoles(db, bundle);
-        ForceSyncSuperAdminPermissions(db);
-        SeedInitialRolePermissionsIfMissing(db, catalog, bundle);
+        ForceSyncSystemRolePermissions(db, catalog, bundle);
+        SeedInitialBusinessRolePermissionsIfMissing(db, catalog, bundle);
         BackfillUserRoleEntityIds(db);
     }
 
@@ -108,22 +109,67 @@ public static class RbacSeeder
         db.SaveChanges();
     }
 
-    private static void ForceSyncSuperAdminPermissions(AppDbContext db)
+    private static void ForceSyncSystemRolePermissions(
+        AppDbContext db,
+        IReadOnlyList<PermissionCatalog.Entry> catalog,
+        RbacSeedData.Bundle bundle)
     {
-        var role = db.Roles.FirstOrDefault(r => r.Code == SystemRoleCodes.SuperAdmin);
-        if (role == null) return;
+        var permissionIdByCode = db.Permissions.ToDictionary(
+            p => RbacConventions.BuildCode(p.Module, p.Action),
+            p => p.Id,
+            StringComparer.OrdinalIgnoreCase);
+        var allCodes = catalog.Select(e => e.Code).ToList();
 
-        var allPermissionIds = db.Permissions.Select(p => p.Id).ToHashSet();
-        var currentIds = db.RolePermissions.Where(rp => rp.RoleId == role.Id).Select(rp => rp.PermissionId).ToHashSet();
+        var systemRoles = db.Roles
+            .Where(r => r.IsSystem)
+            .ToList();
 
-        var toAdd = allPermissionIds
-            .Where(id => !currentIds.Contains(id))
-            .Select(id => new RolePermission { RoleId = role.Id, PermissionId = id, CreatedAt = DateTime.UtcNow });
-        db.RolePermissions.AddRange(toAdd);
+        foreach (var role in systemRoles)
+        {
+            // SUPER_ADMIN bypasses pattern expansion — always gets the full
+            // catalog so an empty/missing pattern entry can never lock it out.
+            HashSet<int> desiredIds;
+            if (string.Equals(role.Code, SystemRoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase))
+            {
+                desiredIds = permissionIdByCode.Values.ToHashSet();
+            }
+            else if (bundle.RolePermissions.TryGetValue(role.Code, out var defaults))
+            {
+                var codes = PermissionCatalog.ExpandPatterns(defaults.Patterns, allCodes, defaults.Deny);
+                desiredIds = codes
+                    .Where(permissionIdByCode.ContainsKey)
+                    .Select(c => permissionIdByCode[c])
+                    .ToHashSet();
+            }
+            else
+            {
+                continue;
+            }
+
+            var currentIds = db.RolePermissions
+                .Where(rp => rp.RoleId == role.Id)
+                .Select(rp => rp.PermissionId)
+                .ToHashSet();
+
+            var toAdd = desiredIds.Except(currentIds)
+                .Select(id => new RolePermission { RoleId = role.Id, PermissionId = id, CreatedAt = DateTime.UtcNow });
+            var toRemove = db.RolePermissions
+                .Where(rp => rp.RoleId == role.Id && !desiredIds.Contains(rp.PermissionId))
+                .ToList();
+
+            db.RolePermissions.AddRange(toAdd);
+            if (toRemove.Count > 0) db.RolePermissions.RemoveRange(toRemove);
+
+            // System roles are deterministic: mark seeded so the business-role
+            // initial-seed pass below skips them (it filters by IsSystem too,
+            // but this keeps the flag truthful for any tooling that reads it).
+            role.InitialPermissionsSeeded = true;
+        }
+
         db.SaveChanges();
     }
 
-    private static void SeedInitialRolePermissionsIfMissing(
+    private static void SeedInitialBusinessRolePermissionsIfMissing(
         AppDbContext db,
         IReadOnlyList<PermissionCatalog.Entry> catalog,
         RbacSeedData.Bundle bundle)
@@ -132,9 +178,9 @@ public static class RbacSeeder
             .ToDictionary(p => RbacConventions.BuildCode(p.Module, p.Action), p => p.Id, StringComparer.OrdinalIgnoreCase);
         var allCodes = catalog.Select(e => e.Code).ToList();
 
-        // Skip SUPER_ADMIN — handled by ForceSyncSuperAdminPermissions.
+        // System roles are handled by ForceSyncSystemRolePermissions.
         var roles = db.Roles
-            .Where(r => r.Code != SystemRoleCodes.SuperAdmin && !r.InitialPermissionsSeeded)
+            .Where(r => !r.IsSystem && !r.InitialPermissionsSeeded)
             .ToList();
 
         foreach (var role in roles)

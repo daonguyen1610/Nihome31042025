@@ -54,33 +54,68 @@ public class RbacSeederTests : IDisposable
     }
 
     [Fact]
-    public void Seed_DoesNotOverwriteAdminChangesAfterFirstSeed()
+    public void Seed_DoesNotOverwriteBusinessRoleChangesAfterFirstSeed()
     {
         RbacSeeder.Seed(_db);
 
-        var admin = _db.Roles.Single(r => r.Code == SystemRoleCodes.Admin);
-        var adminPerms = _db.RolePermissions.Where(rp => rp.RoleId == admin.Id).ToList();
-        Assert.NotEmpty(adminPerms);
-        _db.RolePermissions.RemoveRange(adminPerms);
+        var sale = _db.Roles.Single(r => r.Code == "SALE");
+        var salePerms = _db.RolePermissions.Where(rp => rp.RoleId == sale.Id).ToList();
+        Assert.NotEmpty(salePerms);
+        _db.RolePermissions.RemoveRange(salePerms);
         _db.SaveChanges();
 
         RbacSeeder.Seed(_db);
 
-        Assert.Empty(_db.RolePermissions.Where(rp => rp.RoleId == admin.Id));
+        Assert.Empty(_db.RolePermissions.Where(rp => rp.RoleId == sale.Id));
     }
 
     [Fact]
-    public void Seed_SuperAdminPermissionsAreRestoredOnEveryBoot()
+    public void Seed_SystemRolePermissionsAreRestoredOnEveryBoot()
     {
         RbacSeeder.Seed(_db);
-        var sa = _db.Roles.Single(r => r.Code == SystemRoleCodes.SuperAdmin);
-        var perms = _db.RolePermissions.Where(rp => rp.RoleId == sa.Id).ToList();
-        _db.RolePermissions.RemoveRange(perms);
+
+        foreach (var code in new[] { SystemRoleCodes.SuperAdmin, SystemRoleCodes.Admin, SystemRoleCodes.User })
+        {
+            var role = _db.Roles.Single(r => r.Code == code);
+            var perms = _db.RolePermissions.Where(rp => rp.RoleId == role.Id).ToList();
+            Assert.NotEmpty(perms);
+            _db.RolePermissions.RemoveRange(perms);
+        }
         _db.SaveChanges();
 
         RbacSeeder.Seed(_db);
 
-        Assert.Equal(_db.Permissions.Count(), _db.RolePermissions.Count(rp => rp.RoleId == sa.Id));
+        var allCodes = PermissionCatalog.Resolve(RbacSeedData.Default.BaseCatalog).Select(e => e.Code).ToList();
+        foreach (var (code, expectedCount) in new[]
+        {
+            (SystemRoleCodes.SuperAdmin, allCodes.Count),
+            (SystemRoleCodes.Admin, ExpectedCount(SystemRoleCodes.Admin, allCodes)),
+            (SystemRoleCodes.User, ExpectedCount(SystemRoleCodes.User, allCodes)),
+        })
+        {
+            var role = _db.Roles.Single(r => r.Code == code);
+            Assert.Equal(expectedCount, _db.RolePermissions.Count(rp => rp.RoleId == role.Id));
+        }
+    }
+
+    [Fact]
+    public void Seed_AdminPicksUpNewCatalogCodesAddedAfterInitialSeed()
+    {
+        RbacSeeder.Seed(_db);
+        var admin = _db.Roles.Single(r => r.Code == SystemRoleCodes.Admin);
+        var beforeCount = _db.RolePermissions.Count(rp => rp.RoleId == admin.Id);
+
+        // Simulate the catalog growing between boots: a new module/action that
+        // matches ADMIN's `**` pattern (and is not in its deny list) appears.
+        var extended = RbacSeedData.Default;
+        var expandedCatalog = extended.BaseCatalog
+            .Append(new PermissionCatalog.Entry("synthetic", "manage", "rbac.perm.synthetic.manage"))
+            .ToList();
+        var grown = new RbacSeedData.Bundle(expandedCatalog, extended.BusinessRoles, extended.RolePermissions);
+
+        RbacSeeder.Seed(_db, assemblies: null, seedData: grown);
+
+        Assert.Equal(beforeCount + 1, _db.RolePermissions.Count(rp => rp.RoleId == admin.Id));
     }
 
     [Fact]
@@ -146,5 +181,11 @@ public class RbacSeederTests : IDisposable
         RbacSeeder.Seed(_db);
 
         Assert.Equal(PermissionCatalog.Resolve(RbacSeedData.Default.BaseCatalog).Count, _db.Permissions.Count());
+    }
+
+    private static int ExpectedCount(string roleCode, IReadOnlyList<string> allCodes)
+    {
+        var defaults = RbacSeedData.Default.RolePermissions[roleCode];
+        return PermissionCatalog.ExpandPatterns(defaults.Patterns, allCodes, defaults.Deny).Count;
     }
 }
