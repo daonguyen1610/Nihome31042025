@@ -132,6 +132,22 @@
     "ja": "システム監査イベントの閲覧を許可します。"
   },
   {
+    "key": "rbac.perm.system.audit.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý nhật ký kiểm toán",
+    "en": "Manage audit log",
+    "zh": "管理审计日志",
+    "ja": "監査ログを管理"
+  },
+  {
+    "key": "rbac.perm.system.audit.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép xoá log và cập nhật cấu hình thời gian lưu trữ.",
+    "en": "Allows deleting entries and updating retention configuration.",
+    "zh": "允许删除条目并更新保留期配置。",
+    "ja": "ログの削除と保持期間設定の更新を許可します。"
+  },
+  {
     "key": "rbac.perm.system.notifications.manage.label",
     "category": "rbac",
     "vi": "Quản lý thông báo hệ thống",

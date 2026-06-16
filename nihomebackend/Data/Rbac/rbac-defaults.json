@@ -5,6 +5,7 @@
     { "module": "dashboard", "action": "view" },
 
     { "module": "system.audit", "action": "view" },
+    { "module": "system.audit", "action": "manage" },
     { "module": "system.notifications", "action": "manage" },
 
     { "module": "users", "action": "view" },
@@ -28,7 +29,7 @@
 
   "rolePermissions": {
     "SUPER_ADMIN": { "patterns": ["**"] },
-    "ADMIN":       { "patterns": ["**"], "deny": ["users.manage"] },
+    "ADMIN":       { "patterns": ["**"], "deny": ["users.manage", "system.audit.manage"] },
     "USER":        { "patterns": ["profile.me.*"] },
 
     "SALE": {
