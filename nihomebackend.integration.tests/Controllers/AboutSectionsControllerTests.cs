@@ -15,6 +15,7 @@ public class AboutSectionsControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullRoundTrip_Create_Read_Update_Delete()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var slug = UniqueSlug("about");
         var payload = new
         {

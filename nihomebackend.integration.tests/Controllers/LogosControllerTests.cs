@@ -15,6 +15,7 @@ public class LogosControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullRoundTrip_Create_Update_Delete()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var name = $"Logo-{Guid.NewGuid():N}".Substring(0, 18);
         var created = await Client.PostAsJsonAsync("/api/logos", new
         {

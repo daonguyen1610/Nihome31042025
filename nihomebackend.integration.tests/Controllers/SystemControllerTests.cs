@@ -16,6 +16,7 @@ public class SystemControllerTests : IntegrationTestBase
     [Fact]
     public async Task UploadImage_NoFile_ReturnsBadRequest()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         using var form = new MultipartFormDataContent();
         var res = await Client.PostAsync("/api/system/upload-image", form);
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -24,6 +25,7 @@ public class SystemControllerTests : IntegrationTestBase
     [Fact]
     public async Task UploadVideo_NoFile_ReturnsBadRequest()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         using var form = new MultipartFormDataContent();
         var res = await Client.PostAsync("/api/system/upload-video", form);
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -32,6 +34,7 @@ public class SystemControllerTests : IntegrationTestBase
     [Fact]
     public async Task UploadCv_NoFile_ReturnsBadRequest()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         using var form = new MultipartFormDataContent();
         var res = await Client.PostAsync("/api/system/upload-cv", form);
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);

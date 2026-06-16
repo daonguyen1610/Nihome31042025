@@ -15,6 +15,7 @@ public class ActivityCategoriesControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullRoundTrip_Create_Update_Delete()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var name = $"Cat-{Guid.NewGuid():N}".Substring(0, 16);
         var created = await Client.PostAsJsonAsync("/api/activity-categories", new { name, isActive = true, sortOrder = 0 });
         created.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -29,6 +30,7 @@ public class ActivityCategoriesControllerTests : IntegrationTestBase
     [Fact]
     public async Task Update_NonExistent_ReturnsNotFound()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var res = await Client.PutAsJsonAsync("/api/activity-categories/999999", new { name = "x", isActive = true, sortOrder = 0 });
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }

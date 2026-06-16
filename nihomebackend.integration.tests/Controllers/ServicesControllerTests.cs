@@ -22,6 +22,7 @@ public class ServicesControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullRoundTrip_Create_Update_Delete()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var slug = UniqueSlug("svc");
         var sections = JsonDocument.Parse("[{\"title\":\"Section\",\"items\":[]}]").RootElement;
 

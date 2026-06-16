@@ -15,6 +15,7 @@ public class ProcessesControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullRoundTrip_Create_Update_Delete()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var title = $"Process {Guid.NewGuid():N}".Substring(0, 24);
         var created = await Client.PostAsJsonAsync("/api/processes", new
         {
@@ -45,6 +46,7 @@ public class ProcessesControllerTests : IntegrationTestBase
     [Fact]
     public async Task UploadImage_NoFile_ReturnsBadRequest()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         using var form = new MultipartFormDataContent();
         var response = await Client.PostAsync("/api/processes/upload-image", form);
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
