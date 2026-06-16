@@ -1,8 +1,12 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
 using nihomebackend.tests.Helpers;
 
@@ -13,6 +17,7 @@ public class AuditLogsControllerTests : IDisposable
     private readonly AppDbContext _db;
     private readonly AuditLogsController _sut;
     private readonly AuditLogQueue _queue;
+    private readonly Mock<IPermissionService> _permissions;
 
     public AuditLogsControllerTests()
     {
@@ -20,9 +25,22 @@ public class AuditLogsControllerTests : IDisposable
         _queue = new AuditLogQueue();
         var logger = new AuditLogger(
             _queue,
-            new Microsoft.AspNetCore.Http.HttpContextAccessor(),
+            new HttpContextAccessor(),
             NullLogger<AuditLogger>.Instance);
-        _sut = new AuditLogsController(_db, logger);
+        _permissions = new Mock<IPermissionService>();
+        _permissions
+            .Setup(p => p.HasAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _sut = new AuditLogsController(_db, logger, _permissions.Object);
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    new[] { new Claim(ClaimTypes.NameIdentifier, "1") }, "TestAuth")),
+            },
+        };
     }
 
     public void Dispose() => _db.Dispose();
@@ -252,5 +270,28 @@ public class AuditLogsControllerTests : IDisposable
         SeedSettings();
         var result = await _sut.UpdateConfig(new AuditLogsController.AuditConfigDto { RetentionMinutes = -5 });
         Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Get_WithoutViewPermission_ReturnsForbid()
+    {
+        _permissions
+            .Setup(p => p.HasAsync(It.IsAny<int>(), "system.audit.view", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var result = await _sut.Get(null, null, null, null, null, null, null, null, null, null, 1, 50);
+        Assert.IsType<ForbidResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task UpdateConfig_WithoutManagePermission_ReturnsForbid()
+    {
+        SeedSettings();
+        _permissions
+            .Setup(p => p.HasAsync(It.IsAny<int>(), "system.audit.manage", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var result = await _sut.UpdateConfig(new AuditLogsController.AuditConfigDto { RetentionMinutes = 60 });
+        Assert.IsType<ForbidResult>(result.Result);
     }
 }
