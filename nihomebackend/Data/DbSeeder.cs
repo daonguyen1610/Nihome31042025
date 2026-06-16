@@ -136,5 +136,51 @@ public static class DbSeeder
         ContentSeeder.Seed(db);
         TranslationSeeder.Seed(db);
         RbacSeeder.Seed(db);
+        SeedBusinessRoleUsers(db);
+    }
+
+    // Phone numbers used here are stable, predictable test credentials so the
+    // RBAC test matrix in docs/users-rbac.md and the playwright/integration
+    // tests can always log in as any role.
+    private static readonly (string RoleCode, string Phone, string FullName, string Email)[] _businessRoleUsers =
+    [
+        ("SALE",       "0911000003", "Sale Tester",       "sale.test@nihome.vn"),
+        ("DESIGN",     "0911000004", "Design Tester",     "design.test@nihome.vn"),
+        ("PM",         "0911000005", "PM Tester",         "pm.test@nihome.vn"),
+        ("QS",         "0911000006", "QS Tester",         "qs.test@nihome.vn"),
+        ("ACCOUNTANT", "0911000007", "Accountant Tester", "accountant.test@nihome.vn"),
+        ("WAREHOUSE",  "0911000008", "Warehouse Tester",  "warehouse.test@nihome.vn"),
+        ("BGD",        "0911000009", "BGD Tester",        "bgd.test@nihome.vn"),
+    ];
+
+    private static void SeedBusinessRoleUsers(AppDbContext db)
+    {
+        var passwordService = new PasswordService();
+        var rolesByCode = db.Roles
+            .Where(r => !r.IsSystem)
+            .ToDictionary(r => r.Code, r => r.Id, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (code, phone, fullName, email) in _businessRoleUsers)
+        {
+            if (!rolesByCode.TryGetValue(code, out var roleId)) continue;
+            if (db.Users.Any(u => u.PhoneNumber == phone)) continue;
+
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                FullName = fullName,
+                Email = email,
+                // Business roles live outside the legacy 3-value enum; the
+                // canonical role link is RoleEntityId, and PermissionService
+                // reads from there first.
+                Role = UserRole.USER,
+                RoleEntityId = roleId,
+                IsActive = true,
+            };
+            user.PasswordHash = passwordService.Hash(user, "Admin@123");
+            db.Users.Add(user);
+        }
+
+        db.SaveChanges();
     }
 }

@@ -22,6 +22,27 @@ public static class AuthTestHelper
     public static Task<string> LoginAsCustomerAsync(HttpClient client) =>
         LoginAsync(client, TestDataSeeder.CustomerPhone, TestDataSeeder.DefaultPassword);
 
+    /// <summary>
+    /// Log in as the seeded test user for any role code (system or business).
+    /// Throws when the code is not in the seeded test matrix so tests fail
+    /// loudly rather than silently using the wrong identity.
+    /// </summary>
+    public static Task<string> LoginAsRoleAsync(HttpClient client, string roleCode)
+    {
+        if (string.IsNullOrWhiteSpace(roleCode))
+            throw new ArgumentException("Role code is required.", nameof(roleCode));
+
+        var phone = roleCode.ToUpperInvariant() switch
+        {
+            "SUPER_ADMIN" => TestDataSeeder.SuperAdminPhone,
+            "ADMIN" => TestDataSeeder.AdminPhone,
+            "USER" => TestDataSeeder.CustomerPhone,
+            _ when TestDataSeeder.BusinessRolePhonesByCode.TryGetValue(roleCode, out var p) => p,
+            _ => throw new ArgumentException($"No seeded test user for role '{roleCode}'.", nameof(roleCode)),
+        };
+        return LoginAsync(client, phone, TestDataSeeder.DefaultPassword);
+    }
+
     public static async Task<string> LoginAsync(HttpClient client, string phoneNumber, string password)
     {
         var response = await client.PostAsJsonAsync("/api/auth/login", new { phoneNumber, password });
