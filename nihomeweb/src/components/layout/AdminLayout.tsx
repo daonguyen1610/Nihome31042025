@@ -31,6 +31,7 @@ import {
   Languages,
   SlidersHorizontal,
   Bell,
+  ConciergeBell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -74,6 +75,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         items: [
           { to: "/admin/posts", label: t("nav.posts"), icon: FileText },
           { to: "/admin/projects", label: t("nav.projects"), icon: Building2 },
+          { to: "/admin/services", label: t("nav.services"), icon: ConciergeBell },
           { to: "/admin/recruitment", label: t("nav.recruitment"), icon: Briefcase },
           { to: "/admin/contacts", label: t("nav.contacts"), icon: Inbox },
           { to: "/admin/categories", label: t("nav.categories"), icon: FolderTree },

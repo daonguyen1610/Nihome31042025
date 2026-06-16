@@ -5,6 +5,19 @@ import { useI18n } from "@/lib/i18n";
 import { useService, useServices } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 
+function RichText({ text, className }: { text: string; className?: string }) {
+  const paras = text.split(/\n\n+/);
+  return (
+    <div className={className}>
+      {paras.map((para, i) => (
+        <p key={i} className={`whitespace-pre-wrap leading-relaxed${i < paras.length - 1 ? " mb-4" : ""}`}>
+          {para}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 const ServiceDetail = () => {
   const { t } = useI18n();
   const { slug } = useParams();
@@ -73,8 +86,50 @@ const ServiceDetail = () => {
       <section className="py-14 lg:py-18 bg-background">
         <div className="container-custom max-w-5xl">
           <div className="rounded-3xl border border-border bg-card p-6 lg:p-8">
-            <p className="text-lg lg:text-xl text-foreground/85 leading-relaxed">{svc.intro}</p>
+            <RichText text={svc.intro} className="text-lg lg:text-xl text-foreground/85" />
           </div>
+
+          {/* Intro blocks: alternating 2-col image + text */}
+          {(svc.introBlocks ?? []).length > 0 && (
+            <div className="mt-10 space-y-12">
+              {svc.introBlocks.map((block, i) => {
+                const hasImage = !!block.imageUrl;
+                const hasText = !!block.text.trim();
+                const imageLeft = i % 2 === 0;
+
+                // Image only — full width centered
+                if (hasImage && !hasText) {
+                  return (
+                    <div key={i} className="rounded-2xl overflow-hidden border border-border shadow-lg">
+                      <img src={block.imageUrl} alt="" className="w-full h-auto block" loading="lazy" />
+                    </div>
+                  );
+                }
+
+                // Text only — full width
+                if (hasText && !hasImage) {
+                  return (
+                    <RichText key={i} text={block.text} className="text-base lg:text-lg text-foreground/80" />
+                  );
+                }
+
+                // Both — alternating 2-col layout
+                return (
+                  <div
+                    key={i}
+                    className={`flex flex-col gap-6 lg:gap-10 lg:items-center ${imageLeft ? "lg:flex-row" : "lg:flex-row-reverse"}`}
+                  >
+                    <div className="lg:w-1/2 rounded-2xl overflow-hidden border border-border shadow-lg shrink-0">
+                      <img src={block.imageUrl} alt="" className="w-full h-auto block" loading="lazy" />
+                    </div>
+                    <div className="lg:w-1/2">
+                      <RichText text={block.text} className="text-base lg:text-lg text-foreground/80" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

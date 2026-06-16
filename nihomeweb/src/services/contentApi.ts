@@ -58,6 +58,11 @@ export interface ServiceSection {
   body: string[];
 }
 
+export interface IntroBlock {
+  text: string;
+  imageUrl?: string;
+}
+
 export interface ServiceResponse {
   id: number;
   slug: string;
@@ -67,6 +72,8 @@ export interface ServiceResponse {
   intro: string;
   sections: ServiceSection[];
   highlights: string[];
+  introBlocks: IntroBlock[];
+  sortOrder: number;
 }
 
 export interface LogoResponse {

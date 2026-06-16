@@ -12,4 +12,6 @@ public class ServiceResponse
     public string Intro { get; set; } = "";
     public JsonElement Sections { get; set; }
     public string[] Highlights { get; set; } = [];
+    public JsonElement IntroBlocks { get; set; }
+    public int SortOrder { get; set; }
 }
