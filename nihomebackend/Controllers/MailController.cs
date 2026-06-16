@@ -9,7 +9,7 @@ using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
 
-[Authorize(Roles = "SUPERADMIN,ADMIN")]
+[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
 [ApiController]
 [Route("api/[controller]")]
 public class MailController : ControllerBase

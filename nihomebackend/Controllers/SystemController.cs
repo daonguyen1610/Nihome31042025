@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
@@ -5,6 +6,7 @@ using NihomeBackend.Services;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
+[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
 [Route("api/[controller]")]
 public class SystemController(
     TimeService timeService,
@@ -20,6 +22,7 @@ public class SystemController(
         [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
 
     [HttpGet("health")]
+    [AllowAnonymous]
     public ActionResult<HealthResponse> GetHealth()
     {
         return Ok(new HealthResponse
@@ -130,6 +133,7 @@ public class SystemController(
     }
 
     [HttpPost("upload-cv")]
+    [AllowAnonymous]
     [Consumes("multipart/form-data")]
     [DisableRequestSizeLimit]
     [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue)]

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
@@ -5,14 +6,17 @@ using NihomeBackend.Services;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
+[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
 [Route("api/activities")]
 [Route("api/v1/activities")]
 public class ActivitiesController(ActivityService svc) : ControllerBase
 {
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] string lang = "vi") => Ok(await svc.GetAllAsync(lang));
 
     [HttpGet("{slug}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetBySlug(string slug, [FromQuery] string lang = "vi")
     {
         var item = await svc.GetBySlugAsync(slug, lang);

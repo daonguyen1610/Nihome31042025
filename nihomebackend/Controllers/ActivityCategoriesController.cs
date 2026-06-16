@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
@@ -5,11 +6,13 @@ using NihomeBackend.Services;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
+[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
 [Route("api/activity-categories")]
 [Route("api/v1/activity-categories")]
 public class ActivityCategoriesController(ActivityCategoryService svc) : ControllerBase
 {
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
         => Ok(await svc.GetAllAsync(includeInactive));
 
