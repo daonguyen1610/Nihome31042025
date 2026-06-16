@@ -15,6 +15,7 @@ public class ProjectCategoriesControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullRoundTrip_Create_Update_Delete()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var name = $"PCat-{Guid.NewGuid():N}".Substring(0, 18);
         var created = await Client.PostAsJsonAsync("/api/project-categories", new { name, isActive = true, sortOrder = 0 });
         created.StatusCode.Should().Be(HttpStatusCode.Created);

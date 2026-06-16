@@ -28,6 +28,7 @@ public class ProjectsControllerTests : IntegrationTestBase
     [Fact]
     public async Task Create_Then_GetBySlug_Then_Update_Then_Delete_RoundTrip()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var slug = $"itest-project-{Guid.NewGuid():N}".Substring(0, 30);
         var payload = new
         {
@@ -89,6 +90,7 @@ public class ProjectsControllerTests : IntegrationTestBase
     [Fact]
     public async Task Update_NonExistent_ReturnsNotFound()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var payload = new
         {
             slug = "ghost",

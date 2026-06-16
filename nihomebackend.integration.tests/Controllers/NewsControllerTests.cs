@@ -21,6 +21,7 @@ public class NewsControllerTests : IntegrationTestBase
     [Fact]
     public async Task FullRoundTrip_Create_Update_Delete()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var slug = UniqueSlug("news");
         var payload = new
         {
