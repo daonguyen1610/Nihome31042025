@@ -285,7 +285,7 @@ const ActivityLog = () => {
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("log.title")}</h1>
+          <h1 data-testid="audit-log-title" className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("log.title")}</h1>
           <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
             {total === 0 ? `0 ${t("log.entries")}` : `${showingFrom}–${showingTo} / ${total} ${t("log.entries")}`}
             {" · "}{t("log.currentRetention")}: <span className="font-semibold">{retentionLabel}</span>
@@ -305,7 +305,7 @@ const ActivityLog = () => {
       </div>
 
       {isSuperAdmin && (
-        <div className="admin-card p-5 mb-5">
+        <div data-testid="audit-log-retention-card" className="admin-card p-5 mb-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-lg">{t("log.retentionConfig")}</h2>
             <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{t("log.retentionHint")}</p>
@@ -334,7 +334,7 @@ const ActivityLog = () => {
         </div>
       )}
 
-      <div className="admin-card p-5 mb-5">
+      <div data-testid="audit-log-filter-card" className="admin-card p-5 mb-5">
         <div className="mb-3">
           <Filter label={t("log.search")}>
             <input
@@ -388,7 +388,7 @@ const ActivityLog = () => {
 
       <div className="admin-card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[1100px]">
+          <table data-testid="audit-log-table" className="w-full text-sm min-w-[1100px]">
             <thead style={{ background: "hsl(var(--admin-bg))" }}>
               <tr className="text-left">
                 <th className="px-4 py-3 font-semibold">{t("log.createdOn")}</th>
