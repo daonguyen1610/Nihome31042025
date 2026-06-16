@@ -37,12 +37,21 @@ import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import LanguageToggle from "@/components/LanguageToggle";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import logoNicon from "@/assets/logo-nicon.png";
 import type { LucideIcon } from "lucide-react";
 
-type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
+type NavItem = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  /** Permission code required to see this entry. Omitted = always visible. */
+  permission?: string;
+};
 type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] };
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
@@ -52,33 +61,35 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const user = useAppSelector((state) => state.auth.user);
-  const isSuperAdmin = user?.role?.toUpperCase() === "SUPER_ADMIN";
+  const { permissions } = usePermissions();
 
   const dashboardItem: NavItem = {
     to: "/admin",
     label: t("nav.dashboard"),
     icon: LayoutDashboard,
     end: true,
+    permission: ADMIN_PERMS.dashboard,
   };
   const notificationsItem: NavItem = {
     to: "/admin/notifications",
     label: t("notify.title"),
     icon: Bell,
+    permission: ADMIN_PERMS.notifications,
   };
 
-  const groups: NavGroup[] = useMemo(
+  const rawGroups: NavGroup[] = useMemo(
     () => [
       {
         id: "content",
         label: t("nav.content"),
         icon: FileText,
         items: [
-          { to: "/admin/posts", label: t("nav.posts"), icon: FileText },
-          { to: "/admin/projects", label: t("nav.projects"), icon: Building2 },
-          { to: "/admin/services", label: t("nav.services"), icon: ConciergeBell },
-          { to: "/admin/recruitment", label: t("nav.recruitment"), icon: Briefcase },
-          { to: "/admin/contacts", label: t("nav.contacts"), icon: Inbox },
-          { to: "/admin/categories", label: t("nav.categories"), icon: FolderTree },
+          { to: "/admin/posts", label: t("nav.posts"), icon: FileText, permission: ADMIN_PERMS.posts },
+          { to: "/admin/projects", label: t("nav.projects"), icon: Building2, permission: ADMIN_PERMS.projects },
+          { to: "/admin/services", label: t("nav.services"), icon: ConciergeBell, permission: ADMIN_PERMS.services },
+          { to: "/admin/recruitment", label: t("nav.recruitment"), icon: Briefcase, permission: ADMIN_PERMS.recruitment },
+          { to: "/admin/contacts", label: t("nav.contacts"), icon: Inbox, permission: ADMIN_PERMS.contacts },
+          { to: "/admin/categories", label: t("nav.categories"), icon: FolderTree, permission: ADMIN_PERMS.categories },
         ],
       },
       {
@@ -86,11 +97,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.branding"),
         icon: ImageIcon,
         items: [
-          { to: "/admin/clients", label: t("nav.clients"), icon: Handshake },
-          { to: "/admin/partners", label: t("nav.partners"), icon: Building },
-          { to: "/admin/suppliers", label: t("nav.suppliers"), icon: Truck },
-          { to: "/admin/awards", label: t("nav.awards"), icon: Award },
-          { to: "/admin/about", label: t("nav.about"), icon: Info },
+          { to: "/admin/clients", label: t("nav.clients"), icon: Handshake, permission: ADMIN_PERMS.logos },
+          { to: "/admin/partners", label: t("nav.partners"), icon: Building, permission: ADMIN_PERMS.logos },
+          { to: "/admin/suppliers", label: t("nav.suppliers"), icon: Truck, permission: ADMIN_PERMS.logos },
+          { to: "/admin/awards", label: t("nav.awards"), icon: Award, permission: ADMIN_PERMS.logos },
+          { to: "/admin/about", label: t("nav.about"), icon: Info, permission: ADMIN_PERMS.about },
         ],
       },
       {
@@ -98,14 +109,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.processes"),
         icon: Workflow,
         items: [
-          { to: "/admin/processes/general", label: t("proc.general"), icon: FileText },
-          { to: "/admin/processes/ptcskh", label: t("proc.ptcskh"), icon: FileText },
-          { to: "/admin/processes/dt", label: t("proc.dt"), icon: FileText },
-          { to: "/admin/processes/tk", label: t("proc.tk"), icon: FileText },
-          { to: "/admin/processes/tc", label: t("proc.tc"), icon: FileText },
-          { to: "/admin/processes/ttqtct", label: t("proc.ttqtct"), icon: FileText },
-          { to: "/admin/processes/qlns", label: t("proc.qlns"), icon: FileText },
-          { to: "/admin/processes/mhdgncu", label: t("proc.mhdgncu"), icon: FileText },
+          { to: "/admin/processes/general", label: t("proc.general"), icon: FileText, permission: ADMIN_PERMS.processes },
+          { to: "/admin/processes/ptcskh", label: t("proc.ptcskh"), icon: FileText, permission: ADMIN_PERMS.processes },
+          { to: "/admin/processes/dt", label: t("proc.dt"), icon: FileText, permission: ADMIN_PERMS.processes },
+          { to: "/admin/processes/tk", label: t("proc.tk"), icon: FileText, permission: ADMIN_PERMS.processes },
+          { to: "/admin/processes/tc", label: t("proc.tc"), icon: FileText, permission: ADMIN_PERMS.processes },
+          { to: "/admin/processes/ttqtct", label: t("proc.ttqtct"), icon: FileText, permission: ADMIN_PERMS.processes },
+          { to: "/admin/processes/qlns", label: t("proc.qlns"), icon: FileText, permission: ADMIN_PERMS.processes },
+          { to: "/admin/processes/mhdgncu", label: t("proc.mhdgncu"), icon: FileText, permission: ADMIN_PERMS.processes },
         ],
       },
       {
@@ -113,12 +124,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.users"),
         icon: Users,
         items: [
-          ...(isSuperAdmin
-            ? [
-                { to: "/admin/users", label: t("nav.userManagement"), icon: UserCog },
-                { to: "/admin/roles", label: t("nav.roleManagement"), icon: ShieldCheck },
-              ]
-            : []),
+          { to: "/admin/users", label: t("nav.userManagement"), icon: UserCog, permission: ADMIN_PERMS.users },
+          { to: "/admin/roles", label: t("nav.roleManagement"), icon: ShieldCheck, permission: ADMIN_PERMS.rbacRoles },
         ],
       },
       {
@@ -126,16 +133,32 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.config"),
         icon: Cog,
         items: [
-          { to: "/admin/settings", label: t("settings.title"), icon: SlidersHorizontal },
-          { to: "/admin/languages", label: t("set.languages"), icon: Languages },
-          { to: "/admin/translations", label: t("nav.translations"), icon: Languages },
-          { to: "/admin/email-templates", label: t("set.emailTemplates"), icon: Mail },
-          { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History },
+          { to: "/admin/settings", label: t("settings.title"), icon: SlidersHorizontal, permission: ADMIN_PERMS.settings },
+          { to: "/admin/languages", label: t("set.languages"), icon: Languages, permission: ADMIN_PERMS.translations },
+          { to: "/admin/translations", label: t("nav.translations"), icon: Languages, permission: ADMIN_PERMS.translations },
+          { to: "/admin/email-templates", label: t("set.emailTemplates"), icon: Mail, permission: ADMIN_PERMS.emailTemplates },
+          { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History, permission: ADMIN_PERMS.activityLog },
         ],
       },
     ],
-    [isSuperAdmin, t],
+    [t],
   );
+
+  const groups: NavGroup[] = useMemo(
+    () =>
+      rawGroups
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((it) => !it.permission || permissions.has(it.permission)),
+        }))
+        .filter((g) => g.items.length > 0),
+    [rawGroups, permissions],
+  );
+
+  const showDashboard =
+    !dashboardItem.permission || permissions.has(dashboardItem.permission);
+  const showNotifications =
+    !notificationsItem.permission || permissions.has(notificationsItem.permission);
 
   // Group expand/collapse: keep group containing active route open
   const initialOpen = useMemo(() => {
@@ -218,8 +241,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
         <nav className="flex-1 overflow-y-auto px-4 pb-6 space-y-1">
           {/* Dashboard */}
-          {renderItem(dashboardItem)}
-          {renderItem(notificationsItem)}
+          {showDashboard && renderItem(dashboardItem)}
+          {showNotifications && renderItem(notificationsItem)}
 
           {/* Groups */}
           {groups.map((g) => {

@@ -7,6 +7,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/lib/i18n";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import RequirePermission from "@/components/auth/RequirePermission";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import Forbidden from "./pages/Forbidden.tsx";
 import Index from "./pages/Index.tsx";
 import Profile from "./pages/Profile.tsx";
 import Services from "./pages/Services.tsx";
@@ -80,72 +83,107 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route path="/my-profile" element={<MyProfile />} />
             </Route>
-            <Route element={<ProtectedRoute roles={["ADMIN", "SUPER_ADMIN"]} />}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/notifications" element={<AdminNotifications />} />
-              <Route element={<ProtectedRoute roles={["SUPER_ADMIN"]} />}>
+            <Route path="/forbidden" element={<Forbidden />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<RequirePermission code={ADMIN_PERMS.dashboard} />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/notifications" element={<AdminNotifications />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.users} />}>
                 <Route path="/admin/users" element={<AdminUsers />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.rbacRoles} />}>
                 <Route path="/admin/roles" element={<AdminRoles />} />
               </Route>
-              <Route path="/admin/posts" element={<AdminPosts />} />
-              <Route path="/admin/posts/new" element={<PostForm mode="create" />} />
-              <Route path="/admin/posts/:slug" element={<PostView />} />
-              <Route path="/admin/posts/:slug/edit" element={<PostForm mode="edit" />} />
-              <Route path="/admin/projects" element={<AdminProjects />} />
-              <Route path="/admin/projects/new" element={<ProjectForm mode="create" />} />
-              <Route path="/admin/projects/:slug" element={<ProjectView />} />
-              <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
-              <Route path="/admin/services" element={<AdminServices />} />
-              <Route path="/admin/contacts" element={<AdminContacts />} />
-              <Route path="/admin/recruitment" element={<AdminRecruitment />} />
-              <Route path="/admin/recruitment/employment-types" element={<EmploymentTypes />} />
-              <Route path="/admin/recruitment/new" element={<JobPositionForm mode="create" />} />
-              <Route path="/admin/recruitment/:id/edit" element={<JobPositionForm mode="edit" />} />
-              <Route path="/admin/email-templates" element={<EmailTemplateConfig />} />
-              <Route path="/admin/settings" element={<SettingsCenter />} />
-              <Route path="/admin/languages" element={<LanguagesPage />} />
-              <Route path="/admin/translations" element={<TranslationsPage />} />
-              <Route path="/admin/categories" element={<AdminCategories />} />
-              <Route path="/admin/project-categories" element={<Navigate to="/admin/categories?tab=projects" replace />} />
-              <Route path="/admin/activity-log" element={<AdminActivityLog />} />
-              <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
-              <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />
-              <Route path="/admin/suppliers" element={<AdminLogosManager kind="suppliers" titleKey="nav.suppliers" />} />
-              <Route path="/admin/awards" element={<AdminLogosManager kind="awards" titleKey="nav.awards" />} />
-              <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
-              <Route path="/admin/about" element={<AboutContent />} />
-              <Route
-                path="/admin/processes/general"
-                element={<ProcessList groupKey="general" titleKey="proc.general" />}
-              />
-              <Route
-                path="/admin/processes/ptcskh"
-                element={<ProcessList groupKey="ptcskh" titleKey="proc.ptcskh" />}
-              />
-              <Route
-                path="/admin/processes/dt"
-                element={<ProcessList groupKey="dt" titleKey="proc.dt" />}
-              />
-              <Route
-                path="/admin/processes/tk"
-                element={<ProcessList groupKey="tk" titleKey="proc.tk" />}
-              />
-              <Route
-                path="/admin/processes/tc"
-                element={<ProcessList groupKey="tc" titleKey="proc.tc" />}
-              />
-              <Route
-                path="/admin/processes/ttqtct"
-                element={<ProcessList groupKey="ttqtct" titleKey="proc.ttqtct" />}
-              />
-              <Route
-                path="/admin/processes/qlns"
-                element={<ProcessList groupKey="qlns" titleKey="proc.qlns" />}
-              />
-              <Route
-                path="/admin/processes/mhdgncu"
-                element={<ProcessList groupKey="mhdgncu" titleKey="proc.mhdgncu" />}
-              />
+              <Route element={<RequirePermission code={ADMIN_PERMS.posts} />}>
+                <Route path="/admin/posts" element={<AdminPosts />} />
+                <Route path="/admin/posts/new" element={<PostForm mode="create" />} />
+                <Route path="/admin/posts/:slug" element={<PostView />} />
+                <Route path="/admin/posts/:slug/edit" element={<PostForm mode="edit" />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.projects} />}>
+                <Route path="/admin/projects" element={<AdminProjects />} />
+                <Route path="/admin/projects/new" element={<ProjectForm mode="create" />} />
+                <Route path="/admin/projects/:slug" element={<ProjectView />} />
+                <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.services} />}>
+                <Route path="/admin/services" element={<AdminServices />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.contacts} />}>
+                <Route path="/admin/contacts" element={<AdminContacts />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
+                <Route path="/admin/recruitment" element={<AdminRecruitment />} />
+                <Route path="/admin/recruitment/new" element={<JobPositionForm mode="create" />} />
+                <Route path="/admin/recruitment/:id/edit" element={<JobPositionForm mode="edit" />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.recruitmentOptions} />}>
+                <Route path="/admin/recruitment/employment-types" element={<EmploymentTypes />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.emailTemplates} />}>
+                <Route path="/admin/email-templates" element={<EmailTemplateConfig />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.settings} />}>
+                <Route path="/admin/settings" element={<SettingsCenter />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.translations} />}>
+                <Route path="/admin/languages" element={<LanguagesPage />} />
+                <Route path="/admin/translations" element={<TranslationsPage />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.categories} />}>
+                <Route path="/admin/categories" element={<AdminCategories />} />
+                <Route path="/admin/project-categories" element={<Navigate to="/admin/categories?tab=projects" replace />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.activityLog} />}>
+                <Route path="/admin/activity-log" element={<AdminActivityLog />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.logos} />}>
+                <Route path="/admin/clients" element={<AdminLogosManager kind="clients" titleKey="nav.clients" />} />
+                <Route path="/admin/partners" element={<AdminLogosManager kind="partners" titleKey="nav.partners" />} />
+                <Route path="/admin/suppliers" element={<AdminLogosManager kind="suppliers" titleKey="nav.suppliers" />} />
+                <Route path="/admin/awards" element={<AdminLogosManager kind="awards" titleKey="nav.awards" />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.settings} />}>
+                <Route path="/admin/slideshow" element={<Navigate to="/admin/settings?tab=slideshow" replace />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.about} />}>
+                <Route path="/admin/about" element={<AboutContent />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.processes} />}>
+                <Route
+                  path="/admin/processes/general"
+                  element={<ProcessList groupKey="general" titleKey="proc.general" />}
+                />
+                <Route
+                  path="/admin/processes/ptcskh"
+                  element={<ProcessList groupKey="ptcskh" titleKey="proc.ptcskh" />}
+                />
+                <Route
+                  path="/admin/processes/dt"
+                  element={<ProcessList groupKey="dt" titleKey="proc.dt" />}
+                />
+                <Route
+                  path="/admin/processes/tk"
+                  element={<ProcessList groupKey="tk" titleKey="proc.tk" />}
+                />
+                <Route
+                  path="/admin/processes/tc"
+                  element={<ProcessList groupKey="tc" titleKey="proc.tc" />}
+                />
+                <Route
+                  path="/admin/processes/ttqtct"
+                  element={<ProcessList groupKey="ttqtct" titleKey="proc.ttqtct" />}
+                />
+                <Route
+                  path="/admin/processes/qlns"
+                  element={<ProcessList groupKey="qlns" titleKey="proc.qlns" />}
+                />
+                <Route
+                  path="/admin/processes/mhdgncu"
+                  element={<ProcessList groupKey="mhdgncu" titleKey="proc.mhdgncu" />}
+                />
+              </Route>
             </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
