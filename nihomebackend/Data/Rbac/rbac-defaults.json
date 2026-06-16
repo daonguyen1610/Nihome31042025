@@ -7,6 +7,7 @@
     { "module": "system.audit", "action": "view" },
     { "module": "system.audit", "action": "manage" },
     { "module": "system.notifications", "action": "manage" },
+    { "module": "system.uploads", "action": "manage" },
 
     { "module": "users", "action": "view" },
     { "module": "users", "action": "manage" },
@@ -14,7 +15,42 @@
     { "module": "rbac.roles", "action": "manage" },
 
     { "module": "profile.me", "action": "view" },
-    { "module": "profile.me", "action": "update" }
+    { "module": "profile.me", "action": "update" },
+
+    { "module": "content.about", "action": "view" },
+    { "module": "content.about", "action": "manage" },
+    { "module": "content.activities", "action": "view" },
+    { "module": "content.activities", "action": "manage" },
+    { "module": "content.activity-categories", "action": "view" },
+    { "module": "content.activity-categories", "action": "manage" },
+    { "module": "content.logos", "action": "view" },
+    { "module": "content.logos", "action": "manage" },
+    { "module": "content.news", "action": "view" },
+    { "module": "content.news", "action": "manage" },
+    { "module": "content.projects", "action": "view" },
+    { "module": "content.projects", "action": "manage" },
+    { "module": "content.project-categories", "action": "view" },
+    { "module": "content.project-categories", "action": "manage" },
+    { "module": "content.services", "action": "view" },
+    { "module": "content.services", "action": "manage" },
+    { "module": "content.slideshow", "action": "view" },
+    { "module": "content.slideshow", "action": "manage" },
+
+    { "module": "processes", "action": "view" },
+    { "module": "processes", "action": "manage" },
+    { "module": "processes.uploads", "action": "manage" },
+
+    { "module": "mail", "action": "send" },
+
+    { "module": "contacts", "action": "view" },
+    { "module": "contacts", "action": "manage" },
+
+    { "module": "recruitment.applications", "action": "view" },
+    { "module": "recruitment.applications", "action": "manage" },
+    { "module": "recruitment.positions", "action": "view" },
+    { "module": "recruitment.positions", "action": "manage" },
+    { "module": "recruitment.options", "action": "view" },
+    { "module": "recruitment.options", "action": "manage" }
   ],
 
   "businessRoles": [

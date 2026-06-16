@@ -59,6 +59,6 @@ test("permissions response shape is stable for FE consumers", async ({ api, logi
   expect(Array.isArray(body.permissions)).toBe(true);
   body.permissions.forEach((code) => {
     expect(typeof code).toBe("string");
-    expect(code).toMatch(/^[a-z][a-z0-9_.]*\.[a-z][a-z0-9_]*$/i);
+    expect(code).toMatch(/^[a-z][a-z0-9_.\-]*\.[a-z][a-z0-9_\-]*$/i);
   });
 });
