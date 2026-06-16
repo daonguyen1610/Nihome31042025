@@ -3,13 +3,15 @@ using MailKit.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests.Mail;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
 
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("mail", "send")]
 [ApiController]
 [Route("api/[controller]")]
 public class MailController : ControllerBase

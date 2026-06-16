@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 
@@ -20,7 +21,8 @@ public class RecruitmentDropdownOptionsController(RecruitmentDropdownOptionServi
     }
 
     [HttpPost]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("recruitment.options", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertRecruitmentDropdownOptionRequest req)
     {
         try
@@ -35,7 +37,8 @@ public class RecruitmentDropdownOptionsController(RecruitmentDropdownOptionServi
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("recruitment.options", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertRecruitmentDropdownOptionRequest req)
     {
         try
@@ -50,7 +53,8 @@ public class RecruitmentDropdownOptionsController(RecruitmentDropdownOptionServi
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("recruitment.options", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         try

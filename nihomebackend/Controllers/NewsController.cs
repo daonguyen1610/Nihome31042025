@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
@@ -7,7 +8,8 @@ using NihomeBackend.Services.Audit;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("content.news", "view")]
 [Route("api/news")]
 [Route("api/v1/news")]
 public class NewsController(NewsService svc, IAuditLogger audit) : ControllerBase
@@ -25,6 +27,7 @@ public class NewsController(NewsService svc, IAuditLogger audit) : ControllerBas
     }
 
     [HttpPost]
+    [RequirePermission("content.news", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertNewsRequest req)
     {
         var result = await svc.CreateAsync(req);
@@ -40,6 +43,7 @@ public class NewsController(NewsService svc, IAuditLogger audit) : ControllerBas
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("content.news", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertNewsRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
@@ -68,6 +72,7 @@ public class NewsController(NewsService svc, IAuditLogger audit) : ControllerBas
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("content.news", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         var ok = await svc.DeleteAsync(id);

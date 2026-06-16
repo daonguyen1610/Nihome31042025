@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Services;
@@ -8,6 +9,7 @@ using NihomeBackend.Services;
 namespace NihomeBackend.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/translations")]
 public class TranslationsController(
     TranslationService translationSvc,
@@ -27,7 +29,7 @@ public class TranslationsController(
 
     /// <summary>Get translation pairs for admin (vi + others side-by-side).</summary>
     [HttpGet("admin")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "view")]
     public async Task<IActionResult> GetPairs([FromQuery] string? category, [FromQuery] string? search)
     {
         var pairs = await translationSvc.GetPairsAsync(category, search);
@@ -36,7 +38,7 @@ public class TranslationsController(
 
     /// <summary>Get list of translation categories.</summary>
     [HttpGet("categories")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "view")]
     public async Task<IActionResult> GetCategories()
     {
         var categories = await translationSvc.GetCategoriesAsync();
@@ -45,7 +47,7 @@ public class TranslationsController(
 
     /// <summary>Create or update a translation pair.</summary>
     [HttpPost("pair")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> UpsertPair([FromBody] UpsertTranslationPairRequest req)
     {
         await translationSvc.UpsertPairAsync(req.Key, req.VietnameseValue, req.Translations, req.Category);
@@ -54,7 +56,7 @@ public class TranslationsController(
 
     /// <summary>Bulk create/update translations.</summary>
     [HttpPost("bulk")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> BulkUpsert([FromBody] List<BulkTranslationItem> items)
     {
         await translationSvc.BulkUpsertAsync(items);
@@ -63,7 +65,7 @@ public class TranslationsController(
 
     /// <summary>Delete a translation key across all languages.</summary>
     [HttpDelete("key/{key}")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> DeleteKey(string key)
     {
         await translationSvc.DeleteKeyAsync(key);
@@ -74,7 +76,7 @@ public class TranslationsController(
 
     /// <summary>List entity types with their translatable fields.</summary>
     [HttpGet("entity/types")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "view")]
     public IActionResult GetEntityTypes()
     {
         var types = new[]
@@ -90,7 +92,7 @@ public class TranslationsController(
 
     /// <summary>Get all entities of a type with their translation status.</summary>
     [HttpGet("entity/{entityType}")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "view")]
     public async Task<IActionResult> GetEntitiesWithTranslationStatus(string entityType)
     {
         var translationCounts = await db.EntityTranslations
@@ -163,7 +165,7 @@ public class TranslationsController(
 
     /// <summary>Get all translations for a specific entity (admin edit form).</summary>
     [HttpGet("entity/{entityType}/{entityId:int}")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "view")]
     public async Task<IActionResult> GetEntityTranslations(string entityType, int entityId)
     {
         // Build original as Dictionary so keys stay PascalCase (matching fields array)
@@ -205,7 +207,7 @@ public class TranslationsController(
 
     /// <summary>Save translations for an entity in a specific language.</summary>
     [HttpPost("entity/{entityType}/{entityId:int}")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> SaveEntityTranslations(
         string entityType, int entityId, [FromBody] SaveEntityTranslationsRequest req)
     {
@@ -215,7 +217,7 @@ public class TranslationsController(
 
     /// <summary>Delete all translations for an entity.</summary>
     [HttpDelete("entity/{entityType}/{entityId:int}")]
-    [Authorize(Roles = "ADMIN,SUPER_ADMIN")]
+    [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> DeleteEntityTranslations(string entityType, int entityId)
     {
         await entitySvc.DeleteEntityTranslationsAsync(entityType, entityId);

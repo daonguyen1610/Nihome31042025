@@ -35,6 +35,11 @@
     { "module": "content.services", "action": "manage" },
     { "module": "content.slideshow", "action": "view" },
     { "module": "content.slideshow", "action": "manage" },
+    { "module": "content.translations", "action": "view" },
+    { "module": "content.translations", "action": "manage" },
+
+    { "module": "system.settings", "action": "view" },
+    { "module": "system.settings", "action": "manage" },
 
     { "module": "processes", "action": "view" },
     { "module": "processes", "action": "manage" },

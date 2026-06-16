@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
@@ -10,7 +11,8 @@ namespace NihomeBackend.Controllers;
 [ApiController]
 [Route("api/users")]
 [Route("api/v1/users")]
-[Authorize(Roles = "SUPER_ADMIN")]
+[Authorize]
+[RequirePermission("users", "view")]
 public class UsersController(UserService svc) : ControllerBase
 {
     [HttpGet]
@@ -38,6 +40,7 @@ public class UsersController(UserService svc) : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission("users", "manage")]
     public async Task<ActionResult<UserDetailResponse>> Create([FromBody] CreateUserRequest req)
     {
         try
@@ -52,6 +55,7 @@ public class UsersController(UserService svc) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("users", "manage")]
     public async Task<ActionResult<UserDetailResponse>> Update(int id, [FromBody] UpdateUserRequest req)
     {
         try
@@ -66,6 +70,7 @@ public class UsersController(UserService svc) : ControllerBase
     }
 
     [HttpPatch("{id:int}/toggle-active")]
+    [RequirePermission("users", "manage")]
     public async Task<ActionResult<UserDetailResponse>> ToggleActive(int id)
     {
         try
@@ -80,6 +85,7 @@ public class UsersController(UserService svc) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("users", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         try

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
@@ -32,7 +33,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 
     /// <summary>Update OTP verification settings.</summary>
     [HttpPut("otp-settings")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
     public async Task<ActionResult<OtpSettingsResponse>> UpdateOtpSettings([FromBody] UpdateOtpSettingsRequest req)
     {
         try
@@ -51,7 +53,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 
     /// <summary>Get email templates and notification email.</summary>
     [HttpGet("email-templates")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("system.settings", "view")]
     public async Task<IActionResult> GetEmailTemplates()
     {
         var settings = await svc.GetAsync();
@@ -69,7 +72,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 
     /// <summary>Update email templates and notification email.</summary>
     [HttpPut("email-templates")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
     public async Task<IActionResult> UpdateEmailTemplates([FromBody] UpdateEmailTemplatesRequest req)
     {
         try
@@ -113,7 +117,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 
     /// <summary>Update the embedded Google Map URL.</summary>
     [HttpPut("map-embed")]
-    [Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
     public async Task<IActionResult> UpdateMapEmbed([FromBody] UpdateMapEmbedRequest req)
     {
         try

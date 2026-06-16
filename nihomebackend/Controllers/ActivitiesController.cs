@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
 
 [ApiController]
-[Authorize(Roles = "SUPER_ADMIN,ADMIN")]
+[Authorize]
+[RequirePermission("content.activities", "view")]
 [Route("api/activities")]
 [Route("api/v1/activities")]
 public class ActivitiesController(ActivityService svc) : ControllerBase
@@ -24,6 +26,7 @@ public class ActivitiesController(ActivityService svc) : ControllerBase
     }
 
     [HttpPost]
+    [RequirePermission("content.activities", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertActivityRequest req)
     {
         var result = await svc.CreateAsync(req);
@@ -31,6 +34,7 @@ public class ActivitiesController(ActivityService svc) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [RequirePermission("content.activities", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertActivityRequest req)
     {
         var result = await svc.UpdateAsync(id, req);
@@ -38,6 +42,7 @@ public class ActivitiesController(ActivityService svc) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [RequirePermission("content.activities", "manage")]
     public async Task<IActionResult> Delete(int id)
     {
         return await svc.DeleteAsync(id) ? NoContent() : NotFound();
