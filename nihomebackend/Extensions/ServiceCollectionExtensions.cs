@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using NihomeBackend.Authorization;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
@@ -14,7 +15,10 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddOpenApiServices(this IServiceCollection services)
     {
-        services.AddControllers()
+        services.AddControllers(options =>
+            {
+                options.Filters.Add<PermissionAuthorizationFilter>();
+            })
             .AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
