@@ -1,11 +1,8 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Authorization;
 using NihomeBackend.Data;
-using NihomeBackend.Models;
-using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
 
 namespace NihomeBackend.Controllers;
@@ -17,12 +14,8 @@ namespace NihomeBackend.Controllers;
 [RequirePermission("system.audit", "view")]
 public class AuditLogsController(
     AppDbContext db,
-    IAuditLogger audit,
-    IPermissionService permissions) : ControllerBase
+    IAuditLogger audit) : ControllerBase
 {
-    private const string PermView = "system.audit.view";
-    private const string PermManage = "system.audit.manage";
-
     public sealed class AuditLogItem
     {
         public long Id { get; set; }
@@ -80,8 +73,6 @@ public class AuditLogsController(
         [FromQuery] int pageSize = 50,
         CancellationToken ct = default)
     {
-        if (!await RequirePermissionAsync(PermView, ct)) return Forbid();
-
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
         if (pageSize > 200) pageSize = 200;
@@ -162,8 +153,6 @@ public class AuditLogsController(
     [RequirePermission("system.audit", "manage")]
     public async Task<IActionResult> Delete(long id, CancellationToken ct = default)
     {
-        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
-
         var deleted = await db.AuditLogs.Where(a => a.Id == id).ExecuteDeleteAsync(ct);
         if (deleted == 0) return NotFound();
         audit.Log("audit.delete", "AuditLog", id.ToString(), $"Deleted audit log entry {id}");
@@ -177,8 +166,6 @@ public class AuditLogsController(
         [FromQuery] string? action,
         CancellationToken ct = default)
     {
-        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
-
         var q = db.AuditLogs.AsQueryable();
         if (before.HasValue) q = q.Where(a => a.CreatedAt < before.Value);
         if (!string.IsNullOrWhiteSpace(action)) q = q.Where(a => a.Action == action);
@@ -197,8 +184,6 @@ public class AuditLogsController(
     [HttpGet("config")]
     public async Task<ActionResult<AuditConfigDto>> GetConfig(CancellationToken ct = default)
     {
-        if (!await RequirePermissionAsync(PermView, ct)) return Forbid();
-
         var s = await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct);
         return Ok(new AuditConfigDto { RetentionMinutes = s?.AuditLogRetentionMinutes ?? 0 });
     }
@@ -209,8 +194,6 @@ public class AuditLogsController(
         [FromBody] AuditConfigDto body,
         CancellationToken ct = default)
     {
-        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
-
         if (body.RetentionMinutes < 0) return BadRequest(new { message = "RetentionMinutes must be >= 0" });
 
         var s = await db.SiteSettings.FirstOrDefaultAsync(ct)
@@ -221,18 +204,5 @@ public class AuditLogsController(
         audit.Log("audit.config_update", "AuditLog", null,
             $"Set audit retention to {body.RetentionMinutes} minutes");
         return Ok(new AuditConfigDto { RetentionMinutes = s.AuditLogRetentionMinutes });
-    }
-
-    private async Task<bool> RequirePermissionAsync(string code, CancellationToken ct)
-    {
-        var uid = GetCurrentUserId();
-        if (uid <= 0) return false;
-        return await permissions.HasAsync(uid, code, ct);
-    }
-
-    private int GetCurrentUserId()
-    {
-        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
-        return int.TryParse(raw, out var id) ? id : 0;
     }
 }
