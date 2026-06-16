@@ -7,6 +7,13 @@ import { test as base, expect, request, APIRequestContext, Page } from "@playwri
 export const TEST_USERS = {
   superAdmin: { phoneNumber: "0335240370", password: "Admin@123", role: "SUPER_ADMIN" },
   admin: { phoneNumber: "0911111111", password: "Admin@123", role: "ADMIN" },
+  sale: { phoneNumber: "0911000003", password: "Admin@123", role: "SALE" },
+  design: { phoneNumber: "0911000004", password: "Admin@123", role: "DESIGN" },
+  pm: { phoneNumber: "0911000005", password: "Admin@123", role: "PM" },
+  qs: { phoneNumber: "0911000006", password: "Admin@123", role: "QS" },
+  accountant: { phoneNumber: "0911000007", password: "Admin@123", role: "ACCOUNTANT" },
+  warehouse: { phoneNumber: "0911000008", password: "Admin@123", role: "WAREHOUSE" },
+  bgd: { phoneNumber: "0911000009", password: "Admin@123", role: "BGD" },
 } as const;
 
 export type TestUser = (typeof TEST_USERS)[keyof typeof TEST_USERS];

@@ -344,6 +344,30 @@
     "ja": "申し訳ございません。ページが見つかりません。"
   },
   {
+    "key": "forbidden.title",
+    "category": "forbidden",
+    "vi": "Truy cập bị từ chối",
+    "en": "Access denied",
+    "zh": "访问被拒绝",
+    "ja": "アクセスが拒否されました"
+  },
+  {
+    "key": "forbidden.description",
+    "category": "forbidden",
+    "vi": "Tài khoản của bạn không có quyền truy cập trang này.",
+    "en": "Your account does not have permission to access this page.",
+    "zh": "您的帐户没有权限访问此页面。",
+    "ja": "このページにアクセスする権限がありません。"
+  },
+  {
+    "key": "forbidden.back",
+    "category": "forbidden",
+    "vi": "Về trang quản trị",
+    "en": "Back to admin",
+    "zh": "返回管理后台",
+    "ja": "管理画面に戻る"
+  },
+  {
     "key": "form.back",
     "category": "form",
     "vi": "Quay lại",
