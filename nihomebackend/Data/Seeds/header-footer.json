@@ -120,6 +120,14 @@
     "ja": "採用"
   },
   {
+    "key": "nav.services",
+    "category": "nav",
+    "vi": "Quản lý dịch vụ",
+    "en": "Services",
+    "zh": "服务管理",
+    "ja": "サービス管理"
+  },
+  {
     "key": "nav.settings",
     "category": "nav",
     "vi": "Cài đặt",

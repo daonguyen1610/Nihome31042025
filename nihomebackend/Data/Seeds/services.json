@@ -78,5 +78,213 @@
     "en": "Explore more",
     "zh": "探索更多",
     "ja": "もっと見る"
+  },
+  {
+    "key": "svc.admin.title",
+    "category": "svc",
+    "vi": "Quản lý dịch vụ",
+    "en": "Services",
+    "zh": "服务管理",
+    "ja": "サービス管理"
+  },
+  {
+    "key": "svc.admin.add",
+    "category": "svc",
+    "vi": "Thêm dịch vụ",
+    "en": "Add service",
+    "zh": "添加服务",
+    "ja": "サービスを追加"
+  },
+  {
+    "key": "svc.admin.createTitle",
+    "category": "svc",
+    "vi": "Tạo dịch vụ mới",
+    "en": "Create service",
+    "zh": "创建新服务",
+    "ja": "新しいサービスを作成"
+  },
+  {
+    "key": "svc.admin.editTitle",
+    "category": "svc",
+    "vi": "Sửa dịch vụ",
+    "en": "Edit service",
+    "zh": "编辑服务",
+    "ja": "サービスを編集"
+  },
+  {
+    "key": "svc.admin.searchPh",
+    "category": "svc",
+    "vi": "Tìm theo tên hoặc slug...",
+    "en": "Search by name or slug...",
+    "zh": "按名称或slug搜索...",
+    "ja": "名前またはslugで検索..."
+  },
+  {
+    "key": "svc.admin.empty",
+    "category": "svc",
+    "vi": "Chưa có dịch vụ nào",
+    "en": "No services yet",
+    "zh": "暂无服务",
+    "ja": "サービスがまだありません"
+  },
+  {
+    "key": "svc.admin.confirmDel",
+    "category": "svc",
+    "vi": "Xác nhận xóa dịch vụ này?",
+    "en": "Delete this service?",
+    "zh": "确认删除此服务？",
+    "ja": "このサービスを削除しますか？"
+  },
+  {
+    "key": "svc.admin.slug",
+    "category": "svc",
+    "vi": "Slug (URL)",
+    "en": "Slug (URL)",
+    "zh": "Slug (URL)",
+    "ja": "スラッグ (URL)"
+  },
+  {
+    "key": "svc.admin.shortTitle",
+    "category": "svc",
+    "vi": "Tên ngắn (eyebrow)",
+    "en": "Short title (eyebrow)",
+    "zh": "短标题（眉题）",
+    "ja": "短いタイトル（アイブロー）"
+  },
+  {
+    "key": "svc.admin.tagline",
+    "category": "svc",
+    "vi": "Tagline (phụ đề)",
+    "en": "Tagline (subtitle)",
+    "zh": "标语（副标题）",
+    "ja": "タグライン（サブタイトル）"
+  },
+  {
+    "key": "svc.admin.intro",
+    "category": "svc",
+    "vi": "Giới thiệu",
+    "en": "Intro",
+    "zh": "简介",
+    "ja": "紹介"
+  },
+  {
+    "key": "svc.admin.highlights",
+    "category": "svc",
+    "vi": "Điểm nổi bật",
+    "en": "Highlights",
+    "zh": "亮点",
+    "ja": "ハイライト"
+  },
+  {
+    "key": "svc.admin.addHighlight",
+    "category": "svc",
+    "vi": "+ Thêm điểm nổi bật",
+    "en": "+ Add highlight",
+    "zh": "+ 添加亮点",
+    "ja": "+ ハイライトを追加"
+  },
+  {
+    "key": "svc.admin.highlightPh",
+    "category": "svc",
+    "vi": "VD: Thi công trọn gói",
+    "en": "E.g. Turnkey construction",
+    "zh": "例：一站式施工",
+    "ja": "例：一括施工"
+  },
+  {
+    "key": "svc.admin.sections",
+    "category": "svc",
+    "vi": "Các mục nội dung",
+    "en": "Content sections",
+    "zh": "内容板块",
+    "ja": "コンテンツセクション"
+  },
+  {
+    "key": "svc.admin.addSection",
+    "category": "svc",
+    "vi": "+ Thêm mục",
+    "en": "+ Add section",
+    "zh": "+ 添加板块",
+    "ja": "+ セクションを追加"
+  },
+  {
+    "key": "svc.admin.addBullet",
+    "category": "svc",
+    "vi": "+ Thêm dòng",
+    "en": "+ Add bullet",
+    "zh": "+ 添加要点",
+    "ja": "+ 箇条書きを追加"
+  },
+  {
+    "key": "svc.admin.sectionHeadingPh",
+    "category": "svc",
+    "vi": "Tiêu đề mục...",
+    "en": "Section heading...",
+    "zh": "板块标题...",
+    "ja": "セクション見出し..."
+  },
+  {
+    "key": "svc.admin.bulletPh",
+    "category": "svc",
+    "vi": "Nội dung dòng...",
+    "en": "Bullet text...",
+    "zh": "要点内容...",
+    "ja": "箇条書きテキスト..."
+  },
+  {
+    "key": "svc.admin.basicInfo",
+    "category": "svc",
+    "vi": "Thông tin cơ bản",
+    "en": "Basic info",
+    "zh": "基本信息",
+    "ja": "基本情報"
+  },
+  {
+    "key": "svc.admin.fallbackError",
+    "category": "svc",
+    "vi": "Đã xảy ra lỗi, vui lòng thử lại",
+    "en": "An error occurred, please try again",
+    "zh": "发生错误，请重试",
+    "ja": "エラーが発生しました。もう一度お試しください"
+  },
+  {
+    "key": "svc.admin.introBlocks",
+    "category": "svc",
+    "vi": "Khối giới thiệu (văn bản + ảnh)",
+    "en": "Intro blocks (text + image)",
+    "zh": "介绍块（文字 + 图片）",
+    "ja": "紹介ブロック（テキスト＋画像）"
+  },
+  {
+    "key": "svc.admin.introBlock",
+    "category": "svc",
+    "vi": "Khối",
+    "en": "Block",
+    "zh": "块",
+    "ja": "ブロック"
+  },
+  {
+    "key": "svc.admin.addIntroBlock",
+    "category": "svc",
+    "vi": "+ Thêm khối giới thiệu",
+    "en": "+ Add intro block",
+    "zh": "+ 添加介绍块",
+    "ja": "+ 紹介ブロックを追加"
+  },
+  {
+    "key": "svc.admin.introBlockTextPh",
+    "category": "svc",
+    "vi": "Nhập đoạn văn bản...",
+    "en": "Enter paragraph text...",
+    "zh": "输入段落文字...",
+    "ja": "段落テキストを入力..."
+  },
+  {
+    "key": "svc.admin.introBlockImage",
+    "category": "svc",
+    "vi": "Tải ảnh lên",
+    "en": "Upload image",
+    "zh": "上传图片",
+    "ja": "画像をアップロード"
   }
 ]

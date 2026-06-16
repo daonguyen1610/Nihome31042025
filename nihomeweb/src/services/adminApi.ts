@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import type { ServiceResponse } from "@/services/contentApi";
 
 // ─── Request types ───────────────────────────────────────────
 
@@ -117,6 +118,18 @@ export interface AboutSectionAdminResponse {
   paragraph2: string;
   imageUrl: string;
   isActive: boolean;
+  sortOrder: number;
+}
+
+export interface UpsertServiceAdminRequest {
+  slug: string;
+  title: string;
+  shortTitle: string;
+  tagline: string;
+  intro: string;
+  sections: { heading: string; body: string[] }[];
+  highlights: string[];
+  introBlocks: { text: string; imageUrl?: string }[];
   sortOrder: number;
 }
 
@@ -520,6 +533,14 @@ export const adminApi = {
       headers: { "Content-Type": "multipart/form-data" },
     });
   },
+
+  // Services
+  createService: (data: UpsertServiceAdminRequest) =>
+    api.post<ServiceResponse>('/services', data),
+  updateService: (id: number, data: UpsertServiceAdminRequest) =>
+    api.put<ServiceResponse>(`/services/${id}`, data),
+  deleteService: (id: number) =>
+    api.delete(`/services/${id}`),
 
   // Slideshow
   getSlideshow: (lang = "vi", activeOnly = false) =>

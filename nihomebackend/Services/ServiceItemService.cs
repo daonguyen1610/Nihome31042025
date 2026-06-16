@@ -40,6 +40,7 @@ public class ServiceItemService(AppDbContext db)
             Intro = req.Intro,
             SectionsJson = req.Sections.GetRawText(),
             HighlightsJson = JsonSerializer.Serialize(req.Highlights),
+            IntroBlocksJson = req.IntroBlocks.ValueKind == JsonValueKind.Array ? req.IntroBlocks.GetRawText() : "[]",
             SortOrder = req.SortOrder,
         };
         db.ServiceItems.Add(entity);
@@ -64,6 +65,7 @@ public class ServiceItemService(AppDbContext db)
         entity.Intro = req.Intro;
         entity.SectionsJson = req.Sections.GetRawText();
         entity.HighlightsJson = JsonSerializer.Serialize(req.Highlights);
+        entity.IntroBlocksJson = req.IntroBlocks.ValueKind == JsonValueKind.Array ? req.IntroBlocks.GetRawText() : "[]";
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -96,5 +98,7 @@ public class ServiceItemService(AppDbContext db)
         Intro = s.Intro,
         Sections = JsonSerializer.Deserialize<JsonElement>(s.SectionsJson),
         Highlights = JsonSerializer.Deserialize<string[]>(s.HighlightsJson) ?? [],
+        IntroBlocks = JsonSerializer.Deserialize<JsonElement>(s.IntroBlocksJson),
+        SortOrder = s.SortOrder,
     };
 }

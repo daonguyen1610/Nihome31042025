@@ -12,5 +12,6 @@ public class UpsertServiceRequest
     [Required] public string Intro { get; set; } = "";
     [Required] public JsonElement Sections { get; set; }
     [Required] public string[] Highlights { get; set; } = [];
+    public JsonElement IntroBlocks { get; set; }
     public int SortOrder { get; set; }
 }

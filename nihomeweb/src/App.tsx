@@ -42,6 +42,7 @@ import PostForm from "./pages/admin/PostForm.tsx";
 import PostView from "./pages/admin/PostView.tsx";
 import AdminCategories from "./pages/admin/Categories.tsx";
 import AdminActivityLog from "./pages/admin/ActivityLog.tsx";
+import AdminServices from "./pages/admin/Services.tsx";
 import AdminLogosManager from "./pages/admin/LogosManager.tsx";
 import AboutContent from "./pages/admin/AboutContent.tsx";
 import ProcessList from "./pages/admin/ProcessList.tsx";
@@ -94,6 +95,7 @@ const App = () => (
               <Route path="/admin/projects/new" element={<ProjectForm mode="create" />} />
               <Route path="/admin/projects/:slug" element={<ProjectView />} />
               <Route path="/admin/projects/:slug/edit" element={<ProjectForm mode="edit" />} />
+              <Route path="/admin/services" element={<AdminServices />} />
               <Route path="/admin/contacts" element={<AdminContacts />} />
               <Route path="/admin/recruitment" element={<AdminRecruitment />} />
               <Route path="/admin/recruitment/employment-types" element={<EmploymentTypes />} />

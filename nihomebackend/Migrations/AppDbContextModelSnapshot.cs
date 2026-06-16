@@ -1104,6 +1104,10 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("IntroBlocksJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Intro")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

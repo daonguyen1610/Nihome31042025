@@ -12,6 +12,8 @@ public class ServiceItem
     public string SectionsJson { get; set; } = "[]";
     /// <summary>JSON array of highlight strings.</summary>
     public string HighlightsJson { get; set; } = "[]";
+    /// <summary>JSON array of { text: string, imageUrl?: string } blocks for rich intro content.</summary>
+    public string IntroBlocksJson { get; set; } = "[]";
     public int SortOrder { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

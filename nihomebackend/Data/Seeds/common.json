@@ -456,6 +456,14 @@
     "ja": "プレビュー"
   },
   {
+    "key": "form.title",
+    "category": "form",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
     "key": "media.featured.change",
     "category": "media",
     "vi": "Thay đổi ảnh",
