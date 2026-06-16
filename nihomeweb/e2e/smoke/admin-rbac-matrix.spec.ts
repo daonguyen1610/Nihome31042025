@@ -1,4 +1,11 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { test, expect, TEST_USERS, type TestUser } from "../fixtures/auth";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Phase 6 — full RBAC matrix smoke against the live stack at $BASE_URL.
@@ -190,4 +197,62 @@ test.describe("Phase 6 — anonymous + USER-only access", () => {
     await page.goto("/forbidden");
     await expect(page.getByText(FORBIDDEN_BODY).first()).toBeVisible();
   });
+});
+
+/**
+ * Tier-1 drift guard: when a dev adds a new `<Route path="/admin/...">` to
+ * App.tsx, the matrix above needs to grow to cover it. This test reads the
+ * router source and fails if a discoverable shell route is missing from
+ * ALL_ADMIN_PATHS, forcing the author to either:
+ *   (a) add the route to ALL_ADMIN_PATHS + update each role's `allowed`, or
+ *   (b) whitelist it below with a one-line justification.
+ *
+ * The whitelist is intentional, not a bypass — it captures routes that share
+ * a permission with one already covered (e.g. /admin/processes/general stands
+ * in for all /admin/processes/* sub-groups) plus pure client-side redirects.
+ */
+const MATRIX_PATH_EXCLUSIONS = new Set<string>([
+  // Pure redirects — RequirePermission wraps a <Navigate />, no real page.
+  "/admin/project-categories",
+  "/admin/slideshow",
+  // Process sub-groups all gated by ADMIN_PERMS.processes; /admin/processes/general
+  // already proves the gate works for the whole group.
+  "/admin/processes/ptcskh",
+  "/admin/processes/dt",
+  "/admin/processes/tk",
+  "/admin/processes/tc",
+  "/admin/processes/ttqtct",
+  "/admin/processes/qlns",
+  "/admin/processes/mhdgncu",
+]);
+
+test("Tier-1 — every /admin route in App.tsx is covered by the matrix", () => {
+  const appSource = readFileSync(
+    resolve(__dirname, "../../src/App.tsx"),
+    "utf-8",
+  );
+
+  const declared = new Set<string>();
+  for (const m of appSource.matchAll(/path="(\/admin[^"]*)"/g)) {
+    const p = m[1];
+    if (p.includes(":")) continue; // parametric sub-routes (/posts/:slug)
+    if (/\/(new|edit)$/.test(p)) continue; // CRUD action sub-routes
+    declared.add(p);
+  }
+
+  const covered = new Set<string>([...ALL_ADMIN_PATHS, ...MATRIX_PATH_EXCLUSIONS]);
+  const missing = [...declared].filter((p) => !covered.has(p)).sort();
+
+  expect(
+    missing,
+    [
+      `Found admin route(s) declared in src/App.tsx that the RBAC matrix does NOT cover:`,
+      ...missing.map((p) => `  - ${p}`),
+      ``,
+      `Fix one of:`,
+      `  1) Add the path to ALL_ADMIN_PATHS and update each role's 'allowed' array.`,
+      `  2) If it shares a permission with an already-covered route or is a pure`,
+      `     redirect, add it to MATRIX_PATH_EXCLUSIONS with a short comment.`,
+    ].join("\n"),
+  ).toEqual([]);
 });
