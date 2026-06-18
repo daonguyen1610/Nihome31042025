@@ -18,10 +18,13 @@ namespace NihomeBackend.Controllers;
 public class MeController(
     AppDbContext db,
     PasswordService passwordService,
+    IdempotencyService idempotency,
+    FingerprintService fingerprint,
     IPermissionService permissionService,
     IWebHostEnvironment env,
     ILogger<MeController> logger) : ControllerBase
 {
+    private const string UpdateMeScope = "users.me.update";
     private const long MaxDocumentSize = 10 * 1024 * 1024; // 10MB
     private static readonly HashSet<string> AllowedDocumentExtensions =
         [".jpg", ".jpeg", ".png", ".gif", ".webp"];
@@ -55,16 +58,45 @@ public class MeController(
     }
 
     [HttpPut]
-    public async Task<ActionResult<MeResponse>> UpdateMe([FromBody] UpdateMeRequest req)
+    [Idempotency(UpdateMeScope)]
+    public async Task<ActionResult<MeResponse>> UpdateMe(
+        [FromBody] UpdateMeRequest req,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
     {
+        var fp = fingerprint.Compute(HttpContext);
         var userId = GetCurrentUserId();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user == null) return NotFound();
 
-        user.FullName = string.IsNullOrWhiteSpace(req.FullName) ? user.FullName : req.FullName.Trim();
-        user.Email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
-        await db.SaveChangesAsync();
-        return Ok(MapMe(user));
+        if (req.Email != null)
+        {
+            var normalizedEmail = EmailUniqueness.Normalize(req.Email);
+            if (string.IsNullOrEmpty(normalizedEmail))
+            {
+                return BadRequest(new { message = "Email is required." });
+            }
+
+            if (!normalizedEmail.Equals(user.Email, StringComparison.Ordinal) &&
+                await EmailUniqueness.IsTakenAsync(db, normalizedEmail, excludeUserId: user.Id, ct))
+            {
+                return Conflict(new { message = "Email already registered." });
+            }
+
+            user.Email = normalizedEmail;
+        }
+
+        if (req.FullName != null)
+        {
+            user.FullName = string.IsNullOrWhiteSpace(req.FullName) ? user.FullName : req.FullName.Trim();
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        var response = MapMe(user);
+        await idempotency.SaveAsync(UpdateMeScope, idempotencyKey, fp, user.Id, StatusCodes.Status200OK, response, ct);
+        return Ok(response);
     }
 
     [HttpPost("change-password")]
@@ -241,7 +273,7 @@ public class UpdateMeRequest
     [MaxLength(150)]
     public string? FullName { get; set; }
 
-    [MaxLength(150)]
+    [EmailAddress, MaxLength(150)]
     public string? Email { get; set; }
 }
 

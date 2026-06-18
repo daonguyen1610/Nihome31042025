@@ -41,11 +41,58 @@ public class UserServiceTests : IDisposable
         {
             PhoneNumber = "0900000001",
             FullName = "Duplicate",
+            Email = "newdup@nicon.vn",
             Password = "Secret123",
             Role = "USER",
         }));
 
         Assert.Equal(UserServiceError.DuplicatePhoneNumber, ex.Error);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ThrowsDuplicateEmail_WhenEmailExists_CaseInsensitive()
+    {
+        await SeedUser("0900000020", "Existing", UserRole.USER, email: "shared@nicon.vn");
+
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.CreateAsync(new CreateUserRequest
+        {
+            PhoneNumber = "0900000021",
+            FullName = "Other",
+            Email = "SHARED@Nicon.VN",
+            Password = "Secret123",
+            Role = "USER",
+        }));
+
+        Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ThrowsDuplicateEmail_WhenEmailMissing()
+    {
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.CreateAsync(new CreateUserRequest
+        {
+            PhoneNumber = "0900000022",
+            FullName = "No Email",
+            Email = "   ",
+            Password = "Secret123",
+            Role = "USER",
+        }));
+
+        Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ThrowsDuplicateEmail_WhenEmailBelongsToAnotherUser()
+    {
+        await SeedUser("0900000030", "Owner", UserRole.USER, email: "owner@nicon.vn");
+        var target = await SeedUser("0900000031", "Target", UserRole.USER, email: "target@nicon.vn");
+
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.UpdateAsync(
+            target.Id,
+            new UpdateUserRequest { Email = "owner@nicon.vn" },
+            currentUserId: 999));
+
+        Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
     }
 
     [Fact]
@@ -141,7 +188,7 @@ public class UserServiceTests : IDisposable
         {
             PhoneNumber = phone,
             FullName = name,
-            Email = email,
+            Email = email ?? $"seed-{phone}@test.com",
             Role = role,
             IsActive = isActive,
             PasswordHash = "hashed",

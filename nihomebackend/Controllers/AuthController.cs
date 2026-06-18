@@ -16,11 +16,16 @@ namespace NihomeBackend.Controllers;
 [Route("api/v1/[controller]")]
 public class AuthController : ControllerBase
 {
+    private const string RegisterStartScope = "auth.register.start";
+    private const string RegisterCompleteScope = "auth.register.complete";
+
     private readonly AppDbContext _db;
     private readonly PasswordService _passwordService;
     private readonly JwtService _jwtService;
     private readonly RefreshTokenService _refreshTokenService;
     private readonly OtpService _otpService;
+    private readonly IdempotencyService _idempotency;
+    private readonly FingerprintService _fingerprint;
     private readonly IMapper _mapper;
     private readonly JwtOptions _jwtOptions;
     private readonly IAuditLogger _audit;
@@ -32,6 +37,8 @@ public class AuthController : ControllerBase
         JwtService jwtService,
         RefreshTokenService refreshTokenService,
         OtpService otpService,
+        IdempotencyService idempotency,
+        FingerprintService fingerprint,
         IMapper mapper,
         IOptions<JwtOptions> jwtOptions,
         IAuditLogger audit,
@@ -42,6 +49,8 @@ public class AuthController : ControllerBase
         _jwtService = jwtService;
         _refreshTokenService = refreshTokenService;
         _otpService = otpService;
+        _idempotency = idempotency;
+        _fingerprint = fingerprint;
         _mapper = mapper;
         _jwtOptions = jwtOptions.Value;
         _audit = audit;
@@ -49,11 +58,37 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register/start")]
-    public async Task<IActionResult> StartRegister(RegisterStartRequest request)
+    [Idempotency(RegisterStartScope)]
+    public async Task<IActionResult> StartRegister(
+        RegisterStartRequest request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
     {
-        if (await _db.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber))
+        var fingerprint = _fingerprint.Compute(HttpContext);
+
+        var phone = (request.PhoneNumber ?? string.Empty).Trim();
+        var normalizedEmail = EmailUniqueness.Normalize(request.Email);
+
+        if (await _db.Users.AsNoTracking().AnyAsync(u => u.PhoneNumber == phone, ct))
         {
             return BadRequest(new { message = "Phone number already registered." });
+        }
+
+        if (await EmailUniqueness.IsTakenAsync(_db, normalizedEmail, excludeUserId: null, ct))
+        {
+            return Conflict(new { message = "Email already registered." });
+        }
+
+        // Block when another in-flight OTP registration already claimed this email.
+        if (!string.IsNullOrEmpty(normalizedEmail) && await _db.RegistrationOtps
+            .AsNoTracking()
+            .AnyAsync(o =>
+                o.Email == normalizedEmail &&
+                o.PhoneNumber != phone &&
+                !o.IsUsed &&
+                o.ExpiresAt > DateTime.UtcNow, ct))
+        {
+            return Conflict(new { message = "Email already registered." });
         }
 
         var settings = await GetSiteSettingsAsync();
@@ -61,27 +96,32 @@ public class AuthController : ControllerBase
         {
             var user = new ApplicationUser
             {
-                PhoneNumber = request.PhoneNumber,
-                FullName = request.FullName,
-                Email = request.Email
+                PhoneNumber = phone,
+                FullName = request.FullName?.Trim() ?? string.Empty,
+                Email = normalizedEmail,
             };
             user.PasswordHash = _passwordService.Hash(user, request.Password);
             _db.Users.Add(user);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(ct);
 
             var response = await BuildAuthResponseAsync(user);
             response.OtpRequired = false;
+            await _idempotency.SaveAsync(
+                RegisterStartScope, idempotencyKey, fingerprint, user.Id, StatusCodes.Status200OK, response, ct);
             return Ok(response);
         }
 
-        await _otpService.GenerateOtp(request.PhoneNumber, request.FullName, request.Email);
-        return Ok(new
+        await _otpService.GenerateOtp(phone, request.FullName?.Trim(), normalizedEmail);
+        var otpPayload = new
         {
             message = "OTP code sent to email.",
-            phone = request.PhoneNumber,
-            email = request.Email,
-            otpRequired = true
-        });
+            phone,
+            email = normalizedEmail,
+            otpRequired = true,
+        };
+        await _idempotency.SaveAsync(
+            RegisterStartScope, idempotencyKey, fingerprint, userId: null, StatusCodes.Status200OK, otpPayload, ct);
+        return Ok(otpPayload);
     }
 
     [HttpPost("register/verify-otp")]
@@ -97,9 +137,17 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register/complete")]
-    public async Task<IActionResult> CompleteRegister(RegistrationCompleteRequest request)
+    [Idempotency(RegisterCompleteScope)]
+    public async Task<IActionResult> CompleteRegister(
+        RegistrationCompleteRequest request,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
     {
-        if (await _db.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber))
+        var fingerprint = _fingerprint.Compute(HttpContext);
+
+        var phone = (request.PhoneNumber ?? string.Empty).Trim();
+
+        if (await _db.Users.AsNoTracking().AnyAsync(u => u.PhoneNumber == phone, ct))
         {
             return BadRequest(new { message = "Phone number already registered." });
         }
@@ -110,10 +158,21 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "OTP verification is disabled. Complete registration from register/start." });
         }
 
-        var entry = await _otpService.GetLatestOtp(request.PhoneNumber);
+        var entry = await _otpService.GetLatestOtp(phone);
         if (entry == null || entry.IsUsed || entry.ExpiresAt < DateTime.UtcNow)
         {
             return BadRequest(new { message = "OTP session not found or expired." });
+        }
+
+        var email = EmailUniqueness.Normalize(entry.Email);
+        if (string.IsNullOrEmpty(email))
+        {
+            return BadRequest(new { message = "Email is required to complete registration." });
+        }
+
+        if (await EmailUniqueness.IsTakenAsync(_db, email, excludeUserId: null, ct))
+        {
+            return Conflict(new { message = "Email already registered." });
         }
 
         await _otpService.MarkAsUsed(entry);
@@ -122,13 +181,16 @@ public class AuthController : ControllerBase
         {
             PhoneNumber = entry.PhoneNumber,
             FullName = entry.FullName ?? string.Empty,
-            Email = entry.Email
+            Email = email,
         };
         user.PasswordHash = _passwordService.Hash(user, request.Password);
         _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(ct);
 
-        return Ok(await BuildAuthResponseAsync(user));
+        var response = await BuildAuthResponseAsync(user);
+        await _idempotency.SaveAsync(
+            RegisterCompleteScope, idempotencyKey, fingerprint, user.Id, StatusCodes.Status200OK, response, ct);
+        return Ok(response);
     }
 
     [HttpPost("register/resend-otp")]

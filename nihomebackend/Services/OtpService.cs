@@ -21,11 +21,12 @@ public class OtpService
     public async Task<string> GenerateOtp(string phoneNumber, string? fullName, string? email)
     {
         var otp = GenerateSecureOtp();
+        var normalizedEmail = EmailUniqueness.Normalize(email);
         var entry = new RegistrationOtp
         {
             PhoneNumber = phoneNumber,
             FullName = fullName,
-            Email = email,
+            Email = string.IsNullOrEmpty(normalizedEmail) ? null : normalizedEmail,
             OtpCode = otp,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
             IsUsed = false

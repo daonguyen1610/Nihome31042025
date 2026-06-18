@@ -13,8 +13,8 @@ public class ApplicationUser
     [MaxLength(150)]
     public string? FullName { get; set; }
 
-    [MaxLength(150)]
-    public string? Email { get; set; }
+    [Required, EmailAddress, MaxLength(150)]
+    public string Email { get; set; } = string.Empty;
 
     [Required]
     public string PasswordHash { get; set; } = string.Empty;

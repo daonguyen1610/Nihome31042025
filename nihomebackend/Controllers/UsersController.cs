@@ -13,8 +13,13 @@ namespace NihomeBackend.Controllers;
 [Route("api/v1/users")]
 [Authorize]
 [RequirePermission("users", "view")]
-public class UsersController(UserService svc) : ControllerBase
+public class UsersController(
+    UserService svc,
+    IdempotencyService idempotency,
+    FingerprintService fingerprint) : ControllerBase
 {
+    private const string CreateScope = "users.admin.create";
+    private const string UpdateScope = "users.admin.update";
     [HttpGet]
     public async Task<ActionResult<UserListResponse>> GetAll(
         [FromQuery] int skip = 0,
@@ -41,11 +46,18 @@ public class UsersController(UserService svc) : ControllerBase
 
     [HttpPost]
     [RequirePermission("users", "manage")]
-    public async Task<ActionResult<UserDetailResponse>> Create([FromBody] CreateUserRequest req)
+    [Idempotency(CreateScope)]
+    public async Task<ActionResult<UserDetailResponse>> Create(
+        [FromBody] CreateUserRequest req,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
     {
         try
         {
             var created = await svc.CreateAsync(req);
+            await idempotency.SaveAsync(
+                CreateScope, idempotencyKey, fingerprint.Compute(HttpContext),
+                created.Id, StatusCodes.Status201Created, created, ct);
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (UserServiceException ex)
@@ -56,12 +68,21 @@ public class UsersController(UserService svc) : ControllerBase
 
     [HttpPut("{id:int}")]
     [RequirePermission("users", "manage")]
-    public async Task<ActionResult<UserDetailResponse>> Update(int id, [FromBody] UpdateUserRequest req)
+    [Idempotency(UpdateScope)]
+    public async Task<ActionResult<UserDetailResponse>> Update(
+        int id,
+        [FromBody] UpdateUserRequest req,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
     {
         try
         {
             var updated = await svc.UpdateAsync(id, req, GetCurrentUserId());
-            return updated == null ? NotFound() : Ok(updated);
+            if (updated == null) return NotFound();
+            await idempotency.SaveAsync(
+                UpdateScope, idempotencyKey, fingerprint.Compute(HttpContext),
+                updated.Id, StatusCodes.Status200OK, updated, ct);
+            return Ok(updated);
         }
         catch (UserServiceException ex)
         {
@@ -109,7 +130,10 @@ public class UsersController(UserService svc) : ControllerBase
     }
 
     private ActionResult ToErrorResult(UserServiceException ex)
-        => ex.Error == UserServiceError.DuplicatePhoneNumber
-            ? Conflict(new { message = ex.Message })
-            : BadRequest(new { message = ex.Message });
+        => ex.Error switch
+        {
+            UserServiceError.DuplicatePhoneNumber => Conflict(new { message = ex.Message }),
+            UserServiceError.DuplicateEmail => Conflict(new { message = ex.Message }),
+            _ => BadRequest(new { message = ex.Message }),
+        };
 }

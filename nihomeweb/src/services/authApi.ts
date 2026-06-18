@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+import api, { withIdempotencyKey } from "@/lib/api";
 
 // --- Types matching backend DTOs ---
 
@@ -40,19 +40,28 @@ export const authApi = {
   login: (phoneNumber: string, password: string) =>
     api.post<AuthResponse>("/auth/login", { phoneNumber, password }),
 
-  registerStart: (phoneNumber: string, fullName: string, email: string, password: string) =>
-    api.post<AuthResponse | RegisterStartResponse>("/auth/register/start", {
-      phoneNumber,
-      fullName,
-      email,
-      password,
-    }),
+  registerStart: (
+    phoneNumber: string,
+    fullName: string,
+    email: string,
+    password: string,
+    idempotencyKey?: string,
+  ) =>
+    api.post<AuthResponse | RegisterStartResponse>(
+      "/auth/register/start",
+      { phoneNumber, fullName, email, password },
+      withIdempotencyKey(idempotencyKey),
+    ),
 
   registerVerifyOtp: (phoneNumber: string, otpCode: string) =>
     api.post<OtpMessageResponse>("/auth/register/verify-otp", { phoneNumber, otpCode }),
 
-  registerComplete: (phoneNumber: string, password: string) =>
-    api.post<AuthResponse>("/auth/register/complete", { phoneNumber, password }),
+  registerComplete: (phoneNumber: string, password: string, idempotencyKey?: string) =>
+    api.post<AuthResponse>(
+      "/auth/register/complete",
+      { phoneNumber, password },
+      withIdempotencyKey(idempotencyKey),
+    ),
 
   registerResendOtp: (phoneNumber: string) =>
     api.post<OtpMessageResponse>("/auth/register/resend-otp", { phoneNumber }),

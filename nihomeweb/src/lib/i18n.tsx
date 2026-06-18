@@ -10,6 +10,8 @@ const backendErrorMap: Record<string, string> = {
   "Invalid credentials.": "auth.err.invalidCredentials",
   "Account is inactive.": "auth.err.accountInactive",
   "Phone number already registered.": "auth.err.phoneRegistered",
+  "Email already registered.": "auth.err.emailRegistered",
+  "Email is required.": "auth.err.emailRequired",
   "Invalid OTP.": "auth.err.invalidOtp",
   "OTP session not found or expired.": "auth.err.otpExpired",
   "OTP request limit exceeded.": "auth.err.otpLimitExceeded",

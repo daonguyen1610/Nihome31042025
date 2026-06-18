@@ -176,6 +176,14 @@
     "ja": "パスワードは6文字以上で入力してください。"
   },
   {
+    "key": "adminUsers.validation.email",
+    "category": "admin-users",
+    "vi": "Vui lòng nhập địa chỉ email hợp lệ.",
+    "en": "Please enter a valid email address.",
+    "zh": "请输入有效的电子邮箱地址。",
+    "ja": "有効なメールアドレスを入力してください。"
+  },
+  {
     "key": "adminUsers.validation.role",
     "category": "admin-users",
     "vi": "Vui lòng chọn vai trò.",
