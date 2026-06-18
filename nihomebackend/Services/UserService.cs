@@ -116,12 +116,11 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
 
         try
         {
-            await notifications.CreateAsync(
-                user.Id,
+            await notifications.CreateForAdminsAsync(
                 "User",
-                "Tài khoản của bạn đã được tạo",
-                $"Chào mừng {user.FullName ?? user.PhoneNumber}! Tài khoản của bạn đã sẵn sàng.",
-                "/admin");
+                $"Người dùng mới được tạo: {user.FullName ?? user.PhoneNumber}",
+                null,
+                "/admin/users");
         }
         catch { /* best-effort — do not fail the create */ }
 

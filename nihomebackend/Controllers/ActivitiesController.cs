@@ -11,7 +11,7 @@ namespace NihomeBackend.Controllers;
 [RequirePermission("content.activities", "view")]
 [Route("api/activities")]
 [Route("api/v1/activities")]
-public class ActivitiesController(ActivityService svc) : ControllerBase
+public class ActivitiesController(ActivityService svc, INotificationService notifications) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
@@ -30,6 +30,17 @@ public class ActivitiesController(ActivityService svc) : ControllerBase
     public async Task<IActionResult> Create([FromBody] UpsertActivityRequest req)
     {
         var result = await svc.CreateAsync(req);
+
+        try
+        {
+            await notifications.CreateForAdminsAsync(
+                "Activity",
+                $"Bài đăng mới: {result.Title}",
+                null,
+                $"/admin/posts/{result.Slug}");
+        }
+        catch { /* best-effort */ }
+
         return CreatedAtAction(nameof(GetBySlug), new { slug = result.Slug }, result);
     }
 
