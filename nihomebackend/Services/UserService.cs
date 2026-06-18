@@ -20,7 +20,7 @@ public class UserServiceException(UserServiceError error, string message) : Inva
     public UserServiceError Error { get; } = error;
 }
 
-public class UserService(AppDbContext db, PasswordService passwordService)
+public class UserService(AppDbContext db, PasswordService passwordService, INotificationService notifications)
 {
     private const int DefaultTake = 20;
     private const int MaxTake = 100;
@@ -114,6 +114,17 @@ public class UserService(AppDbContext db, PasswordService passwordService)
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
+        try
+        {
+            await notifications.CreateAsync(
+                user.Id,
+                "User",
+                "Tài khoản của bạn đã được tạo",
+                $"Chào mừng {user.FullName ?? user.PhoneNumber}! Tài khoản của bạn đã sẵn sàng.",
+                "/admin");
+        }
+        catch { /* best-effort — do not fail the create */ }
+
         return MapDetail(user);
     }
 
@@ -176,6 +187,16 @@ public class UserService(AppDbContext db, PasswordService passwordService)
 
         user.IsActive = nextIsActive;
         await db.SaveChangesAsync();
+
+        try
+        {
+            var title = nextIsActive ? "Tài khoản đã được kích hoạt" : "Tài khoản đã bị vô hiệu hóa";
+            var body = nextIsActive
+                ? "Tài khoản của bạn đã được kích hoạt trở lại."
+                : "Tài khoản của bạn đã bị vô hiệu hóa. Liên hệ quản trị viên nếu cần hỗ trợ.";
+            await notifications.CreateAsync(user.Id, "User", title, body, null);
+        }
+        catch { /* best-effort — do not fail the toggle */ }
 
         return MapDetail(user);
     }

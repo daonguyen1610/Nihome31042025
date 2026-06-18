@@ -14,7 +14,7 @@ public class UserServiceTests : IDisposable
     public UserServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new UserService(_db, new PasswordService());
+        _sut = new UserService(_db, new PasswordService(), new NoOpNotificationService());
     }
 
     public void Dispose() => _db.Dispose();
