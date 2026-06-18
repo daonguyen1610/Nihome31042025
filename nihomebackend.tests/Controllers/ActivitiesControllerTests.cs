@@ -1,12 +1,9 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
-using NihomeBackend.Mappings;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
@@ -32,7 +29,7 @@ public class ActivitiesControllerTests : IDisposable
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
 
         _service = new ActivityService(_db, entityTranslationSvc, hostedImageService);
-        _sut = new ActivitiesController(_service);
+        _sut = new ActivitiesController(_service, new NoOpNotificationService());
     }
 
     public void Dispose() => _db.Dispose();
@@ -164,6 +161,42 @@ public class ActivitiesControllerTests : IDisposable
         var saved = _db.Activities.FirstOrDefault(a => a.Slug == "db-test");
         Assert.NotNull(saved);
         Assert.Equal("DB Test", saved.Title);
+    }
+
+    [Fact]
+    async Task Create_SendsAdminNotification()
+    {
+        var admin = new ApplicationUser
+        {
+            PhoneNumber = "0900000099",
+            FullName = "Admin User",
+            Role = UserRole.ADMIN,
+            IsActive = true,
+            PasswordHash = "hashed",
+        };
+        _db.Users.Add(admin);
+        await _db.SaveChangesAsync();
+
+        var notificationSvc = new NotificationService(_db);
+        var sut = new ActivitiesController(_service, notificationSvc);
+
+        await sut.Create(new UpsertActivityRequest
+        {
+            Slug = "notify-test",
+            Date = "2025-03-01",
+            ImageUrl = "/images/notify.jpg",
+            Category = "Event",
+            Title = "Notify Activity",
+            Excerpt = "Test",
+            Content = new[] { "Content" },
+            SortOrder = 1
+        });
+
+        Assert.Equal(1, _db.Notifications.Count());
+        var notification = _db.Notifications.Single();
+        Assert.Equal(admin.Id, notification.UserId);
+        Assert.Equal("Activity", notification.Module);
+        Assert.Contains("/admin/posts/", notification.LinkUrl);
     }
 
     [Fact]

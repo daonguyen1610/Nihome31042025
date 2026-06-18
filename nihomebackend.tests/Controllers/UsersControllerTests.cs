@@ -117,9 +117,11 @@ public class UsersControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_SendsWelcomeNotificationToNewUser()
+    public async Task Create_SendsAdminNotification()
     {
-        var result = await _sut.Create(new CreateUserRequest
+        var admin = await SeedUser("0910000090", "Admin", UserRole.ADMIN);
+
+        await _sut.Create(new CreateUserRequest
         {
             PhoneNumber = "0910000099",
             FullName = "New Person",
@@ -127,13 +129,11 @@ public class UsersControllerTests : IDisposable
             Role = "USER",
         });
 
-        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
-        var user = Assert.IsType<UserDetailResponse>(created.Value);
-
         Assert.Equal(1, _db.Notifications.Count());
         var notification = _db.Notifications.Single();
-        Assert.Equal(user.Id, notification.UserId);
+        Assert.Equal(admin.Id, notification.UserId);
         Assert.Equal("User", notification.Module);
+        Assert.Contains("/admin/users", notification.LinkUrl);
     }
 
     [Fact]
