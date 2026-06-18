@@ -13,6 +13,7 @@ import {
   type UserDetailResponse,
   type UserListItemResponse,
 } from "@/services/adminApi";
+import { newIdempotencyKey } from "@/lib/api";
 import UserFormModal from "./UserFormModal";
 
 const PAGE_SIZE = 20;
@@ -115,11 +116,12 @@ export default function UserList() {
   const submitUser = async (payload: CreateUserRequest | UpdateUserRequest) => {
     setSubmitting(true);
     try {
+      const idempotencyKey = newIdempotencyKey();
       if (editingUser) {
-        await adminApi.updateUser(editingUser.id, payload as UpdateUserRequest);
+        await adminApi.updateUser(editingUser.id, payload as UpdateUserRequest, idempotencyKey);
         toast({ title: t("form.updated") });
       } else {
-        await adminApi.createUser(payload as CreateUserRequest);
+        await adminApi.createUser(payload as CreateUserRequest, idempotencyKey);
         toast({ title: t("form.created") });
       }
       setModalOpen(false);

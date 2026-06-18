@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+import api, { withIdempotencyKey } from "@/lib/api";
 import type { ServiceResponse } from "@/services/contentApi";
 
 // ─── Request types ───────────────────────────────────────────
@@ -323,7 +323,7 @@ export interface UserListResponse {
 export interface CreateUserRequest {
   phoneNumber: string;
   fullName: string;
-  email?: string;
+  email: string;
   password: string;
   role: UserRole;
 }
@@ -624,10 +624,10 @@ export const adminApi = {
     api.get<UserListResponse>("/users", { params }),
   getUser: (id: number) =>
     api.get<UserDetailResponse>(`/users/${id}`),
-  createUser: (data: CreateUserRequest) =>
-    api.post<UserDetailResponse>("/users", data),
-  updateUser: (id: number, data: UpdateUserRequest) =>
-    api.put<UserDetailResponse>(`/users/${id}`, data),
+  createUser: (data: CreateUserRequest, idempotencyKey?: string) =>
+    api.post<UserDetailResponse>("/users", data, withIdempotencyKey(idempotencyKey)),
+  updateUser: (id: number, data: UpdateUserRequest, idempotencyKey?: string) =>
+    api.put<UserDetailResponse>(`/users/${id}`, data, withIdempotencyKey(idempotencyKey)),
   toggleUserActive: (id: number) =>
     api.patch<UserDetailResponse>(`/users/${id}/toggle-active`),
   deleteUser: (id: number) =>

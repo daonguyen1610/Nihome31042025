@@ -13,24 +13,21 @@ namespace NihomeBackend.Controllers;
 [Route("api/v1/users")]
 [Authorize]
 [RequirePermission("users", "view")]
-public class UsersController(UserService svc) : ControllerBase
+public class UsersController(
+    UserService svc,
+    IdempotencyService idempotency,
+    FingerprintService fingerprint) : ControllerBase
 {
+    private const string CreateScope = "users.admin.create";
+    private const string UpdateScope = "users.admin.update";
+
     [HttpGet]
     public async Task<ActionResult<UserListResponse>> GetAll(
         [FromQuery] int skip = 0,
         [FromQuery] int take = 20,
         [FromQuery] string? search = null,
         [FromQuery] string? role = null)
-    {
-        try
-        {
-            return Ok(await svc.GetListAsync(skip, take, search, role));
-        }
-        catch (UserServiceException ex)
-        {
-            return ToErrorResult(ex);
-        }
-    }
+        => Ok(await svc.GetListAsync(skip, take, search, role));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<UserDetailResponse>> GetById(int id)
@@ -41,62 +38,48 @@ public class UsersController(UserService svc) : ControllerBase
 
     [HttpPost]
     [RequirePermission("users", "manage")]
-    public async Task<ActionResult<UserDetailResponse>> Create([FromBody] CreateUserRequest req)
+    [Idempotency(CreateScope)]
+    public async Task<ActionResult<UserDetailResponse>> Create(
+        [FromBody] CreateUserRequest req,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
     {
-        try
-        {
-            var created = await svc.CreateAsync(req);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
-        catch (UserServiceException ex)
-        {
-            return ToErrorResult(ex);
-        }
+        var created = await svc.CreateAsync(req);
+        await idempotency.SaveAsync(
+            CreateScope, idempotencyKey, fingerprint.Compute(HttpContext),
+            created.Id, StatusCodes.Status201Created, created, ct);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
     [RequirePermission("users", "manage")]
-    public async Task<ActionResult<UserDetailResponse>> Update(int id, [FromBody] UpdateUserRequest req)
+    [Idempotency(UpdateScope)]
+    public async Task<ActionResult<UserDetailResponse>> Update(
+        int id,
+        [FromBody] UpdateUserRequest req,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken ct)
     {
-        try
-        {
-            var updated = await svc.UpdateAsync(id, req, GetCurrentUserId());
-            return updated == null ? NotFound() : Ok(updated);
-        }
-        catch (UserServiceException ex)
-        {
-            return ToErrorResult(ex);
-        }
+        var updated = await svc.UpdateAsync(id, req, GetCurrentUserId());
+        if (updated == null) return NotFound();
+        await idempotency.SaveAsync(
+            UpdateScope, idempotencyKey, fingerprint.Compute(HttpContext),
+            updated.Id, StatusCodes.Status200OK, updated, ct);
+        return Ok(updated);
     }
 
     [HttpPatch("{id:int}/toggle-active")]
     [RequirePermission("users", "manage")]
     public async Task<ActionResult<UserDetailResponse>> ToggleActive(int id)
     {
-        try
-        {
-            var updated = await svc.ToggleActiveAsync(id, GetCurrentUserId());
-            return updated == null ? NotFound() : Ok(updated);
-        }
-        catch (UserServiceException ex)
-        {
-            return ToErrorResult(ex);
-        }
+        var updated = await svc.ToggleActiveAsync(id, GetCurrentUserId());
+        return updated == null ? NotFound() : Ok(updated);
     }
 
     [HttpDelete("{id:int}")]
     [RequirePermission("users", "manage")]
     public async Task<IActionResult> Delete(int id)
-    {
-        try
-        {
-            return await svc.DeleteAsync(id, GetCurrentUserId()) ? NoContent() : NotFound();
-        }
-        catch (UserServiceException ex)
-        {
-            return ToErrorResult(ex);
-        }
-    }
+        => await svc.DeleteAsync(id, GetCurrentUserId()) ? NoContent() : NotFound();
 
     [HttpGet("roles")]
     public async Task<ActionResult<RoleCatalogResponse>> GetRoles()
@@ -107,9 +90,4 @@ public class UsersController(UserService svc) : ControllerBase
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
         return int.TryParse(raw, out var id) ? id : 0;
     }
-
-    private ActionResult ToErrorResult(UserServiceException ex)
-        => ex.Error == UserServiceError.DuplicatePhoneNumber
-            ? Conflict(new { message = ex.Message })
-            : BadRequest(new { message = ex.Message });
 }

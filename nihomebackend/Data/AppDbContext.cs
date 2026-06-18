@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
     // RBAC
     public DbSet<Role> Roles => Set<Role>();
@@ -51,6 +52,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ApplicationUser>().ToTable("users");
         modelBuilder.Entity<ApplicationUser>().HasKey(u => u.Id);
         modelBuilder.Entity<ApplicationUser>().HasIndex(u => u.PhoneNumber).IsUnique();
+        modelBuilder.Entity<ApplicationUser>()
+            .Property(u => u.Email)
+            .HasMaxLength(150)
+            .IsRequired();
+        modelBuilder.Entity<ApplicationUser>()
+            .HasIndex(u => u.Email)
+            .IsUnique()
+            .HasDatabaseName("IX_users_Email_Unique");
         modelBuilder.Entity<ApplicationUser>()
             .Property(u => u.Role)
             .HasConversion<string>()
@@ -103,6 +112,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<RegistrationOtp>().ToTable("registration_otp");
         modelBuilder.Entity<RegistrationOtp>().HasKey(otp => otp.Id);
         modelBuilder.Entity<RegistrationOtp>().HasIndex(otp => otp.PhoneNumber);
+
+        modelBuilder.Entity<IdempotencyRecord>().ToTable("idempotency_records");
+        modelBuilder.Entity<IdempotencyRecord>().HasKey(r => r.Id);
+        modelBuilder.Entity<IdempotencyRecord>()
+            .HasIndex(r => new { r.Scope, r.Key })
+            .IsUnique()
+            .HasDatabaseName("IX_idempotency_records_Scope_Key");
+        modelBuilder.Entity<IdempotencyRecord>().HasIndex(r => r.ExpiresAt);
+        modelBuilder.Entity<IdempotencyRecord>().Property(r => r.ResponseJson).HasColumnType("nvarchar(max)");
 
         modelBuilder.Entity<SiteSettings>().ToTable("site_settings");
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);

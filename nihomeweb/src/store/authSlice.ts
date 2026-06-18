@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import { authApi, type AuthResponse } from "@/services/authApi";
+import { newIdempotencyKey } from "@/lib/api";
 import { isAxiosError } from "axios";
 
 // --- State types ---
@@ -107,9 +108,19 @@ export const loginThunk = createAsyncThunk("auth/login", async (payload: { phone
 
 export const registerStartThunk = createAsyncThunk(
   "auth/registerStart",
-  async (payload: { phone: string; fullName: string; email: string; password: string }, { rejectWithValue }) => {
+  async (
+    payload: { phone: string; fullName: string; email: string; password: string; idempotencyKey?: string },
+    { rejectWithValue },
+  ) => {
     try {
-      const { data } = await authApi.registerStart(payload.phone, payload.fullName, payload.email, payload.password);
+      const key = payload.idempotencyKey ?? newIdempotencyKey();
+      const { data } = await authApi.registerStart(
+        payload.phone,
+        payload.fullName,
+        payload.email,
+        payload.password,
+        key,
+      );
       return { data, password: payload.password, phone: payload.phone, email: payload.email };
     } catch (err) {
       return rejectWithValue(extractError(err));
@@ -131,9 +142,10 @@ export const registerVerifyOtpThunk = createAsyncThunk(
 
 export const registerCompleteThunk = createAsyncThunk(
   "auth/registerComplete",
-  async (payload: { phone: string; password: string }, { rejectWithValue }) => {
+  async (payload: { phone: string; password: string; idempotencyKey?: string }, { rejectWithValue }) => {
     try {
-      const { data } = await authApi.registerComplete(payload.phone, payload.password);
+      const key = payload.idempotencyKey ?? newIdempotencyKey();
+      const { data } = await authApi.registerComplete(payload.phone, payload.password, key);
       persistTokens(data.accessToken, data.refreshToken);
       return data;
     } catch (err) {

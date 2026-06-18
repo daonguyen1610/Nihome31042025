@@ -11,8 +11,8 @@ public class CreateUserRequest
     [Required, StringLength(150, MinimumLength = 2)]
     public string FullName { get; set; } = string.Empty;
 
-    [EmailAddress, StringLength(150)]
-    public string? Email { get; set; }
+    [Required, EmailAddress, StringLength(150)]
+    public string Email { get; set; } = string.Empty;
 
     [Required, StringLength(100, MinimumLength = 6)]
     public string Password { get; set; } = string.Empty;
@@ -26,7 +26,7 @@ public class UpdateUserRequest
     [StringLength(150, MinimumLength = 2)]
     public string? FullName { get; set; }
 
-    [EmailAddress, StringLength(150)]
+    [EmailAddress, StringLength(150, MinimumLength = 5)]
     public string? Email { get; set; }
 
     public string? Role { get; set; }

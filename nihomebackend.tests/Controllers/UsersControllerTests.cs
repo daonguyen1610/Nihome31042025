@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -22,7 +24,9 @@ public class UsersControllerTests : IDisposable
         _db = DbContextFactory.Create();
         _notificationSvc = new NotificationService(_db);
         var service = new UserService(_db, new PasswordService(), _notificationSvc);
-        _sut = new UsersController(service)
+        var idempotency = new IdempotencyService(_db, Mock.Of<ILogger<IdempotencyService>>());
+        var fingerprint = new FingerprintService();
+        _sut = new UsersController(service, idempotency, fingerprint)
         {
             ControllerContext = new ControllerContext
             {
@@ -49,19 +53,22 @@ public class UsersControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_ReturnsConflict_WhenPhoneExists()
+    public async Task Create_Throws_DuplicatePhoneNumber_WhenPhoneExists()
     {
         await SeedUser("0910000002", "Existing", UserRole.USER);
 
-        var result = await _sut.Create(new CreateUserRequest
+        // Domain exception bubbles up — the global exception handler turns it
+        // into a 409 at the HTTP boundary.
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Create(new CreateUserRequest
         {
             PhoneNumber = "0910000002",
             FullName = "Duplicate",
+            Email = "dup@example.com",
             Password = "Secret123",
             Role = "USER",
-        });
+        }, idempotencyKey: null, CancellationToken.None));
 
-        Assert.IsType<ConflictObjectResult>(result.Result);
+        Assert.Equal(UserServiceError.DuplicatePhoneNumber, ex.Error);
     }
 
     [Fact]
@@ -71,9 +78,10 @@ public class UsersControllerTests : IDisposable
         {
             PhoneNumber = "0910000003",
             FullName = "Created User",
+            Email = "created@example.com",
             Password = "Secret123",
             Role = "ADMIN",
-        });
+        }, idempotencyKey: null, CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var response = Assert.IsType<UserDetailResponse>(created.Value);
@@ -81,14 +89,71 @@ public class UsersControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_ReturnsBadRequest_WhenChangingOwnRole()
+    public async Task Create_Throws_DuplicateEmail_WhenEmailAlreadyUsed()
+    {
+        await SeedUser("0910009001", "Existing", UserRole.USER, email: "shared@example.com");
+
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Create(new CreateUserRequest
+        {
+            PhoneNumber = "0910009002",
+            FullName = "Another",
+            Email = "SHARED@Example.com",
+            Password = "Secret123",
+            Role = "USER",
+        }, idempotencyKey: null, CancellationToken.None));
+
+        Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
+    }
+
+    [Fact]
+    public async Task Update_Throws_SelfActionNotAllowed_WhenChangingOwnRole()
     {
         var current = await SeedUser("0910000004", "Current", UserRole.SUPER_ADMIN);
         _sut.ControllerContext.HttpContext.User = BuildUserPrincipal(current.Id);
 
-        var result = await _sut.Update(current.Id, new UpdateUserRequest { Role = "ADMIN" });
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Update(
+            current.Id,
+            new UpdateUserRequest { Role = "ADMIN" },
+            idempotencyKey: null,
+            CancellationToken.None));
 
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(UserServiceError.SelfActionNotAllowed, ex.Error);
+    }
+
+    [Fact]
+    public async Task Update_Throws_DuplicateEmail_WhenEmailTakenByAnotherUser()
+    {
+        await SeedUser("0910009101", "Taker", UserRole.USER, email: "unique@example.com");
+        var target = await SeedUser("0910009102", "Target", UserRole.USER, email: "target@example.com");
+
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Update(
+            target.Id,
+            new UpdateUserRequest { Email = "unique@example.com" },
+            idempotencyKey: null,
+            CancellationToken.None));
+
+        Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
+    }
+
+    [Fact]
+    public async Task Create_StoresIdempotencyRecord_WhenKeyProvided()
+    {
+        const string key = "create-key-1";
+
+        var result = await _sut.Create(new CreateUserRequest
+        {
+            PhoneNumber = "0910009201",
+            FullName = "Once",
+            Email = "once@example.com",
+            Password = "Secret123",
+            Role = "USER",
+        }, key, CancellationToken.None);
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+
+        var record = _db.IdempotencyRecords.Single(r => r.Key == key);
+        Assert.Equal("users.admin.create", record.Scope);
+        Assert.Equal(201, record.StatusCode);
     }
 
     [Fact]
@@ -125,9 +190,10 @@ public class UsersControllerTests : IDisposable
         {
             PhoneNumber = "0910000099",
             FullName = "New Person",
+            Email = "new@example.com",
             Password = "Secret123",
             Role = "USER",
-        });
+        }, idempotencyKey: null, CancellationToken.None);
 
         Assert.Equal(1, _db.Notifications.Count());
         var notification = _db.Notifications.Single();
@@ -151,12 +217,17 @@ public class UsersControllerTests : IDisposable
         Assert.Equal("User", notification.Module);
     }
 
-    private async Task<ApplicationUser> SeedUser(string phone, string name, UserRole role)
+    private async Task<ApplicationUser> SeedUser(
+        string phone,
+        string name,
+        UserRole role,
+        string? email = null)
     {
         var user = new ApplicationUser
         {
             PhoneNumber = phone,
             FullName = name,
+            Email = email ?? $"seed-{phone}@test.com",
             Role = role,
             PasswordHash = "hashed",
             IsActive = true,

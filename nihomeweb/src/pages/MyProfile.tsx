@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setUser } from "@/store/authSlice";
 import { meApi, type UserDocumentResponse } from "@/services/meApi";
+import { newIdempotencyKey } from "@/lib/api";
 
 interface FormData {
   fullName: string;
@@ -82,12 +83,22 @@ const MyProfile = () => {
       });
       return;
     }
+    if (!data.email.trim()) {
+      toast({
+        title: t("profile.emailRequired") || "Vui lòng nhập email",
+        variant: "destructive",
+      });
+      return;
+    }
     setSavingProfile(true);
     try {
-      const res = await meApi.updateMe({
-        fullName: data.fullName.trim(),
-        email: data.email.trim() || undefined,
-      });
+      const res = await meApi.updateMe(
+        {
+          fullName: data.fullName.trim(),
+          email: data.email.trim(),
+        },
+        newIdempotencyKey(),
+      );
       if (authUser) {
         dispatch(
           setUser({
@@ -159,6 +170,7 @@ const MyProfile = () => {
                         className="admin-input"
                         value={data.email}
                         onChange={(e) => update("email", e.target.value)}
+                        required
                       />
                     </Field>
                     <Field label={t("profile.phone") || "Số điện thoại"}>

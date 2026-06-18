@@ -1,4 +1,4 @@
-import api from "@/lib/api";
+import api, { withIdempotencyKey } from "@/lib/api";
 
 export interface MeResponse {
   id: number;
@@ -23,8 +23,8 @@ export interface UserDocumentResponse {
 export const meApi = {
   getMe: () => api.get<MeResponse>("/users/me"),
 
-  updateMe: (data: { fullName?: string; email?: string }) =>
-    api.put<MeResponse>("/users/me", data),
+  updateMe: (data: { fullName?: string; email?: string }, idempotencyKey?: string) =>
+    api.put<MeResponse>("/users/me", data, withIdempotencyKey(idempotencyKey)),
 
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.post<{ message: string }>("/users/me/change-password", data),

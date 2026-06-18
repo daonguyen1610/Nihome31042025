@@ -68,6 +68,7 @@ jobs:
           name: unit-backend-results
           path: TestResults/unit
           if-no-files-found: ignore
+          retention-days: 2
 
   nihomebackend-integration:
     name: nihomebackend (integration tests)
@@ -119,6 +120,7 @@ jobs:
           name: integration-backend-results
           path: TestResults
           if-no-files-found: ignore
+          retention-days: 2
 
   nihomeweb-lint:
     name: nihomeweb (lint)
@@ -217,6 +219,7 @@ jobs:
             nihomeweb/playwright-report
             nihomeweb/test-results
           if-no-files-found: ignore
+          retention-days: 2
 
       - name: Dump docker logs on failure
         if: failure()
@@ -313,7 +316,7 @@ jobs:
             trivy-results.json
             trivy-results.sarif
           if-no-files-found: ignore
-          retention-days: 30
+          retention-days: 2
 
       - name: Fail job if CRITICAL/HIGH findings exist
         if: always() && steps.report.outputs.exit_code != '0'
@@ -325,6 +328,8 @@ jobs:
     name: Publish Nicon
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -349,10 +354,18 @@ jobs:
           chmod +x ./auto-deployment.sh
           ./auto-deployment.sh
 
-      - name: Upload publish-release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: publish-release
-          path: deployment-config/output/publish-release.zip
-          if-no-files-found: error
-          retention-days: 30
+      - name: Compute release tag
+        id: tag
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG="release-$(date -u +%Y%m%d-%H%M%S)-${SHORT_SHA}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            deployment-config/output/publish-release.zip \
+            --title "Nicon ${{ steps.tag.outputs.tag }}" \
+            --notes "Automated build from ${{ github.sha }} on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
