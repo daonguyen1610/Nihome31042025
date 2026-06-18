@@ -41,7 +41,8 @@ const APP_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
 
 function getErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "response" in error) {
-    const r = (error as { response?: { data?: { message?: string } } }).response;
+    const r = (error as { response?: { data?: { detail?: string; message?: string } } }).response;
+    if (r?.data?.detail) return r.data.detail;
     if (r?.data?.message) return r.data.message;
   }
   return undefined;

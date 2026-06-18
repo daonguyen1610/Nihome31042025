@@ -28,6 +28,7 @@ function extractError(err: unknown): string {
   if (isAxiosError(err)) {
     const data = err.response?.data;
     if (typeof data === "string") return data;
+    if (data?.detail) return data.detail;
     if (data?.message) return data.message;
     if (data?.title) return data.title;
     return err.message;

@@ -43,7 +43,10 @@ const mapSlideToDraft = (slide: SlideshowAdminResponse): Draft => ({
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === "object" && error !== null) {
-    const withMessage = error as { message?: unknown; response?: { data?: { message?: unknown } } };
+    const withMessage = error as { message?: unknown; response?: { data?: { detail?: unknown; message?: unknown } } };
+    if (typeof withMessage.response?.data?.detail === "string") {
+      return withMessage.response.data.detail;
+    }
     if (typeof withMessage.response?.data?.message === "string") {
       return withMessage.response.data.message;
     }

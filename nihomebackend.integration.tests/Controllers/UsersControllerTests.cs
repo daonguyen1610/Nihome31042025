@@ -107,11 +107,12 @@ public class UsersControllerTests : IntegrationTestBase
         duplicate.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
 
         var body = await ReadJsonAsync(duplicate);
-        // Both modern (ProblemDetails) and legacy (message) keys must coexist
-        // so existing clients keep working.
+        // RFC-7807 ProblemDetails shape: status, detail (human-readable), and
+        // a traceId extension that matches the server's HttpContext.TraceIdentifier.
         body.GetProperty("status").GetInt32().Should().Be(409);
         body.GetProperty("detail").GetString().Should().Contain("Phone");
-        body.GetProperty("message").GetString().Should().Contain("Phone");
         body.GetProperty("traceId").GetString().Should().NotBeNullOrEmpty();
+        // The legacy "message" mirror was removed; clients must read "detail".
+        body.TryGetProperty("message", out _).Should().BeFalse();
     }
 }

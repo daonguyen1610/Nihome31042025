@@ -39,7 +39,7 @@ function useFetch<T>(fetcher: () => Promise<{ data: T }>, deps: unknown[] = []):
     setError(null);
     fetcher()
       .then((res) => setData(res.data))
-      .catch((err) => setError(err?.response?.data?.message ?? err.message ?? "Unknown error"))
+      .catch((err) => setError(err?.response?.data?.detail ?? err?.response?.data?.message ?? err.message ?? "Unknown error"))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);

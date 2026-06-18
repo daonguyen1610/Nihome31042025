@@ -41,7 +41,8 @@ const formatBytes = (n: number): string => {
 
 const extractError = (err: unknown, fallback: string): string => {
   if (isAxiosError(err)) {
-    const data = err.response?.data as { message?: string } | undefined;
+    const data = err.response?.data as { detail?: string; message?: string } | undefined;
+    if (data?.detail) return data.detail;
     if (data?.message) return data.message;
   }
   return fallback;
