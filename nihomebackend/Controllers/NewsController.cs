@@ -4,8 +4,6 @@ using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
-#pragma warning disable CS4014
-
 namespace NihomeBackend.Controllers;
 
 [ApiController]
@@ -43,11 +41,15 @@ public class NewsController(
             Message = $"Created news '{result.Title}'",
             NewValue = result,
         });
-        notifications.CreateForAdminsAsync(
-            "News",
-            $"Tin tức mới được tạo: {result.Title}",
-            null,
-            $"/admin/posts/{result.Slug}");
+        try
+        {
+            await notifications.CreateForAdminsAsync(
+                "News",
+                $"Tin tức mới được tạo: {result.Title}",
+                null,
+                $"/admin/posts/{result.Slug}");
+        }
+        catch { /* best-effort */ }
         return CreatedAtAction(nameof(GetBySlug), new { slug = result.Slug }, result);
     }
 
