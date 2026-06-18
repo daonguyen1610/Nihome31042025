@@ -133,6 +133,6 @@ public class NotificationService(AppDbContext db) : INotificationService
         Body = notification.Body,
         LinkUrl = notification.LinkUrl,
         IsRead = notification.IsRead,
-        CreatedAt = notification.CreatedAt,
+        CreatedAt = DateTime.SpecifyKind(notification.CreatedAt, DateTimeKind.Utc),
     };
 }
