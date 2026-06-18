@@ -1,4 +1,4 @@
-import { Briefcase, Mail, Wrench } from "lucide-react";
+import { Briefcase, Building2, Mail, Newspaper, User, Wrench } from "lucide-react";
 import type { NotificationDto } from "@/services/notificationApi";
 
 export function resolveCurrentLocale() {
@@ -43,5 +43,8 @@ export function formatRelativeTime(value: string) {
 export function moduleIcon(notification: NotificationDto) {
   if (notification.module === "JobApplication") return Briefcase;
   if (notification.module === "Contact") return Mail;
+  if (notification.module === "Project") return Building2;
+  if (notification.module === "News") return Newspaper;
+  if (notification.module === "User") return User;
   return Wrench;
 }
