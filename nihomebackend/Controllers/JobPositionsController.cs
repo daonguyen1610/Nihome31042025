@@ -33,15 +33,8 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
     [RequirePermission("recruitment.positions", "manage")]
     public async Task<IActionResult> Create([FromBody] UpsertJobPositionRequest req)
     {
-        try
-        {
-            var created = await svc.CreateAsync(req);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var created = await svc.CreateAsync(req);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
@@ -49,15 +42,8 @@ public class JobPositionsController(JobPositionService svc) : ControllerBase
     [RequirePermission("recruitment.positions", "manage")]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertJobPositionRequest req)
     {
-        try
-        {
-            var updated = await svc.UpdateAsync(id, req);
-            return updated == null ? NotFound() : Ok(updated);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var updated = await svc.UpdateAsync(id, req);
+        return updated == null ? NotFound() : Ok(updated);
     }
 
     [HttpDelete("{id:int}")]

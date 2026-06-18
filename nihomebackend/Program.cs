@@ -1,4 +1,5 @@
 using NihomeBackend.Extensions;
+using NihomeBackend.Infrastructure;
 using NihomeBackend.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.FileProviders;
@@ -66,7 +67,18 @@ builder.Services.AddFrontendCors(builder.Configuration);
 builder.Services.AddAuthAndEmail(builder.Configuration);
 builder.Services.AddScoped<TimeService>();
 
+// Central exception handling: every uncaught exception flows through
+// GlobalExceptionHandler which writes a ProblemDetails body and logs with
+// the request's TraceIdentifier so an incident can be traced back to a
+// single log line.
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 var app = builder.Build();
+
+// UseExceptionHandler must run before any middleware that may throw, so the
+// handler can catch failures from auth, MVC, static files, etc.
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

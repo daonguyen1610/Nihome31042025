@@ -77,4 +77,41 @@ public class UsersControllerTests : IntegrationTestBase
 
         (await Client.DeleteAsync($"/api/users/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_ReturnsProblemDetailsWithTraceId_OnDuplicatePhone()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+
+        var phone = "0987" + new Random().Next(100000, 999999).ToString();
+        var first = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = phone,
+            fullName = "First User",
+            email = $"first-{Guid.NewGuid():N}@example.com",
+            password = "P@ssword1",
+            role = "USER",
+        });
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var duplicate = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = phone,
+            fullName = "Dup User",
+            email = $"dup-{Guid.NewGuid():N}@example.com",
+            password = "P@ssword1",
+            role = "USER",
+        });
+
+        duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        duplicate.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+
+        var body = await ReadJsonAsync(duplicate);
+        // Both modern (ProblemDetails) and legacy (message) keys must coexist
+        // so existing clients keep working.
+        body.GetProperty("status").GetInt32().Should().Be(409);
+        body.GetProperty("detail").GetString().Should().Contain("Phone");
+        body.GetProperty("message").GetString().Should().Contain("Phone");
+        body.GetProperty("traceId").GetString().Should().NotBeNullOrEmpty();
+    }
 }

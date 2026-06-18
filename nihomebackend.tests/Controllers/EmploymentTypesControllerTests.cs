@@ -55,7 +55,7 @@ public class EmploymentTypesControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Delete_ReturnsBadRequest_WhenEmploymentTypeIsInUse()
+    public async Task Delete_Throws_WhenEmploymentTypeIsInUse()
     {
         var type = new EmploymentType { Code = "intern", Name = "Thực tập", IsActive = true, SortOrder = 1 };
         _db.EmploymentTypes.Add(type);
@@ -71,8 +71,7 @@ public class EmploymentTypesControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var result = await _sut.Delete(type.Id);
-
-        Assert.IsType<BadRequestObjectResult>(result);
+        // The global exception handler turns this domain exception into 400.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.Delete(type.Id));
     }
 }
