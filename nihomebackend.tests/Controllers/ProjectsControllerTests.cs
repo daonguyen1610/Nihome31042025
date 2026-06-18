@@ -29,7 +29,7 @@ public class ProjectsControllerTests : IDisposable
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
         var categoryService = new ProjectCategoryService(_db);
         var service = new ProjectService(_db, hostedImageService, categoryService);
-        _sut = new ProjectsController(service, new NoOpAuditLogger());
+        _sut = new ProjectsController(service, new NoOpAuditLogger(), new NoOpNotificationService());
     }
 
     public void Dispose() => _db.Dispose();
@@ -275,5 +275,43 @@ public class ProjectsControllerTests : IDisposable
 
         // Assert
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Create_SendsAdminNotification()
+    {
+        // Arrange — seed one admin so CreateForAdminsAsync has someone to notify
+        _db.Users.Add(new ApplicationUser
+        {
+            PhoneNumber = "0900000001",
+            PasswordHash = "hash",
+            Role = UserRole.ADMIN,
+            IsActive = true,
+        });
+        await _db.SaveChangesAsync();
+
+        var notificationSvc = new NotificationService(_db);
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
+        var categoryService = new ProjectCategoryService(_db);
+        var projectSvc = new ProjectService(_db, hostedImageService, categoryService);
+        var sut = new ProjectsController(projectSvc, new NoOpAuditLogger(), notificationSvc);
+
+        var req = new UpsertProjectRequest
+        {
+            Slug = "notif-project",
+            Name = "Notification Test Project",
+            ImageUrl = "",
+            Status = "active",
+            Year = "2026",
+            SortOrder = 0,
+        };
+
+        // Act
+        await sut.Create(req);
+
+        // Assert — one notification row created for the admin
+        Assert.Equal(1, _db.Notifications.Count());
+        Assert.Equal("Project", _db.Notifications.Single().Module);
     }
 }
