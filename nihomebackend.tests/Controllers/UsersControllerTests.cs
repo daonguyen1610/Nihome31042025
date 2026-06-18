@@ -51,20 +51,22 @@ public class UsersControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_ReturnsConflict_WhenPhoneExists()
+    public async Task Create_Throws_DuplicatePhoneNumber_WhenPhoneExists()
     {
         await SeedUser("0910000002", "Existing", UserRole.USER);
 
-        var result = await _sut.Create(new CreateUserRequest
+        // Domain exception bubbles up — the global exception handler turns it
+        // into a 409 at the HTTP boundary.
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Create(new CreateUserRequest
         {
             PhoneNumber = "0910000002",
             FullName = "Duplicate",
             Email = "dup@example.com",
             Password = "Secret123",
             Role = "USER",
-        }, idempotencyKey: null, CancellationToken.None);
+        }, idempotencyKey: null, CancellationToken.None));
 
-        Assert.IsType<ConflictObjectResult>(result.Result);
+        Assert.Equal(UserServiceError.DuplicatePhoneNumber, ex.Error);
     }
 
     [Fact]
@@ -85,51 +87,50 @@ public class UsersControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_ReturnsConflict_WhenEmailAlreadyUsed()
+    public async Task Create_Throws_DuplicateEmail_WhenEmailAlreadyUsed()
     {
         await SeedUser("0910009001", "Existing", UserRole.USER, email: "shared@example.com");
 
-        var result = await _sut.Create(new CreateUserRequest
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Create(new CreateUserRequest
         {
             PhoneNumber = "0910009002",
             FullName = "Another",
             Email = "SHARED@Example.com",
             Password = "Secret123",
             Role = "USER",
-        }, idempotencyKey: null, CancellationToken.None);
+        }, idempotencyKey: null, CancellationToken.None));
 
-        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
-        Assert.Contains("Email", conflict.Value!.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
     }
 
     [Fact]
-    public async Task Update_ReturnsBadRequest_WhenChangingOwnRole()
+    public async Task Update_Throws_SelfActionNotAllowed_WhenChangingOwnRole()
     {
         var current = await SeedUser("0910000004", "Current", UserRole.SUPER_ADMIN);
         _sut.ControllerContext.HttpContext.User = BuildUserPrincipal(current.Id);
 
-        var result = await _sut.Update(
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Update(
             current.Id,
             new UpdateUserRequest { Role = "ADMIN" },
             idempotencyKey: null,
-            CancellationToken.None);
+            CancellationToken.None));
 
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(UserServiceError.SelfActionNotAllowed, ex.Error);
     }
 
     [Fact]
-    public async Task Update_ReturnsConflict_WhenEmailTakenByAnotherUser()
+    public async Task Update_Throws_DuplicateEmail_WhenEmailTakenByAnotherUser()
     {
         await SeedUser("0910009101", "Taker", UserRole.USER, email: "unique@example.com");
         var target = await SeedUser("0910009102", "Target", UserRole.USER, email: "target@example.com");
 
-        var result = await _sut.Update(
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Update(
             target.Id,
             new UpdateUserRequest { Email = "unique@example.com" },
             idempotencyKey: null,
-            CancellationToken.None);
+            CancellationToken.None));
 
-        Assert.IsType<ConflictObjectResult>(result.Result);
+        Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
     }
 
     [Fact]

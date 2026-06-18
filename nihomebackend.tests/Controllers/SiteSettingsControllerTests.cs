@@ -122,27 +122,23 @@ public class SiteSettingsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateEmailTemplates_ReturnsBadRequest_WhenNoSettings()
+    public async Task UpdateEmailTemplates_Throws_WhenNoSettings()
     {
-        var result = await _sut.UpdateEmailTemplates(new UpdateEmailTemplatesRequest
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.UpdateEmailTemplates(new UpdateEmailTemplatesRequest
         {
             NewApplicationEmailSubjectTemplate = "S",
             NewApplicationEmailBodyTemplate = "B",
             NotificationEmail = "e"
-        });
-
-        Assert.IsType<BadRequestObjectResult>(result);
+        }));
     }
 
     [Fact]
-    public async Task UpdateOtpSettings_ReturnsBadRequest_WhenNoSettings()
+    public async Task UpdateOtpSettings_Throws_WhenNoSettings()
     {
-        var result = await _sut.UpdateOtpSettings(new UpdateOtpSettingsRequest
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.UpdateOtpSettings(new UpdateOtpSettingsRequest
         {
             EnableOtpForRegistration = true,
             EnableOtpForForgotPassword = true
-        });
-
-        Assert.IsType<BadRequestObjectResult>(result.Result);
+        }));
     }
 }

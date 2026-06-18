@@ -37,18 +37,11 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     [RequirePermission("system.settings", "manage")]
     public async Task<ActionResult<OtpSettingsResponse>> UpdateOtpSettings([FromBody] UpdateOtpSettingsRequest req)
     {
-        try
-        {
-            var settings = await svc.UpdateOtpSettingsAsync(
-                req.EnableOtpForRegistration,
-                req.EnableOtpForForgotPassword);
+        var settings = await svc.UpdateOtpSettingsAsync(
+            req.EnableOtpForRegistration,
+            req.EnableOtpForForgotPassword);
 
-            return Ok(ToOtpSettingsResponse(settings));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return Ok(ToOtpSettingsResponse(settings));
     }
 
     /// <summary>Get email templates and notification email.</summary>
@@ -76,28 +69,21 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     [RequirePermission("system.settings", "manage")]
     public async Task<IActionResult> UpdateEmailTemplates([FromBody] UpdateEmailTemplatesRequest req)
     {
-        try
-        {
-            var settings = await svc.UpdateEmailTemplatesAsync(
-                req.NewApplicationEmailSubjectTemplate,
-                req.NewApplicationEmailBodyTemplate,
-                req.NotificationEmail,
-                req.OtpEmailSubjectTemplate,
-                req.OtpEmailBodyTemplate);
+        var settings = await svc.UpdateEmailTemplatesAsync(
+            req.NewApplicationEmailSubjectTemplate,
+            req.NewApplicationEmailBodyTemplate,
+            req.NotificationEmail,
+            req.OtpEmailSubjectTemplate,
+            req.OtpEmailBodyTemplate);
 
-            return Ok(new
-            {
-                settings.NewApplicationEmailSubjectTemplate,
-                settings.NewApplicationEmailBodyTemplate,
-                settings.NotificationEmail,
-                settings.OtpEmailSubjectTemplate,
-                settings.OtpEmailBodyTemplate,
-            });
-        }
-        catch (InvalidOperationException ex)
+        return Ok(new
         {
-            return BadRequest(new { message = ex.Message });
-        }
+            settings.NewApplicationEmailSubjectTemplate,
+            settings.NewApplicationEmailBodyTemplate,
+            settings.NotificationEmail,
+            settings.OtpEmailSubjectTemplate,
+            settings.OtpEmailBodyTemplate,
+        });
     }
 
     private static OtpSettingsResponse ToOtpSettingsResponse(SiteSettings settings) => new()
@@ -121,14 +107,7 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     [RequirePermission("system.settings", "manage")]
     public async Task<IActionResult> UpdateMapEmbed([FromBody] UpdateMapEmbedRequest req)
     {
-        try
-        {
-            var settings = await svc.UpdateMapEmbedAsync(req.MapEmbedUrl);
-            return Ok(new { mapEmbedUrl = settings.MapEmbedUrl });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var settings = await svc.UpdateMapEmbedAsync(req.MapEmbedUrl);
+        return Ok(new { mapEmbedUrl = settings.MapEmbedUrl });
     }
 }
