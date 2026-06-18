@@ -4,6 +4,7 @@ using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+#pragma warning disable CS4014
 
 namespace NihomeBackend.Controllers;
 
@@ -12,7 +13,10 @@ namespace NihomeBackend.Controllers;
 [RequirePermission("content.projects", "view")]
 [Route("api/projects")]
 [Route("api/v1/projects")]
-public class ProjectsController(ProjectService svc, IAuditLogger audit) : ControllerBase
+public class ProjectsController(
+    ProjectService svc,
+    IAuditLogger audit,
+    INotificationService notifications) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
@@ -39,6 +43,11 @@ public class ProjectsController(ProjectService svc, IAuditLogger audit) : Contro
             Message = $"Created project '{result.Name}'",
             NewValue = result,
         });
+        notifications.CreateForAdminsAsync(
+            "Project",
+            $"Dự án mới được tạo: {result.Name}",
+            null,
+            $"/admin/projects/{result.Slug}");
         return CreatedAtAction(nameof(GetBySlug), new { slug = result.Slug }, result);
     }
 
