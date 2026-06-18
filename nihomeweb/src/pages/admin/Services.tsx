@@ -51,9 +51,10 @@ function getErrorMessage(error: unknown): string | null {
   if (typeof error === "object" && error !== null) {
     const e = error as {
       message?: unknown;
-      response?: { data?: { message?: unknown; title?: unknown; errors?: Record<string, unknown> } };
+      response?: { data?: { detail?: unknown; message?: unknown; title?: unknown; errors?: Record<string, unknown> } };
     };
     const data = e.response?.data;
+    if (typeof data?.detail === "string") return data.detail;
     if (typeof data?.message === "string") return data.message;
     if (data?.errors) {
       for (const v of Object.values(data.errors)) {

@@ -62,9 +62,6 @@ public sealed class GlobalExceptionHandler(
             Instance = httpContext.Request.Path,
         };
         problem.Extensions["traceId"] = traceId;
-        // Mirror the detail into "message" so existing clients that read
-        // response.data.message continue to work unchanged.
-        problem.Extensions["message"] = detail;
 
         // Only echo the raw exception message in Development to avoid leaking
         // internals (e.g. SQL fragments) to clients in production.

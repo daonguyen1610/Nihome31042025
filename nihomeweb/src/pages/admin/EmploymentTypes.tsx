@@ -19,9 +19,10 @@ function getErrorMessage(error: unknown) {
   if (
     typeof error === "object" && error !== null &&
     "response" in error &&
-    typeof (error as { response?: { data?: { message?: string } } }).response === "object"
+    typeof (error as { response?: { data?: { detail?: string; message?: string } } }).response === "object"
   ) {
-    return (error as { response: { data?: { message?: string } } }).response?.data?.message;
+    const data = (error as { response: { data?: { detail?: string; message?: string } } }).response?.data;
+    return data?.detail ?? data?.message;
   }
   return undefined;
 }

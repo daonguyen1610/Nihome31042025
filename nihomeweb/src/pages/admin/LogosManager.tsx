@@ -60,6 +60,7 @@ function getErrorMessage(error: unknown) {
       message?: unknown;
       response?: {
         data?: {
+          detail?: unknown;
           message?: unknown;
           title?: unknown;
           errors?: Record<string, unknown>;
@@ -68,6 +69,7 @@ function getErrorMessage(error: unknown) {
     };
 
     const data = withResponse.response?.data;
+    if (typeof data?.detail === "string") return data.detail;
     if (typeof data?.message === "string") return data.message;
     if (data?.errors && typeof data.errors === "object") {
       for (const value of Object.values(data.errors)) {

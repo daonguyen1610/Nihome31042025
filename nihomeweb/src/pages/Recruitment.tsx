@@ -116,7 +116,8 @@ const Recruitment = () => {
       setCvFile(null);
     } catch (submitError) {
       const message = submitError && typeof submitError === "object" && "response" in submitError
-        ? (submitError as { response?: { data?: { message?: string } } }).response?.data?.message
+        ? (submitError as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.detail
+          ?? (submitError as { response?: { data?: { detail?: string; message?: string } } }).response?.data?.message
         : undefined;
       toast({ title: t("common.error"), description: message ?? t("rec.toast.errorDesc"), variant: "destructive" });
     } finally {

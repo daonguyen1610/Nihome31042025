@@ -153,8 +153,8 @@ export default function RoleList() {
   const reportError = (err: unknown, defaultKey: string) => {
     let message: string = t(defaultKey);
     if (isAxiosError(err)) {
-      const data = err.response?.data as { message?: string; error?: string } | undefined;
-      message = data?.message ?? data?.error ?? err.message;
+      const data = err.response?.data as { detail?: string; message?: string; error?: string } | undefined;
+      message = data?.detail ?? data?.message ?? data?.error ?? err.message;
     } else if (err instanceof Error) {
       message = err.message;
     }
