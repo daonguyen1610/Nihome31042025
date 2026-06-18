@@ -17,11 +17,13 @@ public class UsersControllerTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly UsersController _sut;
+    private readonly NotificationService _notificationSvc;
 
     public UsersControllerTests()
     {
         _db = DbContextFactory.Create();
-        var service = new UserService(_db, new PasswordService());
+        _notificationSvc = new NotificationService(_db);
+        var service = new UserService(_db, new PasswordService(), _notificationSvc);
         var idempotency = new IdempotencyService(_db, Mock.Of<ILogger<IdempotencyService>>());
         var fingerprint = new FingerprintService();
         _sut = new UsersController(service, idempotency, fingerprint)
@@ -177,6 +179,42 @@ public class UsersControllerTests : IDisposable
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var response = Assert.IsType<RoleCatalogResponse>(ok.Value);
         Assert.Equal(3, response.Roles.Count);
+    }
+
+    [Fact]
+    public async Task Create_SendsAdminNotification()
+    {
+        var admin = await SeedUser("0910000090", "Admin", UserRole.ADMIN);
+
+        await _sut.Create(new CreateUserRequest
+        {
+            PhoneNumber = "0910000099",
+            FullName = "New Person",
+            Email = "new@example.com",
+            Password = "Secret123",
+            Role = "USER",
+        }, idempotencyKey: null, CancellationToken.None);
+
+        Assert.Equal(1, _db.Notifications.Count());
+        var notification = _db.Notifications.Single();
+        Assert.Equal(admin.Id, notification.UserId);
+        Assert.Equal("User", notification.Module);
+        Assert.Contains("/admin/users", notification.LinkUrl);
+    }
+
+    [Fact]
+    public async Task ToggleActive_SendsStatusNotificationToUser()
+    {
+        var actor = await SeedUser("0910000097", "Actor", UserRole.SUPER_ADMIN);
+        var target = await SeedUser("0910000098", "Target", UserRole.USER);
+        _sut.ControllerContext.HttpContext.User = BuildUserPrincipal(actor.Id);
+
+        await _sut.ToggleActive(target.Id);
+
+        Assert.Equal(1, _db.Notifications.Count());
+        var notification = _db.Notifications.Single();
+        Assert.Equal(target.Id, notification.UserId);
+        Assert.Equal("User", notification.Module);
     }
 
     private async Task<ApplicationUser> SeedUser(
