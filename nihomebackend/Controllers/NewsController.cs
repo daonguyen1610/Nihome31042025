@@ -4,6 +4,7 @@ using NihomeBackend.Authorization;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+#pragma warning disable CS4014
 
 namespace NihomeBackend.Controllers;
 
@@ -12,7 +13,10 @@ namespace NihomeBackend.Controllers;
 [RequirePermission("content.news", "view")]
 [Route("api/news")]
 [Route("api/v1/news")]
-public class NewsController(NewsService svc, IAuditLogger audit) : ControllerBase
+public class NewsController(
+    NewsService svc,
+    IAuditLogger audit,
+    INotificationService notifications) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
@@ -39,6 +43,11 @@ public class NewsController(NewsService svc, IAuditLogger audit) : ControllerBas
             Message = $"Created news '{result.Title}'",
             NewValue = result,
         });
+        notifications.CreateForAdminsAsync(
+            "News",
+            $"Tin tức mới được tạo: {result.Title}",
+            null,
+            $"/admin/posts/{result.Slug}");
         return CreatedAtAction(nameof(GetBySlug), new { slug = result.Slug }, result);
     }
 

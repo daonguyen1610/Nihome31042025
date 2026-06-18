@@ -26,7 +26,7 @@ public class NewsControllerTests : IDisposable
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
         var service = new NewsService(_db, entityTranslationSvc, hostedImageService);
-        _sut = new NewsController(service, new NoOpAuditLogger());
+        _sut = new NewsController(service, new NoOpAuditLogger(), new NoOpNotificationService());
     }
 
     public void Dispose() => _db.Dispose();
@@ -219,5 +219,45 @@ public class NewsControllerTests : IDisposable
     {
         var result = await _sut.Delete(999);
         Assert.IsType<NotFoundResult>(result);
+    }
+
+    [Fact]
+    public async Task Create_SendsAdminNotification()
+    {
+        // Arrange — seed one admin so CreateForAdminsAsync has someone to notify
+        _db.Users.Add(new ApplicationUser
+        {
+            PhoneNumber = "0900000001",
+            PasswordHash = "hash",
+            Role = UserRole.ADMIN,
+            IsActive = true,
+        });
+        await _db.SaveChangesAsync();
+
+        var notificationSvc = new NotificationService(_db);
+        var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
+        var hostedImageService = new HostedImageService(
+            Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
+        var newsSvc = new NewsService(_db, entityTranslationSvc, hostedImageService);
+        var sut = new NewsController(newsSvc, new NoOpAuditLogger(), notificationSvc);
+
+        var req = new UpsertNewsRequest
+        {
+            Slug = "notif-news",
+            Title = "Notification Test Article",
+            Date = "2026-06-18",
+            ImageUrl = "",
+            Category = "General",
+            Excerpt = "Test excerpt",
+            Content = new[] { "Body" },
+            SortOrder = 0,
+        };
+
+        // Act
+        await sut.Create(req);
+
+        // Assert
+        Assert.Equal(1, _db.Notifications.Count());
+        Assert.Equal("News", _db.Notifications.Single().Module);
     }
 }
