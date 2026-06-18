@@ -56,6 +56,14 @@
     "ja": "メール"
   },
   {
+    "key": "profile.emailRequired",
+    "category": "profile",
+    "vi": "Vui lòng nhập địa chỉ email.",
+    "en": "Please enter an email address.",
+    "zh": "请输入电子邮箱地址。",
+    "ja": "メールアドレスを入力してください。"
+  },
+  {
     "key": "profile.phone",
     "category": "profile",
     "vi": "Số điện thoại",

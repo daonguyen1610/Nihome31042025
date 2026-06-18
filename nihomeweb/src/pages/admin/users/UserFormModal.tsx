@@ -101,10 +101,15 @@ export default function UserFormModal({
     }
 
     const email = form.email.trim();
+    if (!email) {
+      setError(t("adminUsers.validation.email") || t("profile.emailRequired") || "Vui lòng nhập email");
+      return;
+    }
+
     if (isEdit) {
       await onSubmit({
         fullName: form.fullName.trim(),
-        email: email || undefined,
+        email,
         role: form.role as UserRole,
         isActive: form.isActive,
       });
@@ -114,7 +119,7 @@ export default function UserFormModal({
     await onSubmit({
       fullName: form.fullName.trim(),
       phoneNumber: form.phoneNumber.trim(),
-      email: email || undefined,
+      email,
       password: form.password,
       role: form.role as UserRole,
     });
@@ -170,6 +175,7 @@ export default function UserFormModal({
               onChange={(event) => updateField("email", event.target.value)}
               className="admin-input mt-1 w-full"
               autoComplete="email"
+              required
             />
           </div>
 

@@ -29,4 +29,26 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Build axios request config carrying an Idempotency-Key header so the backend
+ * can short-circuit retries of the same logical mutation.
+ */
+export const withIdempotencyKey = (key?: string | null) =>
+  key ? { headers: { "Idempotency-Key": key } } : {};
+
+/**
+ * UUID v4 generator that prefers the browser-native crypto API and falls back
+ * to a Math.random implementation for non-secure contexts (older browsers).
+ */
+export const newIdempotencyKey = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export default api;

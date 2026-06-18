@@ -20,6 +20,7 @@ const ROLE_NAME = "Auditor (E2E)";
 const TEST_PHONE = "0911000099";
 const TEST_PASSWORD = "Admin@123";
 const TEST_FULL_NAME = "Custom Role Tester";
+const TEST_EMAIL = "custom-role-tester@e2e.nihome.local";
 
 // Permission set picked to be distinguishable from every existing seed role:
 //  - dashboard.view: ride the admin shell
@@ -91,6 +92,7 @@ test.beforeAll(async ({ api }) => {
     data: {
       phoneNumber: TEST_PHONE,
       fullName: TEST_FULL_NAME,
+      email: TEST_EMAIL,
       password: TEST_PASSWORD,
       role: "USER",
     },

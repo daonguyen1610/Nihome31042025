@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -20,7 +22,9 @@ public class UsersControllerTests : IDisposable
     {
         _db = DbContextFactory.Create();
         var service = new UserService(_db, new PasswordService());
-        _sut = new UsersController(service)
+        var idempotency = new IdempotencyService(_db, Mock.Of<ILogger<IdempotencyService>>());
+        var fingerprint = new FingerprintService();
+        _sut = new UsersController(service, idempotency, fingerprint)
         {
             ControllerContext = new ControllerContext
             {
@@ -55,9 +59,10 @@ public class UsersControllerTests : IDisposable
         {
             PhoneNumber = "0910000002",
             FullName = "Duplicate",
+            Email = "dup@example.com",
             Password = "Secret123",
             Role = "USER",
-        });
+        }, idempotencyKey: null, CancellationToken.None);
 
         Assert.IsType<ConflictObjectResult>(result.Result);
     }
@@ -69,13 +74,32 @@ public class UsersControllerTests : IDisposable
         {
             PhoneNumber = "0910000003",
             FullName = "Created User",
+            Email = "created@example.com",
             Password = "Secret123",
             Role = "ADMIN",
-        });
+        }, idempotencyKey: null, CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var response = Assert.IsType<UserDetailResponse>(created.Value);
         Assert.Equal("ADMIN", response.Role);
+    }
+
+    [Fact]
+    public async Task Create_ReturnsConflict_WhenEmailAlreadyUsed()
+    {
+        await SeedUser("0910009001", "Existing", UserRole.USER, email: "shared@example.com");
+
+        var result = await _sut.Create(new CreateUserRequest
+        {
+            PhoneNumber = "0910009002",
+            FullName = "Another",
+            Email = "SHARED@Example.com",
+            Password = "Secret123",
+            Role = "USER",
+        }, idempotencyKey: null, CancellationToken.None);
+
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        Assert.Contains("Email", conflict.Value!.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -84,9 +108,49 @@ public class UsersControllerTests : IDisposable
         var current = await SeedUser("0910000004", "Current", UserRole.SUPER_ADMIN);
         _sut.ControllerContext.HttpContext.User = BuildUserPrincipal(current.Id);
 
-        var result = await _sut.Update(current.Id, new UpdateUserRequest { Role = "ADMIN" });
+        var result = await _sut.Update(
+            current.Id,
+            new UpdateUserRequest { Role = "ADMIN" },
+            idempotencyKey: null,
+            CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Update_ReturnsConflict_WhenEmailTakenByAnotherUser()
+    {
+        await SeedUser("0910009101", "Taker", UserRole.USER, email: "unique@example.com");
+        var target = await SeedUser("0910009102", "Target", UserRole.USER, email: "target@example.com");
+
+        var result = await _sut.Update(
+            target.Id,
+            new UpdateUserRequest { Email = "unique@example.com" },
+            idempotencyKey: null,
+            CancellationToken.None);
+
+        Assert.IsType<ConflictObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Create_StoresIdempotencyRecord_WhenKeyProvided()
+    {
+        const string key = "create-key-1";
+
+        var result = await _sut.Create(new CreateUserRequest
+        {
+            PhoneNumber = "0910009201",
+            FullName = "Once",
+            Email = "once@example.com",
+            Password = "Secret123",
+            Role = "USER",
+        }, key, CancellationToken.None);
+
+        Assert.IsType<CreatedAtActionResult>(result.Result);
+
+        var record = _db.IdempotencyRecords.Single(r => r.Key == key);
+        Assert.Equal("users.admin.create", record.Scope);
+        Assert.Equal(201, record.StatusCode);
     }
 
     [Fact]
@@ -114,12 +178,17 @@ public class UsersControllerTests : IDisposable
         Assert.Equal(3, response.Roles.Count);
     }
 
-    private async Task<ApplicationUser> SeedUser(string phone, string name, UserRole role)
+    private async Task<ApplicationUser> SeedUser(
+        string phone,
+        string name,
+        UserRole role,
+        string? email = null)
     {
         var user = new ApplicationUser
         {
             PhoneNumber = phone,
             FullName = name,
+            Email = email ?? $"seed-{phone}@test.com",
             Role = role,
             PasswordHash = "hashed",
             IsActive = true,

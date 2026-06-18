@@ -9,6 +9,7 @@ namespace NihomeBackend.Services;
 public enum UserServiceError
 {
     DuplicatePhoneNumber,
+    DuplicateEmail,
     InvalidRole,
     SelfActionNotAllowed,
     LastSuperAdmin,
@@ -85,11 +86,26 @@ public class UserService(AppDbContext db, PasswordService passwordService)
                 "Phone number already registered.");
         }
 
+        var email = EmailUniqueness.Normalize(req.Email);
+        if (string.IsNullOrEmpty(email))
+        {
+            throw new UserServiceException(
+                UserServiceError.DuplicateEmail,
+                "Email is required.");
+        }
+
+        if (await EmailUniqueness.IsTakenAsync(db, email))
+        {
+            throw new UserServiceException(
+                UserServiceError.DuplicateEmail,
+                "Email already registered.");
+        }
+
         var user = new ApplicationUser
         {
             PhoneNumber = phoneNumber,
             FullName = req.FullName.Trim(),
-            Email = NormalizeOptional(req.Email),
+            Email = email,
             Role = ParseRole(req.Role),
             IsActive = true,
         };
@@ -121,7 +137,23 @@ public class UserService(AppDbContext db, PasswordService passwordService)
 
         if (req.Email != null)
         {
-            user.Email = NormalizeOptional(req.Email);
+            var email = EmailUniqueness.Normalize(req.Email);
+            if (string.IsNullOrEmpty(email))
+            {
+                throw new UserServiceException(
+                    UserServiceError.DuplicateEmail,
+                    "Email is required.");
+            }
+
+            if (!email.Equals(user.Email, StringComparison.Ordinal) &&
+                await EmailUniqueness.IsTakenAsync(db, email, excludeUserId: user.Id))
+            {
+                throw new UserServiceException(
+                    UserServiceError.DuplicateEmail,
+                    "Email already registered.");
+            }
+
+            user.Email = email;
         }
 
         user.Role = nextRole;
