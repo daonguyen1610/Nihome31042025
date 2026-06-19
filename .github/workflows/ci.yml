@@ -160,7 +160,7 @@ jobs:
     # only runs the real-browser specs and deployment-only contracts (CORS etc.)
     # against the docker-compose stack.
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     steps:
       - uses: actions/checkout@v4
@@ -175,9 +175,22 @@ jobs:
         working-directory: nihomeweb
         run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ hashFiles('nihomeweb/package-lock.json') }}
+
       - name: Install Playwright browsers
         working-directory: nihomeweb
         run: npx playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+
+      - name: Install Playwright system deps (cached browsers)
+        working-directory: nihomeweb
+        run: npx playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
 
       - name: Start full stack
         run: docker compose up -d --build
