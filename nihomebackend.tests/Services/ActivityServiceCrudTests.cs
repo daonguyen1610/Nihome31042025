@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
+using System.Text.Json;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -88,6 +89,33 @@ public class ActivityServiceCrudTests : IDisposable
         var updated = await _sut.UpdateAsync(created.Id, req);
         Assert.Equal("Updated Title", updated!.Title);
         Assert.Single(updated.Gallery!);
+    }
+
+    [Fact]
+    public async Task Create_PreservesLegacyStringContent()
+    {
+        var created = await _sut.CreateAsync(BasePayload("legacy"));
+
+        var content = Assert.IsType<JsonElement>(created.Content[0]);
+        Assert.Equal("p1", content.GetString());
+    }
+
+    [Fact]
+    public async Task Create_PreservesBlockContentJson()
+    {
+        var req = BasePayload("blocks");
+        req.Content =
+        [
+            new Dictionary<string, object> { ["type"] = "text", ["value"] = "Intro" },
+            new Dictionary<string, object> { ["type"] = "image", ["url"] = "/images/activities/inside.jpg" },
+        ];
+
+        var created = await _sut.CreateAsync(req);
+
+        var first = Assert.IsType<JsonElement>(created.Content[0]);
+        Assert.Equal("text", first.GetProperty("type").GetString());
+        Assert.Equal("Intro", first.GetProperty("value").GetString());
+        Assert.Contains("\"type\":\"image\"", _db.Activities.Single(a => a.Id == created.Id).ContentJson);
     }
 
     [Fact]
