@@ -448,6 +448,22 @@
     "ja": "投稿"
   },
   {
+    "key": "cat.tabActivities",
+    "category": "cat",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "アクティビティ"
+  },
+  {
+    "key": "cat.tabNews",
+    "category": "cat",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
+  },
+  {
     "key": "cat.tabProjects",
     "category": "cat",
     "vi": "Dự án",
@@ -2830,5 +2846,365 @@
     "en": "Upload document",
     "zh": "上传文档",
     "ja": "文書をアップロード"
+  },
+  {
+    "key": "form.selectCategory",
+    "category": "form",
+    "vi": "Chọn danh mục",
+    "en": "Select category",
+    "zh": "选择分类",
+    "ja": "カテゴリを選択"
+  },
+  {
+    "key": "media.url.upload",
+    "category": "media",
+    "vi": "Tải lên",
+    "en": "Upload",
+    "zh": "上传",
+    "ja": "アップロード"
+  },
+  {
+    "key": "contentBlocks.empty",
+    "category": "contentBlocks",
+    "vi": "Chưa có nội dung.",
+    "en": "No content blocks yet.",
+    "zh": "暂无内容块。",
+    "ja": "コンテンツブロックはまだありません。"
+  },
+  {
+    "key": "contentBlocks.text",
+    "category": "contentBlocks",
+    "vi": "Đoạn văn",
+    "en": "Text block",
+    "zh": "文本块",
+    "ja": "テキストブロック"
+  },
+  {
+    "key": "contentBlocks.image",
+    "category": "contentBlocks",
+    "vi": "Hình ảnh",
+    "en": "Image block",
+    "zh": "图片块",
+    "ja": "画像ブロック"
+  },
+  {
+    "key": "contentBlocks.moveUp",
+    "category": "contentBlocks",
+    "vi": "Di chuyển lên",
+    "en": "Move up",
+    "zh": "上移",
+    "ja": "上へ移動"
+  },
+  {
+    "key": "contentBlocks.moveDown",
+    "category": "contentBlocks",
+    "vi": "Di chuyển xuống",
+    "en": "Move down",
+    "zh": "下移",
+    "ja": "下へ移動"
+  },
+  {
+    "key": "contentBlocks.addText",
+    "category": "contentBlocks",
+    "vi": "Thêm đoạn văn",
+    "en": "Add text",
+    "zh": "添加文本",
+    "ja": "テキストを追加"
+  },
+  {
+    "key": "contentBlocks.addImage",
+    "category": "contentBlocks",
+    "vi": "Thêm ảnh",
+    "en": "Add image",
+    "zh": "添加图片",
+    "ja": "画像を追加"
+  },
+  {
+    "key": "activities.title",
+    "category": "activities",
+    "vi": "Quản lý hoạt động",
+    "en": "Activities management",
+    "zh": "活动管理",
+    "ja": "アクティビティ管理"
+  },
+  {
+    "key": "activities.create",
+    "category": "activities",
+    "vi": "Tạo hoạt động",
+    "en": "Create activity",
+    "zh": "创建活动",
+    "ja": "アクティビティを作成"
+  },
+  {
+    "key": "activities.searchPlaceholder",
+    "category": "activities",
+    "vi": "Tìm hoạt động...",
+    "en": "Search activities...",
+    "zh": "搜索活动...",
+    "ja": "アクティビティを検索..."
+  },
+  {
+    "key": "activities.allCategories",
+    "category": "activities",
+    "vi": "Tất cả danh mục",
+    "en": "All categories",
+    "zh": "所有分类",
+    "ja": "すべてのカテゴリ"
+  },
+  {
+    "key": "activities.col.post",
+    "category": "activities",
+    "vi": "Hoạt động",
+    "en": "Activity",
+    "zh": "活动",
+    "ja": "アクティビティ"
+  },
+  {
+    "key": "activities.col.category",
+    "category": "activities",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "activities.col.author",
+    "category": "activities",
+    "vi": "Tác giả",
+    "en": "Author",
+    "zh": "作者",
+    "ja": "著者"
+  },
+  {
+    "key": "activities.empty",
+    "category": "activities",
+    "vi": "Không có hoạt động phù hợp.",
+    "en": "No matching activities.",
+    "zh": "没有匹配的活动。",
+    "ja": "一致するアクティビティがありません。"
+  },
+  {
+    "key": "activities.field.title",
+    "category": "activities",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "activities.field.category",
+    "category": "activities",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "activities.field.author",
+    "category": "activities",
+    "vi": "Tác giả",
+    "en": "Author",
+    "zh": "作者",
+    "ja": "著者"
+  },
+  {
+    "key": "activities.field.date",
+    "category": "activities",
+    "vi": "Ngày đăng",
+    "en": "Publish date",
+    "zh": "发布日期",
+    "ja": "公開日"
+  },
+  {
+    "key": "activities.field.image",
+    "category": "activities",
+    "vi": "Ảnh đại diện",
+    "en": "Cover image",
+    "zh": "封面图片",
+    "ja": "カバー画像"
+  },
+  {
+    "key": "activities.field.excerpt",
+    "category": "activities",
+    "vi": "Mô tả ngắn",
+    "en": "Excerpt",
+    "zh": "摘要",
+    "ja": "抜粋"
+  },
+  {
+    "key": "activities.field.content",
+    "category": "activities",
+    "vi": "Nội dung",
+    "en": "Content",
+    "zh": "内容",
+    "ja": "内容"
+  },
+  {
+    "key": "activities.detail",
+    "category": "activities",
+    "vi": "Chi tiết hoạt động",
+    "en": "Activity details",
+    "zh": "活动详情",
+    "ja": "アクティビティ詳細"
+  },
+  {
+    "key": "activities.editTitle",
+    "category": "activities",
+    "vi": "Chỉnh sửa hoạt động",
+    "en": "Edit activity",
+    "zh": "编辑活动",
+    "ja": "アクティビティを編集"
+  },
+  {
+    "key": "activities.addTitle",
+    "category": "activities",
+    "vi": "Thêm hoạt động mới",
+    "en": "Add new activity",
+    "zh": "添加新活动",
+    "ja": "新規アクティビティを追加"
+  },
+  {
+    "key": "activities.notFound",
+    "category": "activities",
+    "vi": "Không tìm thấy hoạt động.",
+    "en": "Activity not found.",
+    "zh": "未找到活动。",
+    "ja": "アクティビティが見つかりません。"
+  },
+  {
+    "key": "adminNews.title",
+    "category": "adminNews",
+    "vi": "Quản lý tin tức",
+    "en": "News management",
+    "zh": "新闻管理",
+    "ja": "ニュース管理"
+  },
+  {
+    "key": "adminNews.create",
+    "category": "adminNews",
+    "vi": "Tạo tin tức",
+    "en": "Create news",
+    "zh": "创建新闻",
+    "ja": "ニュースを作成"
+  },
+  {
+    "key": "adminNews.searchPlaceholder",
+    "category": "adminNews",
+    "vi": "Tìm tin tức...",
+    "en": "Search news...",
+    "zh": "搜索新闻...",
+    "ja": "ニュースを検索..."
+  },
+  {
+    "key": "adminNews.allCategories",
+    "category": "adminNews",
+    "vi": "Tất cả danh mục",
+    "en": "All categories",
+    "zh": "所有分类",
+    "ja": "すべてのカテゴリ"
+  },
+  {
+    "key": "adminNews.col.post",
+    "category": "adminNews",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
+  },
+  {
+    "key": "adminNews.col.category",
+    "category": "adminNews",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "adminNews.empty",
+    "category": "adminNews",
+    "vi": "Không có tin tức phù hợp.",
+    "en": "No matching news.",
+    "zh": "没有匹配的新闻。",
+    "ja": "一致するニュースがありません。"
+  },
+  {
+    "key": "adminNews.field.title",
+    "category": "adminNews",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "adminNews.field.category",
+    "category": "adminNews",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "adminNews.field.date",
+    "category": "adminNews",
+    "vi": "Ngày đăng",
+    "en": "Publish date",
+    "zh": "发布日期",
+    "ja": "公開日"
+  },
+  {
+    "key": "adminNews.field.image",
+    "category": "adminNews",
+    "vi": "Ảnh đại diện",
+    "en": "Cover image",
+    "zh": "封面图片",
+    "ja": "カバー画像"
+  },
+  {
+    "key": "adminNews.field.excerpt",
+    "category": "adminNews",
+    "vi": "Mô tả ngắn",
+    "en": "Excerpt",
+    "zh": "摘要",
+    "ja": "抜粋"
+  },
+  {
+    "key": "adminNews.field.content",
+    "category": "adminNews",
+    "vi": "Nội dung",
+    "en": "Content",
+    "zh": "内容",
+    "ja": "内容"
+  },
+  {
+    "key": "adminNews.detail",
+    "category": "adminNews",
+    "vi": "Chi tiết tin tức",
+    "en": "News details",
+    "zh": "新闻详情",
+    "ja": "ニュース詳細"
+  },
+  {
+    "key": "adminNews.editTitle",
+    "category": "adminNews",
+    "vi": "Chỉnh sửa tin tức",
+    "en": "Edit news",
+    "zh": "编辑新闻",
+    "ja": "ニュースを編集"
+  },
+  {
+    "key": "adminNews.addTitle",
+    "category": "adminNews",
+    "vi": "Thêm tin tức mới",
+    "en": "Add new news",
+    "zh": "添加新闻",
+    "ja": "新規ニュースを追加"
+  },
+  {
+    "key": "adminNews.notFound",
+    "category": "adminNews",
+    "vi": "Không tìm thấy tin tức.",
+    "en": "News not found.",
+    "zh": "未找到新闻。",
+    "ja": "ニュースが見つかりません。"
   }
 ]

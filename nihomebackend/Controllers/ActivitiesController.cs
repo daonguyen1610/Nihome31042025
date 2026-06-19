@@ -37,7 +37,7 @@ public class ActivitiesController(ActivityService svc, INotificationService noti
                 "Activity",
                 $"Bài đăng mới: {result.Title}",
                 null,
-                $"/admin/posts/{result.Slug}");
+                $"/admin/activities/{result.Slug}");
         }
         catch { /* best-effort */ }
 

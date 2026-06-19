@@ -60,7 +60,7 @@ public class ActivityService(
             Author = req.Author,
             Title = req.Title,
             Excerpt = req.Excerpt,
-            ContentJson = JsonSerializer.Serialize(req.Content),
+            ContentJson = SerializeContent(req.Content),
             SortOrder = req.SortOrder,
         };
         db.Activities.Add(entity);
@@ -93,7 +93,7 @@ public class ActivityService(
         entity.Author = req.Author;
         entity.Title = req.Title;
         entity.Excerpt = req.Excerpt;
-        entity.ContentJson = JsonSerializer.Serialize(req.Content);
+        entity.ContentJson = SerializeContent(req.Content);
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -143,9 +143,21 @@ public class ActivityService(
         Title = t.GetValueOrDefault("Title", a.Title),
         Excerpt = t.GetValueOrDefault("Excerpt", a.Excerpt),
         Content = t.TryGetValue("Content", out var c)
-            ? JsonSerializer.Deserialize<string[]>(c) ?? []
-            : JsonSerializer.Deserialize<string[]>(a.ContentJson) ?? [],
+            ? DeserializeContent(c)
+            : DeserializeContent(a.ContentJson),
     };
+
+    private static string SerializeContent(object[] content) => JsonSerializer.Serialize(content ?? []);
+
+    private static object[] DeserializeContent(string? contentJson)
+    {
+        if (string.IsNullOrWhiteSpace(contentJson))
+        {
+            return [];
+        }
+
+        return JsonSerializer.Deserialize<object[]>(contentJson) ?? [];
+    }
 
     private string? SerializeGallery(string[]? gallery)
     {

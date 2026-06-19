@@ -47,7 +47,7 @@ public class NewsController(
                 "News",
                 $"Tin tức mới được tạo: {result.Title}",
                 null,
-                $"/admin/posts/{result.Slug}");
+                $"/admin/news/{result.Slug}");
         }
         catch { /* best-effort */ }
         return CreatedAtAction(nameof(GetBySlug), new { slug = result.Slug }, result);
