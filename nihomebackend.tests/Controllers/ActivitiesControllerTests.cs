@@ -196,7 +196,7 @@ public class ActivitiesControllerTests : IDisposable
         var notification = _db.Notifications.Single();
         Assert.Equal(admin.Id, notification.UserId);
         Assert.Equal("Activity", notification.Module);
-        Assert.Contains("/admin/posts/", notification.LinkUrl);
+        Assert.Contains("/admin/activities/", notification.LinkUrl);
     }
 
     [Fact]

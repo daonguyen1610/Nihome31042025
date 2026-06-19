@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Caching.Memory;
 using Moq;
+using System.Text.Json;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -102,6 +103,34 @@ public class NewsServiceTests : IDisposable
         Assert.NotNull(updated);
         Assert.Equal("Updated", updated!.Title);
         Assert.Equal(2, updated.Gallery!.Length);
+    }
+
+    [Fact]
+    public async Task Create_PreservesBlockContentJson()
+    {
+        var req = BasePayload("blocks");
+        req.Content =
+        [
+            new Dictionary<string, object> { ["type"] = "text", ["value"] = "Lead" },
+            new Dictionary<string, object> { ["type"] = "image", ["url"] = "/images/news/inside.jpg" },
+        ];
+
+        var created = await _sut.CreateAsync(req);
+
+        var first = Assert.IsType<JsonElement>(created.Content[0]);
+        Assert.Equal("text", first.GetProperty("type").GetString());
+        Assert.Equal("Lead", first.GetProperty("value").GetString());
+        Assert.Contains("\"type\":\"image\"", _db.NewsArticles.Single(n => n.Id == created.Id).ContentJson);
+    }
+
+    [Fact]
+    public async Task Create_AutoCreatesMissingNewsCategory()
+    {
+        var created = await _sut.CreateAsync(BasePayload("category-sync"));
+
+        Assert.Equal("company", created.Category);
+        Assert.NotNull(created.NewsCategoryId);
+        Assert.Single(_db.NewsCategories);
     }
 
     [Fact]
