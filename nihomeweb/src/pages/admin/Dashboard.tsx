@@ -136,7 +136,7 @@ const Dashboard = () => {
       value: totalPosts,
       icon: FileText,
       bg: "linear-gradient(135deg, hsl(244 75% 64%), hsl(255 80% 72%))",
-      to: "/admin/posts",
+      to: "/admin/activities",
     },
     {
       label: t("dash.activeProjects"),
@@ -237,7 +237,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-display text-lg font-extrabold">{t("dash.recentPosts")}</h2>
             <Link
-              to="/admin/posts"
+              to="/admin/activities"
               className="text-xs font-bold inline-flex items-center gap-1"
               style={{ color: "hsl(var(--admin-primary))" }}
             >
@@ -279,11 +279,11 @@ const Dashboard = () => {
           <h3 className="font-display text-xl font-extrabold mt-2 relative z-10">{t("dash.createPost")}</h3>
           <p className="text-sm opacity-85 mt-2 mb-5 relative z-10">{t("dash.createPostDesc")}</p>
           <Link
-            to="/admin/posts/new"
+            to="/admin/activities/new"
             className="inline-flex items-center gap-2 bg-white text-sm font-bold px-5 py-2.5 rounded-full relative z-10"
             style={{ color: "hsl(var(--admin-primary))" }}
           >
-            <Plus className="w-4 h-4" /> {t("posts.create")}
+            <Plus className="w-4 h-4" /> {t("activities.create")}
           </Link>
         </div>
       </div>
