@@ -93,7 +93,7 @@ public static class ContentSeeder
         var manifest = LoadContentSeed("activities");
         if (manifest.Count == 0) return;
 
-        if (NeedsContentReseed(db.Activities, manifest.Count, a => a.ImageUrl, IsLegacyStockActivityImage))
+        if (NeedsContentReseed(db.Activities, manifest, a => a.ImageUrl, a => a.ContentJson, IsLegacyStockActivityImage))
         {
             ReseedFromManifest(db, EntityTypes.Activity, manifest, item =>
             {
@@ -127,7 +127,7 @@ public static class ContentSeeder
         var manifest = LoadContentSeed("news");
         if (manifest.Count == 0) return;
 
-        if (NeedsContentReseed(db.NewsArticles, manifest.Count, a => a.ImageUrl, IsLegacyStockNewsImage))
+        if (NeedsContentReseed(db.NewsArticles, manifest, a => a.ImageUrl, a => a.ContentJson, IsLegacyStockNewsImage))
         {
             ReseedFromManifest(db, EntityTypes.News, manifest, item =>
             {
@@ -1560,13 +1560,38 @@ public static class ContentSeeder
     private static bool IsLegacyStockNewsImage(string url) =>
         url.StartsWith("/images/news/news-", StringComparison.Ordinal);
 
-    private static bool NeedsContentReseed<T>(IQueryable<T> set, int manifestCount, Func<T, string> imageUrlOf, Func<string, bool> isStockImage)
+    private static bool NeedsContentReseed<T>(IQueryable<T> set, List<ContentSeedItem> manifest, Func<T, string> imageUrlOf, Func<T, string> contentJsonOf, Func<string, bool> isStockImage)
         where T : class
     {
         var existing = set.ToList();
         if (existing.Count == 0) return true;
-        if (existing.Count != manifestCount) return true;
-        return existing.Any(e => isStockImage(imageUrlOf(e)));
+        if (existing.Count != manifest.Count) return true;
+        if (existing.Any(e => isStockImage(imageUrlOf(e)))) return true;
+
+        // Trigger reseed when the manifest carries inline-image content blocks
+        // (e.g. {"type":"image","url":...}) but the DB still has the legacy
+        // pure-string content. Detect by sniffing the first array element.
+        var manifestHasInlineImages = manifest.Any(item =>
+            item.GetTranslation("vi").Content.Any(c => c.ValueKind == JsonValueKind.Object));
+        if (!manifestHasInlineImages) return false;
+
+        var dbHasInlineImages = existing.Any(e =>
+        {
+            var json = contentJsonOf(e);
+            if (string.IsNullOrWhiteSpace(json) || json.Length < 2) return false;
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    if (el.ValueKind == JsonValueKind.Object) return true;
+                }
+            }
+            catch (JsonException) { /* malformed json — fall through */ }
+            return false;
+        });
+        return !dbHasInlineImages;
     }
 
     private static void ReseedFromManifest<T>(AppDbContext db, string entityType, List<ContentSeedItem> manifest, Func<ContentSeedItem, T> factory)
@@ -1640,7 +1665,12 @@ public static class ContentSeeder
         public string Slug { get; set; } = "";
         public string Title { get; set; } = "";
         public string Excerpt { get; set; } = "";
-        public List<string> Content { get; set; } = [];
+
+        // Each entry is either a plain string (paragraph) or an object like
+        // { "type": "image", "url": "/images/news/<slug>/img-03.jpg" } — keep
+        // the raw JsonElement so dict items survive a Serialize round-trip.
+        public List<JsonElement> Content { get; set; } = [];
+
         public string Date { get; set; } = "";
     }
 }

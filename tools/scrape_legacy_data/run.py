@@ -106,18 +106,49 @@ def strip_html(value: str) -> str:
 
 def extract_paragraphs(body_html: str) -> list[str]:
     """Convert a chunk of legacy HTML into a list of plain-text paragraphs."""
+    return [b["value"] for b in extract_content_blocks(body_html) if b["type"] == "text"]
+
+
+def extract_content_blocks(body_html: str) -> list[dict]:
+    """Walk legacy HTML and emit a sequential list of content blocks:
+
+      {"type": "text",  "value": "..."}      ← stripped paragraph
+      {"type": "image", "src":   "..."}      ← raw <img src=...> from legacy
+
+    Image blocks keep their original ``src`` (relative or absolute); the caller
+    is responsible for downloading + rewriting to a local URL before persisting.
+    """
     # Drop script/style.
     body_html = re.sub(r"<script.*?</script>", "", body_html, flags=re.S | re.I)
     body_html = re.sub(r"<style.*?</style>", "", body_html, flags=re.S | re.I)
 
-    # Split on common block-level boundaries before stripping tags.
-    chunks = re.split(r"</?(?:p|div|br|li|h[1-6])[^>]*>", body_html, flags=re.I)
-    paragraphs: list[str] = []
-    for chunk in chunks:
-        text = strip_html(chunk)
+    # Walk in source order. For each block-level separator (or <img>), flush
+    # whatever text accumulated since the previous boundary, then if the
+    # separator was an <img>, emit an image block.
+    separator = re.compile(
+        r"(?P<img><img\b[^>]*\bsrc=\"(?P<src>[^\"]+)\"[^>]*>)"
+        r"|</?(?:p|div|br|li|h[1-6])[^>]*>",
+        re.I,
+    )
+
+    blocks: list[dict] = []
+    cursor = 0
+
+    def flush(text_html: str) -> None:
+        text = strip_html(text_html)
         if text:
-            paragraphs.append(text)
-    return paragraphs
+            blocks.append({"type": "text", "value": text})
+
+    for m in separator.finditer(body_html):
+        flush(body_html[cursor:m.start()])
+        if m.group("img"):
+            src = html.unescape(m.group("src"))
+            if is_downloadable_url(src):
+                blocks.append({"type": "image", "src": src})
+        cursor = m.end()
+
+    flush(body_html[cursor:])
+    return blocks
 
 
 def find_div_block(html_text: str, class_name: str, start: int = 0) -> tuple[int, int] | None:
@@ -348,6 +379,7 @@ class DetailContent:
     date: str | None
     paragraphs: list[str]
     image_urls: list[str]
+    content_blocks: list[dict]   # interleaved text/image blocks in source order
 
 
 def parse_detail(html_text: str) -> DetailContent | None:
@@ -366,14 +398,12 @@ def parse_detail(html_text: str) -> DetailContent | None:
     title = strip_html(title_block) if title_block else ""
     date = strip_html(date_block) if date_block else None
 
-    image_urls: list[str] = []
-    for m in IMAGE_RE.finditer(body_block):
-        src = html.unescape(m.group(1))
-        if is_downloadable_url(src):
-            image_urls.append(src)
+    blocks = extract_content_blocks(body_block)
+    paragraphs = [b["value"] for b in blocks if b["type"] == "text"]
+    image_urls = [b["src"] for b in blocks if b["type"] == "image"]
 
-    paragraphs = extract_paragraphs(body_block)
-    return DetailContent(title=title, date=date, paragraphs=paragraphs, image_urls=image_urls)
+    return DetailContent(title=title, date=date, paragraphs=paragraphs,
+                         image_urls=image_urls, content_blocks=blocks)
 
 
 # ─── Section orchestration (activities / news / projects) ───────────────────
@@ -549,6 +579,8 @@ def fetch_section(opener, base_url: str, section: SectionConfig,
             slug_dir = asset_dir / ascii_id
             relative_image_url = ""
             gallery: list[str] = []
+            # url_by_legacy: raw legacy <img src> -> local /images/... URL
+            url_by_legacy: dict[str, str] = {}
             if not dry_run:
                 wwwroot = asset_root.parent  # asset_root == <wwwroot>/images
                 if vi_card.thumbnail:
@@ -567,16 +599,37 @@ def fetch_section(opener, base_url: str, section: SectionConfig,
                             rel = "/" + str(
                                 path.relative_to(wwwroot)
                             ).replace(os.sep, "/")
+                            url_by_legacy[img_url] = rel
                             if rel == relative_image_url:
                                 continue
                             gallery.append(rel)
+
+            def materialize_content(detail: "DetailContent | None") -> list:
+                """Map source-order content blocks to manifest content entries.
+
+                Text blocks become plain strings; image blocks become
+                {"type":"image","url":...} once the asset has been downloaded.
+                In dry-run mode (or for items we failed to download) image
+                blocks are dropped to avoid 404s downstream.
+                """
+                if not detail:
+                    return []
+                out: list = []
+                for b in detail.content_blocks:
+                    if b["type"] == "text":
+                        out.append(b["value"])
+                        continue
+                    local = url_by_legacy.get(b["src"])
+                    if local:
+                        out.append({"type": "image", "url": local})
+                return out
 
             translations: dict[str, dict] = {
                 "vi": {
                     "slug": vi_card.slug,
                     "title": vi_card.title,
                     "excerpt": vi_card.excerpt,
-                    "content": vi_detail.paragraphs if vi_detail else [],
+                    "content": materialize_content(vi_detail),
                     "date": vi_detail.date if vi_detail and vi_detail.date else vi_card.date,
                 }
             }
@@ -585,7 +638,7 @@ def fetch_section(opener, base_url: str, section: SectionConfig,
                     "slug": en_card.slug,
                     "title": en_card.title,
                     "excerpt": en_card.excerpt,
-                    "content": en_detail.paragraphs if en_detail else [],
+                    "content": materialize_content(en_detail),
                     "date": en_detail.date if en_detail and en_detail.date else en_card.date,
                 }
 
