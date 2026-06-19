@@ -52,12 +52,13 @@ WWWROOT = REPO / "nihomebackend" / "wwwroot"
 IMAGES_ROOT = WWWROOT / "images"
 UPLOAD_DIR = IMAGES_ROOT / "upload"
 SEEDS_ROOT = REPO / "nihomebackend" / "Data" / "Seeds"
+CONTENT_SEEDS_ROOT = SEEDS_ROOT / "content"
 SEEDER_CS = REPO / "nihomebackend" / "Data" / "ContentSeeder.cs"
 
 PUBLIC_MANIFESTS = {
-    "activities": SEEDS_ROOT / "activities-content.json",
-    "news": SEEDS_ROOT / "news-content.json",
-    "projects": SEEDS_ROOT / "projects-content.json",
+    "activities": CONTENT_SEEDS_ROOT / "activities.json",
+    "news": CONTENT_SEEDS_ROOT / "news.json",
+    "projects": CONTENT_SEEDS_ROOT / "projects.json",
 }
 
 
@@ -392,21 +393,21 @@ SECTIONS: dict[str, SectionConfig] = {
         listing_paths=[("activities", None)],
         detail_section="activities",
         output_subdir="activities",
-        output_manifest="activities-content.json",
+        output_manifest="activities.json",
     ),
     "news": SectionConfig(
         name="news",
         listing_paths=[("news", None)],
         detail_section="news",
         output_subdir="news",
-        output_manifest="news-content.json",
+        output_manifest="news.json",
     ),
     "projects": SectionConfig(
         name="projects",
         listing_paths=[("projectsongoing", "ongoing"), ("projectscompleted", "completed")],
         detail_section="projects",  # handled per listing because URL differs
         output_subdir="projects",
-        output_manifest="projects-content.json",
+        output_manifest="projects.json",
     ),
 }
 
@@ -1114,7 +1115,7 @@ def main() -> int:
             targets=targets,
             base_url=base_url,
             asset_root=WWWROOT,
-            seed_root=SEEDS_ROOT,
+            seed_root=CONTENT_SEEDS_ROOT,
             dry_run=args.dry_run,
             email=args.email,
             password=args.password,

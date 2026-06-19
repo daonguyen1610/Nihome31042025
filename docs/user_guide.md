@@ -827,7 +827,7 @@ The process document admin page is read-only. Administrators can search document
 **Asset storage:**
 - Physical asset files are served as static files from `nihomebackend/wwwroot/process-assets/`.
 - Images are served from `/process-assets/images/` and files from `/process-assets/files/`.
-- Asset metadata (display name, URL, MIME type, file size, sort order) is stored as JSON in the `ImagesJson` and `FilesJson` columns on the `process_documents` table and seeded from `nihomebackend/Data/Seeds/processes.json`.
+- Asset metadata (display name, URL, MIME type, file size, sort order) is stored as JSON in the `ImagesJson` and `FilesJson` columns on the `process_documents` table and seeded from `nihomebackend/Data/Seeds/content/processes.json`.
 
 ---
 

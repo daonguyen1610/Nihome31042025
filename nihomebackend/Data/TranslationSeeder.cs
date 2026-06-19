@@ -15,7 +15,7 @@ public static class TranslationSeeder
 
         var assembly = Assembly.GetExecutingAssembly();
         var seedResources = assembly.GetManifestResourceNames()
-            .Where(n => n.Contains(".Data.Seeds.") && n.EndsWith(".json"))
+            .Where(n => n.Contains(".Data.Seeds.i18n.") && n.EndsWith(".json"))
             .OrderBy(n => n)
             .ToList();
 
