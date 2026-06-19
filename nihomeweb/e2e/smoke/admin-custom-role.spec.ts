@@ -36,7 +36,7 @@ const ROLE_PERMISSIONS = [
 const ALLOWED_PATHS = [
   "/admin",
   "/admin/notifications",
-  "/admin/posts",
+  "/admin/news",
   "/admin/activity-log",
 ];
 
