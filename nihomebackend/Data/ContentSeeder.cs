@@ -90,7 +90,7 @@ public static class ContentSeeder
 
     private static void SeedActivities(AppDbContext db)
     {
-        var manifest = LoadContentSeed("nihomebackend.Data.Seeds.activities-content.json");
+        var manifest = LoadContentSeed("activities");
         if (manifest.Count == 0) return;
 
         if (NeedsContentReseed(db.Activities, manifest.Count, a => a.ImageUrl, IsLegacyStockActivityImage))
@@ -124,7 +124,7 @@ public static class ContentSeeder
 
     private static void SeedNews(AppDbContext db)
     {
-        var manifest = LoadContentSeed("nihomebackend.Data.Seeds.news-content.json");
+        var manifest = LoadContentSeed("news");
         if (manifest.Count == 0) return;
 
         if (NeedsContentReseed(db.NewsArticles, manifest.Count, a => a.ImageUrl, IsLegacyStockNewsImage))
@@ -495,7 +495,7 @@ public static class ContentSeeder
     private static void SeedProcesses(AppDbContext db)
     {
         var assembly = Assembly.GetExecutingAssembly();
-        const string resourceName = "nihomebackend.Data.Seeds.processes.json";
+        const string resourceName = "nihomebackend.Data.Seeds.content.processes.json";
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream == null) return;
 
@@ -1121,10 +1121,10 @@ public static class ContentSeeder
         }
 
         // Activity (1..16) and News (1..20) translations are now seeded
-        // by SeedActivities()/SeedNews() directly from the scraped
-        // legacy manifests under Data/Seeds/{activities,news}-content.json,
-        // so non-VI translations stay in sync with real entity IDs after
-        // re-seeds. Do not re-add hardcoded ID-based blocks here.
+        // by SeedActivities()/SeedNews() directly from the manifests under
+        // Data/Seeds/content/{activities,news}.json, so non-VI translations
+        // stay in sync with real entity IDs after re-seeds.
+        // Do not re-add hardcoded ID-based blocks here.
 
         // --- Slideshow items ---
         Add(EntityTypes.Slideshow, 1, "Title", "en", "General Contractor for Factory Design & Build");
@@ -1534,8 +1534,11 @@ public static class ContentSeeder
 
     // ─── Manifest-driven content seeding helpers ───────────────────
 
-    private static List<ContentSeedItem> LoadContentSeed(string resourceName)
+    private static List<ContentSeedItem> LoadContentSeed(string entityName)
     {
+        // Each domain entity has its own JSON in Data/Seeds/content/. The folder
+        // is reflected in the embedded-resource name as a dotted path.
+        var resourceName = $"nihomebackend.Data.Seeds.content.{entityName}.json";
         var asm = Assembly.GetExecutingAssembly();
         using var stream = asm.GetManifestResourceStream(resourceName);
         if (stream is null) return [];

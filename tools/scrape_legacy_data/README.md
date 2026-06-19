@@ -20,10 +20,10 @@ It writes:
 
 | Output | Source |
 | --- | --- |
-| `nihomebackend/Data/Seeds/activities-content.json` | `/activities` |
-| `nihomebackend/Data/Seeds/news-content.json` | `/news` |
-| `nihomebackend/Data/Seeds/projects-content.json` | `/projectsongoing` + `/projectscompleted` |
-| `nihomebackend/Data/Seeds/processes.json` | `/Admin/*Process` (only with `--target all`) |
+| `nihomebackend/Data/Seeds/content/activities.json` | `/activities` |
+| `nihomebackend/Data/Seeds/content/news.json` | `/news` |
+| `nihomebackend/Data/Seeds/content/projects.json` | `/projectsongoing` + `/projectscompleted` |
+| `nihomebackend/Data/Seeds/content/processes.json` | `/Admin/*Process` (only with `--target all`) |
 | `nihomebackend/wwwroot/images/<section>/<slug>/...` | downloaded binaries |
 
 Repeated runs are safe: cached binaries on disk are reused, and the clean

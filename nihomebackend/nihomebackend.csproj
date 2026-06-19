@@ -42,7 +42,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Data/Seeds/*.json" />
+    <EmbeddedResource Include="Data/Seeds/i18n/*.json" />
+    <EmbeddedResource Include="Data/Seeds/content/*.json" />
     <EmbeddedResource Include="Data/Rbac/*.json" />
   </ItemGroup>
 

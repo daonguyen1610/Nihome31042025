@@ -60,7 +60,7 @@ python3 workprocess_legacy_scraper.py \
   --username ADMIN_USER \
   --password ADMIN_PASS \
   --output-dir ../nihomebackend/wwwroot/process-assets \
-  --json-output ../nihomebackend/Data/Seeds/processes.json
+  --json-output ../nihomebackend/Data/Seeds/content/processes.json
 ```
 
 The scraper downloads from the legacy `nicon.vn` admin pages. Requires valid admin credentials.
