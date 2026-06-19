@@ -52,26 +52,27 @@ cp -r $BACKEND_DIR/publish $PUBLISH_RELEASE_DIR \
     || die "Failed to copy the $PUBLISH_RELEASE_DIR folder."
 echo "Publish folder copied to deployment-config."
 
-# Step 3: Copy the deployment-config/images, appsettings.json, and web.config to deployment publish-extract
-echo "Copying images, process-assets, processes, appsettings.json, and web.config to $PUBLISH_RELEASE_DIR..."
+# Step 3: Copy the deployment-config/images, files, process-assets, appsettings.json, and web.config to deployment publish-extract
+echo "Copying images, files, process-assets, appsettings.json, and web.config to $PUBLISH_RELEASE_DIR..."
 # Copy images (data). Use src/. + mkdir -p so re-runs don't nest dirs
 # (cp -r src dest copies INTO dest when dest already exists on BSD/macOS).
-mkdir -p $PUBLISH_RELEASE_DIR/wwwroot/images $PUBLISH_RELEASE_DIR/wwwroot/process-assets $PUBLISH_RELEASE_DIR/wwwroot/processes \
+mkdir -p $PUBLISH_RELEASE_DIR/wwwroot/images $PUBLISH_RELEASE_DIR/wwwroot/files $PUBLISH_RELEASE_DIR/wwwroot/process-assets \
     || die "Failed to create wwwroot data directories."
 cp -rf $DEPLOYMENT_CONFIG_DIR/images/. $PUBLISH_RELEASE_DIR/wwwroot/images/ \
     || die "Failed to copy images to $PUBLISH_RELEASE_DIR."
-# Copy process-assets, processes (data)
+# Copy files (data)
+cp -rf $DEPLOYMENT_CONFIG_DIR/files/. $PUBLISH_RELEASE_DIR/wwwroot/files/ \
+    || die "Failed to copy files to $PUBLISH_RELEASE_DIR."
+# Copy process-assets (data)
 cp -rf $DEPLOYMENT_CONFIG_DIR/process-assets/. $PUBLISH_RELEASE_DIR/wwwroot/process-assets/ \
     || die "Failed to copy process-assets to $PUBLISH_RELEASE_DIR."
-cp -rf $DEPLOYMENT_CONFIG_DIR/processes/. $PUBLISH_RELEASE_DIR/wwwroot/processes/ \
-    || die "Failed to copy processes to $PUBLISH_RELEASE_DIR."
 
 # Copy appsettings.json and web.config (config files)
 cp -f $DEPLOYMENT_CONFIG_DIR/appsettings.json $PUBLISH_RELEASE_DIR/appsettings.json \
     || die "Failed to copy appsettings.json to $PUBLISH_RELEASE_DIR."
 cp -f $DEPLOYMENT_CONFIG_DIR/web.config $PUBLISH_RELEASE_DIR/web.config \
     || die "Failed to copy web.config to $PUBLISH_RELEASE_DIR."
-echo "Images, process-assets, processes, appsettings.json, and web.config copied successfully."
+echo "Images, files, process-assets, appsettings.json, and web.config copied successfully."
 
 # Step 4: Zip the publish-release folder (cd into parent so paths inside
 # the archive are relative — extracting won't re-create the absolute path).
