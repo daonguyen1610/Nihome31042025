@@ -102,6 +102,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<JobApplicationService>();
         services.AddScoped<SiteSettingsService>();
         services.AddScoped<NewsService>();
+        services.AddScoped<NewsCategoryService>();
         services.AddScoped<ProjectService>();
         services.AddScoped<ProjectCategoryService>();
         services.AddScoped<ServiceItemService>();

@@ -12,5 +12,5 @@ public class ActivityResponse
     public string? Author { get; set; }
     public string Title { get; set; } = "";
     public string Excerpt { get; set; } = "";
-    public string[] Content { get; set; } = [];
+    public object[] Content { get; set; } = [];
 }

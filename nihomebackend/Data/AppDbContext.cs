@@ -30,6 +30,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SlideshowItem> SlideshowItems => Set<SlideshowItem>();
     public DbSet<AboutSectionContent> AboutSectionContents => Set<AboutSectionContent>();
     public DbSet<ActivityCategory> ActivityCategories => Set<ActivityCategory>();
+    public DbSet<NewsCategory> NewsCategories => Set<NewsCategory>();
     public DbSet<ProjectCategory> ProjectCategories => Set<ProjectCategory>();
 
     // Recruitment
@@ -196,6 +197,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<NewsArticle>().ToTable("news_articles");
         modelBuilder.Entity<NewsArticle>().HasKey(n => n.Id);
         modelBuilder.Entity<NewsArticle>().HasIndex(n => n.Slug).IsUnique();
+        modelBuilder.Entity<NewsArticle>()
+            .HasOne(n => n.CategoryRef)
+            .WithMany()
+            .HasForeignKey(n => n.NewsCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Project>().ToTable("projects");
         modelBuilder.Entity<Project>().HasKey(p => p.Id);
@@ -236,6 +242,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ActivityCategory>().ToTable("activity_categories");
         modelBuilder.Entity<ActivityCategory>().HasKey(c => c.Id);
         modelBuilder.Entity<ActivityCategory>().HasIndex(c => c.Name).IsUnique();
+
+        modelBuilder.Entity<NewsCategory>().ToTable("news_categories");
+        modelBuilder.Entity<NewsCategory>().HasKey(c => c.Id);
+        modelBuilder.Entity<NewsCategory>().HasIndex(c => c.Name).IsUnique();
 
         modelBuilder.Entity<JobPosition>().ToTable("job_positions");
         modelBuilder.Entity<JobPosition>().HasKey(j => j.Id);

@@ -9,8 +9,9 @@ public class UpsertNewsRequest
     [Required] public string ImageUrl { get; set; } = "";
     public string[]? Gallery { get; set; }
     [Required] public string Category { get; set; } = "";
+    public int? NewsCategoryId { get; set; }
     [Required] public string Title { get; set; } = "";
     [Required] public string Excerpt { get; set; } = "";
-    [Required] public string[] Content { get; set; } = [];
+    [Required] public object[] Content { get; set; } = [];
     public int SortOrder { get; set; }
 }

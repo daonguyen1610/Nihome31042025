@@ -46,6 +46,7 @@ public class NewsService(
 
     public async Task<NewsResponse> CreateAsync(UpsertNewsRequest req)
     {
+        var (categoryId, categoryName) = await ResolveCategoryAsync(req.NewsCategoryId, req.Category);
         var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var entity = new NewsArticle
         {
@@ -53,10 +54,11 @@ public class NewsService(
             Date = req.Date,
             ImageUrl = normalizedImageUrl ?? string.Empty,
             GalleryJson = SerializeGallery(req.Gallery),
-            Category = req.Category,
+            Category = categoryName,
+            NewsCategoryId = categoryId,
             Title = req.Title,
             Excerpt = req.Excerpt,
-            ContentJson = JsonSerializer.Serialize(req.Content),
+            ContentJson = SerializeContent(req.Content),
             SortOrder = req.SortOrder,
         };
         db.NewsArticles.Add(entity);
@@ -77,15 +79,17 @@ public class NewsService(
         var previousImageUrl = hostedImageService.NormalizeImageUrl(entity.ImageUrl);
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var previousGallery = DeserializeGallery(entity.GalleryJson);
+        var (categoryId, categoryName) = await ResolveCategoryAsync(req.NewsCategoryId, req.Category);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;
         entity.ImageUrl = nextImageUrl ?? string.Empty;
         entity.GalleryJson = SerializeGallery(req.Gallery);
-        entity.Category = req.Category;
+        entity.Category = categoryName;
+        entity.NewsCategoryId = categoryId;
         entity.Title = req.Title;
         entity.Excerpt = req.Excerpt;
-        entity.ContentJson = JsonSerializer.Serialize(req.Content);
+        entity.ContentJson = SerializeContent(req.Content);
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -130,12 +134,25 @@ public class NewsService(
         ImageUrl = a.ImageUrl,
         Gallery = string.IsNullOrEmpty(a.GalleryJson) ? null : JsonSerializer.Deserialize<string[]>(a.GalleryJson),
         Category = a.Category,
+        NewsCategoryId = a.NewsCategoryId,
         Title = t.GetValueOrDefault("Title", a.Title),
         Excerpt = t.GetValueOrDefault("Excerpt", a.Excerpt),
         Content = t.TryGetValue("Content", out var c)
-            ? JsonSerializer.Deserialize<string[]>(c) ?? []
-            : JsonSerializer.Deserialize<string[]>(a.ContentJson) ?? [],
+            ? DeserializeContent(c)
+            : DeserializeContent(a.ContentJson),
     };
+
+    private static string SerializeContent(object[] content) => JsonSerializer.Serialize(content ?? []);
+
+    private static object[] DeserializeContent(string? contentJson)
+    {
+        if (string.IsNullOrWhiteSpace(contentJson))
+        {
+            return [];
+        }
+
+        return JsonSerializer.Deserialize<object[]>(contentJson) ?? [];
+    }
 
     private string? SerializeGallery(string[]? gallery)
     {
@@ -169,5 +186,48 @@ public class NewsService(
                 hostedImageService.DeleteIfManagedUpload(url);
             }
         }
+    }
+
+    private async Task<(int? Id, string Name)> ResolveCategoryAsync(int? categoryId, string? categoryName)
+    {
+        if (categoryId.HasValue)
+        {
+            var byId = await db.NewsCategories.FindAsync(categoryId.Value);
+            if (byId == null)
+            {
+                throw new InvalidOperationException("Danh mục tin tức không tồn tại.");
+            }
+            return (byId.Id, byId.Name);
+        }
+
+        var normalizedName = (categoryName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalizedName))
+        {
+            return (null, string.Empty);
+        }
+
+        var existing = await db.NewsCategories
+            .FirstOrDefaultAsync(c => c.Name.ToLower() == normalizedName.ToLower());
+
+        if (existing != null)
+        {
+            return (existing.Id, existing.Name);
+        }
+
+        var maxSortOrder = await db.NewsCategories
+            .AsNoTracking()
+            .Select(c => (int?)c.SortOrder)
+            .MaxAsync() ?? 0;
+
+        var created = new NewsCategory
+        {
+            Name = normalizedName,
+            IsActive = true,
+            SortOrder = maxSortOrder + 1,
+        };
+        db.NewsCategories.Add(created);
+        await db.SaveChangesAsync();
+        Logger.LogInformation("Auto-created news category {CategoryName} from news payload", normalizedName);
+        return (created.Id, created.Name);
     }
 }

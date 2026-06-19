@@ -699,6 +699,9 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("NewsCategoryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -715,10 +718,44 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("NewsCategoryId");
+
                     b.HasIndex("Slug")
                         .IsUnique();
 
                     b.ToTable("news_articles", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.NewsCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("news_categories", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Notification", b =>
@@ -1430,6 +1467,16 @@ namespace nihomebackend.Migrations
                         .IsRequired();
 
                     b.Navigation("JobPosition");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.NewsArticle", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.NewsCategory", "CategoryRef")
+                        .WithMany()
+                        .HasForeignKey("NewsCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CategoryRef");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Notification", b =>

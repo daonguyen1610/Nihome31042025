@@ -96,6 +96,22 @@
     "ja": "投稿管理"
   },
   {
+    "key": "nav.activities",
+    "category": "nav",
+    "vi": "Quản lý hoạt động",
+    "en": "Activities",
+    "zh": "活动管理",
+    "ja": "アクティビティ管理"
+  },
+  {
+    "key": "nav.news",
+    "category": "nav",
+    "vi": "Quản lý tin tức",
+    "en": "News",
+    "zh": "新闻管理",
+    "ja": "ニュース管理"
+  },
+  {
     "key": "nav.projects",
     "category": "nav",
     "vi": "Quản lý dự án",

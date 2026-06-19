@@ -27,6 +27,8 @@
     { "module": "content.logos", "action": "manage" },
     { "module": "content.news", "action": "view" },
     { "module": "content.news", "action": "manage" },
+    { "module": "content.news-categories", "action": "view" },
+    { "module": "content.news-categories", "action": "manage" },
     { "module": "content.projects", "action": "view" },
     { "module": "content.projects", "action": "manage" },
     { "module": "content.project-categories", "action": "view" },
