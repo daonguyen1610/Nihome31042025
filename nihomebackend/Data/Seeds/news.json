@@ -86,5 +86,21 @@
     "en": "Article gallery",
     "zh": "文章相册",
     "ja": "記事ギャラリー"
+  },
+  {
+    "key": "gallery.viewGrid",
+    "category": "gallery",
+    "vi": "Xem dạng lưới",
+    "en": "Grid view",
+    "zh": "网格视图",
+    "ja": "グリッド表示"
+  },
+  {
+    "key": "gallery.viewList",
+    "category": "gallery",
+    "vi": "Xem dạng dọc",
+    "en": "List view",
+    "zh": "列表视图",
+    "ja": "リスト表示"
   }
 ]

@@ -9,6 +9,8 @@ public class NewsArticle
     /// <summary>JSON array of additional gallery image URLs.</summary>
     public string? GalleryJson { get; set; }
     public string Category { get; set; } = "";
+    public int? NewsCategoryId { get; set; }
+    public NewsCategory? CategoryRef { get; set; }
     public string Title { get; set; } = "";
     public string Excerpt { get; set; } = "";
     /// <summary>JSON array of paragraphs.</summary>

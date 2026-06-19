@@ -8,7 +8,8 @@ public class NewsResponse
     public string ImageUrl { get; set; } = "";
     public string[]? Gallery { get; set; }
     public string Category { get; set; } = "";
+    public int? NewsCategoryId { get; set; }
     public string Title { get; set; } = "";
     public string Excerpt { get; set; } = "";
-    public string[] Content { get; set; } = [];
+    public object[] Content { get; set; } = [];
 }

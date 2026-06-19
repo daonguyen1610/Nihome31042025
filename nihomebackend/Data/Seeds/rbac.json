@@ -344,6 +344,38 @@
     "zh": "创建、编辑、发布和删除新闻文章。",
     "ja": "ニュース記事の作成・編集・公開・削除を行います。"
   },
+  {
+    "key": "rbac.perm.content.news-categories.view.label",
+    "category": "rbac",
+    "vi": "Xem danh mục tin tức",
+    "en": "View news categories",
+    "zh": "查看新闻分类",
+    "ja": "ニュースカテゴリを表示"
+  },
+  {
+    "key": "rbac.perm.content.news-categories.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách danh mục tin tức.",
+    "en": "Allows listing news categories.",
+    "zh": "允许查看新闻分类列表。",
+    "ja": "ニュースカテゴリ一覧の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.news-categories.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý danh mục tin tức",
+    "en": "Manage news categories",
+    "zh": "管理新闻分类",
+    "ja": "ニュースカテゴリを管理"
+  },
+  {
+    "key": "rbac.perm.content.news-categories.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá danh mục tin tức.",
+    "en": "Create, edit and delete news categories.",
+    "zh": "创建、编辑和删除新闻分类。",
+    "ja": "ニュースカテゴリの作成・編集・削除を行います。"
+  },
 
   {
     "key": "rbac.perm.content.projects.view.label",
