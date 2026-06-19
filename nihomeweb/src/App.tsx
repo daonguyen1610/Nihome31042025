@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-dom";
 import { Provider } from "react-redux";
 import { store } from "@/store";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -31,7 +31,8 @@ import AdminDashboard from "./pages/admin/Dashboard.tsx";
 import AdminNotifications from "./pages/admin/Notifications.tsx";
 import AdminUsers from "./pages/admin/users/UserList.tsx";
 import AdminRoles from "./pages/admin/users/RoleList.tsx";
-import AdminPosts from "./pages/admin/Posts.tsx";
+import AdminActivities from "./pages/admin/Activities.tsx";
+import AdminNews from "./pages/admin/News.tsx";
 import AdminProjects from "./pages/admin/Projects.tsx";
 import AdminContacts from "./pages/admin/Contacts.tsx";
 import AdminRecruitment from "./pages/admin/Recruitment.tsx";
@@ -41,8 +42,10 @@ import JobPositionForm from "./pages/admin/JobPositionForm.tsx";
 import EmailTemplateConfig from "./pages/admin/EmailTemplateConfig.tsx";
 import ProjectForm from "./pages/admin/ProjectForm.tsx";
 import ProjectView from "./pages/admin/ProjectView.tsx";
-import PostForm from "./pages/admin/PostForm.tsx";
-import PostView from "./pages/admin/PostView.tsx";
+import ActivityForm from "./pages/admin/ActivityForm.tsx";
+import ActivityView from "./pages/admin/ActivityView.tsx";
+import NewsForm from "./pages/admin/NewsForm.tsx";
+import NewsView from "./pages/admin/NewsView.tsx";
 import AdminCategories from "./pages/admin/Categories.tsx";
 import AdminActivityLog from "./pages/admin/ActivityLog.tsx";
 import AdminServices from "./pages/admin/Services.tsx";
@@ -54,6 +57,11 @@ import TranslationsPage from "./pages/admin/settings/Translations.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
+
+const LegacyPostRedirect = ({ edit = false }: { edit?: boolean }) => {
+  const { slug } = useParams();
+  return <Navigate to={`/admin/activities/${slug ?? ""}${edit ? "/edit" : ""}`} replace />;
+};
 
 const App = () => (
   <Provider store={store}>
@@ -95,11 +103,21 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.rbacRoles} />}>
                 <Route path="/admin/roles" element={<AdminRoles />} />
               </Route>
-              <Route element={<RequirePermission code={ADMIN_PERMS.posts} />}>
-                <Route path="/admin/posts" element={<AdminPosts />} />
-                <Route path="/admin/posts/new" element={<PostForm mode="create" />} />
-                <Route path="/admin/posts/:slug" element={<PostView />} />
-                <Route path="/admin/posts/:slug/edit" element={<PostForm mode="edit" />} />
+              <Route element={<RequirePermission code={ADMIN_PERMS.activities} />}>
+                <Route path="/admin/activities" element={<AdminActivities />} />
+                <Route path="/admin/activities/new" element={<ActivityForm mode="create" />} />
+                <Route path="/admin/activities/:slug" element={<ActivityView />} />
+                <Route path="/admin/activities/:slug/edit" element={<ActivityForm mode="edit" />} />
+                <Route path="/admin/posts" element={<Navigate to="/admin/activities" replace />} />
+                <Route path="/admin/posts/new" element={<Navigate to="/admin/activities/new" replace />} />
+                <Route path="/admin/posts/:slug" element={<LegacyPostRedirect />} />
+                <Route path="/admin/posts/:slug/edit" element={<LegacyPostRedirect edit />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.news} />}>
+                <Route path="/admin/news" element={<AdminNews />} />
+                <Route path="/admin/news/new" element={<NewsForm mode="create" />} />
+                <Route path="/admin/news/:slug" element={<NewsView />} />
+                <Route path="/admin/news/:slug/edit" element={<NewsForm mode="edit" />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.projects} />}>
                 <Route path="/admin/projects" element={<AdminProjects />} />

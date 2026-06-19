@@ -1,5 +1,5 @@
 import api, { withIdempotencyKey } from "@/lib/api";
-import type { ServiceResponse } from "@/services/contentApi";
+import type { ContentItem, ServiceResponse } from "@/services/contentApi";
 
 // ─── Request types ───────────────────────────────────────────
 
@@ -13,7 +13,7 @@ export interface UpsertActivityRequest {
   author?: string;
   title: string;
   excerpt: string;
-  content: string[];
+  content: ContentItem[];
   sortOrder?: number;
 }
 
@@ -23,9 +23,10 @@ export interface UpsertNewsRequest {
   imageUrl: string;
   gallery?: string[];
   category: string;
+  newsCategoryId?: number | null;
   title: string;
   excerpt: string;
-  content: string[];
+  content: ContentItem[];
   sortOrder?: number;
 }
 
@@ -165,6 +166,19 @@ export interface UpsertProjectCategoryRequest {
 }
 
 export interface ProjectCategoryResponse {
+  id: number;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface UpsertNewsCategoryRequest {
+  name: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export interface NewsCategoryResponse {
   id: number;
   name: string;
   isActive: boolean;
@@ -455,6 +469,16 @@ export const adminApi = {
     api.put<ActivityCategoryResponse>(`/activity-categories/${id}`, data),
   deleteActivityCategory: (id: number) =>
     api.delete(`/activity-categories/${id}`),
+
+  // News categories
+  getNewsCategories: (includeInactive = false) =>
+    api.get<NewsCategoryResponse[]>(`/news-categories?includeInactive=${includeInactive}`),
+  createNewsCategory: (data: UpsertNewsCategoryRequest) =>
+    api.post<NewsCategoryResponse>("/news-categories", data),
+  updateNewsCategory: (id: number, data: UpsertNewsCategoryRequest) =>
+    api.put<NewsCategoryResponse>(`/news-categories/${id}`, data),
+  deleteNewsCategory: (id: number) =>
+    api.delete(`/news-categories/${id}`),
 
   // Project categories
   getProjectCategories: (includeInactive = false) =>

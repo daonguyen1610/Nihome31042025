@@ -7,8 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
   type ActivityCategoryResponse,
+  type NewsCategoryResponse,
   type ProjectCategoryResponse,
   type UpsertActivityCategoryRequest,
+  type UpsertNewsCategoryRequest,
   type UpsertProjectCategoryRequest,
 } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
@@ -22,9 +24,9 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 
-type CategoryKind = "posts" | "projects";
+type CategoryKind = "activities" | "projects" | "news";
 
-type CategoryItem = ActivityCategoryResponse | ProjectCategoryResponse;
+type CategoryItem = ActivityCategoryResponse | ProjectCategoryResponse | NewsCategoryResponse;
 
 type CategoryFormData = {
   name: string;
@@ -57,8 +59,10 @@ const getErrorMessage = (error: unknown) => {
   return undefined;
 };
 
-const parseTab = (raw: string | null): CategoryKind =>
-  raw === "projects" ? "projects" : "posts";
+const parseTab = (raw: string | null): CategoryKind => {
+  if (raw === "projects" || raw === "news") return raw;
+  return "activities";
+};
 
 const Categories = () => {
   const { t } = useI18n();
@@ -80,6 +84,8 @@ const Categories = () => {
       const result =
         kind === "projects"
           ? await adminApi.getProjectCategories(true)
+          : kind === "news"
+            ? await adminApi.getNewsCategories(true)
           : await adminApi.getActivityCategories(true);
       setItems(result.data);
     } catch {
@@ -105,7 +111,7 @@ const Categories = () => {
   const switchTab = (next: CategoryKind) => {
     if (next === kind) return;
     const params = new URLSearchParams(searchParams);
-    if (next === "posts") {
+    if (next === "activities") {
       params.delete("tab");
     } else {
       params.set("tab", next);
@@ -145,7 +151,7 @@ const Categories = () => {
 
     setSubmitting(true);
     try {
-      const payload: UpsertActivityCategoryRequest | UpsertProjectCategoryRequest = {
+      const payload: UpsertActivityCategoryRequest | UpsertProjectCategoryRequest | UpsertNewsCategoryRequest = {
         name: form.name.trim(),
         isActive: form.isActive,
         sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
@@ -154,6 +160,8 @@ const Categories = () => {
       if (editingId == null) {
         if (kind === "projects") {
           await adminApi.createProjectCategory(payload);
+        } else if (kind === "news") {
+          await adminApi.createNewsCategory(payload);
         } else {
           await adminApi.createActivityCategory(payload);
         }
@@ -161,6 +169,8 @@ const Categories = () => {
       } else {
         if (kind === "projects") {
           await adminApi.updateProjectCategory(editingId, payload);
+        } else if (kind === "news") {
+          await adminApi.updateNewsCategory(editingId, payload);
         } else {
           await adminApi.updateActivityCategory(editingId, payload);
         }
@@ -188,6 +198,8 @@ const Categories = () => {
     try {
       if (kind === "projects") {
         await adminApi.deleteProjectCategory(item.id);
+      } else if (kind === "news") {
+        await adminApi.deleteNewsCategory(item.id);
       } else {
         await adminApi.deleteActivityCategory(item.id);
       }
@@ -205,7 +217,11 @@ const Categories = () => {
   const handleExport = () => {
     downloadCsv({
       filename: createCsvFilename(
-        kind === "projects" ? "admin-project-categories" : "admin-activity-categories",
+        kind === "projects"
+          ? "admin-project-categories"
+          : kind === "news"
+            ? "admin-news-categories"
+            : "admin-activity-categories",
       ),
       columns: [
         { header: "ID", value: "id" },
@@ -218,7 +234,8 @@ const Categories = () => {
   };
 
   const tabs: { key: CategoryKind; label: string }[] = [
-    { key: "posts", label: t("cat.tabPosts") },
+    { key: "activities", label: t("cat.tabActivities") },
+    { key: "news", label: t("cat.tabNews") },
     { key: "projects", label: t("cat.tabProjects") },
   ];
 
