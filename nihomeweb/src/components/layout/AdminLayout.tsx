@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
+  Newspaper,
   Building2,
   Inbox,
   Briefcase,
@@ -84,7 +85,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.content"),
         icon: FileText,
         items: [
-          { to: "/admin/posts", label: t("nav.posts"), icon: FileText, permission: ADMIN_PERMS.posts },
+          { to: "/admin/activities", label: t("nav.activities"), icon: FileText, permission: ADMIN_PERMS.activities },
+          { to: "/admin/news", label: t("nav.news"), icon: Newspaper, permission: ADMIN_PERMS.news },
           { to: "/admin/projects", label: t("nav.projects"), icon: Building2, permission: ADMIN_PERMS.projects },
           { to: "/admin/services", label: t("nav.services"), icon: ConciergeBell, permission: ADMIN_PERMS.services },
           { to: "/admin/recruitment", label: t("nav.recruitment"), icon: Briefcase, permission: ADMIN_PERMS.recruitment },

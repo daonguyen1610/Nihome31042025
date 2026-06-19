@@ -2,6 +2,11 @@ import api from "@/lib/api";
 
 // --- Types matching backend DTOs ---
 
+export type TextContentBlock = { type: "text"; value: string };
+export type ImageContentBlock = { type: "image"; url: string };
+export type ContentBlock = TextContentBlock | ImageContentBlock;
+export type ContentItem = string | ContentBlock;
+
 export interface ActivityResponse {
   id: number;
   slug: string;
@@ -13,7 +18,7 @@ export interface ActivityResponse {
   author?: string;
   title: string;
   excerpt: string;
-  content: string[];
+  content: ContentItem[];
 }
 
 export interface NewsResponse {
@@ -23,9 +28,10 @@ export interface NewsResponse {
   imageUrl: string;
   gallery?: string[];
   category: string;
+  newsCategoryId?: number | null;
   title: string;
   excerpt: string;
-  content: string[];
+  content: ContentItem[];
 }
 
 export interface ProjectHighlight {
@@ -131,6 +137,13 @@ export interface ActivityCategoryResponse {
 }
 
 export interface ProjectCategoryResponse {
+  id: number;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface NewsCategoryResponse {
   id: number;
   name: string;
   isActive: boolean;
@@ -281,11 +294,21 @@ function resolveImageUrl(value: string) {
 }
 
 function mapActivity(item: ActivityResponse): ActivityResponse {
-  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+  return {
+    ...item,
+    imageUrl: resolveImageUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveImageUrl),
+    content: item.content.map(resolveContentItem),
+  };
 }
 
 function mapNews(item: NewsResponse): NewsResponse {
-  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+  return {
+    ...item,
+    imageUrl: resolveImageUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveImageUrl),
+    content: item.content.map(resolveContentItem),
+  };
 }
 
 function mapProject(item: ProjectResponse): ProjectResponse {
@@ -302,6 +325,18 @@ function mapLogo(item: LogoResponse): LogoResponse {
 
 function mapSlideshow(item: SlideshowResponse): SlideshowResponse {
   return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+}
+
+function resolveContentItem(item: ContentItem): ContentItem {
+  if (typeof item === "string") {
+    return item;
+  }
+
+  if (item.type === "image") {
+    return { ...item, url: resolveImageUrl(item.url) };
+  }
+
+  return item;
 }
 
 function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {
@@ -330,6 +365,9 @@ export const contentApi = {
 
   getProjectCategories: (includeInactive = false) =>
     api.get<ProjectCategoryResponse[]>(`/project-categories?includeInactive=${includeInactive}`),
+
+  getNewsCategories: (includeInactive = false) =>
+    api.get<NewsCategoryResponse[]>(`/news-categories?includeInactive=${includeInactive}`),
 
   getEmploymentTypes: (includeInactive = false) =>
     api.get<EmploymentTypeResponse[]>(`/employment-types?includeInactive=${includeInactive}`),

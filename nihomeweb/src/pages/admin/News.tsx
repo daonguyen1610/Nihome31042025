@@ -4,27 +4,27 @@ import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { useActivities, useActivityCategories } from "@/hooks/useContentApi";
+import { useNews, useNewsCategories } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
-import type { ActivityResponse } from "@/services/contentApi";
+import type { NewsResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
-const AdminPosts = () => {
+const AdminNews = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
-  const { data: items, loading, error, refetch } = useActivities();
-  const { data: categoryMaster } = useActivityCategories(true);
+  const { data: items, loading, error, refetch } = useNews();
+  const { data: categoryMaster } = useNewsCategories(true);
 
   const list = useMemo(() => items ?? [], [items]);
   const categories = useMemo(() => {
     const fromMaster = (categoryMaster ?? []).map((c) => c.name);
-    const fromPosts = list.map((a) => a.category).filter(Boolean);
-    const unique = Array.from(new Set([...fromMaster, ...fromPosts])).sort((a, b) =>
+    const fromNews = list.map((a) => a.category).filter(Boolean);
+    const unique = Array.from(new Set([...fromMaster, ...fromNews])).sort((a, b) =>
       a.localeCompare(b, "vi"),
     );
     return ["all", ...unique];
@@ -40,10 +40,10 @@ const AdminPosts = () => {
     [list, cat, q],
   );
 
-  const handleDelete = async (a: ActivityResponse) => {
+  const handleDelete = async (a: NewsResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;
     try {
-      await adminApi.deleteActivity(a.id);
+      await adminApi.deleteNews(a.id);
       toast({ title: t("form.deleted"), description: a.title });
       refetch();
     } catch {
@@ -53,16 +53,15 @@ const AdminPosts = () => {
 
   const handleExport = () => {
     downloadCsv({
-      filename: createCsvFilename("admin-posts"),
+      filename: createCsvFilename("admin-news"),
       columns: [
         { header: "ID", value: "id" },
         { header: "Slug", value: "slug" },
-        { header: t("posts.col.post"), value: "title" },
-        { header: t("posts.col.category"), value: "category" },
-        { header: t("posts.col.author"), value: (row) => row.author ?? "" },
+        { header: t("adminNews.col.post"), value: "title" },
+        { header: t("adminNews.col.category"), value: "category" },
         { header: t("common.date"), value: "date" },
         { header: "Excerpt", value: "excerpt" },
-        { header: "Content", value: (row) => row.content.join("\n\n") },
+        { header: "Content", value: (row) => row.content.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).join("\n\n") },
         { header: "Image URL", value: "imageUrl" },
       ],
       rows: filtered,
@@ -73,15 +72,15 @@ const AdminPosts = () => {
     <AdminLayout>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
         <div>
-          <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("posts.title")}</h1>
+          <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("adminNews.title")}</h1>
           <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
             {filtered.length} {t("common.showing")}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
-          <Link to="/admin/posts/new" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-            <Plus className="w-4 h-4" /> {t("posts.create")}
+          <Link to="/admin/news/new" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
+            <Plus className="w-4 h-4" /> {t("adminNews.create")}
           </Link>
         </div>
       </div>
@@ -101,7 +100,7 @@ const AdminPosts = () => {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={t("posts.searchPlaceholder")}
+            placeholder={t("adminNews.searchPlaceholder")}
             className="bg-transparent outline-none text-sm flex-1"
           />
         </div>
@@ -117,7 +116,7 @@ const AdminPosts = () => {
                   : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-sidebar-text))" }
               }
             >
-              {c === "all" ? t("posts.allCategories") : c}
+              {c === "all" ? t("adminNews.allCategories") : c}
             </button>
           ))}
         </div>
@@ -128,9 +127,8 @@ const AdminPosts = () => {
           <table className="w-full text-sm">
             <thead style={{ background: "hsl(var(--admin-bg))" }}>
               <tr className="text-left">
-                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("posts.col.post")}</th>
-                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("posts.col.category")}</th>
-                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("posts.col.author")}</th>
+                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("adminNews.col.post")}</th>
+                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("adminNews.col.category")}</th>
                 <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("common.date")}</th>
                 <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">{t("common.actions")}</th>
               </tr>
@@ -138,15 +136,15 @@ const AdminPosts = () => {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                    {t("posts.empty")}
+                  <td colSpan={4} className="px-6 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                    {t("adminNews.empty")}
                   </td>
                 </tr>
               ) : (
                 filtered.map((a) => (
                   <tr key={a.id} className="border-t hover:bg-muted/30 transition" style={{ borderColor: "hsl(var(--admin-border))" }}>
                     <td className="px-6 py-4">
-                      <Link to={`/admin/posts/${a.slug}`} className="flex items-center gap-3 hover:opacity-80 transition">
+                      <Link to={`/admin/news/${a.slug}`} className="flex items-center gap-3 hover:opacity-80 transition">
                         <img src={a.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />
                         <p className="font-semibold line-clamp-2 max-w-md">{a.title}</p>
                       </Link>
@@ -156,19 +154,18 @@ const AdminPosts = () => {
                         {a.category}
                       </span>
                     </td>
-                    <td className="px-6 py-4" style={{ color: "hsl(var(--admin-muted))" }}>{a.author ?? "—"}</td>
                     <td className="px-6 py-4" style={{ color: "hsl(var(--admin-muted))" }}>{a.date}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex items-center gap-1">
                         <Link
-                          to={`/admin/posts/${a.slug}`}
+                          to={`/admin/news/${a.slug}`}
                           className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
                           style={{ color: "hsl(var(--admin-info))" }}
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
                         <Link
-                          to={`/admin/posts/${a.slug}/edit`}
+                          to={`/admin/news/${a.slug}/edit`}
                           className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
                           style={{ color: "hsl(var(--admin-primary))" }}
                         >
@@ -196,4 +193,4 @@ const AdminPosts = () => {
   );
 };
 
-export default AdminPosts;
+export default AdminNews;

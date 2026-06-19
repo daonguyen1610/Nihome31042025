@@ -1,15 +1,18 @@
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Calendar, Tag } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Calendar, Grid3X3, List, Tag } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useNewsItem, useNews } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import ContentBlocks from "@/components/ContentBlocks";
 
 const NewsDetail = () => {
   const { t } = useI18n();
   const { slug } = useParams();
   const { data: item, loading, error, refetch } = useNewsItem(slug ?? "");
   const { data: allNews } = useNews();
+  const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
 
   if (loading) return <Layout><PageLoading /></Layout>;
   if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
@@ -59,21 +62,27 @@ const NewsDetail = () => {
       {/* Body */}
       <section className="pb-20 bg-background">
         <div className="container-custom max-w-3xl">
-          <div className="space-y-6 text-lg text-foreground/85 leading-relaxed">
-            {item.content.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
+          <ContentBlocks items={item.content} paragraphClassName="text-lg text-foreground/85 leading-relaxed" />
         </div>
       </section>
 
       {item.gallery && item.gallery.length > 0 && (
         <section className="pb-20 bg-background">
           <div className="container-custom">
-            <p className="eyebrow text-primary mb-6">{t("newsDetail.gallery")}</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <p className="eyebrow text-primary">{t("newsDetail.gallery")}</p>
+              <div className="inline-flex rounded-full border border-border overflow-hidden bg-card">
+                <button type="button" onClick={() => setGalleryMode("grid")} className="p-2 hover:bg-muted" aria-label={t("gallery.viewGrid")}>
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button type="button" onClick={() => setGalleryMode("list")} className="p-2 hover:bg-muted border-l border-border" aria-label={t("gallery.viewList")}>
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className={galleryMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-5" : "space-y-5 max-w-5xl mx-auto"}>
               {item.gallery.map((g, i) => (
-                <div key={i} className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted">
+                <div key={`${g}-${i}`} className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted"}>
                   <img src={g} alt={`${item.title} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                 </div>
               ))}

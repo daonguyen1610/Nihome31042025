@@ -5,11 +5,13 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify } from "@/services/adminApi";
-import type { UpsertActivityRequest } from "@/services/adminApi";
-import { useActivity, useActivityCategories } from "@/hooks/useContentApi";
+import type { UpsertNewsRequest } from "@/services/adminApi";
+import { useNewsItem, useNewsCategories } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
+import ContentBlockEditor from "@/components/admin/ContentBlockEditor";
+import type { ContentItem } from "@/services/contentApi";
 
 interface FormData {
   id: number;
@@ -20,8 +22,7 @@ interface FormData {
   category: string;
   title: string;
   excerpt: string;
-  content: string[];
-  author: string;
+  content: ContentItem[];
 }
 
 const toInputDate = (value: string) => {
@@ -43,8 +44,6 @@ const toApiDate = (value: string) => {
   return `${day}.${month}.${year}`;
 };
 
-const toContentLines = (value: string) => value.replace(/\r\n/g, "\n").split("\n");
-
 const empty: FormData = {
   id: 0,
   slug: "",
@@ -55,16 +54,15 @@ const empty: FormData = {
   title: "",
   excerpt: "",
   content: [],
-  author: "",
 };
 
-const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
+const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
   const { toast } = useToast();
-  const { data: existing, loading, error, refetch } = useActivity(mode === "edit" ? (slug ?? "") : "");
-  const { data: categories } = useActivityCategories();
+  const { data: existing, loading, error, refetch } = useNewsItem(mode === "edit" ? (slug ?? "") : "");
+  const { data: categories } = useNewsCategories();
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -84,7 +82,6 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
       title: existing.title,
       excerpt: existing.excerpt,
       content: existing.content ?? [],
-      author: existing.author ?? "",
     });
     setInitialized(true);
   }
@@ -113,7 +110,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!data.title.trim()) {
-      toast({ title: t("form.required"), description: t("posts.field.title"), variant: "destructive" });
+      toast({ title: t("form.required"), description: t("adminNews.field.title"), variant: "destructive" });
       return;
     }
     let imageUrl = data.imageUrl || "/placeholder.svg";
@@ -129,29 +126,28 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
         imageUrl = upload.data.imageUrl;
       }
 
-      const payload: UpsertActivityRequest = {
+      const payload: UpsertNewsRequest = {
       slug: data.slug || slugify(data.title),
       date: toApiDate(data.date),
       imageUrl,
       gallery: data.gallery.length ? data.gallery : undefined,
       category: data.category,
-      categoryId:
+      newsCategoryId:
         (categories ?? []).find(
           (c) => c.name.toLowerCase() === data.category.trim().toLowerCase(),
         )?.id ?? null,
-      author: data.author || undefined,
       title: data.title,
       excerpt: data.excerpt,
       content: data.content,
       };
 
       if (mode === "create") {
-        await adminApi.createActivity(payload);
+        await adminApi.createNews(payload);
       } else {
-        await adminApi.updateActivity(data.id, payload);
+        await adminApi.updateNews(data.id, payload);
       }
       toast({ title: mode === "create" ? t("form.created") : t("form.updated"), description: data.title });
-      navigate("/admin/posts");
+      navigate("/admin/news");
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
@@ -167,7 +163,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
     <AdminLayout>
       <div className="flex items-center gap-3 mb-6">
         <Link
-          to="/admin/posts"
+          to="/admin/news"
           className="w-10 h-10 rounded-full bg-white border flex items-center justify-center hover:bg-muted transition"
           style={{ borderColor: "hsl(var(--admin-border))" }}
         >
@@ -175,7 +171,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
         </Link>
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {mode === "create" ? t("posts.addTitle") : t("posts.editTitle")}
+            {mode === "create" ? t("adminNews.addTitle") : t("adminNews.editTitle")}
           </h1>
           <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{mode === "edit" && data.slug}</p>
         </div>
@@ -186,16 +182,16 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
             <div className="space-y-4">
-              <Field label={t("posts.field.title") + " *"}>
+              <Field label={t("adminNews.field.title") + " *"}>
                 <input className="admin-input" value={data.title} onChange={(e) => update("title", e.target.value)} required />
               </Field>
-              <Field label={t("posts.field.excerpt")}>
+              <Field label={t("adminNews.field.excerpt")}>
                 <textarea className="admin-input min-h-20" value={data.excerpt} onChange={(e) => update("excerpt", e.target.value)} />
               </Field>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Field label={t("posts.field.category")}>
+                <Field label={t("adminNews.field.category")}>
                   <select className="admin-input" value={data.category} onChange={(e) => update("category", e.target.value)}>
-                    <option value="">-- Chọn danh mục --</option>
+                    <option value="">{t("form.selectCategory")}</option>
                     {[
                       ...categoryOptions,
                       ...(data.category && !categoryOptions.includes(data.category) ? [data.category] : []),
@@ -204,10 +200,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
                     ))}
                   </select>
                 </Field>
-                <Field label={t("posts.field.author")}>
-                  <input className="admin-input" value={data.author ?? ""} onChange={(e) => update("author", e.target.value)} />
-                </Field>
-                <Field label={t("posts.field.date")}>
+                <Field label={t("adminNews.field.date")}>
                   <input type="date" className="admin-input" value={data.date} onChange={(e) => update("date", e.target.value)} />
                 </Field>
               </div>
@@ -216,12 +209,8 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
 
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.content")}</h2>
-            <Field label={t("posts.field.content")}>
-              <textarea
-                className="admin-input min-h-64"
-                value={data.content.join("\n")}
-                onChange={(e) => update("content", toContentLines(e.target.value))}
-              />
+            <Field label={t("adminNews.field.content")}>
+              <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} />
             </Field>
           </div>
         </div>
@@ -229,7 +218,7 @@ const PostForm = ({ mode }: { mode: "create" | "edit" }) => {
         <div className="space-y-5">
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.media")}</h2>
-            <Field label={t("posts.field.image") + " *"}>
+            <Field label={t("adminNews.field.image") + " *"}>
               <FeaturedImageUploader
                 imageUrl={data.imageUrl}
                 pendingPreview={pendingImagePreview}
@@ -272,4 +261,4 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
   </label>
 );
 
-export default PostForm;
+export default NewsForm;
