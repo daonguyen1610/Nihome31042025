@@ -30,7 +30,8 @@ const ALL_ADMIN_PATHS = [
   "/admin/notifications",
   "/admin/users",
   "/admin/roles",
-  "/admin/posts",
+  "/admin/activities",
+  "/admin/news",
   "/admin/projects",
   "/admin/services",
   "/admin/contacts",
@@ -85,7 +86,8 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
-      "/admin/posts",
+      "/admin/activities",
+      "/admin/news",
       "/admin/projects",
       "/admin/services",
       "/admin/categories",
@@ -215,6 +217,8 @@ const MATRIX_PATH_EXCLUSIONS = new Set<string>([
   // Pure redirects — RequirePermission wraps a <Navigate />, no real page.
   "/admin/project-categories",
   "/admin/slideshow",
+  // /admin/posts redirects to /admin/activities; no independent permission gate.
+  "/admin/posts",
   // Process sub-groups all gated by ADMIN_PERMS.processes; /admin/processes/general
   // already proves the gate works for the whole group.
   "/admin/processes/ptcskh",
