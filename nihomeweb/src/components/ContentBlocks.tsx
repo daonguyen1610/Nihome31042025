@@ -1,5 +1,6 @@
 import type { ContentItem } from "@/services/contentApi";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface ContentBlocksProps {
   items: ContentItem[];
@@ -9,16 +10,8 @@ interface ContentBlocksProps {
 }
 
 function extractYoutubeId(url: string): string | null {
-  try {
-    const u = new URL(url);
-    if (u.hostname === "youtu.be") return u.pathname.slice(1);
-    if (u.hostname.includes("youtube.com")) {
-      return u.searchParams.get("v") ?? u.pathname.replace("/embed/", "") ?? null;
-    }
-  } catch {
-    // invalid URL
-  }
-  return null;
+  const match = url.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/);
+  return match?.[1] ?? null;
 }
 
 const ContentBlocks = ({
@@ -26,7 +19,9 @@ const ContentBlocks = ({
   className,
   paragraphClassName,
   imageClassName,
-}: ContentBlocksProps) => (
+}: ContentBlocksProps) => {
+  const { t } = useI18n();
+  return (
   <div className={cn("space-y-6", className)}>
     {items.map((item, index) => {
       if (typeof item === "string") {
@@ -67,7 +62,7 @@ const ContentBlocks = ({
           <div key={`${index}-yt-${videoId}`} className="relative w-full aspect-video rounded-2xl overflow-hidden bg-muted">
             <iframe
               src={`https://www.youtube.com/embed/${videoId}`}
-              title="YouTube video"
+              title={t("contentBlocks.youtubeTitle")}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
               className="absolute inset-0 w-full h-full"
@@ -85,6 +80,7 @@ const ContentBlocks = ({
       );
     })}
   </div>
-);
+  );
+};
 
 export default ContentBlocks;

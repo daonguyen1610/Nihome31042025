@@ -36,6 +36,7 @@ interface SortableBlockProps {
 }
 
 const SortableBlock = ({ id, children }: SortableBlockProps) => {
+  const { t } = useI18n();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -44,7 +45,7 @@ const SortableBlock = ({ id, children }: SortableBlockProps) => {
   };
   return (
     <div ref={setNodeRef} style={style}>
-      {children({ ...attributes, ...listeners, type: "button", "aria-label": "Drag to reorder" } as React.HTMLAttributes<HTMLButtonElement>)}
+      {children({ ...attributes, ...listeners, type: "button", "aria-label": t("contentBlocks.dragToReorder") } as React.HTMLAttributes<HTMLButtonElement>)}
     </div>
   );
 };
@@ -98,7 +99,9 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
     try {
       const previous = blocks[uploadTarget]?.type === "image" ? blocks[uploadTarget].url : undefined;
       const res = await adminApi.uploadImage(file, previous || undefined);
-      updateBlock(uploadTarget, { type: "image", url: res.data.imageUrl });
+      const existingBlock = blocks[uploadTarget];
+      const caption = existingBlock?.type === "image" ? existingBlock.caption : undefined;
+      updateBlock(uploadTarget, { type: "image", url: res.data.imageUrl, caption });
       toast({ title: t("form.updated"), description: file.name });
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
@@ -169,10 +172,10 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
                           className="admin-input"
                           value={block.url}
                           onChange={(event) => updateBlock(index, { type: "youtube", url: event.target.value })}
-                          placeholder="https://www.youtube.com/watch?v=..."
+                          placeholder={t("contentBlocks.youtubePlaceholder")}
                         />
                         {block.url && (() => {
-                          const match = block.url.match(/(?:youtu\.be\/|[?&]v=|\/embed\/)([A-Za-z0-9_-]{11})/);
+                          const match = block.url.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/);
                           return match ? (
                             <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
                               <iframe

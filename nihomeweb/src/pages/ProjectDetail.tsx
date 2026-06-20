@@ -209,9 +209,14 @@ const ProjectDetail = () => {
                     <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
                   </button>
                 ) : (
-                  <div key={i} className="image-zoom rounded-3xl overflow-hidden aspect-video bg-muted">
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedImage(g)}
+                    className="image-zoom rounded-3xl overflow-hidden aspect-video bg-muted w-full text-left"
+                  >
                     <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                  </div>
+                  </button>
                 )
               )}
             </div>
