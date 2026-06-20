@@ -8,6 +8,19 @@ interface ContentBlocksProps {
   imageClassName?: string;
 }
 
+function extractYoutubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname === "youtu.be") return u.pathname.slice(1);
+    if (u.hostname.includes("youtube.com")) {
+      return u.searchParams.get("v") ?? u.pathname.replace("/embed/", "") ?? null;
+    }
+  } catch {
+    // invalid URL
+  }
+  return null;
+}
+
 const ContentBlocks = ({
   items,
   className,
@@ -27,14 +40,39 @@ const ContentBlocks = ({
       }
 
       if (item.type === "image") {
-        return (
+        const imgEl = (
           <img
-            key={`${index}-${item.url}`}
             src={item.url}
-            alt=""
+            alt={item.caption ?? ""}
             loading="lazy"
             className={cn("w-full rounded-2xl object-cover", imageClassName)}
           />
+        );
+        return item.caption ? (
+          <figure key={`${index}-${item.url}`} className="space-y-2">
+            {imgEl}
+            <figcaption className="text-center text-sm text-muted-foreground italic">
+              {item.caption}
+            </figcaption>
+          </figure>
+        ) : (
+          <div key={`${index}-${item.url}`}>{imgEl}</div>
+        );
+      }
+
+      if (item.type === "youtube") {
+        const videoId = extractYoutubeId(item.url);
+        if (!videoId) return null;
+        return (
+          <div key={`${index}-yt-${videoId}`} className="relative w-full aspect-video rounded-2xl overflow-hidden bg-muted">
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}`}
+              title="YouTube video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="absolute inset-0 w-full h-full"
+            />
+          </div>
         );
       }
 
