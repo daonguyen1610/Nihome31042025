@@ -53,7 +53,7 @@ const NewsDetail = () => {
       {/* Image */}
       <section className="bg-background pb-12">
         <div className="container-custom">
-          <div className="rounded-3xl overflow-hidden -mt-4 aspect-[16/9] bg-muted">
+          <div className="rounded-3xl overflow-hidden aspect-[16/9] bg-muted">
             <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
           </div>
         </div>
