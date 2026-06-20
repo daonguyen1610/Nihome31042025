@@ -3230,5 +3230,29 @@
     "en": "Caption (optional)",
     "zh": "图片说明（可选）",
     "ja": "キャプション（任意）"
+  },
+  {
+    "key": "contentBlocks.dragToReorder",
+    "category": "contentBlocks",
+    "vi": "Kéo để sắp xếp lại",
+    "en": "Drag to reorder",
+    "zh": "拖动以重新排序",
+    "ja": "ドラッグして並べ替え"
+  },
+  {
+    "key": "contentBlocks.youtubePlaceholder",
+    "category": "contentBlocks",
+    "vi": "https://www.youtube.com/watch?v=...",
+    "en": "https://www.youtube.com/watch?v=...",
+    "zh": "https://www.youtube.com/watch?v=...",
+    "ja": "https://www.youtube.com/watch?v=..."
+  },
+  {
+    "key": "contentBlocks.youtubeTitle",
+    "category": "contentBlocks",
+    "vi": "Video YouTube",
+    "en": "YouTube video",
+    "zh": "YouTube 视频",
+    "ja": "YouTubeビデオ"
   }
 ]
