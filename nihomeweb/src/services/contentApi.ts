@@ -3,8 +3,9 @@ import api from "@/lib/api";
 // --- Types matching backend DTOs ---
 
 export type TextContentBlock = { type: "text"; value: string };
-export type ImageContentBlock = { type: "image"; url: string };
-export type ContentBlock = TextContentBlock | ImageContentBlock;
+export type ImageContentBlock = { type: "image"; url: string; caption?: string };
+export type YoutubeContentBlock = { type: "youtube"; url: string };
+export type ContentBlock = TextContentBlock | ImageContentBlock | YoutubeContentBlock;
 export type ContentItem = string | ContentBlock;
 
 export interface ActivityResponse {
@@ -57,6 +58,7 @@ export interface ProjectResponse {
   challenges?: string[];
   solutions?: string[];
   highlights?: ProjectHighlight[];
+  content?: ContentItem[];
 }
 
 export interface ServiceSection {
@@ -316,6 +318,7 @@ function mapProject(item: ProjectResponse): ProjectResponse {
     ...item,
     imageUrl: resolveImageUrl(item.imageUrl),
     gallery: item.gallery?.map(resolveImageUrl),
+    content: item.content?.map(resolveContentItem),
   };
 }
 
@@ -328,15 +331,9 @@ function mapSlideshow(item: SlideshowResponse): SlideshowResponse {
 }
 
 function resolveContentItem(item: ContentItem): ContentItem {
-  if (typeof item === "string") {
-    return item;
-  }
-
-  if (item.type === "image") {
-    return { ...item, url: resolveImageUrl(item.url) };
-  }
-
-  return item;
+  if (typeof item === "string") return item;
+  if (item.type === "image") return { ...item, url: resolveImageUrl(item.url) };
+  return item; // text and youtube pass through unchanged
 }
 
 function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {

@@ -47,6 +47,7 @@ export interface UpsertProjectRequest {
   challenges?: string[];
   solutions?: string[];
   highlights?: { label: string; value: string }[];
+  content?: ContentItem[];
   sortOrder?: number;
 }
 
