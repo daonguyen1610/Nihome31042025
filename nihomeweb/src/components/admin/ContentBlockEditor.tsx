@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, Type, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, ImagePlus, Plus, Trash2, Type, Upload, Youtube } from "lucide-react";
 import { adminApi } from "@/services/adminApi";
 import type { ContentBlock, ContentItem } from "@/services/contentApi";
 import { useI18n } from "@/lib/i18n";
@@ -30,6 +30,7 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
 
   const addText = () => updateBlocks([...blocks, { type: "text", value: "" }]);
   const addImage = () => updateBlocks([...blocks, { type: "image", url: "" }]);
+  const addYoutube = () => updateBlocks([...blocks, { type: "youtube", url: "" }]);
 
   const remove = (index: number) => {
     updateBlocks(blocks.filter((_, i) => i !== index));
@@ -86,8 +87,11 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
           >
             <div className="flex items-center gap-1 justify-between">
               <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
-                {block.type === "text" ? <Type className="w-3.5 h-3.5" /> : <ImagePlus className="w-3.5 h-3.5" />}
-                {block.type === "text" ? t("contentBlocks.text") : t("contentBlocks.image")}
+                {block.type === "text"
+                  ? <><Type className="w-3.5 h-3.5" />{t("contentBlocks.text")}</>
+                  : block.type === "youtube"
+                    ? <><Youtube className="w-3.5 h-3.5" />{t("contentBlocks.youtube")}</>
+                    : <><ImagePlus className="w-3.5 h-3.5" />{t("contentBlocks.image")}</>}
               </span>
               <div className="flex items-center gap-1">
                 <button type="button" className="p-1.5 rounded-md hover:bg-muted" onClick={() => move(index, -1)} disabled={index === 0} aria-label={t("contentBlocks.moveUp")}>
@@ -108,6 +112,28 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
                 value={block.value}
                 onChange={(event) => updateBlock(index, { type: "text", value: event.target.value })}
               />
+            ) : block.type === "youtube" ? (
+              <div className="space-y-2">
+                <input
+                  className="admin-input"
+                  value={block.url}
+                  onChange={(event) => updateBlock(index, { type: "youtube", url: event.target.value })}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+                {block.url && (() => {
+                  const match = block.url.match(/(?:youtu\.be\/|[?&]v=|\/embed\/)([A-Za-z0-9_-]{11})/);
+                  return match ? (
+                    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${match[1]}`}
+                        title="Preview"
+                        className="absolute inset-0 w-full h-full"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : null;
+                })()}
+              </div>
             ) : (
               <div className="space-y-2">
                 {block.url && (
@@ -131,6 +157,14 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
                     {t("media.url.upload")}
                   </button>
                 </div>
+                <input
+                  className="admin-input"
+                  value={block.caption ?? ""}
+                  onChange={(event) =>
+                    updateBlock(index, { type: "image", url: block.url, caption: event.target.value || undefined })
+                  }
+                  placeholder={t("contentBlocks.captionPlaceholder")}
+                />
               </div>
             )}
           </div>
@@ -145,6 +179,15 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
         <button type="button" className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border rounded-lg hover:bg-muted" style={{ borderColor: "hsl(var(--admin-border))" }} onClick={addImage}>
           <Plus className="w-3.5 h-3.5" />
           {t("contentBlocks.addImage")}
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border rounded-lg hover:bg-muted"
+          style={{ borderColor: "hsl(var(--admin-border))" }}
+          onClick={addYoutube}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {t("contentBlocks.addYoutube")}
         </button>
       </div>
     </div>
