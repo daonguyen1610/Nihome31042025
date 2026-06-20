@@ -3206,5 +3206,29 @@
     "en": "News not found.",
     "zh": "未找到新闻。",
     "ja": "ニュースが見つかりません。"
+  },
+  {
+    "key": "contentBlocks.youtube",
+    "category": "contentBlocks",
+    "vi": "YouTube",
+    "en": "YouTube",
+    "zh": "YouTube",
+    "ja": "YouTube"
+  },
+  {
+    "key": "contentBlocks.addYoutube",
+    "category": "contentBlocks",
+    "vi": "Thêm YouTube",
+    "en": "Add YouTube",
+    "zh": "添加YouTube",
+    "ja": "YouTubeを追加"
+  },
+  {
+    "key": "contentBlocks.captionPlaceholder",
+    "category": "contentBlocks",
+    "vi": "Chú thích ảnh (tùy chọn)",
+    "en": "Caption (optional)",
+    "zh": "图片说明（可选）",
+    "ja": "キャプション（任意）"
   }
 ]
