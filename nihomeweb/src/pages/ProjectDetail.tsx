@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar, Tag } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar, Tag, Grid3X3, List } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
 import { useProject, useProjects } from "@/hooks/useContentApi";
@@ -12,6 +12,7 @@ const ProjectDetail = () => {
   const { t } = useI18n();
   const { slug } = useParams();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
   const { data: project, loading, error, refetch } = useProject(slug ?? "");
   const { data: allProjects } = useProjects();
 
@@ -175,18 +176,44 @@ const ProjectDetail = () => {
       {project.gallery && project.gallery.length > 0 && (
         <section className="py-16 bg-surface">
           <div className="container-custom">
-            <p className="eyebrow text-primary mb-6">{t("projDetail.gallery")}</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {project.gallery.map((g, i) => (
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <p className="eyebrow text-primary">{t("projDetail.gallery")}</p>
+              <div className="inline-flex rounded-full border border-border overflow-hidden bg-card">
                 <button
-                  key={i}
                   type="button"
-                  onClick={() => setSelectedImage(g)}
-                  className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left"
+                  onClick={() => setGalleryMode("grid")}
+                  className={`p-2 hover:bg-muted ${galleryMode === "grid" ? "bg-muted" : ""}`}
+                  aria-label={t("gallery.viewGrid")}
                 >
-                  <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                  <Grid3X3 className="w-4 h-4" />
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setGalleryMode("list")}
+                  className={`p-2 hover:bg-muted border-l border-border ${galleryMode === "list" ? "bg-muted" : ""}`}
+                  aria-label={t("gallery.viewList")}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className={galleryMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-5" : "space-y-5 max-w-5xl mx-auto"}>
+              {project.gallery.map((g, i) =>
+                galleryMode === "grid" ? (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedImage(g)}
+                    className="image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left"
+                  >
+                    <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                  </button>
+                ) : (
+                  <div key={i} className="image-zoom rounded-3xl overflow-hidden aspect-video bg-muted">
+                    <img src={g} alt={`${project.name} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                )
+              )}
             </div>
           </div>
         </section>
