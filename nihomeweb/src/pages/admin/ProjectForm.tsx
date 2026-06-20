@@ -10,6 +10,8 @@ import { useProject, useProjectCategories } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
+import ContentBlockEditor from "@/components/admin/ContentBlockEditor";
+import type { ContentItem } from "@/services/contentApi";
 
 interface FormData {
   id: number;
@@ -28,6 +30,7 @@ interface FormData {
   challenges: string[];
   solutions: string[];
   highlights: { label: string; value: string }[];
+  content: ContentItem[];
 }
 
 const empty: FormData = {
@@ -47,6 +50,7 @@ const empty: FormData = {
   challenges: [],
   solutions: [],
   highlights: [],
+  content: [],
 };
 
 const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
@@ -86,6 +90,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       challenges: existing.challenges ?? [],
       solutions: existing.solutions ?? [],
       highlights: existing.highlights ?? [],
+      content: existing.content ?? [],
     });
     setInitialized(true);
   }
@@ -144,6 +149,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
         highlights: data.highlights.length
           ? data.highlights.filter((item) => item.label.trim() || item.value.trim())
           : undefined,
+        content: data.content.length ? data.content : undefined,
       };
       if (mode === "create") {
         await adminApi.createProject(payload);
@@ -281,6 +287,15 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                 placeholder="Mô tả tổng quan về dự án..."
               />
             </Field>
+          </div>
+
+          {/* ── Rich content blocks ── */}
+          <div className="admin-card p-6">
+            <h2 className="font-bold mb-4">{t("form.content")}</h2>
+            <ContentBlockEditor
+              value={data.content}
+              onChange={(items) => update("content", items)}
+            />
           </div>
 
           {/* ── Thách thức & Giải pháp ── */}

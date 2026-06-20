@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { useProject, useProjects } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ContentBlocks from "@/components/ContentBlocks";
 
 const ProjectDetail = () => {
   const { t } = useI18n();
@@ -157,6 +158,18 @@ const ProjectDetail = () => {
           </aside>
         </div>
       </section>
+
+      {/* Content blocks */}
+      {project.content && project.content.length > 0 && (
+        <section className="py-12 bg-background border-t border-border">
+          <div className="container-custom max-w-3xl">
+            <ContentBlocks
+              items={project.content}
+              paragraphClassName="text-lg text-foreground/85 leading-relaxed"
+            />
+          </div>
+        </section>
+      )}
 
       {/* Gallery */}
       {project.gallery && project.gallery.length > 0 && (
