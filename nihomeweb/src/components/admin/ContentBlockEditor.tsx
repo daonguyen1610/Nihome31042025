@@ -17,7 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, ImagePlus, Plus, Trash2, Type, Upload, Youtube } from "lucide-react";
-import { adminApi } from "@/services/adminApi";
+import { adminApi, type UploadBucket } from "@/services/adminApi";
 import type { ContentBlock, ContentItem } from "@/services/contentApi";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ContentBlockEditorProps {
   value: ContentItem[];
   onChange: (value: ContentItem[]) => void;
+  category?: UploadBucket;
 }
 
 const normalizeBlock = (item: ContentItem): ContentBlock =>
@@ -50,7 +51,7 @@ const SortableBlock = ({ id, children }: SortableBlockProps) => {
   );
 };
 
-const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
+const ContentBlockEditor = ({ value, onChange, category }: ContentBlockEditorProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -98,7 +99,7 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
     setUploading(true);
     try {
       const previous = blocks[uploadTarget]?.type === "image" ? blocks[uploadTarget].url : undefined;
-      const res = await adminApi.uploadImage(file, previous || undefined);
+      const res = await adminApi.uploadImage(file, previous || undefined, category);
       const existingBlock = blocks[uploadTarget];
       const caption = existingBlock?.type === "image" ? existingBlock.caption : undefined;
       updateBlock(uploadTarget, { type: "image", url: res.data.imageUrl, caption });

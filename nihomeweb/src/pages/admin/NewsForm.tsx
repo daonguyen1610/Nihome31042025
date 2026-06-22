@@ -122,6 +122,7 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
         const upload = await adminApi.uploadImage(
           pendingImageFile,
           mode === "edit" ? data.imageUrl : undefined,
+          "news",
         );
         imageUrl = upload.data.imageUrl;
       }
@@ -210,7 +211,7 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
           <div className="admin-card p-6">
             <h2 className="font-bold mb-4">{t("form.content")}</h2>
             <Field label={t("adminNews.field.content")}>
-              <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} />
+              <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} category="news" />
             </Field>
           </div>
         </div>
@@ -239,7 +240,7 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
             <p className="text-xs mb-4" style={{ color: "hsl(var(--admin-muted))" }}>
               {t("media.gallery.descPost")}
             </p>
-            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
+            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} category="news" />
           </div>
 
           <button type="submit" disabled={submitting || uploadingImage} className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50">

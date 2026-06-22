@@ -91,6 +91,10 @@ app.UseStaticFiles();
 
 var uploadImagesPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "images", "upload");
 Directory.CreateDirectory(uploadImagesPath);
+foreach (var bucket in NihomeBackend.Controllers.SystemController.AllowedUploadBuckets)
+{
+    Directory.CreateDirectory(Path.Combine(uploadImagesPath, bucket));
+}
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadImagesPath),

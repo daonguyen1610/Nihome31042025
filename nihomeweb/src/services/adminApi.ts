@@ -1,6 +1,15 @@
 import api, { withIdempotencyKey } from "@/lib/api";
 import type { ContentItem, ServiceResponse } from "@/services/contentApi";
 
+// Mirrors NihomeBackend.Controllers.SystemController.AllowedUploadBuckets.
+// Anything outside this list is silently bucketed under "misc" by the API.
+export type UploadBucket =
+  | "activities"
+  | "news"
+  | "projects"
+  | "logos"
+  | "misc";
+
 // ─── Request types ───────────────────────────────────────────
 
 export interface UpsertActivityRequest {
@@ -429,20 +438,34 @@ export interface DeleteAuditRangeParams {
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
-  uploadImage: (file: File, previousImageUrl?: string) => {
+  uploadImage: (
+    file: File,
+    previousImageUrl?: string,
+    category?: UploadBucket,
+  ) => {
     const formData = new FormData();
     formData.append("file", file);
     if (previousImageUrl) {
       formData.append("previousImageUrl", previousImageUrl);
     }
+    if (category) {
+      formData.append("category", category);
+    }
     return api.post<{ imageUrl: string }>("/system/upload-image", formData);
   },
 
-  uploadVideo: (file: File, previousImageUrl?: string) => {
+  uploadVideo: (
+    file: File,
+    previousImageUrl?: string,
+    category?: UploadBucket,
+  ) => {
     const formData = new FormData();
     formData.append("file", file);
     if (previousImageUrl) {
       formData.append("previousImageUrl", previousImageUrl);
+    }
+    if (category) {
+      formData.append("category", category);
     }
     return api.post<{ mediaUrl: string }>("/system/upload-video", formData);
   },

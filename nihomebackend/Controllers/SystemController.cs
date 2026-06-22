@@ -16,6 +16,20 @@ public class SystemController(
     ILogger<SystemController> logger) : ControllerBase
 {
     private const string ManagedImagePrefix = "/images/upload/";
+    private const string DefaultUploadBucket = "misc";
+
+    // Buckets accepted by /system/upload-image and /system/upload-video. Anything
+    // outside this set falls back to "misc" so the upload folder stays tidy.
+    public static readonly IReadOnlySet<string> AllowedUploadBuckets =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "activities",
+            "news",
+            "projects",
+            "logos",
+            DefaultUploadBucket,
+        };
+
     private static readonly HashSet<string> AllowedImageExtensions =
         [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
     private static readonly HashSet<string> AllowedVideoExtensions =
@@ -43,6 +57,7 @@ public class SystemController(
     public async Task<IActionResult> UploadImage(
         [FromForm] IFormFile? file,
         [FromForm] string? previousImageUrl,
+        [FromForm] string? category,
         CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
@@ -61,9 +76,11 @@ public class SystemController(
             return BadRequest(new { message = "Invalid image format" });
         }
 
+        var bucket = ResolveUploadBucket(category);
+
         try
         {
-            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload");
+            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload", bucket);
             Directory.CreateDirectory(uploadDir);
 
             var fileName = $"{Guid.NewGuid():N}{extension}";
@@ -72,11 +89,12 @@ public class SystemController(
             await using var stream = new FileStream(filePath, FileMode.Create);
             await file.CopyToAsync(stream, cancellationToken);
 
-            DeleteManagedUpload(previousImageUrl, fileName);
+            var imageUrl = $"{ManagedImagePrefix}{bucket}/{fileName}";
+            DeleteManagedUpload(previousImageUrl, imageUrl);
 
             return Ok(new
             {
-                imageUrl = $"/images/upload/{fileName}"
+                imageUrl
             });
         }
         catch (Exception ex)
@@ -91,6 +109,7 @@ public class SystemController(
     public async Task<IActionResult> UploadVideo(
         [FromForm] IFormFile? file,
         [FromForm] string? previousImageUrl,
+        [FromForm] string? category,
         CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
@@ -109,9 +128,11 @@ public class SystemController(
             return BadRequest(new { message = "Invalid video format" });
         }
 
+        var bucket = ResolveUploadBucket(category);
+
         try
         {
-            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload");
+            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload", bucket);
             Directory.CreateDirectory(uploadDir);
 
             var fileName = $"{Guid.NewGuid():N}{extension}";
@@ -120,11 +141,12 @@ public class SystemController(
             await using var stream = new FileStream(filePath, FileMode.Create);
             await file.CopyToAsync(stream, cancellationToken);
 
-            DeleteManagedUpload(previousImageUrl, fileName);
+            var mediaUrl = $"{ManagedImagePrefix}{bucket}/{fileName}";
+            DeleteManagedUpload(previousImageUrl, mediaUrl);
 
             return Ok(new
             {
-                mediaUrl = $"/images/upload/{fileName}"
+                mediaUrl
             });
         }
         catch (Exception ex)
@@ -170,7 +192,7 @@ public class SystemController(
         }
     }
 
-    private void DeleteManagedUpload(string? imageUrl, string? currentFileName = null)
+    private void DeleteManagedUpload(string? imageUrl, string? currentImageUrl = null)
     {
         imageUrl = NormalizeManagedUploadUrl(imageUrl);
         if (string.IsNullOrWhiteSpace(imageUrl) ||
@@ -179,18 +201,27 @@ public class SystemController(
             return;
         }
 
-        var previousFileName = Path.GetFileName(imageUrl);
-        if (!string.IsNullOrWhiteSpace(currentFileName) &&
-            string.Equals(previousFileName, currentFileName, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(currentImageUrl) &&
+            string.Equals(imageUrl, currentImageUrl, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload", previousFileName);
+        var relativePath = imageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", relativePath);
         if (System.IO.File.Exists(fullPath))
         {
             System.IO.File.Delete(fullPath);
         }
+    }
+
+    private static string ResolveUploadBucket(string? category)
+    {
+        if (string.IsNullOrWhiteSpace(category)) return DefaultUploadBucket;
+        var trimmed = category.Trim();
+        return AllowedUploadBuckets.Contains(trimmed)
+            ? trimmed.ToLowerInvariant()
+            : DefaultUploadBucket;
     }
 
     private static string? NormalizeManagedUploadUrl(string? imageUrl)

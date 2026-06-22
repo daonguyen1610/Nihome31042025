@@ -1,15 +1,16 @@
 import { useRef, useState } from "react";
 import { Trash2, Upload, Plus } from "lucide-react";
-import { adminApi } from "@/services/adminApi";
+import { adminApi, type UploadBucket } from "@/services/adminApi";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 
 interface GalleryEditorProps {
   items: string[];
   onChange: (items: string[]) => void;
+  category?: UploadBucket;
 }
 
-const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
+const GalleryEditor = ({ items, onChange, category }: GalleryEditorProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -22,7 +23,7 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        const res = await adminApi.uploadImage(file);
+        const res = await adminApi.uploadImage(file, undefined, category);
         uploaded.push(res.data.imageUrl);
       }
       onChange([...items, ...uploaded]);

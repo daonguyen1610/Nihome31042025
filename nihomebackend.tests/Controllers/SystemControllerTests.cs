@@ -89,7 +89,7 @@ public class SystemControllerTests
                 ContentType = "text/plain"
             };
 
-            var result = await controller.UploadVideo(file, null, CancellationToken.None);
+            var result = await controller.UploadVideo(file, null, null, CancellationToken.None);
 
             Assert.IsType<BadRequestObjectResult>(result);
         }
@@ -115,16 +115,128 @@ public class SystemControllerTests
                 ContentType = "video/mp4"
             };
 
-            var result = await controller.UploadVideo(file, null, CancellationToken.None);
+            var result = await controller.UploadVideo(file, null, null, CancellationToken.None);
 
             var ok = Assert.IsType<OkObjectResult>(result);
             var mediaUrl = ok.Value?.GetType().GetProperty("mediaUrl")?.GetValue(ok.Value) as string;
             Assert.False(string.IsNullOrWhiteSpace(mediaUrl));
-            Assert.StartsWith("/images/upload/", mediaUrl!);
+            Assert.StartsWith("/images/upload/misc/", mediaUrl!);
 
-            var fileName = Path.GetFileName(mediaUrl!);
-            var fullPath = Path.Combine(tempRoot, "wwwroot", "images", "upload", fileName);
+            var relative = mediaUrl!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var fullPath = Path.Combine(tempRoot, "wwwroot", relative);
             Assert.True(File.Exists(fullPath));
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, true);
+        }
+    }
+
+    [Theory]
+    [InlineData("activities")]
+    [InlineData("news")]
+    [InlineData("projects")]
+    [InlineData("logos")]
+    [InlineData("misc")]
+    public async Task UploadImage_StoresFileInRequestedBucket(string bucket)
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"nihome-system-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var controller = CreateController(tempRoot);
+            await using var stream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 });
+            var file = new FormFile(stream, 0, stream.Length, "file", "photo.jpg")
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "image/jpeg"
+            };
+
+            var result = await controller.UploadImage(file, null, bucket, CancellationToken.None);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var imageUrl = ok.Value?.GetType().GetProperty("imageUrl")?.GetValue(ok.Value) as string;
+            Assert.False(string.IsNullOrWhiteSpace(imageUrl));
+            Assert.StartsWith($"/images/upload/{bucket}/", imageUrl!);
+
+            var relative = imageUrl!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var fullPath = Path.Combine(tempRoot, "wwwroot", relative);
+            Assert.True(File.Exists(fullPath));
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, true);
+        }
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("hackers")]
+    [InlineData("../etc")]
+    [InlineData("documents")]
+    public async Task UploadImage_UnknownCategory_FallsBackToMisc(string? bucket)
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"nihome-system-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var controller = CreateController(tempRoot);
+            await using var stream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 });
+            var file = new FormFile(stream, 0, stream.Length, "file", "photo.jpg")
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "image/jpeg"
+            };
+
+            var result = await controller.UploadImage(file, null, bucket, CancellationToken.None);
+
+            var ok = Assert.IsType<OkObjectResult>(result);
+            var imageUrl = ok.Value?.GetType().GetProperty("imageUrl")?.GetValue(ok.Value) as string;
+            Assert.StartsWith("/images/upload/misc/", imageUrl!);
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, true);
+        }
+    }
+
+    [Fact]
+    public async Task UploadImage_DeletesPreviousBucketedFile_OnReupload()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"nihome-system-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var controller = CreateController(tempRoot);
+
+            // seed an existing managed file in the activities bucket
+            var activitiesDir = Path.Combine(tempRoot, "wwwroot", "images", "upload", "activities");
+            Directory.CreateDirectory(activitiesDir);
+            var legacyName = $"{Guid.NewGuid():N}.jpg";
+            var legacyPath = Path.Combine(activitiesDir, legacyName);
+            await File.WriteAllBytesAsync(legacyPath, new byte[] { 1, 2, 3 });
+            Assert.True(File.Exists(legacyPath));
+
+            await using var stream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 });
+            var file = new FormFile(stream, 0, stream.Length, "file", "photo.jpg")
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "image/jpeg"
+            };
+
+            var result = await controller.UploadImage(
+                file,
+                $"/images/upload/activities/{legacyName}",
+                "activities",
+                CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.False(File.Exists(legacyPath));
         }
         finally
         {

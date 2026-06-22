@@ -123,6 +123,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
         const upload = await adminApi.uploadImage(
           pendingImageFile,
           mode === "edit" ? data.imageUrl : undefined,
+          "projects",
         );
         imageUrl = upload.data.imageUrl;
       }
@@ -295,6 +296,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <ContentBlockEditor
               value={data.content}
               onChange={(items) => update("content", items)}
+              category="projects"
             />
           </div>
 
@@ -351,7 +353,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <p className="text-xs mb-4" style={{ color: "hsl(var(--admin-muted))" }}>
               {t("media.gallery.descProject")}
             </p>
-            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
+            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} category="projects" />
           </div>
 
           <button
