@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 
 namespace NihomeBackend.Services;
@@ -49,52 +50,99 @@ public class UploadedImageCleanupService(
         var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload");
         Directory.CreateDirectory(uploadDir);
 
-        var referencedFiles = await GetReferencedFileNamesAsync(cancellationToken);
+        var referencedUrls = await GetReferencedUrlsAsync(cancellationToken);
         var now = DateTime.UtcNow;
         var totalFiles = 0;
         var deletedCount = 0;
         var skippedReferencedCount = 0;
         var skippedRecentCount = 0;
+        var skippedUnscannedCount = 0;
 
+        // Top-level files (legacy uploads, pre-bucket scheme).
         foreach (var filePath in Directory.EnumerateFiles(uploadDir))
         {
             cancellationToken.ThrowIfCancellationRequested();
             totalFiles++;
+            var managedUrl = $"{ManagedImagePrefix}{Path.GetFileName(filePath)}";
+            EvaluateFile(filePath, managedUrl, referencedUrls, now,
+                ref deletedCount, ref skippedReferencedCount, ref skippedRecentCount);
+        }
 
-            var fileName = Path.GetFileName(filePath);
-            if (referencedFiles.Contains(fileName))
-            {
-                skippedReferencedCount++;
-                continue;
-            }
+        // Files inside owned buckets.
+        foreach (var bucket in SystemController.AllowedUploadBuckets)
+        {
+            var bucketDir = Path.Combine(uploadDir, bucket);
+            if (!Directory.Exists(bucketDir)) continue;
 
-            var lastWriteUtc = File.GetLastWriteTimeUtc(filePath);
-            if (now - lastWriteUtc < MinFileAgeToDelete)
+            foreach (var filePath in Directory.EnumerateFiles(bucketDir))
             {
-                skippedRecentCount++;
-                continue;
-            }
-
-            try
-            {
-                File.Delete(filePath);
-                deletedCount++;
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Unable to delete orphan uploaded image {FilePath}", filePath);
+                cancellationToken.ThrowIfCancellationRequested();
+                totalFiles++;
+                var managedUrl = $"{ManagedImagePrefix}{bucket}/{Path.GetFileName(filePath)}";
+                EvaluateFile(filePath, managedUrl, referencedUrls, now,
+                    ref deletedCount, ref skippedReferencedCount, ref skippedRecentCount);
             }
         }
 
+        // Count unowned sub-folders (e.g. "documents/" managed by MeController) so
+        // the log is honest but we don't touch them.
+        foreach (var subDir in Directory.EnumerateDirectories(uploadDir))
+        {
+            var bucketName = Path.GetFileName(subDir);
+            if (SystemController.AllowedUploadBuckets.Contains(bucketName)) continue;
+            skippedUnscannedCount += Directory.EnumerateFiles(subDir).Count();
+        }
+
         logger.LogInformation(
-            "Uploaded image cleanup completed. totalFiles={TotalFiles}, referenced={ReferencedCount}, recent={RecentCount}, deleted={DeletedCount}",
+            "Uploaded image cleanup completed. totalFiles={TotalFiles}, referenced={ReferencedCount}, recent={RecentCount}, unscanned={UnscannedCount}, deleted={DeletedCount}",
             totalFiles,
             skippedReferencedCount,
             skippedRecentCount,
+            skippedUnscannedCount,
             deletedCount);
     }
 
-    private async Task<HashSet<string>> GetReferencedFileNamesAsync(CancellationToken cancellationToken)
+    private void EvaluateFile(
+        string filePath,
+        string managedUrl,
+        HashSet<string> referencedUrls,
+        DateTime now,
+        ref int deletedCount,
+        ref int skippedReferencedCount,
+        ref int skippedRecentCount)
+    {
+        // Skip dotfiles (e.g. .gitkeep) so the committed bucket structure is preserved.
+        if (Path.GetFileName(filePath).StartsWith('.'))
+        {
+            skippedReferencedCount++;
+            return;
+        }
+
+        if (referencedUrls.Contains(managedUrl))
+        {
+            skippedReferencedCount++;
+            return;
+        }
+
+        var lastWriteUtc = File.GetLastWriteTimeUtc(filePath);
+        if (now - lastWriteUtc < MinFileAgeToDelete)
+        {
+            skippedRecentCount++;
+            return;
+        }
+
+        try
+        {
+            File.Delete(filePath);
+            deletedCount++;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Unable to delete orphan uploaded image {FilePath}", filePath);
+        }
+    }
+
+    private async Task<HashSet<string>> GetReferencedUrlsAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -109,56 +157,51 @@ public class UploadedImageCleanupService(
                 return;
             }
 
-            var fileName = Path.GetFileName(imageUrl);
-            if (!string.IsNullOrWhiteSpace(fileName))
+            referenced.Add(imageUrl);
+        }
+
+        void AddGalleryJson(string? galleryJson)
+        {
+            if (string.IsNullOrWhiteSpace(galleryJson)) return;
+            try
             {
-                referenced.Add(fileName);
+                var gallery = JsonSerializer.Deserialize<string[]>(galleryJson) ?? [];
+                foreach (var url in gallery) AddIfManaged(url);
+            }
+            catch (JsonException)
+            {
+                // Ignore malformed legacy data to keep cleanup resilient.
             }
         }
 
-        var activityImageUrls = await db.Activities
+        var activityImages = await db.Activities
             .AsNoTracking()
-            .Select(x => x.ImageUrl)
+            .Select(x => new { x.ImageUrl, x.GalleryJson })
             .ToListAsync(cancellationToken);
-        foreach (var imageUrl in activityImageUrls)
+        foreach (var a in activityImages)
         {
-            AddIfManaged(imageUrl);
+            AddIfManaged(a.ImageUrl);
+            AddGalleryJson(a.GalleryJson);
         }
 
-        var newsImageUrls = await db.NewsArticles
+        var newsImages = await db.NewsArticles
             .AsNoTracking()
-            .Select(x => x.ImageUrl)
+            .Select(x => new { x.ImageUrl, x.GalleryJson })
             .ToListAsync(cancellationToken);
-        foreach (var imageUrl in newsImageUrls)
+        foreach (var n in newsImages)
         {
-            AddIfManaged(imageUrl);
+            AddIfManaged(n.ImageUrl);
+            AddGalleryJson(n.GalleryJson);
         }
 
         var projectImages = await db.Projects
             .AsNoTracking()
             .Select(x => new { x.ImageUrl, x.GalleryJson })
             .ToListAsync(cancellationToken);
-        foreach (var project in projectImages)
+        foreach (var p in projectImages)
         {
-            AddIfManaged(project.ImageUrl);
-
-            if (string.IsNullOrWhiteSpace(project.GalleryJson))
-            {
-                continue;
-            }
-
-            try
-            {
-                var gallery = JsonSerializer.Deserialize<string[]>(project.GalleryJson) ?? [];
-                foreach (var galleryImageUrl in gallery)
-                {
-                    AddIfManaged(galleryImageUrl);
-                }
-            }
-            catch (JsonException)
-            {
-                // Ignore malformed legacy data to keep cleanup resilient.
-            }
+            AddIfManaged(p.ImageUrl);
+            AddGalleryJson(p.GalleryJson);
         }
 
         var logoImageUrls = await db.ClientLogos

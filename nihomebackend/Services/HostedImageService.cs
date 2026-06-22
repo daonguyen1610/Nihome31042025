@@ -40,8 +40,19 @@ public class HostedImageService(IWebHostEnvironment env)
             return;
         }
 
-        var relativePath = imageUrl!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", relativePath);
+        var uploadRoot = Path.GetFullPath(
+            Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload"));
+        var relative = imageUrl![ManagedImagePrefix.Length..].Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.GetFullPath(Path.Combine(uploadRoot, relative));
+
+        // Reject forged URLs that resolve outside the upload root.
+        var rootWithSeparator = uploadRoot.EndsWith(Path.DirectorySeparatorChar)
+            ? uploadRoot
+            : uploadRoot + Path.DirectorySeparatorChar;
+        if (!fullPath.StartsWith(rootWithSeparator, StringComparison.Ordinal))
+        {
+            return;
+        }
 
         if (File.Exists(fullPath))
         {

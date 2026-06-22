@@ -244,6 +244,45 @@ public class SystemControllerTests
         }
     }
 
+    [Fact]
+    public async Task UploadImage_TraversalInPreviousImageUrl_DoesNotDeleteFileOutsideUploadRoot()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"nihome-system-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var controller = CreateController(tempRoot);
+
+            // seed a file that lives OUTSIDE /images/upload/ but inside wwwroot.
+            var sensitiveDir = Path.Combine(tempRoot, "wwwroot", "appsettings");
+            Directory.CreateDirectory(sensitiveDir);
+            var sensitivePath = Path.Combine(sensitiveDir, "secret.json");
+            await File.WriteAllTextAsync(sensitivePath, "do-not-delete");
+
+            await using var stream = new MemoryStream(new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 });
+            var file = new FormFile(stream, 0, stream.Length, "file", "photo.jpg")
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "image/jpeg"
+            };
+
+            // Forged URL: starts with the managed prefix but escapes via ..
+            var result = await controller.UploadImage(
+                file,
+                "/images/upload/../appsettings/secret.json",
+                "misc",
+                CancellationToken.None);
+
+            Assert.IsType<OkObjectResult>(result);
+            Assert.True(File.Exists(sensitivePath), "sensitive file outside /images/upload/ must be untouched");
+        }
+        finally
+        {
+            Directory.Delete(tempRoot, true);
+        }
+    }
+
     private static SystemController CreateController(string contentRootPath)
     {
         var timeService = new TimeService();

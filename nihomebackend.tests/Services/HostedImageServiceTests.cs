@@ -70,6 +70,20 @@ public class HostedImageServiceTests : IDisposable
     }
 
     [Fact]
+    public void DeleteIfManagedUpload_RemovesFileInBucketSubFolder()
+    {
+        var rel = "/images/upload/activities/abc.png";
+        var dir = Path.Combine(_root, "wwwroot", "images", "upload", "activities");
+        Directory.CreateDirectory(dir);
+        var full = Path.Combine(dir, "abc.png");
+        File.WriteAllBytes(full, new byte[] { 1, 2, 3 });
+
+        _sut.DeleteIfManagedUpload(rel);
+
+        Assert.False(File.Exists(full));
+    }
+
+    [Fact]
     public void DeleteIfManagedUpload_IgnoresMissingFile()
     {
         // Should not throw
@@ -81,5 +95,20 @@ public class HostedImageServiceTests : IDisposable
     {
         _sut.DeleteIfManagedUpload("https://cdn/x.png");
         _sut.DeleteIfManagedUpload(null);
+    }
+
+    [Fact]
+    public void DeleteIfManagedUpload_TraversalAttempt_DoesNotEscapeUploadRoot()
+    {
+        // Seed a file outside /images/upload/ but inside wwwroot
+        var sensitiveDir = Path.Combine(_root, "wwwroot", "config");
+        Directory.CreateDirectory(sensitiveDir);
+        var sensitive = Path.Combine(sensitiveDir, "secret.json");
+        File.WriteAllText(sensitive, "do-not-delete");
+
+        // Forged URL passes the prefix check but resolves outside the upload root
+        _sut.DeleteIfManagedUpload("/images/upload/../config/secret.json");
+
+        Assert.True(File.Exists(sensitive));
     }
 }
