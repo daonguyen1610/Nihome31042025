@@ -442,7 +442,24 @@ public class AuthController : ControllerBase
         response.AccessToken = accessToken;
         response.RefreshToken = refreshToken.Token;
         response.ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.AccessTokenMinutes);
-        response.Role = user.Role.ToString();
+
+        // AuthController's various flows load the user without Include(RoleEntity),
+        // so the AutoMapper fallback above would return the legacy enum string
+        // (e.g. "USER" for a custom-role user whose mirror enum is USER). One
+        // tiny lookup gets us the canonical RBAC code so the client can route /
+        // gate correctly.
+        if (user.RoleEntityId.HasValue && user.RoleEntity == null)
+        {
+            var code = await _db.Roles.AsNoTracking()
+                .Where(r => r.Id == user.RoleEntityId.Value)
+                .Select(r => r.Code)
+                .FirstOrDefaultAsync();
+            if (!string.IsNullOrEmpty(code))
+            {
+                response.Role = code;
+            }
+        }
+        response.RoleId = user.RoleEntityId;
         return response;
     }
 }
