@@ -257,6 +257,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany(j => j.Applications)
             .HasForeignKey(a => a.JobPositionId)
             .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<JobApplication>()
+            .Property(a => a.Status)
+            .HasMaxLength(32);
+        modelBuilder.Entity<JobApplication>().HasIndex(a => a.Status);
+        modelBuilder.Entity<JobApplication>().HasIndex(a => a.AppliedAt);
 
         modelBuilder.Entity<EmploymentType>().ToTable("employment_types");
         modelBuilder.Entity<EmploymentType>().HasKey(e => e.Id);
