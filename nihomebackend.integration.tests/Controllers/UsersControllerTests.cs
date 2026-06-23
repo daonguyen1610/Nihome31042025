@@ -1,4 +1,8 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Data;
+using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -114,5 +118,117 @@ public class UsersControllerTests : IntegrationTestBase
         body.GetProperty("traceId").GetString().Should().NotBeNullOrEmpty();
         // The legacy "message" mirror was removed; clients must read "detail".
         body.TryGetProperty("message", out _).Should().BeFalse();
+    }
+
+    // -------------------- Custom RBAC role assignment --------------------
+
+    [Fact]
+    public async Task Create_WithCustomBusinessRole_AssignsRoleEntityId()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+
+        var customCode = $"BIZ_{Guid.NewGuid():N}".Substring(0, 12).ToUpperInvariant();
+        await SeedCustomRole(customCode, "Custom Business Role");
+
+        var phone = "0987" + new Random().Next(100000, 999999).ToString();
+        var created = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = phone,
+            fullName = "Custom Role User",
+            email = $"custom-{Guid.NewGuid():N}@example.com",
+            password = "P@ssword1",
+            role = customCode,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var body = await ReadJsonAsync(created);
+        var newId = body.GetProperty("id").GetInt32();
+        body.GetProperty("role").GetString().Should().Be(customCode);
+        body.GetProperty("roleName").GetString().Should().Be("Custom Business Role");
+        body.GetProperty("roleId").GetInt32().Should().BeGreaterThan(0);
+
+        // Verify persistence: RoleEntityId is set; legacy enum mirrors as USER
+        // (custom roles never auto-elevate via the enum-based gates).
+        await WithDbAsync(async db =>
+        {
+            var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == newId);
+            user.RoleEntityId.Should().NotBeNull();
+            user.Role.Should().Be(UserRole.USER);
+        });
+
+        // Cleanup so fixture isn't polluted for later tests.
+        (await Client.DeleteAsync($"/api/users/{newId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Update_FromSystemRoleToCustomBusinessRole_PersistsBothSides()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+
+        var customCode = $"BIZ_{Guid.NewGuid():N}".Substring(0, 12).ToUpperInvariant();
+        await SeedCustomRole(customCode, "Promoted Role");
+
+        var phone = "0987" + new Random().Next(100000, 999999).ToString();
+        var created = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = phone,
+            fullName = "Will Be Promoted",
+            email = $"promote-{Guid.NewGuid():N}@example.com",
+            password = "P@ssword1",
+            role = "USER",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        var updated = await Client.PutAsJsonAsync($"/api/users/{id}", new
+        {
+            role = customCode,
+        });
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await ReadJsonAsync(updated);
+        body.GetProperty("role").GetString().Should().Be(customCode);
+        body.GetProperty("roleName").GetString().Should().Be("Promoted Role");
+
+        (await Client.DeleteAsync($"/api/users/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Create_WithUnknownRoleCode_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+
+        var phone = "0987" + new Random().Next(100000, 999999).ToString();
+        var resp = await Client.PostAsJsonAsync("/api/users", new
+        {
+            phoneNumber = phone,
+            fullName = "Bad Role",
+            email = $"bad-{Guid.NewGuid():N}@example.com",
+            password = "P@ssword1",
+            role = "TOTALLY_UNKNOWN_ROLE_CODE",
+        });
+
+        resp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await ReadJsonAsync(resp);
+        body.GetProperty("detail").GetString()!.ToLowerInvariant().Should().Contain("role");
+    }
+
+    private async Task SeedCustomRole(string code, string name)
+    {
+        await WithDbAsync(async db =>
+        {
+            if (!await db.Roles.AnyAsync(r => r.Code == code))
+            {
+                db.Roles.Add(new Role
+                {
+                    Code = code,
+                    Name = name,
+                    IsSystem = false,
+                    IsActive = true,
+                    InitialPermissionsSeeded = true,
+                });
+                await db.SaveChangesAsync();
+            }
+        });
     }
 }
