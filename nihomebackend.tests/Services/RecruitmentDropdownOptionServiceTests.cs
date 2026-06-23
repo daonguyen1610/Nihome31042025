@@ -3,6 +3,7 @@ using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -14,7 +15,7 @@ public class RecruitmentDropdownOptionServiceTests : IDisposable
     public RecruitmentDropdownOptionServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new RecruitmentDropdownOptionService(_db);
+        _sut = new RecruitmentDropdownOptionService(_db, NullLogger<RecruitmentDropdownOptionService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

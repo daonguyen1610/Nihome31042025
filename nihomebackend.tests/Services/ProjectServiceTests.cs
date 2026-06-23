@@ -7,6 +7,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -19,8 +20,8 @@ public class ProjectServiceTests : IDisposable
     {
         _db = DbContextFactory.Create();
         var hosted = new HostedImageService(Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp"));
-        var catSvc = new ProjectCategoryService(_db);
-        _sut = new ProjectService(_db, hosted, catSvc);
+        var catSvc = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
+        _sut = new ProjectService(_db, hosted, catSvc, NullLogger<ProjectService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

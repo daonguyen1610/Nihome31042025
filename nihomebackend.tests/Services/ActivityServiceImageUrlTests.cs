@@ -7,6 +7,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -26,7 +27,7 @@ public class ActivityServiceImageUrlTests : IDisposable
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == _contentRootPath));
 
-        _sut = new ActivityService(_db, translationService, hostedImageService);
+        _sut = new ActivityService(_db, translationService, hostedImageService, NullLogger<ActivityService>.Instance);
     }
 
     public void Dispose()

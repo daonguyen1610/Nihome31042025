@@ -1,6 +1,5 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -8,9 +7,8 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class EmploymentTypeService(AppDbContext db)
+public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeService> logger)
 {
-    private ILogger<EmploymentTypeService> Logger => db.GetService<ILoggerFactory>().CreateLogger<EmploymentTypeService>();
 
     public async Task<List<EmploymentTypeResponse>> GetAllAsync(bool includeInactive = false)
     {
@@ -46,7 +44,7 @@ public class EmploymentTypeService(AppDbContext db)
 
         db.EmploymentTypes.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created employment type {EmploymentTypeId} ({EmploymentTypeCode})", entity.Id, entity.Code);
+        logger.LogInformation("Created employment type {EmploymentTypeId} ({EmploymentTypeCode})", entity.Id, entity.Code);
         return MapToResponse(entity);
     }
 
@@ -72,7 +70,7 @@ public class EmploymentTypeService(AppDbContext db)
         await UpdateLinkedPositionsCodeAsync(previousCode, normalizedCode);
 
         await db.SaveChangesAsync();
-        Logger.LogInformation("Updated employment type {EmploymentTypeId} ({EmploymentTypeCode})", entity.Id, entity.Code);
+        logger.LogInformation("Updated employment type {EmploymentTypeId} ({EmploymentTypeCode})", entity.Id, entity.Code);
         return MapToResponse(entity);
     }
 
@@ -95,7 +93,7 @@ public class EmploymentTypeService(AppDbContext db)
 
         db.EmploymentTypes.Remove(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Deleted employment type {EmploymentTypeId} ({EmploymentTypeCode})", entity.Id, entity.Code);
+        logger.LogInformation("Deleted employment type {EmploymentTypeId} ({EmploymentTypeCode})", entity.Id, entity.Code);
         return true;
     }
 
@@ -147,14 +145,14 @@ public class EmploymentTypeService(AppDbContext db)
         try
         {
             await db.SaveChangesAsync();
-            Logger.LogInformation("Seeded {Count} employment types", entities.Count);
+            logger.LogInformation("Seeded {Count} employment types", entities.Count);
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             // Concurrent first-requests may race on the same defaults.
             // Treat duplicate-key as benign and continue with existing rows.
             db.ChangeTracker.Clear();
-            Logger.LogInformation("Skipped employment type seeding due to concurrent insert race.");
+            logger.LogInformation("Skipped employment type seeding due to concurrent insert race.");
         }
     }
 

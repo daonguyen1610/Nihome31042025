@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,9 +6,8 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class NewsCategoryService(AppDbContext db)
+public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> logger)
 {
-    private ILogger<NewsCategoryService> Logger => db.GetService<ILoggerFactory>().CreateLogger<NewsCategoryService>();
 
     public async Task<List<NewsCategoryResponse>> GetAllAsync(bool includeInactive = false)
     {
@@ -26,7 +24,7 @@ public class NewsCategoryService(AppDbContext db)
             .ThenBy(c => c.Name)
             .ToListAsync();
 
-        Logger.LogDebug("Fetched {Count} news categories (includeInactive={IncludeInactive})", items.Count, includeInactive);
+        logger.LogDebug("Fetched {Count} news categories (includeInactive={IncludeInactive})", items.Count, includeInactive);
         return items.Select(MapToResponse).ToList();
     }
 
@@ -45,7 +43,7 @@ public class NewsCategoryService(AppDbContext db)
         db.NewsCategories.Add(entity);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Created news category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Created news category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -54,7 +52,7 @@ public class NewsCategoryService(AppDbContext db)
         var entity = await db.NewsCategories.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update news category. Id {CategoryId} not found", id);
+            logger.LogWarning("Cannot update news category. Id {CategoryId} not found", id);
             return null;
         }
 
@@ -70,7 +68,7 @@ public class NewsCategoryService(AppDbContext db)
         await UpdateNewsForRenamedCategoryAsync(id, previousName, normalizedName);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Updated news category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Updated news category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -79,7 +77,7 @@ public class NewsCategoryService(AppDbContext db)
         var entity = await db.NewsCategories.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete news category. Id {CategoryId} not found", id);
+            logger.LogWarning("Cannot delete news category. Id {CategoryId} not found", id);
             return false;
         }
 
@@ -95,7 +93,7 @@ public class NewsCategoryService(AppDbContext db)
         db.NewsCategories.Remove(entity);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Deleted news category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Deleted news category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return true;
     }
 
@@ -132,7 +130,7 @@ public class NewsCategoryService(AppDbContext db)
         db.NewsCategories.AddRange(entities);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Seeded {Count} news categories from news data", entities.Count);
+        logger.LogInformation("Seeded {Count} news categories from news data", entities.Count);
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)
@@ -168,7 +166,7 @@ public class NewsCategoryService(AppDbContext db)
 
         if (news.Count > 0)
         {
-            Logger.LogInformation(
+            logger.LogInformation(
                 "Updated {Count} news articles from category {PreviousCategoryName} to {NextCategoryName}",
                 news.Count,
                 previousName,

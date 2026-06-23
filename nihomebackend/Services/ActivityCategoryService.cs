@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,9 +6,8 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ActivityCategoryService(AppDbContext db)
+public class ActivityCategoryService(AppDbContext db, ILogger<ActivityCategoryService> logger)
 {
-    private ILogger<ActivityCategoryService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ActivityCategoryService>();
 
     public async Task<List<ActivityCategoryResponse>> GetAllAsync(bool includeInactive = false)
     {
@@ -26,7 +24,7 @@ public class ActivityCategoryService(AppDbContext db)
             .ThenBy(c => c.Name)
             .ToListAsync();
 
-        Logger.LogDebug("Fetched {Count} activity categories (includeInactive={IncludeInactive})", items.Count, includeInactive);
+        logger.LogDebug("Fetched {Count} activity categories (includeInactive={IncludeInactive})", items.Count, includeInactive);
         return items.Select(MapToResponse).ToList();
     }
 
@@ -45,7 +43,7 @@ public class ActivityCategoryService(AppDbContext db)
         db.ActivityCategories.Add(entity);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Created activity category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Created activity category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -54,7 +52,7 @@ public class ActivityCategoryService(AppDbContext db)
         var entity = await db.ActivityCategories.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update activity category. Id {CategoryId} not found", id);
+            logger.LogWarning("Cannot update activity category. Id {CategoryId} not found", id);
             return null;
         }
 
@@ -71,7 +69,7 @@ public class ActivityCategoryService(AppDbContext db)
 
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Updated activity category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Updated activity category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -80,7 +78,7 @@ public class ActivityCategoryService(AppDbContext db)
         var entity = await db.ActivityCategories.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete activity category. Id {CategoryId} not found", id);
+            logger.LogWarning("Cannot delete activity category. Id {CategoryId} not found", id);
             return false;
         }
 
@@ -96,7 +94,7 @@ public class ActivityCategoryService(AppDbContext db)
         db.ActivityCategories.Remove(entity);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Deleted activity category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Deleted activity category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return true;
     }
 
@@ -133,7 +131,7 @@ public class ActivityCategoryService(AppDbContext db)
         db.ActivityCategories.AddRange(entities);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Seeded {Count} activity categories from activities data", entities.Count);
+        logger.LogInformation("Seeded {Count} activity categories from activities data", entities.Count);
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)
@@ -169,7 +167,7 @@ public class ActivityCategoryService(AppDbContext db)
 
         if (activities.Count > 0)
         {
-            Logger.LogInformation(
+            logger.LogInformation(
                 "Updated {Count} activities from category {PreviousCategoryName} to {NextCategoryName}",
                 activities.Count,
                 previousName,

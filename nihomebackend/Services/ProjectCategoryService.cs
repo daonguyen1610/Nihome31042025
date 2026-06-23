@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,9 +6,8 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProjectCategoryService(AppDbContext db)
+public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryService> logger)
 {
-    private ILogger<ProjectCategoryService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProjectCategoryService>();
 
     public async Task<List<ProjectCategoryResponse>> GetAllAsync(bool includeInactive = false)
     {
@@ -26,7 +24,7 @@ public class ProjectCategoryService(AppDbContext db)
             .ThenBy(c => c.Name)
             .ToListAsync();
 
-        Logger.LogDebug("Fetched {Count} project categories (includeInactive={IncludeInactive})", items.Count, includeInactive);
+        logger.LogDebug("Fetched {Count} project categories (includeInactive={IncludeInactive})", items.Count, includeInactive);
         return items.Select(MapToResponse).ToList();
     }
 
@@ -45,7 +43,7 @@ public class ProjectCategoryService(AppDbContext db)
         db.ProjectCategories.Add(entity);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Created project category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Created project category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -54,7 +52,7 @@ public class ProjectCategoryService(AppDbContext db)
         var entity = await db.ProjectCategories.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update project category. Id {CategoryId} not found", id);
+            logger.LogWarning("Cannot update project category. Id {CategoryId} not found", id);
             return null;
         }
 
@@ -71,7 +69,7 @@ public class ProjectCategoryService(AppDbContext db)
 
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Updated project category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Updated project category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -80,7 +78,7 @@ public class ProjectCategoryService(AppDbContext db)
         var entity = await db.ProjectCategories.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete project category. Id {CategoryId} not found", id);
+            logger.LogWarning("Cannot delete project category. Id {CategoryId} not found", id);
             return false;
         }
 
@@ -96,7 +94,7 @@ public class ProjectCategoryService(AppDbContext db)
         db.ProjectCategories.Remove(entity);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Deleted project category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
+        logger.LogInformation("Deleted project category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
         return true;
     }
 
@@ -139,7 +137,7 @@ public class ProjectCategoryService(AppDbContext db)
         };
         db.ProjectCategories.Add(created);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Auto-created project category {CategoryName} from project payload", trimmed);
+        logger.LogInformation("Auto-created project category {CategoryName} from project payload", trimmed);
         return (created.Id, created.Name);
     }
 
@@ -177,7 +175,7 @@ public class ProjectCategoryService(AppDbContext db)
         db.ProjectCategories.AddRange(entities);
         await db.SaveChangesAsync();
 
-        Logger.LogInformation("Seeded {Count} project categories from projects data", entities.Count);
+        logger.LogInformation("Seeded {Count} project categories from projects data", entities.Count);
     }
 
     private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)
@@ -213,7 +211,7 @@ public class ProjectCategoryService(AppDbContext db)
 
         if (projects.Count > 0)
         {
-            Logger.LogInformation(
+            logger.LogInformation(
                 "Updated {Count} projects from category {PreviousCategoryName} to {NextCategoryName}",
                 projects.Count, previousName, nextName);
         }

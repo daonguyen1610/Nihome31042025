@@ -4,6 +4,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -15,7 +16,7 @@ public class NewsCategoryServiceTests : IDisposable
     public NewsCategoryServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new NewsCategoryService(_db);
+        _sut = new NewsCategoryService(_db, NullLogger<NewsCategoryService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

@@ -8,6 +8,7 @@ using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using System.Text.Json;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -19,7 +20,7 @@ public class ServicesControllerTests : IDisposable
     public ServicesControllerTests()
     {
         _db = DbContextFactory.Create();
-        var service = new ServiceItemService(_db);
+        var service = new ServiceItemService(_db, NullLogger<ServiceItemService>.Instance);
         _sut = new ServicesController(service);
     }
 

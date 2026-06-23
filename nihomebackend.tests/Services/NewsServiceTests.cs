@@ -9,6 +9,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -23,7 +24,7 @@ public class NewsServiceTests : IDisposable
         _db = DbContextFactory.Create();
         _translationSvc = new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions()));
         var hosted = new HostedImageService(Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp"));
-        _sut = new NewsService(_db, _translationSvc, hosted);
+        _sut = new NewsService(_db, _translationSvc, hosted, NullLogger<NewsService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

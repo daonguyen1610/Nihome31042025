@@ -1,6 +1,5 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -8,13 +7,10 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class RecruitmentDropdownOptionService(AppDbContext db)
+public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<RecruitmentDropdownOptionService> logger)
 {
     public const string TypeExperienceLevel = "experience-level";
     public const string TypeBenefit = "benefit";
-
-    private ILogger<RecruitmentDropdownOptionService> Logger =>
-        db.GetService<ILoggerFactory>().CreateLogger<RecruitmentDropdownOptionService>();
 
     public async Task<List<RecruitmentDropdownOptionResponse>> GetByTypeAsync(string type, bool includeInactive = false)
     {
@@ -53,7 +49,7 @@ public class RecruitmentDropdownOptionService(AppDbContext db)
 
         db.RecruitmentDropdownOptions.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created recruitment dropdown option {Id} ({Type}/{Code})", entity.Id, entity.Type, entity.Code);
+        logger.LogInformation("Created recruitment dropdown option {Id} ({Type}/{Code})", entity.Id, entity.Type, entity.Code);
         return MapToResponse(entity);
     }
 
@@ -76,7 +72,7 @@ public class RecruitmentDropdownOptionService(AppDbContext db)
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
-        Logger.LogInformation("Updated recruitment dropdown option {Id} ({Type}/{Code})", entity.Id, entity.Type, entity.Code);
+        logger.LogInformation("Updated recruitment dropdown option {Id} ({Type}/{Code})", entity.Id, entity.Type, entity.Code);
         return MapToResponse(entity);
     }
 
@@ -88,7 +84,7 @@ public class RecruitmentDropdownOptionService(AppDbContext db)
 
         db.RecruitmentDropdownOptions.Remove(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Deleted recruitment dropdown option {Id} ({Type}/{Code})", entity.Id, entity.Type, entity.Code);
+        logger.LogInformation("Deleted recruitment dropdown option {Id} ({Type}/{Code})", entity.Id, entity.Type, entity.Code);
         return true;
     }
 
@@ -127,12 +123,12 @@ public class RecruitmentDropdownOptionService(AppDbContext db)
         try
         {
             await db.SaveChangesAsync();
-            Logger.LogInformation("Seeded {Count} defaults for type {Type}", defaults.Length, type);
+            logger.LogInformation("Seeded {Count} defaults for type {Type}", defaults.Length, type);
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             db.ChangeTracker.Clear();
-            Logger.LogInformation("Skipped seeding {Type} options due to concurrent insert race.", type);
+            logger.LogInformation("Skipped seeding {Type} options due to concurrent insert race.", type);
         }
     }
 

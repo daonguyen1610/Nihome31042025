@@ -3,6 +3,7 @@ using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -14,7 +15,7 @@ public class EmploymentTypeServiceTests : IDisposable
     public EmploymentTypeServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new EmploymentTypeService(_db);
+        _sut = new EmploymentTypeService(_db, NullLogger<EmploymentTypeService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

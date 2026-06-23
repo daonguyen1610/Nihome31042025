@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -12,14 +11,14 @@ namespace NihomeBackend.Services;
 public class ActivityService(
     AppDbContext db,
     EntityTranslationService translationSvc,
-    HostedImageService hostedImageService)
+    HostedImageService hostedImageService,
+    ILogger<ActivityService> logger)
 {
-    private ILogger<ActivityService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ActivityService>();
 
     public async Task<List<ActivityResponse>> GetAllAsync(string lang = "vi")
     {
         var items = await db.Activities.AsNoTracking().OrderBy(a => a.SortOrder).ToListAsync();
-        Logger.LogDebug("Fetched {Count} activities (lang={Lang})", items.Count, lang);
+        logger.LogDebug("Fetched {Count} activities (lang={Lang})", items.Count, lang);
         var translations = await translationSvc.GetBatchTranslationsAsync(
             EntityTypes.Activity, items.Select(a => a.Id), lang);
 
@@ -35,12 +34,12 @@ public class ActivityService(
         var item = await db.Activities.AsNoTracking().FirstOrDefaultAsync(a => a.Slug == slug);
         if (item == null)
         {
-            Logger.LogWarning("Activity not found by slug {Slug}", slug);
+            logger.LogWarning("Activity not found by slug {Slug}", slug);
             return null;
         }
 
         var t = await translationSvc.GetEntityTranslationsAsync(EntityTypes.Activity, item.Id, lang);
-        Logger.LogDebug("Fetched activity {ActivityId} by slug {Slug} (lang={Lang})", item.Id, slug, lang);
+        logger.LogDebug("Fetched activity {ActivityId} by slug {Slug} (lang={Lang})", item.Id, slug, lang);
         return MapToResponse(item, t);
     }
 
@@ -65,7 +64,7 @@ public class ActivityService(
         };
         db.Activities.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created activity {ActivityId} (slug={Slug})", entity.Id, entity.Slug);
+        logger.LogInformation("Created activity {ActivityId} (slug={Slug})", entity.Id, entity.Slug);
         return MapToResponse(entity, new Dictionary<string, string>());
     }
 
@@ -74,7 +73,7 @@ public class ActivityService(
         var entity = await db.Activities.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update activity. Id {ActivityId} not found", id);
+            logger.LogWarning("Cannot update activity. Id {ActivityId} not found", id);
             return null;
         }
 
@@ -101,10 +100,10 @@ public class ActivityService(
         if (!string.Equals(previousImageUrl, entity.ImageUrl, StringComparison.OrdinalIgnoreCase))
         {
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
-            Logger.LogInformation("Updated activity {ActivityId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
+            logger.LogInformation("Updated activity {ActivityId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
         DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
-        Logger.LogInformation("Updated activity {ActivityId} (slug={Slug})", id, entity.Slug);
+        logger.LogInformation("Updated activity {ActivityId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity, new Dictionary<string, string>());
     }
 
@@ -113,7 +112,7 @@ public class ActivityService(
         var entity = await db.Activities.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete activity. Id {ActivityId} not found", id);
+            logger.LogWarning("Cannot delete activity. Id {ActivityId} not found", id);
             return false;
         }
         var imageUrl = entity.ImageUrl;
@@ -126,7 +125,7 @@ public class ActivityService(
             hostedImageService.DeleteIfManagedUpload(url);
         }
         await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.Activity, id);
-        Logger.LogInformation("Deleted activity {ActivityId}", id);
+        logger.LogInformation("Deleted activity {ActivityId}", id);
         return true;
     }
 
@@ -232,7 +231,7 @@ public class ActivityService(
         };
         db.ActivityCategories.Add(created);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Auto-created activity category {CategoryName} from activity payload", normalizedName);
+        logger.LogInformation("Auto-created activity category {CategoryName} from activity payload", normalizedName);
         return (created.Id, created.Name);
     }
 }

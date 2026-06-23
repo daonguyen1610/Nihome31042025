@@ -9,6 +9,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -23,7 +24,7 @@ public class ActivityServiceCrudTests : IDisposable
         _db = DbContextFactory.Create();
         _translationSvc = new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions()));
         var hosted = new HostedImageService(Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp"));
-        _sut = new ActivityService(_db, _translationSvc, hosted);
+        _sut = new ActivityService(_db, _translationSvc, hosted, NullLogger<ActivityService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

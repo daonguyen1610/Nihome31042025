@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -8,14 +7,13 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ServiceItemService(AppDbContext db)
+public class ServiceItemService(AppDbContext db, ILogger<ServiceItemService> logger)
 {
-    private ILogger<ServiceItemService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ServiceItemService>();
 
     public async Task<List<ServiceResponse>> GetAllAsync()
     {
         var items = await db.ServiceItems.AsNoTracking().OrderBy(s => s.SortOrder).ToListAsync();
-        Logger.LogDebug("Fetched {Count} service items", items.Count);
+        logger.LogDebug("Fetched {Count} service items", items.Count);
         return items.Select(MapToResponse).ToList();
     }
 
@@ -24,7 +22,7 @@ public class ServiceItemService(AppDbContext db)
         var item = await db.ServiceItems.AsNoTracking().FirstOrDefaultAsync(s => s.Slug == slug);
         if (item == null)
         {
-            Logger.LogWarning("Service item not found by slug {Slug}", slug);
+            logger.LogWarning("Service item not found by slug {Slug}", slug);
         }
         return item == null ? null : MapToResponse(item);
     }
@@ -45,7 +43,7 @@ public class ServiceItemService(AppDbContext db)
         };
         db.ServiceItems.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created service item {ServiceItemId} (slug={Slug})", entity.Id, entity.Slug);
+        logger.LogInformation("Created service item {ServiceItemId} (slug={Slug})", entity.Id, entity.Slug);
         return MapToResponse(entity);
     }
 
@@ -54,7 +52,7 @@ public class ServiceItemService(AppDbContext db)
         var entity = await db.ServiceItems.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update service item. Id {ServiceItemId} not found", id);
+            logger.LogWarning("Cannot update service item. Id {ServiceItemId} not found", id);
             return null;
         }
 
@@ -70,7 +68,7 @@ public class ServiceItemService(AppDbContext db)
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
-        Logger.LogInformation("Updated service item {ServiceItemId} (slug={Slug})", id, entity.Slug);
+        logger.LogInformation("Updated service item {ServiceItemId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity);
     }
 
@@ -79,12 +77,12 @@ public class ServiceItemService(AppDbContext db)
         var entity = await db.ServiceItems.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete service item. Id {ServiceItemId} not found", id);
+            logger.LogWarning("Cannot delete service item. Id {ServiceItemId} not found", id);
             return false;
         }
         db.ServiceItems.Remove(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Deleted service item {ServiceItemId}", id);
+        logger.LogInformation("Deleted service item {ServiceItemId}", id);
         return true;
     }
 

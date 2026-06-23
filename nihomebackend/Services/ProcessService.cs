@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -9,7 +8,7 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
+public class ProcessService(AppDbContext db, ILogger<ProcessService> logger, IWebHostEnvironment? env = null)
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
 
@@ -28,12 +27,11 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
         return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
     }
 
-    private ILogger<ProcessService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProcessService>();
 
     public async Task<Dictionary<string, List<ProcessResponse>>> GetAllGroupedAsync()
     {
         var all = await db.ProcessDocuments.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync();
-        Logger.LogDebug("Fetched {Count} process documents", all.Count);
+        logger.LogDebug("Fetched {Count} process documents", all.Count);
         return all.GroupBy(p => p.GroupKey)
             .ToDictionary(g => g.Key, g => g.Select(MapToResponse).ToList());
     }
@@ -51,7 +49,7 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
         };
         db.ProcessDocuments.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created process document {ProcessId} (group={GroupKey}, code={Code})", entity.Id, entity.GroupKey, entity.Code);
+        logger.LogInformation("Created process document {ProcessId} (group={GroupKey}, code={Code})", entity.Id, entity.GroupKey, entity.Code);
         return MapToResponse(entity);
     }
 
@@ -60,7 +58,7 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
         var entity = await db.ProcessDocuments.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update process document. Id {ProcessId} not found", id);
+            logger.LogWarning("Cannot update process document. Id {ProcessId} not found", id);
             return null;
         }
 
@@ -72,7 +70,7 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
         entity.FilesJson = SerializeAssets(req.Files);
 
         await db.SaveChangesAsync();
-        Logger.LogInformation("Updated process document {ProcessId}", id);
+        logger.LogInformation("Updated process document {ProcessId}", id);
         return MapToResponse(entity);
     }
 
@@ -81,12 +79,12 @@ public class ProcessService(AppDbContext db, IWebHostEnvironment? env = null)
         var entity = await db.ProcessDocuments.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete process document. Id {ProcessId} not found", id);
+            logger.LogWarning("Cannot delete process document. Id {ProcessId} not found", id);
             return false;
         }
         db.ProcessDocuments.Remove(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Deleted process document {ProcessId}", id);
+        logger.LogInformation("Deleted process document {ProcessId}", id);
         return true;
     }
 

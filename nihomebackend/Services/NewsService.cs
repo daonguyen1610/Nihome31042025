@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -12,14 +11,14 @@ namespace NihomeBackend.Services;
 public class NewsService(
     AppDbContext db,
     EntityTranslationService translationSvc,
-    HostedImageService hostedImageService)
+    HostedImageService hostedImageService,
+    ILogger<NewsService> logger)
 {
-    private ILogger<NewsService> Logger => db.GetService<ILoggerFactory>().CreateLogger<NewsService>();
 
     public async Task<List<NewsResponse>> GetAllAsync(string lang = "vi")
     {
         var items = await db.NewsArticles.AsNoTracking().OrderBy(a => a.SortOrder).ToListAsync();
-        Logger.LogDebug("Fetched {Count} news articles (lang={Lang})", items.Count, lang);
+        logger.LogDebug("Fetched {Count} news articles (lang={Lang})", items.Count, lang);
         var translations = await translationSvc.GetBatchTranslationsAsync(
             EntityTypes.News, items.Select(a => a.Id), lang);
 
@@ -35,12 +34,12 @@ public class NewsService(
         var item = await db.NewsArticles.AsNoTracking().FirstOrDefaultAsync(a => a.Slug == slug);
         if (item == null)
         {
-            Logger.LogWarning("News not found by slug {Slug}", slug);
+            logger.LogWarning("News not found by slug {Slug}", slug);
             return null;
         }
 
         var t = await translationSvc.GetEntityTranslationsAsync(EntityTypes.News, item.Id, lang);
-        Logger.LogDebug("Fetched news {NewsId} by slug {Slug} (lang={Lang})", item.Id, slug, lang);
+        logger.LogDebug("Fetched news {NewsId} by slug {Slug} (lang={Lang})", item.Id, slug, lang);
         return MapToResponse(item, t);
     }
 
@@ -63,7 +62,7 @@ public class NewsService(
         };
         db.NewsArticles.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created news article {NewsId} (slug={Slug})", entity.Id, entity.Slug);
+        logger.LogInformation("Created news article {NewsId} (slug={Slug})", entity.Id, entity.Slug);
         return MapToResponse(entity, new Dictionary<string, string>());
     }
 
@@ -72,7 +71,7 @@ public class NewsService(
         var entity = await db.NewsArticles.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update news. Id {NewsId} not found", id);
+            logger.LogWarning("Cannot update news. Id {NewsId} not found", id);
             return null;
         }
 
@@ -97,10 +96,10 @@ public class NewsService(
         if (!string.Equals(previousImageUrl, entity.ImageUrl, StringComparison.OrdinalIgnoreCase))
         {
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
-            Logger.LogInformation("Updated news {NewsId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
+            logger.LogInformation("Updated news {NewsId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
         DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
-        Logger.LogInformation("Updated news article {NewsId} (slug={Slug})", id, entity.Slug);
+        logger.LogInformation("Updated news article {NewsId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity, new Dictionary<string, string>());
     }
 
@@ -109,7 +108,7 @@ public class NewsService(
         var entity = await db.NewsArticles.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete news. Id {NewsId} not found", id);
+            logger.LogWarning("Cannot delete news. Id {NewsId} not found", id);
             return false;
         }
         var imageUrl = entity.ImageUrl;
@@ -122,7 +121,7 @@ public class NewsService(
             hostedImageService.DeleteIfManagedUpload(url);
         }
         await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.News, id);
-        Logger.LogInformation("Deleted news article {NewsId}", id);
+        logger.LogInformation("Deleted news article {NewsId}", id);
         return true;
     }
 
@@ -227,7 +226,7 @@ public class NewsService(
         };
         db.NewsCategories.Add(created);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Auto-created news category {CategoryName} from news payload", normalizedName);
+        logger.LogInformation("Auto-created news category {CategoryName} from news payload", normalizedName);
         return (created.Id, created.Name);
     }
 }
