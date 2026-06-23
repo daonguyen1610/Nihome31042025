@@ -17,35 +17,38 @@ public class JobPositionService(
 
     public async Task<List<JobPositionResponse>> GetAllAsync(bool includeInactive = false, string lang = "vi")
     {
-        var query = db.JobPositions
-            .AsNoTracking()
-            .Include(j => j.Applications);
+        var query = db.JobPositions.AsNoTracking();
+        if (!includeInactive)
+        {
+            query = query.Where(j => j.IsActive);
+        }
 
-        var items = await (includeInactive
-            ? query.OrderBy(j => j.SortOrder).ThenBy(j => j.Title)
-            : query.Where(j => j.IsActive).OrderBy(j => j.SortOrder).ThenBy(j => j.Title))
+        var items = await query
+            .OrderBy(j => j.SortOrder).ThenBy(j => j.Title)
+            .Select(j => new { Position = j, ApplicationCount = j.Applications.Count() })
             .ToListAsync();
 
         var translations = await translationSvc.GetBatchTranslationsAsync(
-            EntityTypes.JobPosition, items.Select(j => j.Id), lang);
+            EntityTypes.JobPosition, items.Select(x => x.Position.Id), lang);
 
-        return items.Select(j =>
+        return items.Select(x =>
         {
-            var t = translations.GetValueOrDefault(j.Id, new Dictionary<string, string>());
-            return MapToResponse(j, t);
+            var t = translations.GetValueOrDefault(x.Position.Id, new Dictionary<string, string>());
+            return MapToResponse(x.Position, t, x.ApplicationCount);
         }).ToList();
     }
 
     public async Task<JobPositionResponse?> GetByIdAsync(int id, string lang = "vi")
     {
-        var entity = await db.JobPositions
+        var row = await db.JobPositions
             .AsNoTracking()
-            .Include(j => j.Applications)
-            .FirstOrDefaultAsync(j => j.Id == id);
-        if (entity == null) return null;
+            .Where(j => j.Id == id)
+            .Select(j => new { Position = j, ApplicationCount = j.Applications.Count() })
+            .FirstOrDefaultAsync();
+        if (row == null) return null;
 
         var t = await translationSvc.GetEntityTranslationsAsync(EntityTypes.JobPosition, id, lang);
-        return MapToResponse(entity, t);
+        return MapToResponse(row.Position, t, row.ApplicationCount);
     }
 
     public async Task<JobPositionResponse> CreateAsync(UpsertJobPositionRequest req)
@@ -69,7 +72,7 @@ public class JobPositionService(
 
         db.JobPositions.Add(entity);
         await db.SaveChangesAsync();
-        return MapToResponse(entity, new Dictionary<string, string>());
+        return MapToResponse(entity, new Dictionary<string, string>(), applicationCount: 0);
     }
 
     public async Task<JobPositionResponse?> UpdateAsync(int id, UpsertJobPositionRequest req)
@@ -93,7 +96,7 @@ public class JobPositionService(
         entity.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
-        return MapToResponse(entity, new Dictionary<string, string>());
+        return MapToResponse(entity, new Dictionary<string, string>(), applicationCount: 0);
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -107,7 +110,7 @@ public class JobPositionService(
         return true;
     }
 
-    private static JobPositionResponse MapToResponse(JobPosition j, Dictionary<string, string> t)
+    private static JobPositionResponse MapToResponse(JobPosition j, Dictionary<string, string> t, int applicationCount)
     {
         List<string> reqs;
         try
@@ -136,7 +139,7 @@ public class JobPositionService(
             Benefits = benefits,
             IsActive = j.IsActive,
             SortOrder = j.SortOrder,
-            ApplicationCount = j.Applications?.Count ?? 0,
+            ApplicationCount = applicationCount,
         };
     }
 }
