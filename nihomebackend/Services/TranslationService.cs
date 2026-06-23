@@ -95,23 +95,24 @@ public class TranslationService(AppDbContext db, IMemoryCache cache)
     public async Task BulkUpsertAsync(List<BulkTranslationItem> items)
     {
         var now = DateTime.UtcNow;
-        var existingKeys = (await db.Translations
-            .Select(t => t.Key + "_" + t.LanguageCode)
-            .ToListAsync())
-            .ToHashSet();
+        var itemKeys = items.Select(i => i.Key).Distinct().ToList();
+        var itemLangs = items.Select(i => i.LanguageCode).Distinct().ToList();
+
+        var existing = await db.Translations
+            .Where(t => itemKeys.Contains(t.Key) && itemLangs.Contains(t.LanguageCode))
+            .ToDictionaryAsync(t => (t.Key, t.LanguageCode));
 
         foreach (var item in items)
         {
-            var compositeKey = item.Key + "_" + item.LanguageCode;
-            if (existingKeys.Contains(compositeKey))
+            if (existing.TryGetValue((item.Key, item.LanguageCode), out var row))
             {
-                var row = await db.Translations.FirstOrDefaultAsync(
-                    t => t.Key == item.Key && t.LanguageCode == item.LanguageCode);
-                if (row != null) { row.Value = item.Value; row.Category = item.Category; row.UpdatedAt = now; }
+                row.Value = item.Value;
+                row.Category = item.Category;
+                row.UpdatedAt = now;
             }
             else
             {
-                db.Translations.Add(new Translation
+                var newRow = new Translation
                 {
                     Key = item.Key,
                     LanguageCode = item.LanguageCode,
@@ -119,8 +120,9 @@ public class TranslationService(AppDbContext db, IMemoryCache cache)
                     Category = item.Category,
                     CreatedAt = now,
                     UpdatedAt = now,
-                });
-                existingKeys.Add(compositeKey);
+                };
+                db.Translations.Add(newRow);
+                existing[(item.Key, item.LanguageCode)] = newRow;
             }
         }
 
