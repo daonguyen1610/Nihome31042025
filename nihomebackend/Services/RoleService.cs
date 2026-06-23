@@ -19,22 +19,49 @@ public sealed class RoleService(
 
     public async Task<List<RoleResponse>> ListRolesAsync(CancellationToken ct = default)
     {
-        return await db.Roles.AsNoTracking()
+        var roles = await db.Roles.AsNoTracking()
             .OrderByDescending(r => r.IsSystem)
             .ThenBy(r => r.Code)
-            .Select(r => new RoleResponse
+            .Select(r => new
             {
-                Id = r.Id,
-                Code = r.Code,
-                Name = r.Name,
-                LabelKey = r.LabelKey,
-                DescriptionKey = r.DescriptionKey,
-                IsSystem = r.IsSystem,
-                IsActive = r.IsActive,
-                UserCount = db.Users.Count(u => u.RoleEntityId == r.Id),
-                PermissionCount = db.RolePermissions.Count(rp => rp.RoleId == r.Id),
+                r.Id,
+                r.Code,
+                r.Name,
+                r.LabelKey,
+                r.DescriptionKey,
+                r.IsSystem,
+                r.IsActive,
             })
             .ToListAsync(ct);
+
+        if (roles.Count == 0) return [];
+
+        var ids = roles.Select(r => r.Id).ToList();
+
+        var userCounts = await db.Users.AsNoTracking()
+            .Where(u => u.RoleEntityId != null && ids.Contains(u.RoleEntityId.Value))
+            .GroupBy(u => u.RoleEntityId!.Value)
+            .Select(g => new { RoleId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
+
+        var permCounts = await db.RolePermissions.AsNoTracking()
+            .Where(rp => ids.Contains(rp.RoleId))
+            .GroupBy(rp => rp.RoleId)
+            .Select(g => new { RoleId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
+
+        return roles.Select(r => new RoleResponse
+        {
+            Id = r.Id,
+            Code = r.Code,
+            Name = r.Name,
+            LabelKey = r.LabelKey,
+            DescriptionKey = r.DescriptionKey,
+            IsSystem = r.IsSystem,
+            IsActive = r.IsActive,
+            UserCount = userCounts.GetValueOrDefault(r.Id, 0),
+            PermissionCount = permCounts.GetValueOrDefault(r.Id, 0),
+        }).ToList();
     }
 
     public async Task<RoleResponse?> GetRoleAsync(int id, CancellationToken ct = default)
