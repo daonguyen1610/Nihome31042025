@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Mappings;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 using Xunit;
 
 namespace nihomebackend.tests.Mappings;
@@ -71,5 +72,53 @@ public class AutoMapperProfileTests
         Assert.Equal(string.Empty, response.AccessToken);
         Assert.Equal(string.Empty, response.RefreshToken);
         Assert.False(response.OtpRequired);
+    }
+
+    [Fact]
+    public void Map_ApplicationUser_ToAuthResponse_UsesRbacCodeWhenRoleEntityLinked()
+    {
+        var user = new ApplicationUser
+        {
+            Id = 7,
+            PhoneNumber = "0900000007",
+            PasswordHash = "hashed",
+            // Mirror enum says USER (which is what a custom-role user has after
+            // UserService.CreateAsync); the canonical role is the linked entity.
+            Role = UserRole.USER,
+            RoleEntityId = 42,
+            RoleEntity = new Role
+            {
+                Id = 42,
+                Code = "PROJECT_MANAGER",
+                Name = "Project Manager",
+                IsSystem = false,
+                IsActive = true,
+            },
+        };
+
+        var response = _mapper.Map<AuthResponse>(user);
+
+        // The canonical RBAC code takes precedence over the legacy enum so the
+        // frontend can route / gate by the actual role assignment.
+        Assert.Equal("PROJECT_MANAGER", response.Role);
+        Assert.Equal(42, response.RoleId);
+    }
+
+    [Fact]
+    public void Map_ApplicationUser_ToAuthResponse_FallsBackToEnumWhenRoleEntityMissing()
+    {
+        var user = new ApplicationUser
+        {
+            Id = 8,
+            PhoneNumber = "0900000008",
+            PasswordHash = "hashed",
+            Role = UserRole.ADMIN,
+            RoleEntityId = null, // legacy user not yet backfilled
+        };
+
+        var response = _mapper.Map<AuthResponse>(user);
+
+        Assert.Equal("ADMIN", response.Role);
+        Assert.Null(response.RoleId);
     }
 }

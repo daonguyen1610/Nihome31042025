@@ -33,7 +33,10 @@ public class MeController(
     public async Task<ActionResult<MeResponse>> GetMe()
     {
         var userId = GetCurrentUserId();
-        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        var user = await db.Users
+            .AsNoTracking()
+            .Include(u => u.RoleEntity)
+            .FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null) return NotFound();
         return Ok(MapMe(user));
     }
@@ -67,7 +70,9 @@ public class MeController(
         var fp = fingerprint.Compute(HttpContext);
         var userId = GetCurrentUserId();
 
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+        var user = await db.Users
+            .Include(u => u.RoleEntity)
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user == null) return NotFound();
 
         if (req.Email != null)
@@ -262,7 +267,11 @@ public class MeController(
         PhoneNumber = u.PhoneNumber,
         FullName = u.FullName,
         Email = u.Email,
-        Role = u.Role.ToString(),
+        // Canonical RBAC code (custom business roles included) when the user is
+        // linked to a role row. Legacy users without RoleEntityId still get
+        // their enum code via the mapper.
+        Role = u.RoleEntity != null ? u.RoleEntity.Code : UserRoleCodeMapper.ToCode(u.Role),
+        RoleId = u.RoleEntityId,
         IsActive = u.IsActive,
         AvatarUrl = u.AvatarUrl,
     };
@@ -292,7 +301,17 @@ public class MeResponse
     public string PhoneNumber { get; set; } = string.Empty;
     public string? FullName { get; set; }
     public string? Email { get; set; }
+
+    /// <summary>
+    /// Canonical RBAC role code for the user (e.g. <c>ADMIN</c>,
+    /// <c>PROJECT_MANAGER</c>). Falls back to the legacy enum string for users
+    /// not yet linked to the <c>roles</c> table.
+    /// </summary>
     public string Role { get; set; } = string.Empty;
+
+    /// <summary>RBAC role id. Null only for legacy users not yet backfilled.</summary>
+    public int? RoleId { get; set; }
+
     public bool IsActive { get; set; }
     public string? AvatarUrl { get; set; }
 }
