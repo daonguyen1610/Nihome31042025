@@ -6,7 +6,20 @@ public class UserListItemResponse
     public string PhoneNumber { get; set; } = string.Empty;
     public string? FullName { get; set; }
     public string? Email { get; set; }
+
+    /// <summary>
+    /// Canonical RBAC role code (e.g. <c>SUPER_ADMIN</c>, <c>ADMIN</c>, <c>USER</c>,
+    /// or any custom business role like <c>PROJECT_MANAGER</c>). For legacy users
+    /// not yet linked to the <c>roles</c> table this falls back to the enum string.
+    /// </summary>
     public string Role { get; set; } = string.Empty;
+
+    /// <summary>RBAC role id. Null only for legacy users not yet backfilled.</summary>
+    public int? RoleId { get; set; }
+
+    /// <summary>Human-readable role name from the <c>roles</c> table. Null for legacy users.</summary>
+    public string? RoleName { get; set; }
+
     public bool IsActive { get; set; }
     public string? AvatarUrl { get; set; }
 }
