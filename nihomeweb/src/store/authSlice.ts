@@ -10,7 +10,10 @@ export interface AuthUser {
   phoneNumber: string;
   fullName: string;
   email?: string;
+  /** Canonical RBAC role code (system or custom business code). */
   role: string;
+  /** RBAC role id. Null only for legacy users not yet backfilled. */
+  roleId?: number | null;
   isActive: boolean;
   avatarUrl?: string;
 }
@@ -74,6 +77,7 @@ function userFromAuth(r: AuthResponse): AuthUser {
     fullName: r.fullName,
     email: r.email,
     role: r.role,
+    roleId: r.roleId,
     isActive: r.isActive,
     avatarUrl: r.avatarUrl,
   };

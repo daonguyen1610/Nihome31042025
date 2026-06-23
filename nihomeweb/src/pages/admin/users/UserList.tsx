@@ -8,11 +8,11 @@ import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
   type CreateUserRequest,
-  type RoleCatalogResponse,
   type UpdateUserRequest,
   type UserDetailResponse,
   type UserListItemResponse,
 } from "@/services/adminApi";
+import { rbacApi, type RoleResponse } from "@/services/rbacApi";
 import { newIdempotencyKey } from "@/lib/api";
 import UserFormModal from "./UserFormModal";
 
@@ -48,7 +48,9 @@ export default function UserList() {
   const { toast } = useToast();
   const [items, setItems] = useState<UserListItemResponse[]>([]);
   const [total, setTotal] = useState(0);
-  const [catalog, setCatalog] = useState<RoleCatalogResponse | null>(null);
+  // Full RBAC catalog (system + custom). Inactive roles are filtered out below
+  // before being handed to the form so the dropdown only shows assignable roles.
+  const [allRoles, setAllRoles] = useState<RoleResponse[]>([]);
   const [searchText, setSearchText] = useState("");
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
@@ -60,13 +62,20 @@ export default function UserList() {
   const [submitting, setSubmitting] = useState(false);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
 
-  const roles = useMemo(() => catalog?.roles ?? [], [catalog]);
+  const roles = useMemo(() => allRoles.filter((item) => item.isActive), [allRoles]);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const roleLabelMap = useMemo(
-    () => new Map(roles.map((item) => [item.role, t(item.labelKey)])),
-    [roles, t],
-  );
+  // Build a code -> display label map for the user-list role chip. Prefer the
+  // backend-supplied translation key (if it resolves) over the raw name, so
+  // localized labels still work for the seeded system roles.
+  const roleLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const role of allRoles) {
+      const translated = role.labelKey ? t(role.labelKey) : undefined;
+      map.set(role.code, translated && translated !== role.labelKey ? translated : role.name);
+    }
+    return map;
+  }, [allRoles, t]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -79,11 +88,11 @@ export default function UserList() {
           search: search || undefined,
           role: role || undefined,
         }),
-        adminApi.getUserRoles(),
+        rbacApi.listRoles(),
       ]);
       setItems(usersRes.data.items);
       setTotal(usersRes.data.total);
-      setCatalog(rolesRes.data);
+      setAllRoles(rolesRes.data);
     } catch (err) {
       setError(getErrorMessage(err) ?? t("common.error"));
     } finally {
@@ -203,8 +212,8 @@ export default function UserList() {
           >
             <option value="">{t("adminUsers.allRoles")}</option>
             {roles.map((item) => (
-              <option key={item.role} value={item.role}>
-                {t(item.labelKey)}
+              <option key={item.code} value={item.code}>
+                {roleLabelMap.get(item.code) ?? item.name}
               </option>
             ))}
           </select>

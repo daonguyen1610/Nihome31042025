@@ -314,14 +314,25 @@ export interface ContactMessageResponse {
   createdAt: string;
 }
 
-export type UserRole = "SUPER_ADMIN" | "ADMIN" | "USER";
+/**
+ * RBAC role code. Historically restricted to the three system codes
+ * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
+ * (custom business roles included) is valid. Typed as `string` to allow
+ * arbitrary catalog values while keeping autocomplete on the system codes.
+ */
+export type UserRole = (string & {}) | "SUPER_ADMIN" | "ADMIN" | "USER";
 
 export interface UserListItemResponse {
   id: number;
   phoneNumber: string;
   fullName?: string;
   email?: string;
+  /** Canonical RBAC role code. Falls back to the legacy enum for legacy users. */
   role: UserRole;
+  /** RBAC role id. Null only for legacy users not yet backfilled. */
+  roleId?: number | null;
+  /** Human-readable role name from the `roles` table. Null for legacy users. */
+  roleName?: string | null;
   isActive: boolean;
   avatarUrl?: string;
 }

@@ -13,7 +13,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
-import { useAppSelector } from "@/store";
+import { usePermissions } from "@/hooks/usePermissions";
 import { adminApi, type AuditLogItem, type AuditLogPage } from "@/services/adminApi";
 
 type RetentionUnit = "minutes" | "hours" | "days";
@@ -159,8 +159,12 @@ const DetailDrawer = ({ item, onClose }: { item: AuditLogItem; onClose: () => vo
 
 const ActivityLog = () => {
   const { t } = useI18n();
-  const user = useAppSelector((state) => state.auth.user);
-  const isSuperAdmin = user?.role?.toUpperCase() === "SUPER_ADMIN";
+  // Permission-based gate: any role granted system.audit.manage can mutate
+  // audit data. Previously hardcoded to SUPER_ADMIN by string match, which
+  // locked out custom business roles even when explicitly granted the
+  // permission via the RBAC matrix.
+  const { has: hasPermission } = usePermissions();
+  const canManageAudit = hasPermission("system.audit.manage");
 
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -236,7 +240,7 @@ const ActivityLog = () => {
   };
 
   const onDeleteOne = async (id: number) => {
-    if (!isSuperAdmin) return;
+    if (!canManageAudit) return;
     if (!window.confirm(t("form.confirmDelete"))) return;
     try {
       await adminApi.deleteAuditLog(id);
@@ -248,7 +252,7 @@ const ActivityLog = () => {
   };
 
   const onClearBefore = async () => {
-    if (!isSuperAdmin) return;
+    if (!canManageAudit) return;
     if (!from) { toast.error(t("log.selectBefore")); return; }
     if (!window.confirm(t("log.confirmClearBefore"))) return;
     try {
@@ -261,7 +265,7 @@ const ActivityLog = () => {
   };
 
   const onSaveConfig = async () => {
-    if (!isSuperAdmin) return;
+    if (!canManageAudit) return;
     const minutes = toMinutes(retentionValue, retentionUnit);
     setSavingConfig(true);
     try {
@@ -296,7 +300,7 @@ const ActivityLog = () => {
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             {t("common.refresh")}
           </button>
-          {isSuperAdmin && (
+          {canManageAudit && (
             <button onClick={onClearBefore} className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl" style={{ background: "hsl(var(--admin-danger))", color: "white" }}>
               <Eraser className="w-4 h-4" /> {t("log.clearBefore")}
             </button>
@@ -304,7 +308,7 @@ const ActivityLog = () => {
         </div>
       </div>
 
-      {isSuperAdmin && (
+      {canManageAudit && (
         <div data-testid="audit-log-retention-card" className="admin-card p-5 mb-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-lg">{t("log.retentionConfig")}</h2>
@@ -437,7 +441,7 @@ const ActivityLog = () => {
                     <button onClick={() => setSelected(l)} className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-muted mr-1">
                       <Eye className="w-3.5 h-3.5" /> {t("common.view")}
                     </button>
-                    {isSuperAdmin && (
+                    {canManageAudit && (
                       <button onClick={() => onDeleteOne(l.id)} className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-muted" style={{ color: "hsl(var(--admin-danger))" }}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
