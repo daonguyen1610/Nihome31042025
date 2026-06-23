@@ -10,6 +10,7 @@ using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -28,7 +29,7 @@ public class SlideshowControllerTests : IDisposable
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
 
-        _service = new SlideshowService(_db, entityTranslationSvc, hostedImageService);
+        _service = new SlideshowService(_db, entityTranslationSvc, hostedImageService, NullLogger<SlideshowService>.Instance);
         _sut = new SlideshowController(_service);
     }
 

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,14 +6,13 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class LogoService(AppDbContext db, HostedImageService hostedImageService)
+public class LogoService(AppDbContext db, HostedImageService hostedImageService, ILogger<LogoService> logger)
 {
-    private ILogger<LogoService> Logger => db.GetService<ILoggerFactory>().CreateLogger<LogoService>();
 
     public async Task<LogosGroupedResponse> GetAllGroupedAsync()
     {
         var all = await db.ClientLogos.AsNoTracking().OrderBy(l => l.SortOrder).ToListAsync();
-        Logger.LogDebug("Fetched {Count} logos", all.Count);
+        logger.LogDebug("Fetched {Count} logos", all.Count);
         return new LogosGroupedResponse
         {
             Clients = all.Where(l => l.Kind == LogoKind.Client).Select(MapToResponse).ToArray(),
@@ -37,7 +35,7 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
         };
         db.ClientLogos.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created logo {LogoId} ({Name})", entity.Id, entity.Name);
+        logger.LogInformation("Created logo {LogoId} ({Name})", entity.Id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -46,7 +44,7 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
         var entity = await db.ClientLogos.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update logo. Id {LogoId} not found", id);
+            logger.LogWarning("Cannot update logo. Id {LogoId} not found", id);
             return null;
         }
 
@@ -63,9 +61,9 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
         if (!string.Equals(previousImageUrl, entity.ImageUrl, StringComparison.OrdinalIgnoreCase))
         {
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
-            Logger.LogInformation("Updated logo {LogoId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
+            logger.LogInformation("Updated logo {LogoId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
-        Logger.LogInformation("Updated logo {LogoId} ({Name})", id, entity.Name);
+        logger.LogInformation("Updated logo {LogoId} ({Name})", id, entity.Name);
         return MapToResponse(entity);
     }
 
@@ -74,14 +72,14 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService)
         var entity = await db.ClientLogos.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete logo. Id {LogoId} not found", id);
+            logger.LogWarning("Cannot delete logo. Id {LogoId} not found", id);
             return false;
         }
         var imageUrl = entity.ImageUrl;
         db.ClientLogos.Remove(entity);
         await db.SaveChangesAsync();
         hostedImageService.DeleteIfManagedUpload(imageUrl);
-        Logger.LogInformation("Deleted logo {LogoId}", id);
+        logger.LogInformation("Deleted logo {LogoId}", id);
         return true;
     }
 

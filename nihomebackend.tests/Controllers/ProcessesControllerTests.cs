@@ -22,7 +22,7 @@ public class ProcessesControllerTests : IDisposable
     {
         _db = DbContextFactory.Create();
         var env = Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp");
-        var service = new ProcessService(_db, env);
+        var service = new ProcessService(_db, NullLogger<ProcessService>.Instance, env);
         _sut = new ProcessesController(service, env, new NoOpAuditLogger(), NullLogger<ProcessesController>.Instance);
     }
 

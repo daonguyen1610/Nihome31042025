@@ -10,6 +10,7 @@ using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -28,7 +29,7 @@ public class ActivitiesControllerTests : IDisposable
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
 
-        _service = new ActivityService(_db, entityTranslationSvc, hostedImageService);
+        _service = new ActivityService(_db, entityTranslationSvc, hostedImageService, NullLogger<ActivityService>.Instance);
         _sut = new ActivitiesController(_service, new NoOpNotificationService());
     }
 

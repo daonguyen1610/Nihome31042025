@@ -5,6 +5,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -20,7 +21,7 @@ public class ProcessServiceTests : IDisposable
         _tmpRoot = Path.Combine(Path.GetTempPath(), "nihome-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(_tmpRoot, "wwwroot", "files"));
         var env = Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == _tmpRoot);
-        _sut = new ProcessService(_db, env);
+        _sut = new ProcessService(_db, NullLogger<ProcessService>.Instance, env);
     }
 
     public void Dispose()

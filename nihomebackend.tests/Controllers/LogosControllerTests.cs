@@ -9,6 +9,7 @@ using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -22,7 +23,7 @@ public class LogosControllerTests : IDisposable
         _db = DbContextFactory.Create();
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var service = new LogoService(_db, hostedImageService);
+        var service = new LogoService(_db, hostedImageService, NullLogger<LogoService>.Instance);
         _sut = new LogosController(service);
     }
 

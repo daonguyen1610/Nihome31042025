@@ -7,6 +7,7 @@ using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -19,7 +20,7 @@ public class ProjectCategoriesControllerTests : IDisposable
     public ProjectCategoriesControllerTests()
     {
         _db = DbContextFactory.Create();
-        _service = new ProjectCategoryService(_db);
+        _service = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
         _sut = new ProjectCategoriesController(_service);
     }
 

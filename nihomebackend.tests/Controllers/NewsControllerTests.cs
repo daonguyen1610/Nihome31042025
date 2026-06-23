@@ -10,6 +10,7 @@ using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -25,7 +26,7 @@ public class NewsControllerTests : IDisposable
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var service = new NewsService(_db, entityTranslationSvc, hostedImageService);
+        var service = new NewsService(_db, entityTranslationSvc, hostedImageService, NullLogger<NewsService>.Instance);
         _sut = new NewsController(service, new NoOpAuditLogger(), new NoOpNotificationService());
     }
 
@@ -238,7 +239,7 @@ public class NewsControllerTests : IDisposable
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var newsSvc = new NewsService(_db, entityTranslationSvc, hostedImageService);
+        var newsSvc = new NewsService(_db, entityTranslationSvc, hostedImageService, NullLogger<NewsService>.Instance);
         var sut = new NewsController(newsSvc, new NoOpAuditLogger(), notificationSvc);
 
         var req = new UpsertNewsRequest

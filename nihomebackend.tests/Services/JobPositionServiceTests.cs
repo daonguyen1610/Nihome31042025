@@ -5,6 +5,7 @@ using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -16,7 +17,7 @@ public class JobPositionServiceTests : IDisposable
     public JobPositionServiceTests()
     {
         _db = DbContextFactory.Create();
-        var employmentTypeService = new EmploymentTypeService(_db);
+        var employmentTypeService = new EmploymentTypeService(_db, NullLogger<EmploymentTypeService>.Instance);
         var translationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         _sut = new JobPositionService(_db, employmentTypeService, translationSvc);
     }

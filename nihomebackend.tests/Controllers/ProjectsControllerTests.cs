@@ -13,6 +13,7 @@ using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -27,8 +28,8 @@ public class ProjectsControllerTests : IDisposable
 
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var categoryService = new ProjectCategoryService(_db);
-        var service = new ProjectService(_db, hostedImageService, categoryService);
+        var categoryService = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
+        var service = new ProjectService(_db, hostedImageService, categoryService, NullLogger<ProjectService>.Instance);
         _sut = new ProjectsController(service, new NoOpAuditLogger(), new NoOpNotificationService());
     }
 
@@ -293,8 +294,8 @@ public class ProjectsControllerTests : IDisposable
         var notificationSvc = new NotificationService(_db);
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var categoryService = new ProjectCategoryService(_db);
-        var projectSvc = new ProjectService(_db, hostedImageService, categoryService);
+        var categoryService = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
+        var projectSvc = new ProjectService(_db, hostedImageService, categoryService, NullLogger<ProjectService>.Instance);
         var sut = new ProjectsController(projectSvc, new NoOpAuditLogger(), notificationSvc);
 
         var req = new UpsertProjectRequest

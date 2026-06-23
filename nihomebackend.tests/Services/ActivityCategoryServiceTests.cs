@@ -7,6 +7,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using Xunit;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Services;
 
@@ -18,7 +19,7 @@ public class ActivityCategoryServiceTests : IDisposable
     public ActivityCategoryServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new ActivityCategoryService(_db);
+        _sut = new ActivityCategoryService(_db, NullLogger<ActivityCategoryService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

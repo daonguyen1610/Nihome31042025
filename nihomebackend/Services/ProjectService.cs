@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -8,14 +7,13 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProjectService(AppDbContext db, HostedImageService hostedImageService, ProjectCategoryService categorySvc)
+public class ProjectService(AppDbContext db, HostedImageService hostedImageService, ProjectCategoryService categorySvc, ILogger<ProjectService> logger)
 {
-    private ILogger<ProjectService> Logger => db.GetService<ILoggerFactory>().CreateLogger<ProjectService>();
 
     public async Task<List<ProjectResponse>> GetAllAsync()
     {
         var items = await db.Projects.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync();
-        Logger.LogDebug("Fetched {Count} projects", items.Count);
+        logger.LogDebug("Fetched {Count} projects", items.Count);
         return items.Select(MapToResponse).ToList();
     }
 
@@ -24,7 +22,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         var item = await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
         if (item == null)
         {
-            Logger.LogWarning("Project not found by slug {Slug}", slug);
+            logger.LogWarning("Project not found by slug {Slug}", slug);
         }
         return item == null ? null : MapToResponse(item);
     }
@@ -55,7 +53,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         };
         db.Projects.Add(entity);
         await db.SaveChangesAsync();
-        Logger.LogInformation("Created project {ProjectId} (slug={Slug})", entity.Id, entity.Slug);
+        logger.LogInformation("Created project {ProjectId} (slug={Slug})", entity.Id, entity.Slug);
         return MapToResponse(entity);
     }
 
@@ -64,7 +62,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         var entity = await db.Projects.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot update project. Id {ProjectId} not found", id);
+            logger.LogWarning("Cannot update project. Id {ProjectId} not found", id);
             return null;
         }
 
@@ -97,10 +95,10 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         if (!string.Equals(previousImageUrl, entity.ImageUrl, StringComparison.OrdinalIgnoreCase))
         {
             hostedImageService.DeleteIfManagedUpload(previousImageUrl);
-            Logger.LogInformation("Updated project {ProjectId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
+            logger.LogInformation("Updated project {ProjectId} image from {OldImageUrl} to {NewImageUrl}", id, previousImageUrl, entity.ImageUrl);
         }
         DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
-        Logger.LogInformation("Updated project {ProjectId} (slug={Slug})", id, entity.Slug);
+        logger.LogInformation("Updated project {ProjectId} (slug={Slug})", id, entity.Slug);
         return MapToResponse(entity);
     }
 
@@ -109,7 +107,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         var entity = await db.Projects.FindAsync(id);
         if (entity == null)
         {
-            Logger.LogWarning("Cannot delete project. Id {ProjectId} not found", id);
+            logger.LogWarning("Cannot delete project. Id {ProjectId} not found", id);
             return false;
         }
         var imageUrl = entity.ImageUrl;
@@ -121,7 +119,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         {
             hostedImageService.DeleteIfManagedUpload(url);
         }
-        Logger.LogInformation("Deleted project {ProjectId}", id);
+        logger.LogInformation("Deleted project {ProjectId}", id);
         return true;
     }
 
