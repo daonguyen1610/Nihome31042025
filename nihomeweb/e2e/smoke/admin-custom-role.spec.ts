@@ -2,16 +2,16 @@ import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { execSql } from "../fixtures/db";
 
 /**
- * Phase 6 follow-up — covers a freshly-minted business role with a custom
- * permission set, exercising the whole RBAC chain end-to-end:
- *   SUPER_ADMIN → POST /api/admin/rbac/roles (custom permission set)
- *   SUPER_ADMIN → POST /api/users         (USER-enum stub)
- *   SQL        → users.RoleEntityId = new role.Id (no API for this yet)
- *   browser    → login as the new user, prove allow/deny via the SPA guards.
+ * End-to-end RBAC → user-management chain, driven entirely through the public
+ * HTTP API plus the SPA:
+ *   SUPER_ADMIN → POST /api/admin/rbac/roles  (custom permission set)
+ *   SUPER_ADMIN → POST /api/users             (role: custom code)
+ *   browser     → login as the new user, prove allow/deny via the SPA guards.
  *
- * The public API does not yet expose business-role assignment when creating a
- * user (POST /api/users only accepts the legacy 3-value UserRole enum), so
- * the wiring step uses a direct SQL UPDATE. Cleanup undoes it.
+ * (Earlier revisions of this spec wired RoleEntityId via SQL because
+ * UsersController only accepted the legacy 3-value enum. The user-CRUD layer
+ * now accepts any RBAC code, so the SQL workaround is gone — this spec also
+ * doubles as a regression guard against re-introducing the enum-only path.)
  */
 test.describe.configure({ mode: "serial" });
 
@@ -87,6 +87,9 @@ test.beforeAll(async ({ api }) => {
   expect(roleRes.status(), "create AUDITOR_E2E").toBe(201);
   createdRoleId = (await roleRes.json()).id as number;
 
+  // Create the user assigned directly to the custom role — UsersController
+  // resolves the code against the RBAC table, sets RoleEntityId, and mirrors
+  // the legacy enum to USER so legacy gates can't accidentally elevate.
   const userRes = await api.post("/api/users", {
     headers: { Authorization: `Bearer ${saToken}` },
     data: {
@@ -94,24 +97,23 @@ test.beforeAll(async ({ api }) => {
       fullName: TEST_FULL_NAME,
       email: TEST_EMAIL,
       password: TEST_PASSWORD,
-      role: "USER",
+      role: ROLE_CODE,
     },
   });
   expect(userRes.status(), "create test user").toBe(201);
-  createdUserId = (await userRes.json()).id as number;
-
-  // Wire the user to the new business role. UsersController doesn't accept
-  // RoleEntityId yet, so do it directly.
-  execSql(`UPDATE users SET RoleEntityId = ${createdRoleId} WHERE Id = ${createdUserId};`);
+  const userBody = await userRes.json();
+  createdUserId = userBody.id as number;
+  // Sanity-check the response shape that the SPA depends on for prefill.
+  expect(userBody.role, "response role is the canonical RBAC code").toBe(ROLE_CODE);
+  expect(userBody.roleId, "response roleId matches the created role").toBe(createdRoleId);
+  expect(userBody.roleName, "response roleName mirrors the RBAC entity").toBe(ROLE_NAME);
 });
 
 test.afterAll(async ({ api }) => {
-  // Detach user from role before deleting role (DELETE /api/admin/rbac/roles/{id}
-  // refuses while any user — active or not — still references it).
+  // DELETE /api/admin/rbac/roles/{id} refuses while any user (active or not)
+  // still references the role, so detach first.
   if (createdUserId != null) {
     execSql(`UPDATE users SET RoleEntityId = NULL WHERE Id = ${createdUserId};`);
-    // Soft delete is fine for the user; integration suite does not depend on
-    // this phone number. We also clear refresh tokens so the next run starts clean.
     execSql(`DELETE FROM refresh_tokens WHERE UserId = ${createdUserId};`);
     execSql(`DELETE FROM users WHERE Id = ${createdUserId};`);
   }
@@ -128,15 +130,23 @@ test("AUDITOR_E2E /api/users/me/permissions matches the assigned set", async ({ 
     data: { phoneNumber: TEST_PHONE, password: TEST_PASSWORD },
   });
   expect(login.status()).toBe(200);
-  const token = (await login.json()).accessToken as string;
+  const loginBody = await login.json();
+  // Login response surfaces the canonical RBAC code (not the enum mirror) so
+  // the SPA admin-area gate can recognise the user as admin.
+  expect(loginBody.role, "login response role").toBe(ROLE_CODE);
+  expect(loginBody.roleId, "login response roleId").toBe(createdRoleId);
+  const token = loginBody.accessToken as string;
 
   const me = await api.get("/api/users/me/permissions", {
     headers: { Authorization: `Bearer ${token}` },
   });
   expect(me.status()).toBe(200);
   const body = await me.json();
-  // Server includes profile.me.* implicitly through... actually it doesn't —
-  // a custom role only gets what was assigned. So just match the explicit set.
+  // /me/permissions also exposes the canonical code (regression: previously
+  // returned "USER" for any custom-role user because it read the enum mirror).
+  expect(body.role, "/me/permissions role").toBe(ROLE_CODE);
+  expect(body.roleId, "/me/permissions roleId").toBe(createdRoleId);
+  // Custom role only gets what was assigned — no implicit profile.me.* etc.
   expect(new Set(body.permissions as string[])).toEqual(new Set(ROLE_PERMISSIONS));
 });
 
