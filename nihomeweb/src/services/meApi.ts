@@ -5,7 +5,10 @@ export interface MeResponse {
   phoneNumber: string;
   fullName?: string;
   email?: string;
+  /** Canonical RBAC role code; falls back to the legacy enum for legacy users. */
   role: string;
+  /** RBAC role id. Null only for legacy users not yet backfilled. */
+  roleId?: number | null;
   isActive: boolean;
   avatarUrl?: string;
 }

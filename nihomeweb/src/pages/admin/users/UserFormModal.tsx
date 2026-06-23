@@ -10,16 +10,16 @@ import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/lib/i18n";
 import type {
   CreateUserRequest,
-  RoleMetadataResponse,
   UpdateUserRequest,
   UserDetailResponse,
-  UserRole,
 } from "@/services/adminApi";
+import type { RoleResponse } from "@/services/rbacApi";
 
 type UserFormModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  roles: RoleMetadataResponse[];
+  /** Full RBAC role catalog (system + custom). Inactive roles are filtered by the parent. */
+  roles: RoleResponse[];
   user: UserDetailResponse | null;
   submitting: boolean;
   onSubmit: (payload: CreateUserRequest | UpdateUserRequest) => Promise<void>;
@@ -30,9 +30,12 @@ type FormState = {
   phoneNumber: string;
   email: string;
   password: string;
-  role: UserRole | "";
+  /** Selected RBAC role code (e.g. "ADMIN", "PROJECT_MANAGER"). */
+  role: string;
   isActive: boolean;
 };
+
+const PUBLIC_ROLE_CODE = "USER";
 
 const emptyForm: FormState = {
   fullName: "",
@@ -57,9 +60,21 @@ export default function UserFormModal({
   const isEdit = Boolean(user);
 
   const defaultRole = useMemo(
-    () => roles.find((item) => item.role === "USER")?.role ?? roles[0]?.role ?? "",
+    () => roles.find((item) => item.code === PUBLIC_ROLE_CODE)?.code ?? roles[0]?.code ?? "",
     [roles],
   );
+
+  // RoleResponse exposes both a backend-supplied display name and an optional
+  // i18n key. Prefer the translation if a key is present and resolves; otherwise
+  // fall back to the seed-time name so custom roles without translations still
+  // render usefully.
+  const renderRoleLabel = (role: RoleResponse): string => {
+    if (role.labelKey) {
+      const translated = t(role.labelKey);
+      if (translated && translated !== role.labelKey) return translated;
+    }
+    return role.name;
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -110,7 +125,7 @@ export default function UserFormModal({
       await onSubmit({
         fullName: form.fullName.trim(),
         email,
-        role: form.role as UserRole,
+        role: form.role,
         isActive: form.isActive,
       });
       return;
@@ -121,7 +136,7 @@ export default function UserFormModal({
       phoneNumber: form.phoneNumber.trim(),
       email,
       password: form.password,
-      role: form.role as UserRole,
+      role: form.role,
     });
   };
 
@@ -204,13 +219,13 @@ export default function UserFormModal({
               <select
                 id="user-role"
                 value={form.role}
-                onChange={(event) => updateField("role", event.target.value as UserRole)}
+                onChange={(event) => updateField("role", event.target.value)}
                 className="admin-input mt-1 w-full"
                 required
               >
                 {roles.map((role) => (
-                  <option key={role.role} value={role.role}>
-                    {t(role.labelKey)}
+                  <option key={role.code} value={role.code}>
+                    {renderRoleLabel(role)}
                   </option>
                 ))}
               </select>
