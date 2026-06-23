@@ -45,16 +45,27 @@ public class MeController(
     public async Task<ActionResult<MePermissionsResponse>> GetPermissions(CancellationToken ct)
     {
         var userId = GetCurrentUserId();
+        // Pull RoleEntity.Code alongside the user so the response carries the
+        // canonical RBAC code (custom business roles included). Falling back to
+        // the legacy enum mirror would return "USER" for a custom-role user,
+        // which contradicts what AuthResponse and MeResponse expose.
         var user = await db.Users.AsNoTracking()
             .Where(u => u.Id == userId)
-            .Select(u => new { u.Id, u.Role, u.RoleEntityId, u.IsActive })
+            .Select(u => new
+            {
+                u.Id,
+                u.Role,
+                u.RoleEntityId,
+                u.IsActive,
+                RoleEntityCode = u.RoleEntity != null ? u.RoleEntity.Code : null,
+            })
             .FirstOrDefaultAsync(ct);
         if (user == null) return NotFound();
 
         var codes = await permissionService.GetForUserAsync(userId, ct);
         return Ok(new MePermissionsResponse
         {
-            Role = UserRoleCodeMapper.ToCode(user.Role),
+            Role = user.RoleEntityCode ?? UserRoleCodeMapper.ToCode(user.Role),
             RoleId = user.RoleEntityId,
             Permissions = codes.OrderBy(c => c, StringComparer.OrdinalIgnoreCase).ToList(),
         });
