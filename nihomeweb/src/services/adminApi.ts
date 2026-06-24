@@ -438,6 +438,11 @@ export interface DeleteAuditRangeParams {
 }
 
 // ─── Admin API ───────────────────────────────────────────────
+//
+// Upload folder convention — ALWAYS pass `folder` to uploadImage / uploadVideo:
+//   projects/<slug>   activities/<slug>   news/<slug>
+//   slideshow         logos               services        about
+// Omitting `folder` uploads to the flat root and breaks the organised structure.
 
 export const adminApi = {
   uploadImage: (file: File, previousImageUrl?: string, folder?: string) => {
