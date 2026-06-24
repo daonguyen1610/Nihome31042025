@@ -827,7 +827,7 @@ const AboutContent = () => {
     setUploading(true);
     try {
       const previousImageUrl = form.id > 0 ? form.imageUrl : undefined;
-      const response = await adminApi.uploadImage(file, previousImageUrl);
+      const response = await adminApi.uploadImage(file, previousImageUrl, "about");
       updateForm("imageUrl", response.data.imageUrl);
       toast({ title: t("form.updated") });
     } catch {
@@ -853,7 +853,7 @@ const AboutContent = () => {
   const handleCertImageUpload = async (file: File, certId: string) => {
     setUploadingCertIds((prev) => new Set([...prev, certId]));
     try {
-      const response = await adminApi.uploadImage(file);
+      const response = await adminApi.uploadImage(file, undefined, "about");
       const next = certItems.map((item) =>
         item.id === certId ? { ...item, imageUrl: response.data.imageUrl } : item,
       );
@@ -900,7 +900,7 @@ const AboutContent = () => {
     if (!file) return;
     setUploading(true);
     try {
-      const response = await adminApi.uploadImage(file);
+      const response = await adminApi.uploadImage(file, undefined, "about");
       updateItemsJson({ ...organizationItems, [field]: response.data.imageUrl });
     } catch {
       toast({ title: t("auth.error"), variant: "destructive" });

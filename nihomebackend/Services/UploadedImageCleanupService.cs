@@ -49,20 +49,23 @@ public class UploadedImageCleanupService(
         var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload");
         Directory.CreateDirectory(uploadDir);
 
-        var referencedFiles = await GetReferencedFileNamesAsync(cancellationToken);
+        var referencedPaths = await GetReferencedRelativePathsAsync(cancellationToken);
         var now = DateTime.UtcNow;
         var totalFiles = 0;
         var deletedCount = 0;
         var skippedReferencedCount = 0;
         var skippedRecentCount = 0;
 
-        foreach (var filePath in Directory.EnumerateFiles(uploadDir))
+        // Scan recursively to handle organised subfolders (e.g. upload/projects/slug/uuid.jpg)
+        foreach (var filePath in Directory.EnumerateFiles(uploadDir, "*", SearchOption.AllDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
             totalFiles++;
 
-            var fileName = Path.GetFileName(filePath);
-            if (referencedFiles.Contains(fileName))
+            // Use path relative to uploadDir so it matches what the DB stores
+            // e.g. "projects/nha-may-bma/uuid.jpg" or just "uuid.jpg"
+            var relPath = Path.GetRelativePath(uploadDir, filePath).Replace('\\', '/');
+            if (referencedPaths.Contains(relPath))
             {
                 skippedReferencedCount++;
                 continue;
@@ -94,11 +97,15 @@ public class UploadedImageCleanupService(
             deletedCount);
     }
 
-    private async Task<HashSet<string>> GetReferencedFileNamesAsync(CancellationToken cancellationToken)
+    private async Task<HashSet<string>> GetReferencedRelativePathsAsync(CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        // Store paths relative to the upload directory so they can be compared
+        // with Path.GetRelativePath() results from the filesystem scan.
+        // Flat files:     "uuid.jpg"
+        // Organised:      "projects/nha-may-bma/uuid.jpg"
         var referenced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void AddIfManaged(string? imageUrl)
@@ -109,10 +116,11 @@ public class UploadedImageCleanupService(
                 return;
             }
 
-            var fileName = Path.GetFileName(imageUrl);
-            if (!string.IsNullOrWhiteSpace(fileName))
+            // Strip the /images/upload/ prefix to get the relative path
+            var relPath = imageUrl[ManagedImagePrefix.Length..].TrimStart('/');
+            if (!string.IsNullOrWhiteSpace(relPath))
             {
-                referenced.Add(fileName);
+                referenced.Add(relPath);
             }
         }
 
