@@ -616,6 +616,8 @@ public static class ContentSeeder
 
     private static void SeedAboutSections(AppDbContext db)
     {
+        EnsureCatalogueDownloadsSection(db);
+
         if (db.AboutSectionContents.Any()) return;
 
         var now = DateTime.UtcNow;
@@ -760,16 +762,13 @@ public static class ContentSeeder
             new AboutSectionContent
             {
                 Slug = "downloads-main",
-                Eyebrow = "TÀI LIỆU",
-                TitleA = "Hồ sơ năng lực",
-                TitleB = "và tài liệu tham khảo",
-                Paragraph1 = "Tổng hợp các tài liệu giới thiệu năng lực, chứng nhận và thông tin doanh nghiệp phục vụ đối tác, khách hàng và nhà đầu tư.",
+                Eyebrow = "CATALOGUE",
+                TitleA = "Catalogue",
+                TitleB = "& hồ sơ năng lực",
+                Paragraph1 = "Tải Catalogue và các tài liệu giới thiệu năng lực, chứng nhận của NICON dành cho đối tác, khách hàng và nhà đầu tư.",
                 ItemsJson = JsonSerializer.Serialize(new[]
                 {
-                    new { sortOrder = 0, name = "Company Profile", size = "12 MB", type = "PDF", url = "#" },
-                    new { sortOrder = 1, name = "Brochure năng lực", size = "8 MB", type = "PDF", url = "#" },
-                    new { sortOrder = 2, name = "ISO Certificates", size = "4 MB", type = "PDF", url = "#" },
-                    new { sortOrder = 3, name = "Danh mục dự án tiêu biểu", size = "10 MB", type = "PDF", url = "#" },
+                    new { sortOrder = 0, name = "NICON Brochure", size = "77 MB", type = "PDF", url = "/files/Nicon-brochure.pdf" },
                 }),
                 IsActive = true,
                 SortOrder = 7,
@@ -777,6 +776,27 @@ public static class ContentSeeder
                 UpdatedAt = now,
             });
 
+        db.SaveChanges();
+    }
+
+    private static void EnsureCatalogueDownloadsSection(AppDbContext db)
+    {
+        var existing = db.AboutSectionContents.FirstOrDefault(x => x.Slug == "downloads-main");
+        if (existing == null) return;
+
+        // Only patch the placeholder seed (url = "#"). If admin has edited the
+        // downloads, leave their content alone.
+        if (existing.ItemsJson is null || !existing.ItemsJson.Contains("\"url\":\"#\"", StringComparison.Ordinal)) return;
+
+        existing.Eyebrow = "CATALOGUE";
+        existing.TitleA = "Catalogue";
+        existing.TitleB = "& hồ sơ năng lực";
+        existing.Paragraph1 = "Tải Catalogue và các tài liệu giới thiệu năng lực, chứng nhận của NICON dành cho đối tác, khách hàng và nhà đầu tư.";
+        existing.ItemsJson = JsonSerializer.Serialize(new[]
+        {
+            new { sortOrder = 0, name = "NICON Brochure", size = "77 MB", type = "PDF", url = "/files/Nicon-brochure.pdf" },
+        });
+        existing.UpdatedAt = DateTime.UtcNow;
         db.SaveChanges();
     }
 
