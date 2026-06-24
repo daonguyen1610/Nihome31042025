@@ -26,10 +26,10 @@
   {
     "key": "profilePage.nav.about",
     "category": "profilePage",
-    "vi": "Giới thiệu",
-    "en": "About",
-    "zh": "介绍",
-    "ja": "概要"
+    "vi": "Về chúng tôi",
+    "en": "About us",
+    "zh": "关于我们",
+    "ja": "会社概要"
   },
   {
     "key": "profilePage.nav.strategy",
@@ -42,34 +42,34 @@
   {
     "key": "profilePage.nav.org",
     "category": "profilePage",
-    "vi": "Tổ chức",
-    "en": "Organization",
-    "zh": "组织",
-    "ja": "組織"
+    "vi": "Sơ đồ tổ chức",
+    "en": "Organization chart",
+    "zh": "组织架构",
+    "ja": "組織図"
   },
   {
     "key": "profilePage.nav.timeline",
     "category": "profilePage",
-    "vi": "Lịch sử",
-    "en": "History",
-    "zh": "历史",
+    "vi": "Lịch sử hoạt động",
+    "en": "Company history",
+    "zh": "公司历史",
     "ja": "沿革"
   },
   {
     "key": "profilePage.nav.certs",
     "category": "profilePage",
-    "vi": "Chứng nhận",
-    "en": "Certifications",
-    "zh": "认证",
-    "ja": "認証"
+    "vi": "Chứng nhận & giải thưởng",
+    "en": "Certifications & awards",
+    "zh": "认证与奖项",
+    "ja": "認証・受賞"
   },
   {
     "key": "profilePage.nav.downloads",
     "category": "profilePage",
-    "vi": "Tài liệu",
-    "en": "Downloads",
-    "zh": "资料下载",
-    "ja": "資料"
+    "vi": "Catalogue",
+    "en": "Catalogue",
+    "zh": "目录",
+    "ja": "カタログ"
   },
   {
     "key": "profilePage.about.eyebrow",
