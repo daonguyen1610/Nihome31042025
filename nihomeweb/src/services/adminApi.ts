@@ -440,21 +440,19 @@ export interface DeleteAuditRangeParams {
 // ─── Admin API ───────────────────────────────────────────────
 
 export const adminApi = {
-  uploadImage: (file: File, previousImageUrl?: string) => {
+  uploadImage: (file: File, previousImageUrl?: string, folder?: string) => {
     const formData = new FormData();
     formData.append("file", file);
-    if (previousImageUrl) {
-      formData.append("previousImageUrl", previousImageUrl);
-    }
+    if (previousImageUrl) formData.append("previousImageUrl", previousImageUrl);
+    if (folder) formData.append("folder", folder);
     return api.post<{ imageUrl: string }>("/system/upload-image", formData);
   },
 
-  uploadVideo: (file: File, previousImageUrl?: string) => {
+  uploadVideo: (file: File, previousImageUrl?: string, folder?: string) => {
     const formData = new FormData();
     formData.append("file", file);
-    if (previousImageUrl) {
-      formData.append("previousImageUrl", previousImageUrl);
-    }
+    if (previousImageUrl) formData.append("previousImageUrl", previousImageUrl);
+    if (folder) formData.append("folder", folder);
     return api.post<{ mediaUrl: string }>("/system/upload-video", formData);
   },
 

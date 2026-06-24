@@ -120,9 +120,11 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
     try {
       if (pendingImageFile) {
         setUploadingImage(true);
+        const folder = `projects/${data.slug || slugify(data.name)}`;
         const upload = await adminApi.uploadImage(
           pendingImageFile,
           mode === "edit" ? data.imageUrl : undefined,
+          folder,
         );
         imageUrl = upload.data.imageUrl;
       }
@@ -295,6 +297,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <ContentBlockEditor
               value={data.content}
               onChange={(items) => update("content", items)}
+              folder={`projects/${data.slug || slugify(data.name)}`}
             />
           </div>
 
@@ -351,7 +354,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <p className="text-xs mb-4" style={{ color: "hsl(var(--admin-muted))" }}>
               {t("media.gallery.descProject")}
             </p>
-            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
+            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} folder={`projects/${data.slug || slugify(data.name)}`} />
           </div>
 
           <button

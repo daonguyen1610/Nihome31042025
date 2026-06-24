@@ -248,7 +248,7 @@ function IntroBlocksEditor({
       introBlocks: f.introBlocks.map((b, j) => (j === i ? { ...b, uploading: true } : b)),
     }));
     try {
-      const res = await adminApi.uploadImage(file);
+      const res = await adminApi.uploadImage(file, undefined, "services");
       setForm((f) => ({
         ...f,
         introBlocks: f.introBlocks.map((b, j) =>
