@@ -89,7 +89,7 @@ public class SystemControllerTests
                 ContentType = "text/plain"
             };
 
-            var result = await controller.UploadVideo(file, null, CancellationToken.None);
+            var result = await controller.UploadVideo(file, null, null, CancellationToken.None);
 
             Assert.IsType<BadRequestObjectResult>(result);
         }
@@ -115,7 +115,7 @@ public class SystemControllerTests
                 ContentType = "video/mp4"
             };
 
-            var result = await controller.UploadVideo(file, null, CancellationToken.None);
+            var result = await controller.UploadVideo(file, null, null, CancellationToken.None);
 
             var ok = Assert.IsType<OkObjectResult>(result);
             var mediaUrl = ok.Value?.GetType().GetProperty("mediaUrl")?.GetValue(ok.Value) as string;
