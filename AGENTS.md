@@ -43,7 +43,7 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 
 * Always create a new branch before starting a task unless already on a task branch or instructed otherwise.
 * Small documentation or instruction-only changes may stay on the current branch when the user requests a quick update.
-* Branch from `main` unless instructed otherwise.
+* Branch from `feature-phase-02` unless instructed otherwise.
 * Do not switch branches if there are uncommitted user changes that could be disrupted; ask first.
 
 ---
@@ -269,5 +269,6 @@ Every response MUST include:
 ## Git commit
 
 * When a feature or bug fix is complete, commit the work.
-* Write commit messages following the 50/72 rule.
+* Write commit messages following the 50/72 rule. For eg: https://www.gitkraken.com/learn/git/best-practices/git-commit-message
 * Only add files related to the commit — do not use `git add -A` blindly.
+* If resolving any issues, then describe rootcause, and solution.
