@@ -145,7 +145,7 @@ const ServiceDetail = () => {
                 <h2 className="font-display text-2xl lg:text-[30px] font-extrabold leading-tight tracking-tight">{sec.heading}</h2>
               </div>
               <ul className="space-y-3.5">
-                {(sec.body ?? []).map((p, j) => (
+                {(Array.isArray(sec.body) ? sec.body : sec.body ? [sec.body] : []).map((p, j) => (
                   <li key={j} className="flex gap-3 text-foreground/80 leading-relaxed">
                     <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-1" strokeWidth={2.1} />
                     <span>{p}</span>
