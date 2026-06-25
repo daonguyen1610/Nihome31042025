@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -19,7 +20,8 @@ public class AboutSectionServiceTests : IDisposable
         _db = DbContextFactory.Create();
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        _sut = new AboutSectionService(_db, hostedImageService);
+        var translationSvc = new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions()));
+        _sut = new AboutSectionService(_db, hostedImageService, translationSvc);
     }
 
     public void Dispose() => _db.Dispose();
