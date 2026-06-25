@@ -391,8 +391,10 @@ export const contentApi = {
       .then((res) => ({ ...res, data: mapProject(res.data) })),
 
   // Services
-  getServices: () => api.get<ServiceResponse[]>("/services"),
-  getService: (slug: string) => api.get<ServiceResponse>(`/services/${slug}`),
+  getServices: (lang = "vi") =>
+    api.get<ServiceResponse[]>(`/services?lang=${lang}`),
+  getService: (slug: string, lang = "vi") =>
+    api.get<ServiceResponse>(`/services/${slug}?lang=${lang}`),
 
   // Logos
   getLogos: () =>
