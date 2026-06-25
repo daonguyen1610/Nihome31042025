@@ -136,7 +136,7 @@ const ServiceDetail = () => {
       {/* Sections */}
       <section className="pb-20 bg-background">
         <div className="container-custom max-w-5xl space-y-7 lg:space-y-8">
-          {svc.sections.map((sec, i) => (
+          {(Array.isArray(svc.sections) ? svc.sections : []).map((sec, i) => (
             <div key={i} className="bg-card rounded-3xl border border-border p-6 lg:p-8">
               <div className="flex items-center gap-3.5 mb-5">
                 <span className="w-10 h-10 rounded-xl bg-gradient-primary text-white font-display font-extrabold flex items-center justify-center shadow-glow shrink-0">
@@ -145,7 +145,7 @@ const ServiceDetail = () => {
                 <h2 className="font-display text-2xl lg:text-[30px] font-extrabold leading-tight tracking-tight">{sec.heading}</h2>
               </div>
               <ul className="space-y-3.5">
-                {sec.body.map((p, j) => (
+                {(sec.body ?? []).map((p, j) => (
                   <li key={j} className="flex gap-3 text-foreground/80 leading-relaxed">
                     <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-1" strokeWidth={2.1} />
                     <span>{p}</span>
