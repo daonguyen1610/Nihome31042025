@@ -124,22 +124,24 @@ public class UploadedImageCleanupService(
             }
         }
 
-        var activityImageUrls = await db.Activities
+        var activityImages = await db.Activities
             .AsNoTracking()
-            .Select(x => x.ImageUrl)
+            .Select(x => new { x.ImageUrl, x.GalleryJson })
             .ToListAsync(cancellationToken);
-        foreach (var imageUrl in activityImageUrls)
+        foreach (var activity in activityImages)
         {
-            AddIfManaged(imageUrl);
+            AddIfManaged(activity.ImageUrl);
+            AddGalleryUrls(activity.GalleryJson, AddIfManaged);
         }
 
-        var newsImageUrls = await db.NewsArticles
+        var newsImages = await db.NewsArticles
             .AsNoTracking()
-            .Select(x => x.ImageUrl)
+            .Select(x => new { x.ImageUrl, x.GalleryJson })
             .ToListAsync(cancellationToken);
-        foreach (var imageUrl in newsImageUrls)
+        foreach (var article in newsImages)
         {
-            AddIfManaged(imageUrl);
+            AddIfManaged(article.ImageUrl);
+            AddGalleryUrls(article.GalleryJson, AddIfManaged);
         }
 
         var projectImages = await db.Projects
@@ -187,6 +189,63 @@ public class UploadedImageCleanupService(
             AddIfManaged(imageUrl);
         }
 
+        // About sections: main ImageUrl + nested imageUrl values inside ItemsJson
+        // (cert images, org-chart images stored as { imageUrl: "..." } in JSON)
+        var aboutSections = await db.AboutSectionContents
+            .AsNoTracking()
+            .Select(x => new { x.ImageUrl, x.ItemsJson })
+            .ToListAsync(cancellationToken);
+        foreach (var section in aboutSections)
+        {
+            AddIfManaged(section.ImageUrl);
+            AddJsonImageUrls(section.ItemsJson, AddIfManaged);
+        }
+
         return referenced;
+    }
+
+    // Deserialise a JSON string[] gallery and protect each URL.
+    private static void AddGalleryUrls(string? galleryJson, Action<string?> addIfManaged)
+    {
+        if (string.IsNullOrWhiteSpace(galleryJson)) return;
+        try
+        {
+            var urls = JsonSerializer.Deserialize<string[]>(galleryJson) ?? [];
+            foreach (var url in urls)
+                addIfManaged(url);
+        }
+        catch (JsonException) { }
+    }
+
+    // Walk arbitrary JSON and protect every property named "imageUrl".
+    private static void AddJsonImageUrls(string? json, Action<string?> addIfManaged)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            WalkElement(doc.RootElement, addIfManaged);
+        }
+        catch (JsonException) { }
+    }
+
+    private static void WalkElement(JsonElement element, Action<string?> addIfManaged)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (prop.Name == "imageUrl" && prop.Value.ValueKind == JsonValueKind.String)
+                        addIfManaged(prop.Value.GetString());
+                    else
+                        WalkElement(prop.Value, addIfManaged);
+                }
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                    WalkElement(item, addIfManaged);
+                break;
+        }
     }
 }
