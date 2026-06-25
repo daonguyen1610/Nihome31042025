@@ -109,14 +109,15 @@ public class ServiceItemService(
         Intro = Coalesce(t, "Intro", s.Intro),
         Sections = ResolveJsonElement(t, "Sections", s.SectionsJson),
         Highlights = JsonSerializer.Deserialize<string[]>(s.HighlightsJson) ?? [],
-        IntroBlocks = JsonSerializer.Deserialize<JsonElement>(s.IntroBlocksJson),
+        IntroBlocks = JsonSerializer.Deserialize<JsonElement>(
+            string.IsNullOrWhiteSpace(s.IntroBlocksJson) ? "[]" : s.IntroBlocksJson),
         SortOrder = s.SortOrder,
     };
 
     private static string Coalesce(Dictionary<string, string> t, string field, string original) =>
         t.TryGetValue(field, out var v) && !string.IsNullOrWhiteSpace(v) ? v : original;
 
-    // Sections is a JSON blob: apply translated string only when it parses as valid JSON.
+    // Sections is a JSON array blob: only apply translation when it parses as a valid JSON array.
     private static JsonElement ResolveJsonElement(
         Dictionary<string, string> t, string field, string originalJson)
     {
@@ -125,10 +126,12 @@ public class ServiceItemService(
             try
             {
                 using var doc = JsonDocument.Parse(translated);
-                return doc.RootElement.Clone();
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                    return doc.RootElement.Clone();
             }
             catch (JsonException) { }
         }
-        return JsonSerializer.Deserialize<JsonElement>(originalJson);
+        var fallback = string.IsNullOrWhiteSpace(originalJson) ? "[]" : originalJson;
+        return JsonSerializer.Deserialize<JsonElement>(fallback);
     }
 }

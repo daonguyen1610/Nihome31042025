@@ -336,6 +336,15 @@ function resolveContentItem(item: ContentItem): ContentItem {
   return item; // text and youtube pass through unchanged
 }
 
+function mapService(item: ServiceResponse): ServiceResponse {
+  return {
+    ...item,
+    introBlocks: (item.introBlocks ?? []).map((b) =>
+      b.imageUrl ? { ...b, imageUrl: resolveImageUrl(b.imageUrl) } : b
+    ),
+  };
+}
+
 function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {
   return {
     clients: data.clients.map(mapLogo),
@@ -392,9 +401,11 @@ export const contentApi = {
 
   // Services
   getServices: (lang = "vi") =>
-    api.get<ServiceResponse[]>(`/services?lang=${lang}`),
+    api.get<ServiceResponse[]>(`/services?lang=${lang}`)
+      .then((res) => ({ ...res, data: res.data.map(mapService) })),
   getService: (slug: string, lang = "vi") =>
-    api.get<ServiceResponse>(`/services/${slug}?lang=${lang}`),
+    api.get<ServiceResponse>(`/services/${slug}?lang=${lang}`)
+      .then((res) => ({ ...res, data: mapService(res.data) })),
 
   // Logos
   getLogos: () =>
