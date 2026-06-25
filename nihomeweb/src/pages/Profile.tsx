@@ -61,7 +61,7 @@ const parseItems = <T,>(value: string | null | undefined, fallback: T): T => {
 };
 
 const Profile = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [aboutSections, setAboutSections] = useState<AboutSectionResponse[]>([]);
   const [certLightbox, setCertLightbox] = useState<string | null>(null);
 
@@ -69,7 +69,7 @@ const Profile = () => {
     let canceled = false;
     const load = async () => {
       try {
-        const { data } = await contentApi.getAboutSections(true);
+        const { data } = await contentApi.getAboutSections(lang, true);
         if (!canceled) setAboutSections(data);
       } catch {
         if (!canceled) setAboutSections([]);
@@ -79,7 +79,7 @@ const Profile = () => {
     return () => {
       canceled = true;
     };
-  }, []);
+  }, [lang]);
 
   const aboutMain = useMemo(
     () => aboutSections.find((x) => x.slug === "about-main") ?? aboutSections[0],

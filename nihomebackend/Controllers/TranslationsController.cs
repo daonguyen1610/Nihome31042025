@@ -86,6 +86,7 @@ public class TranslationsController(
             new { type = EntityTypes.Project, display = "Projects", fields = new[] { "Name", "Description", "Challenges", "Solutions" } },
             new { type = EntityTypes.Service, display = "Services", fields = new[] { "Title", "ShortTitle", "Tagline", "Intro", "Sections" } },
             new { type = EntityTypes.JobPosition, display = "Job Positions", fields = new[] { "Title", "Department", "Description", "Requirements" } },
+            new { type = EntityTypes.About, display = "About Sections", fields = new[] { "Eyebrow", "TitleA", "TitleB", "Paragraph1", "Paragraph2", "ItemsJson" } },
         };
         return Ok(types);
     }
@@ -154,6 +155,16 @@ public class TranslationsController(
                     translationCount = translationCounts.GetValueOrDefault(j.Id, 0),
                     expectedFields = 4
                 }),
+            EntityTypes.About => (await db.AboutSectionContents.AsNoTracking().OrderBy(a => a.SortOrder).ThenBy(a => a.Id).ToListAsync())
+                .Select(a => new
+                {
+                    id = a.Id,
+                    title = a.Slug,
+                    description = a.Eyebrow,
+                    hasTranslation = translationCounts.ContainsKey(a.Id),
+                    translationCount = translationCounts.GetValueOrDefault(a.Id, 0),
+                    expectedFields = 6
+                }),
             _ => null
         };
 
@@ -192,6 +203,18 @@ public class TranslationsController(
             case EntityTypes.JobPosition:
                 var job = await db.JobPositions.AsNoTracking().FirstOrDefaultAsync(j => j.Id == entityId);
                 if (job != null) original = new() { ["Title"] = job.Title, ["Department"] = job.Department, ["Description"] = job.Description ?? "", ["Requirements"] = job.RequirementsJson };
+                break;
+            case EntityTypes.About:
+                var about = await db.AboutSectionContents.AsNoTracking().FirstOrDefaultAsync(a => a.Id == entityId);
+                if (about != null) original = new()
+                {
+                    ["Eyebrow"] = about.Eyebrow,
+                    ["TitleA"] = about.TitleA,
+                    ["TitleB"] = about.TitleB,
+                    ["Paragraph1"] = about.Paragraph1,
+                    ["Paragraph2"] = about.Paragraph2,
+                    ["ItemsJson"] = about.ItemsJson ?? "",
+                };
                 break;
         }
 
