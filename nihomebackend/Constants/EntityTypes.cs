@@ -10,4 +10,5 @@ public static class EntityTypes
     public const string ProcessDocument = "ProcessDocument";
     public const string Slideshow = "Slideshow";
     public const string JobPosition = "JobPosition";
+    public const string About = "About";
 }

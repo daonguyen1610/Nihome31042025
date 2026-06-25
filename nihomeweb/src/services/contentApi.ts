@@ -408,8 +408,8 @@ export const contentApi = {
       .then((res) => ({ ...res, data: res.data.map(mapSlideshow) })),
 
   // About sections
-  getAboutSections: (activeOnly = true) =>
-    api.get<AboutSectionResponse[]>(`/about-sections?activeOnly=${activeOnly}`)
+  getAboutSections: (lang = "vi", activeOnly = true) =>
+    api.get<AboutSectionResponse[]>(`/about-sections?lang=${lang}&activeOnly=${activeOnly}`)
       .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveImageUrl(x.imageUrl) })) })),
 
   // Job positions (public)
