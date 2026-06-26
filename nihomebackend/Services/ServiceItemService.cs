@@ -108,14 +108,58 @@ public class ServiceItemService(
         Tagline = Coalesce(t, "Tagline", s.Tagline),
         Intro = Coalesce(t, "Intro", s.Intro),
         Sections = ResolveJsonElement(t, "Sections", s.SectionsJson),
-        Highlights = JsonSerializer.Deserialize<string[]>(s.HighlightsJson) ?? [],
-        IntroBlocks = JsonSerializer.Deserialize<JsonElement>(
-            string.IsNullOrWhiteSpace(s.IntroBlocksJson) ? "[]" : s.IntroBlocksJson),
+        Highlights = ResolveStringArray(t, "Highlights", s.HighlightsJson),
+        IntroBlocks = ResolveIntroBlocks(t, s.IntroBlocksJson),
         SortOrder = s.SortOrder,
     };
 
     private static string Coalesce(Dictionary<string, string> t, string field, string original) =>
         t.TryGetValue(field, out var v) && !string.IsNullOrWhiteSpace(v) ? v : original;
+
+    // Highlights is string[]: apply translation when it parses as a valid JSON string array.
+    private static string[] ResolveStringArray(Dictionary<string, string> t, string field, string originalJson)
+    {
+        if (t.TryGetValue(field, out var translated) && !string.IsNullOrWhiteSpace(translated))
+        {
+            try
+            {
+                var arr = JsonSerializer.Deserialize<string[]>(translated);
+                if (arr != null) return arr;
+            }
+            catch (JsonException) { }
+        }
+        return JsonSerializer.Deserialize<string[]>(
+            string.IsNullOrWhiteSpace(originalJson) ? "[]" : originalJson) ?? [];
+    }
+
+    // IntroBlocks: translate only the text field of each block, keep original imageUrl.
+    private static JsonElement ResolveIntroBlocks(Dictionary<string, string> t, string? introBlocksJson)
+    {
+        var origJson = string.IsNullOrWhiteSpace(introBlocksJson) ? "[]" : introBlocksJson;
+        if (t.TryGetValue("IntroBlocks", out var textsJson) && !string.IsNullOrWhiteSpace(textsJson))
+        {
+            try
+            {
+                var texts = JsonSerializer.Deserialize<string[]>(textsJson);
+                using var origDoc = JsonDocument.Parse(origJson);
+                if (texts != null && origDoc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    var origArr = origDoc.RootElement.EnumerateArray().ToArray();
+                    var merged = origArr.Select((orig, idx) =>
+                    {
+                        var text = idx < texts.Length && !string.IsNullOrWhiteSpace(texts[idx])
+                            ? texts[idx]
+                            : (orig.TryGetProperty("text", out var tv) ? tv.GetString() ?? "" : "");
+                        var imageUrl = orig.TryGetProperty("imageUrl", out var iv) ? iv.GetString() : null;
+                        return new Dictionary<string, object?> { ["text"] = text, ["imageUrl"] = imageUrl };
+                    }).ToList();
+                    return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(merged));
+                }
+            }
+            catch (JsonException) { }
+        }
+        return JsonSerializer.Deserialize<JsonElement>(origJson);
+    }
 
     // Sections is a JSON array blob: only apply translation when it parses as a valid JSON array.
     private static JsonElement ResolveJsonElement(
