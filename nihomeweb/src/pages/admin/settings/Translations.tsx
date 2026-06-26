@@ -27,7 +27,7 @@ const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions", "Highligh
 function fieldHint(field: string): string | null {
   if (field === "Sections") return 'Format: "## Section heading" on first line, one bullet per line below. Blank line between sections.';
   if (field === "Highlights") return "One highlight per line.";
-  if (field === "IntroBlocks") return "One text block per paragraph. Separate blocks with a blank line.";
+  if (field === "IntroBlocks") return 'Separate blocks with "---" on its own line. You can use Enter and blank lines freely within each block.';
   if (field === "Content") return "Paragraphs separated by blank lines.";
   return null;
 }
@@ -42,11 +42,11 @@ function jsonToPlainText(raw: string, field: string): string {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return raw;
 
-    // string[] — Highlights (one per line), IntroBlocks/Content/etc (blank-line-separated)
+    // string[] — Highlights (one per line), IntroBlocks (--- separator), Content/etc (blank-line-separated)
     if (parsed.every((v: unknown) => typeof v === "string")) {
-      return field === "Highlights"
-        ? (parsed as string[]).join("\n")
-        : (parsed as string[]).join("\n\n");
+      if (field === "Highlights") return (parsed as string[]).join("\n");
+      if (field === "IntroBlocks") return (parsed as string[]).join("\n---\n");
+      return (parsed as string[]).join("\n\n");
     }
 
     // object[] — Sections: ## Heading\nBullet1\nBullet2
@@ -86,8 +86,8 @@ function plainTextToJson(text: string, field: string): string {
   }
 
   if (field === "IntroBlocks") {
-    // Paragraphs separated by blank lines → string[]
-    const items = text.split(/\n\n+/).map((l) => l.trim()).filter(Boolean);
+    // Blocks separated by "---" on its own line → string[]; blank lines within blocks are preserved
+    const items = text.split(/\n-{3,}\n/).map((l) => l.trim()).filter(Boolean);
     return JSON.stringify(items);
   }
 
