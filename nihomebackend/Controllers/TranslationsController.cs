@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -84,7 +85,7 @@ public class TranslationsController(
             new { type = EntityTypes.Activity, display = "Activities", fields = new[] { "Title", "Excerpt", "Content" } },
             new { type = EntityTypes.News, display = "News", fields = new[] { "Title", "Excerpt", "Content" } },
             new { type = EntityTypes.Project, display = "Projects", fields = new[] { "Name", "Description", "Challenges", "Solutions" } },
-            new { type = EntityTypes.Service, display = "Services", fields = new[] { "Title", "ShortTitle", "Tagline", "Intro", "Sections" } },
+            new { type = EntityTypes.Service, display = "Services", fields = new[] { "Title", "ShortTitle", "Tagline", "Intro", "Highlights", "Sections", "IntroBlocks" } },
             new { type = EntityTypes.JobPosition, display = "Job Positions", fields = new[] { "Title", "Department", "Description", "Requirements" } },
             new { type = EntityTypes.About, display = "About Sections", fields = new[] { "Eyebrow", "TitleA", "TitleB", "Paragraph1", "Paragraph2", "ItemsJson" } },
         };
@@ -143,7 +144,7 @@ public class TranslationsController(
                     description = s.Tagline,
                     hasTranslation = translationCounts.ContainsKey(s.Id),
                     translationCount = translationCounts.GetValueOrDefault(s.Id, 0),
-                    expectedFields = 5
+                    expectedFields = 7
                 }),
             EntityTypes.JobPosition => (await db.JobPositions.AsNoTracking().OrderBy(j => j.SortOrder).ThenBy(j => j.Title).ToListAsync())
                 .Select(j => new
@@ -198,7 +199,20 @@ public class TranslationsController(
                 break;
             case EntityTypes.Service:
                 var svc = await db.ServiceItems.AsNoTracking().FirstOrDefaultAsync(s => s.Id == entityId);
-                if (svc != null) original = new() { ["Title"] = svc.Title, ["ShortTitle"] = svc.ShortTitle ?? "", ["Tagline"] = svc.Tagline ?? "", ["Intro"] = svc.Intro ?? "", ["Sections"] = svc.SectionsJson ?? "" };
+                if (svc != null)
+                {
+                    var ibTexts = ExtractIntroBlockTexts(svc.IntroBlocksJson);
+                    original = new()
+                    {
+                        ["Title"] = svc.Title,
+                        ["ShortTitle"] = svc.ShortTitle ?? "",
+                        ["Tagline"] = svc.Tagline ?? "",
+                        ["Intro"] = svc.Intro ?? "",
+                        ["Highlights"] = svc.HighlightsJson ?? "[]",
+                        ["Sections"] = svc.SectionsJson ?? "[]",
+                        ["IntroBlocks"] = ibTexts,
+                    };
+                }
                 break;
             case EntityTypes.JobPosition:
                 var job = await db.JobPositions.AsNoTracking().FirstOrDefaultAsync(j => j.Id == entityId);
@@ -245,6 +259,25 @@ public class TranslationsController(
     {
         await entitySvc.DeleteEntityTranslationsAsync(entityType, entityId);
         return NoContent();
+    }
+
+    // Extract only the text values from IntroBlocksJson as a JSON string array.
+    private static string ExtractIntroBlockTexts(string? introBlocksJson)
+    {
+        if (string.IsNullOrWhiteSpace(introBlocksJson)) return "[]";
+        try
+        {
+            using var doc = JsonDocument.Parse(introBlocksJson);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return "[]";
+            var texts = doc.RootElement.EnumerateArray()
+                .Select(b => b.TryGetProperty("text", out var t) ? t.GetString() ?? "" : "")
+                .ToArray();
+            return JsonSerializer.Serialize(texts);
+        }
+        catch (JsonException)
+        {
+            return "[]";
+        }
     }
 }
 
