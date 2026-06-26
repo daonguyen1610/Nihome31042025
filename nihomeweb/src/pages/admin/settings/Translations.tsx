@@ -19,41 +19,79 @@ import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 /* ─── Helpers ───────────────────────────────────── */
-const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions"];
 
-/** Try to parse a JSON array of strings into plain text (paragraphs separated by blank lines). */
-function jsonToPlainText(raw: string): string {
+// Fields stored as JSON in the DB that need plain-text conversion for the editor.
+const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions", "Highlights", "IntroBlocks", "ItemsJson", "Requirements"];
+
+/** Hints shown below the translation textarea so users know the expected format. */
+function fieldHint(field: string): string | null {
+  if (field === "Sections") return 'Format: "## Section heading" on first line, one bullet per line below. Blank line between sections.';
+  if (field === "Highlights") return "One highlight per line.";
+  if (field === "IntroBlocks") return "One text block per paragraph. Separate blocks with a blank line.";
+  if (field === "Content") return "Paragraphs separated by blank lines.";
+  return null;
+}
+
+/**
+ * Convert a backend JSON blob to human-readable plain text for the editor.
+ * Must be paired with plainTextToJson when saving.
+ */
+function jsonToPlainText(raw: string, field: string): string {
   if (!raw) return "";
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      // Handle array of strings
-      if (parsed.every((v: unknown) => typeof v === "string")) return parsed.join("\n\n");
-      // Handle array of objects (e.g. Sections with heading/body)
-      if (parsed.every((v: unknown) => typeof v === "object" && v !== null)) {
-        return parsed.map((s: Record<string, string>) => {
-          if (s.heading && s.body) return `## ${s.heading}\n${s.body}`;
-          return JSON.stringify(s);
-        }).join("\n\n");
-      }
+    if (!Array.isArray(parsed)) return raw;
+
+    // string[] — Highlights (one per line), IntroBlocks/Content/etc (blank-line-separated)
+    if (parsed.every((v: unknown) => typeof v === "string")) {
+      return field === "Highlights"
+        ? (parsed as string[]).join("\n")
+        : (parsed as string[]).join("\n\n");
     }
-  } catch { /* not JSON, return as-is */ }
+
+    // object[] — Sections: ## Heading\nBullet1\nBullet2
+    if (parsed.every((v: unknown) => typeof v === "object" && v !== null)) {
+      return (parsed as Record<string, unknown>[]).map((s) => {
+        const heading = typeof s.heading === "string" ? s.heading : "";
+        const bodyArr = Array.isArray(s.body)
+          ? (s.body as unknown[]).map(String)
+          : typeof s.body === "string" ? [s.body] : [];
+        return `## ${heading}\n${bodyArr.join("\n")}`;
+      }).join("\n\n");
+    }
+  } catch { /* not JSON */ }
   return raw;
 }
 
-/** Convert plain text back to JSON array string for storage. */
+/** Convert plain text back to JSON for storage. Must mirror jsonToPlainText exactly. */
 function plainTextToJson(text: string, field: string): string {
   if (!text.trim()) return "";
+
   if (field === "Sections") {
-    // Parse ## heading\nbody format back to [{heading,body}]
+    // ## Heading\nBullet1\nBullet2\n\n## Next section...
     const sections = text.split(/\n\n+/).filter(Boolean).map((block) => {
-      const m = block.match(/^##\s+(.+)\n([\s\S]*)$/);
-      if (m) return { heading: m[1].trim(), body: m[2].trim() };
-      return { heading: "", body: block.trim() };
+      const lines = block.split("\n");
+      const m = lines[0].match(/^##\s+(.*)/);
+      const heading = m ? m[1].trim() : "";
+      const body = (m ? lines.slice(1) : lines).map((l) => l.trim()).filter(Boolean);
+      return { heading, body };
     });
     return JSON.stringify(sections);
   }
-  // For Content, Challenges, Solutions: split by blank lines into array
+
+  if (field === "Highlights") {
+    // One per line → string[]
+    const items = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    return JSON.stringify(items);
+  }
+
+  if (field === "IntroBlocks") {
+    // Paragraphs separated by blank lines → string[]
+    const items = text.split(/\n\n+/).map((l) => l.trim()).filter(Boolean);
+    return JSON.stringify(items);
+  }
+
+  // Content, Challenges, Solutions, Requirements — blank-line separated → string[]
   const parts = text.split(/\n\n+/).filter(Boolean);
   return JSON.stringify(parts);
 }
@@ -251,13 +289,13 @@ const TranslationsPage = () => {
       // Convert JSON fields to plain text for display
       const orig: Record<string, string> = data.original ?? {};
       for (const f of JSON_FIELDS) {
-        if (orig[f]) orig[f] = jsonToPlainText(orig[f]);
+        if (orig[f]) orig[f] = jsonToPlainText(orig[f], f);
       }
       setEntityOriginal(orig);
       const trans: Record<string, Record<string, string>> = data.translations ?? {};
       for (const lang of Object.keys(trans)) {
         for (const f of JSON_FIELDS) {
-          if (trans[lang][f]) trans[lang][f] = jsonToPlainText(trans[lang][f]);
+          if (trans[lang][f]) trans[lang][f] = jsonToPlainText(trans[lang][f], f);
         }
       }
       setEntityTranslations(trans);
@@ -679,8 +717,11 @@ const TranslationsPage = () => {
             {/* Side-by-side fields */}
             <div className="space-y-4">
               {entityModalType.fields.map((field) => {
-                const isLong = ["Content", "Sections", "Challenges", "Solutions", "Description"].includes(field);
-                const rows = isLong ? 8 : 3;
+                const rows =
+                  ["Content", "Sections", "Challenges", "Solutions", "Description", "IntroBlocks"].includes(field) ? 8
+                  : ["Highlights", "Requirements"].includes(field) ? 5
+                  : 3;
+                const hint = fieldHint(field);
                 return (
                 <div key={field} className="grid grid-cols-2 gap-4">
                   {/* Original (VI) */}
@@ -692,7 +733,7 @@ const TranslationsPage = () => {
                       value={entityOriginal[field] ?? ""}
                       readOnly
                       rows={rows}
-                      className="w-full rounded-lg px-3 py-2 text-sm border bg-gray-50 outline-none resize-y"
+                      className="w-full rounded-lg px-3 py-2 text-sm border bg-gray-50 outline-none resize-y font-mono"
                       style={{ borderColor: "hsl(var(--admin-border))" }}
                     />
                   </div>
@@ -705,9 +746,14 @@ const TranslationsPage = () => {
                       value={entityTranslations[entityModalLang]?.[field] ?? ""}
                       onChange={(e) => updateEntityField(field, e.target.value)}
                       rows={rows}
-                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none resize-y"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none resize-y font-mono"
                       style={{ borderColor: "hsl(var(--admin-border))" }}
                     />
+                    {hint && (
+                      <p className="mt-1 text-[11px] leading-relaxed" style={{ color: "hsl(var(--admin-muted))" }}>
+                        {hint}
+                      </p>
+                    )}
                   </div>
                 </div>
                 );
