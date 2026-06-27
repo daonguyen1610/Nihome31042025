@@ -147,21 +147,33 @@ export interface SlideshowAdminResponse {
   sortOrder: number;
 }
 
-export interface UpsertActivityCategoryRequest {
-  name: string;
-  isActive?: boolean;
-  sortOrder?: number;
-}
-
 export interface ActivityCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
 
+export interface UpsertActivityCategoryRequest {
+  name: string;
+  nameVi?: string;
+  nameEn?: string;
+  nameZh?: string;
+  nameJa?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
 export interface UpsertProjectCategoryRequest {
   name: string;
+  nameVi?: string;
+  nameEn?: string;
+  nameZh?: string;
+  nameJa?: string;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -169,12 +181,20 @@ export interface UpsertProjectCategoryRequest {
 export interface ProjectCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
 
 export interface UpsertNewsCategoryRequest {
   name: string;
+  nameVi?: string;
+  nameEn?: string;
+  nameZh?: string;
+  nameJa?: string;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -182,6 +202,10 @@ export interface UpsertNewsCategoryRequest {
 export interface NewsCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
