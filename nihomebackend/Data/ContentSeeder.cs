@@ -21,6 +21,80 @@ public static class ContentSeeder
         SeedContactMessages(db);
         SeedEntityTranslations(db);
         LinkCategories(db);
+        SeedCategories(db);
+    }
+
+    private static void SeedCategories(AppDbContext db)
+    {
+        var now = DateTime.UtcNow;
+
+        var projectCats = new[]
+        {
+            new { Name = "Nhà máy công nghiệp", SortOrder = 0 },
+            new { Name = "Nhà xưởng sản xuất",  SortOrder = 1 },
+            new { Name = "Tổ hợp công nghiệp",  SortOrder = 2 },
+            new { Name = "Nhà kho logistics",    SortOrder = 3 },
+            new { Name = "Văn phòng",            SortOrder = 4 },
+            new { Name = "Nội thất văn phòng",   SortOrder = 5 },
+            new { Name = "Nội thất công nghiệp", SortOrder = 6 },
+            new { Name = "Công trình công cộng", SortOrder = 7 },
+            new { Name = "Khách sạn",            SortOrder = 8 },
+            new { Name = "Nhà hàng",             SortOrder = 9 },
+            new { Name = "Thương mại",           SortOrder = 10 },
+            new { Name = "Nhà ở",                SortOrder = 11 },
+            new { Name = "Bất động sản",         SortOrder = 12 },
+            new { Name = "Studio",               SortOrder = 13 },
+            new { Name = "Nhà máy dược phẩm",   SortOrder = 14 },
+            new { Name = "Giáo dục",             SortOrder = 15 },
+        };
+
+        var existingProjCats = db.ProjectCategories
+            .ToDictionary(c => c.Name.ToLower());
+        foreach (var seed in projectCats)
+        {
+            var key = seed.Name.ToLower();
+            if (existingProjCats.TryGetValue(key, out var existing))
+                existing.SortOrder = seed.SortOrder;
+            else
+                db.ProjectCategories.Add(new ProjectCategory
+                {
+                    Name = seed.Name,
+                    IsActive = true,
+                    SortOrder = seed.SortOrder,
+                });
+        }
+
+        var activityCats = new[]
+        {
+            new { Name = "Khởi công",   SortOrder = 1 },
+            new { Name = "Khánh thành", SortOrder = 2 },
+            new { Name = "Sự kiện",     SortOrder = 3 },
+            new { Name = "Dự án",       SortOrder = 4 },
+            new { Name = "Giải thưởng", SortOrder = 5 },
+            new { Name = "Triển lãm",   SortOrder = 6 },
+            new { Name = "Cộng đồng",   SortOrder = 7 },
+            new { Name = "Văn hóa",     SortOrder = 8 },
+            new { Name = "Đào tạo",     SortOrder = 9 },
+            new { Name = "Dịch vụ",     SortOrder = 10 },
+        };
+
+        var existingActCats = db.ActivityCategories
+            .ToDictionary(c => c.Name.ToLower());
+        foreach (var seed in activityCats)
+        {
+            var key = seed.Name.ToLower();
+            if (existingActCats.TryGetValue(key, out var existing))
+                existing.SortOrder = seed.SortOrder;
+            else
+                db.ActivityCategories.Add(new ActivityCategory
+                {
+                    Name = seed.Name,
+                    IsActive = true,
+                    SortOrder = seed.SortOrder,
+                });
+        }
+
+        db.SaveChanges();
     }
 
     private static void LinkCategories(AppDbContext db)
@@ -279,17 +353,114 @@ public static class ContentSeeder
 
     private static void SeedServices(AppDbContext db)
     {
-        if (db.ServiceItems.Any()) return;
+        var now = DateTime.UtcNow;
 
-        var items = new ServiceItem[]
+        var seeds = new[]
         {
-            new() { Slug = "design-and-build", ShortTitle = "Design & Build", Title = "Tổng thầu Thiết kế và Thi công (D&B)", Tagline = "Một đầu mối — toàn bộ vòng đời dự án.", Intro = "Phương thức Design & Build (D&B) và EPC là hai phương pháp phổ biến nhất trong xây dựng công nghiệp và dân dụng. NICON đã hệ thống hoá quy trình D&B từ ngày đầu thành lập và liên tục hoàn thiện qua hơn 150 dự án.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Lợi thế của phương thức D&B / EPC", body = new[] { "Tối thiểu hóa nghĩa vụ quản lý cho chủ đầu tư — NICON đảm nhận toàn bộ điều phối và quản lý dự án.", "Giảm thiểu rủi ro không nhất quán giữa thiết kế và thi công.", "Linh hoạt đẩy nhanh tiến độ ngay cả khi thiết kế chưa hoàn chỉnh, giảm chi phí phát sinh.", "Chi phí quản lý hợp lý — chủ đầu tư dễ ước lượng và kiểm soát chất lượng do chỉ làm việc với một nhà thầu." } }, new { heading = "Phương pháp quản lý dự án tiên tiến", body = new[] { "Hợp tác chặt chẽ cùng Mori Construction (Nhật Bản), NICON ứng dụng quy trình BIM (Building Information Modeling) cho mọi giai đoạn.", "Đội ngũ chuyên viên BIM giàu kinh nghiệm cung cấp giải pháp đồng bộ, giúp chủ đầu tư có toàn bộ thông tin dự án và dự đoán rủi ro sớm." } }, new { heading = "Sản phẩm tốt nhất từ những con người tốt nhất", body = new[] { "NICON sở hữu mạng lưới đối tác quản lý quốc tế trong các lĩnh vực kiến trúc, kết cấu, nội thất và M&E.", "Đội ngũ giàu kinh nghiệm gồm project manager, kiến trúc sư, kỹ sư và công nhân lành nghề có thể xử lý các dự án QUY MÔ LỚN – TIẾN ĐỘ GẤP – CHẤT LƯỢNG CAO." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "BIM 4D / 5D", "ISO 9001:2015", "150+ dự án D&B", "Mori Group partner" }), SortOrder = 0 },
-            new() { Slug = "main-contractor", ShortTitle = "Main Contractor", Title = "Dịch vụ Tổng thầu chính (Main Contractor)", Tagline = "Quản lý trọn gói thi công — bàn giao chìa khóa trao tay.", Intro = "Với vai trò Tổng thầu chính Việt – Nhật, NICON thực hiện đầy đủ các nhiệm vụ của một dự án xây dựng công nghiệp.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Phạm vi công việc của Tổng thầu chính", body = new[] { "Quản lý toàn bộ công trường, điều phối các nhà thầu phụ và nhà cung cấp.", "Đảm bảo tiến độ, chất lượng và an toàn lao động (HSE) tại công trường.", "Báo cáo định kỳ cho chủ đầu tư bằng tiếng Việt – Anh – Nhật." } }, new { heading = "Phương pháp quản lý chuẩn quốc tế", body = new[] { "Áp dụng tiêu chuẩn quản lý dự án PMP và phương pháp Lean Construction.", "Sử dụng phần mềm MS Project, Primavera P6 cho lập tiến độ và kiểm soát chi phí.", "Quy trình QA/QC theo ISO 9001:2015 cho từng hạng mục thi công." } }, new { heading = "Đối tác chiến lược cùng Mori Group", body = new[] { "Sự hợp tác cùng Mori Industry Group (Nhật Bản) mang đến tiêu chuẩn kỹ thuật và văn hóa làm việc chuẩn Nhật cho mọi dự án NICON đảm nhận." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "18+ năm kinh nghiệm", "Quản lý PMP", "QA/QC ISO 9001", "An toàn HSE chuẩn Nhật" }), SortOrder = 1 },
-            new() { Slug = "general-contractor", ShortTitle = "General Contractor", Title = "Dịch vụ Tổng thầu (General Contractor)", Tagline = "Đảm nhận toàn bộ vòng đời thi công nhà máy công nghiệp.", Intro = "Với cương vị Tổng thầu Việt Nam – Nhật Bản, NICON thực hiện đầy đủ nhiệm vụ của một dự án xây dựng công nghiệp gồm thiết kế, xin phép, thi công và bàn giao trọn gói.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Vai trò Tổng thầu", body = new[] { "Quản lý toàn diện từ thiết kế cơ sở, thiết kế kỹ thuật đến bản vẽ thi công.", "Mua sắm vật tư – thiết bị (Procurement) và quản lý chuỗi cung ứng cho dự án.", "Tổ chức thi công, nghiệm thu từng phần và bàn giao công trình hoàn chỉnh." } }, new { heading = "Năng lực mega-project", body = new[] { "NICON đã thành công thực hiện các tổ hợp công nghiệp 250.000 m² như Lâm Hiệp Hưng – Tân Toàn Phát.", "Năng lực tổ chức công trường lớn với hàng trăm công nhân, thiết bị nặng và logistics phức tạp." } }, new { heading = "Cam kết chất lượng", body = new[] { "100% công trình bàn giao đúng tiến độ trong 5 năm gần nhất.", "Bảo hành 24 tháng cho phần xây dựng, 12 tháng cho phần MEP." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "Mega-project 250.000m²", "Procurement chuyên nghiệp", "Bảo hành 24 tháng", "Đa quốc gia" }), SortOrder = 2 },
-            new() { Slug = "mep-contractor", ShortTitle = "MEP Contractor", Title = "Dịch vụ Tổng thầu MEP", Tagline = "Hệ thống Cơ – Điện – Nước đồng bộ và tối ưu vận hành.", Intro = "MEP (Mechanical – Electrical – Plumbing) là phần quan trọng quyết định hiệu quả vận hành nhà máy. NICON cung cấp dịch vụ tổng thầu MEP độc lập hoặc tích hợp trong gói D&B, với đội ngũ kỹ sư chuyên ngành giàu kinh nghiệm.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Phạm vi MEP của NICON", body = new[] { "Hệ thống điện công nghiệp: trung – hạ thế, máy phát dự phòng, UPS, hệ chiếu sáng năng lượng cao.", "Hệ HVAC, thông gió và phòng sạch theo cấp ISO Class 5/7/8.", "Hệ cấp – thoát nước, nước nóng năng lượng mặt trời, hệ xử lý nước thải.", "Hệ PCCC sprinkler, báo cháy địa chỉ theo TCVN và NFPA." } }, new { heading = "Tích hợp và bàn giao", body = new[] { "Quy trình T&C (Testing & Commissioning) bài bản, có sự chứng kiến của tư vấn giám sát và chủ đầu tư.", "Bàn giao kèm hồ sơ As-built, sách hướng dẫn vận hành – bảo trì (O&M Manual).", "Đào tạo vận hành cho đội ngũ kỹ thuật của chủ đầu tư." } }, new { heading = "Quản lý dự án bằng BIM", body = new[] { "Mô hình MEP 3D phát hiện xung đột hạng mục trước khi thi công, giảm 80% chỉnh sửa hiện trường.", "Tài liệu BIM bàn giao cho chủ đầu tư phục vụ vận hành – bảo trì lâu dài." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "BIM MEP 3D", "Phòng sạch ISO 5-8", "T&C chuyên nghiệp", "O&M training" }), SortOrder = 3 },
+            new
+            {
+                Slug = "design-and-build", ShortTitle = "Design & Build", SortOrder = 0,
+                Title   = "Tổng thầu Thiết kế và Thi công (D&B)",
+                Tagline = "Một đầu mối — toàn bộ vòng đời dự án.",
+                Intro   = "Phương thức Design & Build (D&B) và EPC là hai phương pháp phổ biến nhất trong xây dựng công nghiệp và dân dụng. NICON đã hệ thống hoá quy trình D&B từ ngày đầu thành lập và liên tục hoàn thiện qua hơn 150 dự án.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Lợi thế của phương thức D&B / EPC", body = new[] { "Tối thiểu hóa nghĩa vụ quản lý cho chủ đầu tư — NICON đảm nhận toàn bộ điều phối và quản lý dự án.", "Giảm thiểu rủi ro không nhất quán giữa thiết kế và thi công.", "Linh hoạt đẩy nhanh tiến độ ngay cả khi thiết kế chưa hoàn chỉnh, giảm chi phí phát sinh.", "Chi phí quản lý hợp lý — chủ đầu tư dễ ước lượng và kiểm soát chất lượng do chỉ làm việc với một nhà thầu." } },
+                    new { heading = "Phương pháp quản lý dự án tiên tiến", body = new[] { "Hợp tác chặt chẽ cùng Mori Construction (Nhật Bản), NICON ứng dụng quy trình BIM (Building Information Modeling) cho mọi giai đoạn.", "Đội ngũ chuyên viên BIM giàu kinh nghiệm cung cấp giải pháp đồng bộ, giúp chủ đầu tư có toàn bộ thông tin dự án và dự đoán rủi ro sớm." } },
+                    new { heading = "Sản phẩm tốt nhất từ những con người tốt nhất", body = new[] { "NICON sở hữu mạng lưới đối tác quản lý quốc tế trong các lĩnh vực kiến trúc, kết cấu, nội thất và M&E.", "Đội ngũ giàu kinh nghiệm gồm project manager, kiến trúc sư, kỹ sư và công nhân lành nghề có thể xử lý các dự án QUY MÔ LỚN – TIẾN ĐỘ GẤP – CHẤT LƯỢNG CAO." } },
+                }),
+                HighlightsJson = JsonSerializer.Serialize(new[] { "BIM 4D / 5D", "ISO 9001:2015", "150+ Dự Án D&B", "Mori Group partner" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "Hiện nay, ngành xây dựng chủ yếu áp dụng hai phương thức: Thiết kế-Xây dựng và Kỹ thuật – Mua sắm – Xây dựng (EPC).\n\nNhận thấy đây là giải pháp tối ưu cho thị trường Việt Nam, chúng tôi đã áp dụng đồng bộ hệ thống này ngay từ ngày đầu thành lập. Sự phát triển nhanh chóng của công ty là minh chứng cho sự lựa chọn đúng đắn này.\n\nKỹ thuật - Mua sắm - Xây dựng (EPC): Nhà thầu chịu trách nhiệm hoàn toàn về mọi thứ từ thiết kế, mua sắm vật tư thiết bị, đến thi công và bàn giao.\n\nDesign-Build: Một phương pháp hiện đại tối ưu hóa mô hình truyền thống (Design-Bid-Build), giúp rút ngắn thời gian bằng cách thực hiện thiết kế chi tiết song song với hoặc ngay trước khi thi công, thay vì chờ đấu thầu.", imageUrl = "/images/upload/services/01921bad60bc4188b3e194f9d85bcf39.png" },
+                    new { text = "1. Phương pháp thiết kế - đấu thầu - xây dựng (truyền thống):\nChủ đầu tư phải lựa chọn nhiều nhà thầu cho từng giai đoạn riêng biệt: trao thiết kế cho công ty tư vấn chuyên nghiệp, thi công cho nhà thầu xây dựng và vật tư/thiết bị do nhà cung cấp cung cấp theo quy trình. Phương pháp này yêu cầu thiết kế chi tiết và được phê duyệt đầy đủ trước khi triển khai.\n\n2. Kỹ thuật - Mua sắm - Phương pháp xây dựng (Hiện đại):\nChủ đầu tư chỉ cần chuẩn bị thiết kế sơ bộ, sau đó chỉ định một nhà thầu duy nhất chịu trách nhiệm chìa khóa trao tay từ thiết kế chi tiết, mua sắm, thi công cho đến khi bàn giao dự án", imageUrl = "/images/upload/services/1bbb66eebdc3489abe7f6d40134a1b54.jpg" },
+                    new { text = "Áp dụng phương pháp Design-Build mang lại nhiều lợi ích vượt trội cho cả chủ đầu tư và nhà thầu:\n\nQuản lý hợp lý cho chủ đầu tư: Nhà thầu thay mặt chủ đầu tư chịu trách nhiệm hoàn toàn từ điều phối đến quản lý dự án.\n\nGiảm thiểu rủi ro không phù hợp giữa thiết kế và thực tế: Nhờ thiết kế tự quản lý, nhà thầu có thể dễ dàng điều chỉnh các biện pháp thi công phù hợp, có thể triển khai sớm ngay cả khi thiết kế chưa hoàn thành, từ đó đẩy nhanh tiến độ và giảm thiểu chi phí phát sinh.", imageUrl = "/images/upload/services/6d91a196a9ae44f483e30438c19a5b56.jpg" },
+                }),
+            },
+            new
+            {
+                Slug = "main-contractor", ShortTitle = "Main Contractor", SortOrder = 1,
+                Title   = "Dịch vụ Tổng thầu chính",
+                Tagline = "Quản lý trọn gói thi công — bàn giao chìa khóa trao tay.",
+                Intro   = "Với vai trò Tổng thầu chính Việt – Nhật, NICON thực hiện đầy đủ các nhiệm vụ của một dự án xây dựng công nghiệp.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Phạm vi công việc của Tổng thầu chính", body = new[] { "Quản lý toàn bộ công trường, điều phối các nhà thầu phụ và nhà cung cấp.", "Đảm bảo tiến độ, chất lượng và an toàn lao động (HSE) tại công trường.", "Báo cáo định kỳ cho chủ đầu tư bằng tiếng Việt – Anh – Nhật." } },
+                    new { heading = "Phương pháp quản lý chuẩn quốc tế", body = new[] { "Áp dụng tiêu chuẩn quản lý dự án PMP và phương pháp Lean Construction.", "Sử dụng phần mềm MS Project, Primavera P6 cho lập tiến độ và kiểm soát chi phí.", "Quy trình QA/QC theo ISO 9001:2015 cho từng hạng mục thi công." } },
+                    new { heading = "Đối tác chiến lược cùng Mori Group", body = new[] { "Sự hợp tác cùng Mori Industry Group (Nhật Bản) mang đến tiêu chuẩn kỹ thuật và văn hóa làm việc chuẩn Nhật cho mọi dự án NICON đảm nhận." } },
+                }),
+                HighlightsJson  = JsonSerializer.Serialize(new[] { "18+ năm kinh nghiệm", "Quản lý PMP", "QA/QC ISO 9001", "An toàn HSE chuẩn Nhật" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "", imageUrl = "/images/upload/services/69c646fb16ac4ec5b3be0e7e62a2ffc2.jpg" },
+                }),
+            },
+            new
+            {
+                Slug = "general-contractor", ShortTitle = "General Contractor", SortOrder = 2,
+                Title   = "Dịch vụ Tổng thầu",
+                Tagline = "Đảm nhận toàn bộ vòng đời thi công nhà máy công nghiệp.",
+                Intro   = "Với cương vị Tổng thầu Việt Nam – Nhật Bản, NICON thực hiện đầy đủ nhiệm vụ của một dự án xây dựng công nghiệp gồm thiết kế, xin phép, thi công và bàn giao trọn gói.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Vai trò Tổng thầu", body = new[] { "Quản lý toàn diện từ thiết kế cơ sở, thiết kế kỹ thuật đến bản vẽ thi công.", "Mua sắm vật tư – thiết bị (Procurement) và quản lý chuỗi cung ứng cho dự án.", "Tổ chức thi công, nghiệm thu từng phần và bàn giao công trình hoàn chỉnh." } },
+                    new { heading = "Năng lực mega-project", body = new[] { "NICON đã thành công thực hiện các tổ hợp công nghiệp 250.000 m² như Lâm Hiệp Hưng – Tân Toàn Phát.", "Năng lực tổ chức công trường lớn với hàng trăm công nhân, thiết bị nặng và logistics phức tạp." } },
+                    new { heading = "Cam kết chất lượng", body = new[] { "100% công trình bàn giao đúng tiến độ trong 5 năm gần nhất.", "Bảo hành 24 tháng cho phần xây dựng, 12 tháng cho phần MEP." } },
+                }),
+                HighlightsJson  = JsonSerializer.Serialize(new[] { "Mega-project 250.000m²", "Procurement chuyên nghiệp", "Bảo hành 24 tháng", "Đa quốc gia" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "", imageUrl = "/images/upload/services/2b6c2d8c9936439993180016b4654242.jpg" },
+                }),
+            },
+            new
+            {
+                Slug = "mep-contractor", ShortTitle = "MEP Contractor", SortOrder = 3,
+                Title   = "Dịch vụ Tổng thầu MEP",
+                Tagline = "Hệ thống Cơ – Điện – Nước đồng bộ và tối ưu vận hành.",
+                Intro   = "MEP (Mechanical – Electrical – Plumbing) là phần quan trọng quyết định hiệu quả vận hành nhà máy. NICON cung cấp dịch vụ tổng thầu MEP độc lập hoặc tích hợp trong gói D&B, với đội ngũ kỹ sư chuyên ngành giàu kinh nghiệm.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Phạm vi MEP của NICON", body = new[] { "Hệ thống điện công nghiệp: trung – hạ thế, máy phát dự phòng, UPS, hệ chiếu sáng năng lượng cao.", "Hệ HVAC, thông gió và phòng sạch theo cấp ISO Class 5/7/8.", "Hệ cấp – thoát nước, nước nóng năng lượng mặt trời, hệ xử lý nước thải.", "Hệ PCCC sprinkler, báo cháy địa chỉ theo TCVN và NFPA." } },
+                    new { heading = "Tích hợp và bàn giao", body = new[] { "Quy trình T&C (Testing & Commissioning) bài bản, có sự chứng kiến của tư vấn giám sát và chủ đầu tư.", "Bàn giao kèm hồ sơ As-built, sách hướng dẫn vận hành – bảo trì (O&M Manual).", "Đào tạo vận hành cho đội ngũ kỹ thuật của chủ đầu tư." } },
+                    new { heading = "Quản lý dự án bằng BIM", body = new[] { "Mô hình MEP 3D phát hiện xung đột hạng mục trước khi thi công, giảm 80% chỉnh sửa hiện trường.", "Tài liệu BIM bàn giao cho chủ đầu tư phục vụ vận hành – bảo trì lâu dài." } },
+                }),
+                HighlightsJson  = JsonSerializer.Serialize(new[] { "BIM MEP 3D", "Phòng sạch ISO 5-8", "T&C chuyên nghiệp", "O&M training" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "1. Quản lý\nBằng cách sử dụng Nicon làm đầu mối quản lý duy nhất, các công việc quản lý thông tin và quản lý nguồn nhân lực trở nên thuận tiện hơn.\n\n2. Chất lượng\nChất lượng dự án được đảm bảo bởi danh tiếng, uy tín và sự cam kết của Nicon.\n\n3. Tiến độ\nTiến độ dự án được đảm bảo bởi năng lực và sự cam kết của Nicon.\n\n4. Chi phí\nNgân sách dự án được quản lý một cách hiệu quả, giúp gia tăng lợi nhuận.", imageUrl = "/images/upload/services/cfec2296483c4862b38062bb787a03bb.jpg" },
+                    new { text = "", imageUrl = "/images/upload/services/be65ae444d6b48c7b3eb4f79badfc363.jpg" },
+                }),
+            },
         };
 
-        db.ServiceItems.AddRange(items);
+        var existing = db.ServiceItems.ToDictionary(s => s.Slug);
+
+        foreach (var seed in seeds)
+        {
+            if (existing.TryGetValue(seed.Slug, out var item))
+            {
+                item.Title           = seed.Title;
+                item.ShortTitle      = seed.ShortTitle;
+                item.Tagline         = seed.Tagline;
+                item.Intro           = seed.Intro;
+                item.SectionsJson    = seed.SectionsJson;
+                item.HighlightsJson  = seed.HighlightsJson;
+                item.IntroBlocksJson = seed.IntroBlocksJson;
+                item.SortOrder       = seed.SortOrder;
+                item.UpdatedAt       = now;
+            }
+            else
+            {
+                db.ServiceItems.Add(new ServiceItem
+                {
+                    Slug            = seed.Slug,
+                    Title           = seed.Title,
+                    ShortTitle      = seed.ShortTitle,
+                    Tagline         = seed.Tagline,
+                    Intro           = seed.Intro,
+                    SectionsJson    = seed.SectionsJson,
+                    HighlightsJson  = seed.HighlightsJson,
+                    IntroBlocksJson = seed.IntroBlocksJson,
+                    SortOrder       = seed.SortOrder,
+                    CreatedAt       = now,
+                    UpdatedAt       = now,
+                });
+            }
+        }
+
         db.SaveChanges();
     }
 
@@ -512,6 +683,20 @@ public static class ContentSeeder
             });
         }
 
+        // Fix any localhost URLs in award logos
+        var awardLogoFixes = new Dictionary<string, string>
+        {
+            ["Top 10 Vietnam Leading Brands 2018"] = "/images/activities/activity-ceremony.jpg",
+            ["Vietnam Golden FDI 2019"]             = "/images/activities/activity-opening.jpg",
+            ["Outstanding Design & Build Contractor"] = "/images/activities/activity-handover.jpg",
+        };
+        foreach (var (name, relUrl) in awardLogoFixes)
+        {
+            var logo = db.ClientLogos.FirstOrDefault(l => l.Kind == LogoKind.Award && l.Name == name);
+            if (logo != null && logo.ImageUrl != relUrl)
+                logo.ImageUrl = relUrl;
+        }
+
         db.SaveChanges();
     }
 
@@ -572,68 +757,43 @@ public static class ContentSeeder
 
     private static void SeedSlideshow(AppDbContext db)
     {
-        if (db.SlideshowItems.Any()) return;
-
-        var items = new SlideshowItem[]
+        var seeds = new[]
         {
-            new()
-            {
-                Slug = "hero-factory",
-                ImageUrl = "/images/projects/project-bma.jpg",
-                Title = "Tổng thầu Thiết kế & Thi công Nhà máy",
-                Subtitle = "Hơn 18 năm kinh nghiệm — 150+ dự án công nghiệp",
-                LinkUrl = "/projects",
-                LinkText = "Xem dự án",
-                IsActive = true,
-                SortOrder = 0,
-            },
-            new()
-            {
-                Slug = "hero-design-build",
-                ImageUrl = "/images/projects/project-nbdc.jpg",
-                Title = "Design & Build — Giải pháp trọn gói",
-                Subtitle = "Một đầu mối — toàn bộ vòng đời dự án từ thiết kế đến bàn giao",
-                LinkUrl = "/services/design-and-build",
-                LinkText = "Tìm hiểu thêm",
-                IsActive = true,
-                SortOrder = 1,
-            },
-            new()
-            {
-                Slug = "hero-industrial",
-                ImageUrl = "/images/projects/project-lhh.jpg",
-                Title = "Nhà máy Công nghiệp Quy mô lớn",
-                Subtitle = "Tổ hợp 250.000 m² — Tiêu chuẩn Nhật Bản cùng Mori Group",
-                LinkUrl = "/projects/nha-may-lhh",
-                LinkText = "Xem chi tiết",
-                IsActive = true,
-                SortOrder = 2,
-            },
-            new()
-            {
-                Slug = "hero-sports-center",
-                ImageUrl = "/images/projects/project-sports.jpg",
-                Title = "Công trình Thể dục Thể thao",
-                Subtitle = "Thiết kế không gian thể thao đa năng phục vụ cộng đồng",
-                LinkUrl = "/projects/ttdtt-thu-duc",
-                LinkText = "Khám phá",
-                IsActive = true,
-                SortOrder = 3,
-            },
-            new()
-            {
-                Slug = "hero-office",
-                ImageUrl = "/images/projects/project-office.jpg",
-                Title = "Nội thất Văn phòng Hiện đại",
-                Subtitle = "Phong cách tối giản — Không gian mở — Tiêu chuẩn quốc tế",
-                LinkUrl = "/projects/noi-that-b37",
-                LinkText = "Xem dự án",
-                IsActive = true,
-                SortOrder = 4,
-            },
+            new { Slug = "hero-factory",      ImageUrl = "/images/projects/project-bma.jpg",    Title = "Tổng thầu Thiết kế & Thi công Nhà máy",    Subtitle = "Hơn 18 năm kinh nghiệm — 150+ dự án công nghiệp",                            LinkUrl = "/projects",                   LinkText = "Xem dự án",     IsActive = true, SortOrder = 0 },
+            new { Slug = "hero-design-build", ImageUrl = "/images/projects/project-nbdc.jpg",   Title = "Design & Build — Giải pháp trọn gói",       Subtitle = "Một đầu mối — toàn bộ vòng đời dự án từ thiết kế đến bàn giao",              LinkUrl = "/services/design-and-build",  LinkText = "Tìm hiểu thêm", IsActive = true, SortOrder = 1 },
+            new { Slug = "hero-industrial",   ImageUrl = "/images/projects/project-lhh.jpg",    Title = "Nhà máy Công nghiệp Quy mô lớn",            Subtitle = "Tổ hợp 250.000 m² — Tiêu chuẩn Nhật Bản cùng Mori Group",                   LinkUrl = "/projects/nha-may-lhh",       LinkText = "Xem chi tiết",  IsActive = true, SortOrder = 2 },
+            new { Slug = "hero-sports-center",ImageUrl = "/images/projects/project-sports.jpg", Title = "Công trình Thể dục Thể thao",               Subtitle = "Thiết kế không gian thể thao đa năng phục vụ cộng đồng",                     LinkUrl = "/projects/ttdtt-thu-duc",     LinkText = "Khám phá",      IsActive = true, SortOrder = 3 },
+            new { Slug = "hero-office",       ImageUrl = "/images/projects/project-office.jpg", Title = "Nội thất Văn phòng Hiện đại",               Subtitle = "Phong cách tối giản — Không gian mở — Tiêu chuẩn quốc tế",                   LinkUrl = "/projects/noi-that-b37",      LinkText = "Xem dự án",     IsActive = true, SortOrder = 4 },
         };
 
-        db.SlideshowItems.AddRange(items);
+        var existing = db.SlideshowItems.ToDictionary(s => s.Slug);
+        var now = DateTime.UtcNow;
+
+        foreach (var s in seeds)
+        {
+            if (existing.TryGetValue(s.Slug, out var item))
+            {
+                item.ImageUrl  = s.ImageUrl;
+                item.Title     = s.Title;
+                item.Subtitle  = s.Subtitle;
+                item.LinkUrl   = s.LinkUrl;
+                item.LinkText  = s.LinkText;
+                item.IsActive  = s.IsActive;
+                item.SortOrder = s.SortOrder;
+                item.UpdatedAt = now;
+            }
+            else
+            {
+                db.SlideshowItems.Add(new SlideshowItem
+                {
+                    Slug = s.Slug, ImageUrl = s.ImageUrl, Title = s.Title,
+                    Subtitle = s.Subtitle, LinkUrl = s.LinkUrl, LinkText = s.LinkText,
+                    IsActive = s.IsActive, SortOrder = s.SortOrder,
+                    CreatedAt = now, UpdatedAt = now,
+                });
+            }
+        }
+
         db.SaveChanges();
     }
 
@@ -641,187 +801,44 @@ public static class ContentSeeder
 
     private static void SeedAboutSections(AppDbContext db)
     {
-        EnsureCatalogueDownloadsSection(db);
-
-        if (db.AboutSectionContents.Any()) return;
-
         var now = DateTime.UtcNow;
 
-        db.AboutSectionContents.AddRange(
-            new AboutSectionContent
-            {
-                Slug = "about-main",
-                Eyebrow = "VỀ CHÚNG TÔI",
-                TitleA = "Đối tác của sự",
-                TitleB = "phát triển từ 2006",
-                Paragraph1 = "Hơn 18 năm đồng hành cùng các nhà đầu tư trong và ngoài nước, NICON kiến tạo những công trình công nghiệp và dân dụng đạt chuẩn quốc tế.",
-                Paragraph2 = "Chúng tôi tập trung vào chất lượng, tiến độ và an toàn, đảm bảo mỗi dự án đều mang lại hiệu quả đầu tư bền vững cho khách hàng.",
-                ImageUrl = "/images/activities/activity-handover.jpg",
-                IsActive = true,
-                SortOrder = 0,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "values-main",
-                Eyebrow = "GIÁ TRỊ CỐT LÕI",
-                TitleA = "Nền tảng phát triển",
-                TitleB = "NICON",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { iconKey = "target", sortOrder = 0, isActive = true, title = "Mục tiêu rõ ràng", desc = "Mọi quyết định đều hướng đến hiệu quả đầu tư và mục tiêu dài hạn của khách hàng." },
-                    new { iconKey = "shield", sortOrder = 1, isActive = true, title = "Kỷ luật chất lượng", desc = "Quy trình thi công, giám sát và nghiệm thu được kiểm soát nghiêm ngặt." },
-                    new { iconKey = "compass", sortOrder = 2, isActive = true, title = "Định hướng bền vững", desc = "Ưu tiên giải pháp tối ưu vận hành, chi phí và vòng đời công trình." },
-                    new { iconKey = "heart", sortOrder = 3, isActive = true, title = "Tận tâm đồng hành", desc = "Xây dựng niềm tin bằng cách làm việc minh bạch và trách nhiệm đến cùng." },
-                }),
-                IsActive = true,
-                SortOrder = 2,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "stats-main",
-                Eyebrow = "CHỈ SỐ NỔI BẬT",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { iconKey = "calendar", sortOrder = 0, isActive = true, num = "18+", label = "Năm kinh nghiệm" },
-                    new { iconKey = "building", sortOrder = 1, isActive = true, num = "150+", label = "Dự án hoàn thành" },
-                    new { iconKey = "users", sortOrder = 2, isActive = true, num = "80+", label = "Khách hàng đồng hành" },
-                    new { iconKey = "award", sortOrder = 3, isActive = true, num = "ISO", label = "Chuẩn hóa chất lượng" },
-                }),
-                IsActive = true,
-                SortOrder = 1,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "strategy-main",
-                Eyebrow = "CHIẾN LƯỢC",
-                TitleA = "Tư duy hệ thống cho",
-                TitleB = "mỗi dự án",
-                Paragraph1 = "Tầm nhìn: Trở thành tổng thầu thiết kế - thi công uy tín hàng đầu trong lĩnh vực công nghiệp và dân dụng tại Việt Nam.",
-                Paragraph2 = "Định hướng tương lai: Liên tục nâng cao năng lực thiết kế, quản lý và công nghệ để đáp ứng các tiêu chuẩn quốc tế ngày càng cao.",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { iconKey = "building", sortOrder = 0, isActive = true, title = "Thiết kế - thi công tổng thể", desc = "Một đầu mối thống nhất giúp kiểm soát tiến độ, chi phí và chất lượng." },
-                    new { iconKey = "hammer", sortOrder = 1, isActive = true, title = "Kết cấu và hạ tầng công nghiệp", desc = "Tối ưu giải pháp nền móng, kết cấu và hạ tầng kỹ thuật." },
-                    new { iconKey = "layers", sortOrder = 2, isActive = true, title = "Cơ điện và hệ thống phụ trợ", desc = "Đảm bảo vận hành ổn định, an toàn và phù hợp tiêu chuẩn dự án." },
-                    new { iconKey = "wrench", sortOrder = 3, isActive = true, title = "Bảo trì và cải tạo", desc = "Đồng hành cùng khách hàng trong suốt vòng đời vận hành công trình." },
-                    new { iconKey = "briefcase", sortOrder = 4, isActive = true, title = "Tư vấn đầu tư", desc = "Hỗ trợ chủ đầu tư từ giai đoạn ý tưởng đến kế hoạch triển khai." },
-                    new { iconKey = "users-group", sortOrder = 5, isActive = true, title = "Phát triển đội ngũ", desc = "Tăng cường năng lực tổ chức để đáp ứng dự án có quy mô ngày càng lớn." },
-                }),
-                IsActive = true,
-                SortOrder = 3,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "organization-main",
-                Eyebrow = "TỔ CHỨC",
-                TitleA = "Bộ máy điều hành",
-                TitleB = "vững mạnh",
-                ItemsJson = JsonSerializer.Serialize(new
-                {
-                    board = new[]
-                    {
-                        new { sortOrder = 0, role = "Chủ tịch HĐQT", name = "Ông Võ Trí Nguyên" },
-                        new { sortOrder = 1, role = "Phó chủ tịch HĐQT", name = "Ông Trần Văn A" },
-                        new { sortOrder = 2, role = "Phó chủ tịch HĐQT", name = "Ông Nguyễn Văn B" },
-                        new { sortOrder = 3, role = "Thư ký HĐQT", name = "Bà Lê Thị C" },
-                    },
-                    directors = new[]
-                    {
-                        new { sortOrder = 0, role = "Tổng giám đốc", name = "Ông Võ Trí Nguyên" },
-                        new { sortOrder = 1, role = "Giám đốc BD Nhật Bản", name = "Ông Daisuke Mori" },
-                        new { sortOrder = 2, role = "Giám đốc BD châu Á", name = "Ông Kenji Sato" },
-                        new { sortOrder = 3, role = "Giám đốc thiết kế", name = "Bà Nguyễn Thị Lan" },
-                    },
-                }),
-                IsActive = true,
-                SortOrder = 4,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "timeline-main",
-                Eyebrow = "LỊCH SỬ",
-                TitleA = "Dấu mốc phát triển",
-                TitleB = "qua từng giai đoạn",
-                ImageUrl = "/images/activities/activity-opening.jpg",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { sortOrder = 0, year = "2006", title = "Thành lập NICON", desc = "Đặt nền móng cho hành trình phát triển trong lĩnh vực xây dựng công nghiệp." },
-                    new { sortOrder = 1, year = "2007", title = "Mở rộng đội ngũ", desc = "Tăng cường năng lực triển khai và quản lý dự án." },
-                    new { sortOrder = 2, year = "2010", title = "Chinh phục dự án FDI", desc = "Bắt đầu đồng hành cùng nhiều nhà đầu tư nước ngoài." },
-                    new { sortOrder = 3, year = "2016", title = "Chuẩn hóa quy trình", desc = "Nâng cao hiệu quả quản trị và kiểm soát chất lượng." },
-                    new { sortOrder = 4, year = "2018", title = "Mở rộng hợp tác chiến lược", desc = "Tăng cường kết nối với các đối tác trong và ngoài nước." },
-                    new { sortOrder = 5, year = "2024", title = "Tiếp tục tăng trưởng", desc = "Khẳng định vị thế tổng thầu uy tín với nhiều dự án quy mô lớn." },
-                }),
-                IsActive = true,
-                SortOrder = 5,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "certs-main",
-                Eyebrow = "CHỨNG NHẬN",
-                TitleA = "Tiêu chuẩn vận hành",
-                TitleB = "đáng tin cậy",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { sortOrder = 0, name = "ISO 9001:2008", desc = "Hệ thống quản lý chất lượng." },
-                    new { sortOrder = 1, name = "ISO 9001:2015", desc = "Chuẩn hóa quy trình và cải tiến liên tục." },
-                    new { sortOrder = 2, name = "ISO 14001", desc = "Quản lý môi trường trong thi công và vận hành." },
-                }),
-                IsActive = true,
-                SortOrder = 6,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "downloads-main",
-                Eyebrow = "CATALOGUE",
-                TitleA = "Catalogue",
-                TitleB = "& hồ sơ năng lực",
-                Paragraph1 = "Tải Catalogue và các tài liệu giới thiệu năng lực, chứng nhận của NICON dành cho đối tác, khách hàng và nhà đầu tư.",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { sortOrder = 0, name = "NICON Brochure", size = "77 MB", type = "PDF", url = "/files/Nicon-brochure.pdf" },
-                }),
-                IsActive = true,
-                SortOrder = 7,
-                CreatedAt = now,
-                UpdatedAt = now,
-            });
-
-        db.SaveChanges();
-    }
-
-    private static void EnsureCatalogueDownloadsSection(AppDbContext db)
-    {
-        var existing = db.AboutSectionContents.FirstOrDefault(x => x.Slug == "downloads-main");
-        if (existing == null) return;
-
-        // Only patch the placeholder seed (url = "#"). If admin has edited the
-        // downloads, leave their content alone.
-        if (existing.ItemsJson is null || !existing.ItemsJson.Contains("\"url\":\"#\"", StringComparison.Ordinal)) return;
-
-        existing.Eyebrow = "CATALOGUE";
-        existing.TitleA = "Catalogue";
-        existing.TitleB = "& hồ sơ năng lực";
-        existing.Paragraph1 = "Tải Catalogue và các tài liệu giới thiệu năng lực, chứng nhận của NICON dành cho đối tác, khách hàng và nhà đầu tư.";
-        existing.ItemsJson = JsonSerializer.Serialize(new[]
+        var seeds = new AboutSectionContent[]
         {
-            new { sortOrder = 0, name = "NICON Brochure", size = "77 MB", type = "PDF", url = "/files/Nicon-brochure.pdf" },
-        });
-        existing.UpdatedAt = DateTime.UtcNow;
+            new() { Slug = "about-main", SortOrder = 0, IsActive = true, Eyebrow = "GIỚI THIỆU CHUNG", TitleA = "Đối tác của sự", TitleB = "phát triển từ 2006", Paragraph1 = "Hơn 18 năm đồng hành cùng các nhà đầu tư trong và ngoài nước, NICON kiến tạo những công trình công nghiệp và dân dụng đạt chuẩn quốc tế.", Paragraph2 = "NICON chuyên thiết kế và thi công xây dựng công nghiệp, dân dụng chất lượng cao. Là đơn vị tiên phong áp dụng phương pháp tích hợp từ khâu nghiên cứu, thiết kế đến thi công, NICON giúp tối ưu hóa quy trình và mang lại hiệu quả cao nhất cho khách hàng.", ImageUrl = "/images/upload/about/102daea54ad641cdb16005d9fd1ec3b6.png" },
+            new() { Slug = "stats-main", SortOrder = 1, IsActive = true, Eyebrow = "CHỈ SỐ NỔI BẬT", ItemsJson = JsonSerializer.Serialize(new[] { new { iconKey = "calendar", sortOrder = 0, isActive = true, num = "18+", label = "Năm kinh nghiệm" }, new { iconKey = "building", sortOrder = 1, isActive = true, num = "150+", label = "Dự án hoàn thành" }, new { iconKey = "users", sortOrder = 2, isActive = true, num = "80+", label = "Khách hàng đồng hành" }, new { iconKey = "award", sortOrder = 3, isActive = true, num = "ISO", label = "Chuẩn hóa chất lượng" } }) },
+            new() { Slug = "values-main", SortOrder = 2, IsActive = true, Eyebrow = "GIÁ TRỊ CỐT LÕI", TitleA = "Nền tảng phát triển", TitleB = "NICON", ItemsJson = JsonSerializer.Serialize(new[] { new { iconKey = "target", sortOrder = 0, isActive = true, title = "Mục tiêu rõ ràng", desc = "Mọi quyết định đều hướng đến hiệu quả đầu tư và mục tiêu dài hạn của khách hàng." }, new { iconKey = "shield", sortOrder = 1, isActive = true, title = "Kỷ luật chất lượng", desc = "Quy trình thi công, giám sát và nghiệm thu được kiểm soát nghiêm ngặt." }, new { iconKey = "compass", sortOrder = 2, isActive = true, title = "Định hướng bền vững", desc = "Ưu tiên giải pháp tối ưu vận hành, chi phí và vòng đời công trình." }, new { iconKey = "heart", sortOrder = 3, isActive = true, title = "Tận tâm đồng hành", desc = "Xây dựng niềm tin bằng cách làm việc minh bạch và trách nhiệm đến cùng." } }) },
+            new() { Slug = "strategy-main", SortOrder = 3, IsActive = true, Eyebrow = "CHIẾN LƯỢC", TitleA = "Tư duy hệ thống cho", TitleB = "mỗi dự án", Paragraph1 = "Tầm nhìn: Trở thành tổng thầu thiết kế - thi công uy tín hàng đầu trong lĩnh vực công nghiệp và dân dụng tại Việt Nam. Không chỉ là xây dựng các công trình chất lượng mà còn là xây dựng những mối quan hệ bền vững với khách hàng, đối tác, và cộng đồng.", Paragraph2 = "Định hướng tương lai: Liên tục nâng cao năng lực thiết kế, quản lý và công nghệ để đáp ứng các tiêu chuẩn quốc tế ngày càng cao.", ItemsJson = JsonSerializer.Serialize(new[] { new { iconKey = "home", sortOrder = 0, isActive = true, title = "Công trình dân dụng", desc = "Xây dựng các dự án dân dụng từ nhà ở, trường học, đến các tòa nhà thương mại." }, new { iconKey = "hammer", sortOrder = 1, isActive = true, title = "Công trình công nghiệp", desc = "Đảm nhận các dự án xây dựng nhà xưởng, khu công nghiệp, và các công trình liên quan đến sản xuất." }, new { iconKey = "layers", sortOrder = 2, isActive = true, title = "Xây dựng hạ tầng", desc = "Phát triển cơ sở hạ tầng từ giao thông, cấp thoát nước, đến các công trình năng lượng." }, new { iconKey = "wrench", sortOrder = 3, isActive = true, title = "Thiết kế công trình", desc = "Bao gồm các hạng mục kiến trúc, kết cấu, điện nước, hạ tầng, cảnh quan, và quy hoạch tổng thể." }, new { iconKey = "briefcase", sortOrder = 4, isActive = true, title = "Tư vấn đầu tư và đầu tư xây dựng", desc = "Cung cấp các giải pháp đầu tư hiệu quả và hỗ trợ trong việc triển khai dự án xây dựng." }, new { iconKey = "users-group", sortOrder = 5, isActive = true, title = "Tư vấn quản lý xây dựng", desc = "Đảm bảo quá trình thi công đạt chất lượng và tiến độ như cam kết." }, new { iconKey = "handshake", sortOrder = 6, isActive = true, title = "Cung cấp vật liệu xây dựng", desc = "Đảm bảo nguồn cung ứng vật liệu xây dựng chất lượng cao, phù hợp với yêu cầu kỹ thuật của từng dự án." }, new { iconKey = "building", sortOrder = 7, isActive = true, title = "Giao dịch bất động sản", desc = "Tư vấn và hỗ trợ các hoạt động mua bán, chuyển nhượng và quản lý bất động sản." } }) },
+            new() { Slug = "organization-main", SortOrder = 4, IsActive = true, Eyebrow = "TỔ CHỨC", TitleA = "Bộ máy điều hành", TitleB = "vững mạnh", ItemsJson = JsonSerializer.Serialize(new { board = new[] { new { sortOrder = 0, role = "Chủ tịch", name = "Kiến trúc sư. Võ Trí Nguyên" }, new { sortOrder = 1, role = "Phó chủ tịch", name = "Kỹ sư. Yoshihiro Mori" }, new { sortOrder = 2, role = "Phó chủ tịch", name = "Kiến trúc sư. Lê Thị Yến" }, new { sortOrder = 3, role = "Thư ký", name = "MBA.Võ Tố Uyên" } }, directors = new[] { new { sortOrder = 0, role = "Tổng giám đốc", name = "Kiến trúc sư. Võ Trí Nguyên" }, new { sortOrder = 1, role = "Giám đốc phát triển kinh doanh Nhật Bản", name = "Ông Yoshihiro Mori" }, new { sortOrder = 2, role = "phát triển kinh doanh khu vực châu Á", name = "Ông Richard Penalosa" }, new { sortOrder = 3, role = "Giám đốc thiết kế", name = "Kiến trúc sư. Lê Thị Yến" } }, companyChartUrl = "/images/upload/about/26ff4d672035407c989e7aaf1231f5d3.png", siteChartUrl = "/images/upload/about/9972ac8d4ff643a0a88acac542a1ee13.jpg" }) },
+            new() { Slug = "timeline-main", SortOrder = 5, IsActive = true, Eyebrow = "LỊCH SỬ", TitleA = "Dấu mốc phát triển", TitleB = "qua từng giai đoạn", ImageUrl = "/images/upload/cac99fa59b264bd7ade9789960bf781e.jpeg", ItemsJson = JsonSerializer.Serialize(new[] { new { sortOrder = 0, year = "2006", title = "Thành lập NICON", desc = "Đặt nền móng cho hành trình phát triển trong lĩnh vực xây dựng công nghiệp." }, new { sortOrder = 1, year = "2007", title = "Mở rộng đội ngũ", desc = "Tăng cường năng lực triển khai và quản lý dự án." }, new { sortOrder = 2, year = "2008", title = "Nhà thầu Thiết kế và Thi công", desc = "Bắt đầu đồng hành cùng nhiều nhà đầu tư nước ngoài." }, new { sortOrder = 3, year = "2010", title = "Tăng cường hợp tác", desc = "Tăng cường kết nối với các đối tác trong và ngoài nước." }, new { sortOrder = 4, year = "2016", title = "M&A với Mori Group (Nhật Bản)", desc = "Với sự hợp tác này, MORI INDUSTRY GROUP đã trở thành Đối tác chiến lược của NICON" }, new { sortOrder = 5, year = "2018", title = "Top 10 Thương hiệu dẫn đầu Việt Nam", desc = "Khẳng định vị thế tổng thầu uy tín với nhiều dự án quy mô lớn." }, new { sortOrder = 6, year = "2026", title = "Tiếp tục tăng trưởng", desc = "Khẳng định vị thế qua những công trình chất lượng và không ngừng mở rộng quy mô dự án." } }) },
+            new() { Slug = "certs-main", SortOrder = 6, IsActive = true, Eyebrow = "CHỨNG NHẬN", TitleA = "Tiêu chuẩn vận hành", TitleB = "đáng tin cậy", ItemsJson = JsonSerializer.Serialize(new[] { new { sortOrder = 0, name = "ISO 9001:2008", desc = "Hệ thống quản lý chất lượng.", imageUrl = "/images/upload/about/c8bb1be2415a4f1d9ba028a20fbd6d76.jpg" }, new { sortOrder = 1, name = "ISO 9001:2015", desc = "Chuẩn hóa quy trình và cải tiến liên tục.", imageUrl = "/images/upload/about/cf5320dd3930445da2ed045758f2a60b.jpg" }, new { sortOrder = 2, name = "ISO 14001:2015", desc = "Quản lý môi trường trong thi công và vận hành.", imageUrl = "/images/upload/about/4bc5031a2cb941ee8aeeb644a29a4d55.jpg" }, new { sortOrder = 3, name = "Certifications of Nicon JSC", desc = "Tiêu chuẩn thiết kế và thi công phòng sạch, nhà xưởng chuyên biệt.", imageUrl = "/images/upload/about/9681ac567906459da806ffb8ee92df68.jpg" } }) },
+            new() { Slug = "downloads-main", SortOrder = 7, IsActive = true, Eyebrow = "TÀI LIỆU", TitleA = "Hồ sơ năng lực", TitleB = "và tài liệu tham khảo", Paragraph1 = "Tổng hợp các tài liệu giới thiệu năng lực, chứng nhận và thông tin doanh nghiệp phục vụ đối tác, khách hàng và nhà đầu tư.", ItemsJson = JsonSerializer.Serialize(new[] { new { sortOrder = 0, name = "Company Profile", size = "77 KB", type = "JPEG", url = "/files/cv/d560cb8311a84a1784c8decf55c31884.jpeg" }, new { sortOrder = 1, name = "Brochure năng lực", size = "76.8 MB", type = "PDF", url = "/files/cv/71a61d81a6a14c25980dfbe9f01d1462.pdf" }, new { sortOrder = 2, name = "ISO Certificates", size = "82 KB", type = "JPG", url = "/files/cv/93ba59bb511e43f3a61c44ba4ea5b6f4.jpg" }, new { sortOrder = 3, name = "Danh mục dự án tiêu biểu", size = "74 KB", type = "JPEG", url = "/files/cv/25631b4fd7f64c538cbaeb9a7b1c0f83.jpeg" } }) },
+        };
+
+        var existing = db.AboutSectionContents.ToDictionary(a => a.Slug);
+        foreach (var seed in seeds)
+        {
+            if (existing.TryGetValue(seed.Slug, out var item))
+            {
+                item.Eyebrow    = seed.Eyebrow;
+                item.TitleA     = seed.TitleA;
+                item.TitleB     = seed.TitleB;
+                item.Paragraph1 = seed.Paragraph1;
+                item.Paragraph2 = seed.Paragraph2;
+                item.ImageUrl   = seed.ImageUrl;
+                item.ItemsJson  = seed.ItemsJson;
+                item.IsActive   = seed.IsActive;
+                item.SortOrder  = seed.SortOrder;
+                item.UpdatedAt  = now;
+            }
+            else
+            {
+                seed.CreatedAt = now;
+                seed.UpdatedAt = now;
+                db.AboutSectionContents.Add(seed);
+            }
+        }
+
         db.SaveChanges();
     }
 

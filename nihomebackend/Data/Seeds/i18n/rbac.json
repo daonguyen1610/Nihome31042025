@@ -1,1042 +1,11 @@
 [
   {
-    "key": "rbac.perm.dashboard.view.label",
-    "category": "rbac",
-    "vi": "Xem Dashboard",
-    "en": "View dashboard",
-    "zh": "查看仪表板",
-    "ja": "ダッシュボードを表示"
-  },
-  {
-    "key": "rbac.perm.dashboard.view.description",
-    "category": "rbac",
-    "vi": "Cho phép truy cập trang tổng quan quản trị.",
-    "en": "Grants access to the admin dashboard.",
-    "zh": "允许访问管理仪表板。",
-    "ja": "管理ダッシュボードへのアクセスを許可します。"
-  },
-
-  {
-    "key": "rbac.perm.profile.me.view.label",
-    "category": "rbac",
-    "vi": "Xem hồ sơ cá nhân",
-    "en": "View own profile",
-    "zh": "查看个人资料",
-    "ja": "自分のプロフィールを表示"
-  },
-  {
-    "key": "rbac.perm.profile.me.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem thông tin tài khoản của chính mình.",
-    "en": "Allows viewing the current user's own profile.",
-    "zh": "允许查看自己的账户信息。",
-    "ja": "自分自身のアカウント情報の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.profile.me.update.label",
-    "category": "rbac",
-    "vi": "Cập nhật hồ sơ cá nhân",
-    "en": "Update own profile",
-    "zh": "更新个人资料",
-    "ja": "自分のプロフィールを更新"
-  },
-  {
-    "key": "rbac.perm.profile.me.update.description",
-    "category": "rbac",
-    "vi": "Cho phép tự cập nhật thông tin tài khoản.",
-    "en": "Allows updating the current user's own profile.",
-    "zh": "允许自行更新账户信息。",
-    "ja": "自身のアカウント情報の更新を許可します。"
-  },
-
-  {
-    "key": "rbac.perm.users.view.label",
-    "category": "rbac",
-    "vi": "Xem người dùng",
-    "en": "View users",
-    "zh": "查看用户",
-    "ja": "ユーザーを表示"
-  },
-  {
-    "key": "rbac.perm.users.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết người dùng.",
-    "en": "Allows listing and viewing user details.",
-    "zh": "允许查看用户列表和详细信息。",
-    "ja": "ユーザー一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.users.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý người dùng",
-    "en": "Manage users",
-    "zh": "管理用户",
-    "ja": "ユーザーを管理"
-  },
-  {
-    "key": "rbac.perm.users.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, vô hiệu hoá và phân vai trò người dùng.",
-    "en": "Create, edit, deactivate and assign roles to users.",
-    "zh": "创建、编辑、停用用户并分配角色。",
-    "ja": "ユーザーの作成・編集・無効化・ロール割り当てを行います。"
-  },
-
-  {
-    "key": "rbac.perm.rbac.roles.view.label",
-    "category": "rbac",
-    "vi": "Xem vai trò & quyền",
-    "en": "View roles & permissions",
-    "zh": "查看角色与权限",
-    "ja": "ロールと権限を表示"
-  },
-  {
-    "key": "rbac.perm.rbac.roles.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem ma trận vai trò và danh mục quyền.",
-    "en": "Allows viewing the role matrix and permission catalog.",
-    "zh": "允许查看角色矩阵和权限目录。",
-    "ja": "ロールマトリクスと権限カタログの閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.rbac.roles.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý vai trò & quyền",
-    "en": "Manage roles & permissions",
-    "zh": "管理角色与权限",
-    "ja": "ロールと権限を管理"
-  },
-  {
-    "key": "rbac.perm.rbac.roles.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, xoá vai trò và gán quyền (trừ các vai trò hệ thống).",
-    "en": "Create, edit, delete roles and assign permissions (except system roles).",
-    "zh": "创建、编辑、删除角色并分配权限（系统角色除外）。",
-    "ja": "ロールの作成・編集・削除と権限の割り当て（システムロールを除く）。"
-  },
-
-  {
-    "key": "rbac.perm.system.audit.view.label",
-    "category": "rbac",
-    "vi": "Xem nhật ký kiểm toán",
-    "en": "View audit log",
-    "zh": "查看审计日志",
-    "ja": "監査ログを表示"
-  },
-  {
-    "key": "rbac.perm.system.audit.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem các sự kiện kiểm toán hệ thống.",
-    "en": "Allows reading system audit events.",
-    "zh": "允许查看系统审计事件。",
-    "ja": "システム監査イベントの閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.system.audit.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý nhật ký kiểm toán",
-    "en": "Manage audit log",
-    "zh": "管理审计日志",
-    "ja": "監査ログを管理"
-  },
-  {
-    "key": "rbac.perm.system.audit.manage.description",
-    "category": "rbac",
-    "vi": "Cho phép xoá log và cập nhật cấu hình thời gian lưu trữ.",
-    "en": "Allows deleting entries and updating retention configuration.",
-    "zh": "允许删除条目并更新保留期配置。",
-    "ja": "ログの削除と保持期間設定の更新を許可します。"
-  },
-  {
-    "key": "rbac.perm.system.notifications.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý thông báo hệ thống",
-    "en": "Manage system notifications",
-    "zh": "管理系统通知",
-    "ja": "システム通知を管理"
-  },
-  {
-    "key": "rbac.perm.system.notifications.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, đánh dấu đã đọc và xoá thông báo của quản trị viên.",
-    "en": "Create, mark-as-read and delete administrator notifications.",
-    "zh": "创建、标记为已读和删除管理员通知。",
-    "ja": "管理者通知の作成・既読化・削除を行います。"
-  },
-  {
-    "key": "rbac.perm.system.uploads.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý tệp tải lên hệ thống",
-    "en": "Manage system uploads",
-    "zh": "管理系统上传",
-    "ja": "システムのアップロードを管理"
-  },
-  {
-    "key": "rbac.perm.system.uploads.manage.description",
-    "category": "rbac",
-    "vi": "Tải lên, thay thế và xoá tệp dùng chung của hệ thống.",
-    "en": "Upload, replace and delete system-wide shared files.",
-    "zh": "上传、替换和删除系统共享文件。",
-    "ja": "システム共有ファイルのアップロード・置換・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.about.view.label",
-    "category": "rbac",
-    "vi": "Xem nội dung Giới thiệu",
-    "en": "View About content",
-    "zh": "查看“关于”内容",
-    "ja": "「About」コンテンツを表示"
-  },
-  {
-    "key": "rbac.perm.content.about.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem các khối nội dung trang Giới thiệu.",
-    "en": "Allows viewing the About page content sections.",
-    "zh": "允许查看“关于”页面的内容板块。",
-    "ja": "About ページの各セクションの閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.about.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý nội dung Giới thiệu",
-    "en": "Manage About content",
-    "zh": "管理“关于”内容",
-    "ja": "「About」コンテンツを管理"
-  },
-  {
-    "key": "rbac.perm.content.about.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, sắp xếp và xoá các khối nội dung Giới thiệu.",
-    "en": "Create, edit, reorder and delete About content sections.",
-    "zh": "创建、编辑、排序和删除“关于”内容板块。",
-    "ja": "About のセクションの作成・編集・並び替え・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.activities.view.label",
-    "category": "rbac",
-    "vi": "Xem hoạt động",
-    "en": "View activities",
-    "zh": "查看活动",
-    "ja": "アクティビティを表示"
-  },
-  {
-    "key": "rbac.perm.content.activities.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết các hoạt động.",
-    "en": "Allows listing and viewing activity details.",
-    "zh": "允许查看活动列表及详情。",
-    "ja": "アクティビティ一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.activities.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý hoạt động",
-    "en": "Manage activities",
-    "zh": "管理活动",
-    "ja": "アクティビティを管理"
-  },
-  {
-    "key": "rbac.perm.content.activities.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa và xoá các bài hoạt động.",
-    "en": "Create, edit and delete activity entries.",
-    "zh": "创建、编辑和删除活动条目。",
-    "ja": "アクティビティ記事の作成・編集・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.activity-categories.view.label",
-    "category": "rbac",
-    "vi": "Xem danh mục hoạt động",
-    "en": "View activity categories",
-    "zh": "查看活动分类",
-    "ja": "アクティビティのカテゴリを表示"
-  },
-  {
-    "key": "rbac.perm.content.activity-categories.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh mục phân loại hoạt động.",
-    "en": "Allows viewing the activity category list.",
-    "zh": "允许查看活动分类列表。",
-    "ja": "アクティビティのカテゴリ一覧の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.activity-categories.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý danh mục hoạt động",
-    "en": "Manage activity categories",
-    "zh": "管理活动分类",
-    "ja": "アクティビティのカテゴリを管理"
-  },
-  {
-    "key": "rbac.perm.content.activity-categories.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa và xoá danh mục phân loại hoạt động.",
-    "en": "Create, edit and delete activity categories.",
-    "zh": "创建、编辑和删除活动分类。",
-    "ja": "アクティビティのカテゴリの作成・編集・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.logos.view.label",
-    "category": "rbac",
-    "vi": "Xem logo đối tác",
-    "en": "View partner logos",
-    "zh": "查看合作伙伴标志",
-    "ja": "パートナーロゴを表示"
-  },
-  {
-    "key": "rbac.perm.content.logos.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách logo đối tác hiển thị trên web.",
-    "en": "Allows viewing the list of partner logos shown on the site.",
-    "zh": "允许查看网站显示的合作伙伴标志列表。",
-    "ja": "サイトに表示するパートナーロゴ一覧の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.logos.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý logo đối tác",
-    "en": "Manage partner logos",
-    "zh": "管理合作伙伴标志",
-    "ja": "パートナーロゴを管理"
-  },
-  {
-    "key": "rbac.perm.content.logos.manage.description",
-    "category": "rbac",
-    "vi": "Tải lên, thay thế và xoá logo đối tác.",
-    "en": "Upload, replace and delete partner logos.",
-    "zh": "上传、替换和删除合作伙伴标志。",
-    "ja": "パートナーロゴのアップロード・置換・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.news.view.label",
-    "category": "rbac",
-    "vi": "Xem tin tức",
-    "en": "View news",
-    "zh": "查看新闻",
-    "ja": "ニュースを表示"
-  },
-  {
-    "key": "rbac.perm.content.news.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết tin tức.",
-    "en": "Allows listing and viewing news details.",
-    "zh": "允许查看新闻列表及详情。",
-    "ja": "ニュース一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.news.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý tin tức",
-    "en": "Manage news",
-    "zh": "管理新闻",
-    "ja": "ニュースを管理"
-  },
-  {
-    "key": "rbac.perm.content.news.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, đăng và xoá bài tin tức.",
-    "en": "Create, edit, publish and delete news articles.",
-    "zh": "创建、编辑、发布和删除新闻文章。",
-    "ja": "ニュース記事の作成・編集・公開・削除を行います。"
-  },
-  {
-    "key": "rbac.perm.content.news-categories.view.label",
-    "category": "rbac",
-    "vi": "Xem danh mục tin tức",
-    "en": "View news categories",
-    "zh": "查看新闻分类",
-    "ja": "ニュースカテゴリを表示"
-  },
-  {
-    "key": "rbac.perm.content.news-categories.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách danh mục tin tức.",
-    "en": "Allows listing news categories.",
-    "zh": "允许查看新闻分类列表。",
-    "ja": "ニュースカテゴリ一覧の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.news-categories.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý danh mục tin tức",
-    "en": "Manage news categories",
-    "zh": "管理新闻分类",
-    "ja": "ニュースカテゴリを管理"
-  },
-  {
-    "key": "rbac.perm.content.news-categories.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa và xoá danh mục tin tức.",
-    "en": "Create, edit and delete news categories.",
-    "zh": "创建、编辑和删除新闻分类。",
-    "ja": "ニュースカテゴリの作成・編集・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.projects.view.label",
-    "category": "rbac",
-    "vi": "Xem dự án",
-    "en": "View projects",
-    "zh": "查看项目",
-    "ja": "プロジェクトを表示"
-  },
-  {
-    "key": "rbac.perm.content.projects.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết dự án.",
-    "en": "Allows listing and viewing project details.",
-    "zh": "允许查看项目列表及详情。",
-    "ja": "プロジェクト一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.projects.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý dự án",
-    "en": "Manage projects",
-    "zh": "管理项目",
-    "ja": "プロジェクトを管理"
-  },
-  {
-    "key": "rbac.perm.content.projects.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, đăng và xoá dự án trên trang web.",
-    "en": "Create, edit, publish and delete projects on the site.",
-    "zh": "创建、编辑、发布和删除网站上的项目。",
-    "ja": "サイトのプロジェクトの作成・編集・公開・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.project-categories.view.label",
-    "category": "rbac",
-    "vi": "Xem danh mục dự án",
-    "en": "View project categories",
-    "zh": "查看项目分类",
-    "ja": "プロジェクトのカテゴリを表示"
-  },
-  {
-    "key": "rbac.perm.content.project-categories.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh mục phân loại dự án.",
-    "en": "Allows viewing the project category list.",
-    "zh": "允许查看项目分类列表。",
-    "ja": "プロジェクトのカテゴリ一覧の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.project-categories.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý danh mục dự án",
-    "en": "Manage project categories",
-    "zh": "管理项目分类",
-    "ja": "プロジェクトのカテゴリを管理"
-  },
-  {
-    "key": "rbac.perm.content.project-categories.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa và xoá danh mục phân loại dự án.",
-    "en": "Create, edit and delete project categories.",
-    "zh": "创建、编辑和删除项目分类。",
-    "ja": "プロジェクトのカテゴリの作成・編集・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.services.view.label",
-    "category": "rbac",
-    "vi": "Xem dịch vụ",
-    "en": "View services",
-    "zh": "查看服务",
-    "ja": "サービスを表示"
-  },
-  {
-    "key": "rbac.perm.content.services.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết dịch vụ.",
-    "en": "Allows listing and viewing service details.",
-    "zh": "允许查看服务列表及详情。",
-    "ja": "サービス一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.services.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý dịch vụ",
-    "en": "Manage services",
-    "zh": "管理服务",
-    "ja": "サービスを管理"
-  },
-  {
-    "key": "rbac.perm.content.services.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, sắp xếp và xoá các dịch vụ.",
-    "en": "Create, edit, reorder and delete services.",
-    "zh": "创建、编辑、排序和删除服务。",
-    "ja": "サービスの作成・編集・並び替え・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.slideshow.view.label",
-    "category": "rbac",
-    "vi": "Xem trình chiếu",
-    "en": "View slideshow",
-    "zh": "查看幻灯片",
-    "ja": "スライドショーを表示"
-  },
-  {
-    "key": "rbac.perm.content.slideshow.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem các slide hiển thị trên trang chủ.",
-    "en": "Allows viewing the slides shown on the home page.",
-    "zh": "允许查看首页显示的幻灯片。",
-    "ja": "トップページに表示するスライドの閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.slideshow.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý trình chiếu",
-    "en": "Manage slideshow",
-    "zh": "管理幻灯片",
-    "ja": "スライドショーを管理"
-  },
-  {
-    "key": "rbac.perm.content.slideshow.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, sắp xếp và xoá slide trên trang chủ.",
-    "en": "Create, edit, reorder and delete home page slides.",
-    "zh": "创建、编辑、排序和删除首页幻灯片。",
-    "ja": "トップページスライドの作成・編集・並び替え・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.content.translations.view.label",
-    "category": "rbac",
-    "vi": "Xem bản dịch nội dung",
-    "en": "View content translations",
-    "zh": "查看内容翻译",
-    "ja": "コンテンツ翻訳を表示"
-  },
-  {
-    "key": "rbac.perm.content.translations.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem các cặp dịch tĩnh và bản dịch của thực thể.",
-    "en": "Allows viewing static translation pairs and entity translations.",
-    "zh": "允许查看静态翻译键值对以及实体翻译。",
-    "ja": "静的翻訳ペアおよびエンティティ翻訳の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.content.translations.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý bản dịch nội dung",
-    "en": "Manage content translations",
-    "zh": "管理内容翻译",
-    "ja": "コンテンツ翻訳を管理"
-  },
-  {
-    "key": "rbac.perm.content.translations.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa và xoá bản dịch tĩnh cũng như bản dịch của thực thể.",
-    "en": "Create, edit and delete static translation pairs and entity translations.",
-    "zh": "创建、编辑和删除静态翻译键值对及实体翻译。",
-    "ja": "静的翻訳ペアおよびエンティティ翻訳の作成・編集・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.system.settings.view.label",
-    "category": "rbac",
-    "vi": "Xem cấu hình hệ thống",
-    "en": "View system settings",
-    "zh": "查看系统设置",
-    "ja": "システム設定を表示"
-  },
-  {
-    "key": "rbac.perm.system.settings.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem cấu hình OTP, email mẫu và bản đồ nhúng.",
-    "en": "Allows viewing OTP, email template and embedded map settings.",
-    "zh": "允许查看 OTP、邮件模板及嵌入地图设置。",
-    "ja": "OTP・メールテンプレート・埋め込み地図設定の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.system.settings.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý cấu hình hệ thống",
-    "en": "Manage system settings",
-    "zh": "管理系统设置",
-    "ja": "システム設定を管理"
-  },
-  {
-    "key": "rbac.perm.system.settings.manage.description",
-    "category": "rbac",
-    "vi": "Cập nhật OTP, email mẫu và URL bản đồ nhúng cho trang công khai.",
-    "en": "Update OTP, email templates and embedded map URL for the public site.",
-    "zh": "更新公开站点的 OTP、邮件模板及嵌入地图 URL。",
-    "ja": "公開サイトの OTP・メールテンプレート・埋め込み地図 URL を更新します。"
-  },
-
-  {
-    "key": "rbac.perm.processes.view.label",
-    "category": "rbac",
-    "vi": "Xem quy trình làm việc",
-    "en": "View work processes",
-    "zh": "查看工作流程",
-    "ja": "ワークプロセスを表示"
-  },
-  {
-    "key": "rbac.perm.processes.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết quy trình làm việc.",
-    "en": "Allows listing and viewing work process details.",
-    "zh": "允许查看工作流程列表及详情。",
-    "ja": "ワークプロセス一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.processes.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý quy trình làm việc",
-    "en": "Manage work processes",
-    "zh": "管理工作流程",
-    "ja": "ワークプロセスを管理"
-  },
-  {
-    "key": "rbac.perm.processes.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa và xoá các quy trình làm việc nội bộ.",
-    "en": "Create, edit and delete internal work processes.",
-    "zh": "创建、编辑和删除内部工作流程。",
-    "ja": "社内ワークプロセスの作成・編集・削除を行います。"
-  },
-  {
-    "key": "rbac.perm.processes.uploads.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý tài liệu quy trình",
-    "en": "Manage process uploads",
-    "zh": "管理流程文件上传",
-    "ja": "プロセスのアップロードを管理"
-  },
-  {
-    "key": "rbac.perm.processes.uploads.manage.description",
-    "category": "rbac",
-    "vi": "Tải lên, thay thế và xoá tệp đính kèm của quy trình.",
-    "en": "Upload, replace and delete process attachments.",
-    "zh": "上传、替换和删除流程附件。",
-    "ja": "プロセスに添付するファイルのアップロード・置換・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.mail.send.label",
-    "category": "rbac",
-    "vi": "Gửi email từ hệ thống",
-    "en": "Send system email",
-    "zh": "通过系统发送邮件",
-    "ja": "システムからメールを送信"
-  },
-  {
-    "key": "rbac.perm.mail.send.description",
-    "category": "rbac",
-    "vi": "Cho phép gửi email phản hồi và thông báo từ giao diện quản trị.",
-    "en": "Allows sending reply and notification emails from the admin UI.",
-    "zh": "允许通过管理界面发送回复和通知邮件。",
-    "ja": "管理 UI から返信・通知メールを送信できます。"
-  },
-
-  {
-    "key": "rbac.perm.contacts.view.label",
-    "category": "rbac",
-    "vi": "Xem yêu cầu liên hệ",
-    "en": "View contact messages",
-    "zh": "查看联系消息",
-    "ja": "問い合わせを表示"
-  },
-  {
-    "key": "rbac.perm.contacts.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem các yêu cầu liên hệ gửi từ trang web.",
-    "en": "Allows viewing contact messages submitted from the site.",
-    "zh": "允许查看网站提交的联系消息。",
-    "ja": "サイトから送信された問い合わせの閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.contacts.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý yêu cầu liên hệ",
-    "en": "Manage contact messages",
-    "zh": "管理联系消息",
-    "ja": "問い合わせを管理"
-  },
-  {
-    "key": "rbac.perm.contacts.manage.description",
-    "category": "rbac",
-    "vi": "Cập nhật trạng thái, phản hồi và xoá yêu cầu liên hệ.",
-    "en": "Update status, reply and delete contact messages.",
-    "zh": "更新状态、回复和删除联系消息。",
-    "ja": "問い合わせの状態更新・返信・削除を行います。"
-  },
-
-  {
-    "key": "rbac.perm.recruitment.applications.view.label",
-    "category": "rbac",
-    "vi": "Xem hồ sơ ứng tuyển",
-    "en": "View job applications",
-    "zh": "查看求职申请",
-    "ja": "応募者を表示"
-  },
-  {
-    "key": "rbac.perm.recruitment.applications.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết hồ sơ ứng tuyển.",
-    "en": "Allows listing and viewing job application details.",
-    "zh": "允许查看求职申请列表及详情。",
-    "ja": "応募者一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.recruitment.applications.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý hồ sơ ứng tuyển",
-    "en": "Manage job applications",
-    "zh": "管理求职申请",
-    "ja": "応募者を管理"
-  },
-  {
-    "key": "rbac.perm.recruitment.applications.manage.description",
-    "category": "rbac",
-    "vi": "Cập nhật trạng thái, ghi chú và xoá hồ sơ ứng tuyển.",
-    "en": "Update status, notes and delete job applications.",
-    "zh": "更新状态、备注和删除求职申请。",
-    "ja": "応募者の状態更新・メモ・削除を行います。"
-  },
-  {
-    "key": "rbac.perm.recruitment.positions.view.label",
-    "category": "rbac",
-    "vi": "Xem vị trí tuyển dụng",
-    "en": "View job positions",
-    "zh": "查看招聘职位",
-    "ja": "求人を表示"
-  },
-  {
-    "key": "rbac.perm.recruitment.positions.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh sách và chi tiết các vị trí tuyển dụng.",
-    "en": "Allows listing and viewing job position details.",
-    "zh": "允许查看招聘职位列表及详情。",
-    "ja": "求人一覧と詳細の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.recruitment.positions.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý vị trí tuyển dụng",
-    "en": "Manage job positions",
-    "zh": "管理招聘职位",
-    "ja": "求人を管理"
-  },
-  {
-    "key": "rbac.perm.recruitment.positions.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa, đăng và xoá các vị trí tuyển dụng.",
-    "en": "Create, edit, publish and delete job positions.",
-    "zh": "创建、编辑、发布和删除招聘职位。",
-    "ja": "求人の作成・編集・公開・削除を行います。"
-  },
-  {
-    "key": "rbac.perm.recruitment.options.view.label",
-    "category": "rbac",
-    "vi": "Xem danh mục tuyển dụng",
-    "en": "View recruitment options",
-    "zh": "查看招聘选项",
-    "ja": "採用オプションを表示"
-  },
-  {
-    "key": "rbac.perm.recruitment.options.view.description",
-    "category": "rbac",
-    "vi": "Cho phép xem danh mục loại hợp đồng, lựa chọn cho biểu mẫu tuyển dụng.",
-    "en": "Allows viewing employment types and dropdown options for recruitment forms.",
-    "zh": "允许查看招聘表单使用的雇佣类型和下拉选项。",
-    "ja": "採用フォームで使う雇用形態とドロップダウン項目の閲覧を許可します。"
-  },
-  {
-    "key": "rbac.perm.recruitment.options.manage.label",
-    "category": "rbac",
-    "vi": "Quản lý danh mục tuyển dụng",
-    "en": "Manage recruitment options",
-    "zh": "管理招聘选项",
-    "ja": "採用オプションを管理"
-  },
-  {
-    "key": "rbac.perm.recruitment.options.manage.description",
-    "category": "rbac",
-    "vi": "Tạo, sửa và xoá loại hợp đồng cùng lựa chọn cho biểu mẫu tuyển dụng.",
-    "en": "Create, edit and delete employment types and dropdown options.",
-    "zh": "创建、编辑和删除雇佣类型与下拉选项。",
-    "ja": "雇用形態とドロップダウン項目の作成・編集・削除を行います。"
-  },
-
-  {
-    "key": "rbac.role.SUPER_ADMIN.label",
-    "category": "rbac",
-    "vi": "Super Admin",
-    "en": "Super Admin",
-    "zh": "超级管理员",
-    "ja": "スーパー管理者"
-  },
-  {
-    "key": "rbac.role.SUPER_ADMIN.description",
-    "category": "rbac",
-    "vi": "Toàn quyền hệ thống. Không thể chỉnh sửa qua giao diện.",
-    "en": "Full system access. Cannot be edited via the UI.",
-    "zh": "拥有系统全部权限，不能通过界面修改。",
-    "ja": "システムの完全アクセス権を持ち、UI から変更できません。"
-  },
-  {
-    "key": "rbac.role.ADMIN.label",
-    "category": "rbac",
-    "vi": "Quản trị viên",
-    "en": "Administrator",
-    "zh": "管理员",
-    "ja": "管理者"
-  },
-  {
-    "key": "rbac.role.ADMIN.description",
-    "category": "rbac",
-    "vi": "Quản trị toàn bộ nội dung và vai trò, trừ quyền cấp Super Admin.",
-    "en": "Manages all content and roles, excluding Super Admin level rights.",
-    "zh": "管理所有内容与角色，超级管理员权限除外。",
-    "ja": "スーパー管理者権限を除く全てのコンテンツとロールを管理します。"
-  },
-  {
-    "key": "rbac.role.USER.label",
-    "category": "rbac",
-    "vi": "Người dùng",
-    "en": "User",
-    "zh": "用户",
-    "ja": "ユーザー"
-  },
-  {
-    "key": "rbac.role.USER.description",
-    "category": "rbac",
-    "vi": "Vai trò mặc định cho người dùng đã đăng nhập.",
-    "en": "Default role for authenticated end users.",
-    "zh": "已登录最终用户的默认角色。",
-    "ja": "ログイン済みエンドユーザーの既定ロール。"
-  },
-
-  {
-    "key": "rbac.role.SALE.label",
-    "category": "rbac",
-    "vi": "Kinh doanh",
-    "en": "Sales",
-    "zh": "销售",
-    "ja": "営業"
-  },
-  {
-    "key": "rbac.role.SALE.description",
-    "category": "rbac",
-    "vi": "Phụ trách liên hệ khách hàng và hồ sơ tuyển dụng.",
-    "en": "Handles customer contacts and recruitment applications.",
-    "zh": "负责客户联系和招聘申请。",
-    "ja": "顧客対応と採用応募の管理を担当します。"
-  },
-  {
-    "key": "rbac.role.DESIGN.label",
-    "category": "rbac",
-    "vi": "Thiết kế",
-    "en": "Design",
-    "zh": "设计",
-    "ja": "デザイン"
-  },
-  {
-    "key": "rbac.role.DESIGN.description",
-    "category": "rbac",
-    "vi": "Quản lý nội dung trang web và quy trình thiết kế.",
-    "en": "Manages site content and design processes.",
-    "zh": "管理网站内容和设计流程。",
-    "ja": "サイトコンテンツとデザインプロセスを管理します。"
-  },
-  {
-    "key": "rbac.role.PM.label",
-    "category": "rbac",
-    "vi": "Quản lý dự án",
-    "en": "Project Manager",
-    "zh": "项目经理",
-    "ja": "プロジェクトマネージャー"
-  },
-  {
-    "key": "rbac.role.PM.description",
-    "category": "rbac",
-    "vi": "Quản lý dự án, quy trình và đơn ứng tuyển.",
-    "en": "Manages projects, processes and applications.",
-    "zh": "管理项目、流程和申请。",
-    "ja": "プロジェクト・プロセス・応募の管理を行います。"
-  },
-  {
-    "key": "rbac.role.QS.label",
-    "category": "rbac",
-    "vi": "Bóc tách khối lượng",
-    "en": "Quantity Surveyor",
-    "zh": "造价工程师",
-    "ja": "数量積算"
-  },
-  {
-    "key": "rbac.role.QS.description",
-    "category": "rbac",
-    "vi": "Truy cập dữ liệu dự án và quy trình chỉ đọc.",
-    "en": "Read-only access to projects and processes.",
-    "zh": "对项目和流程的只读访问权限。",
-    "ja": "プロジェクトとプロセスへの読み取り専用アクセスです。"
-  },
-  {
-    "key": "rbac.role.ACCOUNTANT.label",
-    "category": "rbac",
-    "vi": "Kế toán",
-    "en": "Accountant",
-    "zh": "会计",
-    "ja": "経理"
-  },
-  {
-    "key": "rbac.role.ACCOUNTANT.description",
-    "category": "rbac",
-    "vi": "Xem liên hệ khách hàng và nhật ký kiểm toán.",
-    "en": "Views customer contacts and audit log.",
-    "zh": "查看客户联系和审计日志。",
-    "ja": "顧客連絡先と監査ログを閲覧します。"
-  },
-  {
-    "key": "rbac.role.WAREHOUSE.label",
-    "category": "rbac",
-    "vi": "Kho",
-    "en": "Warehouse",
-    "zh": "仓库",
-    "ja": "倉庫"
-  },
-  {
-    "key": "rbac.role.WAREHOUSE.description",
-    "category": "rbac",
-    "vi": "Tham khảo quy trình vận hành.",
-    "en": "Reference access to operational processes.",
-    "zh": "查阅运营流程。",
-    "ja": "業務プロセスの参照アクセスです。"
-  },
-  {
-    "key": "rbac.role.BGD.label",
-    "category": "rbac",
-    "vi": "Ban Giám đốc",
-    "en": "Board of Directors",
-    "zh": "董事会",
-    "ja": "取締役会"
-  },
-  {
-    "key": "rbac.role.BGD.description",
-    "category": "rbac",
-    "vi": "Xem toàn bộ dữ liệu chỉ đọc và nhật ký kiểm toán.",
-    "en": "Read-only access to all data and the audit log.",
-    "zh": "对所有数据和审计日志的只读访问权限。",
-    "ja": "全データと監査ログへの読み取り専用アクセスです。"
-  },
-
-  {
-    "key": "rbac.notification.role-created.title",
-    "category": "rbac",
-    "vi": "Đã tạo vai trò mới",
-    "en": "Role created",
-    "zh": "已创建角色",
-    "ja": "ロールを作成しました"
-  },
-  {
-    "key": "rbac.notification.role-updated.title",
-    "category": "rbac",
-    "vi": "Đã cập nhật vai trò",
-    "en": "Role updated",
-    "zh": "已更新角色",
-    "ja": "ロールを更新しました"
-  },
-  {
-    "key": "rbac.notification.role-permissions-updated.title",
-    "category": "rbac",
-    "vi": "Đã cập nhật quyền của vai trò",
-    "en": "Role permissions updated",
-    "zh": "已更新角色权限",
-    "ja": "ロールの権限を更新しました"
-  },
-  {
-    "key": "rbac.notification.role-deleted.title",
-    "category": "rbac",
-    "vi": "Đã xoá vai trò",
-    "en": "Role deleted",
-    "zh": "已删除角色",
-    "ja": "ロールを削除しました"
-  },
-
-  {
-    "key": "adminRbac.title",
-    "category": "rbac",
-    "vi": "Vai trò & Quyền",
-    "en": "Roles & Permissions",
-    "zh": "角色与权限",
-    "ja": "ロールと権限"
-  },
-  {
-    "key": "adminRbac.description",
-    "category": "rbac",
-    "vi": "Bật/tắt từng quyền cho mỗi vai trò. Các vai trò hệ thống không thể chỉnh sửa.",
-    "en": "Toggle individual permissions per role. System roles are read-only.",
-    "zh": "为每个角色启用或禁用权限。系统角色不可编辑。",
-    "ja": "ロールごとに権限を切り替えます。システムロールは編集できません。"
-  },
-  {
-    "key": "adminRbac.permissionColumn",
-    "category": "rbac",
-    "vi": "Quyền",
-    "en": "Permission",
-    "zh": "权限",
-    "ja": "権限"
-  },
-  {
-    "key": "adminRbac.usersAbbrev",
-    "category": "rbac",
-    "vi": "người dùng",
-    "en": "users",
-    "zh": "用户",
-    "ja": "ユーザー"
-  },
-  {
-    "key": "adminRbac.systemRoleBadge",
-    "category": "rbac",
-    "vi": "Hệ thống",
-    "en": "System",
-    "zh": "系统",
-    "ja": "システム"
-  },
-  {
-    "key": "adminRbac.createRole",
-    "category": "rbac",
-    "vi": "Tạo vai trò",
-    "en": "Create role",
-    "zh": "创建角色",
-    "ja": "ロールを作成"
-  },
-  {
-    "key": "adminRbac.deleteRole",
-    "category": "rbac",
-    "vi": "Xoá vai trò",
-    "en": "Delete role",
-    "zh": "删除角色",
-    "ja": "ロールを削除"
-  },
-  {
-    "key": "adminRbac.confirmDelete",
-    "category": "rbac",
-    "vi": "Xoá vai trò {code}? Hành động này không thể hoàn tác.",
-    "en": "Delete role {code}? This cannot be undone.",
-    "zh": "确定删除角色 {code}？此操作无法撤销。",
-    "ja": "ロール {code} を削除しますか？この操作は取り消せません。"
-  },
-  {
-    "key": "adminRbac.codeLabel",
-    "category": "rbac",
-    "vi": "Mã vai trò",
-    "en": "Role code",
-    "zh": "角色代码",
-    "ja": "ロールコード"
+    "key": "adminRbac.cancel",
+    "category": "rbac",
+    "vi": "Huỷ",
+    "en": "Cancel",
+    "zh": "取消",
+    "ja": "キャンセル"
   },
   {
     "key": "adminRbac.codeHint",
@@ -1047,36 +16,20 @@
     "ja": "大文字とアンダースコア（例：MARKETING）。システムロールと重複不可。"
   },
   {
-    "key": "adminRbac.nameLabel",
+    "key": "adminRbac.codeLabel",
     "category": "rbac",
-    "vi": "Tên hiển thị",
-    "en": "Display name",
-    "zh": "显示名称",
-    "ja": "表示名"
+    "vi": "Mã vai trò",
+    "en": "Role code",
+    "zh": "角色代码",
+    "ja": "ロールコード"
   },
   {
-    "key": "adminRbac.save",
+    "key": "adminRbac.confirmDelete",
     "category": "rbac",
-    "vi": "Lưu",
-    "en": "Save",
-    "zh": "保存",
-    "ja": "保存"
-  },
-  {
-    "key": "adminRbac.reset",
-    "category": "rbac",
-    "vi": "Hoàn tác",
-    "en": "Reset",
-    "zh": "重置",
-    "ja": "リセット"
-  },
-  {
-    "key": "adminRbac.cancel",
-    "category": "rbac",
-    "vi": "Huỷ",
-    "en": "Cancel",
-    "zh": "取消",
-    "ja": "キャンセル"
+    "vi": "Xoá vai trò {code}? Hành động này không thể hoàn tác.",
+    "en": "Delete role {code}? This cannot be undone.",
+    "zh": "确定删除角色 {code}？此操作无法撤销。",
+    "ja": "ロール {code} を削除しますか？この操作は取り消せません。"
   },
   {
     "key": "adminRbac.create",
@@ -1087,6 +40,14 @@
     "ja": "作成"
   },
   {
+    "key": "adminRbac.createRole",
+    "category": "rbac",
+    "vi": "Tạo vai trò",
+    "en": "Create role",
+    "zh": "创建角色",
+    "ja": "ロールを作成"
+  },
+  {
     "key": "adminRbac.creating",
     "category": "rbac",
     "vi": "Đang tạo…",
@@ -1095,28 +56,68 @@
     "ja": "作成中…"
   },
   {
-    "key": "adminRbac.toast.saved",
+    "key": "adminRbac.deleteRole",
     "category": "rbac",
-    "vi": "Đã lưu thay đổi",
-    "en": "Changes saved",
-    "zh": "更改已保存",
-    "ja": "変更を保存しました"
+    "vi": "Xoá vai trò",
+    "en": "Delete role",
+    "zh": "删除角色",
+    "ja": "ロールを削除"
   },
   {
-    "key": "adminRbac.toast.saveFailed",
+    "key": "adminRbac.description",
     "category": "rbac",
-    "vi": "Lưu thất bại",
-    "en": "Save failed",
-    "zh": "保存失败",
-    "ja": "保存に失敗しました"
+    "vi": "Bật/tắt từng quyền cho mỗi vai trò. Các vai trò hệ thống không thể chỉnh sửa.",
+    "en": "Toggle individual permissions per role. System roles are read-only.",
+    "zh": "为每个角色启用或禁用权限。系统角色不可编辑。",
+    "ja": "ロールごとに権限を切り替えます。システムロールは編集できません。"
   },
   {
-    "key": "adminRbac.toast.created",
+    "key": "adminRbac.nameLabel",
     "category": "rbac",
-    "vi": "Đã tạo vai trò",
-    "en": "Role created",
-    "zh": "已创建角色",
-    "ja": "ロールを作成しました"
+    "vi": "Tên hiển thị",
+    "en": "Display name",
+    "zh": "显示名称",
+    "ja": "表示名"
+  },
+  {
+    "key": "adminRbac.permissionColumn",
+    "category": "rbac",
+    "vi": "Quyền",
+    "en": "Permission",
+    "zh": "权限",
+    "ja": "権限"
+  },
+  {
+    "key": "adminRbac.reset",
+    "category": "rbac",
+    "vi": "Hoàn tác",
+    "en": "Reset",
+    "zh": "重置",
+    "ja": "リセット"
+  },
+  {
+    "key": "adminRbac.save",
+    "category": "rbac",
+    "vi": "Lưu",
+    "en": "Save",
+    "zh": "保存",
+    "ja": "保存"
+  },
+  {
+    "key": "adminRbac.systemRoleBadge",
+    "category": "rbac",
+    "vi": "Hệ thống",
+    "en": "System",
+    "zh": "系统",
+    "ja": "システム"
+  },
+  {
+    "key": "adminRbac.title",
+    "category": "rbac",
+    "vi": "Vai trò & Quyền",
+    "en": "Roles & Permissions",
+    "zh": "角色与权限",
+    "ja": "ロールと権限"
   },
   {
     "key": "adminRbac.toast.createFailed",
@@ -1127,12 +128,12 @@
     "ja": "ロールの作成に失敗しました"
   },
   {
-    "key": "adminRbac.toast.deleted",
+    "key": "adminRbac.toast.created",
     "category": "rbac",
-    "vi": "Đã xoá vai trò",
-    "en": "Role deleted",
-    "zh": "已删除角色",
-    "ja": "ロールを削除しました"
+    "vi": "Đã tạo vai trò",
+    "en": "Role created",
+    "zh": "已创建角色",
+    "ja": "ロールを作成しました"
   },
   {
     "key": "adminRbac.toast.deleteFailed",
@@ -1141,5 +142,981 @@
     "en": "Failed to delete role",
     "zh": "删除角色失败",
     "ja": "ロールの削除に失敗しました"
+  },
+  {
+    "key": "adminRbac.toast.deleted",
+    "category": "rbac",
+    "vi": "Đã xoá vai trò",
+    "en": "Role deleted",
+    "zh": "已删除角色",
+    "ja": "ロールを削除しました"
+  },
+  {
+    "key": "adminRbac.toast.saveFailed",
+    "category": "rbac",
+    "vi": "Lưu thất bại",
+    "en": "Save failed",
+    "zh": "保存失败",
+    "ja": "保存に失敗しました"
+  },
+  {
+    "key": "adminRbac.toast.saved",
+    "category": "rbac",
+    "vi": "Đã lưu thay đổi",
+    "en": "Changes saved",
+    "zh": "更改已保存",
+    "ja": "変更を保存しました"
+  },
+  {
+    "key": "adminRbac.usersAbbrev",
+    "category": "rbac",
+    "vi": "người dùng",
+    "en": "users",
+    "zh": "用户",
+    "ja": "ユーザー"
+  },
+  {
+    "key": "rbac.notification.role-created.title",
+    "category": "rbac",
+    "vi": "Đã tạo vai trò mới",
+    "en": "Role created",
+    "zh": "已创建角色",
+    "ja": "ロールを作成しました"
+  },
+  {
+    "key": "rbac.notification.role-deleted.title",
+    "category": "rbac",
+    "vi": "Đã xoá vai trò",
+    "en": "Role deleted",
+    "zh": "已删除角色",
+    "ja": "ロールを削除しました"
+  },
+  {
+    "key": "rbac.notification.role-permissions-updated.title",
+    "category": "rbac",
+    "vi": "Đã cập nhật quyền của vai trò",
+    "en": "Role permissions updated",
+    "zh": "已更新角色权限",
+    "ja": "ロールの権限を更新しました"
+  },
+  {
+    "key": "rbac.notification.role-updated.title",
+    "category": "rbac",
+    "vi": "Đã cập nhật vai trò",
+    "en": "Role updated",
+    "zh": "已更新角色",
+    "ja": "ロールを更新しました"
+  },
+  {
+    "key": "rbac.perm.contacts.manage.description",
+    "category": "rbac",
+    "vi": "Cập nhật trạng thái, phản hồi và xoá yêu cầu liên hệ.",
+    "en": "Update status, reply and delete contact messages.",
+    "zh": "更新状态、回复和删除联系消息。",
+    "ja": "問い合わせの状態更新・返信・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.contacts.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý yêu cầu liên hệ",
+    "en": "Manage contact messages",
+    "zh": "管理联系消息",
+    "ja": "問い合わせを管理"
+  },
+  {
+    "key": "rbac.perm.contacts.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các yêu cầu liên hệ gửi từ trang web.",
+    "en": "Allows viewing contact messages submitted from the site.",
+    "zh": "允许查看网站提交的联系消息。",
+    "ja": "サイトから送信された問い合わせの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.contacts.view.label",
+    "category": "rbac",
+    "vi": "Xem yêu cầu liên hệ",
+    "en": "View contact messages",
+    "zh": "查看联系消息",
+    "ja": "問い合わせを表示"
+  },
+  {
+    "key": "rbac.perm.content.about.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, sắp xếp và xoá các khối nội dung Giới thiệu.",
+    "en": "Create, edit, reorder and delete About content sections.",
+    "zh": "创建、编辑、排序和删除“关于”内容板块。",
+    "ja": "About のセクションの作成・編集・並び替え・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.about.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý nội dung Giới thiệu",
+    "en": "Manage About content",
+    "zh": "管理“关于”内容",
+    "ja": "「About」コンテンツを管理"
+  },
+  {
+    "key": "rbac.perm.content.about.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các khối nội dung trang Giới thiệu.",
+    "en": "Allows viewing the About page content sections.",
+    "zh": "允许查看“关于”页面的内容板块。",
+    "ja": "About ページの各セクションの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.about.view.label",
+    "category": "rbac",
+    "vi": "Xem nội dung Giới thiệu",
+    "en": "View About content",
+    "zh": "查看“关于”内容",
+    "ja": "「About」コンテンツを表示"
+  },
+  {
+    "key": "rbac.perm.content.activities.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá các bài hoạt động.",
+    "en": "Create, edit and delete activity entries.",
+    "zh": "创建、编辑和删除活动条目。",
+    "ja": "アクティビティ記事の作成・編集・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.activities.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hoạt động",
+    "en": "Manage activities",
+    "zh": "管理活动",
+    "ja": "アクティビティを管理"
+  },
+  {
+    "key": "rbac.perm.content.activities.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết các hoạt động.",
+    "en": "Allows listing and viewing activity details.",
+    "zh": "允许查看活动列表及详情。",
+    "ja": "アクティビティ一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.activities.view.label",
+    "category": "rbac",
+    "vi": "Xem hoạt động",
+    "en": "View activities",
+    "zh": "查看活动",
+    "ja": "アクティビティを表示"
+  },
+  {
+    "key": "rbac.perm.content.activity-categories.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá danh mục phân loại hoạt động.",
+    "en": "Create, edit and delete activity categories.",
+    "zh": "创建、编辑和删除活动分类。",
+    "ja": "アクティビティのカテゴリの作成・編集・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.activity-categories.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý danh mục hoạt động",
+    "en": "Manage activity categories",
+    "zh": "管理活动分类",
+    "ja": "アクティビティのカテゴリを管理"
+  },
+  {
+    "key": "rbac.perm.content.activity-categories.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh mục phân loại hoạt động.",
+    "en": "Allows viewing the activity category list.",
+    "zh": "允许查看活动分类列表。",
+    "ja": "アクティビティのカテゴリ一覧の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.activity-categories.view.label",
+    "category": "rbac",
+    "vi": "Xem danh mục hoạt động",
+    "en": "View activity categories",
+    "zh": "查看活动分类",
+    "ja": "アクティビティのカテゴリを表示"
+  },
+  {
+    "key": "rbac.perm.content.logos.manage.description",
+    "category": "rbac",
+    "vi": "Tải lên, thay thế và xoá logo đối tác.",
+    "en": "Upload, replace and delete partner logos.",
+    "zh": "上传、替换和删除合作伙伴标志。",
+    "ja": "パートナーロゴのアップロード・置換・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.logos.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý logo đối tác",
+    "en": "Manage partner logos",
+    "zh": "管理合作伙伴标志",
+    "ja": "パートナーロゴを管理"
+  },
+  {
+    "key": "rbac.perm.content.logos.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách logo đối tác hiển thị trên web.",
+    "en": "Allows viewing the list of partner logos shown on the site.",
+    "zh": "允许查看网站显示的合作伙伴标志列表。",
+    "ja": "サイトに表示するパートナーロゴ一覧の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.logos.view.label",
+    "category": "rbac",
+    "vi": "Xem logo đối tác",
+    "en": "View partner logos",
+    "zh": "查看合作伙伴标志",
+    "ja": "パートナーロゴを表示"
+  },
+  {
+    "key": "rbac.perm.content.news-categories.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá danh mục tin tức.",
+    "en": "Create, edit and delete news categories.",
+    "zh": "创建、编辑和删除新闻分类。",
+    "ja": "ニュースカテゴリの作成・編集・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.news-categories.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý danh mục tin tức",
+    "en": "Manage news categories",
+    "zh": "管理新闻分类",
+    "ja": "ニュースカテゴリを管理"
+  },
+  {
+    "key": "rbac.perm.content.news-categories.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách danh mục tin tức.",
+    "en": "Allows listing news categories.",
+    "zh": "允许查看新闻分类列表。",
+    "ja": "ニュースカテゴリ一覧の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.news-categories.view.label",
+    "category": "rbac",
+    "vi": "Xem danh mục tin tức",
+    "en": "View news categories",
+    "zh": "查看新闻分类",
+    "ja": "ニュースカテゴリを表示"
+  },
+  {
+    "key": "rbac.perm.content.news.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, đăng và xoá bài tin tức.",
+    "en": "Create, edit, publish and delete news articles.",
+    "zh": "创建、编辑、发布和删除新闻文章。",
+    "ja": "ニュース記事の作成・編集・公開・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.news.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý tin tức",
+    "en": "Manage news",
+    "zh": "管理新闻",
+    "ja": "ニュースを管理"
+  },
+  {
+    "key": "rbac.perm.content.news.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết tin tức.",
+    "en": "Allows listing and viewing news details.",
+    "zh": "允许查看新闻列表及详情。",
+    "ja": "ニュース一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.news.view.label",
+    "category": "rbac",
+    "vi": "Xem tin tức",
+    "en": "View news",
+    "zh": "查看新闻",
+    "ja": "ニュースを表示"
+  },
+  {
+    "key": "rbac.perm.content.project-categories.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá danh mục phân loại dự án.",
+    "en": "Create, edit and delete project categories.",
+    "zh": "创建、编辑和删除项目分类。",
+    "ja": "プロジェクトのカテゴリの作成・編集・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.project-categories.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý danh mục dự án",
+    "en": "Manage project categories",
+    "zh": "管理项目分类",
+    "ja": "プロジェクトのカテゴリを管理"
+  },
+  {
+    "key": "rbac.perm.content.project-categories.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh mục phân loại dự án.",
+    "en": "Allows viewing the project category list.",
+    "zh": "允许查看项目分类列表。",
+    "ja": "プロジェクトのカテゴリ一覧の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.project-categories.view.label",
+    "category": "rbac",
+    "vi": "Xem danh mục dự án",
+    "en": "View project categories",
+    "zh": "查看项目分类",
+    "ja": "プロジェクトのカテゴリを表示"
+  },
+  {
+    "key": "rbac.perm.content.projects.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, đăng và xoá dự án trên trang web.",
+    "en": "Create, edit, publish and delete projects on the site.",
+    "zh": "创建、编辑、发布和删除网站上的项目。",
+    "ja": "サイトのプロジェクトの作成・編集・公開・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.projects.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý dự án",
+    "en": "Manage projects",
+    "zh": "管理项目",
+    "ja": "プロジェクトを管理"
+  },
+  {
+    "key": "rbac.perm.content.projects.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết dự án.",
+    "en": "Allows listing and viewing project details.",
+    "zh": "允许查看项目列表及详情。",
+    "ja": "プロジェクト一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.projects.view.label",
+    "category": "rbac",
+    "vi": "Xem dự án",
+    "en": "View projects",
+    "zh": "查看项目",
+    "ja": "プロジェクトを表示"
+  },
+  {
+    "key": "rbac.perm.content.services.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, sắp xếp và xoá các dịch vụ.",
+    "en": "Create, edit, reorder and delete services.",
+    "zh": "创建、编辑、排序和删除服务。",
+    "ja": "サービスの作成・編集・並び替え・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.services.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý dịch vụ",
+    "en": "Manage services",
+    "zh": "管理服务",
+    "ja": "サービスを管理"
+  },
+  {
+    "key": "rbac.perm.content.services.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết dịch vụ.",
+    "en": "Allows listing and viewing service details.",
+    "zh": "允许查看服务列表及详情。",
+    "ja": "サービス一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.services.view.label",
+    "category": "rbac",
+    "vi": "Xem dịch vụ",
+    "en": "View services",
+    "zh": "查看服务",
+    "ja": "サービスを表示"
+  },
+  {
+    "key": "rbac.perm.content.slideshow.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, sắp xếp và xoá slide trên trang chủ.",
+    "en": "Create, edit, reorder and delete home page slides.",
+    "zh": "创建、编辑、排序和删除首页幻灯片。",
+    "ja": "トップページスライドの作成・編集・並び替え・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.slideshow.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý trình chiếu",
+    "en": "Manage slideshow",
+    "zh": "管理幻灯片",
+    "ja": "スライドショーを管理"
+  },
+  {
+    "key": "rbac.perm.content.slideshow.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các slide hiển thị trên trang chủ.",
+    "en": "Allows viewing the slides shown on the home page.",
+    "zh": "允许查看首页显示的幻灯片。",
+    "ja": "トップページに表示するスライドの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.slideshow.view.label",
+    "category": "rbac",
+    "vi": "Xem trình chiếu",
+    "en": "View slideshow",
+    "zh": "查看幻灯片",
+    "ja": "スライドショーを表示"
+  },
+  {
+    "key": "rbac.perm.content.translations.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá bản dịch tĩnh cũng như bản dịch của thực thể.",
+    "en": "Create, edit and delete static translation pairs and entity translations.",
+    "zh": "创建、编辑和删除静态翻译键值对及实体翻译。",
+    "ja": "静的翻訳ペアおよびエンティティ翻訳の作成・編集・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.content.translations.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý bản dịch nội dung",
+    "en": "Manage content translations",
+    "zh": "管理内容翻译",
+    "ja": "コンテンツ翻訳を管理"
+  },
+  {
+    "key": "rbac.perm.content.translations.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các cặp dịch tĩnh và bản dịch của thực thể.",
+    "en": "Allows viewing static translation pairs and entity translations.",
+    "zh": "允许查看静态翻译键值对以及实体翻译。",
+    "ja": "静的翻訳ペアおよびエンティティ翻訳の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.content.translations.view.label",
+    "category": "rbac",
+    "vi": "Xem bản dịch nội dung",
+    "en": "View content translations",
+    "zh": "查看内容翻译",
+    "ja": "コンテンツ翻訳を表示"
+  },
+  {
+    "key": "rbac.perm.dashboard.view.description",
+    "category": "rbac",
+    "vi": "Cho phép truy cập trang tổng quan quản trị.",
+    "en": "Grants access to the admin dashboard.",
+    "zh": "允许访问管理仪表板。",
+    "ja": "管理ダッシュボードへのアクセスを許可します。"
+  },
+  {
+    "key": "rbac.perm.dashboard.view.label",
+    "category": "rbac",
+    "vi": "Xem Dashboard",
+    "en": "View dashboard",
+    "zh": "查看仪表板",
+    "ja": "ダッシュボードを表示"
+  },
+  {
+    "key": "rbac.perm.mail.send.description",
+    "category": "rbac",
+    "vi": "Cho phép gửi email phản hồi và thông báo từ giao diện quản trị.",
+    "en": "Allows sending reply and notification emails from the admin UI.",
+    "zh": "允许通过管理界面发送回复和通知邮件。",
+    "ja": "管理 UI から返信・通知メールを送信できます。"
+  },
+  {
+    "key": "rbac.perm.mail.send.label",
+    "category": "rbac",
+    "vi": "Gửi email từ hệ thống",
+    "en": "Send system email",
+    "zh": "通过系统发送邮件",
+    "ja": "システムからメールを送信"
+  },
+  {
+    "key": "rbac.perm.processes.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá các quy trình làm việc nội bộ.",
+    "en": "Create, edit and delete internal work processes.",
+    "zh": "创建、编辑和删除内部工作流程。",
+    "ja": "社内ワークプロセスの作成・編集・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.processes.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý quy trình làm việc",
+    "en": "Manage work processes",
+    "zh": "管理工作流程",
+    "ja": "ワークプロセスを管理"
+  },
+  {
+    "key": "rbac.perm.processes.uploads.manage.description",
+    "category": "rbac",
+    "vi": "Tải lên, thay thế và xoá tệp đính kèm của quy trình.",
+    "en": "Upload, replace and delete process attachments.",
+    "zh": "上传、替换和删除流程附件。",
+    "ja": "プロセスに添付するファイルのアップロード・置換・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.processes.uploads.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý tài liệu quy trình",
+    "en": "Manage process uploads",
+    "zh": "管理流程文件上传",
+    "ja": "プロセスのアップロードを管理"
+  },
+  {
+    "key": "rbac.perm.processes.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết quy trình làm việc.",
+    "en": "Allows listing and viewing work process details.",
+    "zh": "允许查看工作流程列表及详情。",
+    "ja": "ワークプロセス一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.processes.view.label",
+    "category": "rbac",
+    "vi": "Xem quy trình làm việc",
+    "en": "View work processes",
+    "zh": "查看工作流程",
+    "ja": "ワークプロセスを表示"
+  },
+  {
+    "key": "rbac.perm.profile.me.update.description",
+    "category": "rbac",
+    "vi": "Cho phép tự cập nhật thông tin tài khoản.",
+    "en": "Allows updating the current user's own profile.",
+    "zh": "允许自行更新账户信息。",
+    "ja": "自身のアカウント情報の更新を許可します。"
+  },
+  {
+    "key": "rbac.perm.profile.me.update.label",
+    "category": "rbac",
+    "vi": "Cập nhật hồ sơ cá nhân",
+    "en": "Update own profile",
+    "zh": "更新个人资料",
+    "ja": "自分のプロフィールを更新"
+  },
+  {
+    "key": "rbac.perm.profile.me.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem thông tin tài khoản của chính mình.",
+    "en": "Allows viewing the current user's own profile.",
+    "zh": "允许查看自己的账户信息。",
+    "ja": "自分自身のアカウント情報の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.profile.me.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ cá nhân",
+    "en": "View own profile",
+    "zh": "查看个人资料",
+    "ja": "自分のプロフィールを表示"
+  },
+  {
+    "key": "rbac.perm.rbac.roles.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, xoá vai trò và gán quyền (trừ các vai trò hệ thống).",
+    "en": "Create, edit, delete roles and assign permissions (except system roles).",
+    "zh": "创建、编辑、删除角色并分配权限（系统角色除外）。",
+    "ja": "ロールの作成・編集・削除と権限の割り当て（システムロールを除く）。"
+  },
+  {
+    "key": "rbac.perm.rbac.roles.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý vai trò & quyền",
+    "en": "Manage roles & permissions",
+    "zh": "管理角色与权限",
+    "ja": "ロールと権限を管理"
+  },
+  {
+    "key": "rbac.perm.rbac.roles.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem ma trận vai trò và danh mục quyền.",
+    "en": "Allows viewing the role matrix and permission catalog.",
+    "zh": "允许查看角色矩阵和权限目录。",
+    "ja": "ロールマトリクスと権限カタログの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.rbac.roles.view.label",
+    "category": "rbac",
+    "vi": "Xem vai trò & quyền",
+    "en": "View roles & permissions",
+    "zh": "查看角色与权限",
+    "ja": "ロールと権限を表示"
+  },
+  {
+    "key": "rbac.perm.recruitment.applications.manage.description",
+    "category": "rbac",
+    "vi": "Cập nhật trạng thái, ghi chú và xoá hồ sơ ứng tuyển.",
+    "en": "Update status, notes and delete job applications.",
+    "zh": "更新状态、备注和删除求职申请。",
+    "ja": "応募者の状態更新・メモ・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.recruitment.applications.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hồ sơ ứng tuyển",
+    "en": "Manage job applications",
+    "zh": "管理求职申请",
+    "ja": "応募者を管理"
+  },
+  {
+    "key": "rbac.perm.recruitment.applications.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết hồ sơ ứng tuyển.",
+    "en": "Allows listing and viewing job application details.",
+    "zh": "允许查看求职申请列表及详情。",
+    "ja": "応募者一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.recruitment.applications.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ ứng tuyển",
+    "en": "View job applications",
+    "zh": "查看求职申请",
+    "ja": "応募者を表示"
+  },
+  {
+    "key": "rbac.perm.recruitment.options.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa và xoá loại hợp đồng cùng lựa chọn cho biểu mẫu tuyển dụng.",
+    "en": "Create, edit and delete employment types and dropdown options.",
+    "zh": "创建、编辑和删除雇佣类型与下拉选项。",
+    "ja": "雇用形態とドロップダウン項目の作成・編集・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.recruitment.options.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý danh mục tuyển dụng",
+    "en": "Manage recruitment options",
+    "zh": "管理招聘选项",
+    "ja": "採用オプションを管理"
+  },
+  {
+    "key": "rbac.perm.recruitment.options.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh mục loại hợp đồng, lựa chọn cho biểu mẫu tuyển dụng.",
+    "en": "Allows viewing employment types and dropdown options for recruitment forms.",
+    "zh": "允许查看招聘表单使用的雇佣类型和下拉选项。",
+    "ja": "採用フォームで使う雇用形態とドロップダウン項目の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.recruitment.options.view.label",
+    "category": "rbac",
+    "vi": "Xem danh mục tuyển dụng",
+    "en": "View recruitment options",
+    "zh": "查看招聘选项",
+    "ja": "採用オプションを表示"
+  },
+  {
+    "key": "rbac.perm.recruitment.positions.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, đăng và xoá các vị trí tuyển dụng.",
+    "en": "Create, edit, publish and delete job positions.",
+    "zh": "创建、编辑、发布和删除招聘职位。",
+    "ja": "求人の作成・編集・公開・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.recruitment.positions.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý vị trí tuyển dụng",
+    "en": "Manage job positions",
+    "zh": "管理招聘职位",
+    "ja": "求人を管理"
+  },
+  {
+    "key": "rbac.perm.recruitment.positions.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết các vị trí tuyển dụng.",
+    "en": "Allows listing and viewing job position details.",
+    "zh": "允许查看招聘职位列表及详情。",
+    "ja": "求人一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.recruitment.positions.view.label",
+    "category": "rbac",
+    "vi": "Xem vị trí tuyển dụng",
+    "en": "View job positions",
+    "zh": "查看招聘职位",
+    "ja": "求人を表示"
+  },
+  {
+    "key": "rbac.perm.system.audit.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép xoá log và cập nhật cấu hình thời gian lưu trữ.",
+    "en": "Allows deleting entries and updating retention configuration.",
+    "zh": "允许删除条目并更新保留期配置。",
+    "ja": "ログの削除と保持期間設定の更新を許可します。"
+  },
+  {
+    "key": "rbac.perm.system.audit.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý nhật ký kiểm toán",
+    "en": "Manage audit log",
+    "zh": "管理审计日志",
+    "ja": "監査ログを管理"
+  },
+  {
+    "key": "rbac.perm.system.audit.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các sự kiện kiểm toán hệ thống.",
+    "en": "Allows reading system audit events.",
+    "zh": "允许查看系统审计事件。",
+    "ja": "システム監査イベントの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.system.audit.view.label",
+    "category": "rbac",
+    "vi": "Xem nhật ký kiểm toán",
+    "en": "View audit log",
+    "zh": "查看审计日志",
+    "ja": "監査ログを表示"
+  },
+  {
+    "key": "rbac.perm.system.notifications.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, đánh dấu đã đọc và xoá thông báo của quản trị viên.",
+    "en": "Create, mark-as-read and delete administrator notifications.",
+    "zh": "创建、标记为已读和删除管理员通知。",
+    "ja": "管理者通知の作成・既読化・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.system.notifications.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý thông báo hệ thống",
+    "en": "Manage system notifications",
+    "zh": "管理系统通知",
+    "ja": "システム通知を管理"
+  },
+  {
+    "key": "rbac.perm.system.settings.manage.description",
+    "category": "rbac",
+    "vi": "Cập nhật OTP, email mẫu và URL bản đồ nhúng cho trang công khai.",
+    "en": "Update OTP, email templates and embedded map URL for the public site.",
+    "zh": "更新公开站点的 OTP、邮件模板及嵌入地图 URL。",
+    "ja": "公開サイトの OTP・メールテンプレート・埋め込み地図 URL を更新します。"
+  },
+  {
+    "key": "rbac.perm.system.settings.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý cấu hình hệ thống",
+    "en": "Manage system settings",
+    "zh": "管理系统设置",
+    "ja": "システム設定を管理"
+  },
+  {
+    "key": "rbac.perm.system.settings.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem cấu hình OTP, email mẫu và bản đồ nhúng.",
+    "en": "Allows viewing OTP, email template and embedded map settings.",
+    "zh": "允许查看 OTP、邮件模板及嵌入地图设置。",
+    "ja": "OTP・メールテンプレート・埋め込み地図設定の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.system.settings.view.label",
+    "category": "rbac",
+    "vi": "Xem cấu hình hệ thống",
+    "en": "View system settings",
+    "zh": "查看系统设置",
+    "ja": "システム設定を表示"
+  },
+  {
+    "key": "rbac.perm.system.uploads.manage.description",
+    "category": "rbac",
+    "vi": "Tải lên, thay thế và xoá tệp dùng chung của hệ thống.",
+    "en": "Upload, replace and delete system-wide shared files.",
+    "zh": "上传、替换和删除系统共享文件。",
+    "ja": "システム共有ファイルのアップロード・置換・削除を行います。"
+  },
+  {
+    "key": "rbac.perm.system.uploads.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý tệp tải lên hệ thống",
+    "en": "Manage system uploads",
+    "zh": "管理系统上传",
+    "ja": "システムのアップロードを管理"
+  },
+  {
+    "key": "rbac.perm.users.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, sửa, vô hiệu hoá và phân vai trò người dùng.",
+    "en": "Create, edit, deactivate and assign roles to users.",
+    "zh": "创建、编辑、停用用户并分配角色。",
+    "ja": "ユーザーの作成・編集・無効化・ロール割り当てを行います。"
+  },
+  {
+    "key": "rbac.perm.users.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý người dùng",
+    "en": "Manage users",
+    "zh": "管理用户",
+    "ja": "ユーザーを管理"
+  },
+  {
+    "key": "rbac.perm.users.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết người dùng.",
+    "en": "Allows listing and viewing user details.",
+    "zh": "允许查看用户列表和详细信息。",
+    "ja": "ユーザー一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.users.view.label",
+    "category": "rbac",
+    "vi": "Xem người dùng",
+    "en": "View users",
+    "zh": "查看用户",
+    "ja": "ユーザーを表示"
+  },
+  {
+    "key": "rbac.role.ACCOUNTANT.description",
+    "category": "rbac",
+    "vi": "Xem liên hệ khách hàng và nhật ký kiểm toán.",
+    "en": "Views customer contacts and audit log.",
+    "zh": "查看客户联系和审计日志。",
+    "ja": "顧客連絡先と監査ログを閲覧します。"
+  },
+  {
+    "key": "rbac.role.ACCOUNTANT.label",
+    "category": "rbac",
+    "vi": "Kế toán",
+    "en": "Accountant",
+    "zh": "会计",
+    "ja": "経理"
+  },
+  {
+    "key": "rbac.role.ADMIN.description",
+    "category": "rbac",
+    "vi": "Quản trị toàn bộ nội dung và vai trò, trừ quyền cấp Super Admin.",
+    "en": "Manages all content and roles, excluding Super Admin level rights.",
+    "zh": "管理所有内容与角色，超级管理员权限除外。",
+    "ja": "スーパー管理者権限を除く全てのコンテンツとロールを管理します。"
+  },
+  {
+    "key": "rbac.role.ADMIN.label",
+    "category": "rbac",
+    "vi": "Quản trị viên",
+    "en": "Administrator",
+    "zh": "管理员",
+    "ja": "管理者"
+  },
+  {
+    "key": "rbac.role.BGD.description",
+    "category": "rbac",
+    "vi": "Xem toàn bộ dữ liệu chỉ đọc và nhật ký kiểm toán.",
+    "en": "Read-only access to all data and the audit log.",
+    "zh": "对所有数据和审计日志的只读访问权限。",
+    "ja": "全データと監査ログへの読み取り専用アクセスです。"
+  },
+  {
+    "key": "rbac.role.BGD.label",
+    "category": "rbac",
+    "vi": "Ban Giám đốc",
+    "en": "Board of Directors",
+    "zh": "董事会",
+    "ja": "取締役会"
+  },
+  {
+    "key": "rbac.role.DESIGN.description",
+    "category": "rbac",
+    "vi": "Quản lý nội dung trang web và quy trình thiết kế.",
+    "en": "Manages site content and design processes.",
+    "zh": "管理网站内容和设计流程。",
+    "ja": "サイトコンテンツとデザインプロセスを管理します。"
+  },
+  {
+    "key": "rbac.role.DESIGN.label",
+    "category": "rbac",
+    "vi": "Thiết kế",
+    "en": "Design",
+    "zh": "设计",
+    "ja": "デザイン"
+  },
+  {
+    "key": "rbac.role.PM.description",
+    "category": "rbac",
+    "vi": "Quản lý dự án, quy trình và đơn ứng tuyển.",
+    "en": "Manages projects, processes and applications.",
+    "zh": "管理项目、流程和申请。",
+    "ja": "プロジェクト・プロセス・応募の管理を行います。"
+  },
+  {
+    "key": "rbac.role.PM.label",
+    "category": "rbac",
+    "vi": "Quản lý dự án",
+    "en": "Project Manager",
+    "zh": "项目经理",
+    "ja": "プロジェクトマネージャー"
+  },
+  {
+    "key": "rbac.role.QS.description",
+    "category": "rbac",
+    "vi": "Truy cập dữ liệu dự án và quy trình chỉ đọc.",
+    "en": "Read-only access to projects and processes.",
+    "zh": "对项目和流程的只读访问权限。",
+    "ja": "プロジェクトとプロセスへの読み取り専用アクセスです。"
+  },
+  {
+    "key": "rbac.role.QS.label",
+    "category": "rbac",
+    "vi": "Bóc tách khối lượng",
+    "en": "Quantity Surveyor",
+    "zh": "造价工程师",
+    "ja": "数量積算"
+  },
+  {
+    "key": "rbac.role.SALE.description",
+    "category": "rbac",
+    "vi": "Phụ trách liên hệ khách hàng và hồ sơ tuyển dụng.",
+    "en": "Handles customer contacts and recruitment applications.",
+    "zh": "负责客户联系和招聘申请。",
+    "ja": "顧客対応と採用応募の管理を担当します。"
+  },
+  {
+    "key": "rbac.role.SALE.label",
+    "category": "rbac",
+    "vi": "Kinh doanh",
+    "en": "Sales",
+    "zh": "销售",
+    "ja": "営業"
+  },
+  {
+    "key": "rbac.role.SUPER_ADMIN.description",
+    "category": "rbac",
+    "vi": "Toàn quyền hệ thống. Không thể chỉnh sửa qua giao diện.",
+    "en": "Full system access. Cannot be edited via the UI.",
+    "zh": "拥有系统全部权限，不能通过界面修改。",
+    "ja": "システムの完全アクセス権を持ち、UI から変更できません。"
+  },
+  {
+    "key": "rbac.role.SUPER_ADMIN.label",
+    "category": "rbac",
+    "vi": "Super Admin",
+    "en": "Super Admin",
+    "zh": "超级管理员",
+    "ja": "スーパー管理者"
+  },
+  {
+    "key": "rbac.role.USER.description",
+    "category": "rbac",
+    "vi": "Vai trò mặc định cho người dùng đã đăng nhập.",
+    "en": "Default role for authenticated end users.",
+    "zh": "已登录最终用户的默认角色。",
+    "ja": "ログイン済みエンドユーザーの既定ロール。"
+  },
+  {
+    "key": "rbac.role.USER.label",
+    "category": "rbac",
+    "vi": "Người dùng",
+    "en": "User",
+    "zh": "用户",
+    "ja": "ユーザー"
+  },
+  {
+    "key": "rbac.role.WAREHOUSE.description",
+    "category": "rbac",
+    "vi": "Tham khảo quy trình vận hành.",
+    "en": "Reference access to operational processes.",
+    "zh": "查阅运营流程。",
+    "ja": "業務プロセスの参照アクセスです。"
+  },
+  {
+    "key": "rbac.role.WAREHOUSE.label",
+    "category": "rbac",
+    "vi": "Kho",
+    "en": "Warehouse",
+    "zh": "仓库",
+    "ja": "倉庫"
   }
 ]

@@ -1,83 +1,139 @@
 [
   {
-    "key": "newsPage.eyebrow",
-    "category": "newsPage",
-    "vi": "Tin tức & kiến thức",
-    "en": "News & insights",
-    "zh": "新闻与知识",
-    "ja": "ニュース & 知見"
+    "key": "adminNews.addTitle",
+    "category": "adminNews",
+    "vi": "Thêm tin tức mới",
+    "en": "Add new news",
+    "zh": "添加新闻",
+    "ja": "新規ニュースを追加"
   },
   {
-    "key": "newsPage.title",
-    "category": "newsPage",
-    "vi": "Cập nhật ngành xây dựng công nghiệp.",
-    "en": "Industrial construction updates.",
-    "zh": "工业建筑行业资讯。",
-    "ja": "工業建設業界の最新情報。"
+    "key": "adminNews.allCategories",
+    "category": "adminNews",
+    "vi": "Tất cả danh mục",
+    "en": "All categories",
+    "zh": "所有分类",
+    "ja": "すべてのカテゴリ"
   },
   {
-    "key": "newsPage.desc",
-    "category": "newsPage",
-    "vi": "Bài viết chuyên sâu về tiêu chuẩn kỹ thuật, công nghệ thi công và xu hướng thiết kế nhà máy mới nhất.",
-    "en": "In-depth articles on technical standards, construction technology and the latest factory design trends.",
-    "zh": "关于技术标准、施工技术与工厂设计最新趋势的深度文章。",
-    "ja": "技術基準・施工技術・工場デザインの最新動向に関する詳細な記事。"
+    "key": "adminNews.col.category",
+    "category": "adminNews",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
   },
   {
-    "key": "newsPage.searchPh",
-    "category": "newsPage",
-    "vi": "Tìm bài viết...",
-    "en": "Search articles...",
-    "zh": "搜索文章...",
-    "ja": "記事を検索..."
+    "key": "adminNews.col.post",
+    "category": "adminNews",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
   },
   {
-    "key": "newsPage.empty",
-    "category": "newsPage",
-    "vi": "Không có bài viết phù hợp.",
-    "en": "No matching articles.",
-    "zh": "没有匹配的文章。",
-    "ja": "一致する記事がありません。"
+    "key": "adminNews.create",
+    "category": "adminNews",
+    "vi": "Tạo tin tức",
+    "en": "Create news",
+    "zh": "创建新闻",
+    "ja": "ニュースを作成"
   },
   {
-    "key": "newsPage.related",
-    "category": "newsPage",
-    "vi": "Bài viết liên quan",
-    "en": "Related articles",
-    "zh": "相关文章",
-    "ja": "関連記事"
+    "key": "adminNews.detail",
+    "category": "adminNews",
+    "vi": "Chi tiết tin tức",
+    "en": "News details",
+    "zh": "新闻详情",
+    "ja": "ニュース詳細"
   },
   {
-    "key": "newsPage.readMore",
-    "category": "newsPage",
-    "vi": "Đọc thêm",
-    "en": "Read more",
-    "zh": "阅读更多",
-    "ja": "もっと読む"
+    "key": "adminNews.editTitle",
+    "category": "adminNews",
+    "vi": "Chỉnh sửa tin tức",
+    "en": "Edit news",
+    "zh": "编辑新闻",
+    "ja": "ニュースを編集"
   },
   {
-    "key": "newsPage.notFound",
-    "category": "newsPage",
-    "vi": "Không tìm thấy bài viết",
-    "en": "Article not found",
-    "zh": "未找到文章",
-    "ja": "記事が見つかりません"
+    "key": "adminNews.empty",
+    "category": "adminNews",
+    "vi": "Không có tin tức phù hợp.",
+    "en": "No matching news.",
+    "zh": "没有匹配的新闻。",
+    "ja": "一致するニュースがありません。"
   },
   {
-    "key": "newsPage.backToList",
-    "category": "newsPage",
-    "vi": "Quay lại tin tức",
-    "en": "Back to news",
-    "zh": "返回新闻",
-    "ja": "ニュースに戻る"
+    "key": "adminNews.field.category",
+    "category": "adminNews",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
   },
   {
-    "key": "newsDetail.readMore",
-    "category": "newsDetail",
-    "vi": "Đọc thêm",
-    "en": "Read more",
-    "zh": "阅读更多",
-    "ja": "もっと読む"
+    "key": "adminNews.field.content",
+    "category": "adminNews",
+    "vi": "Nội dung",
+    "en": "Content",
+    "zh": "内容",
+    "ja": "内容"
+  },
+  {
+    "key": "adminNews.field.date",
+    "category": "adminNews",
+    "vi": "Ngày đăng",
+    "en": "Publish date",
+    "zh": "发布日期",
+    "ja": "公開日"
+  },
+  {
+    "key": "adminNews.field.excerpt",
+    "category": "adminNews",
+    "vi": "Mô tả ngắn",
+    "en": "Excerpt",
+    "zh": "摘要",
+    "ja": "抜粋"
+  },
+  {
+    "key": "adminNews.field.image",
+    "category": "adminNews",
+    "vi": "Ảnh đại diện",
+    "en": "Cover image",
+    "zh": "封面图片",
+    "ja": "カバー画像"
+  },
+  {
+    "key": "adminNews.field.title",
+    "category": "adminNews",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "adminNews.notFound",
+    "category": "adminNews",
+    "vi": "Không tìm thấy tin tức.",
+    "en": "News not found.",
+    "zh": "未找到新闻。",
+    "ja": "ニュースが見つかりません。"
+  },
+  {
+    "key": "adminNews.searchPlaceholder",
+    "category": "adminNews",
+    "vi": "Tìm tin tức...",
+    "en": "Search news...",
+    "zh": "搜索新闻...",
+    "ja": "ニュースを検索..."
+  },
+  {
+    "key": "adminNews.title",
+    "category": "adminNews",
+    "vi": "Quản lý tin tức",
+    "en": "News management",
+    "zh": "新闻管理",
+    "ja": "ニュース管理"
   },
   {
     "key": "newsDetail.gallery",
@@ -88,19 +144,83 @@
     "ja": "記事ギャラリー"
   },
   {
-    "key": "gallery.viewGrid",
-    "category": "gallery",
-    "vi": "Xem dạng lưới",
-    "en": "Grid view",
-    "zh": "网格视图",
-    "ja": "グリッド表示"
+    "key": "newsDetail.readMore",
+    "category": "newsDetail",
+    "vi": "Đọc thêm",
+    "en": "Read more",
+    "zh": "阅读更多",
+    "ja": "もっと読む"
   },
   {
-    "key": "gallery.viewList",
-    "category": "gallery",
-    "vi": "Xem dạng dọc",
-    "en": "List view",
-    "zh": "列表视图",
-    "ja": "リスト表示"
+    "key": "newsPage.backToList",
+    "category": "newsPage",
+    "vi": "Quay lại tin tức",
+    "en": "Back to news",
+    "zh": "返回新闻",
+    "ja": "ニュースに戻る"
+  },
+  {
+    "key": "newsPage.desc",
+    "category": "newsPage",
+    "vi": "Bài viết chuyên sâu về tiêu chuẩn kỹ thuật, công nghệ thi công và xu hướng thiết kế nhà máy mới nhất.",
+    "en": "In-depth articles on technical standards, construction technology and the latest factory design trends.",
+    "zh": "关于技术标准、施工技术与工厂设计最新趋势的深度文章。",
+    "ja": "技術基準・施工技術・工場デザインの最新動向に関する詳細な記事。"
+  },
+  {
+    "key": "newsPage.empty",
+    "category": "newsPage",
+    "vi": "Không có bài viết phù hợp.",
+    "en": "No matching articles.",
+    "zh": "没有匹配的文章。",
+    "ja": "一致する記事がありません。"
+  },
+  {
+    "key": "newsPage.eyebrow",
+    "category": "newsPage",
+    "vi": "Tin tức & kiến thức",
+    "en": "News & insights",
+    "zh": "新闻与知识",
+    "ja": "ニュース & 知見"
+  },
+  {
+    "key": "newsPage.notFound",
+    "category": "newsPage",
+    "vi": "Không tìm thấy bài viết",
+    "en": "Article not found",
+    "zh": "未找到文章",
+    "ja": "記事が見つかりません"
+  },
+  {
+    "key": "newsPage.readMore",
+    "category": "newsPage",
+    "vi": "Đọc thêm",
+    "en": "Read more",
+    "zh": "阅读更多",
+    "ja": "もっと読む"
+  },
+  {
+    "key": "newsPage.related",
+    "category": "newsPage",
+    "vi": "Bài viết liên quan",
+    "en": "Related articles",
+    "zh": "相关文章",
+    "ja": "関連記事"
+  },
+  {
+    "key": "newsPage.searchPh",
+    "category": "newsPage",
+    "vi": "Tìm bài viết...",
+    "en": "Search articles...",
+    "zh": "搜索文章...",
+    "ja": "記事を検索..."
+  },
+  {
+    "key": "newsPage.title",
+    "category": "newsPage",
+    "vi": "Cập nhật ngành xây dựng công nghiệp.",
+    "en": "Industrial construction updates.",
+    "zh": "工业建筑行业资讯。",
+    "ja": "工業建設業界の最新情報。"
   }
 ]
