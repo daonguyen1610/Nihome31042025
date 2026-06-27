@@ -1,19 +1,27 @@
 [
   {
-    "key": "actPage.eyebrow",
-    "category": "actPage",
-    "vi": "Hoạt động & tin tức",
-    "en": "Activities & news",
-    "zh": "活动与新闻",
-    "ja": "活動とニュース"
+    "key": "actDetail.gallery",
+    "category": "actDetail",
+    "vi": "Hình ảnh hoạt động",
+    "en": "Activity gallery",
+    "zh": "活动相册",
+    "ja": "アクティビティギャラリー"
   },
   {
-    "key": "actPage.title",
+    "key": "actPage.allNews",
     "category": "actPage",
-    "vi": "Câu chuyện đằng sau mỗi công trình.",
-    "en": "The story behind every project.",
-    "zh": "每个工程背后的故事。",
-    "ja": "プロジェクトの裏側にある物語。"
+    "vi": "Tất cả tin",
+    "en": "All news",
+    "zh": "全部新闻",
+    "ja": "すべてのニュース"
+  },
+  {
+    "key": "actPage.backToList",
+    "category": "actPage",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "活動"
   },
   {
     "key": "actPage.desc",
@@ -32,20 +40,12 @@
     "ja": "一致する記事がありません。"
   },
   {
-    "key": "actPage.related",
+    "key": "actPage.eyebrow",
     "category": "actPage",
-    "vi": "Bài viết liên quan",
-    "en": "Related articles",
-    "zh": "相关文章",
-    "ja": "関連記事"
-  },
-  {
-    "key": "actPage.allNews",
-    "category": "actPage",
-    "vi": "Tất cả tin",
-    "en": "All news",
-    "zh": "全部新闻",
-    "ja": "すべてのニュース"
+    "vi": "Hoạt động & tin tức",
+    "en": "Activities & news",
+    "zh": "活动与新闻",
+    "ja": "活動とニュース"
   },
   {
     "key": "actPage.notFound",
@@ -56,19 +56,171 @@
     "ja": "記事が見つかりません"
   },
   {
-    "key": "actPage.backToList",
+    "key": "actPage.related",
     "category": "actPage",
-    "vi": "Hoạt động",
-    "en": "Activities",
-    "zh": "活动",
-    "ja": "活動"
+    "vi": "Bài viết liên quan",
+    "en": "Related articles",
+    "zh": "相关文章",
+    "ja": "関連記事"
   },
   {
-    "key": "actDetail.gallery",
-    "category": "actDetail",
-    "vi": "Hình ảnh hoạt động",
-    "en": "Activity gallery",
-    "zh": "活动相册",
-    "ja": "アクティビティギャラリー"
+    "key": "actPage.title",
+    "category": "actPage",
+    "vi": "Câu chuyện đằng sau mỗi công trình.",
+    "en": "The story behind every project.",
+    "zh": "每个工程背后的故事。",
+    "ja": "プロジェクトの裏側にある物語。"
+  },
+  {
+    "key": "activities.addTitle",
+    "category": "activities",
+    "vi": "Thêm hoạt động mới",
+    "en": "Add new activity",
+    "zh": "添加新活动",
+    "ja": "新規アクティビティを追加"
+  },
+  {
+    "key": "activities.allCategories",
+    "category": "activities",
+    "vi": "Tất cả danh mục",
+    "en": "All categories",
+    "zh": "所有分类",
+    "ja": "すべてのカテゴリ"
+  },
+  {
+    "key": "activities.col.author",
+    "category": "activities",
+    "vi": "Tác giả",
+    "en": "Author",
+    "zh": "作者",
+    "ja": "著者"
+  },
+  {
+    "key": "activities.col.category",
+    "category": "activities",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "activities.col.post",
+    "category": "activities",
+    "vi": "Hoạt động",
+    "en": "Activity",
+    "zh": "活动",
+    "ja": "アクティビティ"
+  },
+  {
+    "key": "activities.create",
+    "category": "activities",
+    "vi": "Tạo hoạt động",
+    "en": "Create activity",
+    "zh": "创建活动",
+    "ja": "アクティビティを作成"
+  },
+  {
+    "key": "activities.detail",
+    "category": "activities",
+    "vi": "Chi tiết hoạt động",
+    "en": "Activity details",
+    "zh": "活动详情",
+    "ja": "アクティビティ詳細"
+  },
+  {
+    "key": "activities.editTitle",
+    "category": "activities",
+    "vi": "Chỉnh sửa hoạt động",
+    "en": "Edit activity",
+    "zh": "编辑活动",
+    "ja": "アクティビティを編集"
+  },
+  {
+    "key": "activities.empty",
+    "category": "activities",
+    "vi": "Không có hoạt động phù hợp.",
+    "en": "No matching activities.",
+    "zh": "没有匹配的活动。",
+    "ja": "一致するアクティビティがありません。"
+  },
+  {
+    "key": "activities.field.author",
+    "category": "activities",
+    "vi": "Tác giả",
+    "en": "Author",
+    "zh": "作者",
+    "ja": "著者"
+  },
+  {
+    "key": "activities.field.category",
+    "category": "activities",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "activities.field.content",
+    "category": "activities",
+    "vi": "Nội dung",
+    "en": "Content",
+    "zh": "内容",
+    "ja": "内容"
+  },
+  {
+    "key": "activities.field.date",
+    "category": "activities",
+    "vi": "Ngày đăng",
+    "en": "Publish date",
+    "zh": "发布日期",
+    "ja": "公開日"
+  },
+  {
+    "key": "activities.field.excerpt",
+    "category": "activities",
+    "vi": "Mô tả ngắn",
+    "en": "Excerpt",
+    "zh": "摘要",
+    "ja": "抜粋"
+  },
+  {
+    "key": "activities.field.image",
+    "category": "activities",
+    "vi": "Ảnh đại diện",
+    "en": "Cover image",
+    "zh": "封面图片",
+    "ja": "カバー画像"
+  },
+  {
+    "key": "activities.field.title",
+    "category": "activities",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "activities.notFound",
+    "category": "activities",
+    "vi": "Không tìm thấy hoạt động.",
+    "en": "Activity not found.",
+    "zh": "未找到活动。",
+    "ja": "アクティビティが見つかりません。"
+  },
+  {
+    "key": "activities.searchPlaceholder",
+    "category": "activities",
+    "vi": "Tìm hoạt động...",
+    "en": "Search activities...",
+    "zh": "搜索活动...",
+    "ja": "アクティビティを検索..."
+  },
+  {
+    "key": "activities.title",
+    "category": "activities",
+    "vi": "Quản lý hoạt động",
+    "en": "Activities management",
+    "zh": "活动管理",
+    "ja": "アクティビティ管理"
   }
 ]

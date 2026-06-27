@@ -1,51 +1,235 @@
 [
   {
-    "key": "rec.eyebrow",
-    "category": "rec",
-    "vi": "Cơ hội nghề nghiệp",
-    "en": "Career opportunities",
-    "zh": "职业机会",
-    "ja": "キャリア機会"
+    "key": "empTypes.active",
+    "category": "empTypes",
+    "vi": "Kích hoạt",
+    "en": "Active",
+    "zh": "激活",
+    "ja": "有効"
   },
   {
-    "key": "rec.titleA",
-    "category": "rec",
-    "vi": "Cùng NICON kiến tạo",
-    "en": "Build the",
-    "zh": "与 NICON 共创",
-    "ja": "NICONと共に"
+    "key": "empTypes.addBenefit",
+    "category": "empTypes",
+    "vi": "Thêm quyền lợi",
+    "en": "Add benefit",
+    "zh": "添加福利",
+    "ja": "福利厚生を追加"
   },
   {
-    "key": "rec.titleB",
-    "category": "rec",
-    "vi": "tương lai",
-    "en": "future with NICON",
-    "zh": "未来",
-    "ja": "未来を創る"
+    "key": "empTypes.addExpLevel",
+    "category": "empTypes",
+    "vi": "Thêm mức kinh nghiệm",
+    "en": "Add experience level",
+    "zh": "添加经验等级",
+    "ja": "経験レベルを追加"
   },
   {
-    "key": "rec.intro",
-    "category": "rec",
-    "vi": "Tham gia đội ngũ hơn 250 chuyên gia tại NICON — nơi tài năng được trao cơ hội, sáng tạo được trân trọng và đóng góp được ghi nhận.",
-    "en": "Join our team of 250+ experts at NICON — where talent is given opportunity, creativity is valued, and contributions are recognized.",
-    "zh": "加入NICON 250多位专家团队 — 在这里,才华被赋予机会,创意被珍视,贡献被认可。",
-    "ja": "250名超の専門家チームに加わりませんか。NICONでは才能に機会を、創造性を尊重し、貢献を称えます。"
+    "key": "empTypes.addType",
+    "category": "empTypes",
+    "vi": "Thêm hình thức",
+    "en": "Add type",
+    "zh": "添加类型",
+    "ja": "追加"
   },
   {
-    "key": "rec.cta1",
-    "category": "rec",
-    "vi": "Xem vị trí tuyển dụng",
-    "en": "View open positions",
-    "zh": "查看招聘职位",
-    "ja": "募集職種を見る"
+    "key": "empTypes.benefits",
+    "category": "empTypes",
+    "vi": "Quyền lợi",
+    "en": "Benefits",
+    "zh": "员工福利",
+    "ja": "福利厚生"
   },
   {
-    "key": "rec.cta2",
+    "key": "empTypes.code",
+    "category": "empTypes",
+    "vi": "Mã",
+    "en": "Code",
+    "zh": "代码",
+    "ja": "コード"
+  },
+  {
+    "key": "empTypes.codeNameRequired",
+    "category": "empTypes",
+    "vi": "Mã và tên không được để trống",
+    "en": "Code and name are required",
+    "zh": "代码和名称不能为空",
+    "ja": "コードと名前は必須です"
+  },
+  {
+    "key": "empTypes.codePlaceholder",
+    "category": "empTypes",
+    "vi": "Mã (vd: full-time)",
+    "en": "Code (e.g. full-time)",
+    "zh": "代码（如：full-time）",
+    "ja": "コード（例：full-time）"
+  },
+  {
+    "key": "empTypes.displayName",
+    "category": "empTypes",
+    "vi": "Tên hiển thị",
+    "en": "Display name",
+    "zh": "显示名称",
+    "ja": "表示名"
+  },
+  {
+    "key": "empTypes.employmentTypes",
+    "category": "empTypes",
+    "vi": "Hình thức làm việc",
+    "en": "Employment types",
+    "zh": "工作类型",
+    "ja": "雇用形態"
+  },
+  {
+    "key": "empTypes.experienceRequired",
+    "category": "empTypes",
+    "vi": "Kinh nghiệm yêu cầu",
+    "en": "Experience required",
+    "zh": "经验要求",
+    "ja": "経験レベル"
+  },
+  {
+    "key": "empTypes.namePlaceholder",
+    "category": "empTypes",
+    "vi": "Tên hiển thị (vd: Toàn thời gian)",
+    "en": "Display name (e.g. Full-time)",
+    "zh": "显示名称（如：全职）",
+    "ja": "表示名（例：正社員）"
+  },
+  {
+    "key": "empTypes.noData",
+    "category": "empTypes",
+    "vi": "Chưa có dữ liệu nào.",
+    "en": "No data yet.",
+    "zh": "暂无数据。",
+    "ja": "データがありません。"
+  },
+  {
+    "key": "empTypes.searchPlaceholder",
+    "category": "empTypes",
+    "vi": "Tìm theo mã hoặc tên",
+    "en": "Search by code or name",
+    "zh": "按代码或名称搜索",
+    "ja": "コードまたは名前で検索"
+  },
+  {
+    "key": "empTypes.sortOrder",
+    "category": "empTypes",
+    "vi": "Thứ tự",
+    "en": "Order",
+    "zh": "排序",
+    "ja": "順序"
+  },
+  {
+    "key": "empTypes.title",
+    "category": "empTypes",
+    "vi": "Danh mục tuyển dụng",
+    "en": "Recruitment categories",
+    "zh": "招聘分类",
+    "ja": "採用カテゴリ"
+  },
+  {
+    "key": "rec.apply",
     "category": "rec",
-    "vi": "Gửi CV ứng tuyển",
-    "en": "Submit CV",
-    "zh": "提交简历",
-    "ja": "履歴書を送る"
+    "vi": "Ứng tuyển",
+    "en": "Apply",
+    "zh": "申请",
+    "ja": "応募する"
+  },
+  {
+    "key": "rec.b1.desc",
+    "category": "rec",
+    "vi": "Bảo hiểm sức khoẻ cao cấp cho bản thân & gia đình.",
+    "en": "Premium health insurance for you and your family.",
+    "zh": "为您及家人提供高端健康保险。",
+    "ja": "ご本人とご家族のための高品質な健康保険。"
+  },
+  {
+    "key": "rec.b1.title",
+    "category": "rec",
+    "vi": "Chăm sóc sức khoẻ",
+    "en": "Health care",
+    "zh": "健康关怀",
+    "ja": "健康ケア"
+  },
+  {
+    "key": "rec.b2.desc",
+    "category": "rec",
+    "vi": "Lộ trình thăng tiến rõ ràng, ngân sách học tập riêng.",
+    "en": "Clear career path with dedicated learning budget.",
+    "zh": "清晰的晋升路径,独立学习预算。",
+    "ja": "明確なキャリアパスと専用学習予算。"
+  },
+  {
+    "key": "rec.b2.title",
+    "category": "rec",
+    "vi": "Đào tạo & phát triển",
+    "en": "Training & development",
+    "zh": "培训与发展",
+    "ja": "研修と成長"
+  },
+  {
+    "key": "rec.b3.desc",
+    "category": "rec",
+    "vi": "Pantry mở, team building hằng quý, hoạt động CSR.",
+    "en": "Open pantry, quarterly team building, CSR activities.",
+    "zh": "开放茶水间,季度团建,CSR活动。",
+    "ja": "オープンパントリー、四半期チームビルディング、CSR活動。"
+  },
+  {
+    "key": "rec.b3.title",
+    "category": "rec",
+    "vi": "Văn hoá thân thiện",
+    "en": "Friendly culture",
+    "zh": "友好文化",
+    "ja": "親しみやすい文化"
+  },
+  {
+    "key": "rec.b4.desc",
+    "category": "rec",
+    "vi": "Hoa hồng và thưởng nóng theo từng cột mốc dự án.",
+    "en": "Commissions and instant bonuses at every project milestone.",
+    "zh": "按项目里程碑发放佣金与即时奖金。",
+    "ja": "プロジェクトのマイルストーンごとにコミッションとボーナス。"
+  },
+  {
+    "key": "rec.b4.title",
+    "category": "rec",
+    "vi": "Thưởng dự án",
+    "en": "Project bonus",
+    "zh": "项目奖金",
+    "ja": "プロジェクト賞与"
+  },
+  {
+    "key": "rec.benefit.friendlyCulture",
+    "category": "rec",
+    "vi": "Môi trường thân thiện",
+    "en": "Friendly Culture",
+    "zh": "友好的工作氛围",
+    "ja": "フレンドリーな職場環境"
+  },
+  {
+    "key": "rec.benefit.healthInsurance",
+    "category": "rec",
+    "vi": "Bảo hiểm sức khỏe",
+    "en": "Health Insurance",
+    "zh": "健康保险",
+    "ja": "健康保険"
+  },
+  {
+    "key": "rec.benefit.projectBonus",
+    "category": "rec",
+    "vi": "Thưởng dự án",
+    "en": "Project Bonus",
+    "zh": "项目奖金",
+    "ja": "プロジェクトボーナス"
+  },
+  {
+    "key": "rec.benefit.training",
+    "category": "rec",
+    "vi": "Đào tạo & phát triển",
+    "en": "Training & Development",
+    "zh": "培训与发展",
+    "ja": "研修・成長支援"
   },
   {
     "key": "rec.benefits.eyebrow",
@@ -72,108 +256,236 @@
     "ja": "NICONか"
   },
   {
-    "key": "rec.b1.title",
+    "key": "rec.cta1",
     "category": "rec",
-    "vi": "Chăm sóc sức khoẻ",
-    "en": "Health care",
-    "zh": "健康关怀",
-    "ja": "健康ケア"
+    "vi": "Xem vị trí tuyển dụng",
+    "en": "View open positions",
+    "zh": "查看招聘职位",
+    "ja": "募集職種を見る"
   },
   {
-    "key": "rec.b1.desc",
+    "key": "rec.cta2",
     "category": "rec",
-    "vi": "Bảo hiểm sức khoẻ cao cấp cho bản thân & gia đình.",
-    "en": "Premium health insurance for you and your family.",
-    "zh": "为您及家人提供高端健康保险。",
-    "ja": "ご本人とご家族のための高品質な健康保険。"
+    "vi": "Gửi CV ứng tuyển",
+    "en": "Submit CV",
+    "zh": "提交简历",
+    "ja": "履歴書を送る"
   },
   {
-    "key": "rec.b2.title",
+    "key": "rec.empType.fullTime",
     "category": "rec",
-    "vi": "Đào tạo & phát triển",
-    "en": "Training & development",
-    "zh": "培训与发展",
-    "ja": "研修と成長"
+    "vi": "Toàn thời gian",
+    "en": "Full-time",
+    "zh": "全职",
+    "ja": "正社員"
   },
   {
-    "key": "rec.b2.desc",
+    "key": "rec.empType.intern",
     "category": "rec",
-    "vi": "Lộ trình thăng tiến rõ ràng, ngân sách học tập riêng.",
-    "en": "Clear career path with dedicated learning budget.",
-    "zh": "清晰的晋升路径,独立学习预算。",
-    "ja": "明確なキャリアパスと専用学習予算。"
+    "vi": "Thực tập sinh",
+    "en": "Internship",
+    "zh": "实习",
+    "ja": "インターン"
   },
   {
-    "key": "rec.b3.title",
+    "key": "rec.empType.partTime",
     "category": "rec",
-    "vi": "Văn hoá thân thiện",
-    "en": "Friendly culture",
-    "zh": "友好文化",
-    "ja": "親しみやすい文化"
+    "vi": "Bán thời gian",
+    "en": "Part-time",
+    "zh": "兼职",
+    "ja": "パートタイム"
   },
   {
-    "key": "rec.b3.desc",
+    "key": "rec.exp.junior",
     "category": "rec",
-    "vi": "Pantry mở, team building hằng quý, hoạt động CSR.",
-    "en": "Open pantry, quarterly team building, CSR activities.",
-    "zh": "开放茶水间,季度团建,CSR活动。",
-    "ja": "オープンパントリー、四半期チームビルディング、CSR活動。"
+    "vi": "0-2 năm",
+    "en": "0-2 years",
+    "zh": "0-2年",
+    "ja": "0-2年"
   },
   {
-    "key": "rec.b4.title",
+    "key": "rec.exp.mid",
     "category": "rec",
-    "vi": "Thưởng dự án",
-    "en": "Project bonus",
-    "zh": "项目奖金",
-    "ja": "プロジェクト賞与"
+    "vi": "2-5 năm",
+    "en": "2-5 years",
+    "zh": "2-5年",
+    "ja": "2-5年"
   },
   {
-    "key": "rec.b4.desc",
+    "key": "rec.exp.senior",
     "category": "rec",
-    "vi": "Hoa hồng và thưởng nóng theo từng cột mốc dự án.",
-    "en": "Commissions and instant bonuses at every project milestone.",
-    "zh": "按项目里程碑发放佣金与即时奖金。",
-    "ja": "プロジェクトのマイルストーンごとにコミッションとボーナス。"
+    "vi": "5+ năm",
+    "en": "5+ years",
+    "zh": "5年以上",
+    "ja": "5年以上"
   },
   {
-    "key": "rec.positions.eyebrow",
+    "key": "rec.exp.student",
     "category": "rec",
-    "vi": "Vị trí đang tuyển",
-    "en": "Open positions",
-    "zh": "招聘职位",
-    "ja": "募集中の職種"
+    "vi": "Sinh viên",
+    "en": "Student",
+    "zh": "学生",
+    "ja": "学生"
   },
   {
-    "key": "rec.positions.countA",
+    "key": "rec.eyebrow",
     "category": "rec",
-    "vi": "cơ hội",
-    "en": "opportunities",
-    "zh": "个机会",
-    "ja": "の機会が"
+    "vi": "Cơ hội nghề nghiệp",
+    "en": "Career opportunities",
+    "zh": "职业机会",
+    "ja": "キャリア機会"
   },
   {
-    "key": "rec.positions.countB",
+    "key": "rec.form.coverLabel",
     "category": "rec",
-    "vi": "đang chờ bạn",
-    "en": "waiting for you",
-    "zh": "等待着您",
-    "ja": "あなたを待っています"
+    "vi": "Giới thiệu ngắn",
+    "en": "Cover letter",
+    "zh": "自我介绍",
+    "ja": "カバーレター"
   },
   {
-    "key": "rec.apply",
+    "key": "rec.form.coverPlaceholder",
     "category": "rec",
-    "vi": "Ứng tuyển",
-    "en": "Apply",
-    "zh": "申请",
-    "ja": "応募する"
+    "vi": "Giới thiệu ngắn về kinh nghiệm, dự án đã tham gia, thế mạnh của bạn...",
+    "en": "Brief introduction about your experience, projects, and strengths...",
+    "zh": "请简要介绍您的经历、参与项目及优势...",
+    "ja": "経歴・参加プロジェクト・強みを簡単にご紹介ください..."
   },
   {
-    "key": "rec.pos.dept.design",
+    "key": "rec.form.cvLabel",
     "category": "rec",
-    "vi": "Thiết kế",
-    "en": "Design",
-    "zh": "设计",
-    "ja": "設計"
+    "vi": "CV / Hồ sơ (PDF, DOC, DOCX)",
+    "en": "CV / Resume (PDF, DOC, DOCX)",
+    "zh": "简历 (PDF, DOC, DOCX)",
+    "ja": "履歴書 (PDF, DOC, DOCX)"
+  },
+  {
+    "key": "rec.form.cvPlaceholder",
+    "category": "rec",
+    "vi": "Chọn file...",
+    "en": "Choose file...",
+    "zh": "选择文件...",
+    "ja": "ファイルを選択..."
+  },
+  {
+    "key": "rec.form.emailLabel",
+    "category": "rec",
+    "vi": "Email",
+    "en": "Email",
+    "zh": "电子邮件",
+    "ja": "メール"
+  },
+  {
+    "key": "rec.form.expLabel",
+    "category": "rec",
+    "vi": "Số năm kinh nghiệm",
+    "en": "Years of experience",
+    "zh": "工作年限",
+    "ja": "経験年数"
+  },
+  {
+    "key": "rec.form.eyebrow",
+    "category": "rec",
+    "vi": "Ứng tuyển trực tuyến",
+    "en": "Apply online",
+    "zh": "在线申请",
+    "ja": "オンライン応募"
+  },
+  {
+    "key": "rec.form.nameLabel",
+    "category": "rec",
+    "vi": "Họ và tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "rec.form.namePlaceholder",
+    "category": "rec",
+    "vi": "Nguyễn Văn A",
+    "en": "John Smith",
+    "zh": "张伟",
+    "ja": "山田太郎"
+  },
+  {
+    "key": "rec.form.noPosition",
+    "category": "rec",
+    "vi": "Chọn vị trí phù hợp",
+    "en": "Select a position",
+    "zh": "选择合适的职位",
+    "ja": "ポジションを選択"
+  },
+  {
+    "key": "rec.form.noPositionHint",
+    "category": "rec",
+    "vi": "Chọn một vị trí ở danh sách bên trái để gửi hồ sơ ngay trên website.",
+    "en": "Choose a position from the list on the left to apply directly on the website.",
+    "zh": "请从左侧列表中选择一个职位以直接在网站上申请。",
+    "ja": "左のリストからポジションを選択してウェブサイトから直接応募できます。"
+  },
+  {
+    "key": "rec.form.phoneLabel",
+    "category": "rec",
+    "vi": "Số điện thoại",
+    "en": "Phone number",
+    "zh": "电话号码",
+    "ja": "電話番号"
+  },
+  {
+    "key": "rec.form.phonePlaceholder",
+    "category": "rec",
+    "vi": "090...",
+    "en": "+84 90...",
+    "zh": "+84 90...",
+    "ja": "+84 90..."
+  },
+  {
+    "key": "rec.form.positionHint",
+    "category": "rec",
+    "vi": "{dept} • {loc}",
+    "en": "{dept} • {loc}",
+    "zh": "{dept} • {loc}",
+    "ja": "{dept} • {loc}"
+  },
+  {
+    "key": "rec.form.submit",
+    "category": "rec",
+    "vi": "Gửi hồ sơ",
+    "en": "Submit application",
+    "zh": "提交申请",
+    "ja": "応募を送信"
+  },
+  {
+    "key": "rec.form.submitting",
+    "category": "rec",
+    "vi": "Đang gửi...",
+    "en": "Submitting...",
+    "zh": "提交中...",
+    "ja": "送信中..."
+  },
+  {
+    "key": "rec.intro",
+    "category": "rec",
+    "vi": "Tham gia đội ngũ hơn 250 chuyên gia tại NICON — nơi tài năng được trao cơ hội, sáng tạo được trân trọng và đóng góp được ghi nhận.",
+    "en": "Join our team of 250+ experts at NICON — where talent is given opportunity, creativity is valued, and contributions are recognized.",
+    "zh": "加入NICON 250多位专家团队 — 在这里,才华被赋予机会,创意被珍视,贡献被认可。",
+    "ja": "250名超の専門家チームに加わりませんか。NICONでは才能に機会を、創造性を尊重し、貢献を称えます。"
+  },
+  {
+    "key": "rec.loading",
+    "category": "rec",
+    "vi": "Đang tải vị trí tuyển dụng...",
+    "en": "Loading positions...",
+    "zh": "正在加载职位...",
+    "ja": "求人を読み込み中..."
+  },
+  {
+    "key": "rec.noPositions",
+    "category": "rec",
+    "vi": "Hiện chưa có vị trí tuyển dụng đang mở. Bạn có thể để lại nhu cầu tại trang liên hệ.",
+    "en": "No open positions at the moment. You can leave your inquiry on the contact page.",
+    "zh": "目前暂无开放职位。您可以在联系页面留下您的意向。",
+    "ja": "現在募集中のポジションはありません。お問い合わせページからご連絡ください。"
   },
   {
     "key": "rec.pos.dept.constr",
@@ -184,6 +496,14 @@
     "ja": "施工"
   },
   {
+    "key": "rec.pos.dept.design",
+    "category": "rec",
+    "vi": "Thiết kế",
+    "en": "Design",
+    "zh": "设计",
+    "ja": "設計"
+  },
+  {
     "key": "rec.pos.dept.qa",
     "category": "rec",
     "vi": "Quản lý chất lượng",
@@ -192,60 +512,12 @@
     "ja": "品質管理"
   },
   {
-    "key": "rec.pos.type.full",
+    "key": "rec.pos.loc.all",
     "category": "rec",
-    "vi": "Toàn thời gian",
-    "en": "Full-time",
-    "zh": "全职",
-    "ja": "正社員"
-  },
-  {
-    "key": "rec.pos.type.intern",
-    "category": "rec",
-    "vi": "Thực tập",
-    "en": "Internship",
-    "zh": "实习",
-    "ja": "インターン"
-  },
-  {
-    "key": "rec.pos.lvl.5",
-    "category": "rec",
-    "vi": "5+ năm",
-    "en": "5+ years",
-    "zh": "5年以上",
-    "ja": "5年以上"
-  },
-  {
-    "key": "rec.pos.lvl.3",
-    "category": "rec",
-    "vi": "3+ năm",
-    "en": "3+ years",
-    "zh": "3年以上",
-    "ja": "3年以上"
-  },
-  {
-    "key": "rec.pos.lvl.2",
-    "category": "rec",
-    "vi": "2+ năm",
-    "en": "2+ years",
-    "zh": "2年以上",
-    "ja": "2年以上"
-  },
-  {
-    "key": "rec.pos.lvl.student",
-    "category": "rec",
-    "vi": "Sinh viên",
-    "en": "Student",
-    "zh": "学生",
-    "ja": "学生"
-  },
-  {
-    "key": "rec.pos.loc.hcm",
-    "category": "rec",
-    "vi": "TP.HCM",
-    "en": "HCMC",
-    "zh": "胡志明市",
-    "ja": "ホーチミン"
+    "vi": "Toàn quốc",
+    "en": "Nationwide",
+    "zh": "全国",
+    "ja": "全国"
   },
   {
     "key": "rec.pos.loc.bd",
@@ -256,12 +528,44 @@
     "ja": "ビンズン"
   },
   {
-    "key": "rec.pos.loc.all",
+    "key": "rec.pos.loc.hcm",
     "category": "rec",
-    "vi": "Toàn quốc",
-    "en": "Nationwide",
-    "zh": "全国",
-    "ja": "全国"
+    "vi": "TP.HCM",
+    "en": "HCMC",
+    "zh": "胡志明市",
+    "ja": "ホーチミン"
+  },
+  {
+    "key": "rec.pos.lvl.2",
+    "category": "rec",
+    "vi": "2+ năm",
+    "en": "2+ years",
+    "zh": "2年以上",
+    "ja": "2年以上"
+  },
+  {
+    "key": "rec.pos.lvl.3",
+    "category": "rec",
+    "vi": "3+ năm",
+    "en": "3+ years",
+    "zh": "3年以上",
+    "ja": "3年以上"
+  },
+  {
+    "key": "rec.pos.lvl.5",
+    "category": "rec",
+    "vi": "5+ năm",
+    "en": "5+ years",
+    "zh": "5年以上",
+    "ja": "5年以上"
+  },
+  {
+    "key": "rec.pos.lvl.student",
+    "category": "rec",
+    "vi": "Sinh viên",
+    "en": "Student",
+    "zh": "学生",
+    "ja": "学生"
   },
   {
     "key": "rec.pos.t1",
@@ -312,132 +616,44 @@
     "ja": "BIMインターン"
   },
   {
-    "key": "recruit.title",
-    "category": "recruit",
-    "vi": "Tuyển dụng",
-    "en": "Recruitment",
-    "zh": "招聘管理",
-    "ja": "採用管理"
+    "key": "rec.pos.type.full",
+    "category": "rec",
+    "vi": "Toàn thời gian",
+    "en": "Full-time",
+    "zh": "全职",
+    "ja": "正社員"
   },
   {
-    "key": "recruit.postPosition",
-    "category": "recruit",
-    "vi": "Đăng vị trí mới",
-    "en": "Post new position",
-    "zh": "发布新职位",
-    "ja": "新しいポジションを投稿"
+    "key": "rec.pos.type.intern",
+    "category": "rec",
+    "vi": "Thực tập",
+    "en": "Internship",
+    "zh": "实习",
+    "ja": "インターン"
   },
   {
-    "key": "recruit.applications",
-    "category": "recruit",
-    "vi": "Đơn ứng tuyển",
-    "en": "Applications",
-    "zh": "应聘申请",
-    "ja": "応募"
+    "key": "rec.positions.countA",
+    "category": "rec",
+    "vi": "cơ hội",
+    "en": "opportunities",
+    "zh": "个机会",
+    "ja": "の機会が"
   },
   {
-    "key": "recruit.positions",
-    "category": "recruit",
+    "key": "rec.positions.countB",
+    "category": "rec",
+    "vi": "đang chờ bạn",
+    "en": "waiting for you",
+    "zh": "等待着您",
+    "ja": "あなたを待っています"
+  },
+  {
+    "key": "rec.positions.eyebrow",
+    "category": "rec",
     "vi": "Vị trí đang tuyển",
     "en": "Open positions",
     "zh": "招聘职位",
-    "ja": "募集中のポジション"
-  },
-  {
-    "key": "recruit.candidate",
-    "category": "recruit",
-    "vi": "Ứng viên",
-    "en": "Candidate",
-    "zh": "候选人",
-    "ja": "候補者"
-  },
-  {
-    "key": "recruit.position",
-    "category": "recruit",
-    "vi": "Vị trí",
-    "en": "Position",
-    "zh": "职位",
-    "ja": "ポジション"
-  },
-  {
-    "key": "recruit.experience",
-    "category": "recruit",
-    "vi": "Kinh nghiệm",
-    "en": "Experience",
-    "zh": "经验",
-    "ja": "経験"
-  },
-  {
-    "key": "recruit.appliedOn",
-    "category": "recruit",
-    "vi": "Ngày nộp",
-    "en": "Applied on",
-    "zh": "申请日期",
-    "ja": "応募日"
-  },
-  {
-    "key": "recruit.hiring",
-    "category": "recruit",
-    "vi": "Đang tuyển",
-    "en": "Hiring",
-    "zh": "招聘中",
-    "ja": "採用中"
-  },
-  {
-    "key": "recruit.searchPositionPlaceholder",
-    "category": "recruit",
-    "vi": "Tìm vị trí theo tên, phòng ban, địa điểm...",
-    "en": "Search positions by title, department, location...",
-    "zh": "按职位名称、部门、位置搜索...",
-    "ja": "ポジション名、部門、場所で検索..."
-  },
-  {
-    "key": "recruit.searchApplicationPlaceholder",
-    "category": "recruit",
-    "vi": "Tìm ứng viên theo tên, email, điện thoại...",
-    "en": "Search candidates by name, email, phone...",
-    "zh": "按候选人姓名、邮箱、电话搜索...",
-    "ja": "候補者を名前、メール、電話で検索..."
-  },
-  {
-    "key": "rec.exp.student",
-    "category": "rec",
-    "vi": "Sinh viên",
-    "en": "Student",
-    "zh": "学生",
-    "ja": "学生"
-  },
-  {
-    "key": "rec.exp.junior",
-    "category": "rec",
-    "vi": "0-2 năm",
-    "en": "0-2 years",
-    "zh": "0-2年",
-    "ja": "0-2年"
-  },
-  {
-    "key": "rec.exp.mid",
-    "category": "rec",
-    "vi": "2-5 năm",
-    "en": "2-5 years",
-    "zh": "2-5年",
-    "ja": "2-5年"
-  },
-  {
-    "key": "rec.exp.senior",
-    "category": "rec",
-    "vi": "5+ năm",
-    "en": "5+ years",
-    "zh": "5年以上",
-    "ja": "5年以上"
-  },
-  {
-    "key": "rec.loading",
-    "category": "rec",
-    "vi": "Đang tải vị trí tuyển dụng...",
-    "en": "Loading positions...",
-    "zh": "正在加载职位...",
-    "ja": "求人を読み込み中..."
+    "ja": "募集中の職種"
   },
   {
     "key": "rec.retry",
@@ -448,172 +664,20 @@
     "ja": "再試行"
   },
   {
-    "key": "rec.noPositions",
+    "key": "rec.titleA",
     "category": "rec",
-    "vi": "Hiện chưa có vị trí tuyển dụng đang mở. Bạn có thể để lại nhu cầu tại trang liên hệ.",
-    "en": "No open positions at the moment. You can leave your inquiry on the contact page.",
-    "zh": "目前暂无开放职位。您可以在联系页面留下您的意向。",
-    "ja": "現在募集中のポジションはありません。お問い合わせページからご連絡ください。"
+    "vi": "Cùng NICON kiến tạo",
+    "en": "Build the",
+    "zh": "与 NICON 共创",
+    "ja": "NICONと共に"
   },
   {
-    "key": "rec.form.eyebrow",
+    "key": "rec.titleB",
     "category": "rec",
-    "vi": "Ứng tuyển trực tuyến",
-    "en": "Apply online",
-    "zh": "在线申请",
-    "ja": "オンライン応募"
-  },
-  {
-    "key": "rec.form.noPosition",
-    "category": "rec",
-    "vi": "Chọn vị trí phù hợp",
-    "en": "Select a position",
-    "zh": "选择合适的职位",
-    "ja": "ポジションを選択"
-  },
-  {
-    "key": "rec.form.noPositionHint",
-    "category": "rec",
-    "vi": "Chọn một vị trí ở danh sách bên trái để gửi hồ sơ ngay trên website.",
-    "en": "Choose a position from the list on the left to apply directly on the website.",
-    "zh": "请从左侧列表中选择一个职位以直接在网站上申请。",
-    "ja": "左のリストからポジションを選択してウェブサイトから直接応募できます。"
-  },
-  {
-    "key": "rec.form.positionHint",
-    "category": "rec",
-    "vi": "{dept} • {loc}",
-    "en": "{dept} • {loc}",
-    "zh": "{dept} • {loc}",
-    "ja": "{dept} • {loc}"
-  },
-  {
-    "key": "rec.form.nameLabel",
-    "category": "rec",
-    "vi": "Họ và tên",
-    "en": "Full name",
-    "zh": "姓名",
-    "ja": "氏名"
-  },
-  {
-    "key": "rec.form.namePlaceholder",
-    "category": "rec",
-    "vi": "Nguyễn Văn A",
-    "en": "John Smith",
-    "zh": "张伟",
-    "ja": "山田太郎"
-  },
-  {
-    "key": "rec.form.emailLabel",
-    "category": "rec",
-    "vi": "Email",
-    "en": "Email",
-    "zh": "电子邮件",
-    "ja": "メール"
-  },
-  {
-    "key": "rec.form.phoneLabel",
-    "category": "rec",
-    "vi": "Số điện thoại",
-    "en": "Phone number",
-    "zh": "电话号码",
-    "ja": "電話番号"
-  },
-  {
-    "key": "rec.form.phonePlaceholder",
-    "category": "rec",
-    "vi": "090...",
-    "en": "+84 90...",
-    "zh": "+84 90...",
-    "ja": "+84 90..."
-  },
-  {
-    "key": "rec.form.expLabel",
-    "category": "rec",
-    "vi": "Số năm kinh nghiệm",
-    "en": "Years of experience",
-    "zh": "工作年限",
-    "ja": "経験年数"
-  },
-  {
-    "key": "rec.form.coverLabel",
-    "category": "rec",
-    "vi": "Giới thiệu ngắn",
-    "en": "Cover letter",
-    "zh": "自我介绍",
-    "ja": "カバーレター"
-  },
-  {
-    "key": "rec.form.coverPlaceholder",
-    "category": "rec",
-    "vi": "Giới thiệu ngắn về kinh nghiệm, dự án đã tham gia, thế mạnh của bạn...",
-    "en": "Brief introduction about your experience, projects, and strengths...",
-    "zh": "请简要介绍您的经历、参与项目及优势...",
-    "ja": "経歴・参加プロジェクト・強みを簡単にご紹介ください..."
-  },
-  {
-    "key": "rec.form.cvLabel",
-    "category": "rec",
-    "vi": "CV / Hồ sơ (PDF, DOC, DOCX)",
-    "en": "CV / Resume (PDF, DOC, DOCX)",
-    "zh": "简历 (PDF, DOC, DOCX)",
-    "ja": "履歴書 (PDF, DOC, DOCX)"
-  },
-  {
-    "key": "rec.form.cvPlaceholder",
-    "category": "rec",
-    "vi": "Chọn file...",
-    "en": "Choose file...",
-    "zh": "选择文件...",
-    "ja": "ファイルを選択..."
-  },
-  {
-    "key": "rec.form.submit",
-    "category": "rec",
-    "vi": "Gửi hồ sơ",
-    "en": "Submit application",
-    "zh": "提交申请",
-    "ja": "応募を送信"
-  },
-  {
-    "key": "rec.form.submitting",
-    "category": "rec",
-    "vi": "Đang gửi...",
-    "en": "Submitting...",
-    "zh": "提交中...",
-    "ja": "送信中..."
-  },
-  {
-    "key": "rec.toast.selectPosition",
-    "category": "rec",
-    "vi": "Vui lòng chọn vị trí ứng tuyển.",
-    "en": "Please select a position to apply for.",
-    "zh": "请选择申请职位。",
-    "ja": "応募職種を選択してください。"
-  },
-  {
-    "key": "rec.toast.fillRequired",
-    "category": "rec",
-    "vi": "Vui lòng nhập họ tên và email.",
-    "en": "Please enter your name and email.",
-    "zh": "请填写姓名和邮箱。",
-    "ja": "お名前とメールアドレスを入力してください。"
-  },
-  {
-    "key": "rec.toast.successTitle",
-    "category": "rec",
-    "vi": "Đã gửi hồ sơ",
-    "en": "Application submitted",
-    "zh": "申请已提交",
-    "ja": "応募を送信しました"
-  },
-  {
-    "key": "rec.toast.successDesc",
-    "category": "rec",
-    "vi": "Ứng tuyển vị trí",
-    "en": "Applied for",
-    "zh": "已申请职位",
-    "ja": "応募職種"
+    "vi": "tương lai",
+    "en": "future with NICON",
+    "zh": "未来",
+    "ja": "未来を創る"
   },
   {
     "key": "rec.toast.errorDesc",
@@ -624,84 +688,36 @@
     "ja": "現在、応募を送信できません。"
   },
   {
-    "key": "recruit.status.new",
-    "category": "recruit",
-    "vi": "Mới",
-    "en": "New",
-    "zh": "新",
-    "ja": "新規"
+    "key": "rec.toast.fillRequired",
+    "category": "rec",
+    "vi": "Vui lòng nhập họ tên và email.",
+    "en": "Please enter your name and email.",
+    "zh": "请填写姓名和邮箱。",
+    "ja": "お名前とメールアドレスを入力してください。"
   },
   {
-    "key": "recruit.status.interview",
-    "category": "recruit",
-    "vi": "Phỏng vấn",
-    "en": "Interview",
-    "zh": "面试",
-    "ja": "面接"
+    "key": "rec.toast.selectPosition",
+    "category": "rec",
+    "vi": "Vui lòng chọn vị trí ứng tuyển.",
+    "en": "Please select a position to apply for.",
+    "zh": "请选择申请职位。",
+    "ja": "応募職種を選択してください。"
   },
   {
-    "key": "recruit.status.hired",
-    "category": "recruit",
-    "vi": "Đã tuyển",
-    "en": "Hired",
-    "zh": "已录用",
-    "ja": "採用済"
+    "key": "rec.toast.successDesc",
+    "category": "rec",
+    "vi": "Ứng tuyển vị trí",
+    "en": "Applied for",
+    "zh": "已申请职位",
+    "ja": "応募職種"
   },
   {
-    "key": "recruit.status.rejected",
-    "category": "recruit",
-    "vi": "Từ chối",
-    "en": "Rejected",
-    "zh": "拒绝",
-    "ja": "不採用"
-  },
-  {
-    "key": "recruit.closed",
-    "category": "recruit",
-    "vi": "Đóng",
-    "en": "Closed",
-    "zh": "已关闭",
-    "ja": "終了"
-  },
-  {
-    "key": "recruit.edit",
-    "category": "recruit",
-    "vi": "Sửa",
-    "en": "Edit",
-    "zh": "编辑",
-    "ja": "編集"
-  },
-  {
-    "key": "recruit.delete",
-    "category": "recruit",
-    "vi": "Xóa",
-    "en": "Delete",
-    "zh": "删除",
-    "ja": "削除"
-  },
-  {
-    "key": "recruit.candidateCount",
-    "category": "recruit",
-    "vi": "ứng viên",
-    "en": "candidates",
-    "zh": "候选人",
-    "ja": "候補者"
-  },
-  {
-    "key": "recruit.noPositions",
-    "category": "recruit",
-    "vi": "Chưa có vị trí tuyển dụng nào.",
-    "en": "No job positions yet.",
-    "zh": "暂无招聘职位。",
-    "ja": "求人がまだありません。"
-  },
-  {
-    "key": "recruit.noApplications",
-    "category": "recruit",
-    "vi": "Chưa có đơn ứng tuyển nào.",
-    "en": "No applications yet.",
-    "zh": "暂无申请。",
-    "ja": "応募がまだありません。"
+    "key": "rec.toast.successTitle",
+    "category": "rec",
+    "vi": "Đã gửi hồ sơ",
+    "en": "Application submitted",
+    "zh": "申请已提交",
+    "ja": "応募を送信しました"
   },
   {
     "key": "recruit.allPositions",
@@ -720,36 +736,52 @@
     "ja": "すべての状態"
   },
   {
-    "key": "recruit.expYears",
+    "key": "recruit.applications",
     "category": "recruit",
-    "vi": "năm",
-    "en": "yrs",
-    "zh": "年",
-    "ja": "年"
+    "vi": "Đơn ứng tuyển",
+    "en": "Applications",
+    "zh": "应聘申请",
+    "ja": "応募"
   },
   {
-    "key": "recruit.deleted",
+    "key": "recruit.appliedOn",
     "category": "recruit",
-    "vi": "Đã xóa",
-    "en": "Deleted",
-    "zh": "已删除",
-    "ja": "削除しました"
+    "vi": "Ngày nộp",
+    "en": "Applied on",
+    "zh": "申请日期",
+    "ja": "応募日"
   },
   {
-    "key": "recruit.updated",
+    "key": "recruit.candidate",
     "category": "recruit",
-    "vi": "Cập nhật",
-    "en": "Updated",
-    "zh": "已更新",
-    "ja": "更新しました"
+    "vi": "Ứng viên",
+    "en": "Candidate",
+    "zh": "候选人",
+    "ja": "候補者"
   },
   {
-    "key": "recruit.deletePositionConfirm",
+    "key": "recruit.candidateCount",
     "category": "recruit",
-    "vi": "Xóa vị trí \"{title}\"? Tất cả đơn ứng tuyển liên quan cũng sẽ bị xóa.",
-    "en": "Delete position \"{title}\"? All related applications will also be deleted.",
-    "zh": "删除职位\"{title}\"？所有相关申请也将被删除。",
-    "ja": "ポジション\"{title}\"を削除しますか？関連するすべての応募も削除されます。"
+    "vi": "ứng viên",
+    "en": "candidates",
+    "zh": "候选人",
+    "ja": "候補者"
+  },
+  {
+    "key": "recruit.closed",
+    "category": "recruit",
+    "vi": "Đóng",
+    "en": "Closed",
+    "zh": "已关闭",
+    "ja": "終了"
+  },
+  {
+    "key": "recruit.delete",
+    "category": "recruit",
+    "vi": "Xóa",
+    "en": "Delete",
+    "zh": "删除",
+    "ja": "削除"
   },
   {
     "key": "recruit.deleteAppConfirm",
@@ -760,140 +792,52 @@
     "ja": "この応募を削除しますか？"
   },
   {
-    "key": "recruit.positionsOpen",
+    "key": "recruit.deletePositionConfirm",
     "category": "recruit",
-    "vi": "đang mở",
-    "en": "open",
-    "zh": "个开放",
-    "ja": "件募集中"
+    "vi": "Xóa vị trí \"{title}\"? Tất cả đơn ứng tuyển liên quan cũng sẽ bị xóa.",
+    "en": "Delete position \"{title}\"? All related applications will also be deleted.",
+    "zh": "删除职位\"{title}\"？所有相关申请也将被删除。",
+    "ja": "ポジション\"{title}\"を削除しますか？関連するすべての応募も削除されます。"
   },
   {
-    "key": "recruit.jobForm.titleCreate",
+    "key": "recruit.deleted",
     "category": "recruit",
-    "vi": "Đăng vị trí tuyển dụng",
-    "en": "Post a job position",
-    "zh": "发布招聘职位",
-    "ja": "求人を投稿"
+    "vi": "Đã xóa",
+    "en": "Deleted",
+    "zh": "已删除",
+    "ja": "削除しました"
   },
   {
-    "key": "recruit.jobForm.titleEdit",
+    "key": "recruit.edit",
     "category": "recruit",
-    "vi": "Chỉnh sửa vị trí tuyển dụng",
-    "en": "Edit job position",
-    "zh": "编辑招聘职位",
-    "ja": "求人を編集"
+    "vi": "Sửa",
+    "en": "Edit",
+    "zh": "编辑",
+    "ja": "編集"
   },
   {
-    "key": "recruit.jobForm.positionTitle",
+    "key": "recruit.expYears",
     "category": "recruit",
-    "vi": "Chức danh *",
-    "en": "Job title *",
-    "zh": "职位名称 *",
-    "ja": "職種名 *"
+    "vi": "năm",
+    "en": "yrs",
+    "zh": "年",
+    "ja": "年"
   },
   {
-    "key": "recruit.jobForm.positionTitlePlaceholder",
+    "key": "recruit.experience",
     "category": "recruit",
-    "vi": "Kỹ sư kết cấu, Kiến trúc sư...",
-    "en": "Structural engineer, Architect...",
-    "zh": "结构工程师、建筑师...",
-    "ja": "構造エンジニア、建築士..."
+    "vi": "Kinh nghiệm",
+    "en": "Experience",
+    "zh": "经验",
+    "ja": "経験"
   },
   {
-    "key": "recruit.jobForm.department",
+    "key": "recruit.hiring",
     "category": "recruit",
-    "vi": "Phòng ban *",
-    "en": "Department *",
-    "zh": "部门 *",
-    "ja": "部門 *"
-  },
-  {
-    "key": "recruit.jobForm.departmentPlaceholder",
-    "category": "recruit",
-    "vi": "Thiết kế, Thi công...",
-    "en": "Design, Construction...",
-    "zh": "设计、施工...",
-    "ja": "設計、施工..."
-  },
-  {
-    "key": "recruit.jobForm.location",
-    "category": "recruit",
-    "vi": "Địa điểm *",
-    "en": "Location *",
-    "zh": "工作地点 *",
-    "ja": "勤務地 *"
-  },
-  {
-    "key": "recruit.jobForm.locationPlaceholder",
-    "category": "recruit",
-    "vi": "TP.HCM, Toàn quốc...",
-    "en": "HCMC, Nationwide...",
-    "zh": "胡志明市、全国...",
-    "ja": "ホーチミン、全国..."
-  },
-  {
-    "key": "recruit.jobForm.employmentType",
-    "category": "recruit",
-    "vi": "Hình thức làm việc",
-    "en": "Employment type",
-    "zh": "工作类型",
-    "ja": "雇用形態"
-  },
-  {
-    "key": "recruit.jobForm.noOptions",
-    "category": "recruit",
-    "vi": "Chưa có dữ liệu",
-    "en": "No options available",
-    "zh": "暂无数据",
-    "ja": "データなし"
-  },
-  {
-    "key": "recruit.jobForm.manageAt",
-    "category": "recruit",
-    "vi": "Quản lý danh mục tại",
-    "en": "Manage categories at",
-    "zh": "在以下位置管理分类",
-    "ja": "カテゴリ管理："
-  },
-  {
-    "key": "recruit.jobForm.experienceLevel",
-    "category": "recruit",
-    "vi": "Kinh nghiệm yêu cầu",
-    "en": "Experience required",
-    "zh": "经验要求",
-    "ja": "経験レベル"
-  },
-  {
-    "key": "recruit.jobForm.description",
-    "category": "recruit",
-    "vi": "Mô tả công việc",
-    "en": "Job description",
-    "zh": "职位描述",
-    "ja": "職務内容"
-  },
-  {
-    "key": "recruit.jobForm.descPlaceholder",
-    "category": "recruit",
-    "vi": "Mô tả chi tiết về vị trí, trách nhiệm công việc...",
-    "en": "Detailed description of the role and responsibilities...",
-    "zh": "职位和职责的详细描述...",
-    "ja": "ポジションと職責の詳細説明..."
-  },
-  {
-    "key": "recruit.jobForm.requirements",
-    "category": "recruit",
-    "vi": "Yêu cầu ứng viên",
-    "en": "Candidate requirements",
-    "zh": "候选人要求",
-    "ja": "応募条件"
-  },
-  {
-    "key": "recruit.jobForm.reqPlaceholder",
-    "category": "recruit",
-    "vi": "Tốt nghiệp đại học chuyên ngành...",
-    "en": "Bachelor's degree in...",
-    "zh": "相关专业本科学历...",
-    "ja": "関連分野の学士号..."
+    "vi": "Đang tuyển",
+    "en": "Hiring",
+    "zh": "招聘中",
+    "ja": "採用中"
   },
   {
     "key": "recruit.jobForm.addReq",
@@ -912,12 +856,52 @@
     "ja": "福利厚生"
   },
   {
-    "key": "recruit.jobForm.settings",
+    "key": "recruit.jobForm.department",
     "category": "recruit",
-    "vi": "Cài đặt",
-    "en": "Settings",
-    "zh": "设置",
-    "ja": "設定"
+    "vi": "Phòng ban *",
+    "en": "Department *",
+    "zh": "部门 *",
+    "ja": "部門 *"
+  },
+  {
+    "key": "recruit.jobForm.departmentPlaceholder",
+    "category": "recruit",
+    "vi": "Thiết kế, Thi công...",
+    "en": "Design, Construction...",
+    "zh": "设计、施工...",
+    "ja": "設計、施工..."
+  },
+  {
+    "key": "recruit.jobForm.descPlaceholder",
+    "category": "recruit",
+    "vi": "Mô tả chi tiết về vị trí, trách nhiệm công việc...",
+    "en": "Detailed description of the role and responsibilities...",
+    "zh": "职位和职责的详细描述...",
+    "ja": "ポジションと職責の詳細説明..."
+  },
+  {
+    "key": "recruit.jobForm.description",
+    "category": "recruit",
+    "vi": "Mô tả công việc",
+    "en": "Job description",
+    "zh": "职位描述",
+    "ja": "職務内容"
+  },
+  {
+    "key": "recruit.jobForm.employmentType",
+    "category": "recruit",
+    "vi": "Hình thức làm việc",
+    "en": "Employment type",
+    "zh": "工作类型",
+    "ja": "雇用形態"
+  },
+  {
+    "key": "recruit.jobForm.experienceLevel",
+    "category": "recruit",
+    "vi": "Kinh nghiệm yêu cầu",
+    "en": "Experience required",
+    "zh": "经验要求",
+    "ja": "経験レベル"
   },
   {
     "key": "recruit.jobForm.isHiring",
@@ -926,14 +910,6 @@
     "en": "Currently hiring",
     "zh": "正在招聘",
     "ja": "募集中"
-  },
-  {
-    "key": "recruit.jobForm.sortOrder",
-    "category": "recruit",
-    "vi": "Thứ tự hiển thị",
-    "en": "Display order",
-    "zh": "显示顺序",
-    "ja": "表示順"
   },
   {
     "key": "recruit.jobForm.loadingTypes",
@@ -952,6 +928,30 @@
     "ja": "数秒後に再試行してください。"
   },
   {
+    "key": "recruit.jobForm.location",
+    "category": "recruit",
+    "vi": "Địa điểm *",
+    "en": "Location *",
+    "zh": "工作地点 *",
+    "ja": "勤務地 *"
+  },
+  {
+    "key": "recruit.jobForm.locationPlaceholder",
+    "category": "recruit",
+    "vi": "TP.HCM, Toàn quốc...",
+    "en": "HCMC, Nationwide...",
+    "zh": "胡志明市、全国...",
+    "ja": "ホーチミン、全国..."
+  },
+  {
+    "key": "recruit.jobForm.manageAt",
+    "category": "recruit",
+    "vi": "Quản lý danh mục tại",
+    "en": "Manage categories at",
+    "zh": "在以下位置管理分类",
+    "ja": "カテゴリ管理："
+  },
+  {
     "key": "recruit.jobForm.missingTypes",
     "category": "recruit",
     "vi": "Thiếu dữ liệu hình thức làm việc",
@@ -968,6 +968,46 @@
     "ja": "求人を保存する前にカテゴリを管理してください。"
   },
   {
+    "key": "recruit.jobForm.noOptions",
+    "category": "recruit",
+    "vi": "Chưa có dữ liệu",
+    "en": "No options available",
+    "zh": "暂无数据",
+    "ja": "データなし"
+  },
+  {
+    "key": "recruit.jobForm.positionTitle",
+    "category": "recruit",
+    "vi": "Chức danh *",
+    "en": "Job title *",
+    "zh": "职位名称 *",
+    "ja": "職種名 *"
+  },
+  {
+    "key": "recruit.jobForm.positionTitlePlaceholder",
+    "category": "recruit",
+    "vi": "Kỹ sư kết cấu, Kiến trúc sư...",
+    "en": "Structural engineer, Architect...",
+    "zh": "结构工程师、建筑师...",
+    "ja": "構造エンジニア、建築士..."
+  },
+  {
+    "key": "recruit.jobForm.reqPlaceholder",
+    "category": "recruit",
+    "vi": "Tốt nghiệp đại học chuyên ngành...",
+    "en": "Bachelor's degree in...",
+    "zh": "相关专业本科学历...",
+    "ja": "関連分野の学士号..."
+  },
+  {
+    "key": "recruit.jobForm.requirements",
+    "category": "recruit",
+    "vi": "Yêu cầu ứng viên",
+    "en": "Candidate requirements",
+    "zh": "候选人要求",
+    "ja": "応募条件"
+  },
+  {
     "key": "recruit.jobForm.selectType",
     "category": "recruit",
     "vi": "Vui lòng chọn hình thức làm việc.",
@@ -976,187 +1016,147 @@
     "ja": "雇用形態を選択してください。"
   },
   {
-    "key": "empTypes.title",
-    "category": "empTypes",
-    "vi": "Danh mục tuyển dụng",
-    "en": "Recruitment categories",
-    "zh": "招聘分类",
-    "ja": "採用カテゴリ"
+    "key": "recruit.jobForm.settings",
+    "category": "recruit",
+    "vi": "Cài đặt",
+    "en": "Settings",
+    "zh": "设置",
+    "ja": "設定"
   },
   {
-    "key": "empTypes.employmentTypes",
-    "category": "empTypes",
-    "vi": "Hình thức làm việc",
-    "en": "Employment types",
-    "zh": "工作类型",
-    "ja": "雇用形態"
+    "key": "recruit.jobForm.sortOrder",
+    "category": "recruit",
+    "vi": "Thứ tự hiển thị",
+    "en": "Display order",
+    "zh": "显示顺序",
+    "ja": "表示順"
   },
   {
-    "key": "empTypes.experienceRequired",
-    "category": "empTypes",
-    "vi": "Kinh nghiệm yêu cầu",
-    "en": "Experience required",
-    "zh": "经验要求",
-    "ja": "経験レベル"
+    "key": "recruit.jobForm.titleCreate",
+    "category": "recruit",
+    "vi": "Đăng vị trí tuyển dụng",
+    "en": "Post a job position",
+    "zh": "发布招聘职位",
+    "ja": "求人を投稿"
   },
   {
-    "key": "empTypes.benefits",
-    "category": "empTypes",
-    "vi": "Quyền lợi",
-    "en": "Benefits",
-    "zh": "员工福利",
-    "ja": "福利厚生"
+    "key": "recruit.jobForm.titleEdit",
+    "category": "recruit",
+    "vi": "Chỉnh sửa vị trí tuyển dụng",
+    "en": "Edit job position",
+    "zh": "编辑招聘职位",
+    "ja": "求人を編集"
   },
   {
-    "key": "empTypes.addType",
-    "category": "empTypes",
-    "vi": "Thêm hình thức",
-    "en": "Add type",
-    "zh": "添加类型",
-    "ja": "追加"
+    "key": "recruit.noApplications",
+    "category": "recruit",
+    "vi": "Chưa có đơn ứng tuyển nào.",
+    "en": "No applications yet.",
+    "zh": "暂无申请。",
+    "ja": "応募がまだありません。"
   },
   {
-    "key": "empTypes.addExpLevel",
-    "category": "empTypes",
-    "vi": "Thêm mức kinh nghiệm",
-    "en": "Add experience level",
-    "zh": "添加经验等级",
-    "ja": "経験レベルを追加"
+    "key": "recruit.noPositions",
+    "category": "recruit",
+    "vi": "Chưa có vị trí tuyển dụng nào.",
+    "en": "No job positions yet.",
+    "zh": "暂无招聘职位。",
+    "ja": "求人がまだありません。"
   },
   {
-    "key": "empTypes.addBenefit",
-    "category": "empTypes",
-    "vi": "Thêm quyền lợi",
-    "en": "Add benefit",
-    "zh": "添加福利",
-    "ja": "福利厚生を追加"
+    "key": "recruit.position",
+    "category": "recruit",
+    "vi": "Vị trí",
+    "en": "Position",
+    "zh": "职位",
+    "ja": "ポジション"
   },
   {
-    "key": "empTypes.code",
-    "category": "empTypes",
-    "vi": "Mã",
-    "en": "Code",
-    "zh": "代码",
-    "ja": "コード"
+    "key": "recruit.positions",
+    "category": "recruit",
+    "vi": "Vị trí đang tuyển",
+    "en": "Open positions",
+    "zh": "招聘职位",
+    "ja": "募集中のポジション"
   },
   {
-    "key": "empTypes.displayName",
-    "category": "empTypes",
-    "vi": "Tên hiển thị",
-    "en": "Display name",
-    "zh": "显示名称",
-    "ja": "表示名"
+    "key": "recruit.positionsOpen",
+    "category": "recruit",
+    "vi": "đang mở",
+    "en": "open",
+    "zh": "个开放",
+    "ja": "件募集中"
   },
   {
-    "key": "empTypes.sortOrder",
-    "category": "empTypes",
-    "vi": "Thứ tự",
-    "en": "Order",
-    "zh": "排序",
-    "ja": "順序"
+    "key": "recruit.postPosition",
+    "category": "recruit",
+    "vi": "Đăng vị trí mới",
+    "en": "Post new position",
+    "zh": "发布新职位",
+    "ja": "新しいポジションを投稿"
   },
   {
-    "key": "empTypes.active",
-    "category": "empTypes",
-    "vi": "Kích hoạt",
-    "en": "Active",
-    "zh": "激活",
-    "ja": "有効"
+    "key": "recruit.searchApplicationPlaceholder",
+    "category": "recruit",
+    "vi": "Tìm ứng viên theo tên, email, điện thoại...",
+    "en": "Search candidates by name, email, phone...",
+    "zh": "按候选人姓名、邮箱、电话搜索...",
+    "ja": "候補者を名前、メール、電話で検索..."
   },
   {
-    "key": "empTypes.codePlaceholder",
-    "category": "empTypes",
-    "vi": "Mã (vd: full-time)",
-    "en": "Code (e.g. full-time)",
-    "zh": "代码（如：full-time）",
-    "ja": "コード（例：full-time）"
+    "key": "recruit.searchPositionPlaceholder",
+    "category": "recruit",
+    "vi": "Tìm vị trí theo tên, phòng ban, địa điểm...",
+    "en": "Search positions by title, department, location...",
+    "zh": "按职位名称、部门、位置搜索...",
+    "ja": "ポジション名、部門、場所で検索..."
   },
   {
-    "key": "empTypes.namePlaceholder",
-    "category": "empTypes",
-    "vi": "Tên hiển thị (vd: Toàn thời gian)",
-    "en": "Display name (e.g. Full-time)",
-    "zh": "显示名称（如：全职）",
-    "ja": "表示名（例：正社員）"
+    "key": "recruit.status.hired",
+    "category": "recruit",
+    "vi": "Đã tuyển",
+    "en": "Hired",
+    "zh": "已录用",
+    "ja": "採用済"
   },
   {
-    "key": "empTypes.searchPlaceholder",
-    "category": "empTypes",
-    "vi": "Tìm theo mã hoặc tên",
-    "en": "Search by code or name",
-    "zh": "按代码或名称搜索",
-    "ja": "コードまたは名前で検索"
+    "key": "recruit.status.interview",
+    "category": "recruit",
+    "vi": "Phỏng vấn",
+    "en": "Interview",
+    "zh": "面试",
+    "ja": "面接"
   },
   {
-    "key": "empTypes.noData",
-    "category": "empTypes",
-    "vi": "Chưa có dữ liệu nào.",
-    "en": "No data yet.",
-    "zh": "暂无数据。",
-    "ja": "データがありません。"
+    "key": "recruit.status.new",
+    "category": "recruit",
+    "vi": "Mới",
+    "en": "New",
+    "zh": "新",
+    "ja": "新規"
   },
   {
-    "key": "empTypes.codeNameRequired",
-    "category": "empTypes",
-    "vi": "Mã và tên không được để trống",
-    "en": "Code and name are required",
-    "zh": "代码和名称不能为空",
-    "ja": "コードと名前は必須です"
+    "key": "recruit.status.rejected",
+    "category": "recruit",
+    "vi": "Từ chối",
+    "en": "Rejected",
+    "zh": "拒绝",
+    "ja": "不採用"
   },
   {
-    "key": "rec.empType.fullTime",
-    "category": "rec",
-    "vi": "Toàn thời gian",
-    "en": "Full-time",
-    "zh": "全职",
-    "ja": "正社員"
+    "key": "recruit.title",
+    "category": "recruit",
+    "vi": "Tuyển dụng",
+    "en": "Recruitment",
+    "zh": "招聘管理",
+    "ja": "採用管理"
   },
   {
-    "key": "rec.empType.partTime",
-    "category": "rec",
-    "vi": "Bán thời gian",
-    "en": "Part-time",
-    "zh": "兼职",
-    "ja": "パートタイム"
-  },
-  {
-    "key": "rec.empType.intern",
-    "category": "rec",
-    "vi": "Thực tập sinh",
-    "en": "Internship",
-    "zh": "实习",
-    "ja": "インターン"
-  },
-  {
-    "key": "rec.benefit.healthInsurance",
-    "category": "rec",
-    "vi": "Bảo hiểm sức khỏe",
-    "en": "Health Insurance",
-    "zh": "健康保险",
-    "ja": "健康保険"
-  },
-  {
-    "key": "rec.benefit.training",
-    "category": "rec",
-    "vi": "Đào tạo & phát triển",
-    "en": "Training & Development",
-    "zh": "培训与发展",
-    "ja": "研修・成長支援"
-  },
-  {
-    "key": "rec.benefit.friendlyCulture",
-    "category": "rec",
-    "vi": "Môi trường thân thiện",
-    "en": "Friendly Culture",
-    "zh": "友好的工作氛围",
-    "ja": "フレンドリーな職場環境"
-  },
-  {
-    "key": "rec.benefit.projectBonus",
-    "category": "rec",
-    "vi": "Thưởng dự án",
-    "en": "Project Bonus",
-    "zh": "项目奖金",
-    "ja": "プロジェクトボーナス"
+    "key": "recruit.updated",
+    "category": "recruit",
+    "vi": "Cập nhật",
+    "en": "Updated",
+    "zh": "已更新",
+    "ja": "更新しました"
   }
 ]

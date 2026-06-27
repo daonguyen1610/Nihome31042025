@@ -1,21 +1,5 @@
 [
   {
-    "key": "cli.eyebrow",
-    "category": "cli",
-    "vi": "Khách hàng – Đối tác – Nhà cung cấp",
-    "en": "Clients – Partners – Suppliers",
-    "zh": "客户 – 合作伙伴 – 供应商",
-    "ja": "クライアント – パートナー – サプライヤー"
-  },
-  {
-    "key": "cli.title",
-    "category": "cli",
-    "vi": "Niềm tin được xây dựng qua từng dự án.",
-    "en": "Trust built one project at a time.",
-    "zh": "信任在每个项目中累积。",
-    "ja": "プロジェクトごとに築かれる信頼。"
-  },
-  {
     "key": "cli.desc",
     "category": "cli",
     "vi": "Hơn 80 doanh nghiệp trong và ngoài nước đã tin tưởng lựa chọn NICON, cùng mạng lưới đối tác KCN và nhà cung cấp vật tư hàng đầu Việt Nam.",
@@ -24,28 +8,28 @@
     "ja": "国内外80社以上の企業がNICONを信頼。ベトナムの主要工業団地パートナーや資材サプライヤーとも連携しています。"
   },
   {
-    "key": "cli.tab.clients",
+    "key": "cli.eyebrow",
     "category": "cli",
-    "vi": "Khách hàng",
-    "en": "Clients",
-    "zh": "客户",
-    "ja": "クライアント"
+    "vi": "Khách hàng – Đối tác – Nhà cung cấp",
+    "en": "Clients – Partners – Suppliers",
+    "zh": "客户 – 合作伙伴 – 供应商",
+    "ja": "クライアント – パートナー – サプライヤー"
   },
   {
-    "key": "cli.tab.partners",
+    "key": "cli.network.eyebrow",
     "category": "cli",
-    "vi": "Đối tác",
-    "en": "Partners",
-    "zh": "合作伙伴",
-    "ja": "パートナー"
+    "vi": "Mạng lưới NICON",
+    "en": "NICON network",
+    "zh": "NICON 网络",
+    "ja": "NICONのネットワーク"
   },
   {
-    "key": "cli.tab.suppliers",
+    "key": "cli.network.titleA",
     "category": "cli",
-    "vi": "Nhà cung cấp",
-    "en": "Suppliers",
-    "zh": "供应商",
-    "ja": "サプライヤー"
+    "vi": "Cộng đồng",
+    "en": "Community of",
+    "zh": "的",
+    "ja": "の"
   },
   {
     "key": "cli.stat.clients",
@@ -72,20 +56,28 @@
     "ja": "リピート顧客"
   },
   {
-    "key": "cli.network.eyebrow",
+    "key": "cli.tab.clients",
     "category": "cli",
-    "vi": "Mạng lưới NICON",
-    "en": "NICON network",
-    "zh": "NICON 网络",
-    "ja": "NICONのネットワーク"
+    "vi": "Khách hàng",
+    "en": "Clients",
+    "zh": "客户",
+    "ja": "クライアント"
   },
   {
-    "key": "cli.network.titleA",
+    "key": "cli.tab.partners",
     "category": "cli",
-    "vi": "Cộng đồng",
-    "en": "Community of",
-    "zh": "的",
-    "ja": "の"
+    "vi": "Đối tác",
+    "en": "Partners",
+    "zh": "合作伙伴",
+    "ja": "パートナー"
+  },
+  {
+    "key": "cli.tab.suppliers",
+    "category": "cli",
+    "vi": "Nhà cung cấp",
+    "en": "Suppliers",
+    "zh": "供应商",
+    "ja": "サプライヤー"
   },
   {
     "key": "cli.testi.eyebrow",
@@ -94,22 +86,6 @@
     "en": "What they say",
     "zh": "客户评价",
     "ja": "お客様の声"
-  },
-  {
-    "key": "cli.testi.titleA",
-    "category": "cli",
-    "vi": "Lời chứng thực",
-    "en": "Testimonials",
-    "zh": "客户证言",
-    "ja": "推薦の声"
-  },
-  {
-    "key": "cli.testi.titleB",
-    "category": "cli",
-    "vi": "từ khách hàng",
-    "en": "from clients",
-    "zh": "来自客户",
-    "ja": "お客様より"
   },
   {
     "key": "cli.testi.q1",
@@ -158,5 +134,269 @@
     "en": "Investor, Lam Hiep Hung",
     "zh": "Lam Hiep Hung 投资方",
     "ja": "Lam Hiep Hung 投資家"
+  },
+  {
+    "key": "cli.testi.titleA",
+    "category": "cli",
+    "vi": "Lời chứng thực",
+    "en": "Testimonials",
+    "zh": "客户证言",
+    "ja": "推薦の声"
+  },
+  {
+    "key": "cli.testi.titleB",
+    "category": "cli",
+    "vi": "từ khách hàng",
+    "en": "from clients",
+    "zh": "来自客户",
+    "ja": "お客様より"
+  },
+  {
+    "key": "cli.title",
+    "category": "cli",
+    "vi": "Niềm tin được xây dựng qua từng dự án.",
+    "en": "Trust built one project at a time.",
+    "zh": "信任在每个项目中累积。",
+    "ja": "プロジェクトごとに築かれる信頼。"
+  },
+  {
+    "key": "logoAdmin.add",
+    "category": "logoAdmin",
+    "vi": "Thêm logo",
+    "en": "Add logo",
+    "zh": "添加标识",
+    "ja": "ロゴを追加"
+  },
+  {
+    "key": "logoAdmin.awardBadge",
+    "category": "logoAdmin",
+    "vi": "AWARD",
+    "en": "AWARD",
+    "zh": "AWARD",
+    "ja": "AWARD"
+  },
+  {
+    "key": "logoAdmin.awardCreateDesc",
+    "category": "logoAdmin",
+    "vi": "Thêm thông tin chứng nhận giải thưởng.",
+    "en": "Add award certification details.",
+    "zh": "添加奖项认证信息。",
+    "ja": "受賞認定情報を追加します。"
+  },
+  {
+    "key": "logoAdmin.awardCreateTitle",
+    "category": "logoAdmin",
+    "vi": "Thêm giải thưởng",
+    "en": "Add award",
+    "zh": "添加奖项",
+    "ja": "受賞歴を追加"
+  },
+  {
+    "key": "logoAdmin.awardEditDesc",
+    "category": "logoAdmin",
+    "vi": "Cập nhật thông tin chứng nhận giải thưởng.",
+    "en": "Update award certification details.",
+    "zh": "更新奖项认证信息。",
+    "ja": "受賞認定情報を更新します。"
+  },
+  {
+    "key": "logoAdmin.awardEditTitle",
+    "category": "logoAdmin",
+    "vi": "Chỉnh sửa giải thưởng",
+    "en": "Edit award",
+    "zh": "编辑奖项",
+    "ja": "受賞歴を編集"
+  },
+  {
+    "key": "logoAdmin.awardFieldName",
+    "category": "logoAdmin",
+    "vi": "Tên giải thưởng",
+    "en": "Award name",
+    "zh": "奖项名称",
+    "ja": "受賞名"
+  },
+  {
+    "key": "logoAdmin.awardPlaceholderName",
+    "category": "logoAdmin",
+    "vi": "Nhập tên giải thưởng",
+    "en": "Enter award name",
+    "zh": "输入奖项名称",
+    "ja": "受賞名を入力"
+  },
+  {
+    "key": "logoAdmin.awardPreviewTitle",
+    "category": "logoAdmin",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "logoAdmin.confirmDelete",
+    "category": "logoAdmin",
+    "vi": "Xóa logo",
+    "en": "Delete logo",
+    "zh": "删除标识",
+    "ja": "ロゴを削除"
+  },
+  {
+    "key": "logoAdmin.createTitle",
+    "category": "logoAdmin",
+    "vi": "Thêm logo mới",
+    "en": "Add new logo",
+    "zh": "添加新标识",
+    "ja": "新しいロゴを追加"
+  },
+  {
+    "key": "logoAdmin.editTitle",
+    "category": "logoAdmin",
+    "vi": "Chỉnh sửa logo",
+    "en": "Edit logo",
+    "zh": "编辑标识",
+    "ja": "ロゴを編集"
+  },
+  {
+    "key": "logoAdmin.fallbackError",
+    "category": "logoAdmin",
+    "vi": "Không thể thực hiện thao tác lúc này.",
+    "en": "Unable to complete this action right now.",
+    "zh": "当前无法完成此操作。",
+    "ja": "現在この操作を完了できません。"
+  },
+  {
+    "key": "logoAdmin.fieldHref",
+    "category": "logoAdmin",
+    "vi": "Liên kết",
+    "en": "Link",
+    "zh": "链接",
+    "ja": "リンク"
+  },
+  {
+    "key": "logoAdmin.fieldImage",
+    "category": "logoAdmin",
+    "vi": "Hình ảnh",
+    "en": "Image",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "logoAdmin.fieldName",
+    "category": "logoAdmin",
+    "vi": "Tên logo",
+    "en": "Logo name",
+    "zh": "标识名称",
+    "ja": "ロゴ名"
+  },
+  {
+    "key": "logoAdmin.fieldSortOrder",
+    "category": "logoAdmin",
+    "vi": "Thứ tự hiển thị",
+    "en": "Display order",
+    "zh": "显示顺序",
+    "ja": "表示順"
+  },
+  {
+    "key": "logoAdmin.logoBadge",
+    "category": "logoAdmin",
+    "vi": "LOGO",
+    "en": "LOGO",
+    "zh": "LOGO",
+    "ja": "LOGO"
+  },
+  {
+    "key": "logoAdmin.logoCreateDesc",
+    "category": "logoAdmin",
+    "vi": "Thêm thông tin logo mới.",
+    "en": "Add new logo details.",
+    "zh": "添加新标识信息。",
+    "ja": "新しいロゴ情報を追加します。"
+  },
+  {
+    "key": "logoAdmin.logoEditDesc",
+    "category": "logoAdmin",
+    "vi": "Cập nhật thông tin logo.",
+    "en": "Update logo details.",
+    "zh": "更新标识信息。",
+    "ja": "ロゴ情報を更新します。"
+  },
+  {
+    "key": "logoAdmin.logoNoun",
+    "category": "logoAdmin",
+    "vi": "logo",
+    "en": "logos",
+    "zh": "个标识",
+    "ja": "件のロゴ"
+  },
+  {
+    "key": "logoAdmin.placeholderName",
+    "category": "logoAdmin",
+    "vi": "Nhập tên thương hiệu",
+    "en": "Enter brand name",
+    "zh": "输入品牌名称",
+    "ja": "ブランド名を入力"
+  },
+  {
+    "key": "logoAdmin.previewAlt",
+    "category": "logoAdmin",
+    "vi": "Xem trước logo",
+    "en": "Logo preview",
+    "zh": "标识预览",
+    "ja": "ロゴプレビュー"
+  },
+  {
+    "key": "logoAdmin.previewTitle",
+    "category": "logoAdmin",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "logoAdmin.requiredNameImage",
+    "category": "logoAdmin",
+    "vi": "Tên và hình ảnh là bắt buộc.",
+    "en": "Name and image are required.",
+    "zh": "名称和图片为必填项。",
+    "ja": "名前と画像は必須です。"
+  },
+  {
+    "key": "logoAdmin.searchPlaceholder",
+    "category": "logoAdmin",
+    "vi": "Tìm logo theo tên hoặc đường dẫn...",
+    "en": "Search logos by name or link...",
+    "zh": "按名称或链接搜索标识...",
+    "ja": "名前またはリンクでロゴを検索..."
+  },
+  {
+    "key": "logoAdmin.sortOrderLabel",
+    "category": "logoAdmin",
+    "vi": "Thứ tự",
+    "en": "Order",
+    "zh": "顺序",
+    "ja": "順序"
+  },
+  {
+    "key": "logoAdmin.upload",
+    "category": "logoAdmin",
+    "vi": "Tải lên",
+    "en": "Upload",
+    "zh": "上传",
+    "ja": "アップロード"
+  },
+  {
+    "key": "logoAdmin.uploadSuccess",
+    "category": "logoAdmin",
+    "vi": "Đã tải ảnh lên",
+    "en": "Image uploaded successfully",
+    "zh": "图片上传成功",
+    "ja": "画像をアップロードしました"
+  },
+  {
+    "key": "logoAdmin.uploading",
+    "category": "logoAdmin",
+    "vi": "Đang tải...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
   }
 ]
