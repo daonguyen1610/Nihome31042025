@@ -160,6 +160,31 @@ When you add a new string to any component:
 
 This is a non-negotiable quality gate. A task that adds UI strings without updating the seed files is not done.
 
+## Upload Folder Convention
+
+Every call to `adminApi.uploadImage()` and `adminApi.uploadVideo()` **must** pass a `folder` argument.
+Omitting it uploads to the flat root and breaks the organised `wwwroot/images/upload/` structure.
+
+Use the following folder names (must be `[\w\-]+` segments, no leading/trailing slashes):
+
+| Page / entity              | folder value                        |
+|----------------------------|-------------------------------------|
+| Project thumbnail & gallery | `projects/<slug>`                  |
+| Activity thumbnail & gallery | `activities/<slug>`               |
+| News thumbnail & gallery   | `news/<slug>`                       |
+| Slideshow items            | `slideshow`                         |
+| Client logos               | `logos`                             |
+| Services page images       | `services`                          |
+| About page images          | `about`                             |
+| Any future entity          | `<entity-type>/<slug>` or a fixed name |
+
+When adding a new admin form that uploads images:
+1. Choose a folder name following the table above.
+2. Pass it to every `uploadImage` / `uploadVideo` call, `GalleryEditor folder=`, and `ContentBlockEditor folder=` on that page.
+3. Update this table with the new mapping.
+
+The backend `SanitizeFolder` method validates segment characters — only `[A-Za-z0-9_-]` per path segment are allowed.
+
 ## Done Criteria
 
 A task is only considered done correctly when:

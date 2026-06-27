@@ -100,10 +100,10 @@ const SlideshowSettings = () => {
     setUploading(true);
     try {
       if (looksLikeVideo) {
-        const res = await adminApi.uploadVideo(file, draft.id ? draft.imageUrl : undefined);
+        const res = await adminApi.uploadVideo(file, draft.id ? draft.imageUrl : undefined, "slideshow");
         setDraft((prev) => ({ ...prev, imageUrl: res.data.mediaUrl, mediaKind: "video" }));
       } else {
-        const res = await adminApi.uploadImage(file, draft.id ? draft.imageUrl : undefined);
+        const res = await adminApi.uploadImage(file, draft.id ? draft.imageUrl : undefined, "slideshow");
         setDraft((prev) => ({ ...prev, imageUrl: res.data.imageUrl, mediaKind: "image" }));
       }
       toast({ title: t("form.updated"), description: file.name });

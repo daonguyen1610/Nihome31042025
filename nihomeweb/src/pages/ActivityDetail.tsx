@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { useActivity, useActivities } from "@/hooks/useContentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import ContentBlocks from "@/components/ContentBlocks";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const ActivityDetail = () => {
   const { t } = useI18n();
@@ -13,6 +14,7 @@ const ActivityDetail = () => {
   const { data: a, loading, error, refetch } = useActivity(slug ?? "");
   const { data: allActivities } = useActivities();
   const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (loading) return <Layout><PageLoading /></Layout>;
   if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
@@ -77,14 +79,31 @@ const ActivityDetail = () => {
             </div>
             <div className={galleryMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-5" : "space-y-5 max-w-5xl mx-auto"}>
               {a.gallery.map((g, i) => (
-                <div key={`${g}-${i}`} className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted"}>
+                <button
+                  key={`${g}-${i}`}
+                  type="button"
+                  onClick={() => setSelectedImage(g)}
+                  className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted w-full text-left"}
+                >
                   <img src={g} alt={`${a.title} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                </div>
+                </button>
               ))}
             </div>
           </div>
         </section>
       )}
+
+      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="p-1 sm:max-w-6xl bg-transparent border-0 shadow-none">
+          {selectedImage ? (
+            <img
+              src={selectedImage}
+              alt={a.title}
+              className="w-full max-h-[85vh] object-contain rounded-xl"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <section className="py-16 bg-surface">
         <div className="container-custom">

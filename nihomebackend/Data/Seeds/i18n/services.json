@@ -286,5 +286,13 @@
     "en": "Upload image",
     "zh": "上传图片",
     "ja": "画像をアップロード"
+  },
+  {
+    "key": "svc.admin.introBlockReplace",
+    "category": "svc",
+    "vi": "Đổi ảnh",
+    "en": "Replace image",
+    "zh": "更换图片",
+    "ja": "画像を変更"
   }
 ]

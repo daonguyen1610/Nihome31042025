@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 interface ContentBlockEditorProps {
   value: ContentItem[];
   onChange: (value: ContentItem[]) => void;
+  folder?: string;
 }
 
 const normalizeBlock = (item: ContentItem): ContentBlock =>
@@ -50,7 +51,7 @@ const SortableBlock = ({ id, children }: SortableBlockProps) => {
   );
 };
 
-const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
+const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -98,7 +99,7 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
     setUploading(true);
     try {
       const previous = blocks[uploadTarget]?.type === "image" ? blocks[uploadTarget].url : undefined;
-      const res = await adminApi.uploadImage(file, previous || undefined);
+      const res = await adminApi.uploadImage(file, previous || undefined, folder);
       const existingBlock = blocks[uploadTarget];
       const caption = existingBlock?.type === "image" ? existingBlock.caption : undefined;
       updateBlock(uploadTarget, { type: "image", url: res.data.imageUrl, caption });
