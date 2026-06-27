@@ -151,11 +151,30 @@ public class ActivityService(
     private static object[] DeserializeContent(string? contentJson)
     {
         if (string.IsNullOrWhiteSpace(contentJson))
-        {
             return [];
+
+        var result = JsonSerializer.Deserialize<object[]>(contentJson) ?? [];
+
+        // Auto-repair: previous admin UI bug stored the whole ContentItem JSON array
+        // as a single escaped string element — e.g. ["[{\"type\":\"image\",...},\"text\"]"].
+        // Unwrap and re-deserialize so images and text render correctly.
+        if (result.Length == 1
+            && result[0] is JsonElement el
+            && el.ValueKind == JsonValueKind.String)
+        {
+            var inner = el.GetString() ?? "";
+            if (inner.TrimStart().StartsWith('['))
+            {
+                try
+                {
+                    var repaired = JsonSerializer.Deserialize<object[]>(inner);
+                    if (repaired is { Length: > 0 }) return repaired;
+                }
+                catch { /* not valid JSON — keep original */ }
+            }
         }
 
-        return JsonSerializer.Deserialize<object[]>(contentJson) ?? [];
+        return result;
     }
 
     private string? SerializeGallery(string[]? gallery)
