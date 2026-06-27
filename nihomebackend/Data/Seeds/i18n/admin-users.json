@@ -1,19 +1,11 @@
 [
   {
-    "key": "adminUsers.title",
+    "key": "adminUsers.active",
     "category": "admin-users",
-    "vi": "Quản lý người dùng",
-    "en": "User management",
-    "zh": "用户管理",
-    "ja": "ユーザー管理"
-  },
-  {
-    "key": "adminUsers.totalUsers",
-    "category": "admin-users",
-    "vi": "người dùng",
-    "en": "users",
-    "zh": "个用户",
-    "ja": "ユーザー"
+    "vi": "Đang hoạt động",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
   },
   {
     "key": "adminUsers.addUser",
@@ -24,196 +16,12 @@
     "ja": "ユーザー追加"
   },
   {
-    "key": "adminUsers.editUser",
-    "category": "admin-users",
-    "vi": "Sửa người dùng",
-    "en": "Edit user",
-    "zh": "编辑用户",
-    "ja": "ユーザー編集"
-  },
-  {
-    "key": "adminUsers.fullName",
-    "category": "admin-users",
-    "vi": "Họ tên",
-    "en": "Full name",
-    "zh": "姓名",
-    "ja": "氏名"
-  },
-  {
-    "key": "adminUsers.phoneNumber",
-    "category": "admin-users",
-    "vi": "Số điện thoại",
-    "en": "Phone number",
-    "zh": "电话号码",
-    "ja": "電話番号"
-  },
-  {
-    "key": "adminUsers.email",
-    "category": "admin-users",
-    "vi": "Email",
-    "en": "Email",
-    "zh": "邮箱",
-    "ja": "メール"
-  },
-  {
-    "key": "adminUsers.password",
-    "category": "admin-users",
-    "vi": "Mật khẩu",
-    "en": "Password",
-    "zh": "密码",
-    "ja": "パスワード"
-  },
-  {
-    "key": "adminUsers.role",
-    "category": "admin-users",
-    "vi": "Vai trò",
-    "en": "Role",
-    "zh": "角色",
-    "ja": "ロール"
-  },
-  {
-    "key": "adminUsers.user",
-    "category": "admin-users",
-    "vi": "Người dùng",
-    "en": "User",
-    "zh": "用户",
-    "ja": "ユーザー"
-  },
-  {
-    "key": "adminUsers.active",
-    "category": "admin-users",
-    "vi": "Đang hoạt động",
-    "en": "Active",
-    "zh": "启用",
-    "ja": "有効"
-  },
-  {
-    "key": "adminUsers.inactive",
-    "category": "admin-users",
-    "vi": "Tạm khoá",
-    "en": "Inactive",
-    "zh": "停用",
-    "ja": "無効"
-  },
-  {
-    "key": "adminUsers.searchPlaceholder",
-    "category": "admin-users",
-    "vi": "Tìm theo tên, số điện thoại hoặc email",
-    "en": "Search by name, phone, or email",
-    "zh": "按姓名、电话或邮箱搜索",
-    "ja": "名前、電話番号、メールで検索"
-  },
-  {
     "key": "adminUsers.allRoles",
     "category": "admin-users",
     "vi": "Tất cả vai trò",
     "en": "All roles",
     "zh": "所有角色",
     "ja": "すべてのロール"
-  },
-  {
-    "key": "adminUsers.empty",
-    "category": "admin-users",
-    "vi": "Không tìm thấy người dùng nào",
-    "en": "No users found",
-    "zh": "未找到用户",
-    "ja": "ユーザーが見つかりません"
-  },
-  {
-    "key": "adminUsers.unnamed",
-    "category": "admin-users",
-    "vi": "Chưa đặt tên",
-    "en": "Unnamed",
-    "zh": "未命名",
-    "ja": "名前未設定"
-  },
-  {
-    "key": "adminUsers.previous",
-    "category": "admin-users",
-    "vi": "Trước",
-    "en": "Previous",
-    "zh": "上一页",
-    "ja": "前へ"
-  },
-  {
-    "key": "adminUsers.next",
-    "category": "admin-users",
-    "vi": "Sau",
-    "en": "Next",
-    "zh": "下一页",
-    "ja": "次へ"
-  },
-  {
-    "key": "adminUsers.confirmDelete",
-    "category": "admin-users",
-    "vi": "Bạn có chắc muốn khoá người dùng này?",
-    "en": "Are you sure you want to deactivate this user?",
-    "zh": "确定要停用此用户吗？",
-    "ja": "このユーザーを無効化してもよろしいですか？"
-  },
-  {
-    "key": "adminUsers.validation.fullName",
-    "category": "admin-users",
-    "vi": "Họ tên phải có ít nhất 2 ký tự.",
-    "en": "Full name must be at least 2 characters.",
-    "zh": "姓名至少需要 2 个字符。",
-    "ja": "氏名は2文字以上で入力してください。"
-  },
-  {
-    "key": "adminUsers.validation.phone",
-    "category": "admin-users",
-    "vi": "Số điện thoại phải có ít nhất 8 ký tự.",
-    "en": "Phone number must be at least 8 characters.",
-    "zh": "电话号码至少需要 8 个字符。",
-    "ja": "電話番号は8文字以上で入力してください。"
-  },
-  {
-    "key": "adminUsers.validation.password",
-    "category": "admin-users",
-    "vi": "Mật khẩu phải có ít nhất 6 ký tự.",
-    "en": "Password must be at least 6 characters.",
-    "zh": "密码至少需要 6 个字符。",
-    "ja": "パスワードは6文字以上で入力してください。"
-  },
-  {
-    "key": "adminUsers.validation.email",
-    "category": "admin-users",
-    "vi": "Vui lòng nhập địa chỉ email hợp lệ.",
-    "en": "Please enter a valid email address.",
-    "zh": "请输入有效的电子邮箱地址。",
-    "ja": "有効なメールアドレスを入力してください。"
-  },
-  {
-    "key": "adminUsers.validation.role",
-    "category": "admin-users",
-    "vi": "Vui lòng chọn vai trò.",
-    "en": "Please select a role.",
-    "zh": "请选择角色。",
-    "ja": "ロールを選択してください。"
-  },
-  {
-    "key": "adminUsers.rolesTitle",
-    "category": "admin-users",
-    "vi": "Quản lý vai trò",
-    "en": "Role management",
-    "zh": "角色管理",
-    "ja": "ロール管理"
-  },
-  {
-    "key": "adminUsers.rolesDescription",
-    "category": "admin-users",
-    "vi": "Các vai trò hệ thống hiện được quản lý bằng RBAC cố định.",
-    "en": "System roles are currently managed through fixed RBAC rules.",
-    "zh": "系统角色当前通过固定 RBAC 规则管理。",
-    "ja": "システムロールは固定RBACルールで管理されています。"
-  },
-  {
-    "key": "adminUsers.systemRole",
-    "category": "admin-users",
-    "vi": "Hệ thống",
-    "en": "System",
-    "zh": "系统",
-    "ja": "システム"
   },
   {
     "key": "adminUsers.assignedUsers",
@@ -224,12 +32,52 @@
     "ja": "割り当て済みユーザー"
   },
   {
-    "key": "adminUsers.permissionMatrix",
+    "key": "adminUsers.confirmDelete",
     "category": "admin-users",
-    "vi": "Ma trận quyền",
-    "en": "Permission matrix",
-    "zh": "权限矩阵",
-    "ja": "権限マトリクス"
+    "vi": "Bạn có chắc muốn khoá người dùng này?",
+    "en": "Are you sure you want to deactivate this user?",
+    "zh": "确定要停用此用户吗？",
+    "ja": "このユーザーを無効化してもよろしいですか？"
+  },
+  {
+    "key": "adminUsers.editUser",
+    "category": "admin-users",
+    "vi": "Sửa người dùng",
+    "en": "Edit user",
+    "zh": "编辑用户",
+    "ja": "ユーザー編集"
+  },
+  {
+    "key": "adminUsers.email",
+    "category": "admin-users",
+    "vi": "Email",
+    "en": "Email",
+    "zh": "邮箱",
+    "ja": "メール"
+  },
+  {
+    "key": "adminUsers.empty",
+    "category": "admin-users",
+    "vi": "Không tìm thấy người dùng nào",
+    "en": "No users found",
+    "zh": "未找到用户",
+    "ja": "ユーザーが見つかりません"
+  },
+  {
+    "key": "adminUsers.fullName",
+    "category": "admin-users",
+    "vi": "Họ tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "adminUsers.inactive",
+    "category": "admin-users",
+    "vi": "Tạm khoá",
+    "en": "Inactive",
+    "zh": "停用",
+    "ja": "無効"
   },
   {
     "key": "adminUsers.module",
@@ -240,60 +88,36 @@
     "ja": "モジュール"
   },
   {
-    "key": "adminUsers.roles.SUPER_ADMIN.label",
+    "key": "adminUsers.next",
     "category": "admin-users",
-    "vi": "Super Admin",
-    "en": "Super Admin",
-    "zh": "超级管理员",
-    "ja": "スーパー管理者"
+    "vi": "Sau",
+    "en": "Next",
+    "zh": "下一页",
+    "ja": "次へ"
   },
   {
-    "key": "adminUsers.roles.SUPER_ADMIN.description",
+    "key": "adminUsers.password",
     "category": "admin-users",
-    "vi": "Toàn quyền hệ thống, bao gồm quản lý người dùng và vai trò.",
-    "en": "Full system access, including user and role management.",
-    "zh": "拥有完整系统权限，包括用户和角色管理。",
-    "ja": "ユーザーとロール管理を含む全システム権限。"
+    "vi": "Mật khẩu",
+    "en": "Password",
+    "zh": "密码",
+    "ja": "パスワード"
   },
   {
-    "key": "adminUsers.roles.ADMIN.label",
+    "key": "adminUsers.permissionMatrix",
     "category": "admin-users",
-    "vi": "Admin",
-    "en": "Admin",
-    "zh": "管理员",
-    "ja": "管理者"
+    "vi": "Ma trận quyền",
+    "en": "Permission matrix",
+    "zh": "权限矩阵",
+    "ja": "権限マトリクス"
   },
   {
-    "key": "adminUsers.roles.ADMIN.description",
+    "key": "adminUsers.permissions.contacts",
     "category": "admin-users",
-    "vi": "Quản lý nội dung, tuyển dụng, liên hệ và cấu hình vận hành.",
-    "en": "Manages content, recruitment, contacts, and operating settings.",
-    "zh": "管理内容、招聘、联系信息和运营设置。",
-    "ja": "コンテンツ、採用、問い合わせ、運用設定を管理します。"
-  },
-  {
-    "key": "adminUsers.roles.USER.label",
-    "category": "admin-users",
-    "vi": "User",
-    "en": "User",
-    "zh": "普通用户",
-    "ja": "ユーザー"
-  },
-  {
-    "key": "adminUsers.roles.USER.description",
-    "category": "admin-users",
-    "vi": "Người dùng thông thường, không có quyền truy cập khu vực quản trị.",
-    "en": "Regular user without admin area access.",
-    "zh": "普通用户，无后台管理访问权限。",
-    "ja": "管理エリアにアクセスできない通常ユーザーです。"
-  },
-  {
-    "key": "adminUsers.permissions.dashboard",
-    "category": "admin-users",
-    "vi": "Bảng điều khiển",
-    "en": "Dashboard",
-    "zh": "仪表盘",
-    "ja": "ダッシュボード"
+    "vi": "Liên hệ",
+    "en": "Contacts",
+    "zh": "联系",
+    "ja": "問い合わせ"
   },
   {
     "key": "adminUsers.permissions.content",
@@ -304,20 +128,28 @@
     "ja": "コンテンツ管理"
   },
   {
+    "key": "adminUsers.permissions.dashboard",
+    "category": "admin-users",
+    "vi": "Bảng điều khiển",
+    "en": "Dashboard",
+    "zh": "仪表盘",
+    "ja": "ダッシュボード"
+  },
+  {
+    "key": "adminUsers.permissions.publicProfile",
+    "category": "admin-users",
+    "vi": "Hồ sơ công khai",
+    "en": "Public profile",
+    "zh": "公开资料",
+    "ja": "公開プロフィール"
+  },
+  {
     "key": "adminUsers.permissions.recruitment",
     "category": "admin-users",
     "vi": "Tuyển dụng",
     "en": "Recruitment",
     "zh": "招聘",
     "ja": "採用"
-  },
-  {
-    "key": "adminUsers.permissions.contacts",
-    "category": "admin-users",
-    "vi": "Liên hệ",
-    "en": "Contacts",
-    "zh": "联系",
-    "ja": "問い合わせ"
   },
   {
     "key": "adminUsers.permissions.settings",
@@ -336,11 +168,331 @@
     "ja": "ユーザーとロール"
   },
   {
-    "key": "adminUsers.permissions.publicProfile",
+    "key": "adminUsers.phoneNumber",
     "category": "admin-users",
-    "vi": "Hồ sơ công khai",
-    "en": "Public profile",
-    "zh": "公开资料",
-    "ja": "公開プロフィール"
+    "vi": "Số điện thoại",
+    "en": "Phone number",
+    "zh": "电话号码",
+    "ja": "電話番号"
+  },
+  {
+    "key": "adminUsers.previous",
+    "category": "admin-users",
+    "vi": "Trước",
+    "en": "Previous",
+    "zh": "上一页",
+    "ja": "前へ"
+  },
+  {
+    "key": "adminUsers.role",
+    "category": "admin-users",
+    "vi": "Vai trò",
+    "en": "Role",
+    "zh": "角色",
+    "ja": "ロール"
+  },
+  {
+    "key": "adminUsers.roles.ADMIN.description",
+    "category": "admin-users",
+    "vi": "Quản lý nội dung, tuyển dụng, liên hệ và cấu hình vận hành.",
+    "en": "Manages content, recruitment, contacts, and operating settings.",
+    "zh": "管理内容、招聘、联系信息和运营设置。",
+    "ja": "コンテンツ、採用、問い合わせ、運用設定を管理します。"
+  },
+  {
+    "key": "adminUsers.roles.ADMIN.label",
+    "category": "admin-users",
+    "vi": "Admin",
+    "en": "Admin",
+    "zh": "管理员",
+    "ja": "管理者"
+  },
+  {
+    "key": "adminUsers.roles.SUPER_ADMIN.description",
+    "category": "admin-users",
+    "vi": "Toàn quyền hệ thống, bao gồm quản lý người dùng và vai trò.",
+    "en": "Full system access, including user and role management.",
+    "zh": "拥有完整系统权限，包括用户和角色管理。",
+    "ja": "ユーザーとロール管理を含む全システム権限。"
+  },
+  {
+    "key": "adminUsers.roles.SUPER_ADMIN.label",
+    "category": "admin-users",
+    "vi": "Super Admin",
+    "en": "Super Admin",
+    "zh": "超级管理员",
+    "ja": "スーパー管理者"
+  },
+  {
+    "key": "adminUsers.roles.USER.description",
+    "category": "admin-users",
+    "vi": "Người dùng thông thường, không có quyền truy cập khu vực quản trị.",
+    "en": "Regular user without admin area access.",
+    "zh": "普通用户，无后台管理访问权限。",
+    "ja": "管理エリアにアクセスできない通常ユーザーです。"
+  },
+  {
+    "key": "adminUsers.roles.USER.label",
+    "category": "admin-users",
+    "vi": "User",
+    "en": "User",
+    "zh": "普通用户",
+    "ja": "ユーザー"
+  },
+  {
+    "key": "adminUsers.rolesDescription",
+    "category": "admin-users",
+    "vi": "Các vai trò hệ thống hiện được quản lý bằng RBAC cố định.",
+    "en": "System roles are currently managed through fixed RBAC rules.",
+    "zh": "系统角色当前通过固定 RBAC 规则管理。",
+    "ja": "システムロールは固定RBACルールで管理されています。"
+  },
+  {
+    "key": "adminUsers.rolesTitle",
+    "category": "admin-users",
+    "vi": "Quản lý vai trò",
+    "en": "Role management",
+    "zh": "角色管理",
+    "ja": "ロール管理"
+  },
+  {
+    "key": "adminUsers.searchPlaceholder",
+    "category": "admin-users",
+    "vi": "Tìm theo tên, số điện thoại hoặc email",
+    "en": "Search by name, phone, or email",
+    "zh": "按姓名、电话或邮箱搜索",
+    "ja": "名前、電話番号、メールで検索"
+  },
+  {
+    "key": "adminUsers.systemRole",
+    "category": "admin-users",
+    "vi": "Hệ thống",
+    "en": "System",
+    "zh": "系统",
+    "ja": "システム"
+  },
+  {
+    "key": "adminUsers.title",
+    "category": "admin-users",
+    "vi": "Quản lý người dùng",
+    "en": "User management",
+    "zh": "用户管理",
+    "ja": "ユーザー管理"
+  },
+  {
+    "key": "adminUsers.totalUsers",
+    "category": "admin-users",
+    "vi": "người dùng",
+    "en": "users",
+    "zh": "个用户",
+    "ja": "ユーザー"
+  },
+  {
+    "key": "adminUsers.unnamed",
+    "category": "admin-users",
+    "vi": "Chưa đặt tên",
+    "en": "Unnamed",
+    "zh": "未命名",
+    "ja": "名前未設定"
+  },
+  {
+    "key": "adminUsers.user",
+    "category": "admin-users",
+    "vi": "Người dùng",
+    "en": "User",
+    "zh": "用户",
+    "ja": "ユーザー"
+  },
+  {
+    "key": "adminUsers.validation.email",
+    "category": "admin-users",
+    "vi": "Vui lòng nhập địa chỉ email hợp lệ.",
+    "en": "Please enter a valid email address.",
+    "zh": "请输入有效的电子邮箱地址。",
+    "ja": "有効なメールアドレスを入力してください。"
+  },
+  {
+    "key": "adminUsers.validation.fullName",
+    "category": "admin-users",
+    "vi": "Họ tên phải có ít nhất 2 ký tự.",
+    "en": "Full name must be at least 2 characters.",
+    "zh": "姓名至少需要 2 个字符。",
+    "ja": "氏名は2文字以上で入力してください。"
+  },
+  {
+    "key": "adminUsers.validation.password",
+    "category": "admin-users",
+    "vi": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "en": "Password must be at least 6 characters.",
+    "zh": "密码至少需要 6 个字符。",
+    "ja": "パスワードは6文字以上で入力してください。"
+  },
+  {
+    "key": "adminUsers.validation.phone",
+    "category": "admin-users",
+    "vi": "Số điện thoại phải có ít nhất 8 ký tự.",
+    "en": "Phone number must be at least 8 characters.",
+    "zh": "电话号码至少需要 8 个字符。",
+    "ja": "電話番号は8文字以上で入力してください。"
+  },
+  {
+    "key": "adminUsers.validation.role",
+    "category": "admin-users",
+    "vi": "Vui lòng chọn vai trò.",
+    "en": "Please select a role.",
+    "zh": "请选择角色。",
+    "ja": "ロールを選択してください。"
+  },
+  {
+    "key": "cat.add",
+    "category": "cat",
+    "vi": "Thêm danh mục",
+    "en": "Add category",
+    "zh": "添加分类",
+    "ja": "カテゴリを追加"
+  },
+  {
+    "key": "cat.empty",
+    "category": "cat",
+    "vi": "Không có danh mục.",
+    "en": "No categories.",
+    "zh": "没有分类。",
+    "ja": "カテゴリがありません。"
+  },
+  {
+    "key": "cat.name",
+    "category": "cat",
+    "vi": "Tên danh mục",
+    "en": "Category name",
+    "zh": "分类名称",
+    "ja": "カテゴリ名"
+  },
+  {
+    "key": "cat.nameVi",
+    "category": "cat",
+    "vi": "Tên tiếng Việt",
+    "en": "Vietnamese name",
+    "zh": "越南文名称",
+    "ja": "ベトナム語名"
+  },
+  {
+    "key": "cat.nameEn",
+    "category": "cat",
+    "vi": "Tên tiếng Anh",
+    "en": "English name",
+    "zh": "英文名称",
+    "ja": "英語名"
+  },
+  {
+    "key": "cat.nameZh",
+    "category": "cat",
+    "vi": "Tên tiếng Trung",
+    "en": "Chinese name",
+    "zh": "中文名称",
+    "ja": "中国語名"
+  },
+  {
+    "key": "cat.nameJa",
+    "category": "cat",
+    "vi": "Tên tiếng Nhật",
+    "en": "Japanese name",
+    "zh": "日文名称",
+    "ja": "日本語名"
+  },
+  {
+    "key": "cat.nameViPh",
+    "category": "cat",
+    "vi": "Tên danh mục (bắt buộc)",
+    "en": "Category name (required)",
+    "zh": "分类名称（必填）",
+    "ja": "カテゴリ名（必須）"
+  },
+  {
+    "key": "cat.nameEnPh",
+    "category": "cat",
+    "vi": "Tên tiếng Anh (tùy chọn)",
+    "en": "English name (optional)",
+    "zh": "英文名称（可选）",
+    "ja": "英語名（任意）"
+  },
+  {
+    "key": "cat.nameZhPh",
+    "category": "cat",
+    "vi": "Tên tiếng Trung (tùy chọn)",
+    "en": "Chinese name (optional)",
+    "zh": "中文名称（可选）",
+    "ja": "中国語名（任意）"
+  },
+  {
+    "key": "cat.nameJaPh",
+    "category": "cat",
+    "vi": "Tên tiếng Nhật (tùy chọn)",
+    "en": "Japanese name (optional)",
+    "zh": "日文名称（可选）",
+    "ja": "日本語名（任意）"
+  },
+  {
+    "key": "cat.order",
+    "category": "cat",
+    "vi": "Thứ tự",
+    "en": "Display order",
+    "zh": "显示顺序",
+    "ja": "表示順"
+  },
+  {
+    "key": "cat.published",
+    "category": "cat",
+    "vi": "Hiển thị",
+    "en": "Published",
+    "zh": "已发布",
+    "ja": "公開"
+  },
+  {
+    "key": "cat.tabActivities",
+    "category": "cat",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "アクティビティ"
+  },
+  {
+    "key": "cat.tabNews",
+    "category": "cat",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
+  },
+  {
+    "key": "cat.tabPosts",
+    "category": "cat",
+    "vi": "Bài đăng",
+    "en": "Posts",
+    "zh": "文章",
+    "ja": "投稿"
+  },
+  {
+    "key": "cat.tabProjects",
+    "category": "cat",
+    "vi": "Dự án",
+    "en": "Projects",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "cat.title",
+    "category": "cat",
+    "vi": "Quản lý danh mục",
+    "en": "Manage categories",
+    "zh": "管理分类",
+    "ja": "カテゴリ管理"
+  },
+  {
+    "key": "projCat.title",
+    "category": "cat",
+    "vi": "Quản lý danh mục dự án",
+    "en": "Manage project categories",
+    "zh": "管理项目分类",
+    "ja": "プロジェクトカテゴリ管理"
   }
 ]

@@ -30,12 +30,16 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
 
     public async Task<ProjectCategoryResponse> CreateAsync(UpsertProjectCategoryRequest req)
     {
-        var normalizedName = NormalizeName(req.Name);
-        await EnsureNameUniqueAsync(normalizedName);
+        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+        await EnsureNameUniqueAsync(nameVi);
 
         var entity = new ProjectCategory
         {
-            Name = normalizedName,
+            Name = nameVi,
+            NameVi = nameVi,
+            NameEn = (req.NameEn ?? "").Trim(),
+            NameZh = (req.NameZh ?? "").Trim(),
+            NameJa = (req.NameJa ?? "").Trim(),
             IsActive = req.IsActive,
             SortOrder = req.SortOrder,
         };
@@ -57,15 +61,19 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
         }
 
         var previousName = entity.Name;
-        var normalizedName = NormalizeName(req.Name);
-        await EnsureNameUniqueAsync(normalizedName, id);
+        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+        await EnsureNameUniqueAsync(nameVi, id);
 
-        entity.Name = normalizedName;
+        entity.Name = nameVi;
+        entity.NameVi = nameVi;
+        entity.NameEn = (req.NameEn ?? "").Trim();
+        entity.NameZh = (req.NameZh ?? "").Trim();
+        entity.NameJa = (req.NameJa ?? "").Trim();
         entity.IsActive = req.IsActive;
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
-        await UpdateProjectsForRenamedCategoryAsync(id, previousName, normalizedName);
+        await UpdateProjectsForRenamedCategoryAsync(id, previousName, nameVi);
 
         await db.SaveChangesAsync();
 
@@ -231,6 +239,10 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
     {
         Id = item.Id,
         Name = item.Name,
+        NameVi = item.NameVi,
+        NameEn = item.NameEn,
+        NameZh = item.NameZh,
+        NameJa = item.NameJa,
         IsActive = item.IsActive,
         SortOrder = item.SortOrder,
     };
