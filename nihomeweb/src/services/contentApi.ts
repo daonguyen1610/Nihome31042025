@@ -278,20 +278,26 @@ function getApiOrigin() {
 
 function resolveImageUrl(value: string) {
   if (!value) return value;
-
-  if (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("data:")
-  ) {
-    return value;
-  }
-
-  if (!value.startsWith("/")) {
-    return value;
-  }
+  if (value.startsWith("data:")) return value;
 
   const apiOrigin = getApiOrigin();
+
+  // Normalize absolute API-origin URLs to path-only so they resolve correctly
+  // regardless of which host the app is deployed on.
+  if (apiOrigin && value.startsWith(apiOrigin + "/")) {
+    value = value.slice(apiOrigin.length);
+  } else {
+    // Strip legacy localhost absolute URLs (old seed data may have http://localhost:PORT/...)
+    const m = value.match(/^https?:\/\/localhost(?::\d+)?(\/.*)/);
+    if (m) value = m[1];
+  }
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value; // External / CDN URL — pass through unchanged
+  }
+
+  if (!value.startsWith("/")) return value;
+
   return apiOrigin ? `${apiOrigin}${value}` : value;
 }
 
