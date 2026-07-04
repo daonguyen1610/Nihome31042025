@@ -12,6 +12,7 @@ public static class ContentSeeder
         SeedActivities(db);
         SeedNews(db);
         SeedProjects(db);
+        SeedProjectTranslations(db);
         SeedServices(db);
         SeedLogos(db);
         SeedProcesses(db);
@@ -167,12 +168,14 @@ public static class ContentSeeder
         var manifest = LoadContentSeed("activities");
         if (manifest.Count == 0) return;
 
-        if (NeedsContentReseed(db.Activities, manifest, a => a.ImageUrl, a => a.ContentJson, IsLegacyStockActivityImage))
+        var existingSlugs = db.Activities.Select(a => a.Slug).ToHashSet();
+        var newItems = manifest.Where(item => !existingSlugs.Contains(item.Slug)).ToList();
+        if (newItems.Count > 0)
         {
-            ReseedFromManifest(db, EntityTypes.Activity, manifest, item =>
+            foreach (var item in newItems)
             {
                 var vi = item.GetTranslation("vi");
-                return new Activity
+                db.Activities.Add(new Activity
                 {
                     Slug = item.Slug,
                     Date = vi.Date.Length > 0 ? vi.Date : item.Date,
@@ -186,12 +189,15 @@ public static class ContentSeeder
                     SortOrder = item.SortOrder,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                };
-            });
-
-            var bySlug = db.Activities.Select(a => new { a.Id, a.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
-            SeedManifestTranslations(db, EntityTypes.Activity, manifest, bySlug);
+                });
+            }
+            db.SaveChanges();
         }
+
+        // Backfill only — never overwrites rows/translations already in the DB,
+        // so admin-added content and translations survive future restarts.
+        var bySlug = db.Activities.Select(a => new { a.Id, a.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
+        SeedManifestTranslations(db, EntityTypes.Activity, manifest, bySlug);
     }
 
     // ─── News (manifest-driven from legacy nicon.vn) ───────────────
@@ -201,12 +207,14 @@ public static class ContentSeeder
         var manifest = LoadContentSeed("news");
         if (manifest.Count == 0) return;
 
-        if (NeedsContentReseed(db.NewsArticles, manifest, a => a.ImageUrl, a => a.ContentJson, IsLegacyStockNewsImage))
+        var existingSlugs = db.NewsArticles.Select(n => n.Slug).ToHashSet();
+        var newItems = manifest.Where(item => !existingSlugs.Contains(item.Slug)).ToList();
+        if (newItems.Count > 0)
         {
-            ReseedFromManifest(db, EntityTypes.News, manifest, item =>
+            foreach (var item in newItems)
             {
                 var vi = item.GetTranslation("vi");
-                return new NewsArticle
+                db.NewsArticles.Add(new NewsArticle
                 {
                     Slug = item.Slug,
                     Date = vi.Date.Length > 0 ? vi.Date : item.Date,
@@ -219,12 +227,15 @@ public static class ContentSeeder
                     SortOrder = item.SortOrder,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                };
-            });
-
-            var bySlug = db.NewsArticles.Select(n => new { n.Id, n.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
-            SeedManifestTranslations(db, EntityTypes.News, manifest, bySlug);
+                });
+            }
+            db.SaveChanges();
         }
+
+        // Backfill only — never overwrites rows/translations already in the DB,
+        // so admin-added content and translations survive future restarts.
+        var bySlug = db.NewsArticles.Select(n => new { n.Id, n.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
+        SeedManifestTranslations(db, EntityTypes.News, manifest, bySlug);
     }
 
     // ─── Projects ───────────────────────────────────────────────────
@@ -347,6 +358,80 @@ public static class ContentSeeder
             if (staleProjects.Count > 0)
                 db.SaveChanges();
         }
+    }
+
+    // ─── Project Translations ────────────────────────────────────────
+
+    private static void SeedProjectTranslations(AppDbContext db)
+    {
+        const string resourceName = "nihomebackend.Data.Seeds.content.project-translations.json";
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream is null) return;
+
+        using var doc = JsonDocument.Parse(stream);
+        if (doc.RootElement.ValueKind != JsonValueKind.Array) return;
+
+        var slugToId = db.Projects
+            .Select(p => new { p.Slug, p.Id })
+            .ToDictionary(x => x.Slug, x => x.Id);
+
+        var existing = db.EntityTranslations
+            .Where(t => t.EntityType == EntityTypes.Project)
+            .Select(t => new { t.EntityId, t.FieldName, t.LanguageCode, t.Id, t.Value })
+            .ToList()
+            .GroupBy(t => $"{t.EntityId}|{t.FieldName}|{t.LanguageCode}")
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var toAdd = new List<EntityTranslation>();
+        var now = DateTime.UtcNow;
+
+        foreach (var entry in doc.RootElement.EnumerateArray())
+        {
+            if (!entry.TryGetProperty("slug", out var slugProp)) continue;
+            var slug = slugProp.GetString();
+            if (slug is null || !slugToId.TryGetValue(slug, out var entityId)) continue;
+
+            foreach (var langProp in entry.EnumerateObject())
+            {
+                var lang = langProp.Name;
+                if (lang == "slug") continue;
+                if (langProp.Value.ValueKind != JsonValueKind.Object) continue;
+
+                foreach (var fieldProp in langProp.Value.EnumerateObject())
+                {
+                    var field = fieldProp.Name;
+                    var value = fieldProp.Value.GetString() ?? "";
+                    if (string.IsNullOrWhiteSpace(value)) continue;
+
+                    var key = $"{entityId}|{field}|{lang}";
+                    if (existing.TryGetValue(key, out var row))
+                    {
+                        if (row.Value != value)
+                        {
+                            var tracked = db.EntityTranslations.Find(row.Id);
+                            if (tracked != null) { tracked.Value = value; tracked.UpdatedAt = now; }
+                        }
+                    }
+                    else
+                    {
+                        toAdd.Add(new EntityTranslation
+                        {
+                            EntityType = EntityTypes.Project,
+                            EntityId = entityId,
+                            FieldName = field,
+                            LanguageCode = lang,
+                            Value = value,
+                            CreatedAt = now,
+                            UpdatedAt = now,
+                        });
+                    }
+                }
+            }
+        }
+
+        if (toAdd.Count > 0) db.EntityTranslations.AddRange(toAdd);
+        db.SaveChanges();
     }
 
     // ─── Services ───────────────────────────────────────────────────
@@ -1209,171 +1294,7 @@ public static class ContentSeeder
         Add(EntityTypes.Slideshow, 5, "Subtitle", "en", "Minimalist style — Open space — International standards");
         Add(EntityTypes.Slideshow, 5, "LinkText", "en", "View Project");
 
-        // ─── Projects: English translations ───
-        Add(EntityTypes.Project, 1, "Name", "en", "BMA Factory");
-        Add(EntityTypes.Project, 1, "Description", "en", "The BMA Factory project is a modern 15,000 m² production complex, designed to international industrial standards.");
-
-        Add(EntityTypes.Project, 2, "Name", "en", "NBDC Workshop");
-        Add(EntityTypes.Project, 2, "Description", "en", "NICON provides full architecture and structural design for the NBDC production workshop at Giang Dien IP.");
-
-        Add(EntityTypes.Project, 3, "Name", "en", "Lam Hiep Hung – Tan Toan Phat Complex");
-        Add(EntityTypes.Project, 3, "Description", "en", "One of NICON's largest projects: a 250,000 m² industrial complex.");
-
-        Add(EntityTypes.Project, 4, "Name", "en", "Thu Duc Sports Center");
-        Add(EntityTypes.Project, 4, "Description", "en", "Multi-purpose sports and recreation center serving the Thu Duc community.");
-
-        Add(EntityTypes.Project, 5, "Name", "en", "B37 Office");
-        Add(EntityTypes.Project, 5, "Description", "en", "Modern office interior design with minimalist style and open space concept.");
-
-        Add(EntityTypes.Project, 6, "Name", "en", "TriMas Vietnam Factory");
-        Add(EntityTypes.Project, 6, "Description", "en", "Turnkey design and build of a packaging factory for TriMas at VSIP IIA.");
-
-        Add(EntityTypes.Project, 7, "Name", "en", "APM Warehouse");
-        Add(EntityTypes.Project, 7, "Description", "en", "Logistics warehouse design for Auto Components Vietnam.");
-
-        Add(EntityTypes.Project, 8, "Name", "en", "JOJO Factory");
-        Add(EntityTypes.Project, 8, "Description", "en", "Factory design with high food safety requirements, HACCP compliant.");
-
-        Add(EntityTypes.Project, 9, "Name", "en", "D22 Hotel");
-        Add(EntityTypes.Project, 9, "Description", "en", "4-star hotel with 80 rooms, ground-floor restaurant and spa.");
-
-        Add(EntityTypes.Project, 10, "Name", "en", "NBDC Canteen");
-        Add(EntityTypes.Project, 10, "Description", "en", "Canteen design for the NBDC industrial complex at Giang Dien IP.");
-
-        Add(EntityTypes.Project, 11, "Name", "en", "NBDC Office");
-        Add(EntityTypes.Project, 11, "Description", "en", "Executive office design for NBDC at Giang Dien IP.");
-
-        Add(EntityTypes.Project, 12, "Name", "en", "Tan Toan Phat Factory");
-        Add(EntityTypes.Project, 12, "Description", "en", "Factory within the Lam Hiep Hung – Tan Toan Phat complex in Binh Duong.");
-
-        Add(EntityTypes.Project, 13, "Name", "en", "Lam Hiep Hung Factory");
-        Add(EntityTypes.Project, 13, "Description", "en", "Lam Hiep Hung factory in Binh Duong, expanding production line.");
-
-        Add(EntityTypes.Project, 14, "Name", "en", "S.T.Food Marketing Vietnam Factory");
-        Add(EntityTypes.Project, 14, "Description", "en", "Food production factory for a Thai investor, designed to GMP and HACCP standards.");
-
-        Add(EntityTypes.Project, 15, "Name", "en", "Medicare Shop");
-        Add(EntityTypes.Project, 15, "Description", "en", "Medicare store at Aeon Mall Binh Duong Canary.");
-
-        Add(EntityTypes.Project, 16, "Name", "en", "Lam Hiep Hung Factory (Phase 1)");
-        Add(EntityTypes.Project, 16, "Description", "en", "Lam Hiep Hung factory phase 1 completed.");
-
-        Add(EntityTypes.Project, 17, "Name", "en", "SCTV Office");
-        Add(EntityTypes.Project, 17, "Description", "en", "Office design and construction for SCTV in District 2, HCMC.");
-
-        Add(EntityTypes.Project, 18, "Name", "en", "H.B.Fuller Factory");
-        Add(EntityTypes.Project, 18, "Description", "en", "MEP system construction for H.B.Fuller factory in Binh Duong.");
-
-        Add(EntityTypes.Project, 19, "Name", "en", "Red Bull Expansion Project");
-        Add(EntityTypes.Project, 19, "Description", "en", "Design for the Red Bull factory expansion in Binh Duong, preserving brand identity.");
-
-        Add(EntityTypes.Project, 20, "Name", "en", "Great Lotus Vietnam Factory");
-        Add(EntityTypes.Project, 20, "Description", "en", "Design and construction of the Great Lotus factory spanning over 31,000 m².");
-
-        Add(EntityTypes.Project, 21, "Name", "en", "Advanced Casting Asia Factory");
-        Add(EntityTypes.Project, 21, "Description", "en", "Advanced Casting Asia production factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 22, "Name", "en", "SCTV Studio & Office");
-        Add(EntityTypes.Project, 22, "Description", "en", "The largest TV studio in Vietnam at the time of construction.");
-
-        Add(EntityTypes.Project, 23, "Name", "en", "BKL Factory");
-        Add(EntityTypes.Project, 23, "Description", "en", "Design and construction of BKL factory at Thinh Phat IP.");
-
-        Add(EntityTypes.Project, 24, "Name", "en", "Rebisco Factory");
-        Add(EntityTypes.Project, 24, "Description", "en", "Rebisco confectionery factory (Philippines) at VSIP II-A.");
-
-        Add(EntityTypes.Project, 25, "Name", "en", "Nestlé Binh An Factory & Office");
-        Add(EntityTypes.Project, 25, "Description", "en", "Design and construction of Nestlé Binh An factory and office.");
-
-        Add(EntityTypes.Project, 26, "Name", "en", "Ampharco U.S.A Factory");
-        Add(EntityTypes.Project, 26, "Description", "en", "Pharmaceutical factory construction for Ampharco U.S.A at Nhon Trach.");
-
-        Add(EntityTypes.Project, 27, "Name", "en", "Konimiyaki Restaurant");
-        Add(EntityTypes.Project, 27, "Description", "en", "Restaurant design for Konimiyaki in District 1, HCMC.");
-
-        Add(EntityTypes.Project, 28, "Name", "en", "SCON Factory");
-        Add(EntityTypes.Project, 28, "Description", "en", "Design and construction of SCON factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 29, "Name", "en", "Clotex Labels Vietnam Factory");
-        Add(EntityTypes.Project, 29, "Description", "en", "Clotex Labels Vietnam factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 30, "Name", "en", "Amiba Factory");
-        Add(EntityTypes.Project, 30, "Description", "en", "Construction of the 2-hectare Amiba factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 31, "Name", "en", "Akati Wood Factory");
-        Add(EntityTypes.Project, 31, "Description", "en", "Akati Wood factory, a branch of Akati Dominant from Malaysia.");
-
-        Add(EntityTypes.Project, 32, "Name", "en", "Japan Plus Factory");
-        Add(EntityTypes.Project, 32, "Description", "en", "Japan Plus PE box production factory at Dong Nam Cu Chi IP.");
-
-        Add(EntityTypes.Project, 33, "Name", "en", "Central Pharmaceutical HCMC");
-        Add(EntityTypes.Project, 33, "Description", "en", "Pharmaceutical factory design in HCMC.");
-
-        Add(EntityTypes.Project, 34, "Name", "en", "Kumgang Office");
-        Add(EntityTypes.Project, 34, "Description", "en", "Office design and construction for Kumgang Vina.");
-
-        Add(EntityTypes.Project, 35, "Name", "en", "VDA-HCM Factory");
-        Add(EntityTypes.Project, 35, "Description", "en", "Design and construction of VDA-HCM factory at Cau Tram IP.");
-
-        Add(EntityTypes.Project, 36, "Name", "en", "Thu Thiem Dragon Show Flat");
-        Add(EntityTypes.Project, 36, "Description", "en", "Show flat construction for Thu Thiem Dragon in District 2.");
-
-        Add(EntityTypes.Project, 37, "Name", "en", "Nam Ha Viet Factory");
-        Add(EntityTypes.Project, 37, "Description", "en", "Welding rod production factory Nam Ha Viet.");
-
-        Add(EntityTypes.Project, 38, "Name", "en", "YC TEC Factory");
-        Add(EntityTypes.Project, 38, "Description", "en", "YC TEC factory design at Song Than II IP.");
-
-        // ─── Services: English translations ───
-        Add(EntityTypes.Service, 1, "Title", "en", "Design & Build General Contractor (D&B)");
-        Add(EntityTypes.Service, 1, "ShortTitle", "en", "Design & Build");
-        Add(EntityTypes.Service, 1, "Tagline", "en", "One point of contact — full project lifecycle from design to handover.");
-        Add(EntityTypes.Service, 1, "Intro", "en", "Design & Build (D&B) and EPC are the two most popular methods in industrial and civil construction. NICON has systemized the D&B process since inception and continuously refined it through 150+ projects.");
-
-        Add(EntityTypes.Service, 2, "Title", "en", "Main Contractor Services");
-        Add(EntityTypes.Service, 2, "ShortTitle", "en", "Main Contractor");
-        Add(EntityTypes.Service, 2, "Tagline", "en", "Full construction management — turnkey handover.");
-        Add(EntityTypes.Service, 2, "Intro", "en", "As a Vietnamese–Japanese Main Contractor, NICON fulfills all tasks of an industrial construction project.");
-
-        Add(EntityTypes.Service, 3, "Title", "en", "General Contractor Services");
-        Add(EntityTypes.Service, 3, "ShortTitle", "en", "General Contractor");
-        Add(EntityTypes.Service, 3, "Tagline", "en", "Handling the full lifecycle of industrial factory construction.");
-        Add(EntityTypes.Service, 3, "Intro", "en", "As a Vietnamese–Japanese General Contractor, NICON undertakes design, permitting, construction and turnkey handover.");
-
-        Add(EntityTypes.Service, 4, "Title", "en", "MEP Contractor Services");
-        Add(EntityTypes.Service, 4, "ShortTitle", "en", "MEP Contractor");
-        Add(EntityTypes.Service, 4, "Tagline", "en", "Synchronized Mechanical–Electrical–Plumbing systems optimized for operations.");
-        Add(EntityTypes.Service, 4, "Intro", "en", "MEP (Mechanical–Electrical–Plumbing) is the key system determining factory operational efficiency. NICON provides standalone or integrated MEP contracting within D&B packages.");
-
-        // ─── Service Sections: EN translations ───
-        Add(EntityTypes.Service, 1, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "Advantages of D&B / EPC", body = "Minimize management obligations for the investor — NICON handles all project coordination. Reduce inconsistency risk between design and construction. Accelerate schedule even before design is finalized, cutting change-order costs. Reasonable management fees — the investor works with a single contractor for easy cost estimation and quality control." },
-            new { heading = "Advanced Project Management", body = "In close partnership with Mori Construction (Japan), NICON applies BIM (Building Information Modeling) throughout every phase. An experienced BIM team delivers synchronized solutions, giving investors full project visibility and early risk detection." },
-            new { heading = "Best Products from the Best People", body = "NICON maintains an international partner network spanning architecture, structure, interiors and M&E. An experienced team of project managers, architects, engineers and skilled workers can handle LARGE-SCALE – TIGHT-SCHEDULE – HIGH-QUALITY projects." }
-        }));
-        Add(EntityTypes.Service, 2, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "Main Contractor Scope", body = "Full site management, subcontractor and supplier coordination. Ensure schedule, quality and HSE (Health Safety Environment) on site. Regular reporting to investors in Vietnamese, English and Japanese." },
-            new { heading = "International-Standard Management", body = "PMP project management standards and Lean Construction methods. MS Project and Primavera P6 for scheduling and cost control. QA/QC per ISO 9001:2015 for every work package." },
-            new { heading = "Strategic Partnership with Mori Group", body = "The partnership with Mori Industry Group (Japan) brings Japanese technical standards and work culture to every NICON project." }
-        }));
-        Add(EntityTypes.Service, 3, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "General Contractor Role", body = "Comprehensive management from schematic design, technical design to construction drawings. Material and equipment procurement and supply chain management. Construction execution, partial acceptance and complete handover." },
-            new { heading = "Mega-Project Capability", body = "NICON has successfully delivered 250,000 m² industrial complexes like Lam Hiep Hung – Tan Toan Phat. Capability to manage large sites with hundreds of workers, heavy equipment and complex logistics." },
-            new { heading = "Quality Commitment", body = "100% of projects delivered on schedule over the last 5 years. 24-month warranty for construction, 12-month warranty for MEP." }
-        }));
-        Add(EntityTypes.Service, 4, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "NICON MEP Scope", body = "Industrial electrical systems: medium/low voltage, backup generators, UPS, high-efficiency lighting. HVAC, ventilation and cleanroom systems per ISO Class 5/7/8. Water supply/drainage, solar hot water, wastewater treatment. Fire sprinkler and addressable alarm systems per TCVN and NFPA." },
-            new { heading = "Integration & Handover", body = "Rigorous T&C (Testing & Commissioning) process witnessed by supervision consultants and investors. Handover with as-built documentation, O&M manuals. Operational training for the investor's technical staff." },
-            new { heading = "BIM-Powered Project Management", body = "3D MEP models detect clashes before construction, reducing 80% of field rework. BIM deliverables support long-term operations and maintenance for the investor." }
-        }));
-
-        // ─── Project Challenges & Solutions: EN translations (Projects 1-3) ───
-        Add(EntityTypes.Project, 1, "Challenges", "en", JsonSerializer.Serialize(new[] { "Tight 10-month schedule from groundbreaking to commissioning.", "Large-span column-free structural solution for production lines.", "Optimizing ventilation and natural lighting for energy savings." }));
-        Add(EntityTypes.Project, 1, "Solutions", "en", JsonSerializer.Serialize(new[] { "Pre-engineered steel with 30m spans and polycarbonate skylights.", "Parallel construction of multiple work packages, managed with BIM 4D software.", "Synchronized M&E systems with 30% capacity reserve for future expansion." }));
-        Add(EntityTypes.Project, 2, "Challenges", "en", JsonSerializer.Serialize(new[] { "Complex production line layout with multiple functional zones.", "Requirement to integrate executive offices and production in one building." }));
-        Add(EntityTypes.Project, 2, "Solutions", "en", JsonSerializer.Serialize(new[] { "Clear zoning with one-way traffic flow to minimize cross-movement.", "Two-story integrated office with production floor overlook." }));
-        Add(EntityTypes.Project, 3, "Challenges", "en", JsonSerializer.Serialize(new[] { "Master planning for a mega-scale site with many building blocks.", "Synchronizing technical infrastructure across a large area." }));
-        Add(EntityTypes.Project, 3, "Solutions", "en", JsonSerializer.Serialize(new[] { "Modular master plan for easy expansion and function changes.", "Internal road system designed for 40-foot container trucks." }));
+        // Project translations are now handled by SeedProjectTranslations() via project-translations.json (slug-based).
 
         // ─── Slideshow: ZH translations ───
         Add(EntityTypes.Slideshow, 1, "Title", "zh", "工厂设计施工总承包商");
@@ -1608,96 +1529,32 @@ public static class ContentSeeder
         return JsonSerializer.Deserialize<List<ContentSeedItem>>(stream, opts) ?? [];
     }
 
-    // Stock placeholders that the original hand-curated seeder cycled across
-    // every Activity row. Their presence is the signal to re-seed from the
-    // legacy manifest.
-    private static bool IsLegacyStockActivityImage(string url) =>
-        url is "/images/activities/activity-ceremony.jpg"
-            or "/images/activities/activity-handover.jpg"
-            or "/images/activities/activity-opening.jpg";
-
-    // Stock thumbnails (news-fire-protection.jpeg, news-build-concept.jpeg, …)
-    // used by the legacy hand-curated News seeder. Per-slug folders use
-    // /images/news/<slug>/thumb.* so this prefix is unambiguous.
-    private static bool IsLegacyStockNewsImage(string url) =>
-        url.StartsWith("/images/news/news-", StringComparison.Ordinal);
-
-    private static bool NeedsContentReseed<T>(IQueryable<T> set, List<ContentSeedItem> manifest, Func<T, string> imageUrlOf, Func<T, string> contentJsonOf, Func<string, bool> isStockImage)
-        where T : class
-    {
-        var existing = set.ToList();
-        if (existing.Count == 0) return true;
-        if (existing.Count != manifest.Count) return true;
-        if (existing.Any(e => isStockImage(imageUrlOf(e)))) return true;
-
-        // Trigger reseed when the manifest carries inline-image content blocks
-        // (e.g. {"type":"image","url":...}) but the DB still has the legacy
-        // pure-string content. Detect by sniffing the first array element.
-        var manifestHasInlineImages = manifest.Any(item =>
-            item.GetTranslation("vi").Content.Any(c => c.ValueKind == JsonValueKind.Object));
-        if (!manifestHasInlineImages) return false;
-
-        var dbHasInlineImages = existing.Any(e =>
-        {
-            var json = contentJsonOf(e);
-            if (string.IsNullOrWhiteSpace(json) || json.Length < 2) return false;
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
-                foreach (var el in doc.RootElement.EnumerateArray())
-                {
-                    if (el.ValueKind == JsonValueKind.Object) return true;
-                }
-            }
-            catch (JsonException) { /* malformed json — fall through */ }
-            return false;
-        });
-        return !dbHasInlineImages;
-    }
-
-    private static void ReseedFromManifest<T>(AppDbContext db, string entityType, List<ContentSeedItem> manifest, Func<ContentSeedItem, T> factory)
-        where T : class
-    {
-        // Wipe dependent translation rows first so they don't dangle once the
-        // entities (and their IDs) are recreated.
-        var staleTranslations = db.EntityTranslations.Where(t => t.EntityType == entityType).ToList();
-        if (staleTranslations.Count > 0)
-        {
-            db.EntityTranslations.RemoveRange(staleTranslations);
-        }
-
-        var dbSet = db.Set<T>();
-        var existing = dbSet.ToList();
-        if (existing.Count > 0)
-        {
-            dbSet.RemoveRange(existing);
-        }
-        db.SaveChanges();
-
-        foreach (var item in manifest)
-        {
-            dbSet.Add(factory(item));
-        }
-        db.SaveChanges();
-    }
-
     private static void SeedManifestTranslations(AppDbContext db, string entityType, List<ContentSeedItem> manifest, IDictionary<string, int> bySlug)
     {
+        var existingKeys = db.EntityTranslations
+            .Where(t => t.EntityType == entityType)
+            .Select(t => t.EntityId + "|" + t.FieldName + "|" + t.LanguageCode)
+            .ToHashSet();
+
         var now = DateTime.UtcNow;
         var rows = new List<EntityTranslation>();
+
+        void Add(int entityId, string field, string lang, string value)
+        {
+            var key = $"{entityId}|{field}|{lang}";
+            if (existingKeys.Contains(key)) return; // never overwrite admin-edited translations
+            rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = field, LanguageCode = lang, Value = value, CreatedAt = now, UpdatedAt = now });
+        }
+
         foreach (var item in manifest)
         {
             if (!bySlug.TryGetValue(item.Slug, out var entityId)) continue;
             foreach (var (lang, t) in item.Translations)
             {
                 if (lang == "vi") continue; // VI lives on the entity itself
-                if (!string.IsNullOrEmpty(t.Title))
-                    rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = "Title", LanguageCode = lang, Value = t.Title, CreatedAt = now, UpdatedAt = now });
-                if (!string.IsNullOrEmpty(t.Excerpt))
-                    rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = "Excerpt", LanguageCode = lang, Value = t.Excerpt, CreatedAt = now, UpdatedAt = now });
-                if (t.Content is { Count: > 0 })
-                    rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = "Content", LanguageCode = lang, Value = JsonSerializer.Serialize(t.Content), CreatedAt = now, UpdatedAt = now });
+                if (!string.IsNullOrEmpty(t.Title)) Add(entityId, "Title", lang, t.Title);
+                if (!string.IsNullOrEmpty(t.Excerpt)) Add(entityId, "Excerpt", lang, t.Excerpt);
+                if (t.Content is { Count: > 0 }) Add(entityId, "Content", lang, JsonSerializer.Serialize(t.Content));
             }
         }
         if (rows.Count > 0)
