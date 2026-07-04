@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,24 +8,40 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProjectService(AppDbContext db, HostedImageService hostedImageService, ProjectCategoryService categorySvc, ILogger<ProjectService> logger)
+public class ProjectService(
+    AppDbContext db,
+    EntityTranslationService translationSvc,
+    HostedImageService hostedImageService,
+    ProjectCategoryService categorySvc,
+    ILogger<ProjectService> logger)
 {
 
-    public async Task<List<ProjectResponse>> GetAllAsync()
+    public async Task<List<ProjectResponse>> GetAllAsync(string lang = "vi")
     {
         var items = await db.Projects.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync();
-        logger.LogDebug("Fetched {Count} projects", items.Count);
-        return items.Select(MapToResponse).ToList();
+        logger.LogDebug("Fetched {Count} projects (lang={Lang})", items.Count, lang);
+        var translations = await translationSvc.GetBatchTranslationsAsync(
+            EntityTypes.Project, items.Select(p => p.Id), lang);
+
+        return items.Select(p =>
+        {
+            var t = translations.GetValueOrDefault(p.Id, new Dictionary<string, string>());
+            return MapToResponse(p, t);
+        }).ToList();
     }
 
-    public async Task<ProjectResponse?> GetBySlugAsync(string slug)
+    public async Task<ProjectResponse?> GetBySlugAsync(string slug, string lang = "vi")
     {
         var item = await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
         if (item == null)
         {
             logger.LogWarning("Project not found by slug {Slug}", slug);
+            return null;
         }
-        return item == null ? null : MapToResponse(item);
+
+        var t = await translationSvc.GetEntityTranslationsAsync(EntityTypes.Project, item.Id, lang);
+        logger.LogDebug("Fetched project {ProjectId} by slug {Slug} (lang={Lang})", item.Id, slug, lang);
+        return MapToResponse(item, t);
     }
 
     public async Task<ProjectResponse> CreateAsync(UpsertProjectRequest req)
@@ -54,7 +71,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         db.Projects.Add(entity);
         await db.SaveChangesAsync();
         logger.LogInformation("Created project {ProjectId} (slug={Slug})", entity.Id, entity.Slug);
-        return MapToResponse(entity);
+        return MapToResponse(entity, new Dictionary<string, string>());
     }
 
     public async Task<ProjectResponse?> UpdateAsync(int id, UpsertProjectRequest req)
@@ -99,7 +116,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         }
         DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
         logger.LogInformation("Updated project {ProjectId} (slug={Slug})", id, entity.Slug);
-        return MapToResponse(entity);
+        return MapToResponse(entity, new Dictionary<string, string>());
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -114,6 +131,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         var gallery = DeserializeGallery(entity.GalleryJson);
         db.Projects.Remove(entity);
         await db.SaveChangesAsync();
+        await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.Project, id);
         hostedImageService.DeleteIfManagedUpload(imageUrl);
         foreach (var url in gallery)
         {
@@ -123,13 +141,13 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         return true;
     }
 
-    private static ProjectResponse MapToResponse(Project p) => new()
+    private static ProjectResponse MapToResponse(Project p, Dictionary<string, string> t) => new()
     {
         Id = p.Id,
         Slug = p.Slug,
         ImageUrl = p.ImageUrl,
         Gallery = string.IsNullOrEmpty(p.GalleryJson) ? null : JsonSerializer.Deserialize<string[]>(p.GalleryJson),
-        Name = p.Name,
+        Name = t.GetValueOrDefault("Name", p.Name),
         Client = p.Client,
         Location = p.Location,
         Scale = p.Scale,
@@ -138,11 +156,14 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         Year = p.Year,
         Category = p.Category,
         CategoryId = p.ProjectCategoryId,
-        Description = p.Description,
-        Challenges = string.IsNullOrEmpty(p.ChallengesJson) ? null : JsonSerializer.Deserialize<string[]>(p.ChallengesJson),
-        Solutions = string.IsNullOrEmpty(p.SolutionsJson) ? null : JsonSerializer.Deserialize<string[]>(p.SolutionsJson),
+        Description = t.GetValueOrDefault("Description", p.Description),
+        Challenges = DeserializeStringArray(t.GetValueOrDefault("Challenges", p.ChallengesJson)),
+        Solutions = DeserializeStringArray(t.GetValueOrDefault("Solutions", p.SolutionsJson)),
         Highlights = string.IsNullOrEmpty(p.HighlightsJson) ? null : JsonSerializer.Deserialize<JsonElement>(p.HighlightsJson),
     };
+
+    private static string[]? DeserializeStringArray(string? json) =>
+        string.IsNullOrEmpty(json) ? null : JsonSerializer.Deserialize<string[]>(json);
 
     private string? SerializeGallery(string[]? gallery)
     {

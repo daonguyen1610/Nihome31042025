@@ -117,11 +117,13 @@ export function useNewsItem(slug: string) {
 }
 
 export function useProjects() {
-  return useFetch<ProjectResponse[]>(() => contentApi.getProjects(), []);
+  const { lang } = useI18n();
+  return useFetch<ProjectResponse[]>(() => contentApi.getProjects(lang), [lang]);
 }
 
 export function useProject(slug: string) {
-  return useFetch<ProjectResponse>(() => contentApi.getProject(slug), [slug]);
+  const { lang } = useI18n();
+  return useFetch<ProjectResponse>(() => contentApi.getProject(slug, lang), [slug, lang]);
 }
 
 export function useServices() {

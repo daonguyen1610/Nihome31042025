@@ -18,13 +18,13 @@ public class ProjectsController(
 {
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAll() => Ok(await svc.GetAllAsync());
+    public async Task<IActionResult> GetAll([FromQuery] string lang = "vi") => Ok(await svc.GetAllAsync(lang));
 
     [HttpGet("{slug}")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetBySlug(string slug)
+    public async Task<IActionResult> GetBySlug(string slug, [FromQuery] string lang = "vi")
     {
-        var item = await svc.GetBySlugAsync(slug);
+        var item = await svc.GetBySlugAsync(slug, lang);
         return item == null ? NotFound() : Ok(item);
     }
 

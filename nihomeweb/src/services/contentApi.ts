@@ -397,12 +397,12 @@ export const contentApi = {
       .then((res) => ({ ...res, data: mapNews(res.data) })),
 
   // Projects
-  getProjects: () =>
-    api.get<ProjectResponse[]>("/projects")
+  getProjects: (lang = "vi") =>
+    api.get<ProjectResponse[]>(`/projects?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapProject) })),
 
-  getProject: (slug: string) =>
-    api.get<ProjectResponse>(`/projects/${slug}`)
+  getProject: (slug: string, lang = "vi") =>
+    api.get<ProjectResponse>(`/projects/${slug}?lang=${lang}`)
       .then((res) => ({ ...res, data: mapProject(res.data) })),
 
   // Services
