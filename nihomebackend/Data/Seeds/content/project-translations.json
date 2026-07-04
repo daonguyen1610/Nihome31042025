@@ -1,0 +1,1145 @@
+[
+  {
+    "slug": "nha-may-bma",
+    "en": {
+      "Challenges": "[\"Tight 10-month schedule from groundbreaking to commissioning.\",\"Large-span column-free structural solution for production lines.\",\"Optimizing ventilation and natural lighting for energy savings.\"]",
+      "Description": "The BMA Factory project is a modern 15,000 m² production complex, designed to international industrial standards.",
+      "Name": "BMA Factory",
+      "Solutions": "[\"Pre-engineered steel with 30m spans and polycarbonate skylights.\",\"Parallel construction of multiple work packages, managed with BIM 4D software.\",\"Synchronized M\\u0026E systems with 30% capacity reserve for future expansion.\"]"
+    },
+    "zh": {
+      "Name": "BMA工厂",
+      "Description": "BMA工厂项目是一座现代化的15,000平方米生产综合体,按照国际工业标准设计建造。",
+      "Challenges": "[\"从破土动工到竣工投产,工期紧张,仅有10个月。\", \"为生产线打造大跨度、无立柱的结构解决方案。\", \"优化通风与自然采光设计,以实现节能。\"]",
+      "Solutions": "[\"采用跨度30米的预制钢结构,并配备聚碳酸酯天窗采光。\", \"多个工程标段并行施工,并借助BIM 4D软件进行统筹管理。\", \"机电系统同步集成设计,预留30%的产能余量以满足未来扩建需求。\"]"
+    },
+    "ja": {
+      "Name": "BMA工場",
+      "Description": "BMA工場プロジェクトは、国際的な工業基準に基づいて設計された、延床面積15,000㎡の近代的な生産施設です。",
+      "Challenges": "[\"着工から稼働開始までの工期がわずか10か月と非常にタイトであった。\", \"生産ラインに対応する大スパン・無柱構造の設計が求められた。\", \"省エネルギーのため、換気および自然採光の最適化が必要であった。\"]",
+      "Solutions": "[\"スパン30mのプレエンジニアード鋼構造とポリカーボネート製トップライトを採用。\", \"複数の工区を並行施工し、BIM 4Dソフトウェアで統合管理を実施。\", \"電気設備(M&E)システムを同期化し、将来の増設に備えて30%の容量余裕を確保。\"]"
+    }
+  },
+  {
+    "slug": "nha-xuong-nbdc",
+    "en": {
+      "Challenges": "[\"Complex production line layout with multiple functional zones.\",\"Requirement to integrate executive offices and production in one building.\"]",
+      "Description": "NICON provides full architecture and structural design for the NBDC production workshop at Giang Dien IP.",
+      "Name": "NBDC Workshop",
+      "Solutions": "[\"Clear zoning with one-way traffic flow to minimize cross-movement.\",\"Two-story integrated office with production floor overlook.\"]"
+    },
+    "zh": {
+      "Name": "NBDC厂房",
+      "Description": "NICON为Giang Dien IP的NBDC生产厂房提供全套建筑与结构设计。",
+      "Challenges": "[\"生产线布局复杂,包含多个功能区。\", \"要求将行政办公与生产功能整合于同一栋建筑内。\"]",
+      "Solutions": "[\"采用清晰分区与单向动线设计,最大限度减少交叉动线。\", \"两层整合式办公区,可俯瞰生产车间。\"]"
+    },
+    "ja": {
+      "Name": "NBDC工場",
+      "Description": "NICONは、Giang Dien IPのNBDC生産工場向けに建築・構造設計一式を提供しています。",
+      "Challenges": "[\"複数の機能エリアを含む複雑な生産ラインレイアウト。\", \"経営管理オフィスと生産機能を同一建屋内に統合するという要件。\"]",
+      "Solutions": "[\"動線の交差を最小限に抑える、明確なゾーニングと一方通行の動線計画。\", \"生産フロアを見渡せる2階建ての統合オフィス。\"]"
+    }
+  },
+  {
+    "slug": "nha-may-lhh",
+    "en": {
+      "Challenges": "[\"Master planning for a mega-scale site with many building blocks.\",\"Synchronizing technical infrastructure across a large area.\"]",
+      "Description": "One of NICON's largest projects: a 250,000 m² industrial complex.",
+      "Name": "Lam Hiep Hung – Tan Toan Phat Complex",
+      "Solutions": "[\"Modular master plan for easy expansion and function changes.\",\"Internal road system designed for 40-foot container trucks.\"]"
+    },
+    "zh": {
+      "Challenges": "[\"为拥有众多建筑单体的超大规模场地进行总体规划。\",\"在大面积范围内协调统一技术基础设施。\"]",
+      "Description": "NICON最大的项目之一：占地250,000 m²的工业综合体。",
+      "Name": "Lam Hiep Hung – Tan Toan Phat 综合体",
+      "Solutions": "[\"采用模块化总体规划，便于扩建和功能调整。\",\"内部道路系统按40英尺集装箱卡车通行标准设计。\"]"
+    },
+    "ja": {
+      "Challenges": "[\"多数の建屋棟を有する超大規模敷地のマスタープランニング。\",\"広範囲にわたる技術インフラの統合・同期。\"]",
+      "Description": "NICON最大級のプロジェクトの一つ：延床面積250,000 m²の工業団地。",
+      "Name": "Lam Hiep Hung – Tan Toan Phat コンプレックス",
+      "Solutions": "[\"拡張や用途変更が容易なモジュール式マスタープラン。\",\"40フィートコンテナトラックの通行に対応した内部道路システムを設計。\"]"
+    }
+  },
+  {
+    "slug": "ttdtt-thu-duc",
+    "en": {
+      "Description": "Multi-purpose sports and recreation center serving the Thu Duc community.",
+      "Name": "Thu Duc Sports Center"
+    },
+    "zh": {
+      "Description": "服务于 Thu Duc 社区的多功能体育休闲中心。",
+      "Name": "Thu Duc 体育中心"
+    },
+    "ja": {
+      "Description": "Thu Duc地域社会にサービスを提供する多目的スポーツ・レクリエーションセンター。",
+      "Name": "Thu Ducスポーツセンター"
+    }
+  },
+  {
+    "slug": "noi-that-b37",
+    "en": {
+      "Description": "Modern office interior design with minimalist style and open space concept.",
+      "Name": "B37 Office"
+    },
+    "zh": {
+      "Description": "现代风格的办公室内部设计，采用简约风格与开放式空间理念。",
+      "Name": "B37办公室"
+    },
+    "ja": {
+      "Description": "ミニマルなスタイルとオープンスペースの概念を取り入れた、モダンなオフィスの内装デザイン。",
+      "Name": "B37オフィス"
+    }
+  },
+  {
+    "slug": "nha-may-trimas",
+    "en": {
+      "Description": "Turnkey design and build of a packaging factory for TriMas at VSIP IIA.",
+      "Name": "TriMas Vietnam Factory"
+    },
+    "zh": {
+      "Description": "为TriMas在VSIP IIA园区打造包装工厂，提供从设计到施工的一站式服务。",
+      "Name": "TriMas越南工厂"
+    },
+    "ja": {
+      "Description": "VSIP IIAにおけるTriMas向け包装工場の設計から施工までの一括請負プロジェクト。",
+      "Name": "TriMasベトナム工場"
+    }
+  },
+  {
+    "slug": "nha-kho-apm",
+    "en": {
+      "Description": "Logistics warehouse design for Auto Components Vietnam.",
+      "Name": "APM Warehouse"
+    },
+    "zh": {
+      "Description": "为越南汽车零部件公司（Auto Components Vietnam）设计的物流仓库。",
+      "Name": "APM仓库"
+    },
+    "ja": {
+      "Description": "Auto Components Vietnam向けに設計された物流倉庫。",
+      "Name": "APM倉庫"
+    }
+  },
+  {
+    "slug": "nha-may-jojo",
+    "en": {
+      "Description": "Factory design with high food safety requirements, HACCP compliant.",
+      "Name": "JOJO Factory"
+    },
+    "zh": {
+      "Description": "符合HACCP标准、满足高食品安全要求的工厂设计。",
+      "Name": "JOJO工厂"
+    },
+    "ja": {
+      "Description": "HACCPに準拠し、高い食品安全基準を満たす工場設計。",
+      "Name": "JOJO工場"
+    }
+  },
+  {
+    "slug": "khach-san-d22",
+    "en": {
+      "Description": "4-star hotel with 80 rooms, ground-floor restaurant and spa.",
+      "Name": "D22 Hotel"
+    },
+    "zh": {
+      "Description": "拥有80间客房的四星级酒店,配有一楼餐厅及水疗中心。",
+      "Name": "D22酒店"
+    },
+    "ja": {
+      "Description": "客室80室を有する4つ星ホテルで、1階にはレストランとスパを併設。",
+      "Name": "D22ホテル"
+    }
+  },
+  {
+    "slug": "nbdc-canteen",
+    "en": {
+      "Description": "Canteen design for the NBDC industrial complex at Giang Dien IP.",
+      "Name": "NBDC Canteen"
+    },
+    "zh": {
+      "Description": "为Giang Dien IP的NBDC工业综合体设计食堂。",
+      "Name": "NBDC食堂"
+    },
+    "ja": {
+      "Description": "Giang Dien IPのNBDC工業団地向け食堂の設計。",
+      "Name": "NBDC食堂"
+    }
+  },
+  {
+    "slug": "nbdc-office",
+    "en": {
+      "Description": "Executive office design for NBDC at Giang Dien IP.",
+      "Name": "NBDC Office"
+    },
+    "zh": {
+      "Description": "为NBDC在Giang Dien工业园区设计的行政办公楼。",
+      "Name": "NBDC办公楼"
+    },
+    "ja": {
+      "Description": "Giang Dien工業団地におけるNBDCの行政オフィス設計。",
+      "Name": "NBDCオフィス"
+    }
+  },
+  {
+    "slug": "nha-may-ttp",
+    "en": {
+      "Description": "Factory within the Lam Hiep Hung – Tan Toan Phat complex in Binh Duong.",
+      "Name": "Tan Toan Phat Factory"
+    },
+    "zh": {
+      "Description": "位于 Binh Duong 省 Lam Hiep Hung – Tan Toan Phat 综合体内的工厂。",
+      "Name": "Tan Toan Phat 工厂"
+    },
+    "ja": {
+      "Description": "Binh Duong省のLam Hiep Hung – Tan Toan Phat複合施設内にある工場。",
+      "Name": "Tan Toan Phat工場"
+    }
+  },
+  {
+    "slug": "nha-may-lhh-2",
+    "en": {
+      "Description": "Lam Hiep Hung factory in Binh Duong, expanding production line.",
+      "Name": "Lam Hiep Hung Factory"
+    },
+    "zh": {
+      "Description": "位于Binh Duong的Lam Hiep Hung工厂，正在扩建生产线。",
+      "Name": "Lam Hiep Hung工厂"
+    },
+    "ja": {
+      "Description": "Binh Duongにある Lam Hiep Hung工場、生産ラインの拡張。",
+      "Name": "Lam Hiep Hung工場"
+    }
+  },
+  {
+    "slug": "nha-may-stfood",
+    "en": {
+      "Description": "Food production factory for a Thai investor, designed to GMP and HACCP standards.",
+      "Name": "S.T.Food Marketing Vietnam Factory"
+    },
+    "zh": {
+      "Description": "为泰国投资商打造的食品生产工厂，按照GMP和HACCP标准进行设计。",
+      "Name": "S.T.Food Marketing越南工厂"
+    },
+    "ja": {
+      "Description": "タイ人投資家向けの食品生産工場で、GMPおよびHACCP基準に準拠して設計。",
+      "Name": "S.T.Food Marketingベトナム工場"
+    }
+  },
+  {
+    "slug": "medicare-shop",
+    "en": {
+      "Description": "Medicare store at Aeon Mall Binh Duong Canary.",
+      "Name": "Medicare Shop"
+    },
+    "zh": {
+      "Description": "位于永旺平阳金娜莉购物中心（Aeon Mall Binh Duong Canary）内的Medicare药店。",
+      "Name": "Medicare药店"
+    },
+    "ja": {
+      "Description": "イオンモール ビンズオン カナリー（Aeon Mall Binh Duong Canary）内のMedicare店舗。",
+      "Name": "Medicareショップ"
+    }
+  },
+  {
+    "slug": "nha-may-lhh-completed",
+    "en": {
+      "Description": "Lam Hiep Hung factory phase 1 completed.",
+      "Name": "Lam Hiep Hung Factory (Phase 1)"
+    },
+    "zh": {
+      "Description": "Lam Hiep Hung工厂第一期项目已竣工。",
+      "Name": "Lam Hiep Hung工厂（第一期）"
+    },
+    "ja": {
+      "Description": "Lam Hiep Hung工場の第1期工事が完成しました。",
+      "Name": "Lam Hiep Hung工場（第1期）"
+    }
+  },
+  {
+    "slug": "nha-may-hbfuller",
+    "en": {
+      "Description": "MEP system construction for H.B.Fuller factory in Binh Duong.",
+      "Name": "H.B.Fuller Factory"
+    },
+    "zh": {
+      "Description": "为位于平阳的H.B.Fuller工厂进行机电(MEP)系统施工。",
+      "Name": "H.B.Fuller工厂"
+    },
+    "ja": {
+      "Description": "ビンズオン省にあるH.B.Fuller工場の設備(MEP)システム施工。",
+      "Name": "H.B.Fuller工場"
+    }
+  },
+  {
+    "slug": "red-bull-expansion",
+    "en": {
+      "Description": "Design for the Red Bull factory expansion in Binh Duong, preserving brand identity.",
+      "Name": "Red Bull Expansion Project"
+    },
+    "zh": {
+      "Description": "为Binh Duong的Red Bull工厂扩建项目提供设计,同时保留品牌形象。",
+      "Name": "Red Bull扩建项目"
+    },
+    "ja": {
+      "Description": "Binh DuongにあるRed Bull工場の拡張設計。ブランドアイデンティティを維持。",
+      "Name": "Red Bull拡張プロジェクト"
+    }
+  },
+  {
+    "slug": "nha-may-great-lotus",
+    "en": {
+      "Description": "Design and construction of the Great Lotus factory spanning over 31,000 m².",
+      "Name": "Great Lotus Vietnam Factory"
+    },
+    "zh": {
+      "Description": "Great Lotus工厂设计与施工，占地面积超过31,000 m²。",
+      "Name": "越南Great Lotus工厂"
+    },
+    "ja": {
+      "Description": "延床面積31,000 m²超のGreat Lotus工場の設計・施工。",
+      "Name": "ベトナムGreat Lotus工場"
+    }
+  },
+  {
+    "slug": "nha-may-advanced-casting",
+    "en": {
+      "Description": "Advanced Casting Asia production factory at VSIP II-A.",
+      "Name": "Advanced Casting Asia Factory"
+    },
+    "zh": {
+      "Description": "位于 VSIP II-A 的 Advanced Casting Asia 生产工厂。",
+      "Name": "Advanced Casting Asia 工厂"
+    },
+    "ja": {
+      "Description": "VSIP II-Aに位置するAdvanced Casting Asiaの生産工場。",
+      "Name": "Advanced Casting Asia工場"
+    }
+  },
+  {
+    "slug": "sctv-studio",
+    "en": {
+      "Description": "The largest TV studio in Vietnam at the time of construction.",
+      "Name": "SCTV Studio & Office"
+    },
+    "zh": {
+      "Description": "建成当时为越南最大的电视演播室。",
+      "Name": "SCTV演播室与办公楼"
+    },
+    "ja": {
+      "Description": "建設当時、ベトナム最大のテレビスタジオ。",
+      "Name": "SCTVスタジオ＆オフィス"
+    }
+  },
+  {
+    "slug": "nha-may-bkl",
+    "en": {
+      "Description": "Design and construction of BKL factory at Thinh Phat IP.",
+      "Name": "BKL Factory"
+    },
+    "zh": {
+      "Description": "在Thinh Phat工业园区设计并建造的BKL工厂。",
+      "Name": "BKL工厂"
+    },
+    "ja": {
+      "Description": "Thinh Phat工業団地におけるBKL工場の設計・施工。",
+      "Name": "BKL工場"
+    }
+  },
+  {
+    "slug": "nha-may-rebisco",
+    "en": {
+      "Description": "Rebisco confectionery factory (Philippines) at VSIP II-A.",
+      "Name": "Rebisco Factory"
+    },
+    "zh": {
+      "Description": "位于VSIP II-A的Rebisco（菲律宾）糖果厂。",
+      "Name": "Rebisco工厂"
+    },
+    "ja": {
+      "Description": "VSIP II-Aに位置するRebisco（フィリピン）製菓工場。",
+      "Name": "Rebisco工場"
+    }
+  },
+  {
+    "slug": "nha-may-nestle",
+    "en": {
+      "Description": "Design and construction of Nestlé Binh An factory and office.",
+      "Name": "Nestlé Binh An Factory & Office"
+    },
+    "zh": {
+      "Description": "Nestlé Binh An工厂及办公楼的设计与施工。",
+      "Name": "Nestlé Binh An 工厂及办公楼"
+    },
+    "ja": {
+      "Description": "Nestlé Binh An 工場およびオフィスの設計・施工。",
+      "Name": "Nestlé Binh An 工場・オフィス"
+    }
+  },
+  {
+    "slug": "nha-may-ampharco",
+    "en": {
+      "Description": "Pharmaceutical factory construction for Ampharco U.S.A at Nhon Trach.",
+      "Name": "Ampharco U.S.A Factory"
+    },
+    "zh": {
+      "Description": "位于仁泽的Ampharco U.S.A制药厂建设项目。",
+      "Name": "Ampharco U.S.A制药厂"
+    },
+    "ja": {
+      "Description": "ニョンチャックにおけるAmpharco U.S.A製薬工場の建設。",
+      "Name": "Ampharco U.S.A製薬工場"
+    }
+  },
+  {
+    "slug": "konimiyaki-restaurant",
+    "en": {
+      "Description": "Restaurant design for Konimiyaki in District 1, HCMC.",
+      "Name": "Konimiyaki Restaurant"
+    },
+    "zh": {
+      "Description": "为HCMC District 1的Konimiyaki餐厅提供设计。",
+      "Name": "Konimiyaki餐厅"
+    },
+    "ja": {
+      "Description": "HCMC District 1にあるKonimiyakiレストランの設計。",
+      "Name": "Konimiyakiレストラン"
+    }
+  },
+  {
+    "slug": "nha-may-scon",
+    "en": {
+      "Description": "Design and construction of SCON factory at VSIP II-A.",
+      "Name": "SCON Factory"
+    },
+    "zh": {
+      "Description": "位于VSIP II-A的SCON工厂设计与施工。",
+      "Name": "SCON工厂"
+    },
+    "ja": {
+      "Description": "VSIP II-AにおけるSCON工場の設計・施工。",
+      "Name": "SCON工場"
+    }
+  },
+  {
+    "slug": "nha-may-clotex",
+    "en": {
+      "Description": "Clotex Labels Vietnam factory at VSIP II-A.",
+      "Name": "Clotex Labels Vietnam Factory"
+    },
+    "zh": {
+      "Description": "位于 VSIP II-A 的 Clotex Labels Vietnam 工厂。",
+      "Name": "Clotex Labels Vietnam 工厂"
+    },
+    "ja": {
+      "Description": "VSIP II-Aに位置するClotex Labels Vietnam工場。",
+      "Name": "Clotex Labels Vietnam工場"
+    }
+  },
+  {
+    "slug": "nha-may-amiba",
+    "en": {
+      "Description": "Construction of the 2-hectare Amiba factory at VSIP II-A.",
+      "Name": "Amiba Factory"
+    },
+    "zh": {
+      "Description": "在VSIP II-A建设占地2公顷的Amiba工厂。",
+      "Name": "Amiba工厂"
+    },
+    "ja": {
+      "Description": "VSIP II-Aにおける、敷地面積2ヘクタールのAmiba工場建設。",
+      "Name": "Amiba工場"
+    }
+  },
+  {
+    "slug": "nha-may-akati-wood",
+    "en": {
+      "Description": "Akati Wood factory, a branch of Akati Dominant from Malaysia.",
+      "Name": "Akati Wood Factory"
+    },
+    "zh": {
+      "Description": "Akati Wood工厂，是马来西亚Akati Dominant公司的分支机构。",
+      "Name": "Akati Wood工厂"
+    },
+    "ja": {
+      "Description": "Akati Wood工場は、マレーシアのAkati Dominant社の支店。",
+      "Name": "Akati Wood工場"
+    }
+  },
+  {
+    "slug": "nha-may-japan-plus",
+    "en": {
+      "Description": "Japan Plus PE box production factory at Dong Nam Cu Chi IP.",
+      "Name": "Japan Plus Factory"
+    },
+    "zh": {
+      "Description": "位于Dong Nam Cu Chi工业区的Japan Plus PE箱生产工厂。",
+      "Name": "Japan Plus工厂"
+    },
+    "ja": {
+      "Description": "Dong Nam Cu Chi工業団地にあるJapan PlusのPE箱生産工場。",
+      "Name": "Japan Plus工場"
+    }
+  },
+  {
+    "slug": "duoc-pham-trung-uong",
+    "en": {
+      "Description": "Pharmaceutical factory design in HCMC.",
+      "Name": "Central Pharmaceutical HCMC"
+    },
+    "zh": {
+      "Description": "位于胡志明市的制药厂设计项目。",
+      "Name": "胡志明市中央制药厂"
+    },
+    "ja": {
+      "Description": "ホーチミン市における製薬工場の設計。",
+      "Name": "ホーチミン市中央製薬工場"
+    }
+  },
+  {
+    "slug": "kumgang-office",
+    "en": {
+      "Description": "Office design and construction for Kumgang Vina.",
+      "Name": "Kumgang Office"
+    },
+    "zh": {
+      "Description": "为Kumgang Vina设计并建造的办公楼项目。",
+      "Name": "Kumgang办公楼"
+    },
+    "ja": {
+      "Description": "Kumgang Vina社のオフィス設計・施工。",
+      "Name": "Kumgangオフィス"
+    }
+  },
+  {
+    "slug": "nha-may-vda-hcm",
+    "en": {
+      "Description": "Design and construction of VDA-HCM factory at Cau Tram IP.",
+      "Name": "VDA-HCM Factory"
+    },
+    "zh": {
+      "Description": "Cau Tram IP的VDA-HCM工厂设计与施工。",
+      "Name": "VDA-HCM工厂"
+    },
+    "ja": {
+      "Description": "Cau Tram IPにおけるVDA-HCM工場の設計・施工。",
+      "Name": "VDA-HCM工場"
+    }
+  },
+  {
+    "slug": "thu-thiem-dragon",
+    "en": {
+      "Description": "Show flat construction for Thu Thiem Dragon in District 2.",
+      "Name": "Thu Thiem Dragon Show Flat"
+    },
+    "zh": {
+      "Description": "位于第2郡的Thu Thiem Dragon样板房施工。",
+      "Name": "Thu Thiem Dragon样板房"
+    },
+    "ja": {
+      "Description": "2区におけるThu Thiem Dragonモデルルームの施工。",
+      "Name": "Thu Thiem Dragonモデルルーム"
+    }
+  },
+  {
+    "slug": "nha-may-nam-ha-viet",
+    "en": {
+      "Description": "Welding rod production factory Nam Ha Viet.",
+      "Name": "Nam Ha Viet Factory"
+    },
+    "zh": {
+      "Description": "Nam Ha Viet 焊条生产工厂。",
+      "Name": "Nam Ha Viet 工厂"
+    },
+    "ja": {
+      "Description": "Nam Ha Viet溶接棒生産工場。",
+      "Name": "Nam Ha Viet工場"
+    }
+  },
+  {
+    "slug": "nha-may-yc-tec",
+    "en": {
+      "Description": "YC TEC factory design at Song Than II IP.",
+      "Name": "YC TEC Factory"
+    },
+    "zh": {
+      "Description": "位于Song Than II工业区的YC TEC工厂设计。",
+      "Name": "YC TEC工厂"
+    },
+    "ja": {
+      "Description": "Song Than II工業団地におけるYC TEC工場の設計。",
+      "Name": "YC TEC工場"
+    }
+  },
+  {
+    "slug": "d56-house",
+    "en": {
+      "Name": "D56 House",
+      "Description": "Design and construction of D56 house in Thu Duc for Nihome."
+    },
+    "zh": {
+      "Name": "D56住宅",
+      "Description": "为Nihome在Thu Duc设计并建造的D56住宅。"
+    },
+    "ja": {
+      "Name": "D56邸",
+      "Description": "NihomeのためにThu DucでD56邸を設計・施工。"
+    }
+  },
+  {
+    "slug": "swimming-pool-service-building",
+    "en": {
+      "Name": "Pool Service Building",
+      "Description": "Design of the pool service facility at Thu Duc Sports Center complex."
+    },
+    "zh": {
+      "Name": "泳池服务楼",
+      "Description": "Thu Duc体育中心综合体内泳池服务设施的设计。"
+    },
+    "ja": {
+      "Name": "プールサービス棟",
+      "Description": "Thu Ducスポーツセンター内のプールサービス施設の設計。"
+    }
+  },
+  {
+    "slug": "thu-duc-multi-purpose-building",
+    "en": {
+      "Name": "Thu Duc Multi-purpose Building",
+      "Description": "Design of a multi-purpose sports and recreation facility at the Thu Duc complex."
+    },
+    "zh": {
+      "Name": "Thu Duc 综合大楼",
+      "Description": "Thu Duc综合体内多功能体育休闲设施的设计。"
+    },
+    "ja": {
+      "Name": "Thu Duc 多目的ビル",
+      "Description": "Thu Duc 複合施設における多目的スポーツ・レクリエーション施設の設計。"
+    }
+  },
+  {
+    "slug": "thu-duc-wedding-banquet",
+    "en": {
+      "Name": "Thu Duc Wedding Banquet Hall",
+      "Description": "Design of the wedding banquet restaurant at Thu Duc Sports Center complex."
+    },
+    "zh": {
+      "Name": "守德婚宴厅",
+      "Description": "守德体育中心综合体内婚宴餐厅的设计项目。"
+    },
+    "ja": {
+      "Name": "トゥドゥック ウェディング宴会場",
+      "Description": "トゥドゥックスポーツセンター内にあるウェディング宴会レストランの設計。"
+    }
+  },
+  {
+    "slug": "thu-duc-sport-service-building",
+    "en": {
+      "Name": "Sports Service Building – Thu Duc",
+      "Description": "Service facility at Thu Duc Sports Center."
+    },
+    "zh": {
+      "Name": "Thu Duc体育服务楼",
+      "Description": "Thu Duc体育中心的配套服务设施。"
+    },
+    "ja": {
+      "Name": "Thu Ducスポーツサービス棟",
+      "Description": "Thu Ducスポーツセンター内のサービス施設。"
+    }
+  },
+  {
+    "slug": "thu-duc-sport-coffee",
+    "en": {
+      "Name": "Coffee – Thu Duc Sports Center",
+      "Description": "Design of the café facility at Thu Duc Sports Center."
+    },
+    "zh": {
+      "Name": "咖啡厅 – Thu Duc体育中心",
+      "Description": "Thu Duc体育中心咖啡设施设计。"
+    },
+    "ja": {
+      "Name": "カフェ – Thu Ducスポーツセンター",
+      "Description": "Thu Ducスポーツセンター内カフェ施設の設計。"
+    }
+  },
+  {
+    "slug": "b37-interior",
+    "en": {
+      "Name": "B37 Office Interior",
+      "Description": "Interior design of the B37 office for Nihome."
+    },
+    "zh": {
+      "Name": "B37 办公室室内设计",
+      "Description": "为 Nihome 打造的 B37 办公室室内设计。"
+    },
+    "ja": {
+      "Name": "B37オフィス内装",
+      "Description": "Nihomeのための B37オフィスの内装デザイン。"
+    }
+  },
+  {
+    "slug": "d22-factory",
+    "en": {
+      "Name": "D22 Factory",
+      "Description": "Factory design for NATCO Vietnam in Thuan An."
+    },
+    "zh": {
+      "Name": "D22工厂",
+      "Description": "为位于Thuan An的NATCO Vietnam设计的工厂。"
+    },
+    "ja": {
+      "Name": "D22工場",
+      "Description": "Thuan AnにあるNATCO Vietnamの工場設計。"
+    }
+  },
+  {
+    "slug": "salad-stop-restaurant",
+    "en": {
+      "Name": "Salad Stop Restaurant",
+      "Description": "Design of the Salad Stop restaurant chain."
+    },
+    "zh": {
+      "Name": "Salad Stop餐厅",
+      "Description": "Salad Stop连锁餐厅的设计项目。"
+    },
+    "ja": {
+      "Name": "Salad Stopレストラン",
+      "Description": "Salad Stopチェーンレストランのデザイン。"
+    }
+  },
+  {
+    "slug": "champion-lee-factory",
+    "en": {
+      "Name": "Champion Lee Group Factory",
+      "Description": "Factory design for Champion Lee Group at Long Hau Industrial Park."
+    },
+    "zh": {
+      "Name": "Champion Lee集团工厂",
+      "Description": "为隆厚工业园区（Long Hau Industrial Park）内的Champion Lee集团设计的工厂。"
+    },
+    "ja": {
+      "Name": "Champion Leeグループ工場",
+      "Description": "Long Hau工業団地内のChampion Leeグループ向け工場設計。"
+    }
+  },
+  {
+    "slug": "jakob-workshop",
+    "en": {
+      "Name": "Jakob Workshop (Proposal)",
+      "Description": "Proposed workshop design for Jakob in Binh Duong."
+    },
+    "zh": {
+      "Name": "Jakob 厂房（方案）",
+      "Description": "为 Jakob 在 Binh Duong 提出的厂房设计方案。"
+    },
+    "ja": {
+      "Name": "Jakob 工場（提案）",
+      "Description": "Binh Duong におけるJakob向け工場設計の提案。"
+    }
+  },
+  {
+    "slug": "siegwerk-factory",
+    "en": {
+      "Name": "Siegwerk Vietnam Factory",
+      "Description": "Factory design for Siegwerk at VSIP IIA."
+    },
+    "zh": {
+      "Name": "Siegwerk越南工厂",
+      "Description": "为Siegwerk位于VSIP IIA的工厂进行设计。"
+    },
+    "ja": {
+      "Name": "Siegwerkベトナム工場",
+      "Description": "VSIP IIAにあるSiegwerk工場の設計。"
+    }
+  },
+  {
+    "slug": "great-lotus-interior",
+    "en": {
+      "Name": "Great Lotus Factory Interior",
+      "Description": "Turnkey interior fit-out for the Great Lotus factory."
+    },
+    "zh": {
+      "Name": "Great Lotus工厂室内装修",
+      "Description": "为Great Lotus工厂提供交钥匙室内装修工程。"
+    },
+    "ja": {
+      "Name": "Great Lotus工場内装",
+      "Description": "Great Lotus工場の内装仕上げ工事(ターンキー方式)。"
+    }
+  },
+  {
+    "slug": "quan-chi-factory",
+    "en": {
+      "Name": "Quan Chi Factory",
+      "Description": "Factory design for Quan Chi at VSIP IIA."
+    },
+    "zh": {
+      "Name": "Quan Chi工厂",
+      "Description": "为VSIP IIA的Quan Chi设计工厂。"
+    },
+    "ja": {
+      "Name": "Quan Chi工場",
+      "Description": "VSIP IIAにおけるQuan Chiの工場設計。"
+    }
+  },
+  {
+    "slug": "velrco-office",
+    "en": {
+      "Name": "Velrco Office",
+      "Description": "Office design and construction for Velrco."
+    },
+    "zh": {
+      "Name": "Velrco 办公室",
+      "Description": "为 Velrco 提供的办公室设计与施工。"
+    },
+    "ja": {
+      "Name": "Velrcoオフィス",
+      "Description": "Velrcoのためのオフィス設計・施工。"
+    }
+  },
+  {
+    "slug": "semivina-nissi-factory",
+    "en": {
+      "Name": "Semivina – Nissi Factory",
+      "Description": "Lighting equipment factory for a South Korean investor at VSIP II."
+    },
+    "zh": {
+      "Name": "Semivina – Nissi工厂",
+      "Description": "为韩国投资商在VSIP II建设的照明设备工厂。"
+    },
+    "ja": {
+      "Name": "Semivina – Nissi工場",
+      "Description": "VSIP IIにおける韓国投資家向け照明機器工場。"
+    }
+  },
+  {
+    "slug": "nha-may-tien-len",
+    "en": {
+      "Name": "Tien Len Factory",
+      "Description": "Client: Tien Len Joint Stock Company – Project: Dai Phuc Factory."
+    },
+    "zh": {
+      "Name": "Tien Len工厂",
+      "Description": "客户：Tien Len股份公司 — 项目：Dai Phuc工厂。"
+    },
+    "ja": {
+      "Name": "Tien Len工場",
+      "Description": "クライアント：Tien Len株式会社 — プロジェクト：Dai Phuc工場。"
+    }
+  },
+  {
+    "slug": "stc-canteen-coffee",
+    "en": {
+      "Name": "STC Canteen – Coffee",
+      "Description": "Client: Phuong Nam Star Company."
+    },
+    "zh": {
+      "Name": "STC食堂 – 咖啡厅",
+      "Description": "客户：Phuong Nam Star Company。"
+    },
+    "ja": {
+      "Name": "STC食堂 – コーヒー",
+      "Description": "クライアント：Phuong Nam Star Company。"
+    }
+  },
+  {
+    "slug": "nha-hang-wrap-roll",
+    "en": {
+      "Name": "Wrap & Roll Restaurant",
+      "Description": "Design and construction of Wrap & Roll restaurant."
+    },
+    "zh": {
+      "Name": "Wrap & Roll 餐厅",
+      "Description": "Wrap & Roll 餐厅的设计与施工。"
+    },
+    "ja": {
+      "Name": "Wrap & Roll レストラン",
+      "Description": "Wrap & Roll レストランの設計・施工。"
+    }
+  },
+  {
+    "slug": "nha-o-gia-dinh",
+    "en": {
+      "Name": "Family Residence",
+      "Description": "Design and construction of a family residential building."
+    },
+    "zh": {
+      "Name": "家庭住宅",
+      "Description": "家庭住宅建筑的设计与施工。"
+    },
+    "ja": {
+      "Name": "家族住宅",
+      "Description": "家族向け住宅建築の設計・施工。"
+    }
+  },
+  {
+    "slug": "nha-may-tan-thanh-long",
+    "en": {
+      "Name": "Tan Thanh Long Factory",
+      "Description": "Client: Tan Thanh Long Packaging Design & Printing Co., Ltd."
+    },
+    "zh": {
+      "Name": "Tan Thanh Long工厂",
+      "Description": "客户:Tan Thanh Long Packaging Design & Printing Co., Ltd."
+    },
+    "ja": {
+      "Name": "Tan Thanh Long工場",
+      "Description": "クライアント:Tan Thanh Long Packaging Design & Printing Co., Ltd."
+    }
+  },
+  {
+    "slug": "ray-river-resort",
+    "en": {
+      "Name": "Song Ray Resort",
+      "Description": "Design and construction of Song Ray Resort."
+    },
+    "zh": {
+      "Name": "Song Ray度假村",
+      "Description": "Song Ray度假村的设计与施工。"
+    },
+    "ja": {
+      "Name": "Song Rayリゾート",
+      "Description": "Song Rayリゾートの設計・施工。"
+    }
+  },
+  {
+    "slug": "nha-hang-okonomiyaki",
+    "en": {
+      "Name": "Okonomiyaki Restaurant",
+      "Description": "Design and construction of Okonomiyaki Restaurant."
+    },
+    "zh": {
+      "Name": "御好烧餐厅",
+      "Description": "御好烧餐厅的设计与施工。"
+    },
+    "ja": {
+      "Name": "お好み焼きレストラン",
+      "Description": "お好み焼きレストランの設計・施工。"
+    }
+  },
+  {
+    "slug": "nha-may-bmt",
+    "en": {
+      "Name": "BMT Factory",
+      "Description": "Location: No. 51–52 Nhut Chanh, Ben Luc Industrial Park, Long An Province."
+    },
+    "zh": {
+      "Name": "BMT工厂",
+      "Description": "地址：Long An省Ben Luc工业区Nhut Chanh路51–52号。"
+    },
+    "ja": {
+      "Name": "BMT工場",
+      "Description": "所在地：Long An省Ben Luc工業団地Nhut Chanh通り51～52号。"
+    }
+  },
+  {
+    "slug": "nha-hang-hokkaido",
+    "en": {
+      "Name": "Hokkaido Restaurant",
+      "Description": "Design and construction of Hokkaido Restaurant."
+    },
+    "zh": {
+      "Name": "Hokkaido餐厅",
+      "Description": "Hokkaido餐厅的设计与施工。"
+    },
+    "ja": {
+      "Name": "Hokkaidoレストラン",
+      "Description": "Hokkaidoレストランの設計・施工。"
+    }
+  },
+  {
+    "slug": "nha-may-inahvina",
+    "en": {
+      "Name": "Inahvina Factory",
+      "Description": "Client: INAHVINA Co., Ltd."
+    },
+    "zh": {
+      "Name": "Inahvina工厂",
+      "Description": "客户：INAHVINA Co., Ltd.。"
+    },
+    "ja": {
+      "Name": "Inahvina工場",
+      "Description": "クライアント：INAHVINA Co., Ltd.。"
+    }
+  },
+  {
+    "slug": "nha-may-dong-nhan",
+    "en": {
+      "Name": "Dong Nhan Factory",
+      "Description": "Client: Dong Nhan Co., Ltd."
+    },
+    "zh": {
+      "Name": "Dong Nhan 工厂",
+      "Description": "客户：Dong Nhan Co., Ltd."
+    },
+    "ja": {
+      "Name": "Dong Nhan 工場",
+      "Description": "クライアント：Dong Nhan Co., Ltd."
+    }
+  },
+  {
+    "slug": "khach-san-toan-vinh",
+    "en": {
+      "Name": "Toan Vinh Hotel",
+      "Description": "Design and construction of Toan Vinh Hotel."
+    },
+    "zh": {
+      "Name": "Toan Vinh酒店",
+      "Description": "Toan Vinh酒店的设计与施工。"
+    },
+    "ja": {
+      "Name": "Toan Vinhホテル",
+      "Description": "Toan Vinhホテルの設計・施工。"
+    }
+  },
+  {
+    "slug": "khach-san-y-linh",
+    "en": {
+      "Name": "Y Linh Hotel",
+      "Description": "Design and construction of Y Linh Hotel."
+    },
+    "zh": {
+      "Name": "Y Linh酒店",
+      "Description": "Y Linh酒店的设计与施工。"
+    },
+    "ja": {
+      "Name": "Y Linhホテル",
+      "Description": "Y Linhホテルの設計・施工。"
+    }
+  },
+  {
+    "slug": "ky-tuc-xa-soul-gear",
+    "en": {
+      "Name": "Soul Gear VINA Dormitory",
+      "Description": "Client: Soul Gear VINA Company (South Korea)."
+    },
+    "zh": {
+      "Name": "Soul Gear VINA宿舍",
+      "Description": "客户：Soul Gear VINA公司（韩国）。"
+    },
+    "ja": {
+      "Name": "Soul Gear VINA寮",
+      "Description": "クライアント：Soul Gear VINA社（韓国）。"
+    }
+  },
+  {
+    "slug": "nha-may-js",
+    "en": {
+      "Name": "JS Factory",
+      "Description": "Location: My Phuoc 2 Industrial Park, Binh Duong Province."
+    },
+    "zh": {
+      "Name": "JS 工厂",
+      "Description": "位置：Binh Duong 省 My Phuoc 2 工业园区。"
+    },
+    "ja": {
+      "Name": "JS工場",
+      "Description": "所在地：Binh Duong省 My Phuoc 2工業団地。"
+    }
+  },
+  {
+    "slug": "truong-quoc-te-acg",
+    "en": {
+      "Name": "ACG International School",
+      "Description": "Location: District 2, Ho Chi Minh City."
+    },
+    "zh": {
+      "Name": "ACG国际学校",
+      "Description": "地址：Ho Chi Minh City第2郡。"
+    },
+    "ja": {
+      "Name": "ACG国際学校",
+      "Description": "所在地：Ho Chi Minh City 第2区。"
+    }
+  },
+  {
+    "slug": "khach-san-eden",
+    "en": {
+      "Name": "Eden Hotel",
+      "Description": "Location: 60 Mai Xuan Thuong Street, Quy Nhon City."
+    },
+    "zh": {
+      "Name": "Eden酒店",
+      "Description": "地址：Quy Nhon市Mai Xuan Thuong街60号。"
+    },
+    "ja": {
+      "Name": "Edenホテル",
+      "Description": "所在地：Quy Nhon市Mai Xuan Thuong通り60番地。"
+    }
+  },
+  {
+    "slug": "nha-may-dream-mekong",
+    "en": {
+      "Name": "Dream Mekong Factory",
+      "Description": "Design and construction of Dream Mekong Factory."
+    },
+    "zh": {
+      "Name": "Dream Mekong工厂",
+      "Description": "Dream Mekong工厂的设计与施工。"
+    },
+    "ja": {
+      "Name": "Dream Mekong工場",
+      "Description": "Dream Mekong工場の設計・施工。"
+    }
+  },
+  {
+    "slug": "long-khanh-hotel-resort",
+    "en": {
+      "Name": "Long Khanh Hotel & Resort",
+      "Description": "Client: Long Khanh Hotel & Resort."
+    },
+    "zh": {
+      "Name": "Long Khanh 酒店度假村",
+      "Description": "客户：Long Khanh Hotel & Resort。"
+    },
+    "ja": {
+      "Name": "Long Khanh ホテル&リゾート",
+      "Description": "クライアント：Long Khanh Hotel & Resort。"
+    }
+  },
+  {
+    "slug": "suzuki-showroom",
+    "en": {
+      "Name": "Suzuki Showroom",
+      "Description": "Location: District 5, Ho Chi Minh City."
+    },
+    "zh": {
+      "Name": "铃木展厅",
+      "Description": "地点:胡志明市第5郡。"
+    },
+    "ja": {
+      "Name": "スズキショールーム",
+      "Description": "所在地:ホーチミン市5区。"
+    }
+  },
+  {
+    "slug": "kv-battery",
+    "en": {
+      "Name": "K&V Battery Factory & Office",
+      "Description": "Client: K & V Battery Co., LTD (South Korea)."
+    },
+    "zh": {
+      "Name": "K&V电池厂及办公楼",
+      "Description": "客户:K & V Battery Co., LTD(韩国)。"
+    },
+    "ja": {
+      "Name": "K&Vバッテリー工場・オフィス",
+      "Description": "クライアント:K & V Battery Co., LTD(韓国)。"
+    }
+  },
+  {
+    "slug": "sctv-office",
+    "en": {
+      "Name": "SCTV Office",
+      "Description": "Design and construction of SCTV office in District 2, Ho Chi Minh City."
+    },
+    "zh": {
+      "Name": "SCTV办公楼",
+      "Description": "位于胡志明市第2郡的SCTV办公楼设计与施工。"
+    },
+    "ja": {
+      "Name": "SCTVオフィス",
+      "Description": "ホーチミン市2区におけるSCTVオフィスの設計・施工。"
+    }
+  }
+]
