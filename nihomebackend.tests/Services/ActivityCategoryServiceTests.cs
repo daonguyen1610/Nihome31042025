@@ -65,6 +65,7 @@ public class ActivityCategoryServiceTests : IDisposable
         Assert.Equal(2, result.Count);
         Assert.Contains(result, item => item.Name == "Event");
         Assert.Contains(result, item => item.Name == "News");
+        Assert.All(result, item => Assert.Equal(item.Name, item.NameVi));
     }
 
     [Fact]
@@ -79,6 +80,17 @@ public class ActivityCategoryServiceTests : IDisposable
 
         Assert.Single(result);
         Assert.Equal("Active", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_FallsBackNameVi_ForLegacyRows()
+    {
+        _db.ActivityCategories.Add(new ActivityCategory { Name = "Legacy", NameVi = "", IsActive = true, SortOrder = 1 });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync();
+
+        Assert.Equal("Legacy", result[0].NameVi);
     }
 
     [Fact]

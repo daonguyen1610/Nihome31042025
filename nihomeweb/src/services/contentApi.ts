@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import { resolveAssetUrl } from "@/lib/url";
 
 // --- Types matching backend DTOs ---
 
@@ -262,50 +263,11 @@ export interface EntityTranslationRow {
   value: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
-
-function getApiOrigin() {
-  const base = API_BASE;
-  if (!base) return "";
-
-  try {
-    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
-    return new URL(base, origin).origin;
-  } catch {
-    return "";
-  }
-}
-
-function resolveImageUrl(value: string) {
-  if (!value) return value;
-  if (value.startsWith("data:")) return value;
-
-  const apiOrigin = getApiOrigin();
-
-  // Normalize absolute API-origin URLs to path-only so they resolve correctly
-  // regardless of which host the app is deployed on.
-  if (apiOrigin && value.startsWith(apiOrigin + "/")) {
-    value = value.slice(apiOrigin.length);
-  } else {
-    // Strip legacy localhost absolute URLs (old seed data may have http://localhost:PORT/...)
-    const m = value.match(/^https?:\/\/localhost(?::\d+)?(\/.*)/);
-    if (m) value = m[1];
-  }
-
-  if (value.startsWith("http://") || value.startsWith("https://")) {
-    return value; // External / CDN URL — pass through unchanged
-  }
-
-  if (!value.startsWith("/")) return value;
-
-  return apiOrigin ? `${apiOrigin}${value}` : value;
-}
-
 function mapActivity(item: ActivityResponse): ActivityResponse {
   return {
     ...item,
-    imageUrl: resolveImageUrl(item.imageUrl),
-    gallery: item.gallery?.map(resolveImageUrl),
+    imageUrl: resolveAssetUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveAssetUrl),
     content: item.content.map(resolveContentItem),
   };
 }
@@ -313,8 +275,8 @@ function mapActivity(item: ActivityResponse): ActivityResponse {
 function mapNews(item: NewsResponse): NewsResponse {
   return {
     ...item,
-    imageUrl: resolveImageUrl(item.imageUrl),
-    gallery: item.gallery?.map(resolveImageUrl),
+    imageUrl: resolveAssetUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveAssetUrl),
     content: item.content.map(resolveContentItem),
   };
 }
@@ -322,23 +284,23 @@ function mapNews(item: NewsResponse): NewsResponse {
 function mapProject(item: ProjectResponse): ProjectResponse {
   return {
     ...item,
-    imageUrl: resolveImageUrl(item.imageUrl),
-    gallery: item.gallery?.map(resolveImageUrl),
+    imageUrl: resolveAssetUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveAssetUrl),
     content: item.content?.map(resolveContentItem),
   };
 }
 
 function mapLogo(item: LogoResponse): LogoResponse {
-  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+  return { ...item, imageUrl: resolveAssetUrl(item.imageUrl) };
 }
 
 function mapSlideshow(item: SlideshowResponse): SlideshowResponse {
-  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+  return { ...item, imageUrl: resolveAssetUrl(item.imageUrl) };
 }
 
 function resolveContentItem(item: ContentItem): ContentItem {
   if (typeof item === "string") return item;
-  if (item.type === "image") return { ...item, url: resolveImageUrl(item.url) };
+  if (item.type === "image") return { ...item, url: resolveAssetUrl(item.url) };
   return item; // text and youtube pass through unchanged
 }
 
@@ -346,7 +308,7 @@ function mapService(item: ServiceResponse): ServiceResponse {
   return {
     ...item,
     introBlocks: (item.introBlocks ?? []).map((b) =>
-      b.imageUrl ? { ...b, imageUrl: resolveImageUrl(b.imageUrl) } : b
+      b.imageUrl ? { ...b, imageUrl: resolveAssetUrl(b.imageUrl) } : b
     ),
   };
 }
@@ -429,7 +391,7 @@ export const contentApi = {
   // About sections
   getAboutSections: (lang = "vi", activeOnly = true) =>
     api.get<AboutSectionResponse[]>(`/about-sections?lang=${lang}&activeOnly=${activeOnly}`)
-      .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveImageUrl(x.imageUrl) })) })),
+      .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveAssetUrl(x.imageUrl) })) })),
 
   // Job positions (public)
   getJobPositions: (lang = "vi") =>

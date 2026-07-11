@@ -131,6 +131,7 @@ public class ActivityCategoryService(AppDbContext db, ILogger<ActivityCategorySe
             .Select((name, index) => new ActivityCategory
             {
                 Name = name,
+                NameVi = name,
                 IsActive = true,
                 SortOrder = index + 1,
             })
@@ -198,10 +199,10 @@ public class ActivityCategoryService(AppDbContext db, ILogger<ActivityCategorySe
     {
         Id = item.Id,
         Name = item.Name,
-        NameVi = item.NameVi,
-        NameEn = item.NameEn,
-        NameZh = item.NameZh,
-        NameJa = item.NameJa,
+        NameVi = string.IsNullOrWhiteSpace(item.NameVi) ? item.Name : item.NameVi,
+        NameEn = item.NameEn ?? "",
+        NameZh = item.NameZh ?? "",
+        NameJa = item.NameJa ?? "",
         IsActive = item.IsActive,
         SortOrder = item.SortOrder,
     };

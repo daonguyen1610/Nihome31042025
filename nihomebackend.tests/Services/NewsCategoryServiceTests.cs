@@ -33,6 +33,18 @@ public class NewsCategoryServiceTests : IDisposable
         var result = await _sut.GetAllAsync();
 
         Assert.Equal(["Company", "Project"], result.Select(c => c.Name).ToArray());
+        Assert.All(result, c => Assert.Equal(c.Name, c.NameVi));
+    }
+
+    [Fact]
+    public async Task GetAll_FallsBackNameVi_ForLegacyRows()
+    {
+        _db.NewsCategories.Add(new NewsCategory { Name = "Legacy", NameVi = "", IsActive = true, SortOrder = 1 });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync();
+
+        Assert.Equal("Legacy", result[0].NameVi);
     }
 
     [Fact]

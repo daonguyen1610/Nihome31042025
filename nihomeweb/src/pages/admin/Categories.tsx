@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { useI18n, type Lang } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
+import { localizedName } from "@/lib/category";
 import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
@@ -44,13 +45,6 @@ const emptyForm: CategoryFormData = {
   nameJa: "",
   isActive: true,
   sortOrder: 0,
-};
-
-const localizedName = (item: CategoryItem, lang: Lang): string => {
-  if (lang === "en") return item.nameEn || item.nameVi || item.name;
-  if (lang === "zh") return item.nameZh || item.nameVi || item.name;
-  if (lang === "ja") return item.nameJa || item.nameVi || item.name;
-  return item.nameVi || item.name;
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -119,7 +113,7 @@ const Categories = () => {
   const filtered = useMemo(
     () => items.filter((i) =>
       localizedName(i, lang).toLowerCase().includes(q.trim().toLowerCase()) ||
-      i.nameVi.toLowerCase().includes(q.trim().toLowerCase())
+      (i.nameVi || i.name || "").toLowerCase().includes(q.trim().toLowerCase())
     ),
     [items, q, lang],
   );

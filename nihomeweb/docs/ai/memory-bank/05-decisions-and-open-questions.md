@@ -68,6 +68,10 @@ Rationale: To reduce backend load without widening scope to SignalR, the admin s
 
 Rationale: User and role management now uses the ASP.NET Core `/api/users` contract, existing `UserRole` enum values, and Redux-backed auth route guards. Roles remain fixed system roles in this phase; no dynamic role table is introduced.
 
+### 2026-07-11 - Backend-served media URLs are host-relative
+
+Rationale: The frontend is built into and served by the ASP.NET backend in deployment, so seeded/stored media should use paths such as `/images/...` instead of fixed development hosts. Frontend URL helpers may resolve path-only media against the current API origin for split dev servers, but must not special-case `localhost`.
+
 ## Open Questions
 
 ### Should the `legacy/` reference folders remain long term?

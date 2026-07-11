@@ -140,6 +140,7 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
         var created = new ProjectCategory
         {
             Name = trimmed,
+            NameVi = trimmed,
             IsActive = true,
             SortOrder = maxSortOrder + 1,
         };
@@ -175,6 +176,7 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
             .Select((name, index) => new ProjectCategory
             {
                 Name = name,
+                NameVi = name,
                 IsActive = true,
                 SortOrder = index + 1,
             })
@@ -239,10 +241,10 @@ public class ProjectCategoryService(AppDbContext db, ILogger<ProjectCategoryServ
     {
         Id = item.Id,
         Name = item.Name,
-        NameVi = item.NameVi,
-        NameEn = item.NameEn,
-        NameZh = item.NameZh,
-        NameJa = item.NameJa,
+        NameVi = string.IsNullOrWhiteSpace(item.NameVi) ? item.Name : item.NameVi,
+        NameEn = item.NameEn ?? "",
+        NameZh = item.NameZh ?? "",
+        NameJa = item.NameJa ?? "",
         IsActive = item.IsActive,
         SortOrder = item.SortOrder,
     };

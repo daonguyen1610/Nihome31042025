@@ -39,6 +39,7 @@ Last reviewed: 2026-05-16
 - Vite client-exposed variables must use the `VITE_` prefix.
 - Do not document env variables that are not actually committed or configured.
 - Do not hardcode backend base URLs in presentational UI.
+- Store backend-served media as host-relative paths such as `/images/...`; frontend helpers may resolve relative paths against the current API origin, but must not special-case fixed development hosts.
 - If the frontend depends on backend proxying or Vite dev-server configuration, commit that configuration and document it in the same task.
 
 ## Runtime Direction

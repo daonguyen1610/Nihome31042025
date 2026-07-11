@@ -15,6 +15,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { toHostRelativeUrl } from "@/lib/url";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
@@ -30,14 +31,6 @@ function fieldHint(field: string): string | null {
   if (field === "IntroBlocks") return 'Separate blocks with "---" on its own line. You can use Enter and blank lines freely within each block.';
   if (field === "Content") return 'Paragraphs separated by blank lines. Images are shown as [IMAGE: /path.jpg] — translate only the text paragraphs; keep image/video lines unchanged.';
   return null;
-}
-
-/** Strip localhost/API-origin prefix so stored URLs are always host-relative. */
-function normalizeContentUrl(url: string): string {
-  if (!url) return url;
-  const m = url.match(/^https?:\/\/localhost(?::\d+)?(\/.*)/);
-  if (m) return m[1];
-  return url;
 }
 
 /**
@@ -69,7 +62,7 @@ function jsonToPlainText(raw: string, field: string): string {
         const b = item as Record<string, unknown>;
         if (b.type === "text" && typeof b.value === "string") return b.value;
         if (b.type === "image" && typeof b.url === "string") {
-          const url = normalizeContentUrl(b.url);
+          const url = toHostRelativeUrl(b.url);
           const caption = typeof b.caption === "string" ? ` | ${b.caption}` : "";
           return `[IMAGE: ${url}${caption}]`;
         }
@@ -371,7 +364,7 @@ const TranslationsPage = () => {
             .map((it) => {
               const b = it as Record<string, string>;
               if (b.type === "image") {
-                const url = normalizeContentUrl(b.url);
+                const url = toHostRelativeUrl(b.url);
                 const caption = b.caption ? ` | ${b.caption}` : "";
                 return `[IMAGE: ${url}${caption}]`;
               }

@@ -1303,15 +1303,15 @@
   {
     "slug": "swimming-pool-service-building",
     "name": "Nhà Dịch Vụ Hồ Bơi",
-    "imageUrl": "http://localhost:5043/images/projects/swimming-pool-service-building/01.png",
+    "imageUrl": "/images/projects/swimming-pool-service-building/01.png",
     "gallery": [
-      "http://localhost:5043/images/projects/swimming-pool-service-building/01.png",
-      "http://localhost:5043/images/projects/swimming-pool-service-building/02.png",
-      "http://localhost:5043/images/projects/swimming-pool-service-building/03.png",
-      "http://localhost:5043/images/projects/swimming-pool-service-building/04.png",
-      "http://localhost:5043/images/projects/swimming-pool-service-building/05.png",
-      "http://localhost:5043/images/projects/swimming-pool-service-building/06.png",
-      "http://localhost:5043/images/projects/swimming-pool-service-building/07.png"
+      "/images/projects/swimming-pool-service-building/01.png",
+      "/images/projects/swimming-pool-service-building/02.png",
+      "/images/projects/swimming-pool-service-building/03.png",
+      "/images/projects/swimming-pool-service-building/04.png",
+      "/images/projects/swimming-pool-service-building/05.png",
+      "/images/projects/swimming-pool-service-building/06.png",
+      "/images/projects/swimming-pool-service-building/07.png"
     ],
     "category": "Công trình công cộng",
     "client": "Thu Thiem Group Joint Stock Company",
@@ -1329,16 +1329,16 @@
   {
     "slug": "thu-duc-multi-purpose-building",
     "name": "Nhà Tập Đa Năng Thủ Đức",
-    "imageUrl": "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/01.png",
+    "imageUrl": "/images/projects/thu-duc-multi-purpose-building/01.png",
     "gallery": [
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/01.png",
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/02.png",
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/03.png",
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/04.png",
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/05.png",
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/06.png",
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/07.png",
-      "http://localhost:5043/images/projects/thu-duc-multi-purpose-building/08.png"
+      "/images/projects/thu-duc-multi-purpose-building/01.png",
+      "/images/projects/thu-duc-multi-purpose-building/02.png",
+      "/images/projects/thu-duc-multi-purpose-building/03.png",
+      "/images/projects/thu-duc-multi-purpose-building/04.png",
+      "/images/projects/thu-duc-multi-purpose-building/05.png",
+      "/images/projects/thu-duc-multi-purpose-building/06.png",
+      "/images/projects/thu-duc-multi-purpose-building/07.png",
+      "/images/projects/thu-duc-multi-purpose-building/08.png"
     ],
     "category": "Công trình công cộng",
     "client": "Thu Thiem Group Joint Stock Company",
@@ -1356,16 +1356,16 @@
   {
     "slug": "thu-duc-wedding-banquet",
     "name": "Nhà Hàng Tiệc Cưới Thủ Đức",
-    "imageUrl": "http://localhost:5043/images/projects/thu-duc-wedding-banquet/01.png",
+    "imageUrl": "/images/projects/thu-duc-wedding-banquet/01.png",
     "gallery": [
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/01.png",
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/02.png",
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/03.png",
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/04.png",
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/05.png",
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/06.png",
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/07.png",
-      "http://localhost:5043/images/projects/thu-duc-wedding-banquet/08.png"
+      "/images/projects/thu-duc-wedding-banquet/01.png",
+      "/images/projects/thu-duc-wedding-banquet/02.png",
+      "/images/projects/thu-duc-wedding-banquet/03.png",
+      "/images/projects/thu-duc-wedding-banquet/04.png",
+      "/images/projects/thu-duc-wedding-banquet/05.png",
+      "/images/projects/thu-duc-wedding-banquet/06.png",
+      "/images/projects/thu-duc-wedding-banquet/07.png",
+      "/images/projects/thu-duc-wedding-banquet/08.png"
     ],
     "category": "Nhà hàng",
     "client": "Thu Thiem Group Joint Stock Company",
@@ -1383,20 +1383,20 @@
   {
     "slug": "thu-duc-sport-service-building",
     "name": "Nhà Dịch Vụ - TDTT Thủ Đức",
-    "imageUrl": "http://localhost:5043/images/projects/thu-duc-sport-service-building/01.png",
+    "imageUrl": "/images/projects/thu-duc-sport-service-building/01.png",
     "gallery": [
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/01.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/02.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/03.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/04.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/05.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/06.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/07.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/08.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/09.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/10.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/11.png",
-      "http://localhost:5043/images/projects/thu-duc-sport-service-building/12.png"
+      "/images/projects/thu-duc-sport-service-building/01.png",
+      "/images/projects/thu-duc-sport-service-building/02.png",
+      "/images/projects/thu-duc-sport-service-building/03.png",
+      "/images/projects/thu-duc-sport-service-building/04.png",
+      "/images/projects/thu-duc-sport-service-building/05.png",
+      "/images/projects/thu-duc-sport-service-building/06.png",
+      "/images/projects/thu-duc-sport-service-building/07.png",
+      "/images/projects/thu-duc-sport-service-building/08.png",
+      "/images/projects/thu-duc-sport-service-building/09.png",
+      "/images/projects/thu-duc-sport-service-building/10.png",
+      "/images/projects/thu-duc-sport-service-building/11.png",
+      "/images/projects/thu-duc-sport-service-building/12.png"
     ],
     "category": "Công trình công cộng",
     "client": "Thu Thiem Group Joint Stock Company",
@@ -1414,34 +1414,34 @@
   {
     "slug": "b37-interior",
     "name": "Nội Thất - Văn Phòng B37",
-    "imageUrl": "http://localhost:5043/images/projects/b37-interior/01.png",
+    "imageUrl": "/images/projects/b37-interior/01.png",
     "gallery": [
-      "http://localhost:5043/images/projects/b37-interior/01.png",
-      "http://localhost:5043/images/projects/b37-interior/02.png",
-      "http://localhost:5043/images/projects/b37-interior/03.png",
-      "http://localhost:5043/images/projects/b37-interior/04.png",
-      "http://localhost:5043/images/projects/b37-interior/05.png",
-      "http://localhost:5043/images/projects/b37-interior/06.png",
-      "http://localhost:5043/images/projects/b37-interior/07.png",
-      "http://localhost:5043/images/projects/b37-interior/08.png",
-      "http://localhost:5043/images/projects/b37-interior/09.png",
-      "http://localhost:5043/images/projects/b37-interior/10.png",
-      "http://localhost:5043/images/projects/b37-interior/11.png",
-      "http://localhost:5043/images/projects/b37-interior/12.png",
-      "http://localhost:5043/images/projects/b37-interior/13.png",
-      "http://localhost:5043/images/projects/b37-interior/14.png",
-      "http://localhost:5043/images/projects/b37-interior/15.png",
-      "http://localhost:5043/images/projects/b37-interior/16.png",
-      "http://localhost:5043/images/projects/b37-interior/17.png",
-      "http://localhost:5043/images/projects/b37-interior/18.png",
-      "http://localhost:5043/images/projects/b37-interior/19.png",
-      "http://localhost:5043/images/projects/b37-interior/20.png",
-      "http://localhost:5043/images/projects/b37-interior/21.png",
-      "http://localhost:5043/images/projects/b37-interior/22.png",
-      "http://localhost:5043/images/projects/b37-interior/23.png",
-      "http://localhost:5043/images/projects/b37-interior/24.png",
-      "http://localhost:5043/images/projects/b37-interior/25.png",
-      "http://localhost:5043/images/projects/b37-interior/26.png"
+      "/images/projects/b37-interior/01.png",
+      "/images/projects/b37-interior/02.png",
+      "/images/projects/b37-interior/03.png",
+      "/images/projects/b37-interior/04.png",
+      "/images/projects/b37-interior/05.png",
+      "/images/projects/b37-interior/06.png",
+      "/images/projects/b37-interior/07.png",
+      "/images/projects/b37-interior/08.png",
+      "/images/projects/b37-interior/09.png",
+      "/images/projects/b37-interior/10.png",
+      "/images/projects/b37-interior/11.png",
+      "/images/projects/b37-interior/12.png",
+      "/images/projects/b37-interior/13.png",
+      "/images/projects/b37-interior/14.png",
+      "/images/projects/b37-interior/15.png",
+      "/images/projects/b37-interior/16.png",
+      "/images/projects/b37-interior/17.png",
+      "/images/projects/b37-interior/18.png",
+      "/images/projects/b37-interior/19.png",
+      "/images/projects/b37-interior/20.png",
+      "/images/projects/b37-interior/21.png",
+      "/images/projects/b37-interior/22.png",
+      "/images/projects/b37-interior/23.png",
+      "/images/projects/b37-interior/24.png",
+      "/images/projects/b37-interior/25.png",
+      "/images/projects/b37-interior/26.png"
     ],
     "category": "Nội thất văn phòng",
     "client": "Nihome Co., Ltd.",
@@ -1459,13 +1459,13 @@
   {
     "slug": "d22-factory",
     "name": "Nhà Xưởng D22",
-    "imageUrl": "http://localhost:5043/images/projects/d22-factory/01.png",
+    "imageUrl": "/images/projects/d22-factory/01.png",
     "gallery": [
-      "http://localhost:5043/images/projects/d22-factory/01.png",
-      "http://localhost:5043/images/projects/d22-factory/02.png",
-      "http://localhost:5043/images/projects/d22-factory/03.png",
-      "http://localhost:5043/images/projects/d22-factory/04.png",
-      "http://localhost:5043/images/projects/d22-factory/05.png"
+      "/images/projects/d22-factory/01.png",
+      "/images/projects/d22-factory/02.png",
+      "/images/projects/d22-factory/03.png",
+      "/images/projects/d22-factory/04.png",
+      "/images/projects/d22-factory/05.png"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "NATCO Vietnam Co., Ltd.",
@@ -1485,10 +1485,10 @@
     "name": "Nhà Máy Semivina – Nissi",
     "imageUrl": "/images/upload/projects/semivina-nissi-factory/c8e28129bfe6405bb1b6c3aeacc1f4c7.jpeg",
     "gallery": [
-      "http://localhost:5043/images/projects/semivina-nissi-factory/01.jpg",
-      "http://localhost:5043/images/projects/semivina-nissi-factory/02.jpg",
-      "http://localhost:5043/images/projects/semivina-nissi-factory/03.jpg",
-      "http://localhost:5043/images/projects/semivina-nissi-factory/04.jpg",
+      "/images/projects/semivina-nissi-factory/01.jpg",
+      "/images/projects/semivina-nissi-factory/02.jpg",
+      "/images/projects/semivina-nissi-factory/03.jpg",
+      "/images/projects/semivina-nissi-factory/04.jpg",
       "/images/upload/projects/semivina-nissi-factory/20b0743d627d4ac5b33ba779bafad0d9.jpg",
       "/images/upload/projects/semivina-nissi-factory/64bb70f35b77487b8ea8b2aeae53a1fd.jpg"
     ],
@@ -1508,11 +1508,11 @@
   {
     "slug": "nha-may-tien-len",
     "name": "Nhà Máy Tiến Lên",
-    "imageUrl": "http://localhost:5043/images/projects/nha-may-tien-len/img-01.jpg",
+    "imageUrl": "/images/projects/nha-may-tien-len/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/nha-may-tien-len/img-02.jpg",
-      "http://localhost:5043/images/projects/nha-may-tien-len/img-03.jpg",
-      "http://localhost:5043/images/projects/nha-may-tien-len/img-04.jpg"
+      "/images/projects/nha-may-tien-len/img-02.jpg",
+      "/images/projects/nha-may-tien-len/img-03.jpg",
+      "/images/projects/nha-may-tien-len/img-04.jpg"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "Tập đoàn Tiến Lên",
@@ -1530,18 +1530,18 @@
   {
     "slug": "stc-canteen-coffee",
     "name": "STC Canteen – Coffee",
-    "imageUrl": "http://localhost:5043/images/projects/quan-ca-phe-stc/img-02.jpg",
+    "imageUrl": "/images/projects/quan-ca-phe-stc/img-02.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-03.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-01.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-04.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-05.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-07.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-08.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-09.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-11.jpg",
-      "http://localhost:5043/images/projects/stc-canteen-coffee-4/img-10.jpg",
-      "http://localhost:5043/images/projects/quan-ca-phe-stc/img-10.jpg"
+      "/images/projects/quan-ca-phe-stc/img-03.jpg",
+      "/images/projects/quan-ca-phe-stc/img-01.jpg",
+      "/images/projects/quan-ca-phe-stc/img-04.jpg",
+      "/images/projects/quan-ca-phe-stc/img-05.jpg",
+      "/images/projects/quan-ca-phe-stc/img-07.jpg",
+      "/images/projects/quan-ca-phe-stc/img-08.jpg",
+      "/images/projects/quan-ca-phe-stc/img-09.jpg",
+      "/images/projects/quan-ca-phe-stc/img-11.jpg",
+      "/images/projects/stc-canteen-coffee-4/img-10.jpg",
+      "/images/projects/quan-ca-phe-stc/img-10.jpg"
     ],
     "category": "Nhà hàng",
     "client": "Công ty Phương Nam Star",
@@ -1559,13 +1559,13 @@
   {
     "slug": "nha-hang-wrap-roll",
     "name": "Nhà Hàng Wrap & Roll",
-    "imageUrl": "http://localhost:5043/images/projects/nha-hang-wrap-roll/img-01.JPG",
+    "imageUrl": "/images/projects/nha-hang-wrap-roll/img-01.JPG",
     "gallery": [
-      "http://localhost:5043/images/projects/nha-hang-wrap-roll/img-02.JPG",
-      "http://localhost:5043/images/projects/nha-hang-wrap-roll/img-03.JPG",
-      "http://localhost:5043/images/projects/nha-hang-wrap-roll/img-04.JPG",
-      "http://localhost:5043/images/projects/nha-hang-wrap-roll/img-05.JPG",
-      "http://localhost:5043/images/projects/nha-hang-wrap-roll/img-06.JPG"
+      "/images/projects/nha-hang-wrap-roll/img-02.JPG",
+      "/images/projects/nha-hang-wrap-roll/img-03.JPG",
+      "/images/projects/nha-hang-wrap-roll/img-04.JPG",
+      "/images/projects/nha-hang-wrap-roll/img-05.JPG",
+      "/images/projects/nha-hang-wrap-roll/img-06.JPG"
     ],
     "category": "Nhà hàng",
     "client": "Công ty cổ phần nhà hàng gói & cuốn",
@@ -1583,11 +1583,11 @@
   {
     "slug": "nha-may-tan-thanh-long",
     "name": "Nhà Máy Tân Thành Long",
-    "imageUrl": "http://localhost:5043/images/projects/nha-may-tan-thanh-long-4/img-01.jpg",
+    "imageUrl": "/images/projects/nha-may-tan-thanh-long-4/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/nha-may-tan-thanh-long-4/img-02.jpg",
-      "http://localhost:5043/images/projects/nha-may-tan-thanh-long-4/img-03.jpg",
-      "http://localhost:5043/images/projects/nha-may-tan-thanh-long-4/img-04.jpg"
+      "/images/projects/nha-may-tan-thanh-long-4/img-02.jpg",
+      "/images/projects/nha-may-tan-thanh-long-4/img-03.jpg",
+      "/images/projects/nha-may-tan-thanh-long-4/img-04.jpg"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "Công ty TNHH MTV Thiết Kế In Bao Bì Tân Thành Long",
@@ -1605,11 +1605,11 @@
   {
     "slug": "ray-river-resort",
     "name": "Resort Sông Ray",
-    "imageUrl": "http://localhost:5043/images/projects/ray-river-resort-2/img-01.jpg",
+    "imageUrl": "/images/projects/ray-river-resort-2/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/ray-river-resort-2/img-02.jpg",
-      "http://localhost:5043/images/projects/ray-river-resort-2/img-03.jpg",
-      "http://localhost:5043/images/projects/ray-river-resort-2/img-04.jpg"
+      "/images/projects/ray-river-resort-2/img-02.jpg",
+      "/images/projects/ray-river-resort-2/img-03.jpg",
+      "/images/projects/ray-river-resort-2/img-04.jpg"
     ],
     "category": "Khách sạn",
     "client": "River Ray  Estates",
@@ -1627,12 +1627,12 @@
   {
     "slug": "nha-hang-okonomiyaki",
     "name": "Nhà Hàng Okonomiyaki",
-    "imageUrl": "http://localhost:5043/images/projects/konimiyaki-restaurant/01.jpg",
+    "imageUrl": "/images/projects/konimiyaki-restaurant/01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/konimiyaki-restaurant/02.jpg",
-      "http://localhost:5043/images/projects/konimiyaki-restaurant/03.jpg",
-      "http://localhost:5043/images/projects/konimiyaki-restaurant/04.jpg",
-      "http://localhost:5043/images/projects/nha-hang-konimiyaki/img-05.jpg"
+      "/images/projects/konimiyaki-restaurant/02.jpg",
+      "/images/projects/konimiyaki-restaurant/03.jpg",
+      "/images/projects/konimiyaki-restaurant/04.jpg",
+      "/images/projects/nha-hang-konimiyaki/img-05.jpg"
     ],
     "category": "Nhà hàng",
     "client": "Nhà hàng Okonomiyaki",
@@ -1650,12 +1650,12 @@
   {
     "slug": "nha-may-bmt",
     "name": "Nhà Máy BMT",
-    "imageUrl": "http://localhost:5043/images/projects/nha-may-bmt/img-01.jpg",
+    "imageUrl": "/images/projects/nha-may-bmt/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/nha-may-bmt/img-02.jpg",
-      "http://localhost:5043/images/projects/nha-may-bmt/img-03.jpg",
-      "http://localhost:5043/images/projects/nha-may-bmt/img-04.jpg",
-      "http://localhost:5043/images/projects/nha-may-bmt/img-05.jpg"
+      "/images/projects/nha-may-bmt/img-02.jpg",
+      "/images/projects/nha-may-bmt/img-03.jpg",
+      "/images/projects/nha-may-bmt/img-04.jpg",
+      "/images/projects/nha-may-bmt/img-05.jpg"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "Công ty TNHH BMT",
@@ -1673,11 +1673,11 @@
   {
     "slug": "nha-may-inahvina",
     "name": "Nhà Máy Inahvina",
-    "imageUrl": "http://localhost:5043/images/projects/nha-may-cong-ty-inahvina/img-01.jpg",
+    "imageUrl": "/images/projects/nha-may-cong-ty-inahvina/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/nha-may-cong-ty-inahvina/img-02.jpg",
-      "http://localhost:5043/images/projects/nha-may-cong-ty-inahvina/img-03.jpg",
-      "http://localhost:5043/images/projects/nha-may-cong-ty-inahvina/img-05.jpg"
+      "/images/projects/nha-may-cong-ty-inahvina/img-02.jpg",
+      "/images/projects/nha-may-cong-ty-inahvina/img-03.jpg",
+      "/images/projects/nha-may-cong-ty-inahvina/img-05.jpg"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "Nhà máy Công ty TNHH INAHVINA",
@@ -1695,10 +1695,10 @@
   {
     "slug": "nha-may-dong-nhan",
     "name": "Nhà Máy Đông Nhân",
-    "imageUrl": "http://localhost:5043/images/projects/nha-may-dong-nhan/img-01.jpg",
+    "imageUrl": "/images/projects/nha-may-dong-nhan/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/nha-may-dong-nhan/img-02.jpg",
-      "http://localhost:5043/images/projects/nha-may-dong-nhan/img-03.jpg"
+      "/images/projects/nha-may-dong-nhan/img-02.jpg",
+      "/images/projects/nha-may-dong-nhan/img-03.jpg"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "Công ty TNHH Đồng Nhân",
@@ -1716,10 +1716,10 @@
   {
     "slug": "khach-san-toan-vinh",
     "name": "Khách Sạn Toàn Vinh",
-    "imageUrl": "http://localhost:5043/images/projects/khach-san-toan-vinh/img-01.jpg",
+    "imageUrl": "/images/projects/khach-san-toan-vinh/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/khach-san-toan-vinh/img-02.jpg",
-      "http://localhost:5043/images/projects/khach-san-toan-vinh/img-03.jpg"
+      "/images/projects/khach-san-toan-vinh/img-02.jpg",
+      "/images/projects/khach-san-toan-vinh/img-03.jpg"
     ],
     "category": "Khách sạn",
     "client": "Công ty Toàn Vinh",
@@ -1737,9 +1737,9 @@
   {
     "slug": "khach-san-y-linh",
     "name": "Khách Sạn Y Linh",
-    "imageUrl": "http://localhost:5043/images/projects/khach-san-y-linh/img-01.jpg",
+    "imageUrl": "/images/projects/khach-san-y-linh/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/khach-san-y-linh/img-02.jpg"
+      "/images/projects/khach-san-y-linh/img-02.jpg"
     ],
     "category": "Khách sạn",
     "client": "Y Linh Hotel",
@@ -1759,7 +1759,7 @@
     "name": "Ký Túc Xá Soul Gear VINA",
     "imageUrl": "/images/upload/projects/ky-tuc-xa-soul-gear/d433f179102f43789788a089f48136f1.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/ky-tuc-xa-soul-gear/img-01.jpg"
+      "/images/projects/ky-tuc-xa-soul-gear/img-01.jpg"
     ],
     "category": "Nhà ở",
     "client": "Công ty Soul Gear VINA (Hàn Quốc)",
@@ -1777,11 +1777,11 @@
   {
     "slug": "nha-may-js",
     "name": "Nhà Máy JS",
-    "imageUrl": "http://localhost:5043/images/projects/nha-may-js/img-01.jpg",
+    "imageUrl": "/images/projects/nha-may-js/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/nha-may-js/img-02.jpg",
-      "http://localhost:5043/images/projects/nha-may-js/img-03.jpg",
-      "http://localhost:5043/images/projects/nha-may-js/img-04.jpg"
+      "/images/projects/nha-may-js/img-02.jpg",
+      "/images/projects/nha-may-js/img-03.jpg",
+      "/images/projects/nha-may-js/img-04.jpg"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "Công ty JS",
@@ -1799,11 +1799,11 @@
   {
     "slug": "truong-quoc-te-acg",
     "name": "Trường Quốc Tế ACG",
-    "imageUrl": "http://localhost:5043/images/projects/truong-quoc-te-acg/img-01.jpg",
+    "imageUrl": "/images/projects/truong-quoc-te-acg/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/truong-quoc-te-acg/img-02.jpg",
-      "http://localhost:5043/images/projects/truong-quoc-te-acg/img-03.jpg",
-      "http://localhost:5043/images/projects/truong-quoc-te-acg/img-04.jpg"
+      "/images/projects/truong-quoc-te-acg/img-02.jpg",
+      "/images/projects/truong-quoc-te-acg/img-03.jpg",
+      "/images/projects/truong-quoc-te-acg/img-04.jpg"
     ],
     "category": "Giáo dục",
     "client": "Trường ACG",
@@ -1821,7 +1821,7 @@
   {
     "slug": "khach-san-eden",
     "name": "Khách Sạn Eden",
-    "imageUrl": "http://localhost:5043/images/projects/khach-san-eden/img-01.jpg",
+    "imageUrl": "/images/projects/khach-san-eden/img-01.jpg",
     "gallery": [],
     "category": "Khách sạn",
     "client": "Eden Hotel co.ltd",
@@ -1839,7 +1839,7 @@
   {
     "slug": "nha-may-dream-mekong",
     "name": "Nhà Máy Dream Mekong",
-    "imageUrl": "http://localhost:5043/images/projects/nha-may-dream-mekong/img-01.jpg",
+    "imageUrl": "/images/projects/nha-may-dream-mekong/img-01.jpg",
     "gallery": [],
     "category": "Nhà máy công nghiệp",
     "client": "Dream Mekong Viet nam (Hàn Quốc)",
@@ -1857,9 +1857,9 @@
   {
     "slug": "long-khanh-hotel-resort",
     "name": "Long Khánh Hotel & Resort",
-    "imageUrl": "http://localhost:5043/images/projects/long-khanh-hotel-resort/img-01.jpg",
+    "imageUrl": "/images/projects/long-khanh-hotel-resort/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/long-khanh-hotel-resort/img-02.jpg"
+      "/images/projects/long-khanh-hotel-resort/img-02.jpg"
     ],
     "category": "Khách sạn",
     "client": "Long Khánh Hotel & Resort",
@@ -1877,11 +1877,11 @@
   {
     "slug": "suzuki-showroom",
     "name": "Suzuki Showroom",
-    "imageUrl": "http://localhost:5043/images/projects/suzuki-showroom/img-01.jpg",
+    "imageUrl": "/images/projects/suzuki-showroom/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/suzuki-showroom/img-02.jpg",
-      "http://localhost:5043/images/projects/suzuki-showroom/img-03.jpg",
-      "http://localhost:5043/images/projects/suzuki-showroom/img-04.jpg"
+      "/images/projects/suzuki-showroom/img-02.jpg",
+      "/images/projects/suzuki-showroom/img-03.jpg",
+      "/images/projects/suzuki-showroom/img-04.jpg"
     ],
     "category": "Thương mại",
     "client": "Công ty Suzuki",
@@ -1899,9 +1899,9 @@
   {
     "slug": "kv-battery",
     "name": "Nhà máy & Văn phòng K&V Battery",
-    "imageUrl": "http://localhost:5043/images/projects/kv-battery-2/img-01.jpg",
+    "imageUrl": "/images/projects/kv-battery-2/img-01.jpg",
     "gallery": [
-      "http://localhost:5043/images/projects/kv-battery-2/img-02.jpg"
+      "/images/projects/kv-battery-2/img-02.jpg"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "K & V Battery Co., LTD (Hàn Quốc)",
@@ -1919,13 +1919,13 @@
   {
     "slug": "quan-chi-factory",
     "name": "Nhà Máy Quân Chí",
-    "imageUrl": "http://localhost:5043/images/projects/quan-chi-factory/01.png",
+    "imageUrl": "/images/projects/quan-chi-factory/01.png",
     "gallery": [
-      "http://localhost:5043/images/projects/quan-chi-factory/01.png",
-      "http://localhost:5043/images/projects/quan-chi-factory/02.png",
-      "http://localhost:5043/images/projects/quan-chi-factory/03.png",
-      "http://localhost:5043/images/projects/quan-chi-factory/04.png",
-      "http://localhost:5043/images/projects/quan-chi-factory/05.png"
+      "/images/projects/quan-chi-factory/01.png",
+      "/images/projects/quan-chi-factory/02.png",
+      "/images/projects/quan-chi-factory/03.png",
+      "/images/projects/quan-chi-factory/04.png",
+      "/images/projects/quan-chi-factory/05.png"
     ],
     "category": "Nhà máy công nghiệp",
     "client": "Quan Chi Co., Ltd.",
