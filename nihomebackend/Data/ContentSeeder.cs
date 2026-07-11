@@ -886,6 +886,8 @@ public static class ContentSeeder
 
     private static void SeedAboutSections(AppDbContext db)
     {
+        EnsureCatalogueDownloadsSection(db);
+
         var now = DateTime.UtcNow;
 
         var seeds = new AboutSectionContent[]
@@ -924,6 +926,27 @@ public static class ContentSeeder
             }
         }
 
+        db.SaveChanges();
+    }
+
+    private static void EnsureCatalogueDownloadsSection(AppDbContext db)
+    {
+        var existing = db.AboutSectionContents.FirstOrDefault(x => x.Slug == "downloads-main");
+        if (existing == null) return;
+
+        // Only patch the placeholder seed (url = "#"). If admin has edited the
+        // downloads, leave their content alone.
+        if (existing.ItemsJson is null || !existing.ItemsJson.Contains("\"url\":\"#\"", StringComparison.Ordinal)) return;
+
+        existing.Eyebrow = "CATALOGUE";
+        existing.TitleA = "Catalogue";
+        existing.TitleB = "& hồ sơ năng lực";
+        existing.Paragraph1 = "Tải Catalogue và các tài liệu giới thiệu năng lực, chứng nhận của NICON dành cho đối tác, khách hàng và nhà đầu tư.";
+        existing.ItemsJson = JsonSerializer.Serialize(new[]
+        {
+            new { sortOrder = 0, name = "NICON Brochure", size = "77 MB", type = "PDF", url = "/files/Nicon-brochure.pdf" },
+        });
+        existing.UpdatedAt = DateTime.UtcNow;
         db.SaveChanges();
     }
 
