@@ -282,14 +282,10 @@ function resolveImageUrl(value: string) {
 
   const apiOrigin = getApiOrigin();
 
-  // Normalize absolute API-origin URLs to path-only so they resolve correctly
-  // regardless of which host the app is deployed on.
+  // Normalize absolute API-origin URLs down to a path so the same DB row
+  // renders correctly no matter which host the app is deployed on.
   if (apiOrigin && value.startsWith(apiOrigin + "/")) {
     value = value.slice(apiOrigin.length);
-  } else {
-    // Strip legacy localhost absolute URLs (old seed data may have http://localhost:PORT/...)
-    const m = value.match(/^https?:\/\/localhost(?::\d+)?(\/.*)/);
-    if (m) value = m[1];
   }
 
   if (value.startsWith("http://") || value.startsWith("https://")) {
