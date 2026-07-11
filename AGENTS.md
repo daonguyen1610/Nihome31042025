@@ -86,6 +86,7 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 * Update the translation and content keys in the ASP .NET DbSeeder aligned with frontend.
 * Check `npm run lint` and fix the issues.
 * No hardcode like the category in the React. All need to fetch from the backend API to avoid the hardcode.
+* Do not hardcode frontend media/backend hosts such as localhost. Backend-served media must be stored as host-relative paths like `/images/...`; frontend helpers may resolve those paths against the current API origin.
 * Follow the nihomeweb/CLAUDE.md for strictly developing the web UI application.
 
 ---

@@ -160,6 +160,12 @@ When you add a new string to any component:
 
 This is a non-negotiable quality gate. A task that adds UI strings without updating the seed files is not done.
 
+## Media URL Rules
+
+Backend-served media must be stored and seeded as host-relative paths such as `/images/...`.
+
+Do not hardcode development hosts like `localhost`, fixed ports, or environment-specific DNS names in frontend URL helpers, content seeds, or admin translation tools. If the frontend runs separately from the backend during development, centralize URL resolution in `src/lib/url.ts` and resolve path-only media against the current API origin.
+
 ## Upload Folder Convention
 
 Every call to `adminApi.uploadImage()` and `adminApi.uploadVideo()` **must** pass a `folder` argument.
