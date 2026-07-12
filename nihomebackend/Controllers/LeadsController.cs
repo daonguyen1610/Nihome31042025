@@ -71,9 +71,14 @@ public class LeadsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        // Belt-and-braces: [RequirePermission] already gated the request,
+        // but re-check so the service enforces the same rule if this method
+        // is ever exercised without the attribute.
+        var canManage = await permissions.HasAsync(userId.Value, "crm.leads.manage", ct);
+
         try
         {
-            var response = await svc.CreateAsync(request, userId.Value, canManage: true, ResolveLanguage(languageHeader), ct);
+            var response = await svc.CreateAsync(request, userId.Value, canManage, ResolveLanguage(languageHeader), ct);
             audit.Log(new AuditEvent
             {
                 Action = "lead.create",
@@ -110,10 +115,11 @@ public class LeadsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.leads.view.all", ct);
+        var canManage = await permissions.HasAsync(userId.Value, "crm.leads.manage", ct);
 
         try
         {
-            var response = await svc.UpdateAsync(id, request, userId.Value, canManage: true, canSeeAll, ResolveLanguage(languageHeader), ct);
+            var response = await svc.UpdateAsync(id, request, userId.Value, canManage, canSeeAll, ResolveLanguage(languageHeader), ct);
             if (response is null) return NotFound();
 
             audit.Log(new AuditEvent
@@ -148,9 +154,11 @@ public class LeadsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        var canManage = await permissions.HasAsync(userId.Value, "crm.leads.manage", ct);
+
         try
         {
-            var removed = await svc.DeleteAsync(id, userId.Value, canManage: true, ct);
+            var removed = await svc.DeleteAsync(id, userId.Value, canManage, ct);
             if (!removed) return NotFound();
 
             audit.Log(new AuditEvent
@@ -178,9 +186,11 @@ public class LeadsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        var canConvert = await permissions.HasAsync(userId.Value, "crm.leads.convert", ct);
+
         try
         {
-            var response = await svc.ConvertAsync(id, request, userId.Value, canConvert: true, ct);
+            var response = await svc.ConvertAsync(id, request, userId.Value, canConvert, ct);
             if (response is null) return NotFound();
 
             audit.Log(new AuditEvent

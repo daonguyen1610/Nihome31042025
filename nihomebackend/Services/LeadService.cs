@@ -16,7 +16,6 @@ public class LeadService(
     private const int MaxPageSize = 100;
     private const string LeadAssignedTemplate = "lead.assigned";
     private const string SourceMasterDataCategory = "customer_source";
-    private const string StatusMasterDataCategory = "lead_status";
     private const string ManageLeadsPermission = "crm.leads.manage";
 
     public async Task<LeadListResponse> ListAsync(

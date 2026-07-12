@@ -507,7 +507,13 @@ const AdminLeads = () => {
       <Dialog open={!!detail || detailLoading} onOpenChange={(open) => !open && closeDetail()}>
         <DialogContent className="max-w-2xl">
           {detailLoading ? (
-            <PageLoading />
+            <>
+              <DialogHeader>
+                <DialogTitle className="sr-only">{t("leads.detail.title")}</DialogTitle>
+                <DialogDescription className="sr-only">{t("common.loading") || "Loading…"}</DialogDescription>
+              </DialogHeader>
+              <PageLoading />
+            </>
           ) : detail ? (
             <>
               <DialogHeader>
