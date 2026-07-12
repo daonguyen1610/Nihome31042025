@@ -1,14 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useNews, useNewsCategories } from "@/hooks/useContentApi";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { adminApi } from "@/services/adminApi";
 import type { NewsResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
@@ -50,6 +53,27 @@ const AdminNews = () => {
       toast({ title: t("common.error"), variant: "destructive" });
     }
   };
+
+  const visibleIds = useMemo(() => filtered.map((a) => a.id), [filtered]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteNews(id),
+    onAfter: async () => {
+      refetch();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [cat, q, clearSelection]);
 
   const handleExport = () => {
     downloadCsv({
@@ -123,10 +147,29 @@ const AdminNews = () => {
       </div>
 
       <div className="admin-card overflow-hidden">
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          bulkDeleting={bulkDeleting}
+          onClear={clearSelection}
+          onBulkDelete={() => void handleBulkDelete()}
+        />
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead style={{ background: "hsl(var(--admin-bg))" }}>
               <tr className="text-left">
+                <th className="w-10 px-3 py-2 text-left">
+                  <Checkbox
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(v) => toggleAllVisible(v === true)}
+                    aria-label={t("common.selectAll")}
+                  />
+                </th>
                 <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("adminNews.col.post")}</th>
                 <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("adminNews.col.category")}</th>
                 <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("common.date")}</th>
@@ -136,13 +179,20 @@ const AdminNews = () => {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                  <td colSpan={5} className="px-6 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
                     {t("adminNews.empty")}
                   </td>
                 </tr>
               ) : (
                 filtered.map((a) => (
                   <tr key={a.id} className="border-t hover:bg-muted/30 transition" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(a.id)}
+                        onCheckedChange={(v) => toggleOne(a.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${a.title}`}
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <Link to={`/admin/news/${a.slug}`} className="flex items-center gap-3 hover:opacity-80 transition">
                         <img src={a.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />

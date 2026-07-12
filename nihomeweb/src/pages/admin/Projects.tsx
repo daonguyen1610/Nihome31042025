@@ -1,14 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, MapPin, Maximize2, Edit, Trash2, Eye, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useProjects, useProjectCategories } from "@/hooks/useContentApi";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { adminApi } from "@/services/adminApi";
 import type { ProjectResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
@@ -54,6 +57,27 @@ const AdminProjects = () => {
       toast({ title: t("common.error"), variant: "destructive" });
     }
   };
+
+  const visibleIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteProject(id),
+    onAfter: async () => {
+      refetch();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [tab, cat, q, clearSelection]);
 
   const handleExport = () => {
     downloadCsv({
@@ -165,9 +189,40 @@ const AdminProjects = () => {
           {t("common.noData")}
         </div>
       ) : (
+      <div className="space-y-3">
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          bulkDeleting={bulkDeleting}
+          onClear={clearSelection}
+          onBulkDelete={() => void handleBulkDelete()}
+        />
+        <div className="flex items-center gap-2 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+          <Checkbox
+            checked={
+              allVisibleSelected
+                ? true
+                : someVisibleSelected
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={(v) => toggleAllVisible(v === true)}
+            aria-label={t("common.selectAll")}
+          />
+          <span>{t("common.selectAll")}</span>
+        </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filtered.map((p) => (
-          <div key={p.id} className="admin-card overflow-hidden group">
+          <div key={p.id} className="admin-card overflow-hidden group relative">
+            <div
+              className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Checkbox
+                checked={selectedIds.has(p.id)}
+                onCheckedChange={(v) => toggleOne(p.id, v === true)}
+                aria-label={`${t("common.selectAll")} · ${p.name}`}
+              />
+            </div>
             <Link to={`/admin/projects/${p.slug}`} className="block aspect-[16/10] overflow-hidden bg-muted relative">
               <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
               <span
@@ -216,6 +271,7 @@ const AdminProjects = () => {
             </div>
           </div>
         ))}
+      </div>
       </div>
       )}
     </AdminLayout>

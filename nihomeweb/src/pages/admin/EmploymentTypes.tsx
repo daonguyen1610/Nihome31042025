@@ -5,6 +5,9 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, type EmploymentTypeResponse, type RecruitmentDropdownOptionResponse } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 type Tab = "employment" | "experience" | "benefit";
@@ -196,6 +199,46 @@ const EmploymentTypes = () => {
   const q = isEmp ? empQ : dropQ;
   const setQ = isEmp ? setEmpQ : setDropQ;
 
+  // Bulk selection for employment types
+  const empVisibleIds = useMemo(() => filteredEmp.map((i) => i.id), [filteredEmp]);
+  const {
+    selectedIds: empSelectedIds,
+    bulkDeleting: empBulkDeleting,
+    allVisibleSelected: empAllSelected,
+    someVisibleSelected: empSomeSelected,
+    toggleAllVisible: empToggleAll,
+    toggleOne: empToggleOne,
+    clearSelection: empClearSelection,
+    handleBulkDelete: empBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds: empVisibleIds,
+    deleteOne: (id) => adminApi.deleteEmploymentType(id),
+    onAfter: async () => { await loadEmp(); },
+  });
+  useEffect(() => {
+    empClearSelection();
+  }, [empQ, empClearSelection]);
+
+  // Bulk selection for dropdown options
+  const dropVisibleIds = useMemo(() => filteredDrop.map((i) => i.id), [filteredDrop]);
+  const {
+    selectedIds: dropSelectedIds,
+    bulkDeleting: dropBulkDeleting,
+    allVisibleSelected: dropAllSelected,
+    someVisibleSelected: dropSomeSelected,
+    toggleAllVisible: dropToggleAll,
+    toggleOne: dropToggleOne,
+    clearSelection: dropClearSelection,
+    handleBulkDelete: dropBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds: dropVisibleIds,
+    deleteOne: (id) => adminApi.deleteRecruitmentDropdownOption(id),
+    onAfter: async () => { await loadDrop(dropType); },
+  });
+  useEffect(() => {
+    dropClearSelection();
+  }, [dropQ, activeTab, dropClearSelection]);
+
   return (
     <AdminLayout>
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
@@ -280,9 +323,34 @@ const EmploymentTypes = () => {
 
       {/* Table */}
       <div className="admin-card overflow-hidden">
+        <BulkActionBar
+          selectedCount={isEmp ? empSelectedIds.size : dropSelectedIds.size}
+          bulkDeleting={isEmp ? empBulkDeleting : dropBulkDeleting}
+          onClear={isEmp ? empClearSelection : dropClearSelection}
+          onBulkDelete={() => void (isEmp ? empBulkDelete() : dropBulkDelete())}
+        />
         <table className="w-full text-sm">
           <thead style={{ background: "hsl(var(--admin-bg))" }}>
             <tr className="text-left">
+              <th className="w-10 px-3 py-2 text-left">
+                <Checkbox
+                  checked={
+                    isEmp
+                      ? empAllSelected
+                        ? true
+                        : empSomeSelected
+                          ? "indeterminate"
+                          : false
+                      : dropAllSelected
+                        ? true
+                        : dropSomeSelected
+                          ? "indeterminate"
+                          : false
+                  }
+                  onCheckedChange={(v) => (isEmp ? empToggleAll(v === true) : dropToggleAll(v === true))}
+                  aria-label={t("common.selectAll")}
+                />
+              </th>
               <th className="px-5 py-3 font-semibold">{t("empTypes.code")}</th>
               <th className="px-5 py-3 font-semibold">{t("empTypes.displayName")}</th>
               <th className="px-5 py-3 font-semibold">{t("empTypes.active")}</th>
@@ -292,12 +360,19 @@ const EmploymentTypes = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>...</td></tr>
+              <tr><td colSpan={6} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>{t("empTypes.noData")}</td></tr>
+              <tr><td colSpan={6} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>{t("empTypes.noData")}</td></tr>
             ) : isEmp ? (
               (filteredEmp).map((item) => (
                 <tr key={item.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={empSelectedIds.has(item.id)}
+                      onCheckedChange={(v) => empToggleOne(item.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${item.name}`}
+                    />
+                  </td>
                   <td className="px-5 py-3 font-mono text-xs">{item.code}</td>
                   <td className="px-5 py-3 font-semibold">{item.name}</td>
                   <td className="px-5 py-3">{item.isActive ? <Check className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} /> : <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />}</td>
@@ -311,6 +386,13 @@ const EmploymentTypes = () => {
             ) : (
               (filteredDrop).map((item) => (
                 <tr key={item.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={dropSelectedIds.has(item.id)}
+                      onCheckedChange={(v) => dropToggleOne(item.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${item.name}`}
+                    />
+                  </td>
                   <td className="px-5 py-3 font-mono text-xs">{item.code}</td>
                   <td className="px-5 py-3 font-semibold">{item.name}</td>
                   <td className="px-5 py-3">{item.isActive ? <Check className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} /> : <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />}</td>

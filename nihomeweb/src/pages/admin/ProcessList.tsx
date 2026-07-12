@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Search as SearchIcon,
   Pencil,
@@ -20,8 +20,11 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useProcesses } from "@/hooks/useContentApi";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import type { ProcessResponse, ProcessAssetInfo } from "@/services/contentApi";
 import { adminApi, type UpsertProcessRequest, type ProcessAssetInput } from "@/services/adminApi";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -266,10 +269,14 @@ function ProcessCard({
   p,
   onEdit,
   onDelete,
+  selected,
+  onToggleSelect,
 }: {
   p: ProcessResponse;
   onEdit: (p: ProcessResponse) => void;
   onDelete: (p: ProcessResponse) => void;
+  selected: boolean;
+  onToggleSelect: (checked: boolean) => void;
 }) {
   const { t } = useI18n();
   const hasAssets = p.images.length > 0 || p.files.length > 0;
@@ -278,6 +285,13 @@ function ProcessCard({
   return (
     <div className="admin-card px-5 py-4 hover:shadow-md transition">
       <div className="flex items-center gap-4">
+        <div onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(v) => onToggleSelect(v === true)}
+            aria-label={`${t("common.selectAll")} · ${p.title}`}
+          />
+        </div>
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
           style={{
@@ -407,6 +421,27 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
     }
   };
 
+  const visibleIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteProcess(id),
+    onAfter: async () => {
+      await refetch();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [groupKey, q, clearSelection]);
+
   const handleAssetUpload = async (
     files: FileList | null,
     kind: "images" | "files",
@@ -534,14 +569,43 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
         </div>
       ) : (
         <div className="space-y-3">
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            bulkDeleting={bulkDeleting}
+            onClear={clearSelection}
+            onBulkDelete={() => void handleBulkDelete()}
+          />
           {filtered.length === 0 ? (
             <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
               {t("proc.empty")}
             </div>
           ) : (
-            filtered.map((p) => (
-              <ProcessCard key={p.id} p={p} onEdit={startEdit} onDelete={remove} />
-            ))
+            <>
+            <div className="flex items-center gap-2 px-2 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+              <Checkbox
+                checked={
+                  allVisibleSelected
+                    ? true
+                    : someVisibleSelected
+                      ? "indeterminate"
+                      : false
+                }
+                onCheckedChange={(v) => toggleAllVisible(v === true)}
+                aria-label={t("common.selectAll")}
+              />
+              <span>{t("common.selectAll")}</span>
+            </div>
+            {filtered.map((p) => (
+              <ProcessCard
+                key={p.id}
+                p={p}
+                onEdit={startEdit}
+                onDelete={remove}
+                selected={selectedIds.has(p.id)}
+                onToggleSelect={(v) => toggleOne(p.id, v)}
+              />
+            ))}
+            </>
           )}
         </div>
       )}

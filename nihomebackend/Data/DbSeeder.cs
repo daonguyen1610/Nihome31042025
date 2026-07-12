@@ -139,6 +139,7 @@ public static class DbSeeder
         MasterDataSeeder.Seed(db);
         NotificationTemplateSeeder.Seed(db);
         SeedBusinessRoleUsers(db);
+        SampleCrmDataSeeder.Seed(db);
     }
 
     // Phone numbers used here are stable, predictable test credentials so the

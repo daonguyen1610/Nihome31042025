@@ -4,6 +4,9 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify, type SlideshowAdminResponse, type UpsertSlideshowRequest } from "@/services/adminApi";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 
 type MediaKind = "image" | "video";
 
@@ -173,6 +176,28 @@ const SlideshowSettings = () => {
     }
   };
 
+  const visibleIds = useMemo(() => slides.map((s) => s.id), [slides]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteSlideshow(id),
+    onAfter: async ({ success }) => {
+      if (success > 0 && draft.id && selectedIds.has(draft.id)) resetDraft();
+      await loadSlides();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [clearSelection]);
+
   if (loading) return <PageLoading />;
   if (error) return <PageError message={error} onRetry={loadSlides} />;
 
@@ -201,6 +226,27 @@ const SlideshowSettings = () => {
           {slides.length === 0 ? (
             <PageEmpty message={t("common.noData")} />
           ) : (
+            <>
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              bulkDeleting={bulkDeleting}
+              onClear={clearSelection}
+              onBulkDelete={() => void handleBulkDelete()}
+            />
+            <div className="flex items-center gap-2 mb-2 px-1 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+              <Checkbox
+                checked={
+                  allVisibleSelected
+                    ? true
+                    : someVisibleSelected
+                      ? "indeterminate"
+                      : false
+                }
+                onCheckedChange={(v) => toggleAllVisible(v === true)}
+                aria-label={t("common.selectAll")}
+              />
+              <span>{t("common.selectAll")}</span>
+            </div>
             <div className="space-y-3">
               {slides.map((slide) => (
                 <div
@@ -208,6 +254,13 @@ const SlideshowSettings = () => {
                   className="rounded-xl border p-3 flex flex-col sm:flex-row gap-3 sm:items-center"
                   style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(slide.id)}
+                      onCheckedChange={(v) => toggleOne(slide.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${slide.title}`}
+                    />
+                  </div>
                   <div className="w-full sm:w-32 aspect-video rounded-lg overflow-hidden bg-muted shrink-0">
                     {isVideoUrl(slide.imageUrl) ? (
                       <video
@@ -254,6 +307,7 @@ const SlideshowSettings = () => {
                 </div>
               ))}
             </div>
+            </>
           )}
         </div>
 

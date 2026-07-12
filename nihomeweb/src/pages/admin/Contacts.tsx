@@ -1,12 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Mail, Phone, CheckCircle2, Clock, Trash2, Send, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useContacts } from "@/hooks/useContentApi";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { adminApi, type ContactMessageResponse } from "@/services/adminApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
@@ -36,6 +39,28 @@ const AdminContacts = () => {
       );
     });
   }, [safeList, statusFilter, q]);
+
+  const visibleIds = useMemo(() => filteredList.map((c) => c.id), [filteredList]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteContact(id),
+    onAfter: async ({ success }) => {
+      if (success > 0 && active && selectedIds.has(active.id)) setActive(null);
+      refetch();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [statusFilter, q, clearSelection]);
 
   if (loading) return <AdminLayout><PageLoading /></AdminLayout>;
   if (error) return <AdminLayout><PageError message={error} onRetry={refetch} /></AdminLayout>;
@@ -164,6 +189,28 @@ const AdminContacts = () => {
             <p className="px-1 text-[10px] uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-muted))" }}>
               {t("contacts.inbox")} ({filteredList.length}/{list.length})
             </p>
+            <div className="flex items-center gap-2 px-1">
+              <Checkbox
+                checked={
+                  allVisibleSelected
+                    ? true
+                    : someVisibleSelected
+                      ? "indeterminate"
+                      : false
+                }
+                onCheckedChange={(v) => toggleAllVisible(v === true)}
+                aria-label={t("common.selectAll")}
+              />
+              <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-muted))" }}>
+                {t("common.selectAll")}
+              </span>
+            </div>
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              bulkDeleting={bulkDeleting}
+              onClear={clearSelection}
+              onBulkDelete={() => void handleBulkDelete()}
+            />
           </div>
           {filteredList.length === 0 && (
             <p className="px-3 py-8 text-center text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
@@ -171,16 +218,23 @@ const AdminContacts = () => {
             </p>
           )}
           {filteredList.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => { setActive(c); setReplyText(""); }}
-              className="w-full text-left p-4 rounded-2xl transition flex gap-3 mb-1"
-              style={
-                active?.id === c.id
-                  ? { background: "hsl(var(--admin-primary-soft))" }
-                  : { background: "transparent" }
-              }
-            >
+            <div key={c.id} className="flex items-center gap-2 mb-1">
+              <div className="pl-2" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectedIds.has(c.id)}
+                  onCheckedChange={(v) => toggleOne(c.id, v === true)}
+                  aria-label={`${t("common.selectAll")} · ${c.name}`}
+                />
+              </div>
+              <button
+                onClick={() => { setActive(c); setReplyText(""); }}
+                className="flex-1 text-left p-4 rounded-2xl transition flex gap-3"
+                style={
+                  active?.id === c.id
+                    ? { background: "hsl(var(--admin-primary-soft))" }
+                    : { background: "transparent" }
+                }
+              >
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 text-white"
                 style={{
@@ -203,7 +257,8 @@ const AdminContacts = () => {
                   <Clock className="w-3 h-3" /> {formatDate(c.createdAt)}
                 </p>
               </div>
-            </button>
+              </button>
+            </div>
           ))}
         </div>
 

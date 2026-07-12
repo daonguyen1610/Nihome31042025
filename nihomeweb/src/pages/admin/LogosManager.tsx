@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   ImageIcon,
   Plus,
@@ -15,10 +15,13 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useLogos } from "@/hooks/useContentApi";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { adminApi, type UpsertLogoRequest } from "@/services/adminApi";
 import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 import {
@@ -278,6 +281,27 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
     }
   };
 
+  const visibleIds = useMemo(() => items.map((i) => i.id), [items]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteLogo(id),
+    onAfter: async () => {
+      await refetch();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [kind, q, clearSelection]);
+
   const handleExport = () => {
     downloadCsv({
       filename: createCsvFilename(`admin-${kind}`),
@@ -346,16 +370,47 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
         </div>
 
         <div className="admin-card p-4">
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            bulkDeleting={bulkDeleting}
+            onClear={clearSelection}
+            onBulkDelete={() => void handleBulkDelete()}
+          />
           {items.length === 0 ? (
             <PageEmpty message={t("common.noData")} />
           ) : (
+            <>
+            <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+              <Checkbox
+                checked={
+                  allVisibleSelected
+                    ? true
+                    : someVisibleSelected
+                      ? "indeterminate"
+                      : false
+                }
+                onCheckedChange={(v) => toggleAllVisible(v === true)}
+                aria-label={t("common.selectAll")}
+              />
+              <span>{t("common.selectAll")}</span>
+            </div>
             <div className={gridClassName}>
               {items.map((item) => (
                 <div
                   key={item.id}
-                  className={cardClassName}
+                  className={`${cardClassName} relative`}
                   style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
+                  <div
+                    className="absolute top-2 right-2 z-10 rounded bg-white/90 p-1 shadow"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(item.id)}
+                      onCheckedChange={(v) => toggleOne(item.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${item.name}`}
+                    />
+                  </div>
                   <div
                     className={imageFrameClassName}
                     style={{ borderColor: "hsl(var(--admin-border))" }}
@@ -415,6 +470,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                 </div>
               ))}
             </div>
+            </>
           )}
         </div>
 

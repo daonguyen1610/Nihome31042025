@@ -4,8 +4,10 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { PageLoading, PageError } from "@/components/PageState";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -117,9 +119,6 @@ const AdminLeads = () => {
   const [convertOpen, setConvertOpen] = useState(false);
   const [converting, setConverting] = useState(false);
 
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [bulkDeleting, setBulkDeleting] = useState(false);
-
   const fetchList = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -142,9 +141,6 @@ const AdminLeads = () => {
     void fetchList();
   }, [fetchList]);
 
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [page, statusFilter, sourceFilter, search]);
 
   useEffect(() => {
     let cancelled = false;
@@ -223,65 +219,27 @@ const AdminLeads = () => {
   };
 
   const visibleIds = useMemo(() => leads.map((l) => l.id), [leads]);
-  const allVisibleSelected =
-    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
-  const someVisibleSelected =
-    !allVisibleSelected && visibleIds.some((id) => selectedIds.has(id));
-
-  const toggleAllVisible = (checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) visibleIds.forEach((id) => next.add(id));
-      else visibleIds.forEach((id) => next.delete(id));
-      return next;
-    });
-  };
-
-  const toggleOne = (id: number, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  };
-
-  const clearSelection = () => setSelectedIds(new Set());
-
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
-    const ids = Array.from(selectedIds);
-    const confirmMessage = t("common.confirmDeleteMany").replace(
-      "{count}",
-      ids.length.toString(),
-    );
-    if (!window.confirm(confirmMessage)) return;
-    setBulkDeleting(true);
-    try {
-      const results = await Promise.allSettled(
-        ids.map((id) => adminApi.deleteLead(id)),
-      );
-      const failed = results.filter((r) => r.status === "rejected").length;
-      const success = results.length - failed;
-      clearSelection();
-      if (detail && ids.includes(detail.id)) closeDetail();
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteLead(id),
+    onAfter: async ({ success }) => {
+      if (success > 0 && detail && selectedIds.has(detail.id)) closeDetail();
       await fetchList();
-      if (failed === 0) {
-        toast({
-          title: t("common.bulkDeleteSuccess").replace("{count}", success.toString()),
-        });
-      } else {
-        toast({
-          title: t("common.bulkDeletePartial")
-            .replace("{success}", success.toString())
-            .replace("{failed}", failed.toString()),
-          variant: success === 0 ? "destructive" : undefined,
-        });
-      }
-    } finally {
-      setBulkDeleting(false);
-    }
-  };
+    },
+  });
+
+  useEffect(() => {
+    clearSelection();
+  }, [page, statusFilter, sourceFilter, search, clearSelection]);
 
   const handleAddActivity = async () => {
     if (!detail || !activityContent.trim()) return;
@@ -412,26 +370,13 @@ const AdminLeads = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {canManage && selectedIds.size > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-                <span className="font-medium">
-                  {t("common.selectedCount").replace("{count}", selectedIds.size.toString())}
-                </span>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={clearSelection} disabled={bulkDeleting}>
-                    {t("common.clearSelection")}
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => void handleBulkDelete()}
-                    disabled={bulkDeleting}
-                  >
-                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                    {t("common.deleteSelected")}
-                  </Button>
-                </div>
-              </div>
+            {canManage && (
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={clearSelection}
+                onBulkDelete={() => void handleBulkDelete()}
+              />
             )}
             <div className="overflow-x-auto rounded-lg border">
             <table className="min-w-full divide-y text-sm">
