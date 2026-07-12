@@ -136,6 +136,7 @@ public static class DbSeeder
         ContentSeeder.Seed(db);
         TranslationSeeder.Seed(db);
         RbacSeeder.Seed(db);
+        MasterDataSeeder.Seed(db);
         SeedBusinessRoleUsers(db);
     }
 

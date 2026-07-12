@@ -81,6 +81,10 @@ public static class TestDataSeeder
 
         SeedBusinessRoleUsers(db, password);
 
+        // Seed master-data catalogue so CRM/Design/Permit lookup endpoints
+        // have something to return.
+        MasterDataSeeder.Seed(db);
+
         if (!db.SiteSettings.Any())
         {
             db.SiteSettings.Add(new SiteSettings
