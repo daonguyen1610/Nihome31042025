@@ -16,6 +16,38 @@
     "ja": "リード「{{leadName}}」（{{leadSource}}）が割り当てられました。24時間以内にフォローしてください。"
   },
   {
+    "key": "notification.opportunity.assigned.title",
+    "category": "notification",
+    "vi": "Bạn được assign một Cơ hội mới",
+    "en": "You have been assigned a new opportunity",
+    "zh": "您已获分配一个新的销售机会",
+    "ja": "新しい商談が割り当てられました"
+  },
+  {
+    "key": "notification.opportunity.assigned.body",
+    "category": "notification",
+    "vi": "Cơ hội \"{{opportunityName}}\" ({{customerName}}) vừa được assign cho bạn. Giá trị dự kiến: {{estimatedValue}}.",
+    "en": "Opportunity \"{{opportunityName}}\" ({{customerName}}) has been assigned to you. Estimated value: {{estimatedValue}}.",
+    "zh": "商机“{{opportunityName}}”（{{customerName}}）已分配给您，预估金额：{{estimatedValue}}。",
+    "ja": "商談「{{opportunityName}}」（{{customerName}}）が割り当てられました。予想金額：{{estimatedValue}}。"
+  },
+  {
+    "key": "notification.opportunity.stage-changed.title",
+    "category": "notification",
+    "vi": "Cơ hội chuyển sang giai đoạn {{stage}}",
+    "en": "Opportunity moved to {{stage}}",
+    "zh": "商机进入 {{stage}} 阶段",
+    "ja": "商談が {{stage}} フェーズに移行しました"
+  },
+  {
+    "key": "notification.opportunity.stage-changed.body",
+    "category": "notification",
+    "vi": "Cơ hội \"{{opportunityName}}\" ({{customerName}}) đã được cập nhật sang giai đoạn {{stage}}.",
+    "en": "Opportunity \"{{opportunityName}}\" ({{customerName}}) has been moved to {{stage}}.",
+    "zh": "商机“{{opportunityName}}”（{{customerName}}）已更新至 {{stage}} 阶段。",
+    "ja": "商談「{{opportunityName}}」（{{customerName}}）が {{stage}} フェーズへ移行しました。"
+  },
+  {
     "key": "notification.quote.submitted-for-approval.title",
     "category": "notification",
     "vi": "Báo giá {{quoteNumber}} chờ bạn duyệt",

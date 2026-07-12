@@ -9,6 +9,18 @@
       "adminDescription": "Sales được assign một Lead mới."
     },
     {
+      "code": "opportunity.assigned",
+      "module": "crm.opportunities",
+      "channel": "InApp",
+      "adminDescription": "Sales được assign một Cơ hội mới."
+    },
+    {
+      "code": "opportunity.stage-changed",
+      "module": "crm.opportunities",
+      "channel": "InApp",
+      "adminDescription": "Owner được thông báo khi Cơ hội chuyển sang Won hoặc Lost."
+    },
+    {
       "code": "quote.submitted-for-approval",
       "module": "crm.quotes",
       "channel": "Both",
