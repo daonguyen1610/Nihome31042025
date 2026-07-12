@@ -5,8 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { PageLoading, PageError } from "@/components/PageState";
-import { Button } from "@/components/ui/button";
+import { PageLoading, PageError } from "@/components/PageState";import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -75,6 +74,34 @@ const emptyCreate: CreateCustomerRequest = {
   name: "",
   sourceCode: "",
   primaryContact: { ...emptyContact },
+};
+
+/**
+ * Extracts a user-facing error message from an axios error. Handles three
+ * shapes the backend returns:
+ *   - 400 ModelState  → { errors: { "Field": ["msg"] } }
+ *   - 400 service     → { message: "…" }
+ *   - fallback        → err.message ("Request failed with status code 400")
+ */
+const extractApiError = (err: unknown): string => {
+  const anyErr = err as {
+    response?: {
+      data?: unknown;
+    };
+    message?: string;
+  };
+  const data = anyErr.response?.data;
+  if (data && typeof data === "object") {
+    if ("errors" in data && data.errors && typeof data.errors === "object") {
+      return Object.entries(data.errors as Record<string, string[]>)
+        .map(([k, v]) => `${k}: ${v.join("; ")}`)
+        .join(" · ");
+    }
+    if ("message" in data && typeof data.message === "string") {
+      return data.message;
+    }
+  }
+  return anyErr.message ?? String(err);
 };
 
 const AdminCustomers = () => {
@@ -249,23 +276,11 @@ const AdminCustomers = () => {
       setOverrideReason("");
       await fetchList();
     } catch (err) {
-      const anyErr = err as {
-        response?: {
-          status?: number;
-          data?: CustomerDuplicateDetail | { title?: string; errors?: Record<string, string[]>; message?: string };
-        };
-        message?: string;
-      };
+      const anyErr = err as { response?: { status?: number; data?: CustomerDuplicateDetail } };
       if (anyErr.response?.status === 409 && anyErr.response.data && "field" in anyErr.response.data) {
-        setDuplicate(anyErr.response.data as CustomerDuplicateDetail);
-      } else if (anyErr.response?.status === 400 && anyErr.response.data && "errors" in anyErr.response.data) {
-        const errors = (anyErr.response.data as { errors: Record<string, string[]> }).errors;
-        const flat = Object.entries(errors).map(([k, v]) => `${k}: ${v.join("; ")}`).join(" · ");
-        setCreateError(flat || anyErr.message || String(err));
-      } else if (anyErr.response?.data && typeof anyErr.response.data === "object" && "message" in anyErr.response.data) {
-        setCreateError((anyErr.response.data as { message: string }).message);
+        setDuplicate(anyErr.response.data);
       } else {
-        setCreateError(anyErr.message ?? String(err));
+        setCreateError(extractApiError(err));
       }
     } finally {
       setSaving(false);
@@ -288,7 +303,7 @@ const AdminCustomers = () => {
       toast({ title: t("customers.updated") });
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setSavingEdit(false);
     }
@@ -302,7 +317,7 @@ const AdminCustomers = () => {
       if (detail?.id === id) closeDetail();
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     }
   };
 
@@ -328,7 +343,7 @@ const AdminCustomers = () => {
       setContactForm(null);
       toast({ title: t("customers.updated") });
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setSavingContact(false);
     }
@@ -345,7 +360,7 @@ const AdminCustomers = () => {
       const { data } = await adminApi.getCustomer(detail.id);
       setDetail(data);
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     }
   };
 
@@ -361,7 +376,7 @@ const AdminCustomers = () => {
       setDetail(data);
       setActivityContent("");
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setAddingActivity(false);
     }

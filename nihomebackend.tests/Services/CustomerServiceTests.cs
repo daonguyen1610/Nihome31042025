@@ -383,7 +383,35 @@ public class CustomerServiceTests : IDisposable
         SeedSource("marketing");
         var created = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
 
-        Assert.True(await _sut.DeleteAsync(created.Id, sales.Id, canManage: true));
+        Assert.True(await _sut.DeleteAsync(created.Id, sales.Id, canManage: true, canSeeAll: true));
+        Assert.Empty(_db.Customers);
+    }
+
+    [Fact]
+    public async Task Delete_SalesUser_CannotDeleteOtherOwnersCustomer()
+    {
+        // SECURITY: Sales must never be able to wipe another user's customer
+        // just by knowing the id. Return false (not throw) so the caller
+        // cannot infer whether the row exists.
+        var sales = await SeedUserAsync();
+        var other = await SeedUserAsync();
+        SeedSource("marketing");
+        var owned = await _sut.CreateAsync(BuildCreate(name: "Theirs"), other.Id, canManage: true);
+
+        var deleted = await _sut.DeleteAsync(owned.Id, sales.Id, canManage: true, canSeeAll: false);
+
+        Assert.False(deleted);
+        Assert.Single(_db.Customers); // still exists
+    }
+
+    [Fact]
+    public async Task Delete_SalesUser_CanDeleteOwnCustomer()
+    {
+        var sales = await SeedUserAsync();
+        SeedSource("marketing");
+        var mine = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
+
+        Assert.True(await _sut.DeleteAsync(mine.Id, sales.Id, canManage: true, canSeeAll: false));
         Assert.Empty(_db.Customers);
     }
 

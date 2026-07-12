@@ -269,6 +269,34 @@ public class CustomersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_SalesUser_CannotDeleteOtherOwnersCustomer_ReturnsNotFound()
+    {
+        // SECURITY regression guard — Sales must never wipe another user's
+        // record just by knowing the id. Endpoint returns 404 (not 403) so
+        // callers cannot even infer whether the row exists.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var created = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Individual",
+            name = "Manager-owned " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "N", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+        });
+        created.EnsureSuccessStatusCode();
+        var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        (await Client.DeleteAsync($"/api/customers/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // Manager can still see it.
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.GetAsync($"/api/customers/{id}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task Activity_AsOwner_PersistsEntry()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));

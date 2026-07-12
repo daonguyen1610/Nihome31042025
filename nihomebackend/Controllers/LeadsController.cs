@@ -155,10 +155,11 @@ public class LeadsController(
         if (userId is null) return Unauthorized();
 
         var canManage = await permissions.HasAsync(userId.Value, "crm.leads.manage", ct);
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.leads.view.all", ct);
 
         try
         {
-            var removed = await svc.DeleteAsync(id, userId.Value, canManage, ct);
+            var removed = await svc.DeleteAsync(id, userId.Value, canManage, canSeeAll, ct);
             if (!removed) return NotFound();
 
             audit.Log(new AuditEvent

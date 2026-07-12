@@ -338,4 +338,33 @@ public class LeadsControllerTests : IntegrationTestBase
 
         (await Client.DeleteAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task Delete_SalesUser_CannotDeleteOtherOwnersLead_ReturnsNotFound()
+    {
+        // SECURITY regression guard mirroring Customer — cross-owner delete
+        // is refused with 404 so existence is not leaked.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var adminId = await WithDbAsync(async db =>
+            (await db.Users.FirstAsync(u => u.PhoneNumber == TestDataSeeder.AdminPhone)).Id);
+        var created = await Client.PostAsJsonAsync("/api/leads", new
+        {
+            name = "Manager-owned lead " + Guid.NewGuid().ToString("N")[..6],
+            phone = "0900000005",
+            sourceCode = "marketing",
+            ownerUserId = adminId,
+        });
+        created.EnsureSuccessStatusCode();
+        var leadId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        (await Client.DeleteAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // Manager confirms lead still exists.
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.GetAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 }
