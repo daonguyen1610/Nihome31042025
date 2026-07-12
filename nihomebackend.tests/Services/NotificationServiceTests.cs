@@ -292,6 +292,158 @@ public class NotificationServiceTests : IDisposable
         Assert.Single(email.Sent);
     }
 
+    // -------- security: outbound email must be HTML-safe (Copilot review NIH-381) --------
+
+    [Fact]
+    public async Task NotifyFromTemplateAsync_EmailChannel_HtmlEncodesPlaceholderValues()
+    {
+        var email = new CapturingEmailService();
+        var sut = NotificationServiceTestFactory.Create(_db, email);
+
+        var user = await SeedUserAsync(UserRole.USER, email: "sales@nihome.test");
+        await SeedTemplateAsync("quote.rejected", channel: NotificationChannel.Email);
+        SeedTranslation("notification.quote.rejected.title", "vi", "Rejected");
+        SeedTranslation("notification.quote.rejected.body", "vi", "Reason: {{reason}}");
+        await _db.SaveChangesAsync();
+
+        var data = new Dictionary<string, string>
+        {
+            ["reason"] = "<script>alert('xss')</script>",
+        };
+        await sut.NotifyFromTemplateAsync(user.Id, "quote.rejected", data);
+
+        Assert.Single(email.Sent);
+        var body = email.Sent[0].Body;
+        // The angle brackets must be encoded so no browser or webmail renders
+        // the injected script.
+        Assert.DoesNotContain("<script>", body);
+        Assert.DoesNotContain("</script>", body);
+        Assert.Contains("&lt;script&gt;", body);
+        Assert.Contains("&#39;xss&#39;", body);
+    }
+
+    [Fact]
+    public async Task NotifyFromTemplateAsync_EmailChannel_KeepsAdminAuthoredTemplateMarkup()
+    {
+        // The template itself lives in the translation table (edited by admins)
+        // and is trusted — only untrusted placeholder VALUES get encoded.
+        var email = new CapturingEmailService();
+        var sut = NotificationServiceTestFactory.Create(_db, email);
+
+        var user = await SeedUserAsync(UserRole.USER, email: "sales@nihome.test");
+        await SeedTemplateAsync("quote.approved", channel: NotificationChannel.Email);
+        SeedTranslation("notification.quote.approved.title", "vi", "Approved");
+        SeedTranslation("notification.quote.approved.body", "vi", "<b>{{amount}}</b> approved");
+        await _db.SaveChangesAsync();
+
+        await sut.NotifyFromTemplateAsync(user.Id, "quote.approved",
+            new Dictionary<string, string> { ["amount"] = "1,500,000₫" });
+
+        var body = email.Sent[0].Body;
+        // Admin markup preserved…
+        Assert.Contains("<b>", body);
+        Assert.Contains("</b>", body);
+        // …placeholder value substituted as-is (no encoding needed for this
+        // benign string but the encoder must not corrupt it either).
+        Assert.Contains("1,500,000₫", body);
+    }
+
+    [Fact]
+    public async Task NotifyFromTemplateAsync_EmailChannel_ConvertsNewlinesToBr()
+    {
+        var email = new CapturingEmailService();
+        var sut = NotificationServiceTestFactory.Create(_db, email);
+
+        var user = await SeedUserAsync(UserRole.USER, email: "sales@nihome.test");
+        await SeedTemplateAsync("contract.activated", channel: NotificationChannel.Email);
+        SeedTranslation("notification.contract.activated.title", "vi", "Contract activated");
+        SeedTranslation("notification.contract.activated.body", "vi", "Line 1\nLine 2\nLine 3");
+        await _db.SaveChangesAsync();
+
+        await sut.NotifyFromTemplateAsync(user.Id, "contract.activated");
+
+        var body = email.Sent[0].Body;
+        Assert.Equal("Line 1<br/>Line 2<br/>Line 3", body);
+    }
+
+    [Fact]
+    public async Task NotifyFromTemplateAsync_InAppBody_StaysPlainTextRegardlessOfEmailEncoding()
+    {
+        // The in-app row must keep the plain-text body so the bell drawer
+        // (which does not render HTML) shows the original characters.
+        var user = await SeedUserAsync(UserRole.USER);
+        await SeedTemplateAsync("quote.rejected", channel: NotificationChannel.Both);
+        SeedTranslation("notification.quote.rejected.title", "vi", "R");
+        SeedTranslation("notification.quote.rejected.body", "vi", "Reason: {{reason}}");
+        await _db.SaveChangesAsync();
+
+        var email = new CapturingEmailService();
+        var sut = NotificationServiceTestFactory.Create(_db, email);
+
+        var response = await sut.NotifyFromTemplateAsync(user.Id, "quote.rejected",
+            new Dictionary<string, string> { ["reason"] = "<b>&</b>" });
+
+        Assert.NotNull(response);
+        Assert.Equal("Reason: <b>&</b>", response!.Body);
+        // Email body IS encoded.
+        Assert.Contains("&lt;b&gt;", email.Sent[0].Body);
+        Assert.Contains("&amp;", email.Sent[0].Body);
+    }
+
+    // -------- schema alignment: template.Module (80) vs Notification.Module (80) --------
+
+    [Fact]
+    public async Task NotifyFromTemplateAsync_LongTemplateModule_PersistsWithoutError()
+    {
+        var user = await SeedUserAsync(UserRole.USER);
+        // Exactly 80 characters — the entity + schema limit for both tables.
+        var longModule = new string('m', 80);
+        _db.NotificationTemplates.Add(new NotificationTemplate
+        {
+            Code = "long.module.test",
+            Module = longModule,
+            TitleKey = "notification.long.module.test.title",
+            BodyKey = "notification.long.module.test.body",
+            Channel = NotificationChannel.InApp,
+            IsActive = true,
+        });
+        SeedTranslation("notification.long.module.test.title", "vi", "T");
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.NotifyFromTemplateAsync(user.Id, "long.module.test");
+
+        Assert.NotNull(response);
+        var row = _db.Notifications.Single();
+        Assert.Equal(80, row.Module.Length);
+    }
+
+    [Fact]
+    public async Task NotifyFromTemplateAsync_ModuleLongerThan80_IsTruncatedNotRejected()
+    {
+        // Even if a future template pushes past the 80-char limit, the service
+        // truncates defensively so callers never crash on SaveChanges.
+        var user = await SeedUserAsync(UserRole.USER);
+        var tooLong = new string('x', 120);
+        _db.NotificationTemplates.Add(new NotificationTemplate
+        {
+            Code = "too.long.module",
+            Module = tooLong,
+            TitleKey = "notification.too.long.module.title",
+            BodyKey = "notification.too.long.module.body",
+            Channel = NotificationChannel.InApp,
+            IsActive = true,
+        });
+        SeedTranslation("notification.too.long.module.title", "vi", "T");
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.NotifyFromTemplateAsync(user.Id, "too.long.module");
+
+        Assert.NotNull(response);
+        var row = _db.Notifications.Single();
+        Assert.Equal(80, row.Module.Length);
+        Assert.True(row.Module.All(c => c == 'x'));
+    }
+
     [Fact]
     public async Task NotifyFromTemplateAsync_EmailFailure_DoesNotRollBackInAppRow()
     {

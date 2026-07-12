@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
@@ -13,6 +14,7 @@ public class NotificationService(
     ILogger<NotificationService> logger) : INotificationService
 {
     private const int MaxPageSize = 100;
+    private const int MaxModuleLength = 80;
     private static readonly Regex PlaceholderRegex = new(@"\{\{\s*(?<key>[a-zA-Z0-9_\-\.]+)\s*\}\}", RegexOptions.Compiled);
 
     public async Task<NotificationResponse> CreateAsync(
@@ -98,12 +100,19 @@ public class NotificationService(
         var rendered = await RenderAsync(template, data, languageCode);
         NotificationResponse? result = null;
 
+        // NotificationTemplate.Module allows up to 80 chars — align with the
+        // notifications table column via defensive truncation so a longer
+        // template module can never crash SaveChanges (see AppDbContext).
+        var safeModule = template.Module.Length > MaxModuleLength
+            ? template.Module[..MaxModuleLength]
+            : template.Module;
+
         if (template.Channel is NotificationChannel.InApp or NotificationChannel.Both)
         {
             var row = new Notification
             {
                 UserId = userId,
-                Module = template.Module,
+                Module = safeModule,
                 TemplateCode = template.Code,
                 RefEntityType = refEntityType,
                 RefEntityId = refEntityId,
@@ -128,7 +137,11 @@ public class NotificationService(
             {
                 try
                 {
-                    await email.SendEmailAsync(user.Email, rendered.Title, rendered.Body ?? rendered.Title);
+                    // IEmailService.SendEmailAsync expects an HTML body. Placeholder
+                    // values may carry user-controlled text (e.g. customerName,
+                    // leadName), so encode the value substitutions and turn line
+                    // breaks into <br/> to prevent HTML injection.
+                    await email.SendEmailAsync(user.Email, rendered.Title, rendered.HtmlBody);
                 }
                 catch (Exception ex)
                 {
@@ -274,9 +287,20 @@ public class NotificationService(
         var titleTemplate = map.GetValueOrDefault(template.TitleKey) ?? template.TitleKey;
         var bodyTemplate = map.GetValueOrDefault(template.BodyKey);
 
-        return new RenderedTemplate(
-            RenderPlaceholders(titleTemplate, data),
-            bodyTemplate == null ? null : RenderPlaceholders(bodyTemplate, data));
+        // Plain rendering for the in-app row (Title bar / mail Subject).
+        var plainTitle = RenderPlaceholders(titleTemplate, data);
+        var plainBody = bodyTemplate == null ? null : RenderPlaceholders(bodyTemplate, data);
+
+        // HTML-safe rendering for the outbound email body: encode every
+        // placeholder value before substitution so caller-supplied strings
+        // cannot inject markup, then convert newlines to <br/>. The template
+        // itself (from the translation table) is admin-authored content and
+        // is trusted.
+        var htmlBody = bodyTemplate == null
+            ? WebUtility.HtmlEncode(plainTitle).Replace("\n", "<br/>")
+            : RenderPlaceholdersHtml(bodyTemplate, data);
+
+        return new RenderedTemplate(plainTitle, plainBody, htmlBody);
     }
 
     private static string RenderPlaceholders(string template, IDictionary<string, string>? data)
@@ -289,6 +313,31 @@ public class NotificationService(
             var key = match.Groups["key"].Value;
             return caseInsensitive.TryGetValue(key, out var value) ? value : match.Value;
         });
+    }
+
+    /// <summary>
+    /// Renders a template intended for HTML output. Placeholder values are
+    /// HTML-encoded before substitution so untrusted caller data cannot
+    /// inject markup. Newlines in the resulting body are converted to
+    /// <c>&lt;br/&gt;</c> tags so plain-text templates render sensibly.
+    /// </summary>
+    private static string RenderPlaceholdersHtml(string template, IDictionary<string, string>? data)
+    {
+        if (string.IsNullOrEmpty(template)) return template;
+
+        var caseInsensitive = data == null
+            ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string>(data, StringComparer.OrdinalIgnoreCase);
+
+        var rendered = PlaceholderRegex.Replace(template, match =>
+        {
+            var key = match.Groups["key"].Value;
+            return caseInsensitive.TryGetValue(key, out var value)
+                ? WebUtility.HtmlEncode(value)
+                : match.Value;
+        });
+
+        return rendered.Replace("\n", "<br/>");
     }
 
     private static NotificationResponse MapToResponse(Notification notification) => new()
@@ -308,5 +357,5 @@ public class NotificationService(
         CreatedAt = DateTime.SpecifyKind(notification.CreatedAt, DateTimeKind.Utc),
     };
 
-    private sealed record RenderedTemplate(string Title, string? Body);
+    private sealed record RenderedTemplate(string Title, string? Body, string HtmlBody);
 }

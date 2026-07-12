@@ -133,7 +133,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Notification>().ToTable("notifications");
         modelBuilder.Entity<Notification>().HasKey(n => n.Id);
-        modelBuilder.Entity<Notification>().Property(n => n.Module).HasMaxLength(50);
+        // Kept in sync with NotificationTemplate.Module so template-driven
+        // notifications can persist the template's module verbatim.
+        modelBuilder.Entity<Notification>().Property(n => n.Module).HasMaxLength(80);
         modelBuilder.Entity<Notification>().Property(n => n.TemplateCode).HasMaxLength(80);
         modelBuilder.Entity<Notification>().Property(n => n.RefEntityType).HasMaxLength(80);
         modelBuilder.Entity<Notification>().Property(n => n.Title).HasMaxLength(200);
