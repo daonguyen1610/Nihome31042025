@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -51,18 +52,23 @@ import {
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
 
-const stageBadgeVariant = (stage: OpportunityStage): "secondary" | "outline" | "default" | "destructive" => {
-  switch (stage) {
-    case "Won":
-      return "default";
-    case "Lost":
-      return "destructive";
-    case "Negotiation":
-    case "Proposal":
-      return "secondary";
-    default:
-      return "outline";
-  }
+// Soft-colored pills so every stage looks equally weighted in the table + Kanban.
+const OPPORTUNITY_STAGE_STYLES: Record<OpportunityStage, string> = {
+  Prospecting: "border-sky-200 bg-sky-50 text-sky-700",
+  Qualification: "border-violet-200 bg-violet-50 text-violet-700",
+  Proposal: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  Negotiation: "border-amber-200 bg-amber-50 text-amber-700",
+  Won: "border-green-300 bg-green-100 text-green-800",
+  Lost: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+const OPPORTUNITY_STAGE_DOT: Record<OpportunityStage, string> = {
+  Prospecting: "bg-sky-500",
+  Qualification: "bg-violet-500",
+  Proposal: "bg-indigo-500",
+  Negotiation: "bg-amber-500",
+  Won: "bg-green-600",
+  Lost: "bg-rose-500",
 };
 
 const emptyCreate = (): CreateOpportunityRequest => ({
@@ -454,24 +460,24 @@ const AdminOpportunities = () => {
           </div>
         </header>
 
-        <section className="grid items-end gap-3 md:grid-cols-6">
+        <section className="grid items-end gap-3 rounded-lg border bg-card p-3 md:grid-cols-6">
           <div className="md:col-span-2">
             <Label className="text-xs" htmlFor="opportunity-search">{t("opportunities.filter.search")}</Label>
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="opportunity-search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={t("opportunities.searchPlaceholder")}
-                className="pl-8"
+                className="h-9 pl-9"
               />
             </div>
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.stage")}</Label>
             <Select value={stageFilter || "all"} onValueChange={(v) => { setStageFilter(v === "all" ? "" : (v as OpportunityStage)); setPage(1); }}>
-              <SelectTrigger><SelectValue placeholder={t("opportunities.filter.all")} /></SelectTrigger>
+              <SelectTrigger className="h-9"><SelectValue placeholder={t("opportunities.filter.all")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("opportunities.filter.all")}</SelectItem>
                 {OPPORTUNITY_STAGES.map((s) => (
@@ -483,7 +489,7 @@ const AdminOpportunities = () => {
           <div>
             <Label className="text-xs">{t("opportunities.filter.customer")}</Label>
             <Select value={customerFilter ? String(customerFilter) : "all"} onValueChange={(v) => { setCustomerFilter(v === "all" ? "" : Number(v)); setPage(1); }}>
-              <SelectTrigger><SelectValue placeholder={t("opportunities.filter.all")} /></SelectTrigger>
+              <SelectTrigger className="h-9"><SelectValue placeholder={t("opportunities.filter.all")} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t("opportunities.filter.all")}</SelectItem>
                 {customers.map((c) => (
@@ -494,11 +500,11 @@ const AdminOpportunities = () => {
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.minValue")}</Label>
-            <Input type="number" min={0} value={minValue} onChange={(e) => { setMinValue(e.target.value); setPage(1); }} />
+            <Input type="number" min={0} value={minValue} onChange={(e) => { setMinValue(e.target.value); setPage(1); }} className="h-9" />
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.maxValue")}</Label>
-            <Input type="number" min={0} value={maxValue} onChange={(e) => { setMaxValue(e.target.value); setPage(1); }} />
+            <Input type="number" min={0} value={maxValue} onChange={(e) => { setMaxValue(e.target.value); setPage(1); }} className="h-9" />
           </div>
         </section>
 
@@ -508,8 +514,16 @@ const AdminOpportunities = () => {
           ) : error ? (
             <PageError message={error} onRetry={() => void fetchList()} />
           ) : rows.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-              {t("opportunities.empty")}
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+              <div className="rounded-full bg-muted p-3">
+                <Search className="h-5 w-5" aria-hidden />
+              </div>
+              <p>{t("opportunities.empty")}</p>
+              {canManage && (
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("opportunities.new")}
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -522,11 +536,11 @@ const AdminOpportunities = () => {
                 />
               )}
               <div className="overflow-x-auto rounded-lg border">
-                <table className="min-w-full divide-y text-sm">
-                  <thead className="bg-muted/50">
+                <table className="min-w-[960px] w-full divide-y text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       {canManage && (
-                        <th className="w-10 px-3 py-2 text-left">
+                        <th className="w-10 px-3 py-3 text-left">
                           <Checkbox
                             checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
                             onCheckedChange={(v) => toggleAllVisible(v === true)}
@@ -534,16 +548,16 @@ const AdminOpportunities = () => {
                           />
                         </th>
                       )}
-                      <th className="px-3 py-2 text-left font-medium">{t("opportunities.field.name")}</th>
-                      <th className="px-3 py-2 text-left font-medium">{t("opportunities.field.customer")}</th>
-                      <th className="px-3 py-2 text-right font-medium">{t("opportunities.field.estimatedValue")}</th>
-                      <th className="px-3 py-2 text-left font-medium">{t("opportunities.field.winProbability")}</th>
-                      <th className="px-3 py-2 text-left font-medium">{t("opportunities.field.expectedCloseDate")}</th>
-                      <th className="px-3 py-2 text-left font-medium">{t("opportunities.field.stage")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.name")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.customer")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("opportunities.field.estimatedValue")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.winProbability")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.expectedCloseDate")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.stage")}</th>
                       {canSeeAll && (
-                        <th className="px-3 py-2 text-left font-medium">{t("opportunities.field.owner")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.owner")}</th>
                       )}
-                      {canManage && <th className="px-3 py-2" />}
+                      {canManage && <th className="px-3 py-3" />}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -554,7 +568,7 @@ const AdminOpportunities = () => {
                         onClick={() => void openDetail(o.id)}
                       >
                         {canManage && (
-                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedIds.has(o.id)}
                               onCheckedChange={(v) => toggleOne(o.id, v === true)}
@@ -562,11 +576,11 @@ const AdminOpportunities = () => {
                             />
                           </td>
                         )}
-                        <td className="px-3 py-2 font-medium">{o.name}</td>
-                        <td className="px-3 py-2">{o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{formatVnd(o.estimatedValue)}</td>
-                        <td className="px-3 py-2 text-xs">{o.winProbability}%</td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-3 py-3 font-medium">{o.name}</td>
+                        <td className="px-3 py-3">{o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{formatVnd(o.estimatedValue)}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-xs">{o.winProbability}%</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-xs">
                           {o.expectedCloseDate ? (
                             <span
                               className={
@@ -584,14 +598,28 @@ const AdminOpportunities = () => {
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
-                        <td className="px-3 py-2">
-                          <Badge variant={stageBadgeVariant(o.stage)}>{t(`opportunities.stage.${o.stage}`)}</Badge>
+                        <td className="px-3 py-3">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-1.5 whitespace-nowrap font-medium",
+                              OPPORTUNITY_STAGE_STYLES[o.stage],
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full",
+                                OPPORTUNITY_STAGE_DOT[o.stage],
+                              )}
+                            />
+                            {t(`opportunities.stage.${o.stage}`)}
+                          </Badge>
                         </td>
                         {canSeeAll && (
-                          <td className="px-3 py-2 text-xs text-muted-foreground">{o.ownerName || "—"}</td>
+                          <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{o.ownerName || "—"}</td>
                         )}
                         {canManage && (
-                          <td className="px-3 py-2 text-right">
+                          <td className="px-3 py-3 text-right">
                             <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
@@ -632,12 +660,15 @@ const AdminOpportunities = () => {
                   key={col.stage}
                   className="rounded-lg border bg-muted/20 flex flex-col min-w-[260px] lg:min-w-0"
                 >
-                  <div className="px-3 py-2 border-b bg-muted/40 rounded-t-lg">
-                    <div className="text-sm font-medium">{t(`opportunities.stage.${col.stage}`)}</div>
-                    <div className="text-xs text-muted-foreground tabular-nums">
-                      {t("opportunities.pipeline.total")
-                        .replace("{count}", col.count.toString())
-                        .replace("{value}", formatVnd(col.totalValue))}
+                  <div className="flex items-center gap-2 px-3 py-2 border-b bg-muted/40 rounded-t-lg">
+                    <span className={cn("h-2 w-2 rounded-full", OPPORTUNITY_STAGE_DOT[col.stage])} />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">{t(`opportunities.stage.${col.stage}`)}</div>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {t("opportunities.pipeline.total")
+                          .replace("{count}", col.count.toString())
+                          .replace("{value}", formatVnd(col.totalValue))}
+                      </div>
                     </div>
                   </div>
                   <div className="p-2 space-y-2 min-h-[120px]">
@@ -817,7 +848,18 @@ const AdminOpportunities = () => {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 flex-wrap">
                   {detail.name}
-                  <Badge variant={stageBadgeVariant(detail.stage)}>{t(`opportunities.stage.${detail.stage}`)}</Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1.5 whitespace-nowrap font-medium",
+                      OPPORTUNITY_STAGE_STYLES[detail.stage],
+                    )}
+                  >
+                    <span
+                      className={cn("h-1.5 w-1.5 rounded-full", OPPORTUNITY_STAGE_DOT[detail.stage])}
+                    />
+                    {t(`opportunities.stage.${detail.stage}`)}
+                  </Badge>
                   <span className="text-sm font-normal text-muted-foreground">
                     · {formatVnd(detail.estimatedValue)} · {detail.winProbability}%
                   </span>
