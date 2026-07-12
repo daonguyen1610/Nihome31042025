@@ -247,12 +247,18 @@ public class CustomerService(
         return MapCustomer(customer, ownerName, customer.Contacts, activities: null);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default)
     {
         if (!canManage) throw new CustomerOperationException("Caller does not have permission to delete customers.");
 
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (customer is null) return false;
+
+        // Owner scoping: Sales users can only delete customers they own.
+        // Managers / Admin / BOD (canSeeAll) may delete anyone's record.
+        // Returning false (not throwing) mirrors the Get/List behaviour so
+        // we never leak the customer's existence to unauthorised callers.
+        if (!canSeeAll && customer.OwnerUserId != callerUserId) return false;
 
         // Delete guard: downstream FKs. Opportunity + Contract entities land
         // in later stories; until they exist there's nothing to check here.

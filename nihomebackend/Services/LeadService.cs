@@ -264,7 +264,7 @@ public class LeadService(
         return MapLead(lead, ownerName, activities: null);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default)
     {
         if (!canManage)
         {
@@ -273,6 +273,11 @@ public class LeadService(
 
         var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == id, ct);
         if (lead is null) return false;
+
+        // Owner scoping — Sales users can only delete their own leads. Mirror
+        // Get/List behaviour and return false rather than throwing so the
+        // lead's existence is not leaked to unauthorised callers.
+        if (!canSeeAll && lead.OwnerUserId != callerUserId) return false;
 
         if (lead.Status == LeadStatus.Converted)
         {

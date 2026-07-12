@@ -646,7 +646,7 @@ public class LeadServiceTests : IDisposable
         var lead = await SeedLeadAsync(status: LeadStatus.Converted);
 
         await Assert.ThrowsAsync<LeadOperationException>(() =>
-            _sut.DeleteAsync(lead.Id, manager.Id, canManage: true));
+            _sut.DeleteAsync(lead.Id, manager.Id, canManage: true, canSeeAll: true));
 
         Assert.Single(_db.Leads);
     }
@@ -658,7 +658,7 @@ public class LeadServiceTests : IDisposable
         SeedSource("marketing");
         var lead = await SeedLeadAsync();
 
-        var deleted = await _sut.DeleteAsync(lead.Id, manager.Id, canManage: true);
+        var deleted = await _sut.DeleteAsync(lead.Id, manager.Id, canManage: true, canSeeAll: true);
 
         Assert.True(deleted);
         Assert.Empty(_db.Leads);
@@ -668,8 +668,34 @@ public class LeadServiceTests : IDisposable
     public async Task DeleteAsync_MissingId_ReturnsFalse()
     {
         var manager = await SeedUserAsync(UserRole.USER);
-        var deleted = await _sut.DeleteAsync(99999, manager.Id, canManage: true);
+        var deleted = await _sut.DeleteAsync(99999, manager.Id, canManage: true, canSeeAll: true);
         Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SalesUser_CannotDeleteOtherOwnersLead()
+    {
+        // SECURITY: same guard as Customer — no cross-owner delete.
+        var sales = await SeedUserAsync(UserRole.USER);
+        var other = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(ownerId: other.Id);
+
+        var deleted = await _sut.DeleteAsync(lead.Id, sales.Id, canManage: true, canSeeAll: false);
+
+        Assert.False(deleted);
+        Assert.Single(_db.Leads);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SalesUser_CanDeleteOwnLead()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(ownerId: sales.Id);
+
+        Assert.True(await _sut.DeleteAsync(lead.Id, sales.Id, canManage: true, canSeeAll: false));
+        Assert.Empty(_db.Leads);
     }
 
     // ---------------- Activities ----------------

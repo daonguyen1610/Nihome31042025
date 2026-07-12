@@ -45,7 +45,7 @@ public interface ILeadService
         string languageCode = "vi",
         CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
 
     Task<LeadResponse?> ConvertAsync(
         int id,
