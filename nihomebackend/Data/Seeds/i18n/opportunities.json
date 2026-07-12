@@ -32,6 +32,7 @@
   { "key": "opportunities.field.wonTender", "category": "opportunities", "vi": "Gói thầu thắng", "en": "Winning tender", "zh": "获胜标段", "ja": "受注入札" },
 
   { "key": "opportunities.filter.stage", "category": "opportunities", "vi": "Giai đoạn", "en": "Stage", "zh": "阶段", "ja": "フェーズ" },
+  { "key": "opportunities.filter.search", "category": "opportunities", "vi": "Tìm kiếm", "en": "Search", "zh": "搜索", "ja": "検索" },
   { "key": "opportunities.filter.customer", "category": "opportunities", "vi": "Khách hàng", "en": "Customer", "zh": "客户", "ja": "顧客" },
   { "key": "opportunities.filter.owner", "category": "opportunities", "vi": "Phụ trách", "en": "Owner", "zh": "负责人", "ja": "担当" },
   { "key": "opportunities.filter.closeFrom", "category": "opportunities", "vi": "Chốt từ", "en": "Close from", "zh": "关闭从", "ja": "予定日 開始" },

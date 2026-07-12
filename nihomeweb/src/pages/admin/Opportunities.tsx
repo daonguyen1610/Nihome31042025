@@ -454,15 +454,19 @@ const AdminOpportunities = () => {
           </div>
         </header>
 
-        <section className="grid gap-3 md:grid-cols-6">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={t("opportunities.searchPlaceholder")}
-              className="pl-8"
-            />
+        <section className="grid items-end gap-3 md:grid-cols-6">
+          <div className="md:col-span-2">
+            <Label className="text-xs" htmlFor="opportunity-search">{t("opportunities.filter.search")}</Label>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="opportunity-search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t("opportunities.searchPlaceholder")}
+                className="pl-8"
+              />
+            </div>
           </div>
           <div>
             <Label className="text-xs">{t("opportunities.filter.stage")}</Label>
