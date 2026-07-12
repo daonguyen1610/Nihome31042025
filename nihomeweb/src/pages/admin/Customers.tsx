@@ -230,22 +230,6 @@ const AdminCustomers = () => {
     setActivityContent("");
   };
 
-  const startEdit = () => {
-    if (!detail) return;
-    setEditForm({
-      type: detail.type,
-      name: detail.name,
-      taxId: detail.taxId,
-      address: detail.address,
-      representativeName: detail.representativeName,
-      sourceCode: detail.sourceCode,
-      relationshipStatus: detail.relationshipStatus,
-      ownerUserId: detail.ownerUserId,
-      note: detail.note,
-    });
-    setEditing(true);
-  };
-
   const handleSaveCreate = async (opts?: { overrideReason?: string }) => {
     setCreateError(null);
     setDuplicate(null);
@@ -877,11 +861,6 @@ const AdminCustomers = () => {
                           </div>
                         )}
                       </div>
-                      {canManage && (
-                        <Button size="sm" variant="outline" onClick={startEdit}>
-                          <Pencil className="mr-1.5 h-4 w-4" /> {t("common.edit")}
-                        </Button>
-                      )}
                     </>
                   ) : editForm && (
                     <div className="space-y-3">
