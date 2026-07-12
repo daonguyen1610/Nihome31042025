@@ -30,6 +30,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/notifications",
   "/admin/users",
   "/admin/roles",
+  "/admin/leads",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -75,9 +76,12 @@ const matrix: RoleExpectation[] = [
     allowed: [...ALL_ADMIN_PATHS],
   },
   {
-    // SALE: contacts.* + recruitment.applications.view + dashboard.view
+    // SALE: crm.leads.{view|manage|convert} + contacts.* +
+    // recruitment.applications.view + dashboard.view. Sales role does
+    // NOT have crm.leads.view.all — the LeadService scopes their list
+    // to owned leads, but the route itself renders (empty state acceptable).
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/contacts", "/admin/recruitment"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view (manage-only routes
