@@ -1,11 +1,14 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Search, Pencil, Trash2, ExternalLink, Loader2, Save, X, ImagePlus } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useServices } from "@/hooks/useContentApi";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import type { ServiceResponse } from "@/services/contentApi";
 import { adminApi, slugify, type UpsertServiceAdminRequest } from "@/services/adminApi";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -438,6 +441,27 @@ const AdminServices = () => {
     }
   };
 
+  const visibleIds = useMemo(() => filtered.map((s) => s.id), [filtered]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteService(id),
+    onAfter: async () => {
+      await refetch();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [q, clearSelection]);
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.slug.trim() || !form.shortTitle.trim() || !form.tagline.trim() || !form.intro.trim()) {
@@ -536,9 +560,28 @@ const AdminServices = () => {
         </div>
       ) : (
         <div className="admin-card overflow-hidden">
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            bulkDeleting={bulkDeleting}
+            onClear={clearSelection}
+            onBulkDelete={() => void handleBulkDelete()}
+          />
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left">
+                <th className="w-10 px-3 py-2 text-left">
+                  <Checkbox
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(v) => toggleAllVisible(v === true)}
+                    aria-label={t("common.selectAll")}
+                  />
+                </th>
                 <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
                   #
                 </th>
@@ -562,6 +605,13 @@ const AdminServices = () => {
                   key={s.id}
                   className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60 transition"
                 >
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(s.id)}
+                      onCheckedChange={(v) => toggleOne(s.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${s.title}`}
+                    />
+                  </td>
                   {/* ID */}
                   <td className="px-4 py-3">
                     <span

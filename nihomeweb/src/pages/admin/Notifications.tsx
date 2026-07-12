@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, CheckCheck, Loader2, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -62,6 +65,24 @@ const Notifications = () => {
     void dispatch(fetchUnreadCount());
   };
 
+  const visibleIds = useMemo(() => items.map((n) => n.id), [items]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => dispatch(removeNotification(id)).unwrap(),
+    onAfter: async () => {
+      await dispatch(fetchUnreadCount());
+    },
+  });
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -109,6 +130,27 @@ const Notifications = () => {
           ) : items.length === 0 ? (
             <div className="px-4 py-20 text-center text-sm text-muted-foreground">{t("notify.empty")}</div>
           ) : (
+            <>
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              bulkDeleting={bulkDeleting}
+              onClear={clearSelection}
+              onBulkDelete={() => void handleBulkDelete()}
+            />
+            <div className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={
+                  allVisibleSelected
+                    ? true
+                    : someVisibleSelected
+                      ? "indeterminate"
+                      : false
+                }
+                onCheckedChange={(v) => toggleAllVisible(v === true)}
+                aria-label={t("common.selectAll")}
+              />
+              <span>{t("common.selectAll")}</span>
+            </div>
             <div className="divide-y">
               {items.map((notification) => {
                 const Icon = moduleIcon(notification);
@@ -121,10 +163,17 @@ const Notifications = () => {
                     onClick={() => handleItemClick(notification)}
                     onKeyDown={(event) => handleItemKeyDown(event, notification)}
                     className={cn(
-                      "group grid cursor-pointer grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-3 px-4 py-4 text-left outline-none transition hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring md:px-5",
+                      "group grid cursor-pointer grid-cols-[2rem_2.25rem_minmax(0,1fr)_auto] gap-3 px-4 py-4 text-left outline-none transition hover:bg-muted/60 focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring md:px-5",
                       !notification.isRead && "bg-primary/5",
                     )}
                   >
+                    <span onClick={(e) => e.stopPropagation()} className="mt-1">
+                      <Checkbox
+                        checked={selectedIds.has(notification.id)}
+                        onCheckedChange={(v) => toggleOne(notification.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${notification.title}`}
+                      />
+                    </span>
                     <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-muted text-primary">
                       <Icon className="h-4 w-4" />
                     </span>
@@ -163,6 +212,7 @@ const Notifications = () => {
                 );
               })}
             </div>
+            </>
           )}
         </section>
 

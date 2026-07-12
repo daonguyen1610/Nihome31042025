@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -14,6 +14,9 @@ import {
   type UpsertProjectCategoryRequest,
 } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import {
   Dialog,
@@ -214,6 +217,37 @@ const Categories = () => {
     }
   };
 
+  // Bulk delete uses a ref so the deleter always dispatches on the active tab.
+  const kindRef = useRef(kind);
+  useEffect(() => {
+    kindRef.current = kind;
+  }, [kind]);
+  const visibleIds = useMemo(() => filtered.map((i) => i.id), [filtered]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => {
+      const currentKind = kindRef.current;
+      if (currentKind === "projects") return adminApi.deleteProjectCategory(id);
+      if (currentKind === "news") return adminApi.deleteNewsCategory(id);
+      return adminApi.deleteActivityCategory(id);
+    },
+    onAfter: async () => {
+      await loadData();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [kind, q, clearSelection]);
+
   const handleExport = () => {
     downloadCsv({
       filename: createCsvFilename(
@@ -351,9 +385,28 @@ const Categories = () => {
       </Dialog>
 
       <div className="admin-card overflow-hidden">
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          bulkDeleting={bulkDeleting}
+          onClear={clearSelection}
+          onBulkDelete={() => void handleBulkDelete()}
+        />
         <table className="w-full text-sm">
           <thead style={{ background: "hsl(var(--admin-bg))" }}>
             <tr className="text-left">
+              <th className="w-10 px-3 py-2 text-left">
+                <Checkbox
+                  checked={
+                    allVisibleSelected
+                      ? true
+                      : someVisibleSelected
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={(v) => toggleAllVisible(v === true)}
+                  aria-label={t("common.selectAll")}
+                />
+              </th>
               <th className="px-5 py-3 font-semibold">{t("cat.name")}</th>
               <th className="px-5 py-3 font-semibold">{t("cat.published")}</th>
               <th className="px-5 py-3 font-semibold">{t("cat.order")}</th>
@@ -363,19 +416,26 @@ const Categories = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                <td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
                   Loading...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                <td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
                   {t("cat.empty")}
                 </td>
               </tr>
             ) : (
               filtered.map((item) => (
                 <tr key={item.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds.has(item.id)}
+                      onCheckedChange={(v) => toggleOne(item.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${item.name}`}
+                    />
+                  </td>
                   <td className="px-5 py-3 font-semibold">{item.name}</td>
                   <td className="px-5 py-3">
                     {item.isActive ? (

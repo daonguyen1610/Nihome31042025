@@ -14,6 +14,9 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { adminApi, type AuditLogItem, type AuditLogPage } from "@/services/adminApi";
 
 type RetentionUnit = "minutes" | "hours" | "days";
@@ -251,6 +254,27 @@ const ActivityLog = () => {
     }
   };
 
+  const visibleIds = useMemo(() => (data?.items ?? []).map((l) => l.id), [data]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteAuditLog(id),
+    onAfter: async () => {
+      await fetchLogs();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [page, pageSize, from, to, actionFilter, actorPhone, ip, statusFilter, resourceType, correlationId, search, clearSelection]);
+
   const onClearBefore = async () => {
     if (!canManageAudit) return;
     if (!from) { toast.error(t("log.selectBefore")); return; }
@@ -391,10 +415,33 @@ const ActivityLog = () => {
       </div>
 
       <div className="admin-card overflow-hidden">
+        {canManageAudit && (
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            bulkDeleting={bulkDeleting}
+            onClear={clearSelection}
+            onBulkDelete={() => void handleBulkDelete()}
+          />
+        )}
         <div className="overflow-x-auto">
           <table data-testid="audit-log-table" className="w-full text-sm min-w-[1100px]">
             <thead style={{ background: "hsl(var(--admin-bg))" }}>
               <tr className="text-left">
+                {canManageAudit && (
+                  <th className="w-10 px-3 py-2 text-left">
+                    <Checkbox
+                      checked={
+                        allVisibleSelected
+                          ? true
+                          : someVisibleSelected
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(v) => toggleAllVisible(v === true)}
+                      aria-label={t("common.selectAll")}
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3 font-semibold">{t("log.createdOn")}</th>
                 <th className="px-4 py-3 font-semibold">{t("log.detail.status")}</th>
                 <th className="px-4 py-3 font-semibold">{t("log.action")}</th>
@@ -407,13 +454,22 @@ const ActivityLog = () => {
             </thead>
             <tbody>
               {loading && items.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-10 text-center"><Loader2 className="w-5 h-5 animate-spin inline-block" /></td></tr>
+                <tr><td colSpan={canManageAudit ? 9 : 8} className="px-5 py-10 text-center"><Loader2 className="w-5 h-5 animate-spin inline-block" /></td></tr>
               )}
               {!loading && items.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-10 text-center text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{t("common.empty")}</td></tr>
+                <tr><td colSpan={canManageAudit ? 9 : 8} className="px-5 py-10 text-center text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{t("common.empty")}</td></tr>
               )}
               {items.map((l) => (
                 <tr key={l.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                  {canManageAudit && (
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(l.id)}
+                        onCheckedChange={(v) => toggleOne(l.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${l.action}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "hsl(var(--admin-muted))" }}>{formatDate(l.createdAt)}</td>
                   <td className="px-4 py-3"><StatusBadge status={l.status} /></td>
                   <td className="px-4 py-3 font-mono text-xs">{l.action}</td>

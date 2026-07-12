@@ -3,7 +3,9 @@ import { Edit, Plus, RefreshCw, Search, Trash2, UserRound } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
@@ -13,6 +15,7 @@ import {
   type UserListItemResponse,
 } from "@/services/adminApi";
 import { rbacApi, type RoleResponse } from "@/services/rbacApi";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { newIdempotencyKey } from "@/lib/api";
 import UserFormModal from "./UserFormModal";
 
@@ -171,6 +174,27 @@ export default function UserList() {
     }
   };
 
+  const visibleIds = useMemo(() => items.map((u) => u.id), [items]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteUser(id),
+    onAfter: async () => {
+      await loadData();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+  }, [page, role, search, clearSelection]);
+
   const applySearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPage(1);
@@ -229,10 +253,29 @@ export default function UserList() {
         <PageError message={error} onRetry={loadData} />
       ) : (
         <div className="admin-card overflow-hidden">
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            bulkDeleting={bulkDeleting}
+            onClear={clearSelection}
+            onBulkDelete={() => void handleBulkDelete()}
+          />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left border-b" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                  <th className="w-10 px-3 py-2 text-left">
+                    <Checkbox
+                      checked={
+                        allVisibleSelected
+                          ? true
+                          : someVisibleSelected
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(v) => toggleAllVisible(v === true)}
+                      aria-label={t("common.selectAll")}
+                    />
+                  </th>
                   <th className="px-5 py-3 font-semibold">{t("adminUsers.user")}</th>
                   <th className="px-5 py-3 font-semibold">{t("adminUsers.phoneNumber")}</th>
                   <th className="px-5 py-3 font-semibold">{t("adminUsers.email")}</th>
@@ -244,7 +287,7 @@ export default function UserList() {
               <tbody className="divide-y" style={{ borderColor: "hsl(var(--admin-border))" }}>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                    <td colSpan={7} className="px-5 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
                       {t("adminUsers.empty")}
                     </td>
                   </tr>
@@ -255,6 +298,13 @@ export default function UserList() {
 
                     return (
                       <tr key={user.id} className="align-middle">
+                        <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(user.id)}
+                            onCheckedChange={(v) => toggleOne(user.id, v === true)}
+                            aria-label={`${t("common.selectAll")} · ${user.fullName ?? user.phoneNumber}`}
+                          />
+                        </td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <div

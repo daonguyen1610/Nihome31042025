@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
 import type { JobPositionResponse, JobApplicationResponse, EmploymentTypeResponse } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
@@ -157,6 +160,51 @@ const AdminRecruitment = () => {
     }
   };
 
+  // Bulk selection for positions
+  const positionVisibleIds = useMemo(() => filteredPositions.map((p) => p.id), [filteredPositions]);
+  const {
+    selectedIds: posSelectedIds,
+    bulkDeleting: posBulkDeleting,
+    allVisibleSelected: posAllSelected,
+    someVisibleSelected: posSomeSelected,
+    toggleAllVisible: posToggleAll,
+    toggleOne: posToggleOne,
+    clearSelection: posClearSelection,
+    handleBulkDelete: posBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds: positionVisibleIds,
+    deleteOne: (id) => adminApi.deleteJobPosition(id),
+    onAfter: async () => {
+      await loadPositions();
+      await loadApplications();
+    },
+  });
+  useEffect(() => {
+    posClearSelection();
+  }, [positionQuery, posClearSelection]);
+
+  // Bulk selection for applications
+  const appVisibleIds = useMemo(() => filteredApplications.map((a) => a.id), [filteredApplications]);
+  const {
+    selectedIds: appSelectedIds,
+    bulkDeleting: appBulkDeleting,
+    allVisibleSelected: appAllSelected,
+    someVisibleSelected: appSomeSelected,
+    toggleAllVisible: appToggleAll,
+    toggleOne: appToggleOne,
+    clearSelection: appClearSelection,
+    handleBulkDelete: appBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds: appVisibleIds,
+    deleteOne: (id) => adminApi.deleteApplication(id),
+    onAfter: async () => {
+      await loadApplications();
+    },
+  });
+  useEffect(() => {
+    appClearSelection();
+  }, [appQuery, filterPosition, filterStatus, appClearSelection]);
+
   const activeCount = useMemo(() => positions.filter((p) => p.isActive).length, [positions]);
 
   const handleExportApplications = () => {
@@ -231,9 +279,40 @@ const AdminRecruitment = () => {
           {positions.length === 0 ? t("recruit.noPositions") : t("common.noData")}
         </div>
       ) : (
+        <>
+        <BulkActionBar
+          selectedCount={posSelectedIds.size}
+          bulkDeleting={posBulkDeleting}
+          onClear={posClearSelection}
+          onBulkDelete={() => void posBulkDelete()}
+        />
+        <div className="flex items-center gap-2 mb-3 px-1 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+          <Checkbox
+            checked={
+              posAllSelected
+                ? true
+                : posSomeSelected
+                  ? "indeterminate"
+                  : false
+            }
+            onCheckedChange={(v) => posToggleAll(v === true)}
+            aria-label={t("common.selectAll")}
+          />
+          <span>{t("common.selectAll")}</span>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-10">
           {filteredPositions.map((p) => (
-            <div key={p.id} className="admin-card p-6 flex flex-col">
+            <div key={p.id} className="admin-card p-6 flex flex-col relative">
+              <div
+                className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Checkbox
+                  checked={posSelectedIds.has(p.id)}
+                  onCheckedChange={(v) => posToggleOne(p.id, v === true)}
+                  aria-label={`${t("common.selectAll")} · ${p.title}`}
+                />
+              </div>
               <div className="flex items-start justify-between mb-4">
                 <div
                   className="w-11 h-11 rounded-2xl flex items-center justify-center text-white"
@@ -288,6 +367,7 @@ const AdminRecruitment = () => {
             </div>
           ))}
         </div>
+        </>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -337,6 +417,12 @@ const AdminRecruitment = () => {
       </div>
 
       <div className="admin-card overflow-hidden">
+        <BulkActionBar
+          selectedCount={appSelectedIds.size}
+          bulkDeleting={appBulkDeleting}
+          onClear={appClearSelection}
+          onBulkDelete={() => void appBulkDelete()}
+        />
         {loadingApps ? (
           <div className="flex justify-center py-10">
             <div className="w-7 h-7 border-4 rounded-full animate-spin" style={{ borderColor: "hsl(var(--admin-primary))", borderTopColor: "transparent" }} />
@@ -350,6 +436,19 @@ const AdminRecruitment = () => {
             <table className="w-full text-sm">
               <thead style={{ background: "hsl(var(--admin-bg))" }}>
                 <tr className="text-left">
+                  <th className="w-10 px-3 py-2 text-left">
+                    <Checkbox
+                      checked={
+                        appAllSelected
+                          ? true
+                          : appSomeSelected
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(v) => appToggleAll(v === true)}
+                      aria-label={t("common.selectAll")}
+                    />
+                  </th>
                   <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("recruit.candidate")}</th>
                   <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("recruit.position")}</th>
                   <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("recruit.experience")}</th>
@@ -363,6 +462,13 @@ const AdminRecruitment = () => {
                   const st = APP_STATUS_STYLE[a.status] ?? APP_STATUS_STYLE.new;
                   return (
                     <tr key={a.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
+                      <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={appSelectedIds.has(a.id)}
+                          onCheckedChange={(v) => appToggleOne(a.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · ${a.candidateName}`}
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div
