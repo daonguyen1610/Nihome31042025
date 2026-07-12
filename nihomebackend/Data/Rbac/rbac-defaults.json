@@ -57,13 +57,67 @@
     { "module": "recruitment.positions", "action": "view" },
     { "module": "recruitment.positions", "action": "manage" },
     { "module": "recruitment.options", "action": "view" },
-    { "module": "recruitment.options", "action": "manage" }
+    { "module": "recruitment.options", "action": "manage" },
+
+    { "module": "master-data", "action": "view" },
+    { "module": "master-data", "action": "manage" },
+
+    { "module": "crm.leads", "action": "view" },
+    { "module": "crm.leads", "action": "manage" },
+    { "module": "crm.leads", "action": "convert" },
+    { "module": "crm.customers", "action": "view" },
+    { "module": "crm.customers", "action": "manage" },
+    { "module": "crm.customers", "action": "export" },
+    { "module": "crm.opportunities", "action": "view" },
+    { "module": "crm.opportunities", "action": "manage" },
+    { "module": "crm.quotes", "action": "view" },
+    { "module": "crm.quotes", "action": "manage" },
+    { "module": "crm.quotes", "action": "approve" },
+    { "module": "crm.quotes", "action": "send" },
+    { "module": "crm.tenders", "action": "view" },
+    { "module": "crm.tenders", "action": "manage" },
+    { "module": "crm.tenders", "action": "mark-result" },
+    { "module": "crm.capability-docs", "action": "view" },
+    { "module": "crm.capability-docs", "action": "manage" },
+    { "module": "crm.surveys", "action": "view" },
+    { "module": "crm.surveys", "action": "manage" },
+    { "module": "crm.contracts", "action": "view" },
+    { "module": "crm.contracts", "action": "manage" },
+    { "module": "crm.contracts", "action": "activate" },
+    { "module": "crm.contracts", "action": "appendix-manage" },
+
+    { "module": "design.projects", "action": "view" },
+    { "module": "design.projects", "action": "manage" },
+    { "module": "design.concepts", "action": "view" },
+    { "module": "design.concepts", "action": "manage" },
+    { "module": "design.concepts", "action": "finalize" },
+    { "module": "design.basic", "action": "view" },
+    { "module": "design.basic", "action": "manage" },
+    { "module": "design.basic", "action": "approve" },
+    { "module": "design.shop", "action": "view" },
+    { "module": "design.shop", "action": "manage" },
+    { "module": "design.shop", "action": "approve" },
+    { "module": "design.revisions", "action": "view" },
+    { "module": "design.revisions", "action": "manage" },
+    { "module": "design.ifc", "action": "view" },
+    { "module": "design.ifc", "action": "manage" },
+    { "module": "design.ifc", "action": "release" },
+
+    { "module": "permit.checklists", "action": "view" },
+    { "module": "permit.checklists", "action": "manage" },
+    { "module": "permit.checklists", "action": "mark-issued" }
   ],
 
   "businessRoles": [
     { "code": "SALE", "name": "Sale" },
+    { "code": "SALES_MANAGER", "name": "Sales Manager" },
     { "code": "DESIGN", "name": "Design" },
+    { "code": "DESIGN_LEAD", "name": "Design Lead" },
+    { "code": "ARCHITECT", "name": "Architect" },
+    { "code": "MEP_ENGINEER", "name": "MEP Engineer" },
+    { "code": "STRUCT_ENGINEER", "name": "Structural Engineer" },
     { "code": "PM", "name": "Project Manager" },
+    { "code": "LEGAL_OFFICER", "name": "Legal Officer" },
     { "code": "QS", "name": "Quantity Surveyor" },
     { "code": "ACCOUNTANT", "name": "Accountant" },
     { "code": "WAREHOUSE", "name": "Warehouse" },
@@ -76,22 +130,151 @@
     "USER":        { "patterns": ["profile.me.*"] },
 
     "SALE": {
-      "patterns": ["dashboard.view", "contacts.*", "recruitment.applications.view", "profile.me.*"]
+      "patterns": [
+        "dashboard.view",
+        "contacts.*",
+        "recruitment.applications.view",
+        "master-data.view",
+        "crm.leads.**",
+        "crm.customers.view", "crm.customers.manage",
+        "crm.opportunities.**",
+        "crm.quotes.view", "crm.quotes.manage", "crm.quotes.send",
+        "crm.tenders.view", "crm.tenders.manage",
+        "crm.capability-docs.view",
+        "crm.surveys.**",
+        "crm.contracts.view", "crm.contracts.manage",
+        "profile.me.*"
+      ]
     },
+    "SALES_MANAGER": {
+      "patterns": [
+        "dashboard.view",
+        "contacts.*",
+        "recruitment.applications.view",
+        "master-data.view",
+        "crm.**",
+        "profile.me.*"
+      ]
+    },
+
     "DESIGN": {
-      "patterns": ["dashboard.view", "content.**", "processes.view", "profile.me.*"]
+      "patterns": [
+        "dashboard.view",
+        "content.**",
+        "processes.view",
+        "master-data.view",
+        "design.projects.view",
+        "design.concepts.view", "design.concepts.manage",
+        "design.basic.view", "design.basic.manage",
+        "design.shop.view", "design.shop.manage",
+        "design.revisions.**",
+        "design.ifc.view",
+        "profile.me.*"
+      ]
     },
+    "DESIGN_LEAD": {
+      "patterns": [
+        "dashboard.view",
+        "content.**",
+        "processes.view",
+        "master-data.view",
+        "design.**",
+        "profile.me.*"
+      ]
+    },
+    "ARCHITECT": {
+      "patterns": [
+        "dashboard.view",
+        "master-data.view",
+        "design.projects.view",
+        "design.concepts.view",
+        "design.basic.view", "design.basic.manage",
+        "design.shop.view", "design.shop.manage",
+        "design.revisions.view", "design.revisions.manage",
+        "design.ifc.view",
+        "profile.me.*"
+      ]
+    },
+    "MEP_ENGINEER": {
+      "patterns": [
+        "dashboard.view",
+        "master-data.view",
+        "design.projects.view",
+        "design.basic.view", "design.basic.manage",
+        "design.shop.view", "design.shop.manage",
+        "design.revisions.view", "design.revisions.manage",
+        "design.ifc.view",
+        "profile.me.*"
+      ]
+    },
+    "STRUCT_ENGINEER": {
+      "patterns": [
+        "dashboard.view",
+        "master-data.view",
+        "design.projects.view",
+        "design.basic.view", "design.basic.manage",
+        "design.shop.view", "design.shop.manage",
+        "design.revisions.view", "design.revisions.manage",
+        "design.ifc.view",
+        "profile.me.*"
+      ]
+    },
+
     "PM": {
-      "patterns": ["dashboard.view", "content.projects.*", "processes.*", "recruitment.applications.view", "profile.me.*"]
+      "patterns": [
+        "dashboard.view",
+        "content.projects.*",
+        "processes.*",
+        "recruitment.applications.view",
+        "master-data.view",
+        "crm.contracts.view",
+        "crm.surveys.view",
+        "design.projects.view",
+        "design.basic.view",
+        "design.shop.view",
+        "design.revisions.view",
+        "design.ifc.**",
+        "permit.checklists.**",
+        "profile.me.*"
+      ]
+    },
+    "LEGAL_OFFICER": {
+      "patterns": [
+        "dashboard.view",
+        "master-data.view",
+        "crm.contracts.view",
+        "design.projects.view",
+        "design.basic.view",
+        "permit.checklists.**",
+        "profile.me.*"
+      ]
     },
     "QS": {
-      "patterns": ["dashboard.view", "content.projects.view", "processes.view", "profile.me.*"]
+      "patterns": [
+        "dashboard.view",
+        "content.projects.view",
+        "processes.view",
+        "master-data.view",
+        "crm.quotes.view",
+        "crm.tenders.view",
+        "crm.contracts.view",
+        "design.basic.view",
+        "design.shop.view",
+        "profile.me.*"
+      ]
     },
     "ACCOUNTANT": {
-      "patterns": ["dashboard.view", "contacts.view", "system.audit.view", "profile.me.*"]
+      "patterns": [
+        "dashboard.view",
+        "contacts.view",
+        "system.audit.view",
+        "master-data.view",
+        "crm.contracts.view",
+        "profile.me.*"
+      ]
     },
     "WAREHOUSE": {
-      "patterns": ["dashboard.view", "processes.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "processes.view", "master-data.view", "profile.me.*"]
     },
     "BGD": {
       "patterns": ["dashboard.view", "**.view", "system.audit.view", "profile.me.*"]
