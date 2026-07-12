@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useNews, useNewsCategories } from "@/hooks/useContentApi";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -11,7 +12,18 @@ import type { NewsResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
@@ -94,151 +106,153 @@ const AdminNews = () => {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
-        <div>
-          <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("adminNews.title")}</h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {filtered.length} {t("common.showing")}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
-          <Link to="/admin/news/new" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-            <Plus className="w-4 h-4" /> {t("adminNews.create")}
-          </Link>
-        </div>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{t("adminNews.title")}</h1>
+            <p className="text-xs italic text-muted-foreground">
+              {filtered.length} {t("common.showing")}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
+            <Button asChild>
+              <Link to="/admin/news/new">
+                <Plus className="mr-1.5 h-4 w-4" /> {t("adminNews.create")}
+              </Link>
+            </Button>
+          </div>
+        </header>
 
-      {loading ? (
-        <PageLoading />
-      ) : error ? (
-        <PageError message={error} onRetry={refetch} />
-      ) : (
-      <>
-      <div className="admin-card p-5 mb-5 flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
-        <div
-          className="flex items-center gap-2 rounded-full px-4 py-2 border w-full lg:w-80"
-          style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
-        >
-          <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("adminNews.searchPlaceholder")}
-            className="bg-transparent outline-none text-sm flex-1"
+        {loading ? (
+          <PageLoading />
+        ) : error ? (
+          <PageError message={error} onRetry={refetch} />
+        ) : (
+        <>
+        <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
+          <div className="min-w-[220px] flex-1">
+            <Label className="text-xs" htmlFor="news-search">{t("common.search")}</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="news-search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("adminNews.searchPlaceholder")}
+                className="h-9 pl-9"
+              />
+            </div>
+          </div>
+          <div className="w-full sm:w-[200px]">
+            <Label className="text-xs" htmlFor="news-category">{t("adminNews.col.category")}</Label>
+            <Select value={cat} onValueChange={setCat}>
+              <SelectTrigger id="news-category" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c === "all" ? t("adminNews.allCategories") : c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
+
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-full bg-muted p-3">
+              <Search className="h-5 w-5" aria-hidden />
+            </div>
+            <p>{t("adminNews.empty")}</p>
+            <Button asChild size="sm">
+              <Link to="/admin/news/new">
+                <Plus className="mr-1.5 h-4 w-4" /> {t("adminNews.create")}
+              </Link>
+            </Button>
+          </div>
+        ) : (
+        <div className="space-y-2">
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            bulkDeleting={bulkDeleting}
+            onClear={clearSelection}
+            onBulkDelete={() => void handleBulkDelete()}
           />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCat(c)}
-              className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition"
-              style={
-                cat === c
-                  ? { background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))", color: "white" }
-                  : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-sidebar-text))" }
-              }
-            >
-              {c === "all" ? t("adminNews.allCategories") : c}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="admin-card overflow-hidden">
-        <BulkActionBar
-          selectedCount={selectedIds.size}
-          bulkDeleting={bulkDeleting}
-          onClear={clearSelection}
-          onBulkDelete={() => void handleBulkDelete()}
-        />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead style={{ background: "hsl(var(--admin-bg))" }}>
-              <tr className="text-left">
-                <th className="w-10 px-3 py-2 text-left">
-                  <Checkbox
-                    checked={
-                      allVisibleSelected
-                        ? true
-                        : someVisibleSelected
-                          ? "indeterminate"
-                          : false
-                    }
-                    onCheckedChange={(v) => toggleAllVisible(v === true)}
-                    aria-label={t("common.selectAll")}
-                  />
-                </th>
-                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("adminNews.col.post")}</th>
-                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("adminNews.col.category")}</th>
-                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("common.date")}</th>
-                <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-[720px] w-full divide-y text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                    {t("adminNews.empty")}
-                  </td>
+                  <th className="w-10 px-3 py-3 text-left">
+                    <Checkbox
+                      checked={
+                        allVisibleSelected
+                          ? true
+                          : someVisibleSelected
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(v) => toggleAllVisible(v === true)}
+                      aria-label={t("common.selectAll")}
+                    />
+                  </th>
+                  <th className="px-3 py-3 text-left font-medium">{t("adminNews.col.post")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminNews.col.category")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("common.date")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
                 </tr>
-              ) : (
-                filtered.map((a) => (
-                  <tr key={a.id} className="border-t hover:bg-muted/30 transition" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.map((a) => (
+                  <tr key={a.id} className="hover:bg-muted/40 transition">
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedIds.has(a.id)}
                         onCheckedChange={(v) => toggleOne(a.id, v === true)}
                         aria-label={`${t("common.selectAll")} · ${a.title}`}
                       />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       <Link to={`/admin/news/${a.slug}`} className="flex items-center gap-3 hover:opacity-80 transition">
-                        <img src={a.imageUrl} alt="" className="w-12 h-12 rounded-xl object-cover" />
-                        <p className="font-semibold line-clamp-2 max-w-md">{a.title}</p>
+                        <img src={a.imageUrl} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                        <p className="font-medium line-clamp-2 max-w-md">{a.title}</p>
                       </Link>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="admin-chip" style={{ background: "hsl(var(--admin-primary-soft))", color: "hsl(var(--admin-primary))" }}>
+                    <td className="whitespace-nowrap px-3 py-3">
+                      <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
                         {a.category}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-6 py-4" style={{ color: "hsl(var(--admin-muted))" }}>{a.date}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.date}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right">
                       <div className="inline-flex items-center gap-1">
-                        <Link
-                          to={`/admin/news/${a.slug}`}
-                          className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
-                          style={{ color: "hsl(var(--admin-info))" }}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        <Link
-                          to={`/admin/news/${a.slug}/edit`}
-                          className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
-                          style={{ color: "hsl(var(--admin-primary))" }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(a)}
-                          className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition"
-                          style={{ color: "hsl(var(--admin-danger))" }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
+                          <Link to={`/admin/news/${a.slug}`}>
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button asChild variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")}>
+                          <Link to={`/admin/news/${a.slug}/edit`}>
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(a)} title={t("common.delete")} aria-label={t("common.delete")}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+        )}
+        </>
+        )}
       </div>
-      </>
-      )}
     </AdminLayout>
   );
 };
