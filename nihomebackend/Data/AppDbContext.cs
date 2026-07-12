@@ -52,6 +52,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
     public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
+    public DbSet<Opportunity> Opportunities => Set<Opportunity>();
+    public DbSet<OpportunityActivity> OpportunityActivities => Set<OpportunityActivity>();
 
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
@@ -388,6 +390,49 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(a => a.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(a => a.CustomerId);
+            b.HasIndex(a => a.OccurredAt);
+        });
+
+        modelBuilder.Entity<Opportunity>(b =>
+        {
+            b.ToTable("opportunities");
+            b.HasKey(o => o.Id);
+            b.Property(o => o.Name).HasMaxLength(200).IsRequired();
+            b.Property(o => o.Stage).HasConversion<string>().HasMaxLength(30);
+            b.Property(o => o.LostReasonCode).HasMaxLength(60);
+            b.Property(o => o.LostNote).HasMaxLength(2000);
+            b.Property(o => o.Note).HasMaxLength(4000);
+            b.Property(o => o.EstimatedValue).HasColumnType("decimal(18,2)");
+            b.HasOne(o => o.Customer)
+                .WithMany()
+                .HasForeignKey(o => o.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(o => o.Owner)
+                .WithMany()
+                .HasForeignKey(o => o.OwnerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(o => o.CustomerId);
+            b.HasIndex(o => o.OwnerUserId);
+            b.HasIndex(o => o.Stage);
+            b.HasIndex(o => o.ExpectedCloseDate);
+            b.HasIndex(o => o.CreatedAt);
+        });
+
+        modelBuilder.Entity<OpportunityActivity>(b =>
+        {
+            b.ToTable("opportunity_activities");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
+            b.Property(a => a.Content).HasMaxLength(4000).IsRequired();
+            b.HasOne(a => a.Opportunity)
+                .WithMany(o => o.Activities)
+                .HasForeignKey(a => a.OpportunityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(a => a.CreatedBy)
+                .WithMany()
+                .HasForeignKey(a => a.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(a => a.OpportunityId);
             b.HasIndex(a => a.OccurredAt);
         });
 
