@@ -45,6 +45,7 @@
     <EmbeddedResource Include="Data/Seeds/i18n/*.json" />
     <EmbeddedResource Include="Data/Seeds/content/*.json" />
     <EmbeddedResource Include="Data/Seeds/master-data/*.json" />
+    <EmbeddedResource Include="Data/Seeds/notification-templates/*.json" />
     <EmbeddedResource Include="Data/Rbac/*.json" />
   </ItemGroup>
 

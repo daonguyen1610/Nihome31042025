@@ -85,6 +85,10 @@ public static class TestDataSeeder
         // have something to return.
         MasterDataSeeder.Seed(db);
 
+        // Seed notification templates so NotifyFromTemplateAsync has
+        // something to resolve.
+        NotificationTemplateSeeder.Seed(db);
+
         if (!db.SiteSettings.Any())
         {
             db.SiteSettings.Add(new SiteSettings

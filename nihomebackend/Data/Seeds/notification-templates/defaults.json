@@ -1,0 +1,48 @@
+{
+  "_comment": "Default notification templates for GD2 CRM/Design/Permit events. Loaded once at startup by NotificationTemplateSeeder. Adding entries is idempotent; existing templates are never overwritten so admin edits to the channel/active flags survive redeploys. Translations for the referenced titleKey/bodyKey live in Data/Seeds/i18n/notification-templates.json.",
+
+  "templates": [
+    {
+      "code": "lead.assigned",
+      "module": "crm.leads",
+      "channel": "InApp",
+      "adminDescription": "Sales được assign một Lead mới."
+    },
+    {
+      "code": "quote.submitted-for-approval",
+      "module": "crm.quotes",
+      "channel": "Both",
+      "adminDescription": "Sales Manager cần duyệt một báo giá vừa submit."
+    },
+    {
+      "code": "quote.approved",
+      "module": "crm.quotes",
+      "channel": "InApp",
+      "adminDescription": "Sales biết báo giá của mình đã được duyệt nội bộ."
+    },
+    {
+      "code": "quote.rejected",
+      "module": "crm.quotes",
+      "channel": "Both",
+      "adminDescription": "Sales biết báo giá bị từ chối, kèm lý do."
+    },
+    {
+      "code": "contract.activated",
+      "module": "crm.contracts",
+      "channel": "Both",
+      "adminDescription": "PM và Design Lead được thông báo hợp đồng chuyển sang Đang thực hiện."
+    },
+    {
+      "code": "design.revision.created",
+      "module": "design.revisions",
+      "channel": "Both",
+      "adminDescription": "Team thiết kế + thi công được cảnh báo revision mới của một bản vẽ."
+    },
+    {
+      "code": "permit.expiring-soon",
+      "module": "permit.checklists",
+      "channel": "Both",
+      "adminDescription": "PM/BGĐ được cảnh báo giấy phép sắp hết hạn."
+    }
+  ]
+}

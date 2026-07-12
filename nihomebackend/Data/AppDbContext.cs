@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RegistrationOtp> RegistrationOtps => Set<RegistrationOtp>();
     public DbSet<SiteSettings> SiteSettings => Set<SiteSettings>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
     public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
@@ -133,6 +134,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Notification>().ToTable("notifications");
         modelBuilder.Entity<Notification>().HasKey(n => n.Id);
         modelBuilder.Entity<Notification>().Property(n => n.Module).HasMaxLength(50);
+        modelBuilder.Entity<Notification>().Property(n => n.TemplateCode).HasMaxLength(80);
+        modelBuilder.Entity<Notification>().Property(n => n.RefEntityType).HasMaxLength(80);
         modelBuilder.Entity<Notification>().Property(n => n.Title).HasMaxLength(200);
         modelBuilder.Entity<Notification>().Property(n => n.Body).HasMaxLength(1000);
         modelBuilder.Entity<Notification>().Property(n => n.LinkUrl).HasMaxLength(500);
@@ -143,6 +146,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany(u => u.Notifications)
             .HasForeignKey(n => n.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<NotificationTemplate>().ToTable("notification_templates");
+        modelBuilder.Entity<NotificationTemplate>().HasKey(t => t.Id);
+        modelBuilder.Entity<NotificationTemplate>().HasIndex(t => t.Code).IsUnique();
+        modelBuilder.Entity<NotificationTemplate>().HasIndex(t => t.Module);
 
         modelBuilder.Entity<AuditLog>().ToTable("audit_logs");
         modelBuilder.Entity<AuditLog>().HasKey(a => a.Id);

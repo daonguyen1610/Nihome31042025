@@ -1,0 +1,114 @@
+[
+  {
+    "key": "notification.lead.assigned.title",
+    "category": "notification",
+    "vi": "Bạn được assign một Lead mới",
+    "en": "You have been assigned a new lead",
+    "zh": "您已获分配一个新的销售线索",
+    "ja": "新しいリードが割り当てられました"
+  },
+  {
+    "key": "notification.lead.assigned.body",
+    "category": "notification",
+    "vi": "Lead \"{{leadName}}\" ({{leadSource}}) vừa được assign cho bạn. Vui lòng liên hệ trong 24 giờ.",
+    "en": "Lead \"{{leadName}}\" ({{leadSource}}) has been assigned to you. Please follow up within 24 hours.",
+    "zh": "销售线索“{{leadName}}”（{{leadSource}}）已分配给您，请在24小时内跟进。",
+    "ja": "リード「{{leadName}}」（{{leadSource}}）が割り当てられました。24時間以内にフォローしてください。"
+  },
+  {
+    "key": "notification.quote.submitted-for-approval.title",
+    "category": "notification",
+    "vi": "Báo giá {{quoteNumber}} chờ bạn duyệt",
+    "en": "Quote {{quoteNumber}} awaits your approval",
+    "zh": "报价 {{quoteNumber}} 等待您的审批",
+    "ja": "見積 {{quoteNumber}} の承認をお願いします"
+  },
+  {
+    "key": "notification.quote.submitted-for-approval.body",
+    "category": "notification",
+    "vi": "Báo giá {{quoteNumber}} của khách hàng {{customerName}}, giá trị {{amount}}, vừa được {{salesName}} gửi duyệt.",
+    "en": "Quote {{quoteNumber}} for customer {{customerName}}, total {{amount}}, was submitted by {{salesName}} for internal approval.",
+    "zh": "客户 {{customerName}} 的报价 {{quoteNumber}}，金额 {{amount}}，由 {{salesName}} 提交内部审批。",
+    "ja": "顧客 {{customerName}} の見積 {{quoteNumber}}（金額 {{amount}}）が {{salesName}} により承認申請されました。"
+  },
+  {
+    "key": "notification.quote.approved.title",
+    "category": "notification",
+    "vi": "Báo giá {{quoteNumber}} đã được duyệt",
+    "en": "Quote {{quoteNumber}} approved",
+    "zh": "报价 {{quoteNumber}} 已获批准",
+    "ja": "見積 {{quoteNumber}} が承認されました"
+  },
+  {
+    "key": "notification.quote.approved.body",
+    "category": "notification",
+    "vi": "Báo giá {{quoteNumber}} của bạn đã được {{approverName}} duyệt nội bộ. Bạn có thể gửi khách hàng.",
+    "en": "Your quote {{quoteNumber}} was internally approved by {{approverName}}. You may now send it to the customer.",
+    "zh": "您的报价 {{quoteNumber}} 已由 {{approverName}} 内部审批通过，可发送给客户。",
+    "ja": "あなたの見積 {{quoteNumber}} は {{approverName}} により社内承認されました。顧客に送付できます。"
+  },
+  {
+    "key": "notification.quote.rejected.title",
+    "category": "notification",
+    "vi": "Báo giá {{quoteNumber}} bị từ chối",
+    "en": "Quote {{quoteNumber}} rejected",
+    "zh": "报价 {{quoteNumber}} 被拒绝",
+    "ja": "見積 {{quoteNumber}} が却下されました"
+  },
+  {
+    "key": "notification.quote.rejected.body",
+    "category": "notification",
+    "vi": "Báo giá {{quoteNumber}} bị {{approverName}} từ chối. Lý do: {{reason}}.",
+    "en": "Quote {{quoteNumber}} was rejected by {{approverName}}. Reason: {{reason}}.",
+    "zh": "报价 {{quoteNumber}} 被 {{approverName}} 拒绝。原因：{{reason}}。",
+    "ja": "見積 {{quoteNumber}} は {{approverName}} により却下されました。理由: {{reason}}。"
+  },
+  {
+    "key": "notification.contract.activated.title",
+    "category": "notification",
+    "vi": "Hợp đồng {{contractNumber}} đã kích hoạt",
+    "en": "Contract {{contractNumber}} activated",
+    "zh": "合同 {{contractNumber}} 已激活",
+    "ja": "契約 {{contractNumber}} が有効になりました"
+  },
+  {
+    "key": "notification.contract.activated.body",
+    "category": "notification",
+    "vi": "Hợp đồng {{contractNumber}} với khách hàng {{customerName}} vừa chuyển sang Đang thực hiện. Dự án thiết kế đã được tự động tạo.",
+    "en": "Contract {{contractNumber}} with {{customerName}} is now In Progress. A design project has been auto-created.",
+    "zh": "与 {{customerName}} 的合同 {{contractNumber}} 已进入执行中，同时自动创建设计项目。",
+    "ja": "顧客 {{customerName}} との契約 {{contractNumber}} が実行中となり、設計プロジェクトが自動作成されました。"
+  },
+  {
+    "key": "notification.design.revision.created.title",
+    "category": "notification",
+    "vi": "Revision mới cho bản vẽ {{drawingCode}}",
+    "en": "New revision for drawing {{drawingCode}}",
+    "zh": "图纸 {{drawingCode}} 有新修订",
+    "ja": "図面 {{drawingCode}} の新しいリビジョン"
+  },
+  {
+    "key": "notification.design.revision.created.body",
+    "category": "notification",
+    "vi": "Bản vẽ {{drawingCode}} vừa có revision {{revision}} ({{reason}}). Bản cũ đã bị thu hồi, vui lòng dùng phiên bản mới.",
+    "en": "Drawing {{drawingCode}} has a new revision {{revision}} ({{reason}}). The previous version was superseded — please use the new one.",
+    "zh": "图纸 {{drawingCode}} 有新修订 {{revision}}（{{reason}}）。旧版已作废，请使用新版本。",
+    "ja": "図面 {{drawingCode}} に新しいリビジョン {{revision}}（{{reason}}）が発行され、旧版は失効しました。新版をご使用ください。"
+  },
+  {
+    "key": "notification.permit.expiring-soon.title",
+    "category": "notification",
+    "vi": "Giấy phép {{permitName}} sắp hết hạn",
+    "en": "Permit {{permitName}} expiring soon",
+    "zh": "许可 {{permitName}} 即将到期",
+    "ja": "許可 {{permitName}} の有効期限が近付いています"
+  },
+  {
+    "key": "notification.permit.expiring-soon.body",
+    "category": "notification",
+    "vi": "Giấy phép {{permitName}} của dự án {{projectName}} sẽ hết hạn trong {{daysLeft}} ngày ({{expiryDate}}). Vui lòng gia hạn.",
+    "en": "Permit {{permitName}} of project {{projectName}} expires in {{daysLeft}} days ({{expiryDate}}). Please initiate renewal.",
+    "zh": "项目 {{projectName}} 的许可 {{permitName}} 将在 {{daysLeft}} 天后（{{expiryDate}}）到期，请办理续期。",
+    "ja": "プロジェクト {{projectName}} の許可 {{permitName}} は {{daysLeft}} 日後（{{expiryDate}}）に失効します。更新手続きをお願いします。"
+  }
+]

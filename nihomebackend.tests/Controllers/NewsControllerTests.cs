@@ -235,7 +235,7 @@ public class NewsControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var notificationSvc = new NotificationService(_db);
+        var notificationSvc = NotificationServiceTestFactory.Create(_db);
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
