@@ -15,7 +15,6 @@
     "zh": "允许访问管理仪表板。",
     "ja": "管理ダッシュボードへのアクセスを許可します。"
   },
-
   {
     "key": "rbac.perm.profile.me.view.label",
     "category": "rbac",
@@ -48,7 +47,6 @@
     "zh": "允许自行更新账户信息。",
     "ja": "自身のアカウント情報の更新を許可します。"
   },
-
   {
     "key": "rbac.perm.users.view.label",
     "category": "rbac",
@@ -81,7 +79,6 @@
     "zh": "创建、编辑、停用用户并分配角色。",
     "ja": "ユーザーの作成・編集・無効化・ロール割り当てを行います。"
   },
-
   {
     "key": "rbac.perm.rbac.roles.view.label",
     "category": "rbac",
@@ -114,7 +111,6 @@
     "zh": "创建、编辑、删除角色并分配权限（系统角色除外）。",
     "ja": "ロールの作成・編集・削除と権限の割り当て（システムロールを除く）。"
   },
-
   {
     "key": "rbac.perm.system.audit.view.label",
     "category": "rbac",
@@ -179,7 +175,6 @@
     "zh": "上传、替换和删除系统共享文件。",
     "ja": "システム共有ファイルのアップロード・置換・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.about.view.label",
     "category": "rbac",
@@ -212,7 +207,6 @@
     "zh": "创建、编辑、排序和删除“关于”内容板块。",
     "ja": "About のセクションの作成・編集・並び替え・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.activities.view.label",
     "category": "rbac",
@@ -245,7 +239,6 @@
     "zh": "创建、编辑和删除活动条目。",
     "ja": "アクティビティ記事の作成・編集・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.activity-categories.view.label",
     "category": "rbac",
@@ -278,7 +271,6 @@
     "zh": "创建、编辑和删除活动分类。",
     "ja": "アクティビティのカテゴリの作成・編集・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.logos.view.label",
     "category": "rbac",
@@ -311,7 +303,6 @@
     "zh": "上传、替换和删除合作伙伴标志。",
     "ja": "パートナーロゴのアップロード・置換・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.news.view.label",
     "category": "rbac",
@@ -376,7 +367,6 @@
     "zh": "创建、编辑和删除新闻分类。",
     "ja": "ニュースカテゴリの作成・編集・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.projects.view.label",
     "category": "rbac",
@@ -409,7 +399,6 @@
     "zh": "创建、编辑、发布和删除网站上的项目。",
     "ja": "サイトのプロジェクトの作成・編集・公開・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.project-categories.view.label",
     "category": "rbac",
@@ -442,7 +431,6 @@
     "zh": "创建、编辑和删除项目分类。",
     "ja": "プロジェクトのカテゴリの作成・編集・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.services.view.label",
     "category": "rbac",
@@ -475,7 +463,6 @@
     "zh": "创建、编辑、排序和删除服务。",
     "ja": "サービスの作成・編集・並び替え・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.slideshow.view.label",
     "category": "rbac",
@@ -508,7 +495,6 @@
     "zh": "创建、编辑、排序和删除首页幻灯片。",
     "ja": "トップページスライドの作成・編集・並び替え・削除を行います。"
   },
-
   {
     "key": "rbac.perm.content.translations.view.label",
     "category": "rbac",
@@ -541,7 +527,6 @@
     "zh": "创建、编辑和删除静态翻译键值对及实体翻译。",
     "ja": "静的翻訳ペアおよびエンティティ翻訳の作成・編集・削除を行います。"
   },
-
   {
     "key": "rbac.perm.system.settings.view.label",
     "category": "rbac",
@@ -574,7 +559,6 @@
     "zh": "更新公开站点的 OTP、邮件模板及嵌入地图 URL。",
     "ja": "公開サイトの OTP・メールテンプレート・埋め込み地図 URL を更新します。"
   },
-
   {
     "key": "rbac.perm.processes.view.label",
     "category": "rbac",
@@ -623,7 +607,6 @@
     "zh": "上传、替换和删除流程附件。",
     "ja": "プロセスに添付するファイルのアップロード・置換・削除を行います。"
   },
-
   {
     "key": "rbac.perm.mail.send.label",
     "category": "rbac",
@@ -640,7 +623,6 @@
     "zh": "允许通过管理界面发送回复和通知邮件。",
     "ja": "管理 UI から返信・通知メールを送信できます。"
   },
-
   {
     "key": "rbac.perm.contacts.view.label",
     "category": "rbac",
@@ -673,7 +655,6 @@
     "zh": "更新状态、回复和删除联系消息。",
     "ja": "問い合わせの状態更新・返信・削除を行います。"
   },
-
   {
     "key": "rbac.perm.recruitment.applications.view.label",
     "category": "rbac",
@@ -770,7 +751,6 @@
     "zh": "创建、编辑和删除雇佣类型与下拉选项。",
     "ja": "雇用形態とドロップダウン項目の作成・編集・削除を行います。"
   },
-
   {
     "key": "rbac.role.SUPER_ADMIN.label",
     "category": "rbac",
@@ -819,7 +799,6 @@
     "zh": "已登录最终用户的默认角色。",
     "ja": "ログイン済みエンドユーザーの既定ロール。"
   },
-
   {
     "key": "rbac.role.SALE.label",
     "category": "rbac",
@@ -932,7 +911,806 @@
     "zh": "对所有数据和审计日志的只读访问权限。",
     "ja": "全データと監査ログへの読み取り専用アクセスです。"
   },
-
+  {
+    "key": "rbac.perm.master-data.view.label",
+    "category": "rbac",
+    "vi": "Xem dữ liệu chuẩn",
+    "en": "View master data",
+    "zh": "查看主数据",
+    "ja": "マスターデータを表示"
+  },
+  {
+    "key": "rbac.perm.master-data.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các danh mục dùng chung (loại KH, trạng thái, template checklist…).",
+    "en": "Allows viewing shared lookup catalogues (customer types, statuses, checklist templates, ...).",
+    "zh": "允许查看共享查找目录(客户类型、状态、清单模板等)。",
+    "ja": "共通のマスターカタログ(顧客区分・ステータス・テンプレート等)の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.master-data.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý dữ liệu chuẩn",
+    "en": "Manage master data",
+    "zh": "管理主数据",
+    "ja": "マスターデータを管理"
+  },
+  {
+    "key": "rbac.perm.master-data.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép thêm/sửa/xoá và tắt bật các mục dữ liệu chuẩn.",
+    "en": "Allows creating, editing, and deactivating master data entries.",
+    "zh": "允许创建、编辑及停用主数据条目。",
+    "ja": "マスターデータの追加・編集・無効化を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.leads.view.label",
+    "category": "rbac",
+    "vi": "Xem Lead",
+    "en": "View leads",
+    "zh": "查看销售线索",
+    "ja": "リードを表示"
+  },
+  {
+    "key": "rbac.perm.crm.leads.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết Lead trong phạm vi được cấp.",
+    "en": "Allows viewing leads within the caller's assigned scope.",
+    "zh": "允许查看权限范围内的销售线索。",
+    "ja": "権限範囲内でリードの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.leads.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý Lead",
+    "en": "Manage leads",
+    "zh": "管理销售线索",
+    "ja": "リードを管理"
+  },
+  {
+    "key": "rbac.perm.crm.leads.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa/xoá Lead và cập nhật trạng thái chăm sóc.",
+    "en": "Allows creating, editing and updating leads and their nurture status.",
+    "zh": "允许创建、编辑和更新销售线索及其培育状态。",
+    "ja": "リードの作成・編集・ステータス更新を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.leads.convert.label",
+    "category": "rbac",
+    "vi": "Chuyển Lead sang Cơ hội",
+    "en": "Convert lead to opportunity",
+    "zh": "将线索转换为商机",
+    "ja": "リードを案件に変換"
+  },
+  {
+    "key": "rbac.perm.crm.leads.convert.description",
+    "category": "rbac",
+    "vi": "Cho phép chuyển Lead thành Khách hàng + Cơ hội và khoá bản Lead gốc.",
+    "en": "Allows converting a lead into a customer + opportunity and locking the source lead.",
+    "zh": "允许将销售线索转换为客户和商机,并锁定原始线索。",
+    "ja": "リードを顧客と案件に変換し、元のリードをロックすることを許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.customers.view.label",
+    "category": "rbac",
+    "vi": "Xem khách hàng",
+    "en": "View customers",
+    "zh": "查看客户",
+    "ja": "顧客を表示"
+  },
+  {
+    "key": "rbac.perm.crm.customers.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và chi tiết Khách hàng trong phạm vi được cấp.",
+    "en": "Allows viewing customers within the caller's assigned scope.",
+    "zh": "允许查看权限范围内的客户。",
+    "ja": "権限範囲内で顧客の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.customers.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý khách hàng",
+    "en": "Manage customers",
+    "zh": "管理客户",
+    "ja": "顧客を管理"
+  },
+  {
+    "key": "rbac.perm.crm.customers.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa/xoá khách hàng và ghi nhận hoạt động chăm sóc.",
+    "en": "Allows creating, editing, deleting customers and logging care activities.",
+    "zh": "允许创建、编辑、删除客户并记录跟进活动。",
+    "ja": "顧客の作成・編集・削除、及びフォローアップの記録を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.customers.export.label",
+    "category": "rbac",
+    "vi": "Xuất danh sách khách hàng",
+    "en": "Export customer list",
+    "zh": "导出客户列表",
+    "ja": "顧客リストをエクスポート"
+  },
+  {
+    "key": "rbac.perm.crm.customers.export.description",
+    "category": "rbac",
+    "vi": "Cho phép xuất CSV danh sách khách hàng theo bộ lọc hiện tại.",
+    "en": "Allows exporting the current customer list to CSV.",
+    "zh": "允许按当前筛选导出客户列表为CSV。",
+    "ja": "現在の絞り込み条件で顧客リストをCSVに出力することを許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.opportunities.view.label",
+    "category": "rbac",
+    "vi": "Xem cơ hội",
+    "en": "View opportunities",
+    "zh": "查看商机",
+    "ja": "案件を表示"
+  },
+  {
+    "key": "rbac.perm.crm.opportunities.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách, pipeline và chi tiết cơ hội bán hàng.",
+    "en": "Allows viewing the opportunity list, pipeline and details.",
+    "zh": "允许查看商机列表、漏斗和详情。",
+    "ja": "案件一覧・パイプライン・詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.opportunities.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý cơ hội",
+    "en": "Manage opportunities",
+    "zh": "管理商机",
+    "ja": "案件を管理"
+  },
+  {
+    "key": "rbac.perm.crm.opportunities.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa/xoá cơ hội và cập nhật stage/xác suất chốt.",
+    "en": "Allows creating, editing and moving opportunities across pipeline stages.",
+    "zh": "允许创建、编辑商机并在漏斗阶段之间移动。",
+    "ja": "案件の作成・編集及びパイプラインステージの変更を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.view.label",
+    "category": "rbac",
+    "vi": "Xem báo giá",
+    "en": "View quotes",
+    "zh": "查看报价",
+    "ja": "見積を表示"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách, phiên bản và chi tiết báo giá gửi khách.",
+    "en": "Allows viewing quote lists, versions and details.",
+    "zh": "允许查看报价列表、版本和详情。",
+    "ja": "見積一覧・バージョン・詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.manage.label",
+    "category": "rbac",
+    "vi": "Lập/sửa báo giá",
+    "en": "Create/edit quotes",
+    "zh": "创建/编辑报价",
+    "ja": "見積の作成/編集"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa báo giá theo suất đầu tư hoặc BOQ sơ bộ.",
+    "en": "Allows creating and editing quotes using rate-per-m² or preliminary BOQ methods.",
+    "zh": "允许使用单价法或初步BOQ创建和编辑报价。",
+    "ja": "単価方式または概算BOQによる見積の作成・編集を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.approve.label",
+    "category": "rbac",
+    "vi": "Duyệt báo giá",
+    "en": "Approve quotes",
+    "zh": "审批报价",
+    "ja": "見積を承認"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.approve.description",
+    "category": "rbac",
+    "vi": "Cho phép duyệt báo giá nội bộ trước khi gửi khách hàng.",
+    "en": "Allows internally approving a quote before it is sent to the customer.",
+    "zh": "允许在发送给客户之前对报价进行内部审批。",
+    "ja": "顧客送付前の見積の社内承認を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.send.label",
+    "category": "rbac",
+    "vi": "Gửi báo giá cho khách",
+    "en": "Send quote to customer",
+    "zh": "将报价发送给客户",
+    "ja": "見積を顧客に送信"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.send.description",
+    "category": "rbac",
+    "vi": "Cho phép gửi báo giá đã duyệt tới khách hàng (email + PDF).",
+    "en": "Allows sending an approved quote to the customer (email + PDF).",
+    "zh": "允许将已审批的报价发送给客户(邮件+PDF)。",
+    "ja": "承認済み見積を顧客に送信(メール+PDF)することを許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.tenders.view.label",
+    "category": "rbac",
+    "vi": "Xem gói thầu",
+    "en": "View tenders",
+    "zh": "查看投标包",
+    "ja": "入札案件を表示"
+  },
+  {
+    "key": "rbac.perm.crm.tenders.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách và tiến độ chuẩn bị các gói dự thầu.",
+    "en": "Allows viewing tender packages and their preparation progress.",
+    "zh": "允许查看投标包及其准备进度。",
+    "ja": "入札パッケージ及びその準備状況の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.tenders.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý gói thầu",
+    "en": "Manage tenders",
+    "zh": "管理投标包",
+    "ja": "入札案件を管理"
+  },
+  {
+    "key": "rbac.perm.crm.tenders.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa gói thầu, cập nhật checklist hồ sơ dự thầu.",
+    "en": "Allows creating/editing tenders and maintaining their checklists.",
+    "zh": "允许创建、编辑投标包及其清单。",
+    "ja": "入札案件の作成・編集及びチェックリストの管理を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.tenders.mark-result.label",
+    "category": "rbac",
+    "vi": "Ghi kết quả thầu",
+    "en": "Record tender result",
+    "zh": "记录投标结果",
+    "ja": "入札結果を登録"
+  },
+  {
+    "key": "rbac.perm.crm.tenders.mark-result.description",
+    "category": "rbac",
+    "vi": "Cho phép đánh dấu Trúng/Trượt và liên kết cơ hội để tạo hợp đồng.",
+    "en": "Allows marking a tender as Won/Lost and linking the opportunity to spawn a contract.",
+    "zh": "允许标记投标结果为中标/落标,并关联商机以生成合同。",
+    "ja": "落札/失注を登録し、案件と紐付けて契約を生成することを許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.capability-docs.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ năng lực",
+    "en": "View capability documents",
+    "zh": "查看能力资料",
+    "ja": "実績資料を表示"
+  },
+  {
+    "key": "rbac.perm.crm.capability-docs.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem thư viện hồ sơ năng lực dùng chung khi làm gói thầu.",
+    "en": "Allows viewing the shared capability document library used for tenders.",
+    "zh": "允许查看用于投标的共享能力资料库。",
+    "ja": "入札時に共有される実績資料ライブラリの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.capability-docs.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hồ sơ năng lực",
+    "en": "Manage capability documents",
+    "zh": "管理能力资料",
+    "ja": "実績資料を管理"
+  },
+  {
+    "key": "rbac.perm.crm.capability-docs.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép upload/thay thế và phân loại hồ sơ năng lực.",
+    "en": "Allows uploading, replacing and tagging capability documents.",
+    "zh": "允许上传、替换和标记能力资料。",
+    "ja": "実績資料のアップロード・差し替え・タグ付けを許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.view.label",
+    "category": "rbac",
+    "vi": "Xem phiếu khảo sát",
+    "en": "View site surveys",
+    "zh": "查看现场勘察",
+    "ja": "現場調査を表示"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem phiếu khảo sát hiện trường và media đính kèm.",
+    "en": "Allows viewing site surveys and attached media.",
+    "zh": "允许查看现场勘察记录和附加媒体。",
+    "ja": "現場調査記録と添付メディアの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý phiếu khảo sát",
+    "en": "Manage site surveys",
+    "zh": "管理现场勘察",
+    "ja": "現場調査を管理"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa phiếu khảo sát và đồng bộ file lên Drive.",
+    "en": "Allows creating/editing surveys and syncing media to Drive.",
+    "zh": "允许创建、编辑勘察并将文件同步至云盘。",
+    "ja": "現場調査の作成・編集及びファイルのDrive同期を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.view.label",
+    "category": "rbac",
+    "vi": "Xem hợp đồng",
+    "en": "View contracts",
+    "zh": "查看合同",
+    "ja": "契約を表示"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem hợp đồng bán ra, lịch thanh toán và phụ lục.",
+    "en": "Allows viewing sales contracts, payment schedules and appendices.",
+    "zh": "允许查看销售合同、付款计划及附录。",
+    "ja": "販売契約・支払スケジュール・付属書の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hợp đồng",
+    "en": "Manage contracts",
+    "zh": "管理合同",
+    "ja": "契約を管理"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa hợp đồng và cấu hình các mốc thanh toán.",
+    "en": "Allows creating/editing contracts and configuring payment milestones.",
+    "zh": "允许创建/编辑合同并配置付款里程碑。",
+    "ja": "契約の作成・編集及び支払マイルストーンの設定を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.activate.label",
+    "category": "rbac",
+    "vi": "Kích hoạt hợp đồng",
+    "en": "Activate contract",
+    "zh": "激活合同",
+    "ja": "契約を有効化"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.activate.description",
+    "category": "rbac",
+    "vi": "Chuyển hợp đồng sang Đang thực hiện (yêu cầu file scan đã ký).",
+    "en": "Moves a contract to In Progress (requires a signed scan on file).",
+    "zh": "将合同移至“执行中”状态(需已签署扫描件)。",
+    "ja": "契約を実行中に移行します(署名済みスキャンが必要)。"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.appendix-manage.label",
+    "category": "rbac",
+    "vi": "Quản lý phụ lục hợp đồng (VO)",
+    "en": "Manage contract appendices (VO)",
+    "zh": "管理合同附录(VO)",
+    "ja": "契約付属書(VO)を管理"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.appendix-manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/duyệt phụ lục hợp đồng phát sinh (Variation Order).",
+    "en": "Allows creating and approving Variation Order (VO) appendices.",
+    "zh": "允许创建和审批变更单(VO)附录。",
+    "ja": "変更指示書(VO)付属書の作成・承認を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.projects.view.label",
+    "category": "rbac",
+    "vi": "Xem dự án thiết kế",
+    "en": "View design projects",
+    "zh": "查看设计项目",
+    "ja": "設計プロジェクトを表示"
+  },
+  {
+    "key": "rbac.perm.design.projects.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem dự án thiết kế và tiến độ 3 giai đoạn.",
+    "en": "Allows viewing design projects and the 3-stage progress board.",
+    "zh": "允许查看设计项目及三阶段进度看板。",
+    "ja": "設計プロジェクトと3段階の進捗ボードの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.projects.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý dự án thiết kế",
+    "en": "Manage design projects",
+    "zh": "管理设计项目",
+    "ja": "設計プロジェクトを管理"
+  },
+  {
+    "key": "rbac.perm.design.projects.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa dự án thiết kế và cấu hình team bộ môn.",
+    "en": "Allows creating/editing design projects and configuring discipline teams.",
+    "zh": "允许创建/编辑设计项目并配置专业团队。",
+    "ja": "設計プロジェクトの作成・編集及び専門チームの設定を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.concepts.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ Concept",
+    "en": "View concept designs",
+    "zh": "查看方案设计",
+    "ja": "コンセプト設計を表示"
+  },
+  {
+    "key": "rbac.perm.design.concepts.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các phương án Concept và feedback khách hàng.",
+    "en": "Allows viewing concept options and customer feedback.",
+    "zh": "允许查看方案概念及客户反馈。",
+    "ja": "コンセプト案及び顧客フィードバックの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.concepts.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hồ sơ Concept",
+    "en": "Manage concept designs",
+    "zh": "管理方案设计",
+    "ja": "コンセプト設計を管理"
+  },
+  {
+    "key": "rbac.perm.design.concepts.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa phương án Concept, upload 3D/mặt bằng.",
+    "en": "Allows creating/editing concept options and uploading 3D/floor plans.",
+    "zh": "允许创建/编辑方案概念并上传3D/平面图。",
+    "ja": "コンセプト案の作成・編集及び3D/平面図のアップロードを許可します。"
+  },
+  {
+    "key": "rbac.perm.design.concepts.finalize.label",
+    "category": "rbac",
+    "vi": "Chốt phương án Concept",
+    "en": "Finalize concept",
+    "zh": "确定方案",
+    "ja": "コンセプトを確定"
+  },
+  {
+    "key": "rbac.perm.design.concepts.finalize.description",
+    "category": "rbac",
+    "vi": "Chốt 1 phương án và tự động khoá các phương án còn lại; mở khoá Basic Design.",
+    "en": "Locks in one concept, marks the others as dropped and unlocks Basic Design.",
+    "zh": "确定一个方案,其余方案将被锁定,并解锁基础设计阶段。",
+    "ja": "1つのコンセプトを確定し他をロックした上で基本設計を解錠します。"
+  },
+  {
+    "key": "rbac.perm.design.basic.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ Basic Design",
+    "en": "View basic design docs",
+    "zh": "查看基础设计文件",
+    "ja": "基本設計を表示"
+  },
+  {
+    "key": "rbac.perm.design.basic.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem hồ sơ thiết kế cơ sở theo từng bộ môn.",
+    "en": "Allows viewing basic design documents grouped by discipline.",
+    "zh": "允许按专业查看基础设计文件。",
+    "ja": "専門別に基本設計文書の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.basic.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hồ sơ Basic Design",
+    "en": "Manage basic design docs",
+    "zh": "管理基础设计文件",
+    "ja": "基本設計を管理"
+  },
+  {
+    "key": "rbac.perm.design.basic.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép upload/thay thế bản vẽ + thuyết minh Basic Design.",
+    "en": "Allows uploading/replacing drawings and technical narratives for Basic Design.",
+    "zh": "允许上传/替换基础设计的图纸与技术说明。",
+    "ja": "基本設計の図面・技術説明のアップロード・差し替えを許可します。"
+  },
+  {
+    "key": "rbac.perm.design.basic.approve.label",
+    "category": "rbac",
+    "vi": "Duyệt hồ sơ Basic Design",
+    "en": "Approve basic design docs",
+    "zh": "审批基础设计文件",
+    "ja": "基本設計を承認"
+  },
+  {
+    "key": "rbac.perm.design.basic.approve.description",
+    "category": "rbac",
+    "vi": "Duyệt nội bộ hồ sơ Basic Design (điều kiện chuyển Shop Drawing).",
+    "en": "Internally approves Basic Design docs (gate to Shop Drawing).",
+    "zh": "对基础设计文件进行内部审批(转施工图的门槛)。",
+    "ja": "基本設計の社内承認(施工図移行の要件)を行います。"
+  },
+  {
+    "key": "rbac.perm.design.shop.view.label",
+    "category": "rbac",
+    "vi": "Xem Shop Drawing",
+    "en": "View shop drawings",
+    "zh": "查看施工图",
+    "ja": "施工図を表示"
+  },
+  {
+    "key": "rbac.perm.design.shop.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem bản vẽ thi công chi tiết theo bộ môn và hạng mục.",
+    "en": "Allows viewing shop drawings by discipline and work package.",
+    "zh": "允许按专业和分项查看施工图。",
+    "ja": "専門と分類別に施工図の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.shop.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý Shop Drawing",
+    "en": "Manage shop drawings",
+    "zh": "管理施工图",
+    "ja": "施工図を管理"
+  },
+  {
+    "key": "rbac.perm.design.shop.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa/upload Shop Drawing và gán reviewer chéo bộ môn.",
+    "en": "Allows creating/editing/uploading shop drawings and assigning cross-discipline reviewers.",
+    "zh": "允许创建/编辑/上传施工图并分配跨专业审查人。",
+    "ja": "施工図の作成・編集・アップロード及び他専門レビュアーの割当てを許可します。"
+  },
+  {
+    "key": "rbac.perm.design.shop.approve.label",
+    "category": "rbac",
+    "vi": "Duyệt Shop Drawing",
+    "en": "Approve shop drawings",
+    "zh": "审批施工图",
+    "ja": "施工図を承認"
+  },
+  {
+    "key": "rbac.perm.design.shop.approve.description",
+    "category": "rbac",
+    "vi": "Duyệt cuối Shop Drawing bởi Design Lead trước khi đưa vào phiếu IFC.",
+    "en": "Final Design Lead approval of shop drawings before an IFC release.",
+    "zh": "施工图在纳入IFC发布前由设计主管终审。",
+    "ja": "IFC発行前に設計リーダーが施工図を最終承認します。"
+  },
+  {
+    "key": "rbac.perm.design.revisions.view.label",
+    "category": "rbac",
+    "vi": "Xem phiên bản bản vẽ",
+    "en": "View drawing revisions",
+    "zh": "查看图纸修订",
+    "ja": "図面リビジョンを表示"
+  },
+  {
+    "key": "rbac.perm.design.revisions.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem lịch sử revision và bản vẽ đã bị thu hồi.",
+    "en": "Allows viewing revision history and superseded drawings.",
+    "zh": "允许查看修订历史及已作废图纸。",
+    "ja": "リビジョン履歴と失効した図面の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.revisions.manage.label",
+    "category": "rbac",
+    "vi": "Tạo phiên bản mới bản vẽ",
+    "en": "Create drawing revisions",
+    "zh": "创建图纸修订",
+    "ja": "図面リビジョンを作成"
+  },
+  {
+    "key": "rbac.perm.design.revisions.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo revision mới với lý do thay đổi + tự thu hồi bản cũ.",
+    "en": "Allows creating a new revision with a change reason; auto-supersedes the previous one.",
+    "zh": "允许创建新修订并附带变更原因,自动作废旧版。",
+    "ja": "変更理由付きの新規リビジョンを作成し、旧版を自動失効させることを許可します。"
+  },
+  {
+    "key": "rbac.perm.design.ifc.view.label",
+    "category": "rbac",
+    "vi": "Xem phiếu phát hành IFC",
+    "en": "View IFC releases",
+    "zh": "查看IFC发布",
+    "ja": "IFC発行を表示"
+  },
+  {
+    "key": "rbac.perm.design.ifc.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem các phiếu phát hành IFC và lịch sử nhận hồ sơ.",
+    "en": "Allows viewing IFC release packages and delivery confirmations.",
+    "zh": "允许查看IFC发布包及收件确认记录。",
+    "ja": "IFC発行パッケージと受領確認履歴の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.ifc.manage.label",
+    "category": "rbac",
+    "vi": "Chuẩn bị phiếu IFC",
+    "en": "Prepare IFC releases",
+    "zh": "准备IFC发布",
+    "ja": "IFC発行を準備"
+  },
+  {
+    "key": "rbac.perm.design.ifc.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép tạo/sửa phiếu phát hành IFC, chọn bộ bản vẽ đưa vào.",
+    "en": "Allows creating/editing IFC release packages and picking the drawing set.",
+    "zh": "允许创建/编辑IFC发布包并选择纳入的图纸。",
+    "ja": "IFC発行パッケージの作成・編集及び対象図面の選定を許可します。"
+  },
+  {
+    "key": "rbac.perm.design.ifc.release.label",
+    "category": "rbac",
+    "vi": "Phát hành IFC",
+    "en": "Release IFC package",
+    "zh": "发布IFC包",
+    "ja": "IFCを発行"
+  },
+  {
+    "key": "rbac.perm.design.ifc.release.description",
+    "category": "rbac",
+    "vi": "Đóng dấu điện tử + khoá chỉnh sửa + phát hành bộ bản vẽ IFC cho nhà thầu.",
+    "en": "Stamps, locks and issues the IFC drawing package to the construction team.",
+    "zh": "对IFC图纸包加盖电子戳、锁定并发布给施工方。",
+    "ja": "電子印を押印しロックした上で施工チームにIFC図面パッケージを発行します。"
+  },
+  {
+    "key": "rbac.perm.permit.checklists.view.label",
+    "category": "rbac",
+    "vi": "Xem checklist pháp lý",
+    "en": "View permitting checklist",
+    "zh": "查看合规清单",
+    "ja": "許認可チェックリストを表示"
+  },
+  {
+    "key": "rbac.perm.permit.checklists.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem checklist hồ sơ pháp lý và tiến độ xin phép.",
+    "en": "Allows viewing the permitting checklist and approval progress.",
+    "zh": "允许查看合规文件清单及审批进度。",
+    "ja": "許認可チェックリストと承認進捗の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.permit.checklists.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý checklist pháp lý",
+    "en": "Manage permitting checklist",
+    "zh": "管理合规清单",
+    "ja": "許認可チェックリストを管理"
+  },
+  {
+    "key": "rbac.perm.permit.checklists.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép cập nhật item pháp lý, ghi timeline làm việc với cơ quan.",
+    "en": "Allows updating permit items and logging interactions with authorities.",
+    "zh": "允许更新合规条目并记录与主管部门的沟通时间线。",
+    "ja": "許認可項目の更新及び行政とのやり取り記録を許可します。"
+  },
+  {
+    "key": "rbac.perm.permit.checklists.mark-issued.label",
+    "category": "rbac",
+    "vi": "Ghi nhận giấy phép đã cấp",
+    "en": "Record permit issuance",
+    "zh": "登记许可已核发",
+    "ja": "許可発行を登録"
+  },
+  {
+    "key": "rbac.perm.permit.checklists.mark-issued.description",
+    "category": "rbac",
+    "vi": "Chuyển trạng thái item pháp lý sang Đã cấp và upload giấy phép chính thức.",
+    "en": "Marks a permit item as Issued and attaches the official permit file.",
+    "zh": "将合规条目标记为已核发并附加正式许可文件。",
+    "ja": "許認可項目を発行済みとしてマークし、正式許可ファイルを添付します。"
+  },
+  {
+    "key": "rbac.role.SALES_MANAGER.label",
+    "category": "rbac",
+    "vi": "Trưởng phòng Kinh doanh",
+    "en": "Sales Manager",
+    "zh": "销售经理",
+    "ja": "営業マネージャー"
+  },
+  {
+    "key": "rbac.role.SALES_MANAGER.description",
+    "category": "rbac",
+    "vi": "Quản lý đội Kinh doanh, duyệt báo giá/hợp đồng và giám sát pipeline khách hàng.",
+    "en": "Leads the Sales team, approves quotes/contracts and oversees the customer pipeline.",
+    "zh": "领导销售团队,审批报价/合同并监督客户漏斗。",
+    "ja": "営業チームを統括し、見積・契約を承認し、顧客パイプラインを管理します。"
+  },
+  {
+    "key": "rbac.role.DESIGN_LEAD.label",
+    "category": "rbac",
+    "vi": "Trưởng phòng Thiết kế",
+    "en": "Design Lead",
+    "zh": "设计主管",
+    "ja": "設計リーダー"
+  },
+  {
+    "key": "rbac.role.DESIGN_LEAD.description",
+    "category": "rbac",
+    "vi": "Chốt phương án Concept, duyệt Basic/Shop Drawing và phát hành hồ sơ IFC.",
+    "en": "Finalises concepts, approves Basic/Shop drawings and releases IFC packages.",
+    "zh": "确定方案概念,审批基础/施工图并发布IFC文件。",
+    "ja": "コンセプトを確定し、基本/施工図を承認し、IFC図面を発行します。"
+  },
+  {
+    "key": "rbac.role.ARCHITECT.label",
+    "category": "rbac",
+    "vi": "Kiến trúc sư",
+    "en": "Architect",
+    "zh": "建筑师",
+    "ja": "建築士"
+  },
+  {
+    "key": "rbac.role.ARCHITECT.description",
+    "category": "rbac",
+    "vi": "Chịu trách nhiệm hồ sơ thiết kế bộ môn Kiến trúc (Concept · Basic · Shop Drawing).",
+    "en": "Owns architectural design documents across Concept, Basic and Shop Drawing stages.",
+    "zh": "负责建筑专业的方案、基础及施工图设计文件。",
+    "ja": "コンセプト・基本・施工図の各段階における建築設計を担当します。"
+  },
+  {
+    "key": "rbac.role.MEP_ENGINEER.label",
+    "category": "rbac",
+    "vi": "Kỹ sư MEP",
+    "en": "MEP Engineer",
+    "zh": "机电工程师",
+    "ja": "MEPエンジニア"
+  },
+  {
+    "key": "rbac.role.MEP_ENGINEER.description",
+    "category": "rbac",
+    "vi": "Phụ trách hồ sơ điện – nước – cơ (MEP) trong các giai đoạn thiết kế.",
+    "en": "Handles Mechanical, Electrical and Plumbing (MEP) design deliverables.",
+    "zh": "负责机电专业(MEP)的设计文件。",
+    "ja": "電気・水道・空調(MEP)関連の設計成果物を担当します。"
+  },
+  {
+    "key": "rbac.role.STRUCT_ENGINEER.label",
+    "category": "rbac",
+    "vi": "Kỹ sư Kết cấu",
+    "en": "Structural Engineer",
+    "zh": "结构工程师",
+    "ja": "構造エンジニア"
+  },
+  {
+    "key": "rbac.role.STRUCT_ENGINEER.description",
+    "category": "rbac",
+    "vi": "Phụ trách hồ sơ Kết cấu trong Basic Design và Shop Drawing.",
+    "en": "Owns structural engineering deliverables in Basic Design and Shop Drawing.",
+    "zh": "负责基础设计与施工图中的结构专业文件。",
+    "ja": "基本設計と施工図における構造関連成果物を担当します。"
+  },
+  {
+    "key": "rbac.role.LEGAL_OFFICER.label",
+    "category": "rbac",
+    "vi": "Phụ trách Pháp lý",
+    "en": "Legal Officer",
+    "zh": "法务专员",
+    "ja": "法務担当"
+  },
+  {
+    "key": "rbac.role.LEGAL_OFFICER.description",
+    "category": "rbac",
+    "vi": "Quản lý checklist hồ sơ pháp lý dự án và theo dõi tiến độ xin phép.",
+    "en": "Manages the project permitting checklist and tracks approval progress.",
+    "zh": "管理项目法规文件清单并跟踪审批进度。",
+    "ja": "プロジェクトの法的チェックリストを管理し、許可取得の進捗を追跡します。"
+  },
   {
     "key": "rbac.notification.role-created.title",
     "category": "rbac",
@@ -965,7 +1743,6 @@
     "zh": "已删除角色",
     "ja": "ロールを削除しました"
   },
-
   {
     "key": "adminRbac.title",
     "category": "rbac",
