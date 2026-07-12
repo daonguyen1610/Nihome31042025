@@ -28,6 +28,7 @@ public static class SampleCrmDataSeeder
 
         SeedLeads(db, owner, now);
         SeedCustomers(db, owner, now);
+        SeedOpportunities(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -234,6 +235,66 @@ public static class SampleCrmDataSeeder
                 CreatedAt = now,
             });
 
+            db.SaveChanges();
+        }
+    }
+
+    private static void SeedOpportunities(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var sampleCustomers = db.Customers
+            .Where(c => c.Name.StartsWith(SampleTag))
+            .OrderBy(c => c.Id)
+            .ToList();
+        if (sampleCustomers.Count == 0) return;
+
+        var samples = new (string Name, decimal Value, int Probability, OpportunityStage Stage, int CloseDaysFromNow)[]
+        {
+            ($"{SampleTag} Nhà máy Alpha - Giai đoạn 1", 4_500_000_000m, 60, OpportunityStage.Qualification, 45),
+            ($"{SampleTag} Beta Interior - Showroom Q3", 2_100_000_000m, 35, OpportunityStage.Prospecting, 90),
+            ($"{SampleTag} Gamma Home - Cải tạo văn phòng", 1_250_000_000m, 75, OpportunityStage.Proposal, 30),
+            ($"{SampleTag} Beta Interior - Nhà xưởng phụ", 3_800_000_000m, 55, OpportunityStage.Negotiation, 60),
+            ($"{SampleTag} Alpha - Mở rộng kho", 800_000_000m, 100, OpportunityStage.Won, -10),
+            ($"{SampleTag} Trần Thị Bảo - Nhà phố", 350_000_000m, 0, OpportunityStage.Lost, -20),
+        };
+
+        for (var i = 0; i < samples.Length; i++)
+        {
+            var (name, value, probability, stage, closeDays) = samples[i];
+            if (db.Opportunities.Any(o => o.Name == name)) continue;
+
+            var customer = sampleCustomers[i % sampleCustomers.Count];
+            var closeDate = now.AddDays(closeDays);
+
+            var op = new Opportunity
+            {
+                Name = name,
+                CustomerId = customer.Id,
+                OwnerUserId = owner.Id,
+                EstimatedValue = value,
+                WinProbability = probability,
+                ExpectedCloseDate = closeDate,
+                Stage = stage,
+                ClosedAt = stage is OpportunityStage.Won or OpportunityStage.Lost ? closeDate : null,
+                LostReasonCode = stage == OpportunityStage.Lost ? "price" : null,
+                LostNote = stage == OpportunityStage.Lost ? "Khách hàng cân nhắc lại vì ngân sách." : null,
+                Note = "Cơ hội mẫu — demo pipeline & stage transition.",
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            };
+            db.Opportunities.Add(op);
+            db.SaveChanges();
+
+            db.OpportunityActivities.Add(new OpportunityActivity
+            {
+                OpportunityId = op.Id,
+                Type = OpportunityActivityType.Note,
+                OccurredAt = now,
+                Content = "Ghi chú mẫu khởi tạo cho cơ hội demo.",
+                CreatedByUserId = owner.Id,
+                CreatedAt = now,
+            });
             db.SaveChanges();
         }
     }
