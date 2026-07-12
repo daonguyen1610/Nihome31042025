@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Briefcase, MapPin, Eye, CheckCircle2, X, Pencil, Trash2, ChevronDown, Users, FileDown, Search } from "lucide-react";
+import { Plus, Briefcase, MapPin, Eye, CheckCircle2, X, Pencil, Trash2, Users, FileDown, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
 import type { JobPositionResponse, JobApplicationResponse, EmploymentTypeResponse } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
@@ -35,11 +47,18 @@ function getExperienceLabel(code: string, t: (key: string) => string) {
   }
 }
 
-const APP_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
-  new: { bg: "hsl(var(--admin-info-soft))", color: "hsl(var(--admin-info))" },
-  interview: { bg: "hsl(var(--admin-warning-soft))", color: "hsl(var(--admin-warning))" },
-  hired: { bg: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" },
-  rejected: { bg: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))" },
+const APP_STATUS_STYLES: Record<string, string> = {
+  new: "border-sky-200 bg-sky-50 text-sky-700",
+  interview: "border-amber-200 bg-amber-50 text-amber-700",
+  hired: "border-green-300 bg-green-100 text-green-800",
+  rejected: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+const APP_STATUS_DOT: Record<string, string> = {
+  new: "bg-sky-500",
+  interview: "bg-amber-500",
+  hired: "bg-green-600",
+  rejected: "bg-rose-500",
 };
 
 function getErrorMessage(error: unknown) {
@@ -231,339 +250,380 @@ const AdminRecruitment = () => {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
-        <div>
-          <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("recruit.title")}</h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {activeCount} {t("recruit.positions")} {t("recruit.positionsOpen")} · {applications.length} {t("recruit.applications")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            to="/admin/recruitment/employment-types"
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm rounded-xl border font-semibold hover:bg-muted transition"
-            style={{ borderColor: "hsl(var(--admin-border))" }}
-          >
-            {t("nav.employmentTypes")}
-          </Link>
-          <Link
-            to="/admin/recruitment/new"
-            className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Plus className="w-4 h-4" /> {t("recruit.postPosition")}
-          </Link>
-        </div>
-      </div>
+      <div className="space-y-6 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{t("recruit.title")}</h1>
+            <p className="text-xs italic text-muted-foreground">
+              {activeCount} {t("recruit.positions")} {t("recruit.positionsOpen")} · {applications.length} {t("recruit.applications")}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline">
+              <Link to="/admin/recruitment/employment-types">{t("nav.employmentTypes")}</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/admin/recruitment/new">
+                <Plus className="mr-1.5 h-4 w-4" /> {t("recruit.postPosition")}
+              </Link>
+            </Button>
+          </div>
+        </header>
 
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
-        <h2 className="font-display text-xl font-extrabold">{t("recruit.positions")}</h2>
-        <div
-          className="flex items-center gap-2 rounded-full px-4 py-2 border w-full lg:w-80"
-          style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
-        >
-          <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-          <input
-            value={positionQuery}
-            onChange={(e) => setPositionQuery(e.target.value)}
-            placeholder={t("recruit.searchPositionPlaceholder")}
-            className="bg-transparent outline-none text-sm flex-1 placeholder:opacity-60"
-          />
-        </div>
-      </div>
-      {loadingPositions ? (
-        <div className="flex justify-center py-10">
-          <div className="w-7 h-7 border-4 rounded-full animate-spin" style={{ borderColor: "hsl(var(--admin-primary))", borderTopColor: "transparent" }} />
-        </div>
-      ) : filteredPositions.length === 0 ? (
-        <div className="admin-card p-10 text-center mb-10" style={{ color: "hsl(var(--admin-muted))" }}>
-          {positions.length === 0 ? t("recruit.noPositions") : t("common.noData")}
-        </div>
-      ) : (
-        <>
-        <BulkActionBar
-          selectedCount={posSelectedIds.size}
-          bulkDeleting={posBulkDeleting}
-          onClear={posClearSelection}
-          onBulkDelete={() => void posBulkDelete()}
-        />
-        <div className="flex items-center gap-2 mb-3 px-1 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-          <Checkbox
-            checked={
-              posAllSelected
-                ? true
-                : posSomeSelected
-                  ? "indeterminate"
-                  : false
-            }
-            onCheckedChange={(v) => posToggleAll(v === true)}
-            aria-label={t("common.selectAll")}
-          />
-          <span>{t("common.selectAll")}</span>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mb-10">
-          {filteredPositions.map((p) => (
-            <div key={p.id} className="admin-card p-6 flex flex-col relative">
-              <div
-                className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Checkbox
-                  checked={posSelectedIds.has(p.id)}
-                  onCheckedChange={(v) => posToggleOne(p.id, v === true)}
-                  aria-label={`${t("common.selectAll")} · ${p.title}`}
+        {/* ---------- Positions section ---------- */}
+        <section className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between rounded-lg border bg-card p-3">
+            <div>
+              <h2 className="text-lg font-semibold">{t("recruit.positions")}</h2>
+              <p className="text-xs text-muted-foreground">
+                {filteredPositions.length} / {positions.length}
+              </p>
+            </div>
+            <div className="w-full sm:w-72">
+              <Label className="text-xs" htmlFor="position-search">{t("common.search")}</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="position-search"
+                  value={positionQuery}
+                  onChange={(e) => setPositionQuery(e.target.value)}
+                  placeholder={t("recruit.searchPositionPlaceholder")}
+                  className="h-9 pl-9"
                 />
               </div>
-              <div className="flex items-start justify-between mb-4">
-                <div
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center text-white"
-                  style={{ background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(255 80% 72%))" }}
-                >
-                  <Briefcase className="w-5 h-5" strokeWidth={1.75} />
-                </div>
-                <span
-                  className="admin-chip"
-                  style={
-                    p.isActive
-                      ? { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
-                      : { background: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))" }
-                  }
-                >
-                  {p.isActive ? t("recruit.hiring") : t("recruit.closed")}
-                </span>
+            </div>
+          </div>
+
+          {loadingPositions ? (
+            <div className="flex justify-center py-10">
+              <div className="h-7 w-7 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : filteredPositions.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+              <div className="rounded-full bg-muted p-3">
+                <Briefcase className="h-5 w-5" aria-hidden />
               </div>
-              <h3 className="font-display text-lg font-extrabold mb-0.5">{p.title}</h3>
-              <p className="text-xs mb-2" style={{ color: "hsl(var(--admin-muted))" }}>{p.department}</p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="admin-chip text-xs">
-                  {getEmploymentTypeLabel(p.employmentType, employmentTypeMap.get(p.employmentType) ?? p.employmentType, t)}
-                </span>
-                <span className="admin-chip text-xs">{getExperienceLabel(p.experienceLevel, t)}</span>
-              </div>
-              <div className="flex items-center justify-between mt-auto pt-4 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                <span className="text-xs flex items-center gap-1.5" style={{ color: "hsl(var(--admin-muted))" }}>
-                  <MapPin className="w-3 h-3" /> {p.location}
-                </span>
-                <span className="text-xs font-bold flex items-center gap-1" style={{ color: "hsl(var(--admin-primary))" }}>
-                  <Users className="w-3 h-3" /> {p.applicationCount} {t("recruit.candidateCount")}
-                </span>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <Link
-                  to={`/admin/recruitment/${p.id}/edit`}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs rounded-lg border hover:bg-muted transition"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                >
-                  <Pencil className="w-3 h-3" /> {t("recruit.edit")}
+              <p>{positions.length === 0 ? t("recruit.noPositions") : t("common.noData")}</p>
+              <Button asChild size="sm">
+                <Link to="/admin/recruitment/new">
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("recruit.postPosition")}
                 </Link>
-                <button
-                  onClick={() => deletePosition(p.id, p.title)}
-                  disabled={deletingId === p.id}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 text-xs rounded-lg border text-destructive hover:bg-destructive/10 transition disabled:opacity-50"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                >
-                  <Trash2 className="w-3 h-3" /> {t("recruit.delete")}
-                </button>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <BulkActionBar
+                selectedCount={posSelectedIds.size}
+                bulkDeleting={posBulkDeleting}
+                onClear={posClearSelection}
+                onBulkDelete={() => void posBulkDelete()}
+              />
+              <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                <Checkbox
+                  checked={
+                    posAllSelected
+                      ? true
+                      : posSomeSelected
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={(v) => posToggleAll(v === true)}
+                  aria-label={t("common.selectAll")}
+                />
+                <span>{t("common.selectAll")}</span>
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filteredPositions.map((p) => (
+                  <div key={p.id} className="relative flex flex-col rounded-lg border bg-card p-5 transition hover:shadow-md">
+                    <div
+                      className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={posSelectedIds.has(p.id)}
+                        onCheckedChange={(v) => posToggleOne(p.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${p.title}`}
+                      />
+                    </div>
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Briefcase className="h-5 w-5" strokeWidth={1.75} />
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "gap-1.5 whitespace-nowrap font-medium",
+                          p.isActive
+                            ? "border-green-300 bg-green-100 text-green-800"
+                            : "border-slate-200 bg-slate-100 text-slate-600",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            p.isActive ? "bg-green-600" : "bg-slate-400",
+                          )}
+                        />
+                        {p.isActive ? t("recruit.hiring") : t("recruit.closed")}
+                      </Badge>
+                    </div>
+                    <h3 className="text-base font-semibold">{p.title}</h3>
+                    <p className="text-xs text-muted-foreground">{p.department}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Badge variant="outline" className="whitespace-nowrap text-xs">
+                        {getEmploymentTypeLabel(p.employmentType, employmentTypeMap.get(p.employmentType) ?? p.employmentType, t)}
+                      </Badge>
+                      <Badge variant="outline" className="whitespace-nowrap text-xs">
+                        {getExperienceLabel(p.experienceLevel, t)}
+                      </Badge>
+                    </div>
+                    <div className="mt-auto flex items-center justify-between pt-4 border-t">
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" /> {p.location}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs font-medium text-primary">
+                        <Users className="h-3 w-3" /> {p.applicationCount} {t("recruit.candidateCount")}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button asChild variant="outline" size="sm" className="flex-1">
+                        <Link to={`/admin/recruitment/${p.id}/edit`}>
+                          <Pencil className="mr-1 h-3.5 w-3.5" /> {t("recruit.edit")}
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deletePosition(p.id, p.title)}
+                        disabled={deletingId === p.id}
+                        className="flex-1 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("recruit.delete")}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* ---------- Applications section ---------- */}
+        <section className="space-y-3">
+          <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:flex-wrap sm:items-end">
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold">{t("recruit.applications")}</h2>
+              <p className="text-xs text-muted-foreground">
+                {filteredApplications.length} / {applications.length}
+              </p>
+            </div>
+            <div className="min-w-[200px] flex-1">
+              <Label className="text-xs" htmlFor="application-search">{t("common.search")}</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="application-search"
+                  value={appQuery}
+                  onChange={(e) => setAppQuery(e.target.value)}
+                  placeholder={t("recruit.searchApplicationPlaceholder")}
+                  className="h-9 pl-9"
+                />
               </div>
             </div>
-          ))}
-        </div>
-        </>
-      )}
+            <div className="w-full sm:w-[180px]">
+              <Label className="text-xs" htmlFor="filter-position">{t("recruit.position")}</Label>
+              <Select
+                value={filterPosition === "" ? "__all" : String(filterPosition)}
+                onValueChange={(v) => setFilterPosition(v === "__all" ? "" : Number(v))}
+              >
+                <SelectTrigger id="filter-position" className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">{t("recruit.allPositions")}</SelectItem>
+                  {positions.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full sm:w-[160px]">
+              <Label className="text-xs" htmlFor="filter-status">{t("common.status")}</Label>
+              <Select
+                value={filterStatus || "__all"}
+                onValueChange={(v) => setFilterStatus(v === "__all" ? "" : v)}
+              >
+                <SelectTrigger id="filter-status" className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">{t("recruit.allStatuses")}</SelectItem>
+                  <SelectItem value="new">{t("recruit.status.new")}</SelectItem>
+                  <SelectItem value="interview">{t("recruit.status.interview")}</SelectItem>
+                  <SelectItem value="hired">{t("recruit.status.hired")}</SelectItem>
+                  <SelectItem value="rejected">{t("recruit.status.rejected")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <AdminExportButton onClick={handleExportApplications} disabled={loadingApps || applications.length === 0} />
+            </div>
+          </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <h2 className="font-display text-xl font-extrabold">{t("recruit.applications")}</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <div
-            className="flex items-center gap-2 rounded-full px-3 py-1.5 border"
-            style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
-          >
-            <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-            <input
-              value={appQuery}
-              onChange={(e) => setAppQuery(e.target.value)}
-              placeholder={t("recruit.searchApplicationPlaceholder")}
-              className="bg-transparent outline-none text-sm w-44 placeholder:opacity-60"
+          <div className="space-y-2">
+            <BulkActionBar
+              selectedCount={appSelectedIds.size}
+              bulkDeleting={appBulkDeleting}
+              onClear={appClearSelection}
+              onBulkDelete={() => void appBulkDelete()}
             />
-          </div>
-          <AdminExportButton onClick={handleExportApplications} disabled={loadingApps || applications.length === 0} />
-          <div className="relative">
-            <select
-              className="admin-input pr-8 text-sm appearance-none"
-              value={filterPosition}
-              onChange={(e) => setFilterPosition(e.target.value === "" ? "" : Number(e.target.value))}
-            >
-              <option value="">{t("recruit.allPositions")}</option>
-              {positions.map((p) => (
-                <option key={p.id} value={p.id}>{p.title}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: "hsl(var(--admin-muted))" }} />
-          </div>
-          <div className="relative">
-            <select
-              className="admin-input pr-8 text-sm appearance-none"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-            >
-              <option value="">{t("recruit.allStatuses")}</option>
-              <option value="new">{t("recruit.status.new")}</option>
-              <option value="interview">{t("recruit.status.interview")}</option>
-              <option value="hired">{t("recruit.status.hired")}</option>
-              <option value="rejected">{t("recruit.status.rejected")}</option>
-            </select>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none" style={{ color: "hsl(var(--admin-muted))" }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="admin-card overflow-hidden">
-        <BulkActionBar
-          selectedCount={appSelectedIds.size}
-          bulkDeleting={appBulkDeleting}
-          onClear={appClearSelection}
-          onBulkDelete={() => void appBulkDelete()}
-        />
-        {loadingApps ? (
-          <div className="flex justify-center py-10">
-            <div className="w-7 h-7 border-4 rounded-full animate-spin" style={{ borderColor: "hsl(var(--admin-primary))", borderTopColor: "transparent" }} />
-          </div>
-        ) : filteredApplications.length === 0 ? (
-          <div className="p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-            {applications.length === 0 ? t("recruit.noApplications") : t("common.noData")}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead style={{ background: "hsl(var(--admin-bg))" }}>
-                <tr className="text-left">
-                  <th className="w-10 px-3 py-2 text-left">
-                    <Checkbox
-                      checked={
-                        appAllSelected
-                          ? true
-                          : appSomeSelected
-                            ? "indeterminate"
-                            : false
-                      }
-                      onCheckedChange={(v) => appToggleAll(v === true)}
-                      aria-label={t("common.selectAll")}
-                    />
-                  </th>
-                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("recruit.candidate")}</th>
-                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("recruit.position")}</th>
-                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("recruit.experience")}</th>
-                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("recruit.appliedOn")}</th>
-                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">{t("common.status")}</th>
-                  <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">{t("common.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredApplications.map((a) => {
-                  const st = APP_STATUS_STYLE[a.status] ?? APP_STATUS_STYLE.new;
-                  return (
-                    <tr key={a.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                      <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
+            {loadingApps ? (
+              <div className="flex justify-center py-10">
+                <div className="h-7 w-7 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            ) : filteredApplications.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                <div className="rounded-full bg-muted p-3">
+                  <Users className="h-5 w-5" aria-hidden />
+                </div>
+                <p>{applications.length === 0 ? t("recruit.noApplications") : t("common.noData")}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="min-w-[900px] w-full divide-y text-sm">
+                  <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="w-10 px-3 py-3 text-left">
                         <Checkbox
-                          checked={appSelectedIds.has(a.id)}
-                          onCheckedChange={(v) => appToggleOne(a.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${a.candidateName}`}
+                          checked={
+                            appAllSelected
+                              ? true
+                              : appSomeSelected
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(v) => appToggleAll(v === true)}
+                          aria-label={t("common.selectAll")}
                         />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-9 h-9 rounded-full text-white flex items-center justify-center text-sm font-bold shrink-0"
-                            style={{ background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(255 80% 72%))" }}
-                          >
-                            {a.candidateName[0]?.toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-semibold">{a.candidateName}</p>
-                            <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{a.email}</p>
-                            {a.phone && <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{a.phone}</p>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 font-medium">{a.positionTitle}</td>
-                      <td className="px-6 py-4" style={{ color: "hsl(var(--admin-muted))" }}>
-                        {a.experienceYears != null ? `${a.experienceYears} ${t("recruit.expYears")}` : "—"}
-                      </td>
-                      <td className="px-6 py-4" style={{ color: "hsl(var(--admin-muted))" }}>
-                        {new Date(a.appliedAt).toLocaleDateString("vi-VN")}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="relative inline-block">
-                          <select
-                            className="admin-chip pr-6 appearance-none cursor-pointer text-xs"
-                            value={a.status}
-                            onChange={(e) => updateAppStatus(a.id, e.target.value)}
-                            style={{ background: st.bg, color: st.color }}
-                          >
-                            <option value="new">{t("recruit.status.new")}</option>
-                            <option value="interview">{t("recruit.status.interview")}</option>
-                            <option value="hired">{t("recruit.status.hired")}</option>
-                            <option value="rejected">{t("recruit.status.rejected")}</option>
-                          </select>
-                          <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none" style={{ color: st.color }} />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="inline-flex gap-1">
-                          {a.coverLetter && (
-                            <button
-                              onClick={() => alert(a.coverLetter)}
-                              title={t("recruit.candidateCount")}
-                              className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
-                              style={{ color: "hsl(var(--admin-info))" }}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          )}
-                          {a.cvUrl && (
-                            <a
-                              href={`${import.meta.env.VITE_API_URL ?? ""}${a.cvUrl}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="CV"
-                              className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
-                              style={{ color: "hsl(var(--admin-primary))" }}
-                            >
-                              <FileDown className="w-4 h-4" />
-                            </a>
-                          )}
-                          <button
-                            onClick={() => updateAppStatus(a.id, "interview")}
-                            title={t("recruit.status.interview")}
-                            className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
-                            style={{ color: "hsl(var(--admin-success))" }}
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => updateAppStatus(a.id, "rejected")}
-                            title={t("recruit.status.rejected")}
-                            className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
-                            style={{ color: "hsl(var(--admin-warning))" }}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteApp(a.id)}
-                            title={t("recruit.delete")}
-                            className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center"
-                            style={{ color: "hsl(var(--admin-danger))" }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                      </th>
+                      <th className="px-3 py-3 text-left font-medium">{t("recruit.candidate")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("recruit.position")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("recruit.experience")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("recruit.appliedOn")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("common.status")}</th>
+                      <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filteredApplications.map((a) => (
+                      <tr key={a.id} className="hover:bg-muted/40 transition">
+                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={appSelectedIds.has(a.id)}
+                            onCheckedChange={(v) => appToggleOne(a.id, v === true)}
+                            aria-label={`${t("common.selectAll")} · ${a.candidateName}`}
+                          />
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                              {a.candidateName[0]?.toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium">{a.candidateName}</p>
+                              <p className="text-xs text-muted-foreground">{a.email}</p>
+                              {a.phone && <p className="text-xs text-muted-foreground">{a.phone}</p>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 font-medium">{a.positionTitle}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                          {a.experienceYears != null ? `${a.experienceYears} ${t("recruit.expYears")}` : "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                          {new Date(a.appliedAt).toLocaleDateString("vi-VN")}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3">
+                          <Select value={a.status} onValueChange={(v) => updateAppStatus(a.id, v)}>
+                            <SelectTrigger
+                              className={cn(
+                                "h-7 gap-1.5 rounded-full border px-2.5 text-xs font-medium w-auto min-w-[110px]",
+                                APP_STATUS_STYLES[a.status] ?? APP_STATUS_STYLES.new,
+                              )}
+                            >
+                              <span className={cn("h-1.5 w-1.5 rounded-full", APP_STATUS_DOT[a.status] ?? APP_STATUS_DOT.new)} />
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new">{t("recruit.status.new")}</SelectItem>
+                              <SelectItem value="interview">{t("recruit.status.interview")}</SelectItem>
+                              <SelectItem value="hired">{t("recruit.status.hired")}</SelectItem>
+                              <SelectItem value="rejected">{t("recruit.status.rejected")}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-right">
+                          <div className="inline-flex items-center gap-1">
+                            {a.coverLetter && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.view")}
+                                aria-label={t("common.view")}
+                                onClick={() => alert(a.coverLetter)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {a.cvUrl && (
+                              <Button asChild variant="ghost" size="icon" title="CV" aria-label="CV">
+                                <a
+                                  href={`${import.meta.env.VITE_API_URL ?? ""}${a.cvUrl}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <FileDown className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => updateAppStatus(a.id, "interview")}
+                              title={t("recruit.status.interview")}
+                              aria-label={t("recruit.status.interview")}
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => updateAppStatus(a.id, "rejected")}
+                              title={t("recruit.status.rejected")}
+                              aria-label={t("recruit.status.rejected")}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteApp(a.id)}
+                              title={t("recruit.delete")}
+                              aria-label={t("recruit.delete")}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+        </section>
       </div>
     </AdminLayout>
   );
