@@ -1,6 +1,6 @@
 [
   { "key": "nav.crm", "category": "nav", "vi": "CRM", "en": "CRM", "zh": "CRM", "ja": "CRM" },
-  { "key": "nav.leads", "category": "nav", "vi": "Lead", "en": "Leads", "zh": "销售线索", "ja": "リード" },
+  { "key": "nav.leads", "category": "nav", "vi": "Quản lý Lead", "en": "Lead management", "zh": "销售线索管理", "ja": "リード管理" },
 
   { "key": "leads.title", "category": "leads", "vi": "Quản lý Lead", "en": "Lead Management", "zh": "销售线索管理", "ja": "リード管理" },
   { "key": "leads.subtitle", "category": "leads", "vi": "Ghi nhận & chăm sóc khách hàng tiềm năng đầu phễu Sales.", "en": "Capture and nurture prospects at the top of the sales funnel.", "zh": "记录并培育销售漏斗顶端的潜在客户。", "ja": "セールスファネル最上流のリードを記録・育成します。" },
@@ -10,6 +10,9 @@
   { "key": "leads.filter.status", "category": "leads", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "ステータス" },
   { "key": "leads.filter.source", "category": "leads", "vi": "Nguồn", "en": "Source", "zh": "来源", "ja": "ソース" },
   { "key": "leads.filter.all", "category": "leads", "vi": "Tất cả", "en": "All", "zh": "全部", "ja": "すべて" },
+  { "key": "leads.myScopeCount", "category": "leads", "vi": "Chỉ hiển thị lead của bạn · Tổng {count}", "en": "Showing only your leads · Total {count}", "zh": "仅显示您的线索 · 共 {count} 条", "ja": "自分のリードのみ表示 · 合計 {count} 件" },
+  { "key": "leads.totalCount", "category": "leads", "vi": "Tổng {count} lead", "en": "{count} leads total", "zh": "共 {count} 条线索", "ja": "リード合計 {count} 件" },
+  { "key": "leads.validation.missingFields", "category": "leads", "vi": "Vui lòng nhập đầy đủ Tên và Nguồn.", "en": "Please provide the contact name and source.", "zh": "请填写姓名和来源。", "ja": "名前とソースを入力してください。" },
 
   { "key": "leads.field.name", "category": "leads", "vi": "Tên liên hệ", "en": "Contact name", "zh": "联系人姓名", "ja": "担当者名" },
   { "key": "leads.field.company", "category": "leads", "vi": "Công ty", "en": "Company", "zh": "公司", "ja": "会社" },
