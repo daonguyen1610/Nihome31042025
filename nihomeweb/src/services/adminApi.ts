@@ -526,6 +526,139 @@ export interface CustomerListParams {
   pageSize?: number;
 }
 
+// ─── CRM Opportunity (NIH-83) ────────────────────────────────────────
+
+export type OpportunityStage =
+  | "Prospecting"
+  | "Qualification"
+  | "Proposal"
+  | "Negotiation"
+  | "Won"
+  | "Lost";
+
+export const OPPORTUNITY_STAGES: OpportunityStage[] = [
+  "Prospecting",
+  "Qualification",
+  "Proposal",
+  "Negotiation",
+  "Won",
+  "Lost",
+];
+
+export type OpportunityActivityType =
+  | "Call"
+  | "Email"
+  | "Meeting"
+  | "Note"
+  | "StageChange";
+
+export interface OpportunityActivityResponse {
+  id: number;
+  type: OpportunityActivityType;
+  occurredAt: string;
+  content: string;
+  createdByUserId: number;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export interface OpportunityResponse {
+  id: number;
+  name: string;
+  customerId: number;
+  customerName?: string;
+  ownerUserId?: number;
+  ownerName?: string;
+  estimatedValue: number;
+  winProbability: number;
+  expectedCloseDate?: string;
+  stage: OpportunityStage;
+  lostReasonCode?: string;
+  lostNote?: string;
+  closedAt?: string;
+  wonQuoteId?: number;
+  wonTenderId?: number;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  activities: OpportunityActivityResponse[];
+}
+
+export interface OpportunityListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: OpportunityResponse[];
+}
+
+export interface OpportunityPipelineColumn {
+  stage: OpportunityStage;
+  count: number;
+  totalValue: number;
+  items: OpportunityResponse[];
+}
+
+export interface OpportunityPipelineResponse {
+  columns: OpportunityPipelineColumn[];
+}
+
+export interface CreateOpportunityRequest {
+  name: string;
+  customerId: number;
+  ownerUserId?: number | null;
+  estimatedValue: number;
+  winProbability: number;
+  expectedCloseDate?: string | null;
+  stage?: OpportunityStage;
+  note?: string;
+}
+
+export interface UpdateOpportunityRequest {
+  name: string;
+  customerId: number;
+  ownerUserId?: number | null;
+  estimatedValue: number;
+  winProbability: number;
+  expectedCloseDate?: string | null;
+  note?: string;
+}
+
+export interface ChangeOpportunityStageRequest {
+  targetStage: OpportunityStage;
+  wonQuoteId?: number;
+  wonTenderId?: number;
+  lostReasonCode?: string;
+  lostNote?: string;
+}
+
+export interface AddOpportunityActivityRequest {
+  type: OpportunityActivityType;
+  content: string;
+  occurredAt?: string;
+}
+
+export interface OpportunityListParams {
+  stage?: OpportunityStage;
+  customerId?: number;
+  ownerUserId?: number;
+  expectedCloseFrom?: string;
+  expectedCloseTo?: string;
+  minValue?: number;
+  maxValue?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface OpportunityPipelineParams {
+  ownerUserId?: number;
+  customerId?: number;
+  expectedCloseFrom?: string;
+  expectedCloseTo?: string;
+  minValue?: number;
+  maxValue?: number;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -915,6 +1048,44 @@ export const adminApi = {
     api.delete(`/customers/${id}/contacts/${contactId}`),
   addCustomerActivity: (id: number, body: CreateCustomerActivityRequest) =>
     api.post<CustomerActivityResponse>(`/customers/${id}/activities`, body),
+
+  // CRM opportunities (NIH-83)
+  listOpportunities: (params: OpportunityListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.stage) q.append("stage", params.stage);
+    if (params.customerId != null) q.append("customerId", String(params.customerId));
+    if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
+    if (params.expectedCloseFrom) q.append("expectedCloseFrom", params.expectedCloseFrom);
+    if (params.expectedCloseTo) q.append("expectedCloseTo", params.expectedCloseTo);
+    if (params.minValue != null) q.append("minValue", String(params.minValue));
+    if (params.maxValue != null) q.append("maxValue", String(params.maxValue));
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<OpportunityListResponse>(`/opportunities${qs ? `?${qs}` : ""}`);
+  },
+  getOpportunityPipeline: (params: OpportunityPipelineParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
+    if (params.customerId != null) q.append("customerId", String(params.customerId));
+    if (params.expectedCloseFrom) q.append("expectedCloseFrom", params.expectedCloseFrom);
+    if (params.expectedCloseTo) q.append("expectedCloseTo", params.expectedCloseTo);
+    if (params.minValue != null) q.append("minValue", String(params.minValue));
+    if (params.maxValue != null) q.append("maxValue", String(params.maxValue));
+    const qs = q.toString();
+    return api.get<OpportunityPipelineResponse>(`/opportunities/pipeline${qs ? `?${qs}` : ""}`);
+  },
+  getOpportunity: (id: number) => api.get<OpportunityResponse>(`/opportunities/${id}`),
+  createOpportunity: (body: CreateOpportunityRequest) =>
+    api.post<OpportunityResponse>("/opportunities", body),
+  updateOpportunity: (id: number, body: UpdateOpportunityRequest) =>
+    api.put<OpportunityResponse>(`/opportunities/${id}`, body),
+  changeOpportunityStage: (id: number, body: ChangeOpportunityStageRequest) =>
+    api.patch<OpportunityResponse>(`/opportunities/${id}/stage`, body),
+  deleteOpportunity: (id: number) => api.delete(`/opportunities/${id}`),
+  addOpportunityActivity: (id: number, body: AddOpportunityActivityRequest) =>
+    api.post<OpportunityActivityResponse>(`/opportunities/${id}/activities`, body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
