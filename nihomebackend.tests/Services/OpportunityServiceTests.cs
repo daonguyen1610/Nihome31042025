@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Data;
@@ -344,6 +345,276 @@ public class OpportunityServiceTests : IDisposable
         Assert.Equal(300, prospecting.TotalValue);
         var negotiation = pipeline.Columns.Single(c => c.Stage == OpportunityStage.Negotiation);
         Assert.Equal(500, negotiation.TotalValue);
+    }
+
+    [Fact]
+    public async Task GetPipelineAsync_WithoutSeeAll_OnlyCountsOwnRows()
+    {
+        var salesA = await SeedUserAsync();
+        var salesB = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(salesA.Id);
+
+        await SeedOpportunityAsync(customer, salesA, OpportunityStage.Prospecting, value: 100);
+        await SeedOpportunityAsync(customer, salesB, OpportunityStage.Prospecting, value: 999);
+
+        var pipeline = await _sut.GetPipelineAsync(salesA.Id, canSeeAll: false);
+        var prospecting = pipeline.Columns.Single(c => c.Stage == OpportunityStage.Prospecting);
+        Assert.Equal(1, prospecting.Count);
+        Assert.Equal(100, prospecting.TotalValue);
+    }
+
+    // ---------------- Regression guards for edge cases ----------------
+
+    [Fact]
+    public async Task GetAsync_WithUnknownId_ReturnsNull()
+    {
+        var user = await SeedUserAsync();
+        var found = await _sut.GetAsync(999_999, user.Id, canSeeAll: true);
+        Assert.Null(found);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithUnknownId_ReturnsNull()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+
+        var response = await _sut.UpdateAsync(
+            999_999,
+            new UpdateOpportunityRequest
+            {
+                Name = "ghost",
+                CustomerId = customer.Id,
+                EstimatedValue = 1,
+                WinProbability = 1,
+            },
+            user.Id,
+            canManage: true,
+            canSeeAll: true);
+
+        Assert.Null(response);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithoutManagePermission_Throws()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var op = await SeedOpportunityAsync(customer, user);
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.UpdateAsync(
+            op.Id,
+            new UpdateOpportunityRequest
+            {
+                Name = "renamed",
+                CustomerId = customer.Id,
+                EstimatedValue = 1,
+                WinProbability = 1,
+            },
+            user.Id,
+            canManage: false,
+            canSeeAll: true));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithoutManagePermission_ReturnsFalse()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var op = await SeedOpportunityAsync(customer, user);
+
+        var removed = await _sut.DeleteAsync(op.Id, user.Id, canManage: false, canSeeAll: true);
+        Assert.False(removed);
+        Assert.NotNull(await _db.Opportunities.FindAsync(op.Id));
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_SameStage_IsNoOpAndDoesNotEmitActivity()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var op = await SeedOpportunityAsync(customer, user, OpportunityStage.Prospecting);
+        var before = await _db.OpportunityActivities.CountAsync();
+
+        var response = await _sut.ChangeStageAsync(
+            op.Id,
+            new ChangeOpportunityStageRequest { TargetStage = OpportunityStage.Prospecting },
+            user.Id, canManage: true, canSeeAll: true);
+
+        Assert.NotNull(response);
+        Assert.Equal(OpportunityStage.Prospecting, response!.Stage);
+        Assert.Equal(before, await _db.OpportunityActivities.CountAsync());
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_WithUnknownId_ReturnsNull()
+    {
+        var user = await SeedUserAsync();
+        var response = await _sut.ChangeStageAsync(
+            999_999,
+            new ChangeOpportunityStageRequest { TargetStage = OpportunityStage.Qualification },
+            user.Id, canManage: true, canSeeAll: true);
+        Assert.Null(response);
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_WithoutSeeAll_HidesOtherOwners()
+    {
+        var salesA = await SeedUserAsync();
+        var salesB = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(salesA.Id);
+        var op = await SeedOpportunityAsync(customer, salesB, OpportunityStage.Prospecting);
+
+        var response = await _sut.ChangeStageAsync(
+            op.Id,
+            new ChangeOpportunityStageRequest { TargetStage = OpportunityStage.Qualification },
+            salesA.Id, canManage: true, canSeeAll: false);
+
+        Assert.Null(response);
+        // Original row is untouched
+        var reloaded = await _db.Opportunities.FindAsync(op.Id);
+        Assert.Equal(OpportunityStage.Prospecting, reloaded!.Stage);
+    }
+
+    [Fact]
+    public async Task AddActivityAsync_PersistsAndBumpsUpdatedAt()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var op = await SeedOpportunityAsync(customer, user);
+        var originalUpdatedAt = op.UpdatedAt;
+
+        var response = await _sut.AddActivityAsync(
+            op.Id,
+            new AddOpportunityActivityRequest
+            {
+                Type = OpportunityActivityType.Note,
+                Content = "  call notes  ",
+            },
+            user.Id,
+            canSeeAll: false);
+
+        Assert.NotNull(response);
+        Assert.Equal("call notes", response!.Content);
+        Assert.Equal(user.Id, response.CreatedByUserId);
+
+        var reloaded = await _db.Opportunities.FindAsync(op.Id);
+        Assert.True(reloaded!.UpdatedAt >= originalUpdatedAt);
+    }
+
+    [Fact]
+    public async Task AddActivityAsync_UnknownOpportunity_ReturnsNull()
+    {
+        var user = await SeedUserAsync();
+        var response = await _sut.AddActivityAsync(
+            999_999,
+            new AddOpportunityActivityRequest { Type = OpportunityActivityType.Note, Content = "x" },
+            user.Id,
+            canSeeAll: true);
+        Assert.Null(response);
+    }
+
+    [Fact]
+    public async Task AddActivityAsync_WithoutSeeAll_HidesOtherOwners()
+    {
+        var salesA = await SeedUserAsync();
+        var salesB = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(salesA.Id);
+        var op = await SeedOpportunityAsync(customer, salesB);
+
+        var response = await _sut.AddActivityAsync(
+            op.Id,
+            new AddOpportunityActivityRequest { Type = OpportunityActivityType.Note, Content = "peek" },
+            salesA.Id,
+            canSeeAll: false);
+        Assert.Null(response);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithSameOwnerAsCaller_DoesNotFireAssignedNotification()
+    {
+        var caller = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(caller.Id);
+
+        await _sut.CreateAsync(
+            new CreateOpportunityRequest
+            {
+                Name = "own deal",
+                CustomerId = customer.Id,
+                OwnerUserId = caller.Id,
+                EstimatedValue = 1_000,
+                WinProbability = 30,
+            },
+            caller.Id,
+            canManage: true);
+
+        _notifications.Verify(n => n.NotifyFromTemplateAsync(
+                It.IsAny<int>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, string>>(),
+                It.IsAny<string?>(),
+                It.IsAny<int?>(),
+                It.IsAny<string?>(),
+                It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task ListAsync_ClampsPageSizeToMaxAndFloors()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        for (var i = 0; i < 3; i++)
+            await SeedOpportunityAsync(customer, user);
+
+        // pageSize < 1 → floored to 1
+        var floored = await _sut.ListAsync(user.Id, canSeeAll: true, pageSize: 0);
+        Assert.Equal(1, floored.PageSize);
+        Assert.Single(floored.Items);
+
+        // pageSize > 100 → capped at 100
+        var capped = await _sut.ListAsync(user.Id, canSeeAll: true, pageSize: 999);
+        Assert.Equal(100, capped.PageSize);
+
+        // page < 1 → floored to 1
+        var page = await _sut.ListAsync(user.Id, canSeeAll: true, page: 0);
+        Assert.Equal(1, page.Page);
+    }
+
+    [Fact]
+    public async Task ListAsync_FiltersByMinAndMaxValue()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        await SeedOpportunityAsync(customer, user, value: 100);
+        await SeedOpportunityAsync(customer, user, value: 500);
+        await SeedOpportunityAsync(customer, user, value: 2_000);
+
+        var band = await _sut.ListAsync(user.Id, canSeeAll: true, minValue: 200, maxValue: 1_000);
+        Assert.Single(band.Items);
+        Assert.Equal(500, band.Items[0].EstimatedValue);
+    }
+
+    [Fact]
+    public async Task ListAsync_FiltersByExpectedCloseRange()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+
+        var oldOp = await SeedOpportunityAsync(customer, user);
+        oldOp.ExpectedCloseDate = new DateTime(2026, 1, 1);
+        var newOp = await SeedOpportunityAsync(customer, user);
+        newOp.ExpectedCloseDate = new DateTime(2026, 12, 31);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.ListAsync(
+            user.Id,
+            canSeeAll: true,
+            expectedCloseFrom: new DateTime(2026, 6, 1),
+            expectedCloseTo: new DateTime(2027, 1, 1));
+
+        Assert.Single(result.Items);
+        Assert.Equal(newOp.Id, result.Items[0].Id);
     }
 
     // ---------------- Helpers ----------------

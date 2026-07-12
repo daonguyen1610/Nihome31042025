@@ -8,6 +8,7 @@ export const TEST_USERS = {
   superAdmin: { phoneNumber: "0335240370", password: "Admin@123", role: "SUPER_ADMIN" },
   admin: { phoneNumber: "0911111111", password: "Admin@123", role: "ADMIN" },
   sale: { phoneNumber: "0911000003", password: "Admin@123", role: "SALE" },
+  salesManager: { phoneNumber: "0911000010", password: "Admin@123", role: "SALES_MANAGER" },
   design: { phoneNumber: "0911000004", password: "Admin@123", role: "DESIGN" },
   pm: { phoneNumber: "0911000005", password: "Admin@123", role: "PM" },
   qs: { phoneNumber: "0911000006", password: "Admin@123", role: "QS" },

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -77,34 +78,6 @@ const emptyCreate: CreateCustomerRequest = {
   name: "",
   sourceCode: "",
   primaryContact: { ...emptyContact },
-};
-
-/**
- * Extracts a user-facing error message from an axios error. Handles three
- * shapes the backend returns:
- *   - 400 ModelState  → { errors: { "Field": ["msg"] } }
- *   - 400 service     → { message: "…" }
- *   - fallback        → err.message ("Request failed with status code 400")
- */
-const extractApiError = (err: unknown): string => {
-  const anyErr = err as {
-    response?: {
-      data?: unknown;
-    };
-    message?: string;
-  };
-  const data = anyErr.response?.data;
-  if (data && typeof data === "object") {
-    if ("errors" in data && data.errors && typeof data.errors === "object") {
-      return Object.entries(data.errors as Record<string, string[]>)
-        .map(([k, v]) => `${k}: ${v.join("; ")}`)
-        .join(" · ");
-    }
-    if ("message" in data && typeof data.message === "string") {
-      return data.message;
-    }
-  }
-  return anyErr.message ?? String(err);
 };
 
 const AdminCustomers = () => {
