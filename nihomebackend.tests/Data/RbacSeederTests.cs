@@ -54,19 +54,49 @@ public class RbacSeederTests : IDisposable
     }
 
     [Fact]
-    public void Seed_DoesNotOverwriteBusinessRoleChangesAfterFirstSeed()
+    public void Seed_TopsUpNewlyDeclaredBusinessRolePermissions_ButPreservesAdminGrants()
     {
+        // Boot 1 — seed the whole default matrix.
         RbacSeeder.Seed(_db);
 
         var sale = _db.Roles.Single(r => r.Code == "SALE");
-        var salePerms = _db.RolePermissions.Where(rp => rp.RoleId == sale.Id).ToList();
-        Assert.NotEmpty(salePerms);
-        _db.RolePermissions.RemoveRange(salePerms);
+        var originalDeclared = _db.RolePermissions
+            .Where(rp => rp.RoleId == sale.Id)
+            .Select(rp => rp.PermissionId)
+            .ToList();
+        Assert.NotEmpty(originalDeclared);
+
+        // Simulate an admin GRANT of a permission the SALE defaults don't include.
+        // pick any permission the role does not currently have.
+        var extra = _db.Permissions
+            .First(p => !originalDeclared.Contains(p.Id));
+        _db.RolePermissions.Add(new RolePermission
+        {
+            RoleId = sale.Id,
+            PermissionId = extra.Id,
+            CreatedAt = DateTime.UtcNow,
+        });
+
+        // Simulate the catalog + defaults being extended between boots. The
+        // reseed should top up any newly-declared permission that this role's
+        // pattern would match, while NEVER removing the admin's manual grant.
         _db.SaveChanges();
 
         RbacSeeder.Seed(_db);
 
-        Assert.Empty(_db.RolePermissions.Where(rp => rp.RoleId == sale.Id));
+        var afterReseed = _db.RolePermissions.Where(rp => rp.RoleId == sale.Id)
+            .Select(rp => rp.PermissionId)
+            .ToList();
+
+        // (a) the admin's manual grant survives the reseed.
+        Assert.Contains(extra.Id, afterReseed);
+        // (b) every originally-declared permission is still present.
+        foreach (var id in originalDeclared)
+        {
+            Assert.Contains(id, afterReseed);
+        }
+        // (c) the flag stays true — first-seed already happened.
+        Assert.True(_db.Roles.Single(r => r.Id == sale.Id).InitialPermissionsSeeded);
     }
 
     [Fact]

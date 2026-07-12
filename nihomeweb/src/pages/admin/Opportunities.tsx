@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Search, Trash2, RefreshCw, LayoutGrid, List, Pencil } from "lucide-react";
+import { AlertTriangle, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +7,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { formatVnd } from "@/lib/numberFormat";
+import { formatVnd, parseVnd } from "@/lib/numberFormat";
+import { isOpportunityOverdue } from "@/lib/opportunityDates";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   adminApi,
   OPPORTUNITY_STAGES,
+  type AuditLogItem,
   type CreateOpportunityRequest,
   type CustomerResponse,
   type MasterDataOption,
@@ -44,6 +46,7 @@ import {
   type OpportunityResponse,
   type OpportunityStage,
   type UpdateOpportunityRequest,
+  type UserListItemResponse,
 } from "@/services/adminApi";
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
@@ -110,6 +113,7 @@ const AdminOpportunities = () => {
   // masters
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [lostReasons, setLostReasons] = useState<MasterDataOption[]>([]);
+  const [salesUsers, setSalesUsers] = useState<UserListItemResponse[]>([]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -167,11 +171,21 @@ const AdminOpportunities = () => {
       } catch {
         /* non-fatal */
       }
+      // Owner picker is only useful for callers that can reassign
+      // (canSeeAll). For plain sales the field is hidden — no need to fetch.
+      if (canSeeAll) {
+        try {
+          const { data } = await adminApi.getUsers({ take: 100 });
+          if (!cancelled) setSalesUsers(data.items.filter((u) => u.isActive));
+        } catch {
+          /* non-fatal */
+        }
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [canSeeAll]);
 
   const customerLabel = useMemo(() => {
     const map = new Map<number, string>();
@@ -232,11 +246,33 @@ const AdminOpportunities = () => {
   const [lostNote, setLostNote] = useState("");
   const [wonQuote, setWonQuote] = useState<string>("");
 
+  // Audit log tab — populated on demand when the detail dialog opens.
+  const [auditItems, setAuditItems] = useState<AuditLogItem[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const loadAuditForOpportunity = useCallback(async (id: number) => {
+    setAuditLoading(true);
+    try {
+      const { data } = await adminApi.listAuditLogs({
+        resourceType: "Opportunity",
+        resourceId: id.toString(),
+        pageSize: 50,
+      });
+      setAuditItems(data.items);
+    } catch {
+      // audit view is a diagnostic; missing perm shouldn't break the dialog
+      setAuditItems([]);
+    } finally {
+      setAuditLoading(false);
+    }
+  }, []);
+
   const openDetail = async (id: number, options: { startEditing?: boolean } = {}) => {
     setDetailLoading(true);
     setDetail(null);
     setEditing(false);
     setEditForm(null);
+    setAuditItems([]);
     try {
       const { data } = await adminApi.getOpportunity(id);
       setDetail(data);
@@ -252,6 +288,8 @@ const AdminOpportunities = () => {
         });
         setEditing(true);
       }
+      // Fetch audit log eagerly so the tab has data when the user switches.
+      void loadAuditForOpportunity(id);
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
@@ -524,8 +562,23 @@ const AdminOpportunities = () => {
                         <td className="px-3 py-2">{o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatVnd(o.estimatedValue)}</td>
                         <td className="px-3 py-2 text-xs">{o.winProbability}%</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
-                          {o.expectedCloseDate ? new Date(o.expectedCloseDate).toLocaleDateString() : "—"}
+                        <td className="px-3 py-2 text-xs">
+                          {o.expectedCloseDate ? (
+                            <span
+                              className={
+                                isOpportunityOverdue(o.expectedCloseDate, o.stage)
+                                  ? "inline-flex items-center gap-1 text-destructive font-medium"
+                                  : "text-muted-foreground"
+                              }
+                            >
+                              {isOpportunityOverdue(o.expectedCloseDate, o.stage) && (
+                                <AlertTriangle className="h-3 w-3" aria-label={t("opportunities.overdue")} />
+                              )}
+                              {new Date(o.expectedCloseDate).toLocaleDateString()}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </td>
                         <td className="px-3 py-2">
                           <Badge variant={stageBadgeVariant(o.stage)}>{t(`opportunities.stage.${o.stage}`)}</Badge>
@@ -568,9 +621,13 @@ const AdminOpportunities = () => {
           pipelineLoading ? (
             <PageLoading />
           ) : (
-            <div className="grid gap-3 xl:grid-cols-6 lg:grid-cols-3 md:grid-cols-2 grid-cols-1">
+            // Mobile: single-row horizontal scroll (spec NIH-91). Desktop grid at lg / xl.
+            <div className="flex gap-3 overflow-x-auto pb-2 lg:grid lg:grid-cols-3 lg:overflow-visible xl:grid-cols-6">
               {pipelineColumns.map((col) => (
-                <div key={col.stage} className="rounded-lg border bg-muted/20 flex flex-col">
+                <div
+                  key={col.stage}
+                  className="rounded-lg border bg-muted/20 flex flex-col min-w-[260px] lg:min-w-0"
+                >
                   <div className="px-3 py-2 border-b bg-muted/40 rounded-t-lg">
                     <div className="text-sm font-medium">{t(`opportunities.stage.${col.stage}`)}</div>
                     <div className="text-xs text-muted-foreground tabular-nums">
@@ -584,21 +641,31 @@ const AdminOpportunities = () => {
                       <div className="text-xs text-muted-foreground py-6 text-center">
                         {t("opportunities.pipeline.empty")}
                       </div>
-                    ) : col.items.map((o) => (
-                      <button
-                        key={o.id}
-                        type="button"
-                        className="w-full text-left rounded-md border bg-background p-2 text-xs hover:border-primary transition"
-                        onClick={() => void openDetail(o.id)}
-                      >
-                        <div className="font-medium text-sm truncate">{o.name}</div>
-                        <div className="text-muted-foreground truncate">{o.customerName ?? `#${o.customerId}`}</div>
-                        <div className="mt-1 flex items-center justify-between">
-                          <span className="tabular-nums font-medium">{formatVnd(o.estimatedValue)}</span>
-                          <span className="text-muted-foreground">{o.winProbability}%</span>
-                        </div>
-                      </button>
-                    ))}
+                    ) : col.items.map((o) => {
+                      const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          className={`w-full text-left rounded-md border bg-background p-2 text-xs hover:border-primary transition ${overdue ? "border-destructive/60" : ""}`}
+                          onClick={() => void openDetail(o.id)}
+                        >
+                          <div className="font-medium text-sm truncate">{o.name}</div>
+                          <div className="text-muted-foreground truncate">{o.customerName ?? `#${o.customerId}`}</div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span className="tabular-nums font-medium">{formatVnd(o.estimatedValue)}</span>
+                            <span className="text-muted-foreground">{o.winProbability}%</span>
+                          </div>
+                          {o.expectedCloseDate && (
+                            <div className={`mt-1 text-[11px] flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
+                              {overdue && <AlertTriangle className="h-3 w-3" />}
+                              {new Date(o.expectedCloseDate).toLocaleDateString()}
+                              {overdue && <span className="font-medium">· {t("opportunities.overdue")}</span>}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -647,23 +714,53 @@ const AdminOpportunities = () => {
               <div>
                 <Label>{t("opportunities.field.estimatedValue")}</Label>
                 <Input
-                  type="number"
-                  min={0}
-                  value={createForm.estimatedValue}
-                  onChange={(e) => setCreateForm({ ...createForm, estimatedValue: Number(e.target.value) })}
+                  inputMode="numeric"
+                  value={createForm.estimatedValue ? formatVnd(createForm.estimatedValue) : ""}
+                  onChange={(e) => setCreateForm({ ...createForm, estimatedValue: parseVnd(e.target.value) })}
+                  placeholder="0"
                 />
               </div>
               <div>
                 <Label>{t("opportunities.field.winProbability")}</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={createForm.winProbability}
-                  onChange={(e) => setCreateForm({ ...createForm, winProbability: Number(e.target.value) })}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={createForm.winProbability}
+                    onChange={(e) => setCreateForm({ ...createForm, winProbability: Number(e.target.value) })}
+                    className="flex-1 accent-primary"
+                    aria-label={t("opportunities.field.winProbability")}
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={createForm.winProbability}
+                    onChange={(e) => setCreateForm({ ...createForm, winProbability: Number(e.target.value) })}
+                    className="w-16"
+                  />
+                </div>
               </div>
             </div>
+            {canSeeAll && (
+              <div>
+                <Label>{t("opportunities.field.owner")}</Label>
+                <Select
+                  value={createForm.ownerUserId ? String(createForm.ownerUserId) : ""}
+                  onValueChange={(v) => setCreateForm({ ...createForm, ownerUserId: Number(v) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    {salesUsers.map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)}>
+                        {u.fullName ?? u.phoneNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>{t("opportunities.field.expectedCloseDate")}</Label>
@@ -725,6 +822,29 @@ const AdminOpportunities = () => {
                   {detail.customerName ?? customerLabel.get(detail.customerId) ?? `#${detail.customerId}`}
                   {detail.ownerName && <> · {detail.ownerName}</>}
                 </DialogDescription>
+                {/* NIH-90: prominent Won / Lost header actions — only rendered when
+                    the caller can manage AND the deal is still in an open stage. */}
+                {canManage && detail.stage !== "Won" && detail.stage !== "Lost" && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      onClick={() => openStageChange("Won")}
+                      disabled={changingStage}
+                    >
+                      <Trophy className="mr-1.5 h-4 w-4" />
+                      {t("opportunities.action.markWon")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => openStageChange("Lost")}
+                      disabled={changingStage}
+                    >
+                      <ThumbsDown className="mr-1.5 h-4 w-4" />
+                      {t("opportunities.action.markLost")}
+                    </Button>
+                  </div>
+                )}
               </DialogHeader>
 
               <Tabs defaultValue="general">
@@ -732,6 +852,9 @@ const AdminOpportunities = () => {
                   <TabsTrigger value="general">{t("opportunities.tab.general")}</TabsTrigger>
                   <TabsTrigger value="timeline">
                     {t("opportunities.tab.timeline")} ({detail.activities.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="audit">
+                    {t("opportunities.tab.audit")} ({auditItems.length})
                   </TabsTrigger>
                 </TabsList>
 
@@ -827,23 +950,53 @@ const AdminOpportunities = () => {
                         <div>
                           <Label>{t("opportunities.field.estimatedValue")}</Label>
                           <Input
-                            type="number"
-                            min={0}
-                            value={editForm.estimatedValue}
-                            onChange={(e) => setEditForm({ ...editForm, estimatedValue: Number(e.target.value) })}
+                            inputMode="numeric"
+                            value={editForm.estimatedValue ? formatVnd(editForm.estimatedValue) : ""}
+                            onChange={(e) => setEditForm({ ...editForm, estimatedValue: parseVnd(e.target.value) })}
+                            placeholder="0"
                           />
                         </div>
                         <div>
                           <Label>{t("opportunities.field.winProbability")}</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={editForm.winProbability}
-                            onChange={(e) => setEditForm({ ...editForm, winProbability: Number(e.target.value) })}
-                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={editForm.winProbability}
+                              onChange={(e) => setEditForm({ ...editForm, winProbability: Number(e.target.value) })}
+                              className="flex-1 accent-primary"
+                              aria-label={t("opportunities.field.winProbability")}
+                            />
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={editForm.winProbability}
+                              onChange={(e) => setEditForm({ ...editForm, winProbability: Number(e.target.value) })}
+                              className="w-16"
+                            />
+                          </div>
                         </div>
                       </div>
+                      {canSeeAll && (
+                        <div>
+                          <Label>{t("opportunities.field.owner")}</Label>
+                          <Select
+                            value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
+                            onValueChange={(v) => setEditForm({ ...editForm, ownerUserId: Number(v) })}
+                          >
+                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                            <SelectContent>
+                              {salesUsers.map((u) => (
+                                <SelectItem key={u.id} value={String(u.id)}>
+                                  {u.fullName ?? u.phoneNumber}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div>
                         <Label>{t("opportunities.field.expectedCloseDate")}</Label>
                         <Input
@@ -940,6 +1093,42 @@ const AdminOpportunities = () => {
                         </div>
                       ))}
                     </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="audit" className="space-y-2 pt-3">
+                  {auditLoading ? (
+                    <div className="text-xs text-muted-foreground py-4 text-center">…</div>
+                  ) : auditItems.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-4">
+                      {t("opportunities.audit.empty")}
+                    </div>
+                  ) : (
+                    <ul className="space-y-1 text-xs">
+                      {auditItems.map((a) => (
+                        <li key={a.id} className="rounded border px-2 py-1.5">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Badge variant="outline">
+                              {a.action.startsWith("opportunity.stage")
+                                ? t("opportunities.audit.actionStage")
+                                : a.action.endsWith(".create")
+                                  ? t("opportunities.audit.actionCreate")
+                                  : a.action.endsWith(".update")
+                                    ? t("opportunities.audit.actionUpdate")
+                                    : a.action.endsWith(".delete")
+                                      ? t("opportunities.audit.actionDelete")
+                                      : a.action}
+                            </Badge>
+                            <span>{new Date(a.createdAt).toLocaleString()}</span>
+                            {a.actorPhone && <span>· {a.actorPhone}</span>}
+                            {a.status !== "success" && (
+                              <Badge variant="destructive">{a.status}</Badge>
+                            )}
+                          </div>
+                          <div className="mt-1">{a.message}</div>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </TabsContent>
               </Tabs>

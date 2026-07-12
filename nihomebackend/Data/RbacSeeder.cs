@@ -179,27 +179,53 @@ public static class RbacSeeder
         var allCodes = catalog.Select(e => e.Code).ToList();
 
         // System roles are handled by ForceSyncSystemRolePermissions.
-        var roles = db.Roles
-            .Where(r => !r.IsSystem && !r.InitialPermissionsSeeded)
-            .ToList();
+        var businessRoles = db.Roles.Where(r => !r.IsSystem).ToList();
 
-        foreach (var role in roles)
+        foreach (var role in businessRoles)
         {
-            if (bundle.RolePermissions.TryGetValue(role.Code, out var defaults))
+            if (!bundle.RolePermissions.TryGetValue(role.Code, out var defaults)) continue;
+
+            var declaredCodes = PermissionCatalog
+                .ExpandPatterns(defaults.Patterns, allCodes, defaults.Deny)
+                .Where(permissionIdByCode.ContainsKey)
+                .ToList();
+
+            if (!role.InitialPermissionsSeeded)
             {
-                var codes = PermissionCatalog.ExpandPatterns(defaults.Patterns, allCodes, defaults.Deny);
-                var rows = codes
-                    .Where(permissionIdByCode.ContainsKey)
-                    .Select(c => new RolePermission
+                // First-ever seed for this role — insert the whole declared set.
+                var rows = declaredCodes.Select(c => new RolePermission
+                {
+                    RoleId = role.Id,
+                    PermissionId = permissionIdByCode[c],
+                    CreatedAt = DateTime.UtcNow,
+                });
+                db.RolePermissions.AddRange(rows);
+                role.InitialPermissionsSeeded = true;
+            }
+            else
+            {
+                // Grow-only reconciliation: when a new permission is added to
+                // the catalog AFTER the role was first seeded, a role whose
+                // declared patterns match the new code stops receiving it
+                // (admins would have to grant it by hand for every environment).
+                // Add-only avoids silently un-doing admin overrides while
+                // still letting new-catalog additions flow through.
+                var existingIds = db.RolePermissions
+                    .Where(rp => rp.RoleId == role.Id)
+                    .Select(rp => rp.PermissionId)
+                    .ToHashSet();
+                var toAdd = declaredCodes
+                    .Select(c => permissionIdByCode[c])
+                    .Where(id => !existingIds.Contains(id))
+                    .Select(id => new RolePermission
                     {
                         RoleId = role.Id,
-                        PermissionId = permissionIdByCode[c],
+                        PermissionId = id,
                         CreatedAt = DateTime.UtcNow,
-                    });
-                db.RolePermissions.AddRange(rows);
+                    })
+                    .ToList();
+                if (toAdd.Count > 0) db.RolePermissions.AddRange(toAdd);
             }
-
-            role.InitialPermissionsSeeded = true;
         }
 
         db.SaveChanges();
