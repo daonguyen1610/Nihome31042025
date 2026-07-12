@@ -88,9 +88,19 @@ const AdminLeads = () => {
   const [sources, setSources] = useState<MasterDataOption[]>([]);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "">("");
   const [sourceFilter, setSourceFilter] = useState<string>("");
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 20;
+
+  // Debounce search input by 350ms so the list doesn't refetch on every keystroke.
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 350);
+    return () => window.clearTimeout(handle);
+  }, [searchInput]);
 
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -163,7 +173,7 @@ const AdminLeads = () => {
   const handleCreate = async () => {
     setCreateError(null);
     if (!createForm.name.trim() || !createForm.sourceCode) {
-      setCreateError(t("common.validationError") || "Missing required fields.");
+      setCreateError(t("leads.validation.missingFields"));
       return;
     }
     if (!createForm.phone?.trim() && !createForm.email?.trim()) {
@@ -246,15 +256,16 @@ const AdminLeads = () => {
           <div>
             <h1 className="text-2xl font-semibold">{t("leads.title")}</h1>
             <p className="text-sm text-muted-foreground">{t("leads.subtitle")}</p>
-            {!canSeeAll && (
-              <p className="text-xs text-muted-foreground italic mt-1">
-                {t("leads.field.owner")} = {t("common.you") || "you"} · {total} lead(s)
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground italic mt-1">
+              {(canSeeAll ? t("leads.totalCount") : t("leads.myScopeCount")).replace(
+                "{count}",
+                total.toString(),
+              )}
+            </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()}>
-              <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh") || "Refresh"}
+              <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
             </Button>
             <Button onClick={() => setCreating(true)}>
               <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
@@ -266,13 +277,11 @@ const AdminLeads = () => {
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              value={search}
-              onChange={(e) => {
-                setPage(1);
-                setSearch(e.target.value);
-              }}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder={t("leads.searchPlaceholder")}
               className="pl-9"
+              aria-label={t("leads.searchPlaceholder")}
             />
           </div>
 
@@ -383,7 +392,8 @@ const AdminLeads = () => {
                           e.stopPropagation();
                           void handleDelete(lead.id);
                         }}
-                        title={t("common.delete") || "Delete"}
+                        title={t("common.delete")}
+                        aria-label={t("common.delete")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -494,7 +504,7 @@ const AdminLeads = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreating(false)} disabled={saving}>
-              {t("common.cancel") || "Cancel"}
+              {t("common.cancel")}
             </Button>
             <Button onClick={() => void handleCreate()} disabled={saving}>
               {saving ? "…" : t("leads.save")}
@@ -510,7 +520,7 @@ const AdminLeads = () => {
             <>
               <DialogHeader>
                 <DialogTitle className="sr-only">{t("leads.detail.title")}</DialogTitle>
-                <DialogDescription className="sr-only">{t("common.loading") || "Loading…"}</DialogDescription>
+                <DialogDescription className="sr-only">{t("common.loading")}</DialogDescription>
               </DialogHeader>
               <PageLoading />
             </>
@@ -585,12 +595,12 @@ const AdminLeads = () => {
 
                 {detail.status !== "Converted" && (
                   <div className="mt-3 flex flex-col gap-2 rounded border p-3">
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <Select
                         value={activityType}
                         onValueChange={(v) => setActivityType(v as LeadActivityType)}
                       >
-                        <SelectTrigger className="w-[140px]">
+                        <SelectTrigger className="w-full sm:w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -601,10 +611,12 @@ const AdminLeads = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Input
+                      <Textarea
                         value={activityContent}
                         onChange={(e) => setActivityContent(e.target.value)}
                         placeholder={t("leads.detail.activityContent")}
+                        rows={2}
+                        className="flex-1"
                       />
                     </div>
                     <Button
@@ -625,7 +637,7 @@ const AdminLeads = () => {
                   </Button>
                 )}
                 <Button variant="outline" onClick={closeDetail}>
-                  {t("common.close") || "Close"}
+                  {t("common.close")}
                 </Button>
               </DialogFooter>
             </>
@@ -642,7 +654,7 @@ const AdminLeads = () => {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConvertOpen(false)} disabled={converting}>
-              {t("common.cancel") || "Cancel"}
+              {t("common.cancel")}
             </Button>
             <Button onClick={() => void handleConvert()} disabled={converting}>
               {converting ? "…" : t("leads.convert.button")}
