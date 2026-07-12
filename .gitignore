@@ -16,3 +16,10 @@ deployment-config/output/publish-release.zip
 nihomebackend.integration.tests/bin/
 nihomebackend.integration.tests/obj/
 TestResults/
+
+# Backend wwwroot is reserved for backend-managed static assets only
+# (user-uploaded images, CVs, process-assets). The React SPA is built to
+# nihomeweb/dist and served via WebRootPath — never copy dist/* here.
+nihomebackend/wwwroot/index.html
+nihomebackend/wwwroot/favicon.svg
+nihomebackend/wwwroot/assets/
