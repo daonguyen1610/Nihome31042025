@@ -18,16 +18,20 @@ import { useLogos } from "@/hooks/useContentApi";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { adminApi, type UpsertLogoRequest } from "@/services/adminApi";
 import type { LogoResponse } from "@/services/contentApi";
-import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
+import { PageLoading, PageError } from "@/components/PageState";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -148,11 +152,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
     ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"
     : "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4";
   const cardClassName = isAwards
-    ? "logo-grid-card rounded-2xl border p-4 card-hover"
-    : "logo-grid-card rounded-xl border p-3 card-hover";
+    ? "rounded-lg border bg-card p-4 transition hover:shadow-md"
+    : "rounded-lg border bg-card p-3 transition hover:shadow-md";
   const imageFrameClassName = isAwards
-    ? "aspect-[4/3] rounded-xl border bg-white flex items-center justify-center overflow-hidden mb-3"
-    : "aspect-[16/10] rounded-lg border bg-white flex items-center justify-center overflow-hidden mb-2.5";
+    ? "aspect-[4/3] rounded-md border bg-white flex items-center justify-center overflow-hidden mb-3"
+    : "aspect-[16/10] rounded-md border bg-white flex items-center justify-center overflow-hidden mb-2.5";
 
   const updateForm = <K extends keyof LogoFormData>(
     key: K,
@@ -332,55 +336,57 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
   return (
     <AdminLayout>
-      <div className={`admin-logo-manager ${isAwards ? "is-awards" : ""}`}>
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+      <div className={`admin-logo-manager space-y-4 p-4 sm:p-6 ${isAwards ? "is-awards" : ""}`}>
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-              {t(titleKey)}
-            </h1>
-            <p
-              className="text-sm mt-1"
-              style={{ color: "hsl(var(--admin-muted))" }}
-            >
+            <h1 className="text-2xl font-semibold">{t(titleKey)}</h1>
+            <p className="text-xs italic text-muted-foreground">
               {q.trim() ? `${items.length} / ${totalCount}` : totalCount} {t("logoAdmin.logoNoun")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div
-              className="flex items-center gap-2 rounded-full px-3 py-2 border"
-              style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
-            >
-              <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-              <input
+            <AdminExportButton onClick={handleExport} disabled={items.length === 0} />
+            <Button type="button" onClick={startCreate}>
+              <Plus className="mr-1.5 h-4 w-4" /> {t("logoAdmin.add")}
+            </Button>
+          </div>
+        </header>
+
+        <section className="rounded-lg border bg-card p-3">
+          <div className="w-full sm:max-w-sm">
+            <Label className="text-xs" htmlFor="logo-search">{t("common.search")}</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="logo-search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder={t("logoAdmin.searchPlaceholder")}
-                className="bg-transparent outline-none text-sm w-48 placeholder:opacity-60"
+                className="h-9 pl-9"
               />
             </div>
-            <AdminExportButton onClick={handleExport} disabled={items.length === 0} />
-            <button
-              onClick={startCreate}
-              className="admin-btn-primary inline-flex items-center gap-2"
-              type="button"
-            >
-              <Plus className="w-4 h-4" /> {t("logoAdmin.add")}
-            </button>
           </div>
-        </div>
+        </section>
 
-        <div className="admin-card p-4">
-          <BulkActionBar
-            selectedCount={selectedIds.size}
-            bulkDeleting={bulkDeleting}
-            onClear={clearSelection}
-            onBulkDelete={() => void handleBulkDelete()}
-          />
-          {items.length === 0 ? (
-            <PageEmpty message={t("common.noData")} />
-          ) : (
-            <>
-            <div className="flex items-center gap-2 mb-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-full bg-muted p-3">
+              {isAwards ? <Trophy className="h-5 w-5" aria-hidden /> : <ImageIcon className="h-5 w-5" aria-hidden />}
+            </div>
+            <p>{t("common.noData")}</p>
+            <Button type="button" size="sm" onClick={startCreate}>
+              <Plus className="mr-1.5 h-4 w-4" /> {t("logoAdmin.add")}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              bulkDeleting={bulkDeleting}
+              onClear={clearSelection}
+              onBulkDelete={() => void handleBulkDelete()}
+            />
+            <div className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
               <Checkbox
                 checked={
                   allVisibleSelected
@@ -396,11 +402,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
             </div>
             <div className={gridClassName}>
               {items.map((item) => (
-                <div
-                  key={item.id}
-                  className={`${cardClassName} relative`}
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                >
+                <div key={item.id} className={`${cardClassName} relative`}>
                   <div
                     className="absolute top-2 right-2 z-10 rounded bg-white/90 p-1 shadow"
                     onClick={(e) => e.stopPropagation()}
@@ -411,10 +413,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                       aria-label={`${t("common.selectAll")} · ${item.name}`}
                     />
                   </div>
-                  <div
-                    className={imageFrameClassName}
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  >
+                  <div className={imageFrameClassName}>
                     <img
                       src={item.imageUrl}
                       alt={item.name}
@@ -423,14 +422,11 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                   </div>
 
                   <p
-                    className={`font-semibold text-sm leading-tight ${isAwards ? "line-clamp-3 min-h-14" : "line-clamp-2 min-h-10"}`}
+                    className={`text-sm font-medium leading-tight ${isAwards ? "line-clamp-3 min-h-14" : "line-clamp-2 min-h-10"}`}
                   >
                     {item.name}
                   </p>
-                  <div
-                    className="text-xs mt-1"
-                    style={{ color: "hsl(var(--admin-muted))" }}
-                  >
+                  <div className="text-xs mt-1 text-muted-foreground">
                     {t("logoAdmin.sortOrderLabel")}: {item.sortOrder ?? 0}
                   </div>
                   {item.href && (
@@ -438,73 +434,61 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex max-w-full min-w-0 items-center gap-1 text-xs mt-1.5"
-                      style={{ color: "hsl(var(--admin-primary))" }}
+                      className="inline-flex max-w-full min-w-0 items-center gap-1 text-xs mt-1.5 text-primary hover:underline"
                     >
-                      <ExternalLink className="w-3 h-3 shrink-0" />{" "}
+                      <ExternalLink className="h-3 w-3 shrink-0" />{" "}
                       <span className="truncate">{item.href}</span>
                     </a>
                   )}
 
-                  <div className="grid grid-cols-2 gap-1.5 mt-3">
-                    <button
+                  <div className="mt-3 grid grid-cols-2 gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => startEdit(item)}
-                      className="inline-flex min-w-0 items-center justify-center gap-1.5 text-xs font-bold py-2 px-2 rounded-lg border hover:bg-muted"
-                      style={{ borderColor: "hsl(var(--admin-border))" }}
                     >
-                      <Pencil className="w-3.5 h-3.5 shrink-0" />{" "}
+                      <Pencil className="mr-1 h-3.5 w-3.5" />
                       <span className="truncate">{t("common.edit")}</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => remove(item)}
-                      className="inline-flex min-w-0 items-center justify-center gap-1.5 text-xs font-bold py-2 px-2 rounded-lg border hover:bg-destructive/10"
-                      style={{
-                        borderColor: "hsl(var(--admin-border))",
-                        color: "hsl(var(--admin-danger))",
-                      }}
+                      className="text-destructive hover:text-destructive"
                     >
-                      <Trash2 className="w-3.5 h-3.5 shrink-0" />{" "}
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
                       <span className="truncate">{t("common.delete")}</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
-            </>
-          )}
-        </div>
+          </div>
+        )}
 
         <Dialog open={openModal} onOpenChange={setOpenModal}>
           <DialogContent
-            className={`admin-scope logo-modal ${isAwards ? "is-awards" : ""} p-0 overflow-hidden gap-0 rounded-3xl border shadow-2xl`}
-            style={{ borderColor: "hsl(var(--admin-border))" }}
+            className={`admin-scope logo-modal ${isAwards ? "is-awards" : ""} p-0 overflow-hidden gap-0 sm:max-w-3xl`}
           >
-            <DialogHeader
-              className="logo-modal-header px-5 sm:px-7 pt-5 sm:pt-6 pb-5"
-            >
-              <DialogTitle className="font-display text-xl sm:text-2xl flex items-center gap-3 leading-tight">
-                <span className="logo-modal-title-icon">
-                  {isAwards ? (
-                    <Trophy className="w-6 h-6" />
-                  ) : (
-                    <ImageIcon className="w-6 h-6" />
-                  )}
+            <DialogHeader className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b">
+              <DialogTitle className="flex items-center gap-3 text-xl leading-tight sm:text-2xl">
+                <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  {isAwards ? <Trophy className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
                 </span>
                 {modalTitle}
               </DialogTitle>
-              <DialogDescription
-                className="logo-modal-description text-sm sm:text-base mt-2 max-w-3xl"
-              >
+              <DialogDescription className="mt-2 text-sm">
                 {modalDescription}
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={save} className="logo-modal-form">
-              <div className="logo-modal-body grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-0">
-                <div className="logo-modal-main px-5 sm:px-6 py-5 space-y-4">
+            <form onSubmit={save}>
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-0">
+                <div className="px-5 sm:px-6 py-5 space-y-4">
                   <Field label={`${nameLabel} *`}>
-                    <input
-                      className="admin-input logo-name-input logo-styled-input w-full"
+                    <Input
                       value={form.name}
                       onChange={(e) => updateForm("name", e.target.value)}
                       placeholder={namePlaceholder}
@@ -513,28 +497,26 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                   </Field>
 
                   <Field label={`${t("logoAdmin.fieldImage")} *`}>
-                    <div className="logo-upload-wrap logo-upload-row space-y-2">
-                      <button
+                    <div className="space-y-2">
+                      <Button
                         type="button"
+                        variant="outline"
                         onClick={uploadImage}
                         disabled={uploading}
-                        className="logo-upload-button w-full inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 text-sm border bg-white hover:bg-muted disabled:opacity-60"
-                        style={{ borderColor: "hsl(var(--admin-border))" }}
+                        className="w-full h-11"
                       >
-                        <Upload className="w-4 h-4" />{" "}
-                        {uploading
-                          ? t("logoAdmin.uploading")
-                          : t("logoAdmin.upload")}
-                      </button>
+                        <Upload className="mr-2 h-4 w-4" />
+                        {uploading ? t("logoAdmin.uploading") : t("logoAdmin.upload")}
+                      </Button>
                       <details>
-                        <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground select-none">
                           {t("media.url.toggle")}
                         </summary>
-                        <input
-                          className="admin-input logo-styled-input w-full bg-white mt-2"
+                        <Input
                           value={form.imageUrl}
                           onChange={(e) => updateForm("imageUrl", e.target.value)}
                           placeholder={t("media.url.placeholder")}
+                          className="mt-2"
                         />
                       </details>
                     </div>
@@ -542,8 +524,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_180px] gap-3">
                     <Field label={t("logoAdmin.fieldHref")}>
-                      <input
-                        className="admin-input logo-styled-input w-full"
+                      <Input
                         value={form.href}
                         onChange={(e) => updateForm("href", e.target.value)}
                         placeholder="https://..."
@@ -551,23 +532,17 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                     </Field>
 
                     <Field label={t("logoAdmin.fieldSortOrder")}>
-                      <input
+                      <Input
                         type="number"
-                        className="admin-input logo-styled-input w-full"
                         value={form.sortOrder}
-                        onChange={(e) =>
-                          updateForm("sortOrder", Number(e.target.value))
-                        }
+                        onChange={(e) => updateForm("sortOrder", Number(e.target.value))}
                         min={0}
                       />
                     </Field>
                   </div>
                 </div>
 
-                <aside
-                  className="logo-preview-pane border-t lg:border-t-0 lg:border-l px-5 sm:px-6 py-5"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                >
+                <aside className="border-t lg:border-t-0 lg:border-l bg-muted/30 px-5 sm:px-6 py-5">
                   <LogoPreview
                     badge={previewBadge}
                     isAward={isAwards}
@@ -580,30 +555,19 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                 </aside>
               </div>
 
-              <div
-                className="logo-modal-footer px-5 sm:px-7 py-4 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3"
-                style={{
-                  borderColor: "hsl(var(--admin-border))",
-                  background: "hsl(var(--admin-bg))",
-                }}
-              >
-                <button
+              <DialogFooter className="border-t px-5 sm:px-7 py-4 bg-muted/20">
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => setOpenModal(false)}
-                  className="logo-secondary-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border hover:bg-muted"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
-                  <X className="w-4 h-4" /> {t("common.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isBusy}
-                  className="admin-btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 min-w-[140px] disabled:opacity-60"
-                >
-                  <Save className="w-4 h-4" />{" "}
+                  <X className="mr-1.5 h-4 w-4" /> {t("common.cancel")}
+                </Button>
+                <Button type="submit" disabled={isBusy} className="min-w-[140px]">
+                  <Save className="mr-1.5 h-4 w-4" />
                   {isEditing ? t("form.update") : t("form.create")}
-                </button>
-              </div>
+                </Button>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -613,15 +577,10 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 };
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
-  <label className="block">
-    <span
-      className="text-xs font-bold uppercase tracking-wider mb-1.5 block"
-      style={{ color: "hsl(var(--admin-muted))" }}
-    >
-      {label}
-    </span>
+  <div className="space-y-1.5">
+    <Label className="text-xs">{label}</Label>
     {children}
-  </label>
+  </div>
 );
 
 const LogoPreview = ({
