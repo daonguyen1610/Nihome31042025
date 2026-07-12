@@ -295,10 +295,16 @@ public class NotificationService(
     {
         Id = notification.Id,
         Module = notification.Module,
+        TemplateCode = notification.TemplateCode,
+        RefEntityType = notification.RefEntityType,
+        RefEntityId = notification.RefEntityId,
         Title = notification.Title,
         Body = notification.Body,
         LinkUrl = notification.LinkUrl,
         IsRead = notification.IsRead,
+        ReadAt = notification.ReadAt.HasValue
+            ? DateTime.SpecifyKind(notification.ReadAt.Value, DateTimeKind.Utc)
+            : null,
         CreatedAt = DateTime.SpecifyKind(notification.CreatedAt, DateTimeKind.Utc),
     };
 
