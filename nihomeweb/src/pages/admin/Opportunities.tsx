@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { extractApiError } from "@/lib/apiError";
+import { formatVnd } from "@/lib/numberFormat";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -67,22 +69,6 @@ const emptyCreate = (): CreateOpportunityRequest => ({
   winProbability: 20,
   stage: "Prospecting",
 });
-
-const extractApiError = (err: unknown): string => {
-  if (typeof err === "object" && err !== null) {
-    const anyErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string };
-    const data = anyErr.response?.data;
-    if (data?.errors) {
-      const first = Object.values(data.errors)[0];
-      if (Array.isArray(first) && first.length) return first[0];
-    }
-    if (data?.message) return data.message;
-    if (anyErr.message) return anyErr.message;
-  }
-  return String(err);
-};
-
-const formatVnd = (v: number) => new Intl.NumberFormat("vi-VN").format(v);
 
 const AdminOpportunities = () => {
   const { t } = useI18n();
@@ -719,7 +705,12 @@ const AdminOpportunities = () => {
       <Dialog open={!!detail || detailLoading} onOpenChange={(o) => !o && closeDetail()}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           {detailLoading && !detail ? (
-            <PageLoading />
+            <>
+              <DialogHeader className="sr-only">
+                <DialogTitle>{t("common.loading")}</DialogTitle>
+              </DialogHeader>
+              <PageLoading />
+            </>
           ) : detail && (
             <>
               <DialogHeader>
