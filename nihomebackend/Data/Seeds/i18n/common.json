@@ -64,6 +64,62 @@
     "ja": "削除"
   },
   {
+    "key": "common.selectAll",
+    "category": "common",
+    "vi": "Chọn tất cả",
+    "en": "Select all",
+    "zh": "全选",
+    "ja": "すべて選択"
+  },
+  {
+    "key": "common.clearSelection",
+    "category": "common",
+    "vi": "Bỏ chọn",
+    "en": "Clear selection",
+    "zh": "取消选择",
+    "ja": "選択解除"
+  },
+  {
+    "key": "common.selectedCount",
+    "category": "common",
+    "vi": "Đã chọn {count}",
+    "en": "{count} selected",
+    "zh": "已选 {count}",
+    "ja": "{count} 件選択中"
+  },
+  {
+    "key": "common.deleteSelected",
+    "category": "common",
+    "vi": "Xoá đã chọn",
+    "en": "Delete selected",
+    "zh": "删除所选",
+    "ja": "選択を削除"
+  },
+  {
+    "key": "common.confirmDeleteMany",
+    "category": "common",
+    "vi": "Bạn có chắc muốn xoá {count} bản ghi đã chọn? Hành động này không thể hoàn tác.",
+    "en": "Delete {count} selected records? This action cannot be undone.",
+    "zh": "确认删除已选 {count} 条记录？此操作无法撤销。",
+    "ja": "選択した {count} 件を削除しますか？この操作は取り消せません。"
+  },
+  {
+    "key": "common.bulkDeleteSuccess",
+    "category": "common",
+    "vi": "Đã xoá {count} bản ghi",
+    "en": "Deleted {count} records",
+    "zh": "已删除 {count} 条记录",
+    "ja": "{count} 件を削除しました"
+  },
+  {
+    "key": "common.bulkDeletePartial",
+    "category": "common",
+    "vi": "Đã xoá {success} bản ghi · {failed} thất bại",
+    "en": "Deleted {success} · {failed} failed",
+    "zh": "已删除 {success} 条 · {failed} 条失败",
+    "ja": "{success} 件削除 · {failed} 件失敗"
+  },
+  {
     "key": "common.view",
     "category": "common",
     "vi": "Xem",

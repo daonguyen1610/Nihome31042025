@@ -320,6 +320,74 @@ const AdminCustomers = () => {
     }
   };
 
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const visibleIds = useMemo(() => rows.map((r) => r.id), [rows]);
+  const allVisibleSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+  const someVisibleSelected =
+    !allVisibleSelected && visibleIds.some((id) => selectedIds.has(id));
+
+  const toggleAllVisible = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) visibleIds.forEach((id) => next.add(id));
+      else visibleIds.forEach((id) => next.delete(id));
+      return next;
+    });
+  };
+
+  const toggleOne = (id: number, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, typeFilter, statusFilter, sourceFilter, search]);
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    const confirmMessage = t("common.confirmDeleteMany").replace(
+      "{count}",
+      ids.length.toString(),
+    );
+    if (!window.confirm(confirmMessage)) return;
+    setBulkDeleting(true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => adminApi.deleteCustomer(id)),
+      );
+      const failed = results.filter((r) => r.status === "rejected").length;
+      const success = results.length - failed;
+      clearSelection();
+      if (detail && ids.includes(detail.id)) closeDetail();
+      await fetchList();
+      if (failed === 0) {
+        toast({
+          title: t("common.bulkDeleteSuccess").replace("{count}", success.toString()),
+        });
+      } else {
+        toast({
+          title: t("common.bulkDeletePartial")
+            .replace("{success}", success.toString())
+            .replace("{failed}", failed.toString()),
+          variant: success === 0 ? "destructive" : undefined,
+        });
+      }
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const handleSaveContact = async () => {
     if (!detail || !contactForm) return;
     if (!contactForm.fullName.trim() ||
@@ -486,10 +554,47 @@ const AdminCustomers = () => {
             {t("customers.empty")}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="space-y-2">
+            {canManage && selectedIds.size > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <span className="font-medium">
+                  {t("common.selectedCount").replace("{count}", selectedIds.size.toString())}
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={clearSelection} disabled={bulkDeleting}>
+                    {t("common.clearSelection")}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => void handleBulkDelete()}
+                    disabled={bulkDeleting}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    {t("common.deleteSelected")}
+                  </Button>
+                </div>
+              </div>
+            )}
+            <div className="overflow-x-auto rounded-lg border">
             <table className="min-w-full divide-y text-sm">
               <thead className="bg-muted/50">
                 <tr>
+                  {canManage && (
+                    <th className="w-10 px-3 py-2 text-left">
+                      <Checkbox
+                        checked={
+                          allVisibleSelected
+                            ? true
+                            : someVisibleSelected
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={(v) => toggleAllVisible(v === true)}
+                        aria-label={t("common.selectAll")}
+                      />
+                    </th>
+                  )}
                   <th className="px-3 py-2 text-left font-medium">{t("customers.field.type")}</th>
                   <th className="px-3 py-2 text-left font-medium">{t("customers.field.name")}</th>
                   <th className="px-3 py-2 text-left font-medium">{t("customers.field.primaryContact")}</th>
@@ -511,6 +616,18 @@ const AdminCustomers = () => {
                       className="cursor-pointer hover:bg-muted/40"
                       onClick={() => void openDetail(c.id)}
                     >
+                      {canManage && (
+                        <td
+                          className="px-3 py-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Checkbox
+                            checked={selectedIds.has(c.id)}
+                            onCheckedChange={(v) => toggleOne(c.id, v === true)}
+                            aria-label={`${t("common.selectAll")} · ${c.name}`}
+                          />
+                        </td>
+                      )}
                       <td className="px-3 py-2">
                         <Badge variant="outline">{t(`customers.type.${c.type}`)}</Badge>
                       </td>
@@ -577,6 +694,7 @@ const AdminCustomers = () => {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
 
