@@ -960,6 +960,22 @@
     "ja": "権限範囲内でリードの閲覧を許可します。"
   },
   {
+    "key": "rbac.perm.crm.leads.view.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ Lead",
+    "en": "View all leads",
+    "zh": "查看全部销售线索",
+    "ja": "全てのリードを表示"
+  },
+  {
+    "key": "rbac.perm.crm.leads.view.all.description",
+    "category": "rbac",
+    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy lead của mọi Sales.",
+    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see leads owned by any user.",
+    "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的线索。",
+    "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者のリードを閲覧可能。"
+  },
+  {
     "key": "rbac.perm.crm.leads.manage.label",
     "category": "rbac",
     "vi": "Quản lý Lead",

@@ -15,7 +15,9 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
     public static readonly TheoryData<string, string[], string[]> RoleExpectations = new()
     {
         // role, mustInclude, mustExclude
-        { "SALE",       new[] { "dashboard.view", "contacts.view", "contacts.manage", "recruitment.applications.view", "profile.me.view" },
+        { "SALE",       new[] { "dashboard.view", "contacts.view", "contacts.manage", "recruitment.applications.view", "profile.me.view", "crm.leads.view", "crm.leads.manage" },
+                        new[] { "users.view", "users.manage", "content.news.manage", "processes.manage", "crm.leads.view.all" } },
+        { "SALES_MANAGER", new[] { "dashboard.view", "contacts.view", "crm.leads.view", "crm.leads.manage", "crm.leads.view.all", "profile.me.view" },
                         new[] { "users.view", "users.manage", "content.news.manage", "processes.manage" } },
         { "DESIGN",     new[] { "dashboard.view", "content.news.view", "content.news.manage", "content.projects.manage", "processes.view", "profile.me.view" },
                         new[] { "users.view", "users.manage", "processes.manage", "contacts.manage" } },
@@ -55,6 +57,7 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
 
     [Theory]
     [InlineData("SALE")]
+    [InlineData("SALES_MANAGER")]
     [InlineData("DESIGN")]
     [InlineData("PM")]
     [InlineData("QS")]
