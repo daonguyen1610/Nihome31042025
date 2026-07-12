@@ -7,6 +7,7 @@
   { "key": "leads.new", "category": "leads", "vi": "Tạo Lead mới", "en": "New lead", "zh": "新建销售线索", "ja": "新規リード" },
   { "key": "leads.empty", "category": "leads", "vi": "Chưa có lead nào — nhấn \"Tạo Lead mới\" để bắt đầu.", "en": "No leads yet — click \"New lead\" to start.", "zh": "暂无线索 — 点击 \"新建销售线索\" 开始。", "ja": "リードはまだありません — 「新規リード」から始めましょう。" },
   { "key": "leads.searchPlaceholder", "category": "leads", "vi": "Tìm theo tên, phone, email…", "en": "Search name, phone, email…", "zh": "按姓名、电话、邮箱搜索…", "ja": "名前・電話・メールで検索…" },
+  { "key": "leads.filter.search", "category": "leads", "vi": "Tìm kiếm", "en": "Search", "zh": "搜索", "ja": "検索" },
   { "key": "leads.filter.status", "category": "leads", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "ステータス" },
   { "key": "leads.filter.source", "category": "leads", "vi": "Nguồn", "en": "Source", "zh": "来源", "ja": "ソース" },
   { "key": "leads.filter.all", "category": "leads", "vi": "Tất cả", "en": "All", "zh": "全部", "ja": "すべて" },

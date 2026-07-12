@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search, Trash2, ArrowRight, RefreshCw } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -49,21 +50,24 @@ const STATUSES: LeadStatus[] = [
 ];
 const ACTIVITY_TYPES: LeadActivityType[] = ["Call", "Email", "Meeting", "Note"];
 
-const statusBadgeVariant = (
-  status: LeadStatus,
-): "default" | "secondary" | "outline" | "destructive" => {
-  switch (status) {
-    case "Converted":
-      return "default";
-    case "Junk":
-    case "NotInterested":
-      return "destructive";
-    case "Interested":
-    case "Contacted":
-      return "secondary";
-    default:
-      return "outline";
-  }
+// Soft-colored pills so every status looks equally weighted in the table.
+// Kept as tailwind class strings so we don't need extra Badge variants.
+const LEAD_STATUS_STYLES: Record<LeadStatus, string> = {
+  New: "border-sky-200 bg-sky-50 text-sky-700",
+  Contacted: "border-amber-200 bg-amber-50 text-amber-700",
+  Interested: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  NotInterested: "border-slate-200 bg-slate-100 text-slate-600",
+  Converted: "border-green-300 bg-green-100 text-green-800",
+  Junk: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+const LEAD_STATUS_DOT: Record<LeadStatus, string> = {
+  New: "bg-sky-500",
+  Contacted: "bg-amber-500",
+  Interested: "bg-emerald-500",
+  NotInterested: "bg-slate-400",
+  Converted: "bg-green-600",
+  Junk: "bg-rose-500",
 };
 
 const emptyCreate: CreateLeadRequest = {
@@ -301,16 +305,19 @@ const AdminLeads = () => {
           </div>
         </header>
 
-        <section className="flex flex-wrap items-end gap-2 rounded-lg border bg-card p-3">
-          <div className="relative min-w-[220px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={t("leads.searchPlaceholder")}
-              className="pl-9"
-              aria-label={t("leads.searchPlaceholder")}
-            />
+        <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
+          <div className="min-w-[220px] flex-1">
+            <Label className="text-xs" htmlFor="lead-search">{t("leads.filter.search")}</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="lead-search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t("leads.searchPlaceholder")}
+                className="h-9 pl-9"
+              />
+            </div>
           </div>
 
           <div className="w-[170px]">
@@ -365,8 +372,16 @@ const AdminLeads = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : leads.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-            {t("leads.empty")}
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-full bg-muted p-3">
+              <Search className="h-5 w-5" aria-hidden />
+            </div>
+            <p>{t("leads.empty")}</p>
+            {canManage && (
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -379,11 +394,11 @@ const AdminLeads = () => {
               />
             )}
             <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-full divide-y text-sm">
-              <thead className="bg-muted/50">
+            <table className="min-w-[880px] w-full divide-y text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   {canManage && (
-                    <th className="w-10 px-3 py-2 text-left">
+                    <th className="w-10 px-3 py-3 text-left">
                       <Checkbox
                         checked={
                           allVisibleSelected
@@ -397,16 +412,16 @@ const AdminLeads = () => {
                       />
                     </th>
                   )}
-                  <th className="px-3 py-2 text-left font-medium">{t("leads.field.name")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("leads.field.company")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("leads.field.phone")} / {t("leads.field.email")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("leads.field.source")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("leads.field.status")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.name")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.company")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.phone")} / {t("leads.field.email")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.source")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.status")}</th>
                   {canSeeAll && (
-                    <th className="px-3 py-2 text-left font-medium">{t("leads.field.owner")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.owner")}</th>
                   )}
-                  <th className="px-3 py-2 text-left font-medium">{t("leads.field.createdAt")}</th>
-                  <th className="px-3 py-2" />
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.createdAt")}</th>
+                  <th className="px-3 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -418,7 +433,7 @@ const AdminLeads = () => {
                   >
                     {canManage && (
                       <td
-                        className="px-3 py-2"
+                        className="px-3 py-3"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -428,27 +443,42 @@ const AdminLeads = () => {
                         />
                       </td>
                     )}
-                    <td className="px-3 py-2 font-medium">{lead.name}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{lead.companyName || "—"}</td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-3 py-3 font-medium">{lead.name}</td>
+                    <td className="px-3 py-3 text-muted-foreground">{lead.companyName || "—"}</td>
+                    <td className="px-3 py-3 text-xs">
                       <div>{lead.phone || "—"}</div>
                       <div className="text-muted-foreground">{lead.email || ""}</div>
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-3 py-3 text-xs">
                       {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
                     </td>
-                    <td className="px-3 py-2">
-                      <Badge variant={statusBadgeVariant(lead.status)}>
+                    <td className="px-3 py-3">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "gap-1.5 whitespace-nowrap font-medium",
+                          LEAD_STATUS_STYLES[lead.status],
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            LEAD_STATUS_DOT[lead.status],
+                          )}
+                        />
                         {t(`leads.status.${lead.status}`)}
                       </Badge>
                     </td>
                     {canSeeAll && (
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{lead.ownerName || "—"}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{lead.ownerName || "—"}</td>
                     )}
-                    <td className="px-3 py-2 text-xs text-muted-foreground">
-                      {new Date(lead.createdAt).toLocaleString()}
+                    <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                      <div>{new Date(lead.createdAt).toLocaleDateString()}</div>
+                      <div className="text-[11px] opacity-70">
+                        {new Date(lead.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-3 text-right">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -592,9 +622,18 @@ const AdminLeads = () => {
           ) : detail ? (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+                <DialogTitle className="flex flex-wrap items-center gap-2">
                   {detail.name}
-                  <Badge variant={statusBadgeVariant(detail.status)}>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1.5 whitespace-nowrap font-medium",
+                      LEAD_STATUS_STYLES[detail.status],
+                    )}
+                  >
+                    <span
+                      className={cn("h-1.5 w-1.5 rounded-full", LEAD_STATUS_DOT[detail.status])}
+                    />
                     {t(`leads.status.${detail.status}`)}
                   </Badge>
                 </DialogTitle>
