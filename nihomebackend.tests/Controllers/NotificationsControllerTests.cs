@@ -19,7 +19,7 @@ public class NotificationsControllerTests : IDisposable
     public NotificationsControllerTests()
     {
         _db = DbContextFactory.Create();
-        _service = new NotificationService(_db);
+        _service = NotificationServiceTestFactory.Create(_db);
         _sut = new NotificationsController(_service);
     }
 

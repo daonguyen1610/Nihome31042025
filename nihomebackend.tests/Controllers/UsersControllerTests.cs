@@ -22,7 +22,7 @@ public class UsersControllerTests : IDisposable
     public UsersControllerTests()
     {
         _db = DbContextFactory.Create();
-        _notificationSvc = new NotificationService(_db);
+        _notificationSvc = NotificationServiceTestFactory.Create(_db);
         var service = new UserService(_db, new PasswordService(), _notificationSvc);
         var idempotency = new IdempotencyService(_db, Mock.Of<ILogger<IdempotencyService>>());
         var fingerprint = new FingerprintService();

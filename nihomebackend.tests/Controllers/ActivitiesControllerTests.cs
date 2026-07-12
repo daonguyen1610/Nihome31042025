@@ -178,7 +178,7 @@ public class ActivitiesControllerTests : IDisposable
         _db.Users.Add(admin);
         await _db.SaveChangesAsync();
 
-        var notificationSvc = new NotificationService(_db);
+        var notificationSvc = NotificationServiceTestFactory.Create(_db);
         var sut = new ActivitiesController(_service, notificationSvc);
 
         await sut.Create(new UpsertActivityRequest

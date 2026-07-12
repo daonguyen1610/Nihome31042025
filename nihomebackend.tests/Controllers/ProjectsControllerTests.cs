@@ -291,7 +291,7 @@ public class ProjectsControllerTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var notificationSvc = new NotificationService(_db);
+        var notificationSvc = NotificationServiceTestFactory.Create(_db);
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
         var categoryService = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
