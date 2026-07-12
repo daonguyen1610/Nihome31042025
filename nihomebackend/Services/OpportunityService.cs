@@ -44,8 +44,13 @@ public class OpportunityService(
 
         var total = await query.CountAsync(ct);
 
+        // Spec NIH-88: default sort = ExpectedCloseDate ASC so the deals
+        // closing soonest surface first. Nulls (no expected close date set)
+        // land at the bottom via the OrderBy(x => x.ExpectedCloseDate == null)
+        // trick so they don't hide near-term deals.
         var rows = await query
-            .OrderByDescending(o => o.CreatedAt)
+            .OrderBy(o => o.ExpectedCloseDate == null)
+            .ThenBy(o => o.ExpectedCloseDate)
             .ThenByDescending(o => o.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

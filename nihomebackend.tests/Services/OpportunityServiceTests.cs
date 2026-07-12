@@ -617,6 +617,27 @@ public class OpportunityServiceTests : IDisposable
         Assert.Equal(newOp.Id, result.Items[0].Id);
     }
 
+    [Fact]
+    public async Task ListAsync_DefaultSort_IsExpectedCloseAscWithNullsLast()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+
+        var noDate = await SeedOpportunityAsync(customer, user);
+        // noDate has null ExpectedCloseDate by default helper
+
+        var far = await SeedOpportunityAsync(customer, user);
+        far.ExpectedCloseDate = new DateTime(2027, 6, 1);
+        var soon = await SeedOpportunityAsync(customer, user);
+        soon.ExpectedCloseDate = new DateTime(2026, 8, 15);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.ListAsync(user.Id, canSeeAll: true);
+        var ids = result.Items.Select(i => i.Id).ToList();
+
+        Assert.Equal(new[] { soon.Id, far.Id, noDate.Id }, ids);
+    }
+
     // ---------------- Helpers ----------------
 
     private async Task<ApplicationUser> SeedUserAsync()

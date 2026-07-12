@@ -55,6 +55,7 @@
 
   { "key": "opportunities.tab.general", "category": "opportunities", "vi": "Thông tin chung", "en": "Overview", "zh": "概览", "ja": "概要" },
   { "key": "opportunities.tab.timeline", "category": "opportunities", "vi": "Lịch sử chăm sóc", "en": "Care timeline", "zh": "跟进记录", "ja": "対応履歴" },
+  { "key": "opportunities.tab.audit", "category": "opportunities", "vi": "Audit log", "en": "Audit log", "zh": "审计日志", "ja": "監査ログ" },
   { "key": "opportunities.activity.new", "category": "opportunities", "vi": "Thêm ghi nhận", "en": "Add entry", "zh": "新增记录", "ja": "履歴を追加" },
   { "key": "opportunities.activity.type.Call", "category": "opportunities", "vi": "Cuộc gọi", "en": "Call", "zh": "电话", "ja": "電話" },
   { "key": "opportunities.activity.type.Email", "category": "opportunities", "vi": "Email", "en": "Email", "zh": "邮件", "ja": "メール" },
@@ -65,5 +66,14 @@
   { "key": "opportunities.pipeline.total", "category": "opportunities", "vi": "Tổng {count} · {value}", "en": "{count} · {value}", "zh": "{count} · {value}", "ja": "{count} · {value}" },
   { "key": "opportunities.pipeline.empty", "category": "opportunities", "vi": "Chưa có cơ hội trong giai đoạn này.", "en": "No opportunities in this stage.", "zh": "该阶段暂无商机。", "ja": "このフェーズには商談がありません。" },
 
-  { "key": "opportunities.validation.missingFields", "category": "opportunities", "vi": "Vui lòng nhập tên, khách hàng, giá trị và xác suất.", "en": "Please provide name, customer, value and probability.", "zh": "请填写名称、客户、金额和成交率。", "ja": "名前・顧客・金額・確度を入力してください。" }
+  { "key": "opportunities.validation.missingFields", "category": "opportunities", "vi": "Vui lòng nhập tên, khách hàng, giá trị và xác suất.", "en": "Please provide name, customer, value and probability.", "zh": "请填写名称、客户、金额和成交率。", "ja": "名前・顧客・金額・確度を入力してください。" },
+
+  { "key": "opportunities.overdue", "category": "opportunities", "vi": "Quá hạn chốt", "en": "Overdue", "zh": "已逾期", "ja": "期限超過" },
+  { "key": "opportunities.audit.empty", "category": "opportunities", "vi": "Chưa có thay đổi nào được ghi nhận.", "en": "No audit entries yet.", "zh": "暂无审计记录。", "ja": "監査ログはまだありません。" },
+  { "key": "opportunities.audit.actionCreate", "category": "opportunities", "vi": "Tạo cơ hội", "en": "Create", "zh": "创建商机", "ja": "商談作成" },
+  { "key": "opportunities.audit.actionUpdate", "category": "opportunities", "vi": "Cập nhật", "en": "Update", "zh": "更新", "ja": "更新" },
+  { "key": "opportunities.audit.actionStage", "category": "opportunities", "vi": "Đổi giai đoạn", "en": "Stage change", "zh": "阶段变更", "ja": "フェーズ変更" },
+  { "key": "opportunities.audit.actionDelete", "category": "opportunities", "vi": "Xoá", "en": "Delete", "zh": "删除", "ja": "削除" },
+  { "key": "opportunities.action.markWon", "category": "opportunities", "vi": "Đánh dấu Thắng", "en": "Mark as Won", "zh": "标记为成交", "ja": "受注に変更" },
+  { "key": "opportunities.action.markLost", "category": "opportunities", "vi": "Đánh dấu Thua", "en": "Mark as Lost", "zh": "标记为失败", "ja": "失注に変更" }
 ]
