@@ -31,6 +31,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/users",
   "/admin/roles",
   "/admin/leads",
+  "/admin/customers",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -76,12 +77,12 @@ const matrix: RoleExpectation[] = [
     allowed: [...ALL_ADMIN_PATHS],
   },
   {
-    // SALE: crm.leads.{view|manage|convert} + contacts.* +
-    // recruitment.applications.view + dashboard.view. Sales role does
-    // NOT have crm.leads.view.all — the LeadService scopes their list
-    // to owned leads, but the route itself renders (empty state acceptable).
+    // SALE: crm.leads.{view|manage|convert} + crm.customers.{view|manage} +
+    // contacts.* + recruitment.applications.view + dashboard.view. Sales role
+    // does NOT have crm.leads.view.all or crm.customers.view.all — the
+    // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/contacts", "/admin/recruitment"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view (manage-only routes
@@ -122,9 +123,9 @@ const matrix: RoleExpectation[] = [
     allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/processes/general"],
   },
   {
-    // ACCOUNTANT: contacts.view + system.audit.view
+    // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
     user: TEST_USERS.accountant,
-    allowed: ["/admin", "/admin/notifications", "/admin/contacts", "/admin/activity-log"],
+    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contacts", "/admin/activity-log"],
   },
   {
     // WAREHOUSE: processes.view only (plus dashboard)

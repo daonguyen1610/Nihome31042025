@@ -34,6 +34,7 @@ import {
   Bell,
   ConciergeBell,
   UserPlus,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -87,6 +88,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         icon: UserPlus,
         items: [
           { to: "/admin/leads", label: t("nav.leads"), icon: UserPlus, permission: ADMIN_PERMS.leads },
+          { to: "/admin/customers", label: t("nav.customers"), icon: UserRound, permission: ADMIN_PERMS.customers },
         ],
       },
       {

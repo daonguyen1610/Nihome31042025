@@ -36,6 +36,7 @@ import AdminNews from "./pages/admin/News.tsx";
 import AdminProjects from "./pages/admin/Projects.tsx";
 import AdminContacts from "./pages/admin/Contacts.tsx";
 import AdminLeads from "./pages/admin/Leads.tsx";
+import AdminCustomers from "./pages/admin/Customers.tsx";
 import AdminRecruitment from "./pages/admin/Recruitment.tsx";
 import EmploymentTypes from "./pages/admin/EmploymentTypes.tsx";
 import SettingsCenter from "./pages/admin/SettingsCenter.tsx";
@@ -134,6 +135,9 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.leads} />}>
                 <Route path="/admin/leads" element={<AdminLeads />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.customers} />}>
+                <Route path="/admin/customers" element={<AdminCustomers />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                 <Route path="/admin/recruitment" element={<AdminRecruitment />} />

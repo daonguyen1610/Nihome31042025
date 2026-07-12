@@ -15,9 +15,9 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
     public static readonly TheoryData<string, string[], string[]> RoleExpectations = new()
     {
         // role, mustInclude, mustExclude
-        { "SALE",       new[] { "dashboard.view", "contacts.view", "contacts.manage", "recruitment.applications.view", "profile.me.view", "crm.leads.view", "crm.leads.manage" },
-                        new[] { "users.view", "users.manage", "content.news.manage", "processes.manage", "crm.leads.view.all" } },
-        { "SALES_MANAGER", new[] { "dashboard.view", "contacts.view", "crm.leads.view", "crm.leads.manage", "crm.leads.view.all", "profile.me.view" },
+        { "SALE",       new[] { "dashboard.view", "contacts.view", "contacts.manage", "recruitment.applications.view", "profile.me.view", "crm.leads.view", "crm.leads.manage", "crm.customers.view", "crm.customers.manage" },
+                        new[] { "users.view", "users.manage", "content.news.manage", "processes.manage", "crm.leads.view.all", "crm.customers.view.all" } },
+        { "SALES_MANAGER", new[] { "dashboard.view", "contacts.view", "crm.leads.view", "crm.leads.manage", "crm.leads.view.all", "crm.customers.view", "crm.customers.manage", "crm.customers.view.all", "profile.me.view" },
                         new[] { "users.view", "users.manage", "content.news.manage", "processes.manage" } },
         { "DESIGN",     new[] { "dashboard.view", "content.news.view", "content.news.manage", "content.projects.manage", "processes.view", "profile.me.view" },
                         new[] { "users.view", "users.manage", "processes.manage", "contacts.manage" } },
@@ -25,8 +25,8 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
                         new[] { "users.view", "users.manage", "content.news.manage" } },
         { "QS",         new[] { "dashboard.view", "content.projects.view", "processes.view", "profile.me.view" },
                         new[] { "content.projects.manage", "processes.manage", "users.view" } },
-        { "ACCOUNTANT", new[] { "dashboard.view", "contacts.view", "system.audit.view", "profile.me.view" },
-                        new[] { "contacts.manage", "system.audit.manage", "users.view" } },
+        { "ACCOUNTANT", new[] { "dashboard.view", "contacts.view", "system.audit.view", "profile.me.view", "crm.customers.view", "crm.customers.view.all" },
+                        new[] { "contacts.manage", "system.audit.manage", "users.view", "crm.customers.manage" } },
         { "WAREHOUSE",  new[] { "dashboard.view", "processes.view", "profile.me.view" },
                         new[] { "processes.manage", "users.view", "contacts.view" } },
         { "BGD",        new[] { "dashboard.view", "users.view", "content.projects.view", "processes.view", "system.audit.view", "profile.me.view" },

@@ -434,7 +434,7 @@ const AdminLeads = () => {
 
       {/* Create dialog */}
       <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("leads.new")}</DialogTitle>
             <DialogDescription>{t("leads.field.contactRequired")}</DialogDescription>
@@ -515,7 +515,7 @@ const AdminLeads = () => {
 
       {/* Detail drawer (as wide dialog) */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(open) => !open && closeDetail()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {detailLoading ? (
             <>
               <DialogHeader>
