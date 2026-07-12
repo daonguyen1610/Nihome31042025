@@ -193,15 +193,30 @@ const AdminCustomers = () => {
     return map;
   }, [sources]);
 
-  const openDetail = async (id: number) => {
+  const openDetail = async (id: number, options: { startEditing?: boolean } = {}) => {
     setDetailLoading(true);
     setDetail(null);
     setEditing(false);
+    setEditForm(null);
     try {
       const { data } = await adminApi.getCustomer(id);
       setDetail(data);
+      if (options.startEditing && canManage) {
+        setEditForm({
+          type: data.type,
+          name: data.name,
+          taxId: data.taxId,
+          address: data.address,
+          representativeName: data.representativeName,
+          sourceCode: data.sourceCode,
+          relationshipStatus: data.relationshipStatus,
+          ownerUserId: data.ownerUserId,
+          note: data.note,
+        });
+        setEditing(true);
+      }
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setDetailLoading(false);
     }
@@ -545,18 +560,32 @@ const AdminCustomers = () => {
                       </td>
                       {canManage && (
                         <td className="px-3 py-2 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void handleDelete(c.id);
-                            }}
-                            title={t("common.delete")}
-                            aria-label={t("common.delete")}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void openDetail(c.id, { startEditing: true });
+                              }}
+                              title={t("common.edit")}
+                              aria-label={t("common.edit")}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleDelete(c.id);
+                              }}
+                              title={t("common.delete")}
+                              aria-label={t("common.delete")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -850,7 +879,7 @@ const AdminCustomers = () => {
                       </div>
                       {canManage && (
                         <Button size="sm" variant="outline" onClick={startEdit}>
-                          <Pencil className="mr-1.5 h-4 w-4" /> {t("common.edit") || "Edit"}
+                          <Pencil className="mr-1.5 h-4 w-4" /> {t("common.edit")}
                         </Button>
                       )}
                     </>
