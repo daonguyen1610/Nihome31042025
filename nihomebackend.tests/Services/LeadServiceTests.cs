@@ -549,6 +549,35 @@ public class LeadServiceTests : IDisposable
         Assert.Null(response);
     }
 
+    [Fact]
+    public async Task UpdateAsync_Manager_CanUnassignOwner()
+    {
+        var manager = await SeedUserAsync(UserRole.USER);
+        var current = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(ownerId: current.Id);
+
+        var response = await _sut.UpdateAsync(
+            lead.Id,
+            BuildUpdate(status: LeadStatus.Contacted, ownerId: null),
+            manager.Id,
+            canManage: true,
+            canSeeAll: true);
+
+        Assert.NotNull(response);
+        Assert.Null(response!.OwnerUserId);
+
+        // Unassignment must NOT fire the assign notification.
+        _notifications.Verify(n => n.NotifyFromTemplateAsync(
+            It.IsAny<int>(),
+            It.IsAny<string>(),
+            It.IsAny<IDictionary<string, string>>(),
+            It.IsAny<string?>(),
+            It.IsAny<int?>(),
+            It.IsAny<string?>(),
+            It.IsAny<string>()), Times.Never);
+    }
+
     // ---------------- Convert ----------------
 
     [Fact]

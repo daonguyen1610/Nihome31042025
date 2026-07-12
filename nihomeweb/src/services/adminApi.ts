@@ -768,7 +768,7 @@ export const adminApi = {
   },
   getLead: (id: number) => api.get<LeadResponse>(`/leads/${id}`),
   createLead: (body: CreateLeadRequest) =>
-    api.post<LeadResponse>("/leads", body, withIdempotencyKey()),
+    api.post<LeadResponse>("/leads", body),
   updateLead: (id: number, body: UpdateLeadRequest) =>
     api.put<LeadResponse>(`/leads/${id}`, body),
   deleteLead: (id: number) => api.delete(`/leads/${id}`),
