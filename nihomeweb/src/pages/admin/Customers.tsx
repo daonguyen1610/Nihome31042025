@@ -834,6 +834,22 @@ const AdminCustomers = () => {
                   {!editing ? (
                     <>
                       <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-xs text-muted-foreground">{t("customers.field.type")}</div>
+                          <div>{t(`customers.type.${detail.type}`)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">{t("customers.field.status")}</div>
+                          <div>{t(`customers.status.${detail.relationshipStatus}`)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">{t("customers.field.source")}</div>
+                          <div>{sourceLabelByCode.get(detail.sourceCode) ?? detail.sourceCode}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">{t("customers.field.owner")}</div>
+                          <div>{detail.ownerName ?? (detail.ownerUserId ? `#${detail.ownerUserId}` : "—")}</div>
+                        </div>
                         {detail.type === "Company" && (
                           <>
                             <div>
@@ -854,6 +870,10 @@ const AdminCustomers = () => {
                           <div className="text-xs text-muted-foreground">{t("customers.field.createdAt")}</div>
                           <div>{new Date(detail.createdAt).toLocaleString()}</div>
                         </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">{t("customers.field.updatedAt")}</div>
+                          <div>{new Date(detail.updatedAt).toLocaleString()}</div>
+                        </div>
                         {detail.note && (
                           <div className="col-span-2">
                             <div className="text-xs text-muted-foreground">{t("customers.field.note")}</div>
@@ -861,6 +881,25 @@ const AdminCustomers = () => {
                           </div>
                         )}
                       </div>
+                      {(() => {
+                        const primary = detail.contacts.find((c) => c.isPrimary) ?? detail.contacts[0];
+                        if (!primary) return null;
+                        return (
+                          <div className="rounded-md border p-3 text-sm space-y-1">
+                            <div className="text-xs text-muted-foreground">{t("customers.field.primaryContact")}</div>
+                            <div className="font-medium">
+                              {primary.fullName}
+                              {primary.position && (
+                                <span className="text-muted-foreground font-normal"> · {primary.position}</span>
+                              )}
+                            </div>
+                            <div className="text-muted-foreground">
+                              {primary.phone || "—"}
+                              {primary.email && <span> · {primary.email}</span>}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </>
                   ) : editForm && (
                     <div className="space-y-3">

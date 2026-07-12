@@ -31,6 +31,7 @@
   { "key": "customers.field.owner", "category": "customers", "vi": "Sales phụ trách", "en": "Sales owner", "zh": "负责销售", "ja": "担当営業" },
   { "key": "customers.field.note", "category": "customers", "vi": "Ghi chú", "en": "Note", "zh": "备注", "ja": "メモ" },
   { "key": "customers.field.createdAt", "category": "customers", "vi": "Tạo lúc", "en": "Created", "zh": "创建时间", "ja": "作成日時" },
+  { "key": "customers.field.updatedAt", "category": "customers", "vi": "Cập nhật lúc", "en": "Updated", "zh": "更新时间", "ja": "更新日時" },
   { "key": "customers.field.primaryContact", "category": "customers", "vi": "Liên hệ chính", "en": "Primary contact", "zh": "主要联系人", "ja": "主要担当者" },
 
   { "key": "customers.contact.title", "category": "customers", "vi": "Danh sách liên hệ", "en": "Contact list", "zh": "联系人列表", "ja": "担当者リスト" },
