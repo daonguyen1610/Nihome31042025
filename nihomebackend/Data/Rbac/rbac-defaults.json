@@ -67,6 +67,7 @@
     { "module": "crm.leads", "action": "manage" },
     { "module": "crm.leads", "action": "convert" },
     { "module": "crm.customers", "action": "view" },
+    { "module": "crm.customers", "action": "view.all" },
     { "module": "crm.customers", "action": "manage" },
     { "module": "crm.customers", "action": "export" },
     { "module": "crm.opportunities", "action": "view" },
@@ -272,6 +273,8 @@
         "contacts.view",
         "system.audit.view",
         "master-data.view",
+        "crm.customers.view",
+        "crm.customers.view.all",
         "crm.contracts.view",
         "profile.me.*"
       ]
@@ -280,7 +283,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "system.audit.view", "profile.me.*"]
     }
   }
 }

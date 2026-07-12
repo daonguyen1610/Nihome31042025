@@ -49,6 +49,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // CRM — M1 chain (Lead → Customer → Opportunity → Quote/Bid → Contract)
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<LeadActivity> LeadActivities => Set<LeadActivity>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
+    public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
 
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
@@ -329,6 +332,63 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(a => a.LeadId);
             b.HasIndex(a => a.CreatedAt);
+        });
+
+        modelBuilder.Entity<Customer>(b =>
+        {
+            b.ToTable("customers");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.Type).HasConversion<string>().HasMaxLength(30);
+            b.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            b.Property(c => c.TaxId).HasMaxLength(30);
+            b.Property(c => c.Address).HasMaxLength(500);
+            b.Property(c => c.RepresentativeName).HasMaxLength(200);
+            b.Property(c => c.SourceCode).HasMaxLength(60).IsRequired();
+            b.Property(c => c.RelationshipStatus).HasConversion<string>().HasMaxLength(30);
+            b.HasIndex(c => c.Type);
+            b.HasIndex(c => c.RelationshipStatus);
+            b.HasIndex(c => c.OwnerUserId);
+            b.HasIndex(c => c.SourceCode);
+            b.HasIndex(c => c.TaxId); // used for duplicate detection on Company
+            b.HasIndex(c => c.CreatedAt);
+            b.HasOne(c => c.Owner)
+                .WithMany()
+                .HasForeignKey(c => c.OwnerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CustomerContact>(b =>
+        {
+            b.ToTable("customer_contacts");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.FullName).HasMaxLength(200).IsRequired();
+            b.Property(c => c.Position).HasMaxLength(150);
+            b.Property(c => c.Phone).HasMaxLength(30);
+            b.Property(c => c.Email).HasMaxLength(150);
+            b.HasOne(c => c.Customer)
+                .WithMany(cu => cu.Contacts)
+                .HasForeignKey(c => c.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(c => c.CustomerId);
+            b.HasIndex(c => c.Phone); // used for duplicate detection on Individual
+        });
+
+        modelBuilder.Entity<CustomerActivity>(b =>
+        {
+            b.ToTable("customer_activities");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
+            b.Property(a => a.Content).HasMaxLength(4000).IsRequired();
+            b.HasOne(a => a.Customer)
+                .WithMany(c => c.Activities)
+                .HasForeignKey(a => a.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(a => a.CreatedBy)
+                .WithMany()
+                .HasForeignKey(a => a.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(a => a.CustomerId);
+            b.HasIndex(a => a.OccurredAt);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

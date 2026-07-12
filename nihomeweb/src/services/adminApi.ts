@@ -413,6 +413,119 @@ export interface MasterDataOption {
   isActive: boolean;
 }
 
+// -------- CRM Customer --------
+
+export type CustomerType = "Individual" | "Company";
+export type CustomerRelationshipStatus = "Prospect" | "InProgress" | "Signed" | "Suspended";
+export type CustomerActivityType = "Call" | "Email" | "Meeting" | "Note";
+
+export interface CustomerContactResponse {
+  id: number;
+  fullName: string;
+  position?: string;
+  phone?: string;
+  email?: string;
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomerActivityResponse {
+  id: number;
+  type: CustomerActivityType;
+  occurredAt: string;
+  content: string;
+  createdByUserId: number;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export interface CustomerResponse {
+  id: number;
+  type: CustomerType;
+  name: string;
+  taxId?: string;
+  address?: string;
+  representativeName?: string;
+  sourceCode: string;
+  relationshipStatus: CustomerRelationshipStatus;
+  ownerUserId?: number;
+  ownerName?: string;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+  contacts: CustomerContactResponse[];
+  activities: CustomerActivityResponse[];
+}
+
+export interface CustomerListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: CustomerResponse[];
+}
+
+export interface UpsertCustomerContactRequest {
+  id?: number;
+  fullName: string;
+  position?: string;
+  phone?: string;
+  email?: string;
+  isPrimary?: boolean;
+}
+
+export interface CreateCustomerRequest {
+  type: CustomerType;
+  name: string;
+  taxId?: string;
+  address?: string;
+  representativeName?: string;
+  sourceCode: string;
+  ownerUserId?: number | null;
+  note?: string;
+  primaryContact: UpsertCustomerContactRequest;
+  duplicateOverrideReason?: string;
+}
+
+export interface UpdateCustomerRequest {
+  type: CustomerType;
+  name: string;
+  taxId?: string;
+  address?: string;
+  representativeName?: string;
+  sourceCode: string;
+  relationshipStatus: CustomerRelationshipStatus;
+  ownerUserId?: number | null;
+  note?: string;
+  duplicateOverrideReason?: string;
+}
+
+export interface CreateCustomerActivityRequest {
+  type: CustomerActivityType;
+  content: string;
+  occurredAt?: string;
+}
+
+export interface CustomerDuplicateDetail {
+  field: "TaxId" | "Phone";
+  value: string;
+  existingCustomerId: number;
+  existingCustomerName: string;
+  message: string;
+}
+
+export interface CustomerListParams {
+  type?: CustomerType;
+  status?: CustomerRelationshipStatus;
+  ownerUserId?: number;
+  sourceCode?: string;
+  search?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -776,6 +889,32 @@ export const adminApi = {
     api.post<LeadResponse>(`/leads/${id}/convert`, body),
   addLeadActivity: (id: number, body: CreateLeadActivityRequest) =>
     api.post<LeadActivityResponse>(`/leads/${id}/activities`, body),
+
+  // CRM customers
+  listCustomers: (params: CustomerListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.type) q.append("type", params.type);
+    if (params.status) q.append("status", params.status);
+    if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
+    if (params.sourceCode) q.append("sourceCode", params.sourceCode);
+    if (params.search) q.append("search", params.search);
+    if (params.createdFrom) q.append("createdFrom", params.createdFrom);
+    if (params.createdTo) q.append("createdTo", params.createdTo);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<CustomerListResponse>(`/customers${qs ? `?${qs}` : ""}`);
+  },
+  getCustomer: (id: number) => api.get<CustomerResponse>(`/customers/${id}`),
+  createCustomer: (body: CreateCustomerRequest) => api.post<CustomerResponse>("/customers", body),
+  updateCustomer: (id: number, body: UpdateCustomerRequest) => api.put<CustomerResponse>(`/customers/${id}`, body),
+  deleteCustomer: (id: number) => api.delete(`/customers/${id}`),
+  upsertCustomerContact: (id: number, body: UpsertCustomerContactRequest) =>
+    api.post<CustomerContactResponse>(`/customers/${id}/contacts`, body),
+  deleteCustomerContact: (id: number, contactId: number) =>
+    api.delete(`/customers/${id}/contacts/${contactId}`),
+  addCustomerActivity: (id: number, body: CreateCustomerActivityRequest) =>
+    api.post<CustomerActivityResponse>(`/customers/${id}/activities`, body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>

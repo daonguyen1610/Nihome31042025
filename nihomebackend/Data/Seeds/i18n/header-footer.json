@@ -232,14 +232,6 @@
     "ja": "ロール管理"
   },
   {
-    "key": "nav.customers",
-    "category": "nav",
-    "vi": "Danh sách người dùng",
-    "en": "Customers",
-    "zh": "客户列表",
-    "ja": "顧客一覧"
-  },
-  {
     "key": "nav.customerRoles",
     "category": "nav",
     "vi": "Phân quyền",
