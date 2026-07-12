@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Search, Trash2, RefreshCw, Star, X, Pencil } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
@@ -50,19 +51,25 @@ const TYPES: CustomerType[] = ["Individual", "Company"];
 const STATUSES: CustomerRelationshipStatus[] = ["Prospect", "InProgress", "Signed", "Suspended"];
 const ACTIVITY_TYPES: CustomerActivityType[] = ["Call", "Email", "Meeting", "Note"];
 
-const statusBadge = (
-  s: CustomerRelationshipStatus,
-): "default" | "secondary" | "outline" | "destructive" => {
-  switch (s) {
-    case "Signed":
-      return "default";
-    case "Suspended":
-      return "destructive";
-    case "InProgress":
-      return "secondary";
-    default:
-      return "outline";
-  }
+// Soft-colored pills so every relationship status looks equally weighted in the table.
+const CUSTOMER_STATUS_STYLES: Record<CustomerRelationshipStatus, string> = {
+  Prospect: "border-sky-200 bg-sky-50 text-sky-700",
+  InProgress: "border-amber-200 bg-amber-50 text-amber-700",
+  Signed: "border-green-300 bg-green-100 text-green-800",
+  Suspended: "border-slate-200 bg-slate-100 text-slate-600",
+};
+
+const CUSTOMER_STATUS_DOT: Record<CustomerRelationshipStatus, string> = {
+  Prospect: "bg-sky-500",
+  InProgress: "bg-amber-500",
+  Signed: "bg-green-600",
+  Suspended: "bg-slate-400",
+};
+
+// Type badge is decorative — keeps Individual vs Company visually distinct without shouting.
+const CUSTOMER_TYPE_STYLES: Record<CustomerType, string> = {
+  Individual: "border-violet-200 bg-violet-50 text-violet-700",
+  Company: "border-indigo-200 bg-indigo-50 text-indigo-700",
 };
 
 const emptyContact: UpsertCustomerContactRequest = {
@@ -409,16 +416,19 @@ const AdminCustomers = () => {
           </div>
         </header>
 
-        <section className="flex flex-wrap items-end gap-2 rounded-lg border bg-card p-3">
-          <div className="relative min-w-[220px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={t("customers.searchPlaceholder")}
-              className="pl-9"
-              aria-label={t("customers.searchPlaceholder")}
-            />
+        <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
+          <div className="min-w-[220px] flex-1">
+            <Label className="text-xs" htmlFor="customer-search">{t("customers.filter.search")}</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="customer-search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t("customers.searchPlaceholder")}
+                className="h-9 pl-9"
+              />
+            </div>
           </div>
           <div className="w-[150px]">
             <Label className="text-xs">{t("customers.filter.type")}</Label>
@@ -481,8 +491,16 @@ const AdminCustomers = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-            {t("customers.empty")}
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-full bg-muted p-3">
+              <Search className="h-5 w-5" aria-hidden />
+            </div>
+            <p>{t("customers.empty")}</p>
+            {canManage && (
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus className="mr-1.5 h-4 w-4" /> {t("customers.new")}
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -495,11 +513,11 @@ const AdminCustomers = () => {
               />
             )}
             <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-full divide-y text-sm">
-              <thead className="bg-muted/50">
+            <table className="min-w-[960px] w-full divide-y text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   {canManage && (
-                    <th className="w-10 px-3 py-2 text-left">
+                    <th className="w-10 px-3 py-3 text-left">
                       <Checkbox
                         checked={
                           allVisibleSelected
@@ -513,16 +531,16 @@ const AdminCustomers = () => {
                       />
                     </th>
                   )}
-                  <th className="px-3 py-2 text-left font-medium">{t("customers.field.type")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("customers.field.name")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("customers.field.primaryContact")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("customers.field.source")}</th>
-                  <th className="px-3 py-2 text-left font-medium">{t("customers.field.status")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.type")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.name")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.primaryContact")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.source")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.status")}</th>
                   {canSeeAll && (
-                    <th className="px-3 py-2 text-left font-medium">{t("customers.field.owner")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.owner")}</th>
                   )}
-                  <th className="px-3 py-2 text-left font-medium">{t("customers.field.createdAt")}</th>
-                  {canManage && <th className="px-3 py-2" />}
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.createdAt")}</th>
+                  {canManage && <th className="px-3 py-3" />}
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -536,7 +554,7 @@ const AdminCustomers = () => {
                     >
                       {canManage && (
                         <td
-                          className="px-3 py-2"
+                          className="px-3 py-3"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Checkbox
@@ -546,16 +564,21 @@ const AdminCustomers = () => {
                           />
                         </td>
                       )}
-                      <td className="px-3 py-2">
-                        <Badge variant="outline">{t(`customers.type.${c.type}`)}</Badge>
+                      <td className="px-3 py-3">
+                        <Badge
+                          variant="outline"
+                          className={cn("whitespace-nowrap font-medium", CUSTOMER_TYPE_STYLES[c.type])}
+                        >
+                          {t(`customers.type.${c.type}`)}
+                        </Badge>
                       </td>
-                      <td className="px-3 py-2 font-medium">
+                      <td className="px-3 py-3 font-medium">
                         {c.name}
                         {c.type === "Company" && c.taxId && (
                           <div className="text-xs text-muted-foreground">MST: {c.taxId}</div>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="px-3 py-3 text-xs">
                         {primary ? (
                           <>
                             <div>{primary.fullName}</div>
@@ -563,22 +586,37 @@ const AdminCustomers = () => {
                           </>
                         ) : "—"}
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="px-3 py-3 text-xs">
                         {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
                       </td>
-                      <td className="px-3 py-2">
-                        <Badge variant={statusBadge(c.relationshipStatus)}>
+                      <td className="px-3 py-3">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "gap-1.5 whitespace-nowrap font-medium",
+                            CUSTOMER_STATUS_STYLES[c.relationshipStatus],
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              CUSTOMER_STATUS_DOT[c.relationshipStatus],
+                            )}
+                          />
                           {t(`customers.status.${c.relationshipStatus}`)}
                         </Badge>
                       </td>
                       {canSeeAll && (
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{c.ownerName || "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{c.ownerName || "—"}</td>
                       )}
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
-                        {new Date(c.createdAt).toLocaleString()}
+                      <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
+                        <div>{new Date(c.createdAt).toLocaleDateString()}</div>
+                        <div className="text-[11px] opacity-70">
+                          {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </div>
                       </td>
                       {canManage && (
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-3 py-3 text-right">
                           <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
@@ -842,10 +880,27 @@ const AdminCustomers = () => {
           ) : detail ? (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+                <DialogTitle className="flex flex-wrap items-center gap-2">
                   {detail.name}
-                  <Badge variant="outline">{t(`customers.type.${detail.type}`)}</Badge>
-                  <Badge variant={statusBadge(detail.relationshipStatus)}>
+                  <Badge
+                    variant="outline"
+                    className={cn("whitespace-nowrap font-medium", CUSTOMER_TYPE_STYLES[detail.type])}
+                  >
+                    {t(`customers.type.${detail.type}`)}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "gap-1.5 whitespace-nowrap font-medium",
+                      CUSTOMER_STATUS_STYLES[detail.relationshipStatus],
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        CUSTOMER_STATUS_DOT[detail.relationshipStatus],
+                      )}
+                    />
                     {t(`customers.status.${detail.relationshipStatus}`)}
                   </Badge>
                 </DialogTitle>
