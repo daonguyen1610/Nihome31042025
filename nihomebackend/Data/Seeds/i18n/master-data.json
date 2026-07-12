@@ -1,0 +1,634 @@
+[
+  {
+    "key": "masterData.category.customer_type.title",
+    "category": "masterData",
+    "vi": "Loại khách hàng",
+    "en": "Customer type",
+    "zh": "客户类型",
+    "ja": "顧客区分"
+  },
+  {
+    "key": "masterData.category.customer_source.title",
+    "category": "masterData",
+    "vi": "Nguồn khách hàng",
+    "en": "Customer source",
+    "zh": "客户来源",
+    "ja": "顧客ソース"
+  },
+  {
+    "key": "masterData.category.customer_status.title",
+    "category": "masterData",
+    "vi": "Trạng thái khách hàng",
+    "en": "Customer status",
+    "zh": "客户状态",
+    "ja": "顧客ステータス"
+  },
+  {
+    "key": "masterData.category.lead_status.title",
+    "category": "masterData",
+    "vi": "Trạng thái Lead",
+    "en": "Lead status",
+    "zh": "线索状态",
+    "ja": "リードステータス"
+  },
+  {
+    "key": "masterData.category.opportunity_stage.title",
+    "category": "masterData",
+    "vi": "Giai đoạn cơ hội",
+    "en": "Opportunity stage",
+    "zh": "商机阶段",
+    "ja": "案件ステージ"
+  },
+  {
+    "key": "masterData.category.opportunity_lost_reason.title",
+    "category": "masterData",
+    "vi": "Lý do thua",
+    "en": "Lost reason",
+    "zh": "失败原因",
+    "ja": "失注理由"
+  },
+  {
+    "key": "masterData.category.quote_status.title",
+    "category": "masterData",
+    "vi": "Trạng thái báo giá",
+    "en": "Quote status",
+    "zh": "报价状态",
+    "ja": "見積ステータス"
+  },
+  {
+    "key": "masterData.category.tender_status.title",
+    "category": "masterData",
+    "vi": "Trạng thái gói thầu",
+    "en": "Tender status",
+    "zh": "投标状态",
+    "ja": "入札ステータス"
+  },
+  {
+    "key": "masterData.category.contract_status.title",
+    "category": "masterData",
+    "vi": "Trạng thái hợp đồng",
+    "en": "Contract status",
+    "zh": "合同状态",
+    "ja": "契約ステータス"
+  },
+  {
+    "key": "masterData.category.design_discipline.title",
+    "category": "masterData",
+    "vi": "Bộ môn thiết kế",
+    "en": "Design discipline",
+    "zh": "设计专业",
+    "ja": "設計専門"
+  },
+  {
+    "key": "masterData.category.permit_type.title",
+    "category": "masterData",
+    "vi": "Loại giấy phép",
+    "en": "Permit type",
+    "zh": "许可类型",
+    "ja": "許可種別"
+  },
+  {
+    "key": "masterData.category.permit_status.title",
+    "category": "masterData",
+    "vi": "Trạng thái giấy phép",
+    "en": "Permit status",
+    "zh": "许可状态",
+    "ja": "許可ステータス"
+  },
+  {
+    "key": "masterData.customer_type.individual.label",
+    "category": "masterData",
+    "vi": "Cá nhân",
+    "en": "Individual",
+    "zh": "个人",
+    "ja": "個人"
+  },
+  {
+    "key": "masterData.customer_type.company.label",
+    "category": "masterData",
+    "vi": "Doanh nghiệp",
+    "en": "Company",
+    "zh": "企业",
+    "ja": "法人"
+  },
+  {
+    "key": "masterData.customer_source.marketing.label",
+    "category": "masterData",
+    "vi": "Marketing",
+    "en": "Marketing",
+    "zh": "市场营销",
+    "ja": "マーケティング"
+  },
+  {
+    "key": "masterData.customer_source.referral.label",
+    "category": "masterData",
+    "vi": "Giới thiệu",
+    "en": "Referral",
+    "zh": "推荐",
+    "ja": "紹介"
+  },
+  {
+    "key": "masterData.customer_source.website.label",
+    "category": "masterData",
+    "vi": "Website",
+    "en": "Website",
+    "zh": "网站",
+    "ja": "ウェブサイト"
+  },
+  {
+    "key": "masterData.customer_source.event.label",
+    "category": "masterData",
+    "vi": "Sự kiện",
+    "en": "Event",
+    "zh": "活动",
+    "ja": "イベント"
+  },
+  {
+    "key": "masterData.customer_source.cold-call.label",
+    "category": "masterData",
+    "vi": "Cold call",
+    "en": "Cold call",
+    "zh": "陌生拜访",
+    "ja": "コールドコール"
+  },
+  {
+    "key": "masterData.customer_source.other.label",
+    "category": "masterData",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
+  },
+  {
+    "key": "masterData.customer_status.prospect.label",
+    "category": "masterData",
+    "vi": "Tiềm năng",
+    "en": "Prospect",
+    "zh": "潜在客户",
+    "ja": "見込み"
+  },
+  {
+    "key": "masterData.customer_status.in-progress.label",
+    "category": "masterData",
+    "vi": "Đang giao dịch",
+    "en": "In progress",
+    "zh": "交易中",
+    "ja": "商談中"
+  },
+  {
+    "key": "masterData.customer_status.signed.label",
+    "category": "masterData",
+    "vi": "Đã ký",
+    "en": "Signed",
+    "zh": "已签约",
+    "ja": "契約済み"
+  },
+  {
+    "key": "masterData.customer_status.suspended.label",
+    "category": "masterData",
+    "vi": "Ngưng",
+    "en": "Suspended",
+    "zh": "暂停",
+    "ja": "停止"
+  },
+  {
+    "key": "masterData.lead_status.new.label",
+    "category": "masterData",
+    "vi": "Mới",
+    "en": "New",
+    "zh": "新的",
+    "ja": "新規"
+  },
+  {
+    "key": "masterData.lead_status.contacted.label",
+    "category": "masterData",
+    "vi": "Đã liên hệ",
+    "en": "Contacted",
+    "zh": "已联系",
+    "ja": "連絡済み"
+  },
+  {
+    "key": "masterData.lead_status.interested.label",
+    "category": "masterData",
+    "vi": "Quan tâm",
+    "en": "Interested",
+    "zh": "感兴趣",
+    "ja": "興味あり"
+  },
+  {
+    "key": "masterData.lead_status.not-interested.label",
+    "category": "masterData",
+    "vi": "Không quan tâm",
+    "en": "Not interested",
+    "zh": "无兴趣",
+    "ja": "興味なし"
+  },
+  {
+    "key": "masterData.lead_status.converted.label",
+    "category": "masterData",
+    "vi": "Đã convert",
+    "en": "Converted",
+    "zh": "已转化",
+    "ja": "変換済み"
+  },
+  {
+    "key": "masterData.lead_status.junk.label",
+    "category": "masterData",
+    "vi": "Junk",
+    "en": "Junk",
+    "zh": "无效",
+    "ja": "無効"
+  },
+  {
+    "key": "masterData.opportunity_stage.prospecting.label",
+    "category": "masterData",
+    "vi": "Tìm hiểu",
+    "en": "Prospecting",
+    "zh": "开发中",
+    "ja": "見込み調査"
+  },
+  {
+    "key": "masterData.opportunity_stage.qualification.label",
+    "category": "masterData",
+    "vi": "Đánh giá",
+    "en": "Qualification",
+    "zh": "评估",
+    "ja": "適格性判定"
+  },
+  {
+    "key": "masterData.opportunity_stage.proposal.label",
+    "category": "masterData",
+    "vi": "Đề xuất",
+    "en": "Proposal",
+    "zh": "提案",
+    "ja": "提案"
+  },
+  {
+    "key": "masterData.opportunity_stage.negotiation.label",
+    "category": "masterData",
+    "vi": "Đàm phán",
+    "en": "Negotiation",
+    "zh": "谈判",
+    "ja": "交渉"
+  },
+  {
+    "key": "masterData.opportunity_stage.won.label",
+    "category": "masterData",
+    "vi": "Thắng",
+    "en": "Won",
+    "zh": "赢单",
+    "ja": "受注"
+  },
+  {
+    "key": "masterData.opportunity_stage.lost.label",
+    "category": "masterData",
+    "vi": "Thua",
+    "en": "Lost",
+    "zh": "输单",
+    "ja": "失注"
+  },
+  {
+    "key": "masterData.opportunity_lost_reason.price.label",
+    "category": "masterData",
+    "vi": "Giá cao",
+    "en": "Price",
+    "zh": "价格过高",
+    "ja": "価格が高い"
+  },
+  {
+    "key": "masterData.opportunity_lost_reason.competitor.label",
+    "category": "masterData",
+    "vi": "Đối thủ",
+    "en": "Competitor",
+    "zh": "竞争对手",
+    "ja": "競合"
+  },
+  {
+    "key": "masterData.opportunity_lost_reason.timing.label",
+    "category": "masterData",
+    "vi": "Thời điểm không phù hợp",
+    "en": "Timing",
+    "zh": "时机不合",
+    "ja": "タイミング"
+  },
+  {
+    "key": "masterData.opportunity_lost_reason.technical.label",
+    "category": "masterData",
+    "vi": "Yêu cầu kỹ thuật không đáp ứng",
+    "en": "Technical fit",
+    "zh": "技术不匹配",
+    "ja": "技術要件"
+  },
+  {
+    "key": "masterData.opportunity_lost_reason.other.label",
+    "category": "masterData",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
+  },
+  {
+    "key": "masterData.quote_status.draft.label",
+    "category": "masterData",
+    "vi": "Bản nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "masterData.quote_status.pending-approval.label",
+    "category": "masterData",
+    "vi": "Chờ duyệt nội bộ",
+    "en": "Pending internal approval",
+    "zh": "待内部审批",
+    "ja": "社内承認待ち"
+  },
+  {
+    "key": "masterData.quote_status.approved.label",
+    "category": "masterData",
+    "vi": "Đã duyệt",
+    "en": "Approved",
+    "zh": "已批准",
+    "ja": "承認済み"
+  },
+  {
+    "key": "masterData.quote_status.sent.label",
+    "category": "masterData",
+    "vi": "Đã gửi khách",
+    "en": "Sent to customer",
+    "zh": "已发给客户",
+    "ja": "顧客送付済み"
+  },
+  {
+    "key": "masterData.quote_status.customer-approved.label",
+    "category": "masterData",
+    "vi": "Khách đã duyệt",
+    "en": "Customer approved",
+    "zh": "客户已批准",
+    "ja": "顧客承認済み"
+  },
+  {
+    "key": "masterData.quote_status.rejected.label",
+    "category": "masterData",
+    "vi": "Từ chối",
+    "en": "Rejected",
+    "zh": "已拒绝",
+    "ja": "却下"
+  },
+  {
+    "key": "masterData.quote_status.expired.label",
+    "category": "masterData",
+    "vi": "Hết hạn",
+    "en": "Expired",
+    "zh": "已过期",
+    "ja": "期限切れ"
+  },
+  {
+    "key": "masterData.tender_status.preparing.label",
+    "category": "masterData",
+    "vi": "Đang chuẩn bị",
+    "en": "Preparing",
+    "zh": "准备中",
+    "ja": "準備中"
+  },
+  {
+    "key": "masterData.tender_status.submitted.label",
+    "category": "masterData",
+    "vi": "Đã nộp",
+    "en": "Submitted",
+    "zh": "已提交",
+    "ja": "提出済み"
+  },
+  {
+    "key": "masterData.tender_status.won.label",
+    "category": "masterData",
+    "vi": "Trúng",
+    "en": "Won",
+    "zh": "中标",
+    "ja": "落札"
+  },
+  {
+    "key": "masterData.tender_status.lost.label",
+    "category": "masterData",
+    "vi": "Trượt",
+    "en": "Lost",
+    "zh": "落标",
+    "ja": "失注"
+  },
+  {
+    "key": "masterData.tender_status.cancelled.label",
+    "category": "masterData",
+    "vi": "Huỷ",
+    "en": "Cancelled",
+    "zh": "已取消",
+    "ja": "キャンセル"
+  },
+  {
+    "key": "masterData.contract_status.draft.label",
+    "category": "masterData",
+    "vi": "Bản nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "masterData.contract_status.signed.label",
+    "category": "masterData",
+    "vi": "Đã ký",
+    "en": "Signed",
+    "zh": "已签署",
+    "ja": "署名済み"
+  },
+  {
+    "key": "masterData.contract_status.in-progress.label",
+    "category": "masterData",
+    "vi": "Đang thực hiện",
+    "en": "In progress",
+    "zh": "执行中",
+    "ja": "実行中"
+  },
+  {
+    "key": "masterData.contract_status.paused.label",
+    "category": "masterData",
+    "vi": "Tạm dừng",
+    "en": "Paused",
+    "zh": "暂停",
+    "ja": "一時停止"
+  },
+  {
+    "key": "masterData.contract_status.completed.label",
+    "category": "masterData",
+    "vi": "Hoàn thành",
+    "en": "Completed",
+    "zh": "已完成",
+    "ja": "完了"
+  },
+  {
+    "key": "masterData.contract_status.cancelled.label",
+    "category": "masterData",
+    "vi": "Huỷ",
+    "en": "Cancelled",
+    "zh": "已取消",
+    "ja": "キャンセル"
+  },
+  {
+    "key": "masterData.design_discipline.architecture.label",
+    "category": "masterData",
+    "vi": "Kiến trúc",
+    "en": "Architecture",
+    "zh": "建筑",
+    "ja": "建築"
+  },
+  {
+    "key": "masterData.design_discipline.structure.label",
+    "category": "masterData",
+    "vi": "Kết cấu",
+    "en": "Structure",
+    "zh": "结构",
+    "ja": "構造"
+  },
+  {
+    "key": "masterData.design_discipline.mep.label",
+    "category": "masterData",
+    "vi": "MEP",
+    "en": "MEP",
+    "zh": "机电",
+    "ja": "MEP"
+  },
+  {
+    "key": "masterData.design_discipline.interior.label",
+    "category": "masterData",
+    "vi": "Nội thất",
+    "en": "Interior",
+    "zh": "室内",
+    "ja": "内装"
+  },
+  {
+    "key": "masterData.permit_type.gpxd.label",
+    "category": "masterData",
+    "vi": "Giấy phép xây dựng (GPXD)",
+    "en": "Construction permit (GPXD)",
+    "zh": "施工许可证 (GPXD)",
+    "ja": "建設許可 (GPXD)"
+  },
+  {
+    "key": "masterData.permit_type.pccc.label",
+    "category": "masterData",
+    "vi": "Phòng cháy chữa cháy (PCCC)",
+    "en": "Fire safety (PCCC)",
+    "zh": "消防 (PCCC)",
+    "ja": "防火 (PCCC)"
+  },
+  {
+    "key": "masterData.permit_type.electricity.label",
+    "category": "masterData",
+    "vi": "Cấp điện",
+    "en": "Electricity supply",
+    "zh": "供电",
+    "ja": "電気供給"
+  },
+  {
+    "key": "masterData.permit_type.water.label",
+    "category": "masterData",
+    "vi": "Cấp nước",
+    "en": "Water supply",
+    "zh": "供水",
+    "ja": "水道供給"
+  },
+  {
+    "key": "masterData.permit_type.sidewalk.label",
+    "category": "masterData",
+    "vi": "Vỉa hè",
+    "en": "Sidewalk",
+    "zh": "人行道",
+    "ja": "歩道"
+  },
+  {
+    "key": "masterData.permit_type.safety.label",
+    "category": "masterData",
+    "vi": "An toàn lao động",
+    "en": "Labor safety",
+    "zh": "劳动安全",
+    "ja": "労働安全"
+  },
+  {
+    "key": "masterData.permit_type.environment.label",
+    "category": "masterData",
+    "vi": "Môi trường",
+    "en": "Environment",
+    "zh": "环境",
+    "ja": "環境"
+  },
+  {
+    "key": "masterData.permit_type.completion.label",
+    "category": "masterData",
+    "vi": "Hoàn công",
+    "en": "Completion certificate",
+    "zh": "竣工验收",
+    "ja": "完了検査"
+  },
+  {
+    "key": "masterData.permit_status.not-started.label",
+    "category": "masterData",
+    "vi": "Chưa chuẩn bị",
+    "en": "Not started",
+    "zh": "未开始",
+    "ja": "未着手"
+  },
+  {
+    "key": "masterData.permit_status.preparing.label",
+    "category": "masterData",
+    "vi": "Đang chuẩn bị",
+    "en": "Preparing",
+    "zh": "准备中",
+    "ja": "準備中"
+  },
+  {
+    "key": "masterData.permit_status.submitted.label",
+    "category": "masterData",
+    "vi": "Đã nộp",
+    "en": "Submitted",
+    "zh": "已提交",
+    "ja": "提出済み"
+  },
+  {
+    "key": "masterData.permit_status.under-review.label",
+    "category": "masterData",
+    "vi": "Đang thẩm định",
+    "en": "Under review",
+    "zh": "审核中",
+    "ja": "審査中"
+  },
+  {
+    "key": "masterData.permit_status.need-more-docs.label",
+    "category": "masterData",
+    "vi": "Bổ sung hồ sơ",
+    "en": "Needs more documents",
+    "zh": "需补充文件",
+    "ja": "資料追加"
+  },
+  {
+    "key": "masterData.permit_status.issued.label",
+    "category": "masterData",
+    "vi": "Đã cấp",
+    "en": "Issued",
+    "zh": "已颁发",
+    "ja": "発行済み"
+  },
+  {
+    "key": "masterData.permit_status.rejected.label",
+    "category": "masterData",
+    "vi": "Bị từ chối",
+    "en": "Rejected",
+    "zh": "已拒绝",
+    "ja": "却下"
+  },
+  {
+    "key": "masterData.permit_status.expired.label",
+    "category": "masterData",
+    "vi": "Hết hạn",
+    "en": "Expired",
+    "zh": "已过期",
+    "ja": "期限切れ"
+  }
+]

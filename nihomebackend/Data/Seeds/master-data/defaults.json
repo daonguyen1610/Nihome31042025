@@ -1,0 +1,144 @@
+{
+  "_comment": "Default master-data catalogue for GD2 modules. Loaded once at startup by MasterDataSeeder. Adding entries here is idempotent — existing DB rows are never overwritten so admin edits are preserved. Field 'labelKey' is optional; when set it points at a translation entry in Data/Seeds/i18n/master-data.json (masterData.<category>.<code>.label).",
+
+  "categories": [
+    {
+      "category": "customer_type",
+      "options": [
+        { "code": "individual", "name": "Cá nhân", "sortOrder": 1 },
+        { "code": "company",    "name": "Doanh nghiệp", "sortOrder": 2 }
+      ]
+    },
+
+    {
+      "category": "customer_source",
+      "options": [
+        { "code": "marketing", "name": "Marketing", "sortOrder": 1 },
+        { "code": "referral",  "name": "Giới thiệu", "sortOrder": 2 },
+        { "code": "website",   "name": "Website", "sortOrder": 3 },
+        { "code": "event",     "name": "Sự kiện", "sortOrder": 4 },
+        { "code": "cold-call", "name": "Cold call", "sortOrder": 5 },
+        { "code": "other",     "name": "Khác", "sortOrder": 99 }
+      ]
+    },
+
+    {
+      "category": "customer_status",
+      "options": [
+        { "code": "prospect",     "name": "Tiềm năng", "sortOrder": 1 },
+        { "code": "in-progress",  "name": "Đang giao dịch", "sortOrder": 2 },
+        { "code": "signed",       "name": "Đã ký", "sortOrder": 3 },
+        { "code": "suspended",    "name": "Ngưng", "sortOrder": 4 }
+      ]
+    },
+
+    {
+      "category": "lead_status",
+      "options": [
+        { "code": "new",             "name": "Mới", "sortOrder": 1 },
+        { "code": "contacted",       "name": "Đã liên hệ", "sortOrder": 2 },
+        { "code": "interested",      "name": "Quan tâm", "sortOrder": 3 },
+        { "code": "not-interested",  "name": "Không quan tâm", "sortOrder": 4 },
+        { "code": "converted",       "name": "Đã convert", "sortOrder": 5 },
+        { "code": "junk",            "name": "Junk", "sortOrder": 6 }
+      ]
+    },
+
+    {
+      "category": "opportunity_stage",
+      "options": [
+        { "code": "prospecting",   "name": "Tìm hiểu", "sortOrder": 1 },
+        { "code": "qualification", "name": "Đánh giá", "sortOrder": 2 },
+        { "code": "proposal",      "name": "Đề xuất", "sortOrder": 3 },
+        { "code": "negotiation",   "name": "Đàm phán", "sortOrder": 4 },
+        { "code": "won",           "name": "Thắng", "sortOrder": 5 },
+        { "code": "lost",          "name": "Thua", "sortOrder": 6 }
+      ]
+    },
+
+    {
+      "category": "opportunity_lost_reason",
+      "options": [
+        { "code": "price",      "name": "Giá cao", "sortOrder": 1 },
+        { "code": "competitor", "name": "Đối thủ", "sortOrder": 2 },
+        { "code": "timing",     "name": "Thời điểm không phù hợp", "sortOrder": 3 },
+        { "code": "technical",  "name": "Yêu cầu kỹ thuật không đáp ứng", "sortOrder": 4 },
+        { "code": "other",      "name": "Khác", "sortOrder": 99 }
+      ]
+    },
+
+    {
+      "category": "quote_status",
+      "options": [
+        { "code": "draft",              "name": "Bản nháp", "sortOrder": 1 },
+        { "code": "pending-approval",   "name": "Chờ duyệt nội bộ", "sortOrder": 2 },
+        { "code": "approved",           "name": "Đã duyệt", "sortOrder": 3 },
+        { "code": "sent",               "name": "Đã gửi khách", "sortOrder": 4 },
+        { "code": "customer-approved",  "name": "Khách đã duyệt", "sortOrder": 5 },
+        { "code": "rejected",           "name": "Từ chối", "sortOrder": 6 },
+        { "code": "expired",            "name": "Hết hạn", "sortOrder": 7 }
+      ]
+    },
+
+    {
+      "category": "tender_status",
+      "options": [
+        { "code": "preparing", "name": "Đang chuẩn bị", "sortOrder": 1 },
+        { "code": "submitted", "name": "Đã nộp", "sortOrder": 2 },
+        { "code": "won",       "name": "Trúng", "sortOrder": 3 },
+        { "code": "lost",      "name": "Trượt", "sortOrder": 4 },
+        { "code": "cancelled", "name": "Huỷ", "sortOrder": 5 }
+      ]
+    },
+
+    {
+      "category": "contract_status",
+      "options": [
+        { "code": "draft",       "name": "Bản nháp", "sortOrder": 1 },
+        { "code": "signed",      "name": "Đã ký", "sortOrder": 2 },
+        { "code": "in-progress", "name": "Đang thực hiện", "sortOrder": 3 },
+        { "code": "paused",      "name": "Tạm dừng", "sortOrder": 4 },
+        { "code": "completed",   "name": "Hoàn thành", "sortOrder": 5 },
+        { "code": "cancelled",   "name": "Huỷ", "sortOrder": 6 }
+      ]
+    },
+
+    {
+      "category": "design_discipline",
+      "options": [
+        { "code": "architecture", "name": "Kiến trúc", "sortOrder": 1 },
+        { "code": "structure",    "name": "Kết cấu", "sortOrder": 2 },
+        { "code": "mep",          "name": "MEP", "sortOrder": 3 },
+        { "code": "interior",     "name": "Nội thất", "sortOrder": 4 }
+      ]
+    },
+
+    {
+      "category": "permit_type",
+      "options": [
+        { "code": "gpxd",         "name": "Giấy phép xây dựng (GPXD)", "sortOrder": 1 },
+        { "code": "pccc",         "name": "Phòng cháy chữa cháy (PCCC)", "sortOrder": 2 },
+        { "code": "electricity",  "name": "Cấp điện", "sortOrder": 3 },
+        { "code": "water",        "name": "Cấp nước", "sortOrder": 4 },
+        { "code": "sidewalk",     "name": "Vỉa hè", "sortOrder": 5 },
+        { "code": "safety",       "name": "An toàn lao động", "sortOrder": 6 },
+        { "code": "environment",  "name": "Môi trường", "sortOrder": 7 },
+        { "code": "completion",   "name": "Hoàn công", "sortOrder": 8 }
+      ]
+    },
+
+    {
+      "category": "permit_status",
+      "options": [
+        { "code": "not-started",     "name": "Chưa chuẩn bị", "sortOrder": 1 },
+        { "code": "preparing",       "name": "Đang chuẩn bị", "sortOrder": 2 },
+        { "code": "submitted",       "name": "Đã nộp", "sortOrder": 3 },
+        { "code": "under-review",    "name": "Đang thẩm định", "sortOrder": 4 },
+        { "code": "need-more-docs",  "name": "Bổ sung hồ sơ", "sortOrder": 5 },
+        { "code": "issued",          "name": "Đã cấp", "sortOrder": 6 },
+        { "code": "rejected",        "name": "Bị từ chối", "sortOrder": 7 },
+        { "code": "expired",         "name": "Hết hạn", "sortOrder": 8 }
+      ]
+    }
+  ]
+}

@@ -89,6 +89,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<FingerprintService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IRoleService, RoleService>();
+        services.AddScoped<IMasterDataService, MasterDataService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<HostedImageService>();

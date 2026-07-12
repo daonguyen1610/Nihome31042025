@@ -42,6 +42,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // Contact
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
 
+    // Master data — generic category-driven lookup for CRM / Design / Permit modules.
+    public DbSet<MasterDataOption> MasterDataOptions => Set<MasterDataOption>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -270,6 +273,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<RecruitmentDropdownOption>().ToTable("recruitment_dropdown_options");
         modelBuilder.Entity<RecruitmentDropdownOption>().HasKey(r => r.Id);
         modelBuilder.Entity<RecruitmentDropdownOption>().HasIndex(r => new { r.Type, r.Code }).IsUnique();
+
+        modelBuilder.Entity<MasterDataOption>().ToTable("master_data_options");
+        modelBuilder.Entity<MasterDataOption>().HasKey(m => m.Id);
+        modelBuilder.Entity<MasterDataOption>().HasIndex(m => new { m.Category, m.Code }).IsUnique();
+        modelBuilder.Entity<MasterDataOption>().HasIndex(m => m.Category);
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");
         modelBuilder.Entity<ContactMessage>().HasKey(c => c.Id);
