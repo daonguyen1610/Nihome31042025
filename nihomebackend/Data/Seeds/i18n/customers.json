@@ -6,6 +6,7 @@
   { "key": "customers.new", "category": "customers", "vi": "Thêm Khách hàng", "en": "New customer", "zh": "新建客户", "ja": "新規顧客" },
   { "key": "customers.empty", "category": "customers", "vi": "Chưa có khách hàng — nhấn \"Thêm Khách hàng\" hoặc chuyển đổi từ Lead.", "en": "No customers yet — click \"New customer\" or convert from a Lead.", "zh": "暂无客户 — 点击 \"新建客户\" 或从线索转化。", "ja": "顧客はまだありません — 「新規顧客」またはリードから変換してください。" },
   { "key": "customers.searchPlaceholder", "category": "customers", "vi": "Tìm theo tên, MST, phone, email…", "en": "Search name, tax id, phone, email…", "zh": "按姓名、税号、电话、邮箱搜索…", "ja": "名前・税番号・電話・メールで検索…" },
+  { "key": "customers.filter.search", "category": "customers", "vi": "Tìm kiếm", "en": "Search", "zh": "搜索", "ja": "検索" },
   { "key": "customers.filter.type", "category": "customers", "vi": "Loại", "en": "Type", "zh": "类型", "ja": "種別" },
   { "key": "customers.filter.status", "category": "customers", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "ステータス" },
   { "key": "customers.filter.source", "category": "customers", "vi": "Nguồn", "en": "Source", "zh": "来源", "ja": "ソース" },
