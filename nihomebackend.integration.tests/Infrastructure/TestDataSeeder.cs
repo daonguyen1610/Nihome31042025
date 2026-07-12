@@ -26,6 +26,7 @@ public static class TestDataSeeder
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["SALE"] = "0911000003",
+            ["SALES_MANAGER"] = "0911000010",
             ["DESIGN"] = "0911000004",
             ["PM"] = "0911000005",
             ["QS"] = "0911000006",

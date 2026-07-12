@@ -314,6 +314,105 @@ export interface ContactMessageResponse {
   createdAt: string;
 }
 
+// -------- CRM Lead --------
+
+export type LeadStatus =
+  | "New"
+  | "Contacted"
+  | "Interested"
+  | "NotInterested"
+  | "Converted"
+  | "Junk";
+
+export type LeadActivityType = "Call" | "Email" | "Meeting" | "Note";
+
+export interface LeadActivityResponse {
+  id: number;
+  type: LeadActivityType;
+  content: string;
+  createdByUserId: number;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export interface LeadResponse {
+  id: number;
+  name: string;
+  companyName?: string;
+  phone?: string;
+  email?: string;
+  sourceCode: string;
+  status: LeadStatus;
+  ownerUserId?: number;
+  ownerName?: string;
+  note?: string;
+  convertedAt?: string;
+  convertedCustomerId?: number;
+  convertedOpportunityId?: number;
+  createdAt: string;
+  updatedAt: string;
+  activities: LeadActivityResponse[];
+}
+
+export interface LeadListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: LeadResponse[];
+}
+
+export interface CreateLeadRequest {
+  name: string;
+  companyName?: string;
+  phone?: string;
+  email?: string;
+  sourceCode: string;
+  ownerUserId?: number | null;
+  note?: string;
+}
+
+export interface UpdateLeadRequest {
+  name: string;
+  companyName?: string;
+  phone?: string;
+  email?: string;
+  sourceCode: string;
+  status: LeadStatus;
+  ownerUserId?: number | null;
+  note?: string;
+}
+
+export interface ConvertLeadRequest {
+  customerId?: number | null;
+  opportunityId?: number | null;
+  note?: string;
+}
+
+export interface CreateLeadActivityRequest {
+  type: LeadActivityType;
+  content: string;
+}
+
+export interface LeadListParams {
+  status?: LeadStatus;
+  sourceCode?: string;
+  ownerUserId?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MasterDataOption {
+  id: number;
+  category: string;
+  code: string;
+  name: string;
+  labelKey?: string;
+  description?: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -654,6 +753,33 @@ export const adminApi = {
     api.patch<ContactMessageResponse>(`/contacts/${id}/mark-replied`),
   deleteContact: (id: number) =>
     api.delete(`/contacts/${id}`),
+
+  // CRM leads
+  listLeads: (params: LeadListParams = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.append("status", params.status);
+    if (params.sourceCode) query.append("sourceCode", params.sourceCode);
+    if (params.ownerUserId != null) query.append("ownerUserId", String(params.ownerUserId));
+    if (params.search) query.append("search", params.search);
+    if (params.page) query.append("page", String(params.page));
+    if (params.pageSize) query.append("pageSize", String(params.pageSize));
+    const qs = query.toString();
+    return api.get<LeadListResponse>(`/leads${qs ? `?${qs}` : ""}`);
+  },
+  getLead: (id: number) => api.get<LeadResponse>(`/leads/${id}`),
+  createLead: (body: CreateLeadRequest) =>
+    api.post<LeadResponse>("/leads", body, withIdempotencyKey()),
+  updateLead: (id: number, body: UpdateLeadRequest) =>
+    api.put<LeadResponse>(`/leads/${id}`, body),
+  deleteLead: (id: number) => api.delete(`/leads/${id}`),
+  convertLead: (id: number, body: ConvertLeadRequest = {}) =>
+    api.post<LeadResponse>(`/leads/${id}/convert`, body),
+  addLeadActivity: (id: number, body: CreateLeadActivityRequest) =>
+    api.post<LeadActivityResponse>(`/leads/${id}/activities`, body),
+
+  // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
+  getMasterDataOptions: (category: string) =>
+    api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`),
 
   // Users / RBAC
   getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>

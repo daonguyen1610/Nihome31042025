@@ -33,6 +33,7 @@ import {
   SlidersHorizontal,
   Bell,
   ConciergeBell,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -80,6 +81,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
   const rawGroups: NavGroup[] = useMemo(
     () => [
+      {
+        id: "crm",
+        label: t("nav.crm"),
+        icon: UserPlus,
+        items: [
+          { to: "/admin/leads", label: t("nav.leads"), icon: UserPlus, permission: ADMIN_PERMS.leads },
+        ],
+      },
       {
         id: "content",
         label: t("nav.content"),

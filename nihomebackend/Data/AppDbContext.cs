@@ -46,6 +46,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // Master data — generic category-driven lookup for CRM / Design / Permit modules.
     public DbSet<MasterDataOption> MasterDataOptions => Set<MasterDataOption>();
 
+    // CRM — M1 chain (Lead → Customer → Opportunity → Quote/Bid → Contract)
+    public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<LeadActivity> LeadActivities => Set<LeadActivity>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -288,6 +292,44 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<MasterDataOption>().HasKey(m => m.Id);
         modelBuilder.Entity<MasterDataOption>().HasIndex(m => new { m.Category, m.Code }).IsUnique();
         modelBuilder.Entity<MasterDataOption>().HasIndex(m => m.Category);
+
+        modelBuilder.Entity<Lead>(b =>
+        {
+            b.ToTable("leads");
+            b.HasKey(l => l.Id);
+            b.Property(l => l.Name).HasMaxLength(200).IsRequired();
+            b.Property(l => l.CompanyName).HasMaxLength(200);
+            b.Property(l => l.Phone).HasMaxLength(30);
+            b.Property(l => l.Email).HasMaxLength(150);
+            b.Property(l => l.SourceCode).HasMaxLength(60).IsRequired();
+            b.Property(l => l.Status).HasConversion<string>().HasMaxLength(30);
+            b.HasIndex(l => l.Status);
+            b.HasIndex(l => l.OwnerUserId);
+            b.HasIndex(l => l.SourceCode);
+            b.HasIndex(l => l.CreatedAt);
+            b.HasOne(l => l.Owner)
+                .WithMany()
+                .HasForeignKey(l => l.OwnerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<LeadActivity>(b =>
+        {
+            b.ToTable("lead_activities");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
+            b.Property(a => a.Content).HasMaxLength(2000).IsRequired();
+            b.HasOne(a => a.Lead)
+                .WithMany(l => l.Activities)
+                .HasForeignKey(a => a.LeadId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(a => a.CreatedBy)
+                .WithMany()
+                .HasForeignKey(a => a.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(a => a.LeadId);
+            b.HasIndex(a => a.CreatedAt);
+        });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");
         modelBuilder.Entity<ContactMessage>().HasKey(c => c.Id);

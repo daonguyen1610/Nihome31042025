@@ -63,6 +63,7 @@
     { "module": "master-data", "action": "manage" },
 
     { "module": "crm.leads", "action": "view" },
+    { "module": "crm.leads", "action": "view.all" },
     { "module": "crm.leads", "action": "manage" },
     { "module": "crm.leads", "action": "convert" },
     { "module": "crm.customers", "action": "view" },
@@ -135,7 +136,9 @@
         "contacts.*",
         "recruitment.applications.view",
         "master-data.view",
-        "crm.leads.**",
+        "crm.leads.view",
+        "crm.leads.manage",
+        "crm.leads.convert",
         "crm.customers.view", "crm.customers.manage",
         "crm.opportunities.**",
         "crm.quotes.view", "crm.quotes.manage", "crm.quotes.send",
