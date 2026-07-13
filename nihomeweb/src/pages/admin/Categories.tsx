@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
@@ -15,7 +16,10 @@ import {
 } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import {
@@ -275,196 +279,200 @@ const Categories = () => {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("cat.title")}</h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {loading ? "..." : `${filtered.length} / ${items.length}`}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
-          <button onClick={startCreate} className="admin-btn-primary inline-flex items-center gap-2" type="button">
-            <Plus className="w-4 h-4" /> {t("cat.add")}
-          </button>
-        </div>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{t("cat.title")}</h1>
+            <p className="text-xs italic text-muted-foreground">
+              {loading ? "..." : `${filtered.length} / ${items.length}`}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
+            <Button type="button" onClick={startCreate}>
+              <Plus className="mr-1.5 h-4 w-4" /> {t("cat.add")}
+            </Button>
+          </div>
+        </header>
 
-      <div className="flex items-center gap-2 border-b mb-5" style={{ borderColor: "hsl(var(--admin-border))" }}>
-        {tabs.map((tab) => {
-          const active = tab.key === kind;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => switchTab(tab.key)}
-              className="px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors"
-              style={{
-                borderColor: active ? "hsl(var(--admin-primary))" : "transparent",
-                color: active ? "hsl(var(--admin-primary))" : "hsl(var(--admin-muted))",
-              }}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="admin-card p-5 mb-5">
-        <div className="flex items-center gap-2 max-w-md">
-          <SearchIcon className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("cat.name")}
-            className="admin-input flex-1"
-          />
-        </div>
-      </div>
-
-      <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
-        <DialogContent className="admin-scope sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display text-xl font-extrabold">
-              {editingId == null ? t("cat.add") : t("common.edit")}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={submitForm} className="space-y-4">
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="cat-name">
-                {t("cat.name")}
-              </label>
-              <input
-                id="cat-name"
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder={t("cat.name")}
-                className="admin-input mt-1 w-full"
-                autoFocus
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="cat-order">
-                {t("cat.order")}
-              </label>
-              <input
-                id="cat-order"
-                type="number"
-                value={form.sortOrder}
-                onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
-                className="admin-input mt-1 w-full"
-              />
-            </div>
-            <div
-              className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
-              style={{ borderColor: "hsl(var(--admin-border))" }}
-            >
-              <span className="text-sm font-semibold">{t("cat.published")}</span>
-              <Switch
-                checked={form.isActive}
-                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
-                aria-label={t("cat.published")}
-              />
-            </div>
-            <DialogFooter>
+        <div className="flex items-center gap-1 border-b">
+          {tabs.map((tab) => {
+            const active = tab.key === kind;
+            return (
               <button
+                key={tab.key}
                 type="button"
-                className="admin-btn-primary opacity-70"
-                onClick={closeDialog}
-                disabled={submitting}
+                onClick={() => switchTab(tab.key)}
+                className={cn(
+                  "-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
               >
-                {t("common.cancel")}
+                {tab.label}
               </button>
-              <button type="submit" className="admin-btn-primary" disabled={submitting}>
-                {submitting ? t("common.loading") : editingId == null ? t("form.create") : t("form.update")}
-              </button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            );
+          })}
+        </div>
 
-      <div className="admin-card overflow-hidden">
-        <BulkActionBar
-          selectedCount={selectedIds.size}
-          bulkDeleting={bulkDeleting}
-          onClear={clearSelection}
-          onBulkDelete={() => void handleBulkDelete()}
-        />
-        <table className="w-full text-sm">
-          <thead style={{ background: "hsl(var(--admin-bg))" }}>
-            <tr className="text-left">
-              <th className="w-10 px-3 py-2 text-left">
-                <Checkbox
-                  checked={
-                    allVisibleSelected
-                      ? true
-                      : someVisibleSelected
-                        ? "indeterminate"
-                        : false
-                  }
-                  onCheckedChange={(v) => toggleAllVisible(v === true)}
-                  aria-label={t("common.selectAll")}
+        <section className="rounded-lg border bg-card p-3">
+          <div className="w-full sm:max-w-sm">
+            <Label className="text-xs" htmlFor="category-search">{t("common.search")}</Label>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="category-search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("cat.name")}
+                className="h-9 pl-9"
+              />
+            </div>
+          </div>
+        </section>
+
+        <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {editingId == null ? t("cat.add") : t("common.edit")}
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={submitForm} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs" htmlFor="cat-name">{t("cat.name")}</Label>
+                <Input
+                  id="cat-name"
+                  value={form.name}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder={t("cat.name")}
+                  autoFocus
+                  required
                 />
-              </th>
-              <th className="px-5 py-3 font-semibold">{t("cat.name")}</th>
-              <th className="px-5 py-3 font-semibold">{t("cat.published")}</th>
-              <th className="px-5 py-3 font-semibold">{t("cat.order")}</th>
-              <th className="px-5 py-3 font-semibold text-right">{t("common.actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                  Loading...
-                </td>
-              </tr>
-            ) : filtered.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {t("cat.empty")}
-                </td>
-              </tr>
-            ) : (
-              filtered.map((item) => (
-                <tr key={item.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs" htmlFor="cat-order">{t("cat.order")}</Label>
+                <Input
+                  id="cat-order"
+                  type="number"
+                  value={form.sortOrder}
+                  onChange={(e) => setForm((prev) => ({ ...prev, sortOrder: Number(e.target.value) }))}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-md border px-4 py-3">
+                <span className="text-sm font-medium">{t("cat.published")}</span>
+                <Switch
+                  checked={form.isActive}
+                  onCheckedChange={(checked) => setForm((prev) => ({ ...prev, isActive: checked }))}
+                  aria-label={t("cat.published")}
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                  disabled={submitting}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? t("common.loading") : editingId == null ? t("form.create") : t("form.update")}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        <div className="space-y-2">
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            bulkDeleting={bulkDeleting}
+            onClear={clearSelection}
+            onBulkDelete={() => void handleBulkDelete()}
+          />
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-[700px] w-full divide-y text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="w-10 px-3 py-3 text-left">
                     <Checkbox
-                      checked={selectedIds.has(item.id)}
-                      onCheckedChange={(v) => toggleOne(item.id, v === true)}
-                      aria-label={`${t("common.selectAll")} · ${item.name}`}
+                      checked={
+                        allVisibleSelected
+                          ? true
+                          : someVisibleSelected
+                            ? "indeterminate"
+                            : false
+                      }
+                      onCheckedChange={(v) => toggleAllVisible(v === true)}
+                      aria-label={t("common.selectAll")}
                     />
-                  </td>
-                  <td className="px-5 py-3 font-semibold">{item.name}</td>
-                  <td className="px-5 py-3">
-                    {item.isActive ? (
-                      <Check className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} />
-                    ) : (
-                      <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />
-                    )}
-                  </td>
-                  <td className="px-5 py-3">{item.sortOrder}</td>
-                  <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => startEdit(item)}
-                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted mr-2"
-                    >
-                      <Pencil className="w-3.5 h-3.5" /> {t("common.edit")}
-                    </button>
-                    <button
-                      onClick={() => remove(item)}
-                      className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
-                      style={{ color: "hsl(var(--admin-danger))" }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> {t("common.delete")}
-                    </button>
-                  </td>
+                  </th>
+                  <th className="px-3 py-3 text-left font-medium">{t("cat.name")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("cat.published")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("cat.order")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">
+                      {t("cat.empty")}
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((item) => (
+                    <tr key={item.id} className="hover:bg-muted/40 transition">
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          onCheckedChange={(v) => toggleOne(item.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · ${item.name}`}
+                        />
+                      </td>
+                      <td className="px-3 py-3 font-medium">{item.name}</td>
+                      <td className="px-3 py-3">
+                        {item.isActive ? (
+                          <Check className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3">{item.sortOrder}</td>
+                      <td className="whitespace-nowrap px-3 py-3 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEdit(item)}
+                          >
+                            <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => remove(item)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );
