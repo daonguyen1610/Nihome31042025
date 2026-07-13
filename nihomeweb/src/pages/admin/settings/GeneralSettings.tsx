@@ -16,6 +16,7 @@ import {
   saveGeneralSettings,
   type GeneralSettings,
 } from "@/lib/settingsStore";
+import { Button } from "@/components/ui/button";
 
 const GeneralSettingsPage = () => {
   const { t } = useI18n();
@@ -31,16 +32,15 @@ const GeneralSettingsPage = () => {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">
-          {t("set.general")}
-        </h1>
-        <button onClick={save} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Save className="w-4 h-4" /> {t("common.save")}
-        </button>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">{t("set.general")}</h1>
+          <Button onClick={save}>
+            <Save className="mr-1.5 h-4 w-4" /> {t("common.save")}
+          </Button>
+        </header>
 
-      <div className="space-y-5">
+        <div className="space-y-4">
         <SettingSection title={t("set.section.social")}>
           <SettingRow label="Facebook page URL">
             <TextInput value={s.facebook} onChange={(e) => upd("facebook", e.target.value)} />
@@ -125,16 +125,16 @@ const GeneralSettingsPage = () => {
           <SettingRow label="Encryption private key">
             <div className="flex gap-2">
               <TextInput value={s.encryptionKey} onChange={(e) => upd("encryptionKey", e.target.value)} />
-              <button
+              <Button
                 type="button"
+                size="sm"
+                className="shrink-0"
                 onClick={() =>
                   upd("encryptionKey", Math.random().toString().slice(2, 18))
                 }
-                className="px-3 py-2 rounded-lg text-xs font-bold text-white shrink-0"
-                style={{ background: "hsl(var(--admin-primary))" }}
               >
                 Change
-              </button>
+              </Button>
             </div>
           </SettingRow>
         </SettingSection>
@@ -144,6 +144,7 @@ const GeneralSettingsPage = () => {
             <Toggle on={s.captchaEnabled} onChange={(v) => upd("captchaEnabled", v)} />
           </SettingRow>
         </SettingSection>
+        </div>
       </div>
     </AdminLayout>
   );

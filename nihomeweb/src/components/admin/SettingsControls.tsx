@@ -1,19 +1,13 @@
 import { type ButtonHTMLAttributes, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /* Section card wrapper */
 export const SettingSection = ({ title, children }: { title: string; children: ReactNode }) => (
-  <div className="admin-card overflow-hidden">
-    <div
-      className="px-6 py-3 border-b text-sm font-bold uppercase tracking-wider"
-      style={{
-        background: "hsl(var(--admin-bg))",
-        borderColor: "hsl(var(--admin-border))",
-        color: "hsl(var(--admin-muted))",
-      }}
-    >
+  <div className="overflow-hidden rounded-lg border bg-card">
+    <div className="border-b bg-muted/50 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
       {title}
     </div>
-    <div className="divide-y" style={{ borderColor: "hsl(var(--admin-border))" }}>
+    <div className="divide-y">
       {children}
     </div>
   </div>
@@ -21,8 +15,8 @@ export const SettingSection = ({ title, children }: { title: string; children: R
 
 /* Single setting row */
 export const SettingRow = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-6 px-6 py-4 items-center">
-    <label className="md:col-span-5 lg:col-span-4 text-sm font-semibold md:text-right">
+  <div className="grid grid-cols-1 items-center gap-3 px-4 py-3 md:grid-cols-12 md:gap-6">
+    <label className="text-sm font-medium md:col-span-5 md:text-right lg:col-span-4">
       {label}
     </label>
     <div className="md:col-span-7 lg:col-span-8">{children}</div>
@@ -30,15 +24,13 @@ export const SettingRow = ({ label, children }: { label: string; children: React
 );
 
 /* Inputs */
-export const TextInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+export const TextInput = ({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input
     {...props}
-    className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none focus:ring-2 transition"
-    style={{
-      borderColor: "hsl(var(--admin-border))",
-      // @ts-expect-error css var
-      "--tw-ring-color": "hsl(var(--admin-primary) / 0.4)",
-    }}
+    className={cn(
+      "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+      className,
+    )}
   />
 );
 
@@ -48,16 +40,15 @@ export const NumberInput = (props: React.InputHTMLAttributes<HTMLInputElement>) 
 
 export const SelectInput = ({
   options,
+  className,
   ...rest
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { options: { value: string; label: string }[] }) => (
   <select
     {...rest}
-    className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none focus:ring-2 transition"
-    style={{
-      borderColor: "hsl(var(--admin-border))",
-      // @ts-expect-error css var
-      "--tw-ring-color": "hsl(var(--admin-primary) / 0.4)",
-    }}
+    className={cn(
+      "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+      className,
+    )}
   >
     {options.map((o) => (
       <option key={o.value} value={o.value}>
@@ -84,26 +75,28 @@ export const Toggle = ({
     type="button"
     onClick={() => onChange(!on)}
     disabled={disabled}
-    className="w-11 h-6 rounded-full relative transition shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
-    style={{ background: on ? "hsl(var(--admin-primary))" : "hsl(var(--admin-border))" }}
+    className={cn(
+      "relative h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+      on ? "bg-primary" : "bg-muted",
+    )}
     aria-pressed={on}
     aria-label={ariaLabel ?? "Toggle setting"}
   >
     <span
-      className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition shadow"
-      style={{ left: on ? "calc(100% - 22px)" : "2px" }}
+      className={cn(
+        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform",
+        on ? "translate-x-5" : "translate-x-0",
+      )}
     />
   </button>
 );
 
-export const TextArea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
+export const TextArea = ({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => (
   <textarea
     {...props}
-    className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none focus:ring-2 transition min-h-24"
-    style={{
-      borderColor: "hsl(var(--admin-border))",
-      // @ts-expect-error css var
-      "--tw-ring-color": "hsl(var(--admin-primary) / 0.4)",
-    }}
+    className={cn(
+      "flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+      className,
+    )}
   />
 );

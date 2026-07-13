@@ -9,6 +9,16 @@ import {
   newId,
   type StoreItem,
 } from "@/lib/settingsStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const blank: StoreItem = { id: "", name: "", url: "", displayOrder: 1, hosts: "" };
 
@@ -19,6 +29,11 @@ const StoresPage = () => {
   const [editing, setEditing] = useState<StoreItem | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<StoreItem>(blank);
+  const dialogOpen = adding || editing !== null;
+  const closeDialog = () => {
+    setAdding(false);
+    setEditing(null);
+  };
 
   const persist = (next: StoreItem[]) => { setRows(next); saveStores(next); };
   const remove = (id: string) => {
@@ -35,84 +50,84 @@ const StoresPage = () => {
       persist(rows.map((r) => (r.id === editing.id ? draft : r)));
       toast({ title: t("form.updated") });
     }
-    setAdding(false); setEditing(null);
+    closeDialog();
   };
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">
-          {t("set.stores")}
-        </h1>
-        <button onClick={() => { setDraft(blank); setAdding(true); }} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> {t("set.add")}
-        </button>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">{t("set.stores")}</h1>
+          <Button onClick={() => { setDraft(blank); setAdding(true); }}>
+            <Plus className="mr-1.5 h-4 w-4" /> {t("set.add")}
+          </Button>
+        </header>
 
-      <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead style={{ background: "hsl(var(--admin-bg))" }}>
-              <tr className="text-left">
-                <th className="px-6 py-3 font-bold">Store name</th>
-                <th className="px-6 py-3 font-bold">Store URL</th>
-                <th className="px-6 py-3 font-bold">{t("set.displayOrder")}</th>
-                <th className="px-6 py-3 font-bold w-40">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <td className="px-6 py-4 font-semibold">{r.name}</td>
-                  <td className="px-6 py-4">{r.url}</td>
-                  <td className="px-6 py-4">{r.displayOrder}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <button onClick={() => { setDraft(r); setEditing(r); }} className="px-2.5 py-1.5 rounded-md text-xs font-bold bg-muted inline-flex items-center gap-1">
-                        <Pencil className="w-3 h-3" /> {t("common.edit")}
-                      </button>
-                      <button onClick={() => remove(r.id)} className="px-2.5 py-1.5 rounded-md text-xs font-bold inline-flex items-center gap-1 text-white" style={{ background: "hsl(var(--admin-danger))" }}>
-                        <Trash2 className="w-3 h-3" /> {t("common.delete")}
-                      </button>
-                    </div>
-                  </td>
+        <section className="overflow-hidden rounded-lg border bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Store name</th>
+                  <th className="px-4 py-3 text-left font-medium">Store URL</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("set.displayOrder")}</th>
+                  <th className="w-40 px-4 py-3 text-left font-medium">{t("common.actions")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((r) => (
+                  <tr key={r.id} className="hover:bg-muted/40 transition">
+                    <td className="px-4 py-3 font-medium">{r.name}</td>
+                    <td className="px-4 py-3">{r.url}</td>
+                    <td className="px-4 py-3">{r.displayOrder}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => { setDraft(r); setEditing(r); }}>
+                          <Pencil className="mr-1 h-3 w-3" /> {t("common.edit")}
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => remove(r.id)}>
+                          <Trash2 className="mr-1 h-3 w-3" /> {t("common.delete")}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
-      {(adding || editing) && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => { setAdding(false); setEditing(null); }}>
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-xl font-extrabold mb-4">{adding ? t("set.add") : t("common.edit")}</h3>
-            <div className="space-y-3">
-              {[
-                ["name", "Store name", "text"],
-                ["url", "Store URL", "text"],
-                ["hosts", "Hosts (comma-separated)", "text"],
-                ["displayOrder", t("set.displayOrder"), "number"],
-              ].map(([key, label, type]) => (
-                <div key={key as string}>
-                  <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>{label}</label>
-                  <input
-                    type={type as string}
-                    value={(draft as Record<string, string | number | boolean>)[key as string]}
-                    onChange={(e) => setDraft({ ...draft, [key as string]: type === "number" ? +e.target.value : e.target.value } as StoreItem)}
-                    className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => { setAdding(false); setEditing(null); }} className="px-4 py-2 rounded-lg text-sm font-bold bg-muted">{t("common.cancel")}</button>
-              <button onClick={submit} className="admin-btn-primary px-4 py-2 text-sm">{t("proc.save")}</button>
-            </div>
+      <Dialog open={dialogOpen} onOpenChange={(open) => (!open ? closeDialog() : null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{adding ? t("set.add") : t("common.edit")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {([
+              ["name", "Store name", "text"],
+              ["url", "Store URL", "text"],
+              ["hosts", "Hosts (comma-separated)", "text"],
+              ["displayOrder", t("set.displayOrder"), "number"],
+            ] as const).map(([key, label, type]) => (
+              <div key={key} className="space-y-1.5">
+                <Label htmlFor={`store-${key}`} className="text-xs">{label}</Label>
+                <Input
+                  id={`store-${key}`}
+                  type={type}
+                  value={(draft as Record<string, string | number | boolean>)[key] as string | number}
+                  onChange={(e) => setDraft({ ...draft, [key]: type === "number" ? +e.target.value : e.target.value } as StoreItem)}
+                  className="h-9"
+                />
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>{t("common.cancel")}</Button>
+            <Button onClick={submit}>{t("proc.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
