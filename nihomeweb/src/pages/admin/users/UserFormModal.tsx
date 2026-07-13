@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -6,6 +7,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useI18n } from "@/lib/i18n";
 import type {
@@ -142,69 +152,57 @@ export default function UserFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="admin-scope sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl font-extrabold">
+          <DialogTitle>
             {isEdit ? t("adminUsers.editUser") : t("adminUsers.addUser")}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider" htmlFor="user-full-name">
-              {t("adminUsers.fullName")}
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label className="text-xs" htmlFor="user-full-name">{t("adminUsers.fullName")}</Label>
+            <Input
               id="user-full-name"
               value={form.fullName}
               onChange={(event) => updateField("fullName", event.target.value)}
-              className="admin-input mt-1 w-full"
               autoComplete="name"
               required
             />
           </div>
 
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider" htmlFor="user-phone">
-              {t("adminUsers.phoneNumber")}
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label className="text-xs" htmlFor="user-phone">{t("adminUsers.phoneNumber")}</Label>
+            <Input
               id="user-phone"
               value={form.phoneNumber}
               onChange={(event) => updateField("phoneNumber", event.target.value)}
-              className="admin-input mt-1 w-full disabled:opacity-60"
               autoComplete="tel"
               disabled={isEdit}
               required
             />
           </div>
 
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider" htmlFor="user-email">
-              {t("adminUsers.email")}
-            </label>
-            <input
+          <div className="space-y-1.5">
+            <Label className="text-xs" htmlFor="user-email">{t("adminUsers.email")}</Label>
+            <Input
               id="user-email"
               type="email"
               value={form.email}
               onChange={(event) => updateField("email", event.target.value)}
-              className="admin-input mt-1 w-full"
               autoComplete="email"
               required
             />
           </div>
 
           {!isEdit && (
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="user-password">
-                {t("adminUsers.password")}
-              </label>
-              <input
+            <div className="space-y-1.5">
+              <Label className="text-xs" htmlFor="user-password">{t("adminUsers.password")}</Label>
+              <Input
                 id="user-password"
                 type="password"
                 value={form.password}
                 onChange={(event) => updateField("password", event.target.value)}
-                className="admin-input mt-1 w-full"
                 autoComplete="new-password"
                 required
               />
@@ -212,28 +210,28 @@ export default function UserFormModal({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold uppercase tracking-wider" htmlFor="user-role">
-                {t("adminUsers.role")}
-              </label>
-              <select
-                id="user-role"
+            <div className="space-y-1.5">
+              <Label className="text-xs" htmlFor="user-role">{t("adminUsers.role")}</Label>
+              <Select
                 value={form.role}
-                onChange={(event) => updateField("role", event.target.value)}
-                className="admin-input mt-1 w-full"
-                required
+                onValueChange={(v) => updateField("role", v)}
               >
-                {roles.map((role) => (
-                  <option key={role.code} value={role.code}>
-                    {renderRoleLabel(role)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="user-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role.code} value={role.code}>
+                      {renderRoleLabel(role)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {isEdit && (
-              <div className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 mt-5" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                <span className="text-sm font-semibold">{t("adminUsers.active")}</span>
+              <div className="mt-6 flex items-center justify-between gap-3 rounded-md border px-4 py-3">
+                <span className="text-sm font-medium">{t("adminUsers.active")}</span>
                 <Switch
                   checked={form.isActive}
                   onCheckedChange={(checked) => updateField("isActive", checked)}
@@ -243,20 +241,20 @@ export default function UserFormModal({
             )}
           </div>
 
-          {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
+          {error && <p className="text-sm font-medium text-destructive">{error}</p>}
 
           <DialogFooter>
-            <button
+            <Button
               type="button"
-              className="admin-btn-primary opacity-70"
+              variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="admin-btn-primary" disabled={submitting || roles.length === 0}>
+            </Button>
+            <Button type="submit" disabled={submitting || roles.length === 0}>
               {submitting ? t("common.loading") : isEdit ? t("form.update") : t("form.create")}
-            </button>
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

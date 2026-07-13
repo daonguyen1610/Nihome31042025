@@ -5,6 +5,7 @@ import { Plus, ShieldCheck, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -214,67 +215,57 @@ export default function RoleList() {
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">
-            {t("adminRbac.title")}
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {t("adminRbac.description")}
-          </p>
-        </div>
-        <Can permission={PERM_MANAGE}>
-          <Button onClick={() => setCreateOpen(true)} data-testid="rbac-create-role">
-            <Plus className="w-4 h-4 mr-2" />
-            {t("adminRbac.createRole")}
-          </Button>
-        </Can>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{t("adminRbac.title")}</h1>
+            <p className="text-xs italic text-muted-foreground">{t("adminRbac.description")}</p>
+          </div>
+          <Can permission={PERM_MANAGE}>
+            <Button onClick={() => setCreateOpen(true)} data-testid="rbac-create-role">
+              <Plus className="mr-1.5 h-4 w-4" />
+              {t("adminRbac.createRole")}
+            </Button>
+          </Can>
+        </header>
 
-      {loading ? (
-        <PageLoading />
-      ) : error ? (
-        <PageError
-          message={error instanceof Error ? error.message : t("common.error")}
-          onRetry={() => {
-            void rolesQuery.refetch();
-            void permsQuery.refetch();
-          }}
-        />
-      ) : (
-        <div className="admin-card overflow-hidden">
-          <div className="overflow-x-auto">
+        {loading ? (
+          <PageLoading />
+        ) : error ? (
+          <PageError
+            message={error instanceof Error ? error.message : t("common.error")}
+            onRetry={() => {
+              void rolesQuery.refetch();
+              void permsQuery.refetch();
+            }}
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
-              <thead>
-                <tr
-                  className="text-left border-b"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                >
-                  <th className="px-4 py-3 font-semibold sticky left-0 bg-background z-10 min-w-[260px]">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="sticky left-0 z-10 min-w-[260px] bg-muted/50 px-4 py-3 text-left font-medium">
                     {t("adminRbac.permissionColumn")}
                   </th>
                   {roles.map((role) => (
                     <th
                       key={role.id}
-                      className="px-3 py-3 font-semibold text-center min-w-[160px]"
+                      className="min-w-[160px] px-3 py-3 text-center font-medium"
                       data-testid={`rbac-col-${role.code}`}
                     >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <ShieldCheck className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex items-center justify-center gap-1.5 normal-case">
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                         <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
                       </div>
-                      <div
-                        className="text-[10px] font-normal mt-0.5"
-                        style={{ color: "hsl(var(--admin-muted))" }}
-                      >
+                      <div className="mt-0.5 text-[10px] font-normal normal-case text-muted-foreground">
                         {role.code} · {role.userCount} {t("adminRbac.usersAbbrev")}
                       </div>
                       {role.isSystem ? (
-                        <span className="admin-chip mt-1 inline-block">
+                        <Badge variant="outline" className="mt-1 border-slate-200 bg-slate-100 text-slate-600 normal-case">
                           {t("adminRbac.systemRoleBadge")}
-                        </span>
+                        </Badge>
                       ) : (
-                        <div className="flex items-center justify-center gap-1 mt-1">
+                        <div className="mt-1 flex items-center justify-center gap-1 normal-case">
                           <Can permission={PERM_MANAGE}>
                             <Button
                               size="sm"
@@ -306,7 +297,7 @@ export default function RoleList() {
                               data-testid={`rbac-delete-${role.code}`}
                               title={t("adminRbac.deleteRole")}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </Can>
                         </div>
@@ -315,21 +306,12 @@ export default function RoleList() {
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y">
                 {perms.map((perm) => (
-                  <tr
-                    key={perm.id}
-                    className="border-t"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  >
-                    <td className="px-4 py-3 font-medium sticky left-0 bg-background z-10">
+                  <tr key={perm.id} className="hover:bg-muted/40 transition">
+                    <td className="sticky left-0 z-10 bg-background px-4 py-3 font-medium">
                       <div>{t(`rbac.perm.${perm.code}.label`)}</div>
-                      <div
-                        className="text-xs font-normal"
-                        style={{ color: "hsl(var(--admin-muted))" }}
-                      >
-                        {perm.code}
-                      </div>
+                      <div className="text-xs font-normal text-muted-foreground">{perm.code}</div>
                     </td>
                     {roles.map((role) => {
                       const set = draft[role.id] ?? serverMap[role.id];
@@ -339,7 +321,7 @@ export default function RoleList() {
                         <td key={role.id} className="px-3 py-3 text-center">
                           <input
                             type="checkbox"
-                            className="w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                            className="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
                             checked={checked}
                             disabled={disabled}
                             onChange={() => togglePerm(role.id, perm.code)}
@@ -353,8 +335,8 @@ export default function RoleList() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
@@ -373,13 +355,11 @@ export default function RoleList() {
                 data-testid="rbac-create-code"
               />
               <p
-                className="text-xs"
-                style={{
-                  color:
-                    createCode.length > 0 && !codeValid
-                      ? "hsl(var(--destructive))"
-                      : "hsl(var(--admin-muted))",
-                }}
+                className={
+                  createCode.length > 0 && !codeValid
+                    ? "text-xs text-destructive"
+                    : "text-xs text-muted-foreground"
+                }
               >
                 {t("adminRbac.codeHint")}
               </p>
