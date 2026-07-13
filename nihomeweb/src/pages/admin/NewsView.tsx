@@ -8,6 +8,7 @@ import { useNewsItem } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import { PageLoading, PageError } from "@/components/PageState";
 import ContentBlocks from "@/components/ContentBlocks";
+import { Button } from "@/components/ui/button";
 
 const NewsView = () => {
   const { slug } = useParams();
@@ -23,11 +24,13 @@ const NewsView = () => {
   if (!post) {
     return (
       <AdminLayout>
-        <div className="admin-card p-10 text-center">
-          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{t("adminNews.notFound")}</p>
-          <Link to="/admin/news" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm mt-4">
-            <ArrowLeft className="w-4 h-4" /> {t("form.back")}
-          </Link>
+        <div className="rounded-lg border bg-card p-10 text-center">
+          <p className="text-sm text-muted-foreground">{t("adminNews.notFound")}</p>
+          <Button asChild className="mt-4">
+            <Link to="/admin/news">
+              <ArrowLeft className="mr-1.5 h-4 w-4" /> {t("form.back")}
+            </Link>
+          </Button>
         </div>
       </AdminLayout>
     );
@@ -46,77 +49,81 @@ const NewsView = () => {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            to="/admin/news"
-            className="w-10 h-10 rounded-full bg-white border flex items-center justify-center hover:bg-muted transition shrink-0"
-            style={{ borderColor: "hsl(var(--admin-border))" }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-primary))" }}>
-              {t("adminNews.detail")}
-            </p>
-            <h1 className="font-display text-xl lg:text-2xl font-extrabold tracking-tight line-clamp-2">{post.title}</h1>
-          </div>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <Link
-            to={`/admin/news/${post.slug}/edit`}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border bg-white hover:bg-muted transition"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-primary))" }}
-          >
-            <Edit className="w-4 h-4" /> {t("common.edit")}
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border bg-white hover:bg-muted transition"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
-          >
-            <Trash2 className="w-4 h-4" /> {t("common.delete")}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-          <div className="admin-card overflow-hidden">
-            <div className="aspect-[16/9] bg-muted">
-              <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" />
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button asChild variant="outline" size="icon" className="rounded-full shrink-0">
+              <Link to="/admin/news">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-primary">
+                {t("adminNews.detail")}
+              </p>
+              <h1 className="text-xl font-semibold tracking-tight lg:text-2xl line-clamp-2">{post.title}</h1>
             </div>
           </div>
-          <div className="admin-card p-6">
-            <p className="text-sm font-semibold mb-4" style={{ color: "hsl(var(--admin-muted))" }}>{post.excerpt}</p>
-            <ContentBlocks items={post.content} className="text-sm leading-relaxed" paragraphClassName="text-[hsl(var(--admin-sidebar-text))]" />
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button asChild variant="outline">
+              <Link to={`/admin/news/${post.slug}/edit`}>
+                <Edit className="mr-1.5 h-4 w-4" /> {t("common.edit")}
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={handleDelete} className="text-destructive hover:text-destructive">
+              <Trash2 className="mr-1.5 h-4 w-4" /> {t("common.delete")}
+            </Button>
           </div>
-          {post.gallery && post.gallery.length > 0 && (
-            <div className="admin-card p-6">
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="font-bold">{t("media.gallery.title")}</h2>
-                <div className="inline-flex rounded-lg border overflow-hidden" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <button type="button" onClick={() => setGalleryMode("grid")} className="p-2 hover:bg-muted" aria-label={t("gallery.viewGrid")}>
-                    <Grid3X3 className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => setGalleryMode("list")} className="p-2 hover:bg-muted border-l" style={{ borderColor: "hsl(var(--admin-border))" }} aria-label={t("gallery.viewList")}>
-                    <List className="w-4 h-4" />
-                  </button>
+        </header>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="overflow-hidden rounded-lg border bg-card">
+              <div className="aspect-[16/9] bg-muted">
+                <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" />
+              </div>
+            </div>
+            <div className="rounded-lg border bg-card p-6">
+              <p className="mb-4 text-sm font-medium text-muted-foreground">{post.excerpt}</p>
+              <ContentBlocks items={post.content} className="text-sm leading-relaxed" />
+            </div>
+            {post.gallery && post.gallery.length > 0 && (
+              <div className="rounded-lg border bg-card p-6">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h2 className="text-base font-semibold">{t("media.gallery.title")}</h2>
+                  <div className="inline-flex overflow-hidden rounded-md border">
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setGalleryMode("grid")} aria-label={t("gallery.viewGrid")} className="rounded-none">
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setGalleryMode("list")} aria-label={t("gallery.viewList")} className="rounded-none border-l">
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className={galleryMode === "grid" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "space-y-3"}>
+                  {post.gallery.map((url, index) => (
+                    <img
+                      key={`${url}-${index}`}
+                      src={url}
+                      alt=""
+                      className={
+                        galleryMode === "grid"
+                          ? "w-full aspect-[4/3] rounded-md object-cover bg-muted"
+                          : "w-full aspect-video rounded-md object-cover bg-muted"
+                      }
+                      loading="lazy"
+                    />
+                  ))}
                 </div>
               </div>
-              <div className={galleryMode === "grid" ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-3"}>
-                {post.gallery.map((url, index) => (
-                  <img key={`${url}-${index}`} src={url} alt="" className={galleryMode === "grid" ? "w-full aspect-[4/3] rounded-xl object-cover bg-muted" : "w-full aspect-video rounded-xl object-cover bg-muted"} loading="lazy" />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="admin-card p-6 h-fit space-y-3 text-sm">
-          <h2 className="font-bold mb-2">{t("form.basicInfo")}</h2>
-          <Info icon={Tag} label={t("adminNews.field.category")} value={post.category} />
-          <Info icon={Calendar} label={t("adminNews.field.date")} value={post.date} />
+          <div className="h-fit space-y-3 rounded-lg border bg-card p-6 text-sm">
+            <h2 className="mb-2 text-base font-semibold">{t("form.basicInfo")}</h2>
+            <Info icon={Tag} label={t("adminNews.field.category")} value={post.category} />
+            <Info icon={Calendar} label={t("adminNews.field.date")} value={post.date} />
+          </div>
         </div>
       </div>
     </AdminLayout>
@@ -125,10 +132,10 @@ const NewsView = () => {
 
 const Info = ({ icon: Icon, label, value }: { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; label: string; value: string }) => (
   <div className="flex items-start gap-3">
-    <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "hsl(var(--admin-muted))" }} />
+    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
     <div className="min-w-0">
-      <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-muted))" }}>{label}</p>
-      <p className="font-semibold break-words">{value}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium break-words">{value}</p>
     </div>
   </div>
 );
