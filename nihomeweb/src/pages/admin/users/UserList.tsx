@@ -2,8 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Edit, Plus, RefreshCw, Search, Trash2, UserRound } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { useI18n } from "@/lib/i18n";
@@ -21,10 +33,10 @@ import UserFormModal from "./UserFormModal";
 
 const PAGE_SIZE = 20;
 
-const roleStyles: Record<string, { background: string; color: string }> = {
-  SUPER_ADMIN: { background: "hsl(var(--admin-danger-soft))", color: "hsl(var(--admin-danger))" },
-  ADMIN: { background: "hsl(var(--admin-primary-soft))", color: "hsl(var(--admin-primary))" },
-  USER: { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" },
+const ROLE_STYLES: Record<string, string> = {
+  SUPER_ADMIN: "border-rose-200 bg-rose-50 text-rose-700",
+  ADMIN: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  USER: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -203,206 +215,224 @@ export default function UserList() {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
-        <div>
-          <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("adminUsers.title")}</h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {total} {t("adminUsers.totalUsers")}
-          </p>
-        </div>
-        <button onClick={openCreate} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Plus className="w-4 h-4" /> {t("adminUsers.addUser")}
-        </button>
-      </div>
-
-      <div className="admin-card p-5 mb-5">
-        <form onSubmit={applySearch} className="grid grid-cols-1 lg:grid-cols-[1fr_220px_auto] gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "hsl(var(--admin-muted))" }} />
-            <input
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              className="admin-input w-full pl-10"
-              placeholder={t("adminUsers.searchPlaceholder")}
-            />
-          </div>
-          <select
-            value={role}
-            onChange={(event) => {
-              setPage(1);
-              setRole(event.target.value);
-            }}
-            className="admin-input w-full"
-          >
-            <option value="">{t("adminUsers.allRoles")}</option>
-            {roles.map((item) => (
-              <option key={item.code} value={item.code}>
-                {roleLabelMap.get(item.code) ?? item.name}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="admin-btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm">
-            <Search className="w-4 h-4" /> {t("common.search")}
-          </button>
-        </form>
-      </div>
-
-      {loading ? (
-        <PageLoading />
-      ) : error ? (
-        <PageError message={error} onRetry={loadData} />
-      ) : (
-        <div className="admin-card overflow-hidden">
-          <BulkActionBar
-            selectedCount={selectedIds.size}
-            bulkDeleting={bulkDeleting}
-            onClear={clearSelection}
-            onBulkDelete={() => void handleBulkDelete()}
-          />
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left border-b" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <th className="w-10 px-3 py-2 text-left">
-                    <Checkbox
-                      checked={
-                        allVisibleSelected
-                          ? true
-                          : someVisibleSelected
-                            ? "indeterminate"
-                            : false
-                      }
-                      onCheckedChange={(v) => toggleAllVisible(v === true)}
-                      aria-label={t("common.selectAll")}
-                    />
-                  </th>
-                  <th className="px-5 py-3 font-semibold">{t("adminUsers.user")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("adminUsers.phoneNumber")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("adminUsers.email")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("adminUsers.role")}</th>
-                  <th className="px-5 py-3 font-semibold">{t("common.status")}</th>
-                  <th className="px-5 py-3 font-semibold text-right">{t("common.actions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                {items.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-5 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                      {t("adminUsers.empty")}
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((user) => {
-                    const roleStyle = roleStyles[user.role] ?? roleStyles.USER;
-                    const disabled = busyUserId === user.id;
-
-                    return (
-                      <tr key={user.id} className="align-middle">
-                        <td className="px-3 py-4" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedIds.has(user.id)}
-                            onCheckedChange={(v) => toggleOne(user.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${user.fullName ?? user.phoneNumber}`}
-                          />
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-10 h-10 rounded-full text-white flex items-center justify-center font-bold text-sm shrink-0"
-                              style={{ background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))" }}
-                            >
-                              {user.avatarUrl ? (
-                                <img src={user.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
-                              ) : (
-                                user.fullName?.[0]?.toUpperCase() ?? <UserRound className="w-4 h-4" />
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold truncate">{user.fullName ?? t("adminUsers.unnamed")}</p>
-                              <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-                                ID #{user.id}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 font-semibold whitespace-nowrap">{user.phoneNumber}</td>
-                        <td className="px-5 py-4">{user.email ?? "—"}</td>
-                        <td className="px-5 py-4">
-                          <span className="admin-chip" style={roleStyle}>
-                            {roleLabelMap.get(user.role) ?? user.role}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={user.isActive}
-                              onCheckedChange={() => toggleActive(user)}
-                              disabled={disabled}
-                              aria-label={t("adminUsers.active")}
-                            />
-                            <span className="text-xs font-semibold" style={{ color: "hsl(var(--admin-muted))" }}>
-                              {user.isActive ? t("adminUsers.active") : t("adminUsers.inactive")}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openEdit(user)}
-                              disabled={disabled}
-                              className="p-2 rounded-lg hover:bg-muted transition disabled:opacity-50"
-                              title={t("common.edit")}
-                            >
-                              {disabled ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Edit className="w-4 h-4" />}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => deleteUser(user)}
-                              disabled={disabled}
-                              className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition disabled:opacity-50"
-                              title={t("common.delete")}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-            <p className="text-xs font-semibold" style={{ color: "hsl(var(--admin-muted))" }}>
-              {t("common.showing")} {items.length} / {total}
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{t("adminUsers.title")}</h1>
+            <p className="text-xs italic text-muted-foreground">
+              {total} {t("adminUsers.totalUsers")}
             </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="admin-btn-primary opacity-70 px-4 py-2 text-xs"
-                disabled={page <= 1}
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                {t("adminUsers.previous")}
-              </button>
-              <span className="text-xs font-bold">
-                {page} / {pageCount}
-              </span>
-              <button
-                type="button"
-                className="admin-btn-primary opacity-70 px-4 py-2 text-xs"
-                disabled={page >= pageCount}
-                onClick={() => setPage((prev) => Math.min(pageCount, prev + 1))}
-              >
-                {t("adminUsers.next")}
-              </button>
+          </div>
+          <Button onClick={openCreate}>
+            <Plus className="mr-1.5 h-4 w-4" /> {t("adminUsers.addUser")}
+          </Button>
+        </header>
+
+        <form onSubmit={applySearch} className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
+          <div className="min-w-[220px] flex-1">
+            <Label className="text-xs" htmlFor="user-search">{t("common.search")}</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="user-search"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder={t("adminUsers.searchPlaceholder")}
+                className="h-9 pl-9"
+              />
             </div>
           </div>
-        </div>
-      )}
+          <div className="w-full sm:w-[220px]">
+            <Label className="text-xs" htmlFor="user-role">{t("adminUsers.role")}</Label>
+            <Select
+              value={role || "__all"}
+              onValueChange={(v) => {
+                setPage(1);
+                setRole(v === "__all" ? "" : v);
+              }}
+            >
+              <SelectTrigger id="user-role" className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">{t("adminUsers.allRoles")}</SelectItem>
+                {roles.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {roleLabelMap.get(item.code) ?? item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button type="submit" className="h-9">
+            <Search className="mr-1.5 h-4 w-4" /> {t("common.search")}
+          </Button>
+        </form>
+
+        {loading ? (
+          <PageLoading />
+        ) : error ? (
+          <PageError message={error} onRetry={loadData} />
+        ) : (
+          <div className="space-y-2">
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              bulkDeleting={bulkDeleting}
+              onClear={clearSelection}
+              onBulkDelete={() => void handleBulkDelete()}
+            />
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="min-w-[900px] w-full divide-y text-sm">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="w-10 px-3 py-3 text-left">
+                      <Checkbox
+                        checked={
+                          allVisibleSelected
+                            ? true
+                            : someVisibleSelected
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={(v) => toggleAllVisible(v === true)}
+                        aria-label={t("common.selectAll")}
+                      />
+                    </th>
+                    <th className="px-3 py-3 text-left font-medium">{t("adminUsers.user")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.phoneNumber")}</th>
+                    <th className="px-3 py-3 text-left font-medium">{t("adminUsers.email")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.role")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("common.status")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {items.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
+                        {t("adminUsers.empty")}
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((user) => {
+                      const disabled = busyUserId === user.id;
+
+                      return (
+                        <tr key={user.id} className="align-middle hover:bg-muted/40 transition">
+                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.has(user.id)}
+                              onCheckedChange={(v) => toggleOne(user.id, v === true)}
+                              aria-label={`${t("common.selectAll")} · ${user.fullName ?? user.phoneNumber}`}
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                                {user.avatarUrl ? (
+                                  <img src={user.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                                ) : (
+                                  user.fullName?.[0]?.toUpperCase() ?? <UserRound className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate font-medium">{user.fullName ?? t("adminUsers.unnamed")}</p>
+                                <p className="text-xs text-muted-foreground">ID #{user.id}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 font-medium">{user.phoneNumber}</td>
+                          <td className="px-3 py-3">{user.email ?? "—"}</td>
+                          <td className="whitespace-nowrap px-3 py-3">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "whitespace-nowrap font-medium",
+                                ROLE_STYLES[user.role] ?? ROLE_STYLES.USER,
+                              )}
+                            >
+                              {roleLabelMap.get(user.role) ?? user.role}
+                            </Badge>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={user.isActive}
+                                onCheckedChange={() => toggleActive(user)}
+                                disabled={disabled}
+                                aria-label={t("adminUsers.active")}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {user.isActive ? t("adminUsers.active") : t("adminUsers.inactive")}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEdit(user)}
+                                disabled={disabled}
+                                title={t("common.edit")}
+                                aria-label={t("common.edit")}
+                              >
+                                {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => deleteUser(user)}
+                                disabled={disabled}
+                                title={t("common.delete")}
+                                aria-label={t("common.delete")}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-lg border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {t("common.showing")} {items.length} / {total}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                >
+                  {t("adminUsers.previous")}
+                </Button>
+                <span className="text-xs font-medium">
+                  {page} / {pageCount}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= pageCount}
+                  onClick={() => setPage((prev) => Math.min(pageCount, prev + 1))}
+                >
+                  {t("adminUsers.next")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <UserFormModal
         open={modalOpen}
