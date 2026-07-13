@@ -8,7 +8,11 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import type { ServiceResponse } from "@/services/contentApi";
 import { adminApi, slugify, type UpsertServiceAdminRequest } from "@/services/adminApi";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -512,190 +516,149 @@ const AdminServices = () => {
 
   return (
     <AdminLayout>
-      {/* Page header */}
-      <div className="mb-6 flex items-start gap-3">
-        <div className="flex-1">
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {t("svc.admin.title")}
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {filtered.length} / {items.length}
-          </p>
-        </div>
-        <button
-          onClick={startCreate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm shrink-0"
-          style={{ background: "hsl(var(--admin-primary))", color: "white" }}
-        >
-          <Plus className="w-4 h-4" />
-          {t("svc.admin.add")}
-        </button>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        {/* Page header */}
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{t("svc.admin.title")}</h1>
+            <p className="text-xs italic text-muted-foreground">
+              {filtered.length} / {items.length}
+            </p>
+          </div>
+          <Button onClick={startCreate}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t("svc.admin.add")}
+          </Button>
+        </header>
 
-      {/* Search bar */}
-      <div className="admin-card p-5 mb-5">
-        <div className="flex items-center gap-2 max-w-md">
-          <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("svc.admin.searchPh")}
-            className="admin-input flex-1"
-          />
-        </div>
-      </div>
+        {/* Search bar */}
+        <section className="rounded-lg border bg-card p-3">
+          <div className="w-full sm:max-w-sm">
+            <Label className="text-xs" htmlFor="service-search">{t("common.search")}</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="service-search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("svc.admin.searchPh")}
+                className="h-9 pl-9"
+              />
+            </div>
+          </div>
+        </section>
 
-      {/* Content */}
-      {loading ? (
-        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-          {t("common.loading")}
-        </div>
-      ) : error ? (
-        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-danger))" }}>
-          {error}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-          {t("svc.admin.empty")}
-        </div>
-      ) : (
-        <div className="admin-card overflow-hidden">
-          <BulkActionBar
-            selectedCount={selectedIds.size}
-            bulkDeleting={bulkDeleting}
-            onClear={clearSelection}
-            onBulkDelete={() => void handleBulkDelete()}
-          />
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-left">
-                <th className="w-10 px-3 py-2 text-left">
-                  <Checkbox
-                    checked={
-                      allVisibleSelected
-                        ? true
-                        : someVisibleSelected
-                          ? "indeterminate"
-                          : false
-                    }
-                    onCheckedChange={(v) => toggleAllVisible(v === true)}
-                    aria-label={t("common.selectAll")}
-                  />
-                </th>
-                <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
-                  #
-                </th>
-                <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {t("svc.admin.shortTitle")}
-                </th>
-                <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {t("form.title")}
-                </th>
-                <th className="hidden md:table-cell px-4 py-3 font-semibold text-xs uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {t("svc.admin.tagline")}
-                </th>
-                <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wider text-right" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {t("common.actions")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60 transition"
-                >
-                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedIds.has(s.id)}
-                      onCheckedChange={(v) => toggleOne(s.id, v === true)}
-                      aria-label={`${t("common.selectAll")} · ${s.title}`}
-                    />
-                  </td>
-                  {/* ID */}
-                  <td className="px-4 py-3">
-                    <span
-                      className="font-mono text-xs"
-                      style={{ color: "hsl(var(--admin-muted))" }}
-                    >
-                      {s.id}
-                    </span>
-                  </td>
-
-                  {/* Short title chip */}
-                  <td className="px-4 py-3">
-                    <span
-                      className="inline-block px-2.5 py-1 rounded-full text-xs font-semibold"
-                      style={{
-                        background: "hsl(var(--admin-primary) / 0.1)",
-                        color: "hsl(var(--admin-primary))",
-                      }}
-                    >
-                      {s.shortTitle}
-                    </span>
-                  </td>
-
-                  {/* Title + slug */}
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-slate-800">{s.title}</div>
-                    <div
-                      className="font-mono text-xs mt-0.5"
-                      style={{ color: "hsl(var(--admin-muted))" }}
-                    >
-                      /{s.slug}
-                    </div>
-                  </td>
-
-                  {/* Tagline (hidden on mobile) */}
-                  <td className="hidden md:table-cell px-4 py-3 max-w-xs">
-                    <span
-                      className="block truncate text-xs"
-                      style={{ color: "hsl(var(--admin-muted))" }}
-                    >
-                      {s.tagline}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <a
-                        href={`/services/${s.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted transition"
-                        style={{ color: "hsl(var(--admin-muted))" }}
-                        title={t("common.view")}
-                        aria-label={t("common.view")}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                      <button
-                        onClick={() => startEdit(s)}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted transition"
-                        style={{ color: "hsl(var(--admin-muted))" }}
-                        title={t("svc.admin.editTitle")}
-                        aria-label={t("svc.admin.editTitle")}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => remove(s)}
-                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted transition"
-                        style={{ color: "hsl(var(--admin-danger))" }}
-                        title={t("common.delete")}
-                        aria-label={t("common.delete")}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+        {/* Content */}
+        {loading ? (
+          <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            {t("common.loading")}
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border border-dashed p-10 text-center text-sm text-destructive">
+            {error}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            <div className="rounded-full bg-muted p-3">
+              <Search className="h-5 w-5" aria-hidden />
+            </div>
+            <p>{t("svc.admin.empty")}</p>
+            <Button size="sm" onClick={startCreate}>
+              <Plus className="mr-1.5 h-4 w-4" /> {t("svc.admin.add")}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <BulkActionBar
+              selectedCount={selectedIds.size}
+              bulkDeleting={bulkDeleting}
+              onClear={clearSelection}
+              onBulkDelete={() => void handleBulkDelete()}
+            />
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="min-w-[800px] w-full divide-y text-sm">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="w-10 px-3 py-3 text-left">
+                      <Checkbox
+                        checked={
+                          allVisibleSelected
+                            ? true
+                            : someVisibleSelected
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={(v) => toggleAllVisible(v === true)}
+                        aria-label={t("common.selectAll")}
+                      />
+                    </th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">#</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("svc.admin.shortTitle")}</th>
+                    <th className="px-3 py-3 text-left font-medium">{t("form.title")}</th>
+                    <th className="hidden px-3 py-3 text-left font-medium md:table-cell">{t("svc.admin.tagline")}</th>
+                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filtered.map((s) => (
+                    <tr key={s.id} className="hover:bg-muted/40 transition">
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(s.id)}
+                          onCheckedChange={(v) => toggleOne(s.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · ${s.title}`}
+                        />
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        <span className="font-mono text-xs text-muted-foreground">{s.id}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3">
+                        <Badge variant="outline" className="whitespace-nowrap border-indigo-200 bg-indigo-50 font-medium text-indigo-700">
+                          {s.shortTitle}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="font-medium">{s.title}</div>
+                        <div className="mt-0.5 font-mono text-xs text-muted-foreground">/{s.slug}</div>
+                      </td>
+                      <td className="hidden max-w-xs px-3 py-3 md:table-cell">
+                        <span className="block truncate text-xs text-muted-foreground">{s.tagline}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
+                            <a href={`/services/${s.slug}`} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => startEdit(s)}
+                            title={t("svc.admin.editTitle")}
+                            aria-label={t("svc.admin.editTitle")}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(s)}
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
       {/* Dialog */}
       <Dialog open={openModal} onOpenChange={(open) => { setOpenModal(open); if (!open) setForm(emptyForm); }}>
@@ -896,6 +859,7 @@ const AdminServices = () => {
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </AdminLayout>
   );
 };
