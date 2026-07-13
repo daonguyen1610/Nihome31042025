@@ -408,7 +408,7 @@ const RowCard = ({ children }: { children: ReactNode }) => (
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <label className="block space-y-1.5">
-    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
+    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--muted-foreground))" }}>
       {label}
     </span>
     {children}
@@ -512,8 +512,8 @@ const IconPicker = ({
           <PreviewIcon className="w-6 h-6" style={{ color: "white" }} />
         </div>
         <div className="text-sm min-w-0 flex-1">
-          <p className="font-display text-lg font-extrabold">{ABOUT_ICON_META[value].label}</p>
-          <p style={{ color: "hsl(var(--admin-muted))" }}>{t("aboutAdmin.iconCurrentLabel")}</p>
+          <p className="text-lg font-extrabold">{ABOUT_ICON_META[value].label}</p>
+          <p style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.iconCurrentLabel")}</p>
         </div>
         <div className="about-icon-current-badge">NICON</div>
       </div>
@@ -563,23 +563,23 @@ const StatListCard = ({
   return (
     <div
       className="rounded-2xl border p-4"
-      style={{ background: "hsl(var(--admin-surface))", borderColor: "hsl(var(--admin-border))" }}
+      style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
     >
       <div className="flex items-center gap-3">
         <div
           className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, hsl(var(--admin-primary-soft)), rgba(255,255,255,0.92))" }}
+          style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), rgba(255,255,255,0.92))" }}
         >
-          <Icon className="w-6 h-6" style={{ color: "hsl(var(--admin-primary))" }} strokeWidth={2} />
+          <Icon className="w-6 h-6" style={{ color: "hsl(var(--primary))" }} strokeWidth={2} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-3xl font-extrabold leading-none truncate" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
+          <div className="text-3xl font-extrabold leading-none truncate" style={{ color: "hsl(var(--foreground))" }}>
             {item.num || t("aboutAdmin.defaultStatValue")}
           </div>
-          <div className="mt-1 text-base truncate" style={{ color: "hsl(var(--admin-muted))" }}>
+          <div className="mt-1 text-base truncate" style={{ color: "hsl(var(--muted-foreground))" }}>
             {item.label || t("aboutAdmin.defaultStatLabel")}
           </div>
-          <div className="mt-2 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+          <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             {t("aboutAdmin.fieldSortOrder")} #{normalizeSortOrder(item.sortOrder, 0)} • {ABOUT_ICON_META[iconKey].label}
           </div>
         </div>
@@ -588,8 +588,8 @@ const StatListCard = ({
             className="px-3 py-1.5 rounded-full text-sm font-semibold"
             style={
               item.isActive !== false
-                ? { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
-                : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-muted))" }
+                ? { background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }
+                : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
             }
           >
             {item.isActive !== false ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
@@ -598,7 +598,7 @@ const StatListCard = ({
             type="button"
             onClick={onEdit}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-primary))" }}
+            style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--primary))" }}
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -606,7 +606,7 @@ const StatListCard = ({
             type="button"
             onClick={onDelete}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
+            style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--destructive))" }}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -633,21 +633,21 @@ const IconTextListCard = ({
   return (
     <div
       className="rounded-2xl border p-4"
-      style={{ background: "hsl(var(--admin-surface))", borderColor: "hsl(var(--admin-border))" }}
+      style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))" }}
     >
       <div className="flex items-start gap-3">
         <div
           className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "linear-gradient(135deg, hsl(var(--admin-primary-soft)), rgba(255,255,255,0.92))" }}
+          style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), rgba(255,255,255,0.92))" }}
         >
-          <Icon className="w-6 h-6" style={{ color: "hsl(var(--admin-primary))" }} strokeWidth={2} />
+          <Icon className="w-6 h-6" style={{ color: "hsl(var(--primary))" }} strokeWidth={2} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-bold text-base truncate">{item.title || t("aboutAdmin.defaultItemTitle")}</div>
-          <p className="mt-1 text-sm line-clamp-2" style={{ color: "hsl(var(--admin-muted))" }}>
+          <p className="mt-1 text-sm line-clamp-2" style={{ color: "hsl(var(--muted-foreground))" }}>
             {item.desc || t("aboutAdmin.defaultItemDesc")}
           </p>
-          <div className="mt-2 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+          <div className="mt-2 text-xs" style={{ color: "hsl(var(--muted-foreground))" }}>
             {t("aboutAdmin.fieldSortOrder")} #{normalizeSortOrder(item.sortOrder, 0)} • {ABOUT_ICON_META[iconKey].label}
           </div>
         </div>
@@ -656,8 +656,8 @@ const IconTextListCard = ({
             className="px-3 py-1.5 rounded-full text-sm font-semibold"
             style={
               item.isActive !== false
-                ? { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
-                : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-muted))" }
+                ? { background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }
+                : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
             }
           >
             {item.isActive !== false ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
@@ -666,7 +666,7 @@ const IconTextListCard = ({
             type="button"
             onClick={onEdit}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-primary))" }}
+            style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--primary))" }}
           >
             <Pencil className="w-4 h-4" />
           </button>
@@ -674,7 +674,7 @@ const IconTextListCard = ({
             type="button"
             onClick={onDelete}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
+            style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--destructive))" }}
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -1007,7 +1007,7 @@ const AboutContent = () => {
           <EditorSection title={t("aboutAdmin.statsList")} actionLabel={t("aboutAdmin.addStat")} onAdd={() => openStatDialog()}>
             <div className="space-y-3">
               {statItems.length === 0 && (
-                <p className="text-sm italic py-4" style={{ color: "hsl(var(--admin-muted))" }}>
+                <p className="text-sm italic py-4" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {t("aboutAdmin.noStats")}
                 </p>
               )}
@@ -1021,7 +1021,7 @@ const AboutContent = () => {
                 />
               ))}
               {statItems.length >= 4 && (
-                <p className="text-xs italic" style={{ color: "hsl(var(--admin-warning))" }}>
+                <p className="text-xs italic" style={{ color: "hsl(38 92% 40%)" }}>
                   {t("aboutAdmin.maxStats")}
                 </p>
               )}
@@ -1034,12 +1034,12 @@ const AboutContent = () => {
                 <h3 className="font-bold text-sm">{t("aboutAdmin.previewTitle")}</h3>
                 <span
                   className="text-xs px-2 py-1 rounded font-semibold"
-                  style={{ background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }}
+                  style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}
                 >
                   {t("aboutAdmin.previewLive")}
                 </span>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl" style={{ background: "hsl(var(--admin-bg))" }}>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 rounded-xl" style={{ background: "hsl(var(--muted))" }}>
                 {statItems
                   .filter((item) => item.isActive !== false)
                   .map((item) => {
@@ -1050,13 +1050,13 @@ const AboutContent = () => {
                       <div
                         key={item.id}
                         className="rounded-2xl p-4 text-center"
-                        style={{ background: "hsl(var(--admin-surface))", borderColor: "hsl(var(--admin-border))", borderWidth: "1px" }}
+                        style={{ background: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderWidth: "1px" }}
                       >
-                        <Icon className="w-6 h-6 mx-auto mb-3" style={{ color: "hsl(var(--admin-primary))" }} strokeWidth={1.5} />
-                        <p className="font-display text-2xl font-extrabold mb-1" style={{ color: "hsl(var(--admin-primary))" }}>
+                        <Icon className="w-6 h-6 mx-auto mb-3" style={{ color: "hsl(var(--primary))" }} strokeWidth={1.5} />
+                        <p className="text-2xl font-extrabold mb-1" style={{ color: "hsl(var(--primary))" }}>
                           {item.num || "—"}
                         </p>
-                        <p className="text-xs font-medium leading-snug h-8 flex items-center justify-center" style={{ color: "hsl(var(--admin-muted))" }}>
+                        <p className="text-xs font-medium leading-snug h-8 flex items-center justify-center" style={{ color: "hsl(var(--muted-foreground))" }}>
                           {item.label || t("aboutAdmin.emptyValue")}
                         </p>
                       </div>
@@ -1077,13 +1077,13 @@ const AboutContent = () => {
 
       return (
         <div className="space-y-4">
-          <div className="p-3 rounded-xl border text-sm" style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-primary-soft))" }}>
+          <div className="p-3 rounded-xl border text-sm" style={{ background: "hsl(var(--muted))", borderColor: "hsl(var(--primary) / 0.1)" }}>
             {t("aboutAdmin.iconDialogHint")}
           </div>
           <EditorSection title={title} actionLabel={actionLabel} onAdd={() => openIconDialog(iconEditor)}>
             <div className="space-y-3">
               {items.length === 0 && (
-                <p className="text-sm italic py-4" style={{ color: "hsl(var(--admin-muted))" }}>
+                <p className="text-sm italic py-4" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {t("aboutAdmin.noItems")}
                 </p>
               )}
@@ -1120,7 +1120,7 @@ const AboutContent = () => {
           <div className="space-y-3">
             {organizationItems[group].length === 0 && (
               <RowCard>
-                <p className="text-sm italic py-2" style={{ color: "hsl(var(--admin-muted))" }}>
+                <p className="text-sm italic py-2" style={{ color: "hsl(var(--muted-foreground))" }}>
                   {t("aboutAdmin.noItems")}
                 </p>
               </RowCard>
@@ -1139,7 +1139,7 @@ const AboutContent = () => {
                   />
                   <Field label={t("aboutAdmin.fieldRole")}>
                     <input
-                      className="admin-input"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       value={item.role}
                       onChange={(e) => {
                         const next = [...organizationItems[group]];
@@ -1150,7 +1150,7 @@ const AboutContent = () => {
                   </Field>
                   <Field label={t("aboutAdmin.fieldName")}>
                     <input
-                      className="admin-input"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       value={item.name}
                       onChange={(e) => {
                         const next = [...organizationItems[group]];
@@ -1196,7 +1196,7 @@ const AboutContent = () => {
           <Field label={label}>
             <div className="flex items-center gap-2">
               <input
-                className="admin-input"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 value={organizationItems[field] ?? ""}
                 onChange={(e) => updateItemsJson({ ...organizationItems, [field]: e.target.value })}
                 placeholder="https://..."
@@ -1252,7 +1252,7 @@ const AboutContent = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Field label={t("aboutAdmin.fieldSortOrder")}>
                     <input
-                      className="admin-input"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       type="number"
                       value={normalizeSortOrder(item.sortOrder, index)}
                       onChange={(e) => {
@@ -1264,7 +1264,7 @@ const AboutContent = () => {
                   </Field>
                   <Field label={t("aboutAdmin.fieldYear")}>
                     <input
-                      className="admin-input"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       value={item.year}
                       onChange={(e) => {
                         const next = [...timelineItems];
@@ -1275,7 +1275,7 @@ const AboutContent = () => {
                   </Field>
                   <Field label={t("aboutAdmin.fieldTitle")}>
                     <input
-                      className="admin-input"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       value={item.title}
                       onChange={(e) => {
                         const next = [...timelineItems];
@@ -1287,7 +1287,7 @@ const AboutContent = () => {
                 </div>
                 <Field label={t("aboutAdmin.fieldDesc")}>
                   <textarea
-                    className="admin-input min-h-24"
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
                     value={item.desc}
                     onChange={(e) => {
                       const next = [...timelineItems];
@@ -1329,7 +1329,7 @@ const AboutContent = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Field label={t("aboutAdmin.fieldSortOrder")}>
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         type="number"
                         value={normalizeSortOrder(item.sortOrder, index)}
                         onChange={(e) => {
@@ -1341,7 +1341,7 @@ const AboutContent = () => {
                     </Field>
                     <Field label={t("aboutAdmin.fieldCertName")}>
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         value={item.name}
                         onChange={(e) => {
                           const next = [...certItems];
@@ -1353,7 +1353,7 @@ const AboutContent = () => {
                   </div>
                   <Field label={t("aboutAdmin.fieldDesc")}>
                     <textarea
-                      className="admin-input min-h-24"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
                       value={item.desc}
                       onChange={(e) => {
                         const next = [...certItems];
@@ -1365,7 +1365,7 @@ const AboutContent = () => {
                   <Field label={t("aboutAdmin.fieldCertImage")}>
                     <div className="flex items-center gap-2">
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         value={item.imageUrl ?? ""}
                         onChange={(e) => {
                           const next = [...certItems];
@@ -1433,7 +1433,7 @@ const AboutContent = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Field label={t("aboutAdmin.fieldSortOrder")}>
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         type="number"
                         value={normalizeSortOrder(item.sortOrder, index)}
                         onChange={(e) => {
@@ -1445,7 +1445,7 @@ const AboutContent = () => {
                     </Field>
                     <Field label={t("aboutAdmin.fieldDocName")}>
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         value={item.name}
                         onChange={(e) => {
                           const next = [...downloadItems];
@@ -1458,7 +1458,7 @@ const AboutContent = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Field label={t("aboutAdmin.fieldFileSize")}>
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         value={item.size}
                         onChange={(e) => {
                           const next = [...downloadItems];
@@ -1469,7 +1469,7 @@ const AboutContent = () => {
                     </Field>
                     <Field label={t("aboutAdmin.fieldFileType")}>
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         value={item.type}
                         onChange={(e) => {
                           const next = [...downloadItems];
@@ -1481,7 +1481,7 @@ const AboutContent = () => {
                     <Field label={t("aboutAdmin.fieldUrl")}>
                       <div className="flex items-center gap-2">
                         <input
-                          className="admin-input"
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           value={item.url}
                           onChange={(e) => {
                             const next = [...downloadItems];
@@ -1530,12 +1530,12 @@ const AboutContent = () => {
   return (
     <AdminLayout>
       <div className="admin-about-page space-y-6">
-      <div className="admin-card about-hero p-6 lg:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] mb-2" style={{ color: "hsl(var(--admin-primary))" }}>
+      <div className="rounded-lg border bg-card about-hero p-6 lg:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] mb-2" style={{ color: "hsl(var(--primary))" }}>
           {t("nav.about")}
         </p>
-        <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("aboutAdmin.title")}</h1>
-        <p className="text-sm mt-2 max-w-3xl" style={{ color: "hsl(var(--admin-muted))" }}>
+        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight">{t("aboutAdmin.title")}</h1>
+        <p className="text-sm mt-2 max-w-3xl" style={{ color: "hsl(var(--muted-foreground))" }}>
           {t("aboutAdmin.pageDesc")}
         </p>
       </div>
@@ -1554,18 +1554,18 @@ const AboutContent = () => {
         ))}
       </div>
 
-      <div ref={editorRef} className="admin-card about-editor p-5 lg:p-7 space-y-6">
+      <div ref={editorRef} className="rounded-lg border bg-card about-editor p-5 lg:p-7 space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="font-display text-xl font-extrabold">{activeTab.label}</h2>
-            <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+            <h2 className="text-xl font-extrabold">{activeTab.label}</h2>
+            <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
               {activeTab.description}
             </p>
           </div>
           <button
             onClick={() => void saveSection()}
             disabled={saving || loading}
-            className="admin-btn-primary px-4 py-2 text-sm inline-flex items-center gap-2 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-4 py-2 text-sm inline-flex items-center gap-2 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {t("common.save")}
@@ -1582,7 +1582,7 @@ const AboutContent = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,1fr)_minmax(280px,0.7fr)] gap-4 items-start">
               <Field label={t("aboutAdmin.fieldSlug")}>
-                <input className="admin-input" value={form.slug} onChange={(e) => updateForm("slug", e.target.value)} placeholder={t("aboutAdmin.placeholderSlug")} />
+                <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.slug} onChange={(e) => updateForm("slug", e.target.value)} placeholder={t("aboutAdmin.placeholderSlug")} />
               </Field>
               <SortOrderField
                 label={t("aboutAdmin.fieldSortOrder")}
@@ -1601,7 +1601,7 @@ const AboutContent = () => {
 
             {activeTab.showEyebrow && (
               <Field label={t("aboutAdmin.fieldEyebrow")}>
-                <input className="admin-input" value={form.eyebrow} onChange={(e) => updateForm("eyebrow", e.target.value)} placeholder={t("aboutAdmin.placeholderEyebrow")} />
+                <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.eyebrow} onChange={(e) => updateForm("eyebrow", e.target.value)} placeholder={t("aboutAdmin.placeholderEyebrow")} />
               </Field>
             )}
 
@@ -1609,12 +1609,12 @@ const AboutContent = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {activeTab.showTitleA && (
                   <Field label={t("aboutAdmin.fieldTitleA")}>
-                    <input className="admin-input" value={form.titleA} onChange={(e) => updateForm("titleA", e.target.value)} placeholder={t("aboutAdmin.placeholderTitleA")} />
+                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.titleA} onChange={(e) => updateForm("titleA", e.target.value)} placeholder={t("aboutAdmin.placeholderTitleA")} />
                   </Field>
                 )}
                 {activeTab.showTitleB && (
                   <Field label={t("aboutAdmin.fieldTitleB")}>
-                    <input className="admin-input" value={form.titleB} onChange={(e) => updateForm("titleB", e.target.value)} placeholder={t("aboutAdmin.placeholderTitleB")} />
+                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.titleB} onChange={(e) => updateForm("titleB", e.target.value)} placeholder={t("aboutAdmin.placeholderTitleB")} />
                   </Field>
                 )}
               </div>
@@ -1622,13 +1622,13 @@ const AboutContent = () => {
 
             {activeTab.showParagraph1 && (
               <Field label={t("aboutAdmin.fieldParagraph1")}>
-                <textarea className="admin-input min-h-24" value={form.paragraph1} onChange={(e) => updateForm("paragraph1", e.target.value)} placeholder={t("aboutAdmin.placeholderParagraph1")} />
+                <textarea className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24" value={form.paragraph1} onChange={(e) => updateForm("paragraph1", e.target.value)} placeholder={t("aboutAdmin.placeholderParagraph1")} />
               </Field>
             )}
 
             {activeTab.showParagraph2 && (
               <Field label={t("aboutAdmin.fieldParagraph2")}>
-                <textarea className="admin-input min-h-24" value={form.paragraph2} onChange={(e) => updateForm("paragraph2", e.target.value)} placeholder={t("aboutAdmin.placeholderParagraph2")} />
+                <textarea className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24" value={form.paragraph2} onChange={(e) => updateForm("paragraph2", e.target.value)} placeholder={t("aboutAdmin.placeholderParagraph2")} />
               </Field>
             )}
 
@@ -1636,7 +1636,7 @@ const AboutContent = () => {
               <div className="space-y-2">
                 <Field label={t("aboutAdmin.fieldImage")}>
                   <div className="flex items-center gap-2">
-                    <input className="admin-input" value={form.imageUrl} onChange={(e) => updateForm("imageUrl", e.target.value)} placeholder={t("aboutAdmin.placeholderImagePath")} />
+                    <input className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" value={form.imageUrl} onChange={(e) => updateForm("imageUrl", e.target.value)} placeholder={t("aboutAdmin.placeholderImagePath")} />
                     <label className="px-3 py-2 rounded-xl border border-border hover:bg-muted inline-flex items-center gap-2 cursor-pointer text-sm">
                       <Upload className="w-4 h-4" />
                       {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("aboutAdmin.upload")}
@@ -1654,7 +1654,7 @@ const AboutContent = () => {
 
             {!shouldShowStructuredEditorFirst && renderStructuredEditor()}
 
-            <div className="text-xs inline-flex items-center gap-1.5" style={{ color: saving ? "hsl(var(--admin-warning))" : "hsl(var(--admin-success))" }}>
+            <div className="text-xs inline-flex items-center gap-1.5" style={{ color: saving ? "hsl(38 92% 40%)" : "hsl(142 71% 35%)" }}>
               {saving ? <Sparkles className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               {saving ? t("aboutAdmin.saving") : t("aboutAdmin.ready")}
             </div>
@@ -1672,23 +1672,23 @@ const AboutContent = () => {
       >
         <DialogContent
           className="admin-scope admin-about-dialog sm:max-w-6xl p-0 overflow-hidden gap-0 rounded-[2rem] border shadow-2xl"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
+          style={{ borderColor: "hsl(var(--border))" }}
         >
           <DialogHeader
             className="admin-about-dialog-header px-5 sm:px-7 pt-5 sm:pt-6 pb-5 border-b"
             style={{
-              borderColor: "hsl(var(--admin-border))",
+              borderColor: "hsl(var(--border))",
               background:
-                "radial-gradient(at 90% 10%, hsl(var(--admin-primary) / 0.18) 0px, transparent 42%), linear-gradient(135deg, hsl(var(--admin-bg)), hsl(var(--admin-primary-soft) / 0.44))",
+                "radial-gradient(at 90% 10%, hsl(var(--primary) / 0.18) 0px, transparent 42%), linear-gradient(135deg, hsl(var(--muted)), hsl(var(--primary) / 0.44))",
             }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "hsl(var(--admin-primary))" }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "hsl(var(--primary))" }}>
               NICON • {t("nav.about")}
             </p>
-            <DialogTitle className="font-display text-[2rem] leading-none tracking-tight">
+            <DialogTitle className="text-[2rem] leading-none tracking-tight">
               {statDraft ? t("aboutAdmin.editStatDialog") : t("aboutAdmin.addStatDialog")}
             </DialogTitle>
-            <DialogDescription className="text-base mt-2 max-w-2xl" style={{ color: "hsl(var(--admin-muted))" }}>
+            <DialogDescription className="text-base mt-2 max-w-2xl" style={{ color: "hsl(var(--muted-foreground))" }}>
               {t("aboutAdmin.editStatDialogDesc")}
             </DialogDescription>
           </DialogHeader>
@@ -1708,7 +1708,7 @@ const AboutContent = () => {
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.statValue")}>
                         <input
-                          className="admin-input text-xl font-extrabold"
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-xl font-extrabold"
                           value={statDraft.num}
                           onChange={(e) => setStatDraft((prev) => (prev ? { ...prev, num: e.target.value } : prev))}
                           placeholder={t("aboutAdmin.placeholderStatValue")}
@@ -1718,7 +1718,7 @@ const AboutContent = () => {
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.fieldStatus")}>
                         <select
-                          className="admin-input"
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           value={statDraft.isActive ? "true" : "false"}
                           onChange={(e) => setStatDraft((prev) => (prev ? { ...prev, isActive: e.target.value === "true" } : prev))}
                         >
@@ -1732,7 +1732,7 @@ const AboutContent = () => {
                   <div className="about-form-card about-form-card-accent">
                     <Field label={t("aboutAdmin.statLabel")}>
                       <input
-                        className="admin-input"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                         value={statDraft.label}
                         onChange={(e) => setStatDraft((prev) => (prev ? { ...prev, label: e.target.value } : prev))}
                         placeholder={t("aboutAdmin.placeholderStatLabel")}
@@ -1754,21 +1754,21 @@ const AboutContent = () => {
                 <aside
                   className="about-dialog-side border-t xl:border-t-0 xl:border-l px-5 sm:px-7 py-5 sm:py-6 space-y-5"
                   style={{
-                    borderColor: "hsl(var(--admin-border))",
-                    background: "linear-gradient(180deg, hsl(var(--admin-primary-soft) / 0.55), hsl(var(--admin-bg)))",
+                    borderColor: "hsl(var(--border))",
+                    background: "linear-gradient(180deg, hsl(var(--primary) / 0.55), hsl(var(--muted)))",
                   }}
                 >
                   <div>
                     <p
                       className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2"
-                      style={{ color: "hsl(var(--admin-primary))" }}
+                      style={{ color: "hsl(var(--primary))" }}
                     >
                       {t("aboutAdmin.previewTitle")}
                     </p>
-                    <h3 className="font-display text-xl font-extrabold leading-tight">
+                    <h3 className="text-xl font-extrabold leading-tight">
                       {statDraft.num || t("aboutAdmin.defaultStatValue")}
                     </h3>
-                    <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+                    <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {statDraft.label || t("aboutAdmin.defaultStatLabel")}
                     </p>
                   </div>
@@ -1776,7 +1776,7 @@ const AboutContent = () => {
                   <div
                     className="admin-stat-card"
                     style={{
-                      background: "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
+                      background: "linear-gradient(135deg, hsl(var(--primary)), hsl(22 95% 58%))",
                     }}
                   >
                     <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-6">
@@ -1784,7 +1784,7 @@ const AboutContent = () => {
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-white/80">{ABOUT_ICON_META[statDraft.iconKey].label}</p>
-                      <p className="font-display text-5xl font-extrabold leading-none">{statDraft.num || t("aboutAdmin.defaultStatValue")}</p>
+                      <p className="text-5xl font-extrabold leading-none">{statDraft.num || t("aboutAdmin.defaultStatValue")}</p>
                       <p className="text-sm text-white/85 leading-relaxed">
                         {statDraft.label || t("aboutAdmin.defaultStatLabel")}
                       </p>
@@ -1793,20 +1793,20 @@ const AboutContent = () => {
 
                   <div
                     className="rounded-[1.5rem] border p-4 space-y-3"
-                    style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-surface) / 0.88)" }}
+                    style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card) / 0.88)" }}
                   >
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--admin-muted))" }}>{t("aboutAdmin.fieldSortOrder")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldSortOrder")}</span>
                       <span className="font-bold">#{statDraft.sortOrder}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--admin-muted))" }}>{t("aboutAdmin.fieldStatus")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldStatus")}</span>
                       <span
                         className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]"
                         style={
                           statDraft.isActive
-                            ? { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
-                            : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-muted))" }
+                            ? { background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }
+                            : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
                         }
                       >
                         {statDraft.isActive ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
@@ -1818,12 +1818,12 @@ const AboutContent = () => {
 
               <div
                 className="about-dialog-footer px-5 sm:px-7 py-4 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2"
-                style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg))" }}
+                style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--muted))" }}
               >
                 <button type="button" className="about-secondary-btn" onClick={() => setStatDialogOpen(false)}>
                   {t("common.cancel")}
                 </button>
-                <button type="button" className="admin-btn-primary px-5 py-2.5 sm:min-w-[152px]" onClick={saveStatDialog}>
+                <button type="button" className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-5 py-2.5 sm:min-w-[152px]" onClick={saveStatDialog}>
                   {t("aboutAdmin.saveStat")}
                 </button>
               </div>
@@ -1839,22 +1839,22 @@ const AboutContent = () => {
           if (!open) setIconDraft(null);
         }}
       >
-        <DialogContent className="admin-scope admin-about-dialog sm:max-w-5xl p-0 gap-0 overflow-hidden rounded-[2rem] border shadow-2xl" style={{ borderColor: "hsl(var(--admin-border))" }}>
+        <DialogContent className="admin-scope admin-about-dialog sm:max-w-5xl p-0 gap-0 overflow-hidden rounded-[2rem] border shadow-2xl" style={{ borderColor: "hsl(var(--border))" }}>
           <DialogHeader
             className="admin-about-dialog-header px-5 sm:px-7 pt-5 sm:pt-6 pb-5 border-b"
             style={{
-              borderColor: "hsl(var(--admin-border))",
+              borderColor: "hsl(var(--border))",
               background:
-                "radial-gradient(at 90% 10%, hsl(var(--admin-primary) / 0.18) 0px, transparent 42%), linear-gradient(135deg, hsl(var(--admin-bg)), hsl(var(--admin-primary-soft) / 0.44))",
+                "radial-gradient(at 90% 10%, hsl(var(--primary) / 0.18) 0px, transparent 42%), linear-gradient(135deg, hsl(var(--muted)), hsl(var(--primary) / 0.44))",
             }}
           >
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "hsl(var(--admin-primary))" }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: "hsl(var(--primary))" }}>
               NICON • {t("nav.about")}
             </p>
-            <DialogTitle className="font-display text-[1.75rem] leading-none tracking-tight">
+            <DialogTitle className="text-[1.75rem] leading-none tracking-tight">
               {iconDialogEditor === "values" ? t("aboutAdmin.editValueDialog") : t("aboutAdmin.editStrategyDialog")}
             </DialogTitle>
-            <DialogDescription className="text-base mt-2 max-w-2xl" style={{ color: "hsl(var(--admin-muted))" }}>
+            <DialogDescription className="text-base mt-2 max-w-2xl" style={{ color: "hsl(var(--muted-foreground))" }}>
               {t("aboutAdmin.editItemDialogDesc")}
             </DialogDescription>
           </DialogHeader>
@@ -1874,7 +1874,7 @@ const AboutContent = () => {
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.fieldStatus")}>
                         <select
-                          className="admin-input"
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           value={iconDraft.isActive ? "true" : "false"}
                           onChange={(e) => setIconDraft((prev) => (prev ? { ...prev, isActive: e.target.value === "true" } : prev))}
                         >
@@ -1886,7 +1886,7 @@ const AboutContent = () => {
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.fieldTitle")}>
                         <input
-                          className="admin-input"
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           value={iconDraft.title}
                           onChange={(e) => setIconDraft((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
                         />
@@ -1897,7 +1897,7 @@ const AboutContent = () => {
                   <div className="about-form-card about-form-card-accent">
                     <Field label={t("aboutAdmin.fieldDesc")}>
                       <textarea
-                        className="admin-input min-h-28"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-28"
                         value={iconDraft.desc}
                         onChange={(e) => setIconDraft((prev) => (prev ? { ...prev, desc: e.target.value } : prev))}
                       />
@@ -1918,21 +1918,21 @@ const AboutContent = () => {
                 <aside
                   className="about-dialog-side border-t xl:border-t-0 xl:border-l px-5 sm:px-7 py-5 sm:py-6 space-y-5"
                   style={{
-                    borderColor: "hsl(var(--admin-border))",
-                    background: "linear-gradient(180deg, hsl(var(--admin-primary-soft) / 0.55), hsl(var(--admin-bg)))",
+                    borderColor: "hsl(var(--border))",
+                    background: "linear-gradient(180deg, hsl(var(--primary) / 0.55), hsl(var(--muted)))",
                   }}
                 >
                   <div>
                     <p
                       className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2"
-                      style={{ color: "hsl(var(--admin-primary))" }}
+                      style={{ color: "hsl(var(--primary))" }}
                     >
                       {t("aboutAdmin.previewTitle")}
                     </p>
-                    <h3 className="font-display text-xl font-extrabold leading-tight">
+                    <h3 className="text-xl font-extrabold leading-tight">
                       {iconDraft.title || t("aboutAdmin.defaultItemTitle")}
                     </h3>
-                    <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+                    <p className="text-sm mt-1" style={{ color: "hsl(var(--muted-foreground))" }}>
                       {iconDraft.desc || t("aboutAdmin.defaultItemDesc")}
                     </p>
                   </div>
@@ -1942,13 +1942,13 @@ const AboutContent = () => {
                       <PreviewIconProxy iconKey={iconDraft.iconKey} />
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-semibold" style={{ color: "hsl(var(--admin-primary))" }}>
+                      <p className="text-sm font-semibold" style={{ color: "hsl(var(--primary))" }}>
                         {ABOUT_ICON_META[iconDraft.iconKey].label}
                       </p>
-                      <p className="font-display text-2xl font-extrabold leading-tight">
+                      <p className="text-2xl font-extrabold leading-tight">
                         {iconDraft.title || t("aboutAdmin.defaultItemTitle")}
                       </p>
-                      <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--admin-muted))" }}>
+                      <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--muted-foreground))" }}>
                         {iconDraft.desc || t("aboutAdmin.defaultItemDesc")}
                       </p>
                     </div>
@@ -1956,20 +1956,20 @@ const AboutContent = () => {
 
                   <div
                     className="rounded-[1.5rem] border p-4 space-y-3"
-                    style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-surface) / 0.88)" }}
+                    style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--card) / 0.88)" }}
                   >
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--admin-muted))" }}>{t("aboutAdmin.fieldSortOrder")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldSortOrder")}</span>
                       <span className="font-bold">#{iconDraft.sortOrder}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span style={{ color: "hsl(var(--admin-muted))" }}>{t("aboutAdmin.fieldStatus")}</span>
+                      <span style={{ color: "hsl(var(--muted-foreground))" }}>{t("aboutAdmin.fieldStatus")}</span>
                       <span
                         className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.14em]"
                         style={
                           iconDraft.isActive
-                            ? { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
-                            : { background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-muted))" }
+                            ? { background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }
+                            : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
                         }
                       >
                         {iconDraft.isActive ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
@@ -1981,12 +1981,12 @@ const AboutContent = () => {
 
               <div
                 className="about-dialog-footer px-5 sm:px-7 py-4 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2"
-                style={{ borderColor: "hsl(var(--admin-border))", background: "hsl(var(--admin-bg))" }}
+                style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--muted))" }}
               >
                 <button type="button" className="about-secondary-btn" onClick={() => setIconDialogOpen(false)}>
                   {t("common.cancel")}
                 </button>
-                <button type="button" className="admin-btn-primary px-4 py-2.5 sm:min-w-[152px]" onClick={saveIconDialog}>
+                <button type="button" className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 px-4 py-2.5 sm:min-w-[152px]" onClick={saveIconDialog}>
                   {t("aboutAdmin.saveItem")}
                 </button>
               </div>
