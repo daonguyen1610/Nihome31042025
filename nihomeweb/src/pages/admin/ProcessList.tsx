@@ -24,7 +24,10 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import type { ProcessResponse, ProcessAssetInfo } from "@/services/contentApi";
 import { adminApi, type UpsertProcessRequest, type ProcessAssetInput } from "@/services/adminApi";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -155,23 +158,25 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
   if (!hasImages && !hasFiles) return null;
 
   return (
-    <div className="border-t mt-2 pt-3 space-y-3">
+    <div className="mt-2 space-y-3 border-t pt-3">
       {hasImages && (
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide flex-1" style={{ color: "hsl(var(--admin-muted))" }}>
-              <ImageIcon className="w-3.5 h-3.5" />
+          <div className="mb-2 flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <ImageIcon className="h-3.5 w-3.5" />
               <span>{t("proc.images")} ({process.images.length})</span>
             </div>
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setStackView((v) => !v)}
-              className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg border border-border hover:bg-muted transition"
-              style={{ color: "hsl(var(--admin-muted))" }}
               title={stackView ? t("proc.gridView") : t("proc.stackView")}
+              className="h-7 gap-1 text-xs"
             >
-              {stackView ? <Grid2x2 className="w-3.5 h-3.5" /> : <LayoutList className="w-3.5 h-3.5" />}
+              {stackView ? <Grid2x2 className="h-3.5 w-3.5" /> : <LayoutList className="h-3.5 w-3.5" />}
               {stackView ? t("proc.gridView") : t("proc.stackView")}
-            </button>
+            </Button>
           </div>
 
           {stackView ? (
@@ -180,20 +185,20 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
                 <button
                   key={i}
                   onClick={() => setLightbox(i)}
-                  className="relative group rounded-lg overflow-hidden border border-border hover:border-primary transition-all w-full"
+                  className="group relative w-full overflow-hidden rounded-md border transition-all hover:border-primary"
                   title={img.displayName}
                 >
                   <img
                     src={`${apiBase}${img.url}`}
                     alt={img.displayName}
-                    className="w-full h-auto object-contain group-hover:opacity-90 transition-opacity"
+                    className="h-auto w-full object-contain transition-opacity group-hover:opacity-90"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).style.display = "none";
                       (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
                     }}
                   />
                   <div className="hidden absolute inset-0 flex items-center justify-center bg-muted" style={{ minHeight: 60 }}>
-                    <ImageIcon className="w-5 h-5" style={{ color: "hsl(var(--admin-muted))" }} />
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </button>
               ))}
@@ -204,21 +209,21 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
                 <button
                   key={i}
                   onClick={() => setLightbox(i)}
-                  className="relative group rounded-lg overflow-hidden border border-border hover:border-primary transition-all"
+                  className="group relative overflow-hidden rounded-md border transition-all hover:border-primary"
                   style={{ width: 80, height: 60 }}
                   title={img.displayName}
                 >
                   <img
                     src={`${apiBase}${img.url}`}
                     alt={img.displayName}
-                    className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                    className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).style.display = "none";
                       (e.currentTarget.nextElementSibling as HTMLElement | null)?.classList.remove("hidden");
                     }}
                   />
                   <div className="hidden absolute inset-0 flex items-center justify-center bg-muted">
-                    <ImageIcon className="w-5 h-5" style={{ color: "hsl(var(--admin-muted))" }} />
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </button>
               ))}
@@ -229,8 +234,8 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
 
       {hasFiles && (
         <div>
-          <div className="flex items-center gap-1.5 mb-2 text-xs font-bold uppercase tracking-wide" style={{ color: "hsl(var(--admin-muted))" }}>
-            <FileText className="w-3.5 h-3.5" />
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <FileText className="h-3.5 w-3.5" />
             <span>{t("proc.files")} ({process.files.length})</span>
           </div>
           <div className="space-y-1.5">
@@ -239,15 +244,15 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
                 key={i}
                 href={`${apiBase}${file.url}`}
                 download={file.originalFileName}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border hover:bg-muted/50 transition group"
+                className="group flex items-center gap-2 rounded-md border px-3 py-2 transition hover:bg-muted/50"
                 title={`${t("proc.download")}: ${file.originalFileName}`}
               >
-                <FileText className="w-4 h-4 shrink-0" style={{ color: "hsl(var(--admin-muted))" }} />
-                <span className="text-sm truncate flex-1">{file.displayName}</span>
-                <span className="text-xs shrink-0" style={{ color: "hsl(var(--admin-muted))" }}>
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1 truncate text-sm">{file.displayName}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
                   {formatBytes(file.fileSizeBytes)}
                 </span>
-                <Download className="w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: "hsl(var(--admin-primary))" }} />
+                <Download className="h-4 w-4 shrink-0 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
               </a>
             ))}
           </div>
@@ -283,7 +288,7 @@ function ProcessCard({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="admin-card px-5 py-4 hover:shadow-md transition">
+    <div className="rounded-lg border bg-card px-5 py-4 transition hover:shadow-md">
       <div className="flex items-center gap-4">
         <div onClick={(e) => e.stopPropagation()}>
           <Checkbox
@@ -292,57 +297,51 @@ function ProcessCard({
             aria-label={`${t("common.selectAll")} · ${p.title}`}
           />
         </div>
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{
-            background:
-              "linear-gradient(135deg, hsl(var(--admin-primary) / 0.12), hsl(22 95% 58% / 0.1))",
-            color: "hsl(var(--admin-primary))",
-          }}
-        >
-          <Pencil className="w-5 h-5" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Pencil className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-semibold truncate" style={{ color: "hsl(var(--admin-primary))" }}>
+          <p className="truncate font-semibold text-primary">
             {p.code ? `${p.code} — ${p.title}` : p.title}
           </p>
           {hasAssets && (
-            <p className="text-xs mt-0.5" style={{ color: "hsl(var(--admin-muted))" }}>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {p.images.length > 0 && `${p.images.length} ${t("proc.images")}`}
               {p.images.length > 0 && p.files.length > 0 && " · "}
               {p.files.length > 0 && `${p.files.length} ${t("proc.files")}`}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
           {hasAssets && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setExpanded((v) => !v)}
-              className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted"
-              style={{ color: "hsl(var(--admin-muted))" }}
             >
-              {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {expanded ? <ChevronUp className="mr-1 h-3.5 w-3.5" /> : <ChevronDown className="mr-1 h-3.5 w-3.5" />}
               {expanded ? t("proc.hide") : t("common.view")}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onEdit(p)}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted"
-            style={{ color: "hsl(var(--admin-muted))" }}
             title={t("proc.editTitle")}
             aria-label={t("proc.editTitle")}
           >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onDelete(p)}
-            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted"
-            style={{ color: "hsl(var(--admin-danger))" }}
             title={t("proc.delete")}
             aria-label={t("proc.delete")}
+            className="text-destructive hover:text-destructive"
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -525,49 +524,45 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
 
   return (
     <AdminLayout>
-      <div className="mb-6 flex items-start gap-3">
-        <div className="flex-1">
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {t(titleKey)}
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {filtered.length} / {items.length}
-          </p>
-        </div>
-        <button
-          onClick={startCreate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-bold text-sm shrink-0"
-          style={{
-            background: "hsl(var(--admin-primary))",
-            color: "white",
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          {t("proc.add")}
-        </button>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{t(titleKey)}</h1>
+            <p className="text-xs italic text-muted-foreground">
+              {filtered.length} / {items.length}
+            </p>
+          </div>
+          <Button onClick={startCreate}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            {t("proc.add")}
+          </Button>
+        </header>
 
-      <div className="admin-card p-5 mb-5">
-        <div className="flex items-center gap-2 max-w-md">
-          <SearchIcon className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("proc.searchPh")}
-            className="admin-input flex-1"
-          />
-        </div>
-      </div>
+        <section className="rounded-lg border bg-card p-3">
+          <div className="w-full sm:max-w-sm">
+            <Label className="text-xs" htmlFor="process-search">{t("common.search")}</Label>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="process-search"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("proc.searchPh")}
+                className="h-9 pl-9"
+              />
+            </div>
+          </div>
+        </section>
 
-      {loading ? (
-        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-          {t("common.loading")}
-        </div>
-      ) : error ? (
-        <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-danger))" }}>
-          {error}
-        </div>
-      ) : (
+        {loading ? (
+          <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+            {t("common.loading")}
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border border-dashed p-10 text-center text-sm text-destructive">
+            {error}
+          </div>
+        ) : (
         <div className="space-y-3">
           <BulkActionBar
             selectedCount={selectedIds.size}
@@ -576,12 +571,12 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
             onBulkDelete={() => void handleBulkDelete()}
           />
           {filtered.length === 0 ? (
-            <div className="admin-card p-10 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
+            <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
               {t("proc.empty")}
             </div>
           ) : (
             <>
-            <div className="flex items-center gap-2 px-2 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
+            <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground">
               <Checkbox
                 checked={
                   allVisibleSelected
@@ -853,6 +848,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </AdminLayout>
   );
 };
