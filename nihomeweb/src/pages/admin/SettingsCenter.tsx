@@ -23,6 +23,10 @@ import {
   type MediaSettings,
 } from "@/lib/settingsStore";
 import SlideshowSettings from "./settings/SlideshowSettings";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Tab = "company" | "general" | "media" | "slideshow" | "map";
 type OtpSettingsKey = keyof OtpSettingsResponse;
@@ -52,20 +56,15 @@ const OtpToggleControl = ({
   savingLabel: string;
   onToggle: (value: boolean) => void;
 }) => (
-  <div
-    className="flex items-start gap-4 rounded-xl px-4 py-4"
-    style={{ background: "hsl(var(--admin-bg))" }}
-  >
-    <div className="pt-1">
+  <div className="flex items-start gap-4 rounded-lg border bg-muted/40 px-4 py-4">
+    <div className="pt-0.5">
       <Toggle on={enabled} onChange={onToggle} disabled={disabled} ariaLabel={label} />
     </div>
     <div className="min-w-0">
-      <p className="text-sm font-bold">{label}</p>
-      <p className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>{description}</p>
+      <p className="text-sm font-medium">{label}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
       {saving && (
-        <p className="text-xs mt-2 font-semibold" style={{ color: "hsl(var(--admin-primary))" }}>
-          {savingLabel}
-        </p>
+        <p className="mt-2 text-xs font-medium text-primary">{savingLabel}</p>
       )}
     </div>
   </div>
@@ -107,50 +106,48 @@ const CompanyTab = () => {
   ] as const;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-      <div className="admin-card p-7">
-        <h2 className="font-display text-lg font-extrabold mb-1">{t("settings.company")}</h2>
-        <p className="text-xs mb-6" style={{ color: "hsl(var(--admin-muted))" }}>{t("settings.companyDesc")}</p>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <section className="rounded-lg border bg-card p-6">
+        <h2 className="text-lg font-semibold">{t("settings.company")}</h2>
+        <p className="mb-6 mt-1 text-xs text-muted-foreground">{t("settings.companyDesc")}</p>
         <div className="space-y-4">
           {fields.map((f) => (
-            <div key={f.key}>
-              <label className="text-xs uppercase tracking-wider font-bold mb-2 block" style={{ color: "hsl(var(--admin-muted))" }}>
+            <div key={f.key} className="space-y-1.5">
+              <Label htmlFor={`company-${f.key}`} className="text-xs">
                 {f.label}
-              </label>
-              <div
-                className="flex items-center gap-3 rounded-xl px-4 py-3 border"
-                style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
-              >
-                <f.icon className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} />
-                <input
+              </Label>
+              <div className="relative">
+                <f.icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id={`company-${f.key}`}
                   value={company[f.key]}
                   onChange={(e) => setCompany({ ...company, [f.key]: e.target.value })}
-                  className="bg-transparent text-sm outline-none flex-1 font-semibold"
+                  className="h-9 pl-9"
                 />
               </div>
             </div>
           ))}
-          <button onClick={save} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm mt-3">
-            <Save className="w-4 h-4" /> {t("common.save")}
-          </button>
+          <Button onClick={save} className="mt-2">
+            <Save className="mr-1.5 h-4 w-4" /> {t("common.save")}
+          </Button>
         </div>
-      </div>
+      </section>
 
-      <div className="admin-card p-7">
-        <h2 className="font-display text-lg font-extrabold mb-1">{t("settings.system")}</h2>
-        <p className="text-xs mb-6" style={{ color: "hsl(var(--admin-muted))" }}>{t("settings.systemDesc")}</p>
+      <section className="rounded-lg border bg-card p-6">
+        <h2 className="text-lg font-semibold">{t("settings.system")}</h2>
+        <p className="mb-6 mt-1 text-xs text-muted-foreground">{t("settings.systemDesc")}</p>
         <div className="space-y-3">
           {featureList.map((f) => (
-            <div key={f.key} className="flex items-center justify-between gap-4 p-4 rounded-2xl" style={{ background: "hsl(var(--admin-bg))" }}>
+            <div key={f.key} className="flex items-center justify-between gap-4 rounded-lg border bg-muted/40 p-4">
               <div className="min-w-0">
-                <p className="font-bold text-sm">{f.label}</p>
-                <p className="text-xs mt-0.5" style={{ color: "hsl(var(--admin-muted))" }}>{f.desc}</p>
+                <p className="text-sm font-medium">{f.label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{f.desc}</p>
               </div>
               <Toggle on={features[f.key]} onChange={(v) => setFeatures({ ...features, [f.key]: v })} />
             </div>
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 };
@@ -213,45 +210,30 @@ const GeneralTab = () => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex justify-end">
-        <button onClick={save} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Save className="w-4 h-4" /> {t("common.save")}
-        </button>
+        <Button onClick={save}>
+          <Save className="mr-1.5 h-4 w-4" /> {t("common.save")}
+        </Button>
       </div>
 
-      <div className="admin-card p-6">
-        <div
-          className="flex items-center gap-3 border-b pb-4"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-        >
-          <ShieldCheck className="w-5 h-5" style={{ color: "hsl(var(--admin-primary))" }} />
-          <h2 className="font-display text-lg font-extrabold">{t("set.otp.securityTitle")}</h2>
+      <section className="rounded-lg border bg-card p-6">
+        <div className="flex items-center gap-2 border-b pb-4">
+          <ShieldCheck className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">{t("set.otp.securityTitle")}</h2>
         </div>
 
         {otpLoading ? (
-          <p className="text-sm pt-5" style={{ color: "hsl(var(--admin-muted))" }}>
-            {t("set.otp.loading")}
-          </p>
+          <p className="pt-5 text-sm text-muted-foreground">{t("set.otp.loading")}</p>
         ) : otpLoadFailed || !otpSettings ? (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-5">
-            <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
-              {t("set.otp.loadError")}
-            </p>
-            <button
-              type="button"
-              onClick={loadOtpSettings}
-              className="inline-flex w-fit items-center rounded-lg border px-3 py-2 text-xs font-bold transition"
-              style={{
-                borderColor: "hsl(var(--admin-border))",
-                color: "hsl(var(--admin-primary))",
-              }}
-            >
+          <div className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center">
+            <p className="text-sm text-muted-foreground">{t("set.otp.loadError")}</p>
+            <Button type="button" size="sm" variant="outline" onClick={loadOtpSettings}>
               {t("common.retry")}
-            </button>
+            </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 pt-5">
+          <div className="grid grid-cols-1 gap-4 pt-5 xl:grid-cols-2">
             <OtpToggleControl
               label={t("set.otp.registrationLabel")}
               description={t("set.otp.registrationDesc")}
@@ -272,7 +254,7 @@ const GeneralTab = () => {
             />
           </div>
         )}
-      </div>
+      </section>
 
       <SettingSection title={t("set.section.social")}>
         <SettingRow label="Facebook URL">
@@ -352,25 +334,24 @@ const MediaTab = () => {
   const save = () => { saveMediaSettings(s); toast({ title: t("settings.saved") }); };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex justify-end">
-        <button onClick={save} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Save className="w-4 h-4" /> {t("common.save")}
-        </button>
+        <Button onClick={save}>
+          <Save className="mr-1.5 h-4 w-4" /> {t("common.save")}
+        </Button>
       </div>
 
       <SettingSection title={t("set.section.common")}>
         <SettingRow label={t("set.imageStorage")}>
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold">{s.storage}</span>
-            <button
+            <span className="text-sm font-medium">{s.storage}</span>
+            <Button
               type="button"
+              size="sm"
               onClick={() => upd("storage", s.storage === "database" ? "filesystem" : "database")}
-              className="px-3 py-2 rounded-lg text-xs font-bold text-white"
-              style={{ background: "hsl(var(--admin-primary))" }}
             >
               {t("common.change")}
-            </button>
+            </Button>
           </div>
         </SettingRow>
         <SettingRow label={t("set.maxImageSize")}>
@@ -460,84 +441,59 @@ const MapTab = () => {
   const previewUrl = savedUrl || url.trim();
 
   return (
-    <div className="space-y-5">
-      <div className="admin-card p-7">
-        <div
-          className="flex items-center gap-3 border-b pb-4 mb-5"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-        >
-          <MapIcon className="w-5 h-5" style={{ color: "hsl(var(--admin-primary))" }} />
+    <div className="space-y-4">
+      <section className="rounded-lg border bg-card p-6">
+        <div className="mb-5 flex items-center gap-3 border-b pb-4">
+          <MapIcon className="h-5 w-5 text-primary" />
           <div>
-            <h2 className="font-display text-lg font-extrabold">{t("settings.map.title")}</h2>
-            <p className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-              {t("settings.map.urlHint")}
-            </p>
+            <h2 className="text-lg font-semibold">{t("settings.map.title")}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t("settings.map.urlHint")}</p>
           </div>
         </div>
 
         {loading ? (
-          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
-            {t("common.loading")}
-          </p>
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
         ) : (
           <div className="space-y-4">
-            <div>
-              <label
-                className="text-xs uppercase tracking-wider font-bold mb-2 block"
-                style={{ color: "hsl(var(--admin-muted))" }}
-              >
+            <div className="space-y-1.5">
+              <Label htmlFor="map-embed-url" className="text-xs">
                 {t("settings.map.url")}
-              </label>
-              <input
+              </Label>
+              <Input
+                id="map-embed-url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="https://www.google.com/maps/embed?pb=..."
-                className="w-full rounded-xl px-4 py-3 border bg-transparent text-sm outline-none font-medium"
-                style={{
-                  background: "hsl(var(--admin-bg))",
-                  borderColor: "hsl(var(--admin-border))",
-                }}
+                className="h-9"
               />
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={save}
-                disabled={saving || url === savedUrl}
-                className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" /> {saving ? t("common.saving") : t("common.save")}
-              </button>
+              <Button onClick={save} disabled={saving || url === savedUrl}>
+                <Save className="mr-1.5 h-4 w-4" /> {saving ? t("common.saving") : t("common.save")}
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="admin-card p-7">
-        <h3 className="font-display text-base font-extrabold mb-4">{t("settings.map.preview")}</h3>
+      <section className="rounded-lg border bg-card p-6">
+        <h3 className="mb-4 text-base font-semibold">{t("settings.map.preview")}</h3>
         {previewUrl ? (
           <iframe
             key={previewUrl}
             src={previewUrl}
             title="Map preview"
-            className="w-full h-96 rounded-2xl border"
-            style={{ borderColor: "hsl(var(--admin-border))" }}
+            className="h-96 w-full rounded-lg border"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
             allowFullScreen
           />
         ) : (
-          <div
-            className="w-full h-96 rounded-2xl border flex items-center justify-center text-sm"
-            style={{
-              borderColor: "hsl(var(--admin-border))",
-              color: "hsl(var(--admin-muted))",
-              background: "hsl(var(--admin-bg))",
-            }}
-          >
+          <div className="flex h-96 w-full items-center justify-center rounded-lg border border-dashed bg-muted/40 text-sm text-muted-foreground">
             {t("settings.map.previewEmpty")}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 };
@@ -558,45 +514,36 @@ const SettingsCenter = () => {
     }
   }, [currentTab]);
 
-  const onChangeTab = (tab: Tab) => {
-    setActiveTab(tab);
+  const onChangeTab = (tab: string) => {
+    setActiveTab(tab as Tab);
     setSearchParams({ tab });
   };
 
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("settings.title")}</h1>
-        <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>{t("settings.centerDesc")}</p>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header>
+          <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("settings.centerDesc")}</p>
+        </header>
 
-      {/* Tabs */}
-      <div
-        className="flex gap-1 p-1 rounded-xl mb-6 overflow-x-auto"
-        style={{ background: "hsl(var(--admin-bg))" }}
-      >
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => onChangeTab(tab.key)}
-            className="px-5 py-2.5 rounded-lg text-sm font-bold transition whitespace-nowrap"
-            style={
-              activeTab === tab.key
-                ? { background: "hsl(var(--admin-primary))", color: "white" }
-                : { color: "hsl(var(--admin-sidebar-text))" }
-            }
-          >
-            {t(tab.labelKey)}
-          </button>
-        ))}
-      </div>
+        <Tabs value={activeTab} onValueChange={onChangeTab} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto sm:w-auto">
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key} className="whitespace-nowrap">
+                {t(tab.labelKey)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-      {/* Tab content */}
-      {activeTab === "company" && <CompanyTab />}
-      {activeTab === "general" && <GeneralTab />}
-      {activeTab === "media" && <MediaTab />}
-      {activeTab === "slideshow" && <SlideshowSettings />}
-      {activeTab === "map" && <MapTab />}
+        {/* Tab content */}
+        {activeTab === "company" && <CompanyTab />}
+        {activeTab === "general" && <GeneralTab />}
+        {activeTab === "media" && <MediaTab />}
+        {activeTab === "slideshow" && <SlideshowSettings />}
+        {activeTab === "map" && <MapTab />}
+      </div>
     </AdminLayout>
   );
 };
