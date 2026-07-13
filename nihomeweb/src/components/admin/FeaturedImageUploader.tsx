@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Upload, Image as ImageIcon, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { Input } from "@/components/ui/input";
 
 interface FeaturedImageUploaderProps {
   imageUrl: string;
@@ -47,7 +48,7 @@ const FeaturedImageUploader = ({
       />
 
       {hasImage ? (
-        <div className="relative aspect-[16/10] rounded-xl overflow-hidden bg-muted border" style={{ borderColor: "hsl(var(--admin-border))" }}>
+        <div className="relative aspect-[16/10] overflow-hidden rounded-lg border bg-muted">
           <img
             src={displayUrl}
             alt=""
@@ -87,8 +88,7 @@ const FeaturedImageUploader = ({
           type="button"
           onClick={handleClick}
           disabled={disabled}
-          className="w-full aspect-[16/10] rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition disabled:opacity-50"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
+          className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition hover:bg-muted/50 disabled:opacity-50"
         >
           <ImageIcon className="w-8 h-8 text-muted-foreground" />
           <span className="text-sm font-bold">{t("media.featured.empty.title")}</span>
@@ -103,11 +103,11 @@ const FeaturedImageUploader = ({
       )}
 
       <details className="group">
-        <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+        <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
           {t("media.url.toggle")}
         </summary>
-        <input
-          className="admin-input mt-2"
+        <Input
+          className="mt-2 h-9"
           value={imageUrl}
           onChange={(e) => onUrlChange(e.target.value)}
           placeholder={t("media.url.placeholder")}

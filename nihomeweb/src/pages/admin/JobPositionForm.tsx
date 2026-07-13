@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, Loader2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
 import type { UpsertJobPositionRequest, JobPositionResponse, EmploymentTypeResponse, RecruitmentDropdownOptionResponse } from "@/services/adminApi";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface FormData {
   id: number;
@@ -34,6 +40,9 @@ const empty: FormData = {
   isActive: true,
   sortOrder: 0,
 };
+
+const selectClasses =
+  "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
 
 const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { id: idParam } = useParams();
@@ -171,8 +180,8 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 rounded-full animate-spin" style={{ borderColor: "hsl(var(--admin-primary))", borderTopColor: "transparent" }} />
+        <div className="flex h-64 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AdminLayout>
     );
@@ -180,207 +189,201 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   return (
     <AdminLayout>
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          to="/admin/recruitment"
-          className="w-10 h-10 rounded-full bg-white border flex items-center justify-center hover:bg-muted transition"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {mode === "create" ? t("recruit.jobForm.titleCreate") : t("recruit.jobForm.titleEdit")}
-          </h1>
-          {mode === "edit" && data.title && (
-            <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{data.title}</p>
-          )}
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-
-          {/* Basic info */}
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label={t("recruit.jobForm.positionTitle")} className="md:col-span-2">
-                <input
-                  className="admin-input"
-                  value={data.title}
-                  onChange={(e) => update("title", e.target.value)}
-                  placeholder={t("recruit.jobForm.positionTitlePlaceholder")}
-                  required
-                />
-              </Field>
-              <Field label={t("recruit.jobForm.department")}>
-                <input
-                  className="admin-input"
-                  value={data.department}
-                  onChange={(e) => update("department", e.target.value)}
-                  placeholder={t("recruit.jobForm.departmentPlaceholder")}
-                  required
-                />
-              </Field>
-              <Field label={t("recruit.jobForm.location")}>
-                <input
-                  className="admin-input"
-                  value={data.location}
-                  onChange={(e) => update("location", e.target.value)}
-                  placeholder={t("recruit.jobForm.locationPlaceholder")}
-                  required
-                />
-              </Field>
-              <Field label={t("recruit.jobForm.employmentType")}>
-                <select
-                  className="admin-input"
-                  value={data.employmentType}
-                  onChange={(e) => update("employmentType", e.target.value)}
-                  required
-                  disabled={employmentTypes.length === 0}
-                >
-                  {employmentTypes.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
-                  {employmentTypes.map((type) => (
-                    <option key={type.id} value={type.code}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs mt-1.5" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {t("recruit.jobForm.manageAt")} <Link to="/admin/recruitment/employment-types" className="underline">{t("empTypes.employmentTypes")}</Link>.
-                </p>
-              </Field>
-              <Field label={t("recruit.jobForm.experienceLevel")}>
-                <select
-                  className="admin-input"
-                  value={data.experienceLevel}
-                  onChange={(e) => update("experienceLevel", e.target.value)}
-                  disabled={experienceLevels.length === 0}
-                >
-                  {experienceLevels.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
-                  {experienceLevels.map((lvl) => (
-                    <option key={lvl.id} value={lvl.code}>
-                      {lvl.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex items-center gap-3">
+          <Button asChild size="icon" variant="outline" className="h-10 w-10 rounded-full">
+            <Link to="/admin/recruitment" aria-label={t("common.back")}>
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold">
+              {mode === "create" ? t("recruit.jobForm.titleCreate") : t("recruit.jobForm.titleEdit")}
+            </h1>
+            {mode === "edit" && data.title && (
+              <p className="text-sm text-muted-foreground">{data.title}</p>
+            )}
           </div>
+        </header>
 
-          {/* Description */}
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">{t("recruit.jobForm.description")}</h2>
-            <textarea
-              className="admin-input min-h-28"
-              value={data.description}
-              onChange={(e) => update("description", e.target.value)}
-              placeholder={t("recruit.jobForm.descPlaceholder")}
-            />
-          </div>
-
-          {/* Requirements */}
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">{t("recruit.jobForm.requirements")}</h2>
-            <div className="space-y-2">
-              {data.requirements.map((req, i) => (
-                <div key={i} className="flex gap-2">
-                  <input
-                    className="admin-input flex-1"
-                    value={req}
-                    onChange={(e) => updateRequirement(i, e.target.value)}
-                    placeholder={t("recruit.jobForm.reqPlaceholder")}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
+            {/* Basic info */}
+            <section className="rounded-lg border bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold">{t("form.basicInfo")}</h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label={t("recruit.jobForm.positionTitle")} className="md:col-span-2">
+                  <Input
+                    className="h-9"
+                    value={data.title}
+                    onChange={(e) => update("title", e.target.value)}
+                    placeholder={t("recruit.jobForm.positionTitlePlaceholder")}
+                    required
                   />
-                  <button
-                    type="button"
-                    onClick={() => removeRequirement(i)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg border text-destructive hover:bg-destructive/10 transition"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
+                </Field>
+                <Field label={t("recruit.jobForm.department")}>
+                  <Input
+                    className="h-9"
+                    value={data.department}
+                    onChange={(e) => update("department", e.target.value)}
+                    placeholder={t("recruit.jobForm.departmentPlaceholder")}
+                    required
+                  />
+                </Field>
+                <Field label={t("recruit.jobForm.location")}>
+                  <Input
+                    className="h-9"
+                    value={data.location}
+                    onChange={(e) => update("location", e.target.value)}
+                    placeholder={t("recruit.jobForm.locationPlaceholder")}
+                    required
+                  />
+                </Field>
+                <Field label={t("recruit.jobForm.employmentType")}>
+                  <select
+                    className={selectClasses}
+                    value={data.employmentType}
+                    onChange={(e) => update("employmentType", e.target.value)}
+                    required
+                    disabled={employmentTypes.length === 0}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addRequirement}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-sm hover:bg-muted transition"
-                style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))" }}
-              >
-                <Plus className="w-3.5 h-3.5" /> {t("recruit.jobForm.addReq")}
-              </button>
-            </div>
-          </div>
-
-          {/* Benefits */}
-          {benefitOptions.length > 0 && (
-            <div className="admin-card p-6">
-              <h2 className="font-bold mb-4">{t("recruit.jobForm.benefits")}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {benefitOptions.map((opt) => (
-                  <label key={opt.id} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={data.benefits.includes(opt.code)}
-                      onChange={() => toggleBenefit(opt.code)}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-sm">{opt.name}</span>
-                  </label>
-                ))}
+                    {employmentTypes.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
+                    {employmentTypes.map((type) => (
+                      <option key={type.id} value={type.code}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {t("recruit.jobForm.manageAt")} <Link to="/admin/recruitment/employment-types" className="underline">{t("empTypes.employmentTypes")}</Link>.
+                  </p>
+                </Field>
+                <Field label={t("recruit.jobForm.experienceLevel")}>
+                  <select
+                    className={selectClasses}
+                    value={data.experienceLevel}
+                    onChange={(e) => update("experienceLevel", e.target.value)}
+                    disabled={experienceLevels.length === 0}
+                  >
+                    {experienceLevels.length === 0 && <option value="">{t("recruit.jobForm.noOptions")}</option>}
+                    {experienceLevels.map((lvl) => (
+                      <option key={lvl.id} value={lvl.code}>
+                        {lvl.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               </div>
-            </div>
-          )}
-        </div>
+            </section>
 
-        {/* Sidebar */}
-        <div className="space-y-5">
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">{t("recruit.jobForm.settings")}</h2>
-            <div className="space-y-4">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={data.isActive}
-                  onChange={(e) => update("isActive", e.target.checked)}
-                  className="w-4 h-4 rounded"
-                />
-                <span className="text-sm font-medium">{t("recruit.jobForm.isHiring")}</span>
-              </label>
-              <Field label={t("recruit.jobForm.sortOrder")}>
-                <input
-                  type="number"
-                  className="admin-input"
-                  value={data.sortOrder}
-                  onChange={(e) => update("sortOrder", Number(e.target.value))}
-                  min="0"
-                />
-              </Field>
-            </div>
+            {/* Description */}
+            <section className="rounded-lg border bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold">{t("recruit.jobForm.description")}</h2>
+              <Textarea
+                className="min-h-28"
+                value={data.description}
+                onChange={(e) => update("description", e.target.value)}
+                placeholder={t("recruit.jobForm.descPlaceholder")}
+              />
+            </section>
+
+            {/* Requirements */}
+            <section className="rounded-lg border bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold">{t("recruit.jobForm.requirements")}</h2>
+              <div className="space-y-2">
+                {data.requirements.map((req, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      className="h-9 flex-1"
+                      value={req}
+                      onChange={(e) => updateRequirement(i, e.target.value)}
+                      placeholder={t("recruit.jobForm.reqPlaceholder")}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => removeRequirement(i)}
+                      aria-label={t("common.delete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addRequirement}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-2 text-sm text-muted-foreground transition hover:bg-muted"
+                >
+                  <Plus className="h-3.5 w-3.5" /> {t("recruit.jobForm.addReq")}
+                </button>
+              </div>
+            </section>
+
+            {/* Benefits */}
+            {benefitOptions.length > 0 && (
+              <section className="rounded-lg border bg-card p-6">
+                <h2 className="mb-4 text-base font-semibold">{t("recruit.jobForm.benefits")}</h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {benefitOptions.map((opt) => (
+                    <label key={opt.id} className="flex cursor-pointer items-center gap-3">
+                      <Checkbox
+                        checked={data.benefits.includes(opt.code)}
+                        onCheckedChange={() => toggleBenefit(opt.code)}
+                      />
+                      <span className="text-sm">{opt.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
-          <button
-            type="submit"
-            disabled={submitting || employmentTypesLoading || employmentTypes.length === 0 || !data.employmentType.trim()}
-            className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50"
-          >
-            <Save className="w-4 h-4" />
-            {mode === "create" ? t("form.create") : t("form.update")}
-          </button>
-        </div>
-      </form>
+          {/* Sidebar */}
+          <div className="space-y-4">
+            <section className="rounded-lg border bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold">{t("recruit.jobForm.settings")}</h2>
+              <div className="space-y-4">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <Checkbox
+                    checked={data.isActive}
+                    onCheckedChange={(v) => update("isActive", v === true)}
+                  />
+                  <span className="text-sm font-medium">{t("recruit.jobForm.isHiring")}</span>
+                </label>
+                <Field label={t("recruit.jobForm.sortOrder")}>
+                  <Input
+                    type="number"
+                    className="h-9"
+                    value={data.sortOrder}
+                    onChange={(e) => update("sortOrder", Number(e.target.value))}
+                    min="0"
+                  />
+                </Field>
+              </div>
+            </section>
+
+            <Button
+              type="submit"
+              disabled={submitting || employmentTypesLoading || employmentTypes.length === 0 || !data.employmentType.trim()}
+              className="w-full"
+            >
+              <Save className="mr-1.5 h-4 w-4" />
+              {mode === "create" ? t("form.create") : t("form.update")}
+            </Button>
+          </div>
+        </form>
+      </div>
     </AdminLayout>
   );
 };
 
 const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
-  <label className={["block", className].filter(Boolean).join(" ")}>
-    <span className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "hsl(var(--admin-muted))" }}>
-      {label}
-    </span>
+  <div className={cn("space-y-1.5", className)}>
+    <Label className="text-xs">{label}</Label>
     {children}
-  </label>
+  </div>
 );
 
 export default JobPositionForm;

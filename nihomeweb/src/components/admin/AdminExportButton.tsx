@@ -1,5 +1,7 @@
 import { FileDown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type AdminExportButtonProps = {
   onClick: () => void;
@@ -9,22 +11,22 @@ type AdminExportButtonProps = {
   className?: string;
 };
 
-const AdminExportButton = ({ onClick, disabled, label, title, className = "" }: AdminExportButtonProps) => {
+const AdminExportButton = ({ onClick, disabled, label, title, className }: AdminExportButtonProps) => {
   const { t } = useI18n();
   const text = label ?? t("common.exportExcel");
 
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
       onClick={onClick}
       disabled={disabled}
       title={title ?? text}
-      className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-      style={{ borderColor: "hsl(var(--admin-border))" }}
+      className={cn("gap-2", className)}
     >
-      <FileDown className="w-4 h-4 shrink-0" />
+      <FileDown className="h-4 w-4 shrink-0" />
       <span>{text}</span>
-    </button>
+    </Button>
   );
 };
 

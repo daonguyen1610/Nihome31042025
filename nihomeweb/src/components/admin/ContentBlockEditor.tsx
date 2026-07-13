@@ -21,6 +21,9 @@ import { adminApi } from "@/services/adminApi";
 import type { ContentBlock, ContentItem } from "@/services/contentApi";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ContentBlockEditorProps {
   value: ContentItem[];
@@ -123,53 +126,52 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
       />
 
       {blocks.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic">{t("contentBlocks.empty")}</p>
+        <p className="text-xs italic text-muted-foreground">{t("contentBlocks.empty")}</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
             {blocks.map((block, index) => (
               <SortableBlock key={blockIds[index]} id={blockIds[index]}>
                 {(dragHandleProps) => (
-                  <div
-                    className="rounded-xl border p-3 space-y-2"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  >
-                    <div className="flex items-center gap-1 justify-between">
+                  <div className="space-y-2 rounded-lg border bg-card p-3">
+                    <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-1.5">
                         <button
                           {...dragHandleProps}
-                          className="p-1 rounded cursor-grab active:cursor-grabbing hover:bg-muted"
+                          className="cursor-grab rounded p-1 hover:bg-muted active:cursor-grabbing"
                         >
-                          <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
                         </button>
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider" style={{ color: "hsl(var(--admin-muted))" }}>
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           {block.type === "text"
-                            ? <><Type className="w-3.5 h-3.5" />{t("contentBlocks.text")}</>
+                            ? <><Type className="h-3.5 w-3.5" />{t("contentBlocks.text")}</>
                             : block.type === "youtube"
-                              ? <><Youtube className="w-3.5 h-3.5" />{t("contentBlocks.youtube")}</>
-                              : <><ImagePlus className="w-3.5 h-3.5" />{t("contentBlocks.image")}</>}
+                              ? <><Youtube className="h-3.5 w-3.5" />{t("contentBlocks.youtube")}</>
+                              : <><ImagePlus className="h-3.5 w-3.5" />{t("contentBlocks.image")}</>}
                         </span>
                       </div>
-                      <button
+                      <Button
                         type="button"
-                        className="p-1.5 rounded-md hover:bg-muted text-red-600"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
                         onClick={() => remove(index)}
                         aria-label={t("common.delete")}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
 
                     {block.type === "text" ? (
-                      <textarea
-                        className="admin-input min-h-28"
+                      <Textarea
+                        className="min-h-28"
                         value={block.value}
                         onChange={(event) => updateBlock(index, { type: "text", value: event.target.value })}
                       />
                     ) : block.type === "youtube" ? (
                       <div className="space-y-2">
-                        <input
-                          className="admin-input"
+                        <Input
+                          className="h-9"
                           value={block.url}
                           onChange={(event) => updateBlock(index, { type: "youtube", url: event.target.value })}
                           placeholder={t("contentBlocks.youtubePlaceholder")}
@@ -177,11 +179,11 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
                         {block.url && (() => {
                           const match = block.url.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/);
                           return match ? (
-                            <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-muted">
+                            <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
                               <iframe
                                 src={`https://www.youtube.com/embed/${match[1]}`}
                                 title="Preview"
-                                className="absolute inset-0 w-full h-full"
+                                className="absolute inset-0 h-full w-full"
                                 allowFullScreen
                               />
                             </div>
@@ -191,28 +193,28 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
                     ) : (
                       <div className="space-y-2">
                         {block.url && (
-                          <img src={block.url} alt="" className="w-full aspect-video rounded-lg object-cover bg-muted" />
+                          <img src={block.url} alt="" className="aspect-video w-full rounded-lg bg-muted object-cover" />
                         )}
                         <div className="flex items-center gap-2">
-                          <input
-                            className="admin-input flex-1"
+                          <Input
+                            className="h-9 flex-1"
                             value={block.url}
                             onChange={(event) => updateBlock(index, { type: "image", url: event.target.value })}
                             placeholder={t("media.url.placeholder")}
                           />
-                          <button
+                          <Button
                             type="button"
+                            size="sm"
+                            variant="outline"
                             onClick={() => openUpload(index)}
                             disabled={uploading}
-                            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border rounded-lg hover:bg-muted disabled:opacity-50"
-                            style={{ borderColor: "hsl(var(--admin-border))" }}
                           >
-                            <Upload className="w-3.5 h-3.5" />
+                            <Upload className="mr-1.5 h-3.5 w-3.5" />
                             {t("media.url.upload")}
-                          </button>
+                          </Button>
                         </div>
-                        <input
-                          className="admin-input"
+                        <Input
+                          className="h-9"
                           value={block.caption ?? ""}
                           onChange={(event) =>
                             updateBlock(index, { type: "image", url: block.url, caption: event.target.value || undefined })
@@ -230,23 +232,18 @@ const ContentBlockEditor = ({ value, onChange }: ContentBlockEditorProps) => {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button type="button" className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border rounded-lg hover:bg-muted" style={{ borderColor: "hsl(var(--admin-border))" }} onClick={addText}>
-          <Plus className="w-3.5 h-3.5" />
+        <Button type="button" size="sm" variant="outline" onClick={addText}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           {t("contentBlocks.addText")}
-        </button>
-        <button type="button" className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border rounded-lg hover:bg-muted" style={{ borderColor: "hsl(var(--admin-border))" }} onClick={addImage}>
-          <Plus className="w-3.5 h-3.5" />
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={addImage}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           {t("contentBlocks.addImage")}
-        </button>
-        <button
-          type="button"
-          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border rounded-lg hover:bg-muted"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-          onClick={addYoutube}
-        >
-          <Plus className="w-3.5 h-3.5" />
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={addYoutube}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           {t("contentBlocks.addYoutube")}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -3,6 +3,8 @@ import { Trash2, Upload, Plus } from "lucide-react";
 import { adminApi } from "@/services/adminApi";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface GalleryEditorProps {
   items: string[];
@@ -48,16 +50,16 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
 
   return (
     <div className="space-y-3">
-      <button
+      <Button
         type="button"
+        size="sm"
+        variant="outline"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="inline-flex items-center gap-2 px-3 py-2 text-xs font-bold border rounded-lg hover:bg-muted disabled:opacity-50"
-        style={{ borderColor: "hsl(var(--admin-border))" }}
       >
-        <Upload className="w-3.5 h-3.5" />
+        <Upload className="mr-1.5 h-3.5 w-3.5" />
         {uploading ? t("media.gallery.uploading") : t("media.gallery.uploadMulti")}
-      </button>
+      </Button>
       <input
         ref={inputRef}
         type="file"
@@ -68,12 +70,12 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
       />
 
       <details>
-        <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+        <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
           {t("media.url.toggle")}
         </summary>
-        <div className="flex items-center gap-1 mt-2">
-          <input
-            className="admin-input flex-1"
+        <div className="mt-2 flex items-center gap-1">
+          <Input
+            className="h-9 flex-1"
             value={manualUrl}
             onChange={(e) => setManualUrl(e.target.value)}
             placeholder={t("media.url.placeholder")}
@@ -84,39 +86,42 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
               }
             }}
           />
-          <button
+          <Button
             type="button"
+            size="icon"
+            variant="outline"
+            className="h-9 w-9"
             onClick={addManual}
-            className="p-2 border rounded-lg hover:bg-muted"
-            style={{ borderColor: "hsl(var(--admin-border))" }}
             aria-label={t("media.url.add")}
           >
-            <Plus className="w-4 h-4" />
-          </button>
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
       </details>
 
       {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic">{t("media.gallery.empty")}</p>
+        <p className="text-xs italic text-muted-foreground">{t("media.gallery.empty")}</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {items.map((url, idx) => (
-            <div key={`${url}-${idx}`} className="relative group aspect-square rounded-lg overflow-hidden bg-muted border" style={{ borderColor: "hsl(var(--admin-border))" }}>
+            <div key={`${url}-${idx}`} className="group relative aspect-square overflow-hidden rounded-lg border bg-muted">
               <img
                 src={url}
                 alt=""
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
                 onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
               />
-              <button
+              <Button
                 type="button"
+                size="icon"
+                variant="secondary"
+                className="absolute right-1 top-1 h-7 w-7 bg-white/90 text-destructive opacity-0 shadow transition group-hover:opacity-100 hover:bg-white hover:text-destructive"
                 onClick={() => remove(idx)}
-                className="absolute top-1 right-1 p-1.5 rounded-md bg-white/90 text-red-600 opacity-0 group-hover:opacity-100 transition shadow"
                 aria-label={t("media.gallery.delete")}
               >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-              <span className="absolute bottom-1 left-1 text-[10px] px-1.5 py-0.5 rounded bg-black/60 text-white">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
                 #{idx + 1}
               </span>
             </div>
