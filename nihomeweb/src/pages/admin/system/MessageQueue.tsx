@@ -3,6 +3,11 @@ import { Search, Trash2, Pencil } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Priority = "Low" | "Normal" | "High";
 type Email = {
@@ -51,6 +56,13 @@ const load = (): Email[] => {
 };
 const save = (items: Email[]) => localStorage.setItem(KEY, JSON.stringify(items));
 
+const priorityBadgeClass = (p: Priority) =>
+  p === "High"
+    ? "border-rose-200 bg-rose-50 text-rose-700"
+    : p === "Normal"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-slate-200 bg-slate-50 text-slate-700";
+
 const MessageQueue = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -76,16 +88,16 @@ const MessageQueue = () => {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageRows = filtered.slice((page - 1) * perPage, page * perPage);
+  const allSelected = pageRows.length > 0 && pageRows.every((r) => selected.has(r.id));
+  const someSelected = pageRows.some((r) => selected.has(r.id)) && !allSelected;
 
   const toggle = (id: number) => {
     const n = new Set(selected); if (n.has(id)) { n.delete(id); } else { n.add(id); } setSelected(n);
   };
-  const toggleAll = () => {
-    if (pageRows.every((r) => selected.has(r.id))) {
-      const n = new Set(selected); pageRows.forEach((r) => n.delete(r.id)); setSelected(n);
-    } else {
-      const n = new Set(selected); pageRows.forEach((r) => n.add(r.id)); setSelected(n);
-    }
+  const toggleAll = (checked: boolean) => {
+    const n = new Set(selected);
+    pageRows.forEach((r) => (checked ? n.add(r.id) : n.delete(r.id)));
+    setSelected(n);
   };
   const removeSelected = () => {
     if (selected.size === 0) return;
@@ -102,96 +114,121 @@ const MessageQueue = () => {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
-        <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("sys.queue.title")}</h1>
-        <div className="flex gap-2">
-          <button onClick={removeSelected} className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg text-white" style={{ background: "hsl(var(--admin-danger))" }}>
-            <Trash2 className="w-4 h-4" /> {t("sys.queue.deleteSelected")}
-          </button>
-          <button onClick={removeAll} className="inline-flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg text-white" style={{ background: "hsl(var(--admin-danger))" }}>
-            <Trash2 className="w-4 h-4" /> {t("sys.queue.deleteAll")}
-          </button>
-        </div>
-      </div>
-
-      <div className="admin-card p-5 mb-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-xs font-bold mb-1 inline-block" style={{ color: "hsl(var(--admin-muted))" }}>{t("log.from")}</span>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="admin-input w-full" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-bold mb-1 inline-block" style={{ color: "hsl(var(--admin-muted))" }}>{t("log.to")}</span>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="admin-input w-full" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-bold mb-1 inline-block" style={{ color: "hsl(var(--admin-muted))" }}>{t("sys.queue.fromAddr")}</span>
-            <input value={fromAddr} onChange={(e) => setFromAddr(e.target.value)} className="admin-input w-full" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-bold mb-1 inline-block" style={{ color: "hsl(var(--admin-muted))" }}>{t("sys.queue.toAddr")}</span>
-            <input value={toAddr} onChange={(e) => setToAddr(e.target.value)} className="admin-input w-full" />
-          </label>
-          <label className="flex items-center gap-2 mt-2">
-            <input type="checkbox" checked={notSent} onChange={(e) => setNotSent(e.target.checked)} />
-            <span className="text-sm font-semibold">{t("sys.queue.onlyNotSent")}</span>
-          </label>
-        </div>
-        <div className="mt-4">
-          <button className="admin-btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
-            <Search className="w-4 h-4" /> {t("set.search")}
-          </button>
-        </div>
-      </div>
-
-      <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[1100px]">
-            <thead style={{ background: "hsl(var(--admin-bg))" }}>
-              <tr className="text-left">
-                <th className="px-4 py-3 w-10"><input type="checkbox" checked={pageRows.length > 0 && pageRows.every((r) => selected.has(r.id))} onChange={toggleAll} /></th>
-                <th className="px-4 py-3 font-bold">ID</th>
-                <th className="px-4 py-3 font-bold">{t("sys.queue.subject")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.queue.from")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.queue.to")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.queue.createdOn")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.queue.sentOn")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.queue.priority")}</th>
-                <th className="px-4 py-3 font-bold">{t("common.edit")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map((m) => (
-                <tr key={m.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <td className="px-4 py-3"><input type="checkbox" checked={selected.has(m.id)} onChange={() => toggle(m.id)} /></td>
-                  <td className="px-4 py-3 text-xs font-mono">{m.id}</td>
-                  <td className="px-4 py-3 text-xs">{m.subject}</td>
-                  <td className="px-4 py-3 text-xs">{m.from}</td>
-                  <td className="px-4 py-3 text-xs">{m.to}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{m.createdOn}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: m.sentOn ? "hsl(142 71% 35%)" : "hsl(var(--admin-muted))" }}>{m.sentOn || "—"}</td>
-                  <td className="px-4 py-3 text-xs"><span className="px-2 py-0.5 rounded-md text-white text-xs font-bold" style={{ background: "hsl(0 80% 55%)" }}>{m.priority}</span></td>
-                  <td className="px-4 py-3">
-                    <button className="px-2 py-1 rounded-md text-xs font-bold bg-muted"><Pencil className="w-3.5 h-3.5" /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between gap-4 px-6 py-3 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-          <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-            {(page - 1) * perPage + 1} - {Math.min(page * perPage, filtered.length)} of {filtered.length} items
-          </p>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map((p) => (
-              <button key={p} onClick={() => setPage(p)} className="w-8 h-8 rounded-md text-xs font-bold"
-                style={p === page ? { background: "hsl(var(--admin-primary))", color: "white" } : { background: "hsl(var(--admin-bg))" }}>
-                {p}
-              </button>
-            ))}
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">{t("sys.queue.title")}</h1>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="destructive" onClick={removeSelected}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> {t("sys.queue.deleteSelected")}
+            </Button>
+            <Button variant="destructive" onClick={removeAll}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> {t("sys.queue.deleteAll")}
+            </Button>
           </div>
-        </div>
+        </header>
+
+        <section className="rounded-lg border bg-card p-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="mq-from" className="text-xs">{t("log.from")}</Label>
+              <Input id="mq-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mq-to" className="text-xs">{t("log.to")}</Label>
+              <Input id="mq-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mq-fromaddr" className="text-xs">{t("sys.queue.fromAddr")}</Label>
+              <Input id="mq-fromaddr" value={fromAddr} onChange={(e) => setFromAddr(e.target.value)} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="mq-toaddr" className="text-xs">{t("sys.queue.toAddr")}</Label>
+              <Input id="mq-toaddr" value={toAddr} onChange={(e) => setToAddr(e.target.value)} className="h-9" />
+            </div>
+            <label className="mt-2 flex items-center gap-2">
+              <Checkbox checked={notSent} onCheckedChange={(v) => setNotSent(v === true)} />
+              <span className="text-sm font-medium">{t("sys.queue.onlyNotSent")}</span>
+            </label>
+          </div>
+          <div className="mt-4">
+            <Button size="sm">
+              <Search className="mr-1.5 h-4 w-4" /> {t("set.search")}
+            </Button>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-lg border bg-card">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px] divide-y text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="w-10 px-4 py-3 text-left">
+                    <Checkbox
+                      checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                      onCheckedChange={(v) => toggleAll(v === true)}
+                      aria-label={t("common.selectAll")}
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">ID</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("sys.queue.subject")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("sys.queue.from")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("sys.queue.to")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("sys.queue.createdOn")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("sys.queue.sentOn")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("sys.queue.priority")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("common.edit")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {pageRows.map((m) => (
+                  <tr key={m.id} className="hover:bg-muted/40 transition">
+                    <td className="px-4 py-3">
+                      <Checkbox
+                        checked={selected.has(m.id)}
+                        onCheckedChange={() => toggle(m.id)}
+                        aria-label={`${t("common.selectAll")} · ${m.id}`}
+                      />
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs">{m.id}</td>
+                    <td className="px-4 py-3 text-xs">{m.subject}</td>
+                    <td className="px-4 py-3 text-xs">{m.from}</td>
+                    <td className="px-4 py-3 text-xs">{m.to}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{m.createdOn}</td>
+                    <td className={`px-4 py-3 text-xs ${m.sentOn ? "text-emerald-700" : "text-muted-foreground"}`}>{m.sentOn || "—"}</td>
+                    <td className="px-4 py-3 text-xs">
+                      <Badge variant="outline" className={`font-medium ${priorityBadgeClass(m.priority)}`}>
+                        {m.priority}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label={t("common.edit")}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between gap-4 border-t px-4 py-3">
+            <p className="text-xs text-muted-foreground">
+              {(page - 1) * perPage + 1} - {Math.min(page * perPage, filtered.length)} of {filtered.length} items
+            </p>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map((p) => (
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={p === page ? "default" : "ghost"}
+                  className="h-8 w-8 p-0"
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </AdminLayout>
   );
