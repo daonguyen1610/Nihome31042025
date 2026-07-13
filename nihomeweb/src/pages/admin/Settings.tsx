@@ -3,19 +3,10 @@ import { Save, Building2, Mail, Phone, MapPin, Globe } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-
-const Toggle = ({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) => (
-  <button
-    onClick={() => onChange(!on)}
-    className="w-11 h-6 rounded-full relative transition"
-    style={{ background: on ? "hsl(var(--admin-primary))" : "hsl(var(--admin-border))" }}
-  >
-    <span
-      className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition shadow"
-      style={{ left: on ? "calc(100% - 22px)" : "2px" }}
-    />
-  </button>
-);
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 const AdminSettings = () => {
   const { t } = useI18n();
@@ -55,67 +46,59 @@ const AdminSettings = () => {
 
   return (
     <AdminLayout>
-      <div className="mb-7">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">{t("settings.title")}</h1>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header>
+          <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
+        </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        {/* Company info */}
-        <div className="admin-card p-7">
-          <h2 className="font-display text-lg font-extrabold mb-1">{t("settings.company")}</h2>
-          <p className="text-xs mb-6" style={{ color: "hsl(var(--admin-muted))" }}>
-            {t("settings.companyDesc")}
-          </p>
-          <div className="space-y-4">
-            {fields.map((f) => (
-              <div key={f.key}>
-                <label className="text-xs uppercase tracking-wider font-bold mb-2 block" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {f.label}
-                </label>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {/* Company info */}
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="text-lg font-semibold">{t("settings.company")}</h2>
+            <p className="mb-6 text-xs text-muted-foreground">{t("settings.companyDesc")}</p>
+            <div className="space-y-4">
+              {fields.map((f) => (
+                <div key={f.key} className="space-y-1.5">
+                  <Label className="text-xs" htmlFor={`settings-${f.key}`}>{f.label}</Label>
+                  <div className="relative">
+                    <f.icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id={`settings-${f.key}`}
+                      value={company[f.key]}
+                      onChange={(e) => setCompany({ ...company, [f.key]: e.target.value })}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+              ))}
+              <Button onClick={save} className="mt-3">
+                <Save className="mr-1.5 h-4 w-4" /> {t("common.save")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Features */}
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="text-lg font-semibold">{t("settings.system")}</h2>
+            <p className="mb-6 text-xs text-muted-foreground">{t("settings.systemDesc")}</p>
+            <div className="space-y-3">
+              {featureList.map((f) => (
                 <div
-                  className="flex items-center gap-3 rounded-xl px-4 py-3 border"
-                  style={{ background: "hsl(var(--admin-bg))", borderColor: "hsl(var(--admin-border))" }}
+                  key={f.key}
+                  className="flex items-center justify-between gap-4 rounded-md border p-4"
                 >
-                  <f.icon className="w-4 h-4" style={{ color: "hsl(var(--admin-primary))" }} />
-                  <input
-                    value={company[f.key]}
-                    onChange={(e) => setCompany({ ...company, [f.key]: e.target.value })}
-                    className="bg-transparent text-sm outline-none flex-1 font-semibold"
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{f.label}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{f.desc}</p>
+                  </div>
+                  <Switch
+                    checked={features[f.key]}
+                    onCheckedChange={(v) => setFeatures({ ...features, [f.key]: v })}
+                    aria-label={f.label}
                   />
                 </div>
-              </div>
-            ))}
-            <button onClick={save} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm mt-3">
-              <Save className="w-4 h-4" /> {t("common.save")}
-            </button>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="admin-card p-7">
-          <h2 className="font-display text-lg font-extrabold mb-1">{t("settings.system")}</h2>
-          <p className="text-xs mb-6" style={{ color: "hsl(var(--admin-muted))" }}>
-            {t("settings.systemDesc")}
-          </p>
-          <div className="space-y-3">
-            {featureList.map((f) => (
-              <div
-                key={f.key}
-                className="flex items-center justify-between gap-4 p-4 rounded-2xl"
-                style={{ background: "hsl(var(--admin-bg))" }}
-              >
-                <div className="min-w-0">
-                  <p className="font-bold text-sm">{f.label}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "hsl(var(--admin-muted))" }}>
-                    {f.desc}
-                  </p>
-                </div>
-                <Toggle
-                  on={features[f.key]}
-                  onChange={(v) => setFeatures({ ...features, [f.key]: v })}
-                />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

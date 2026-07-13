@@ -3,6 +3,17 @@ import { Pencil, Play, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type Task = {
   id: string;
@@ -52,84 +63,138 @@ const ScheduleTasks = () => {
 
   return (
     <AdminLayout>
-      <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight mb-3">{t("sys.tasks.title")}</h1>
-      <div className="admin-card p-5 mb-5">
-        <p className="text-sm font-semibold mb-1">{t("sys.tasks.note1")}</p>
-        <p className="text-sm font-bold">{t("sys.tasks.note2")}</p>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header>
+          <h1 className="text-2xl font-semibold">{t("sys.tasks.title")}</h1>
+        </header>
 
-      <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[1000px]">
-            <thead style={{ background: "hsl(var(--admin-bg))" }}>
-              <tr className="text-left">
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.name")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.seconds")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.enabled")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.stopOnError")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.lastStart")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.lastEnd")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.lastSuccess")}</th>
-                <th className="px-4 py-3 font-bold">{t("sys.tasks.runNow")}</th>
-                <th className="px-4 py-3 font-bold">{t("common.edit")}</th>
+        <div className="rounded-lg border bg-card p-4 text-sm">
+          <p className="font-medium">{t("sys.tasks.note1")}</p>
+          <p className="mt-1 font-semibold">{t("sys.tasks.note2")}</p>
+        </div>
+
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="min-w-[1000px] w-full divide-y text-sm">
+            <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-3 py-3 text-left font-medium">{t("sys.tasks.name")}</th>
+                <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("sys.tasks.seconds")}</th>
+                <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("sys.tasks.enabled")}</th>
+                <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("sys.tasks.stopOnError")}</th>
+                <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("sys.tasks.lastStart")}</th>
+                <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("sys.tasks.lastEnd")}</th>
+                <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("sys.tasks.lastSuccess")}</th>
+                <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y">
               {tasks.map((tk) => (
-                <tr key={tk.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <td className="px-4 py-3 font-semibold">{tk.name}</td>
-                  <td className="px-4 py-3">{tk.seconds}</td>
-                  <td className="px-4 py-3">{tk.enabled ? <Check className="w-4 h-4" style={{ color: "hsl(142 71% 40%)" }} /> : <X className="w-4 h-4" style={{ color: "hsl(var(--admin-danger))" }} />}</td>
-                  <td className="px-4 py-3">{tk.stopOnError ? <Check className="w-4 h-4" style={{ color: "hsl(142 71% 40%)" }} /> : <X className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{tk.lastStart || "—"}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{tk.lastEnd || "—"}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{tk.lastSuccess || "—"}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => runNow(tk.id)} className="px-2 py-1 rounded-md text-xs font-bold text-white" style={{ background: "hsl(var(--admin-primary))" }}>
-                      <Play className="w-3.5 h-3.5" />
-                    </button>
+                <tr key={tk.id} className="hover:bg-muted/40 transition">
+                  <td className="px-3 py-3 font-medium">{tk.name}</td>
+                  <td className="whitespace-nowrap px-3 py-3">{tk.seconds}</td>
+                  <td className="px-3 py-3">
+                    {tk.enabled
+                      ? <Check className="h-4 w-4 text-emerald-600" />
+                      : <X className="h-4 w-4 text-muted-foreground" />}
                   </td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => { setEditing(tk); setDraft(tk); }} className="px-2 py-1 rounded-md text-xs font-bold bg-muted">
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
+                  <td className="px-3 py-3">
+                    {tk.stopOnError
+                      ? <Check className="h-4 w-4 text-amber-600" />
+                      : <X className="h-4 w-4 text-muted-foreground" />}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{tk.lastStart || "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{tk.lastEnd || "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{tk.lastSuccess || "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right">
+                    <div className="inline-flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => runNow(tk.id)}
+                        title={t("sys.tasks.runNow")}
+                        aria-label={t("sys.tasks.runNow")}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => { setEditing(tk); setDraft(tk); }}
+                        title={t("common.edit")}
+                        aria-label={t("common.edit")}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
 
-      {editing && draft && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => { setEditing(null); setDraft(null); }}>
-          <div className="bg-white rounded-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-xl font-extrabold mb-4">{t("common.edit")}: {editing.name}</h3>
-            <div className="space-y-3">
-              <label className="block">
-                <span className="text-xs font-bold block mb-1" style={{ color: "hsl(var(--admin-muted))" }}>{t("sys.tasks.name")}</span>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="admin-input w-full" />
-              </label>
-              <label className="block">
-                <span className="text-xs font-bold block mb-1" style={{ color: "hsl(var(--admin-muted))" }}>{t("sys.tasks.seconds")}</span>
-                <input type="number" value={draft.seconds} onChange={(e) => setDraft({ ...draft, seconds: +e.target.value })} className="admin-input w-full" />
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={draft.enabled} onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })} />
-                <span className="text-sm font-semibold">{t("sys.tasks.enabled")}</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={draft.stopOnError} onChange={(e) => setDraft({ ...draft, stopOnError: e.target.checked })} />
-                <span className="text-sm font-semibold">{t("sys.tasks.stopOnError")}</span>
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => { setEditing(null); setDraft(null); }} className="px-4 py-2 rounded-lg text-sm font-bold bg-muted">{t("common.cancel")}</button>
-              <button onClick={submit} className="admin-btn-primary px-4 py-2 text-sm">{t("proc.save")}</button>
-            </div>
-          </div>
-        </div>
-      )}
+        <Dialog
+          open={!!editing}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditing(null);
+              setDraft(null);
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md">
+            {editing && draft && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{t("common.edit")}: {editing.name}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" htmlFor="task-name">{t("sys.tasks.name")}</Label>
+                    <Input
+                      id="task-name"
+                      value={draft.name}
+                      onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" htmlFor="task-seconds">{t("sys.tasks.seconds")}</Label>
+                    <Input
+                      id="task-seconds"
+                      type="number"
+                      value={draft.seconds}
+                      onChange={(e) => setDraft({ ...draft, seconds: +e.target.value })}
+                    />
+                  </div>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={draft.enabled}
+                      onCheckedChange={(v) => setDraft({ ...draft, enabled: v === true })}
+                    />
+                    <span className="text-sm font-medium">{t("sys.tasks.enabled")}</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={draft.stopOnError}
+                      onCheckedChange={(v) => setDraft({ ...draft, stopOnError: v === true })}
+                    />
+                    <span className="text-sm font-medium">{t("sys.tasks.stopOnError")}</span>
+                  </label>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => { setEditing(null); setDraft(null); }}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button onClick={submit}>{t("proc.save")}</Button>
+                </DialogFooter>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
     </AdminLayout>
   );
 };

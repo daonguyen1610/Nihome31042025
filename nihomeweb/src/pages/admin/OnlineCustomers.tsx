@@ -26,42 +26,41 @@ const OnlineCustomers = () => {
   const { t } = useI18n();
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{t("online.title")}</h1>
-          <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-            {data.length} người dùng
-          </p>
-        </div>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header>
+          <h1 className="text-2xl font-semibold">{t("online.title")}</h1>
+          <p className="text-xs italic text-muted-foreground">{data.length} người dùng</p>
+        </header>
 
-      <div className="admin-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[800px]">
-            <thead style={{ background: "hsl(var(--admin-bg))" }}>
-              <tr className="text-left">
-                <th className="px-5 py-3 font-semibold">{t("online.customer")}</th>
-                <th className="px-5 py-3 font-semibold">{t("cust.ip")}</th>
-                <th className="px-5 py-3 font-semibold">{t("online.location")}</th>
-                <th className="px-5 py-3 font-semibold">{t("cust.lastActivity")}</th>
-                <th className="px-5 py-3 font-semibold">{t("online.lastPage")}</th>
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="min-w-[800px] w-full divide-y text-sm">
+            <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium">{t("online.customer")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("cust.ip")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("online.location")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("cust.lastActivity")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("online.lastPage")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y">
               {data.map((o) => (
-                <tr key={o.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <td className="px-5 py-3">
+                <tr key={o.id} className="hover:bg-muted/40 transition">
+                  <td className="px-4 py-3">
                     <span
-                      className="inline-flex items-center gap-2 font-semibold"
-                      style={{ color: o.customer === "Guest" ? "hsl(var(--admin-muted))" : "hsl(var(--admin-primary))" }}
+                      className={
+                        o.customer === "Guest"
+                          ? "inline-flex items-center gap-2 font-medium text-muted-foreground"
+                          : "inline-flex items-center gap-2 font-medium text-primary"
+                      }
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {o.customer}
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> {o.customer}
                     </span>
                   </td>
-                  <td className="px-5 py-3 font-mono text-xs">{o.ip}</td>
-                  <td className="px-5 py-3 text-xs">{o.location}</td>
-                  <td className="px-5 py-3 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>{o.lastActivity}</td>
-                  <td className="px-5 py-3 text-xs">{o.lastPage}</td>
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{o.ip}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-xs">{o.location}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{o.lastActivity}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-xs">{o.lastPage}</td>
                 </tr>
               ))}
             </tbody>
