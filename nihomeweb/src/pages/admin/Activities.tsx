@@ -223,9 +223,13 @@ const AdminActivities = () => {
                       </Link>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3">
-                      <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
-                        {a.category}
-                      </Badge>
+                      {a.category ? (
+                        <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
+                          {a.category}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.author ?? "—"}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.date}</td>
