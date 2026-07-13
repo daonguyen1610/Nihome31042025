@@ -12,6 +12,17 @@ import GalleryEditor from "@/components/admin/GalleryEditor";
 import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
 import ContentBlockEditor from "@/components/admin/ContentBlockEditor";
 import type { ContentItem } from "@/services/contentApi";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FormData {
   id: number;
@@ -161,104 +172,106 @@ const NewsForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   return (
     <AdminLayout>
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          to="/admin/news"
-          className="w-10 h-10 rounded-full bg-white border flex items-center justify-center hover:bg-muted transition"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {mode === "create" ? t("adminNews.addTitle") : t("adminNews.editTitle")}
-          </h1>
-          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>{mode === "edit" && data.slug}</p>
-        </div>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex items-center gap-3">
+          <Button asChild variant="outline" size="icon" className="rounded-full shrink-0">
+            <Link to="/admin/news">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">
+              {mode === "create" ? t("adminNews.addTitle") : t("adminNews.editTitle")}
+            </h1>
+            <p className="text-sm text-muted-foreground">{mode === "edit" && data.slug}</p>
+          </div>
+        </header>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
-            <div className="space-y-4">
-              <Field label={t("adminNews.field.title") + " *"}>
-                <input className="admin-input" value={data.title} onChange={(e) => update("title", e.target.value)} required />
-              </Field>
-              <Field label={t("adminNews.field.excerpt")}>
-                <textarea className="admin-input min-h-20" value={data.excerpt} onChange={(e) => update("excerpt", e.target.value)} />
-              </Field>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Field label={t("adminNews.field.category")}>
-                  <select className="admin-input" value={data.category} onChange={(e) => update("category", e.target.value)}>
-                    <option value="">{t("form.selectCategory")}</option>
-                    {[
-                      ...categoryOptions,
-                      ...(data.category && !categoryOptions.includes(data.category) ? [data.category] : []),
-                    ].map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold">{t("form.basicInfo")}</h2>
+              <div className="space-y-4">
+                <Field label={t("adminNews.field.title") + " *"}>
+                  <Input value={data.title} onChange={(e) => update("title", e.target.value)} required />
                 </Field>
-                <Field label={t("adminNews.field.date")}>
-                  <input type="date" className="admin-input" value={data.date} onChange={(e) => update("date", e.target.value)} />
+                <Field label={t("adminNews.field.excerpt")}>
+                  <Textarea className="min-h-20" value={data.excerpt} onChange={(e) => update("excerpt", e.target.value)} />
                 </Field>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <Field label={t("adminNews.field.category")}>
+                    <Select value={data.category || undefined} onValueChange={(v) => update("category", v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("form.selectCategory")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          ...categoryOptions,
+                          ...(data.category && !categoryOptions.includes(data.category) ? [data.category] : []),
+                        ].map((option) => (
+                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label={t("adminNews.field.date")}>
+                    <Input type="date" value={data.date} onChange={(e) => update("date", e.target.value)} />
+                  </Field>
+                </div>
               </div>
+            </div>
+
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold">{t("form.content")}</h2>
+              <Field label={t("adminNews.field.content")}>
+                <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} />
+              </Field>
             </div>
           </div>
 
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">{t("form.content")}</h2>
-            <Field label={t("adminNews.field.content")}>
-              <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} />
-            </Field>
-          </div>
-        </div>
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="mb-4 text-base font-semibold">{t("form.media")}</h2>
+              <Field label={t("adminNews.field.image") + " *"}>
+                <FeaturedImageUploader
+                  imageUrl={data.imageUrl}
+                  pendingPreview={pendingImagePreview}
+                  pendingFileName={pendingImageFile?.name}
+                  onUrlChange={(url) => update("imageUrl", url)}
+                  onFileSelected={(file) => {
+                    setPendingImageFile(file);
+                    toast({ title: t("form.updated"), description: file.name });
+                  }}
+                  onClearPending={() => setPendingImageFile(null)}
+                  disabled={uploadingImage}
+                />
+              </Field>
+            </div>
 
-        <div className="space-y-5">
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-4">{t("form.media")}</h2>
-            <Field label={t("adminNews.field.image") + " *"}>
-              <FeaturedImageUploader
-                imageUrl={data.imageUrl}
-                pendingPreview={pendingImagePreview}
-                pendingFileName={pendingImageFile?.name}
-                onUrlChange={(url) => update("imageUrl", url)}
-                onFileSelected={(file) => {
-                  setPendingImageFile(file);
-                  toast({ title: t("form.updated"), description: file.name });
-                }}
-                onClearPending={() => setPendingImageFile(null)}
-                disabled={uploadingImage}
-              />
-            </Field>
-          </div>
+            <div className="rounded-lg border bg-card p-6">
+              <h2 className="mb-1 text-base font-semibold">{t("media.gallery.title")}</h2>
+              <p className="mb-4 text-xs text-muted-foreground">
+                {t("media.gallery.descPost")}
+              </p>
+              <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
+            </div>
 
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-1">{t("media.gallery.title")}</h2>
-            <p className="text-xs mb-4" style={{ color: "hsl(var(--admin-muted))" }}>
-              {t("media.gallery.descPost")}
-            </p>
-            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
+            <Button type="submit" disabled={submitting || uploadingImage} className="w-full">
+              <Save className="mr-1.5 h-4 w-4" />
+              {mode === "create" ? t("form.create") : t("form.update")}
+            </Button>
           </div>
-
-          <button type="submit" disabled={submitting || uploadingImage} className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50">
-            <Save className="w-4 h-4" />
-            {mode === "create" ? t("form.create") : t("form.update")}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </AdminLayout>
   );
 };
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "hsl(var(--admin-muted))" }}>
-      {label}
-    </span>
+  <div className="space-y-1.5">
+    <Label className="text-xs">{label}</Label>
     {children}
-  </label>
+  </div>
 );
 
 export default NewsForm;

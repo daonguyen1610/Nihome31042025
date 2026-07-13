@@ -3,10 +3,13 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit, Trash2, MapPin, Maximize2, Calendar, Building, Tag } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useProject } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
 import { PageLoading, PageError } from "@/components/PageState";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const ProjectView = () => {
@@ -23,11 +26,13 @@ const ProjectView = () => {
   if (!project) {
     return (
       <AdminLayout>
-        <div className="admin-card p-10 text-center">
-          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>Không tìm thấy dự án.</p>
-          <Link to="/admin/projects" className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm mt-4">
-            <ArrowLeft className="w-4 h-4" /> {t("form.back")}
-          </Link>
+        <div className="rounded-lg border bg-card p-10 text-center">
+          <p className="text-sm text-muted-foreground">Không tìm thấy dự án.</p>
+          <Button asChild className="mt-4">
+            <Link to="/admin/projects">
+              <ArrowLeft className="mr-1.5 h-4 w-4" /> {t("form.back")}
+            </Link>
+          </Button>
         </div>
       </AdminLayout>
     );
@@ -46,136 +51,136 @@ const ProjectView = () => {
 
   return (
     <AdminLayout>
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/admin/projects"
-            className="w-10 h-10 rounded-full bg-white border flex items-center justify-center hover:bg-muted transition"
-            style={{ borderColor: "hsl(var(--admin-border))" }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <div>
-            <p className="text-xs uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-primary))" }}>
-              {t("proj.detail")}
-            </p>
-            <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">{project.name}</h1>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            to={`/admin/projects/${project.slug}/edit`}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border bg-white hover:bg-muted transition"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-primary))" }}
-          >
-            <Edit className="w-4 h-4" /> {t("common.edit")}
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border bg-white hover:bg-muted transition"
-            style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-danger))" }}
-          >
-            <Trash2 className="w-4 h-4" /> {t("common.delete")}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-          <div className="admin-card overflow-hidden">
-            <div className="aspect-[16/9] bg-muted">
-              <img src={project.imageUrl} alt={project.name} className="w-full h-full object-cover" />
-            </div>
-          </div>
-
-          {project.description && (
-            <div className="admin-card p-6">
-              <h2 className="font-bold mb-3">{t("proj.field.description")}</h2>
-              <p className="text-sm leading-relaxed" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
-                {project.description}
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Button asChild variant="outline" size="icon" className="rounded-full shrink-0">
+              <Link to="/admin/projects">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-primary">
+                {t("proj.detail")}
               </p>
+              <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">{project.name}</h1>
             </div>
-          )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to={`/admin/projects/${project.slug}/edit`}>
+                <Edit className="mr-1.5 h-4 w-4" /> {t("common.edit")}
+              </Link>
+            </Button>
+            <Button variant="outline" onClick={handleDelete} className="text-destructive hover:text-destructive">
+              <Trash2 className="mr-1.5 h-4 w-4" /> {t("common.delete")}
+            </Button>
+          </div>
+        </header>
 
-          {(project.challenges?.length || project.solutions?.length) ? (
-            <div className="grid md:grid-cols-2 gap-5">
-              {project.challenges?.length ? (
-                <div className="admin-card p-6">
-                  <h2 className="font-bold mb-3">{t("proj.field.challenges").split(" (")[0]}</h2>
-                  <ul className="space-y-2 text-sm list-disc list-inside" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
-                    {project.challenges.map((c, i) => <li key={i}>{c}</li>)}
-                  </ul>
-                </div>
-              ) : null}
-              {project.solutions?.length ? (
-                <div className="admin-card p-6">
-                  <h2 className="font-bold mb-3">{t("proj.field.solutions").split(" (")[0]}</h2>
-                  <ul className="space-y-2 text-sm list-disc list-inside" style={{ color: "hsl(var(--admin-sidebar-text))" }}>
-                    {project.solutions.map((c, i) => <li key={i}>{c}</li>)}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {project.gallery && project.gallery.length > 0 ? (
-            <div className="admin-card p-6">
-              <h2 className="font-bold mb-4">{t("media.gallery.label")}</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {project.gallery.map((imageUrl, index) => (
-                  <button
-                    key={`${imageUrl}-${index}`}
-                    type="button"
-                    onClick={() => setSelectedImage(imageUrl)}
-                    className="group relative aspect-[4/3] rounded-xl overflow-hidden border bg-muted text-left"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={`${project.name} ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                  </button>
-                ))}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="overflow-hidden rounded-lg border bg-card">
+              <div className="aspect-[16/9] bg-muted">
+                <img src={project.imageUrl} alt={project.name} className="w-full h-full object-cover" />
               </div>
             </div>
-          ) : null}
-        </div>
 
-        <div className="admin-card p-6 h-fit">
-          <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
-          <div className="space-y-3 text-sm">
-            <Info icon={Building} label={t("proj.field.client")} value={project.client} />
-            <Info icon={MapPin} label={t("proj.field.location")} value={project.location} />
-            <Info icon={Maximize2} label={t("proj.scale")} value={project.scale} />
-            <Info icon={Tag} label={t("proj.field.scope")} value={project.scope} />
-            <Info icon={Calendar} label={t("proj.field.year")} value={project.year ?? "—"} />
-            <Info icon={Tag} label={t("proj.field.category")} value={project.category ?? "—"} />
-            <div className="pt-3 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-              <span
-                className="admin-chip"
-                style={
-                  project.status === "ongoing"
-                    ? { background: "hsl(var(--admin-warning-soft))", color: "hsl(var(--admin-warning))" }
-                    : { background: "hsl(var(--admin-success-soft))", color: "hsl(var(--admin-success))" }
-                }
-              >
-                {project.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")}
-              </span>
+            {project.description && (
+              <div className="rounded-lg border bg-card p-6">
+                <h2 className="mb-3 text-base font-semibold">{t("proj.field.description")}</h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {project.description}
+                </p>
+              </div>
+            )}
+
+            {(project.challenges?.length || project.solutions?.length) ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {project.challenges?.length ? (
+                  <div className="rounded-lg border bg-card p-6">
+                    <h2 className="mb-3 text-base font-semibold">{t("proj.field.challenges").split(" (")[0]}</h2>
+                    <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
+                      {project.challenges.map((c, i) => <li key={i}>{c}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+                {project.solutions?.length ? (
+                  <div className="rounded-lg border bg-card p-6">
+                    <h2 className="mb-3 text-base font-semibold">{t("proj.field.solutions").split(" (")[0]}</h2>
+                    <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
+                      {project.solutions.map((c, i) => <li key={i}>{c}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {project.gallery && project.gallery.length > 0 ? (
+              <div className="rounded-lg border bg-card p-6">
+                <h2 className="mb-4 text-base font-semibold">{t("media.gallery.label")}</h2>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {project.gallery.map((imageUrl, index) => (
+                    <button
+                      key={`${imageUrl}-${index}`}
+                      type="button"
+                      onClick={() => setSelectedImage(imageUrl)}
+                      className="group relative aspect-[4/3] overflow-hidden rounded-md border bg-muted text-left"
+                    >
+                      <img
+                        src={imageUrl}
+                        alt={`${project.name} ${index + 1}`}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="h-fit rounded-lg border bg-card p-6">
+            <h2 className="mb-4 text-base font-semibold">{t("form.basicInfo")}</h2>
+            <div className="space-y-3 text-sm">
+              <Info icon={Building} label={t("proj.field.client")} value={project.client} />
+              <Info icon={MapPin} label={t("proj.field.location")} value={project.location} />
+              <Info icon={Maximize2} label={t("proj.scale")} value={project.scale} />
+              <Info icon={Tag} label={t("proj.field.scope")} value={project.scope} />
+              <Info icon={Calendar} label={t("proj.field.year")} value={project.year ?? "—"} />
+              <Info icon={Tag} label={t("proj.field.category")} value={project.category ?? "—"} />
+              <div className="pt-3 border-t">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "gap-1.5 whitespace-nowrap font-medium",
+                    project.status === "ongoing"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-green-300 bg-green-100 text-green-800",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      project.status === "ongoing" ? "bg-amber-500" : "bg-green-600",
+                    )}
+                  />
+                  {project.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")}
+                </Badge>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
-        <DialogContent className="p-1 sm:max-w-5xl bg-transparent border-0 shadow-none">
+        <DialogContent className="border-0 bg-transparent p-1 shadow-none sm:max-w-5xl">
           {selectedImage ? (
             <img
               src={selectedImage}
               alt={project.name}
-              className="w-full max-h-[82vh] object-contain rounded-xl"
+              className="max-h-[82vh] w-full rounded-md object-contain"
             />
           ) : null}
         </DialogContent>
@@ -186,10 +191,10 @@ const ProjectView = () => {
 
 const Info = ({ icon: Icon, label, value }: { icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; label: string; value: string }) => (
   <div className="flex items-start gap-3">
-    <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "hsl(var(--admin-muted))" }} />
+    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
     <div className="min-w-0">
-      <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: "hsl(var(--admin-muted))" }}>{label}</p>
-      <p className="font-semibold break-words">{value}</p>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-medium break-words">{value}</p>
     </div>
   </div>
 );

@@ -12,6 +12,8 @@ import GalleryEditor from "@/components/admin/GalleryEditor";
 import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
 import ContentBlockEditor from "@/components/admin/ContentBlockEditor";
 import type { ContentItem } from "@/services/contentApi";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 interface FormData {
   id: number;
@@ -171,34 +173,33 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   return (
     <AdminLayout>
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          to="/admin/projects"
-          className="w-10 h-10 rounded-full bg-white border flex items-center justify-center hover:bg-muted transition"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Link>
-        <div>
-          <h1 className="font-display text-2xl lg:text-3xl font-extrabold tracking-tight">
-            {mode === "create" ? t("proj.addTitle") : t("proj.editTitle")}
-          </h1>
-          <p className="text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
-            {mode === "edit" && data.slug}
-          </p>
-        </div>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex items-center gap-3">
+          <Button asChild variant="outline" size="icon" className="rounded-full shrink-0">
+            <Link to="/admin/projects">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">
+              {mode === "create" ? t("proj.addTitle") : t("proj.editTitle")}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {mode === "edit" && data.slug}
+            </p>
+          </div>
+        </header>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-5">
 
           {/* ── Thông tin cơ bản ── */}
-          <div className="admin-card p-6">
+          <div className="rounded-lg border bg-card p-6">
             <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label={t("proj.field.name") + " *"} className="md:col-span-2">
                 <input
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.name}
                   onChange={(e) => update("name", e.target.value)}
                   placeholder="Dự án nhà máy ABC..."
@@ -207,7 +208,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               </Field>
               <Field label={t("proj.field.client")}>
                 <input
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.client}
                   onChange={(e) => update("client", e.target.value)}
                   placeholder="Tên chủ đầu tư"
@@ -215,7 +216,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               </Field>
               <Field label={t("proj.field.location")}>
                 <input
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.location}
                   onChange={(e) => update("location", e.target.value)}
                   placeholder="Tỉnh / thành phố"
@@ -223,7 +224,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               </Field>
               <Field label={t("proj.scale")}>
                 <input
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.scale}
                   onChange={(e) => update("scale", e.target.value)}
                   placeholder="15.000 m²"
@@ -234,7 +235,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
                   type="number"
                   min="1990"
                   max="2100"
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.year ?? ""}
                   onChange={(e) => update("year", e.target.value)}
                   placeholder={String(new Date().getFullYear())}
@@ -242,7 +243,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               </Field>
               <Field label={t("proj.field.category")}>
                 <select
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.category}
                   onChange={(e) => update("category", e.target.value)}
                 >
@@ -257,7 +258,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               </Field>
               <Field label={t("proj.field.status")}>
                 <select
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.status}
                   onChange={(e) => update("status", e.target.value)}
                 >
@@ -267,7 +268,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               </Field>
               <Field label={t("proj.field.scope")} className="md:col-span-2">
                 <input
-                  className="admin-input"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={data.scope}
                   onChange={(e) => update("scope", e.target.value)}
                   placeholder="Thiết kế, thi công, hoàn thiện..."
@@ -277,11 +278,11 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
           </div>
 
           {/* ── Mô tả ── */}
-          <div className="admin-card p-6">
+          <div className="rounded-lg border bg-card p-6">
             <h2 className="font-bold mb-4">{t("form.content")}</h2>
             <Field label={t("proj.field.description")}>
               <textarea
-                className="admin-input min-h-24"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
                 value={data.description ?? ""}
                 onChange={(e) => update("description", e.target.value)}
                 placeholder="Mô tả tổng quan về dự án..."
@@ -290,7 +291,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
           </div>
 
           {/* ── Rich content blocks ── */}
-          <div className="admin-card p-6">
+          <div className="rounded-lg border bg-card p-6">
             <h2 className="font-bold mb-4">{t("form.content")}</h2>
             <ContentBlockEditor
               value={data.content}
@@ -299,7 +300,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
           </div>
 
           {/* ── Thách thức & Giải pháp ── */}
-          <div className="admin-card p-6">
+          <div className="rounded-lg border bg-card p-6">
             <h2 className="font-bold mb-4">{t("proj.field.challenges")} & {t("proj.field.solutions")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ListEditor
@@ -317,7 +318,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             </div>
           </div>
 
-          <div className="admin-card p-6">
+          <div className="rounded-lg border bg-card p-6">
             <h2 className="font-bold mb-4">{t("projDetail.highlights")}</h2>
             <HighlightsEditor
               items={data.highlights}
@@ -328,7 +329,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
 
         {/* ── Sidebar ── */}
         <div className="space-y-5">
-          <div className="admin-card p-6">
+          <div className="rounded-lg border bg-card p-6">
             <h2 className="font-bold mb-4">{t("form.media")}</h2>
             <Field label={t("proj.field.image") + " *"}>
               <FeaturedImageUploader
@@ -346,35 +347,34 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             </Field>
           </div>
 
-          <div className="admin-card p-6">
-            <h2 className="font-bold mb-1">{t("media.gallery.title")}</h2>
-            <p className="text-xs mb-4" style={{ color: "hsl(var(--admin-muted))" }}>
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="mb-1 text-base font-semibold">{t("media.gallery.title")}</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
               {t("media.gallery.descProject")}
             </p>
             <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={submitting || uploadingImage}
-            className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-50"
+            className="w-full"
           >
-            <Save className="w-4 h-4" />
+            <Save className="mr-1.5 h-4 w-4" />
             {mode === "create" ? t("form.create") : t("form.update")}
-          </button>
+          </Button>
         </div>
       </form>
+      </div>
     </AdminLayout>
   );
 };
 
 const Field = ({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) => (
-  <label className={["block", className].filter(Boolean).join(" ")}>
-    <span className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "hsl(var(--admin-muted))" }}>
-      {label}
-    </span>
+  <div className={["space-y-1.5", className].filter(Boolean).join(" ")}>
+    <Label className="text-xs">{label}</Label>
     {children}
-  </label>
+  </div>
 );
 
 const ListEditor = ({
@@ -398,14 +398,14 @@ const ListEditor = ({
 
   return (
     <div>
-      <span className="text-xs font-bold uppercase tracking-wider mb-2 block" style={{ color: "hsl(var(--admin-muted))" }}>
+      <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </span>
       <div className="space-y-2">
         {items.map((item, i) => (
           <div key={i} className="flex gap-2">
             <input
-              className="admin-input flex-1"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1"
               value={item}
               onChange={(e) => updateItem(i, e.target.value)}
               placeholder={placeholder}
@@ -413,20 +413,18 @@ const ListEditor = ({
             <button
               type="button"
               onClick={() => removeItem(i)}
-              className="w-9 h-9 flex items-center justify-center rounded-lg border text-destructive hover:bg-destructive/10 transition"
-              style={{ borderColor: "hsl(var(--admin-border))" }}
+              className="flex h-9 w-9 items-center justify-center rounded-md border text-destructive transition hover:bg-destructive/10"
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
         ))}
         <button
           type="button"
           onClick={addItem}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-sm transition hover:bg-muted"
-          style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))" }}
+          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-2 text-sm text-muted-foreground transition hover:bg-muted"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="h-3.5 w-3.5" />
           {placeholder ? `+ ${placeholder}` : "+ Thêm"}
         </button>
       </div>
@@ -454,13 +452,13 @@ const HighlightsEditor = ({
       {items.map((item, index) => (
         <div key={index} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
           <input
-            className="admin-input"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={item.label}
             onChange={(e) => updateItem(index, "label", e.target.value)}
             placeholder="Nhãn (ví dụ: Diện tích)"
           />
           <input
-            className="admin-input"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             value={item.value}
             onChange={(e) => updateItem(index, "value", e.target.value)}
             placeholder="Giá trị (ví dụ: 250.000 m²)"
@@ -468,20 +466,18 @@ const HighlightsEditor = ({
           <button
             type="button"
             onClick={() => removeItem(index)}
-            className="w-9 h-9 flex items-center justify-center rounded-lg border text-destructive hover:bg-destructive/10 transition"
-            style={{ borderColor: "hsl(var(--admin-border))" }}
+            className="flex h-9 w-9 items-center justify-center rounded-md border text-destructive transition hover:bg-destructive/10"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       ))}
       <button
         type="button"
         onClick={addItem}
-        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed text-sm transition hover:bg-muted"
-        style={{ borderColor: "hsl(var(--admin-border))", color: "hsl(var(--admin-muted))" }}
+        className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-2 text-sm text-muted-foreground transition hover:bg-muted"
       >
-        <Plus className="w-3.5 h-3.5" />
+        <Plus className="h-3.5 w-3.5" />
         + Thêm điểm nổi bật
       </button>
     </div>
