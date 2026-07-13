@@ -9,6 +9,16 @@ import {
   newId,
   type SettingRow as SRow,
 } from "@/lib/settingsStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const AllSettingsPage = () => {
   const { t } = useI18n();
@@ -35,6 +45,11 @@ const AllSettingsPage = () => {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const pageRows = filtered.slice((page - 1) * perPage, page * perPage);
+  const dialogOpen = adding || editing !== null;
+  const closeDialog = () => {
+    setAdding(false);
+    setEditing(null);
+  };
 
   const persist = (next: SRow[]) => {
     setRows(next);
@@ -63,159 +78,156 @@ const AllSettingsPage = () => {
       persist(rows.map((r) => (r.id === editing.id ? draft : r)));
       toast({ title: t("form.updated") });
     }
-    setAdding(false);
-    setEditing(null);
+    closeDialog();
   };
 
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">
-          {t("set.all")}
-        </h1>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header>
+          <h1 className="text-2xl font-semibold">{t("set.all")}</h1>
+        </header>
 
-      {/* Search */}
-      <div className="admin-card p-6 mb-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs uppercase tracking-wider font-bold mb-2 block" style={{ color: "hsl(var(--admin-muted))" }}>
-              {t("set.name")}
-            </label>
-            <input
-              value={qName}
-              onChange={(e) => setQName(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none"
-              style={{ borderColor: "hsl(var(--admin-border))" }}
-            />
+        {/* Search */}
+        <section className="rounded-lg border bg-card p-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="all-settings-name" className="text-xs">{t("set.name")}</Label>
+              <Input
+                id="all-settings-name"
+                value={qName}
+                onChange={(e) => setQName(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="all-settings-value" className="text-xs">{t("set.value")}</Label>
+              <Input
+                id="all-settings-value"
+                value={qValue}
+                onChange={(e) => setQValue(e.target.value)}
+                className="h-9"
+              />
+            </div>
           </div>
-          <div>
-            <label className="text-xs uppercase tracking-wider font-bold mb-2 block" style={{ color: "hsl(var(--admin-muted))" }}>
-              {t("set.value")}
-            </label>
-            <input
-              value={qValue}
-              onChange={(e) => setQValue(e.target.value)}
-              className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none"
-              style={{ borderColor: "hsl(var(--admin-border))" }}
-            />
+          <div className="mt-4">
+            <Button onClick={() => setPage(1)}>
+              <Search className="mr-1.5 h-4 w-4" /> {t("set.search")}
+            </Button>
           </div>
-        </div>
-        <div className="mt-4">
-          <button
-            onClick={() => setPage(1)}
-            className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm"
-          >
-            <Search className="w-4 h-4" /> {t("set.search")}
-          </button>
-        </div>
-      </div>
+        </section>
 
-      {/* Table */}
-      <div className="admin-card overflow-hidden">
-        <div className="px-6 py-3 border-b flex items-center justify-between" style={{ borderColor: "hsl(var(--admin-border))" }}>
-          <button onClick={startAdd} className="admin-btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
-            <Plus className="w-4 h-4" /> {t("set.addRow")}
-          </button>
-          <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-            {filtered.length} {t("common.showing")}
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead style={{ background: "hsl(var(--admin-bg))" }}>
-              <tr className="text-left">
-                <th className="px-6 py-3 font-bold">{t("set.name")}</th>
-                <th className="px-6 py-3 font-bold">{t("set.value")}</th>
-                <th className="px-6 py-3 font-bold">{t("set.store")}</th>
-                <th className="px-6 py-3 font-bold w-40">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.map((r) => (
-                <tr key={r.id} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                  <td className="px-6 py-3 font-mono text-xs">{r.name}</td>
-                  <td className="px-6 py-3">{r.value}</td>
-                  <td className="px-6 py-3">{r.store}</td>
-                  <td className="px-6 py-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => startEdit(r)} className="px-2.5 py-1.5 rounded-md text-xs font-bold bg-muted inline-flex items-center gap-1">
-                        <Pencil className="w-3 h-3" /> {t("common.edit")}
-                      </button>
-                      <button onClick={() => remove(r.id)} className="px-2.5 py-1.5 rounded-md text-xs font-bold inline-flex items-center gap-1 text-white" style={{ background: "hsl(var(--admin-danger))" }}>
-                        <Trash2 className="w-3 h-3" /> {t("common.delete")}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {pageRows.length === 0 && (
+        {/* Table */}
+        <section className="overflow-hidden rounded-lg border bg-card">
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <Button size="sm" onClick={startAdd}>
+              <Plus className="mr-1.5 h-4 w-4" /> {t("set.addRow")}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              {filtered.length} {t("common.showing")}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <td colSpan={4} className="px-6 py-10 text-center text-sm" style={{ color: "hsl(var(--admin-muted))" }}>
-                    {t("posts.empty")}
-                  </td>
+                  <th className="px-4 py-3 text-left font-medium">{t("set.name")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("set.value")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("set.store")}</th>
+                  <th className="w-40 px-4 py-3 text-left font-medium">{t("common.actions")}</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* pagination */}
-        <div className="flex items-center justify-between gap-4 px-6 py-3 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-          <p className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-            {(page - 1) * perPage + 1} - {Math.min(page * perPage, filtered.length)} of {filtered.length} items
-          </p>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPage(p)}
-                className="w-8 h-8 rounded-md text-xs font-bold"
-                style={
-                  p === page
-                    ? { background: "hsl(var(--admin-primary))", color: "white" }
-                    : { background: "hsl(var(--admin-bg))" }
-                }
-              >
-                {p}
-              </button>
-            ))}
+              </thead>
+              <tbody className="divide-y">
+                {pageRows.map((r) => (
+                  <tr key={r.id} className="hover:bg-muted/40 transition">
+                    <td className="px-4 py-3 font-mono text-xs">{r.name}</td>
+                    <td className="px-4 py-3">{r.value}</td>
+                    <td className="px-4 py-3">{r.store}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => startEdit(r)}>
+                          <Pencil className="mr-1 h-3 w-3" /> {t("common.edit")}
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => remove(r.id)}>
+                          <Trash2 className="mr-1 h-3 w-3" /> {t("common.delete")}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {pageRows.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                      {t("posts.empty")}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
+
+          {/* pagination */}
+          <div className="flex items-center justify-between gap-4 border-t px-4 py-3">
+            <p className="text-xs text-muted-foreground">
+              {(page - 1) * perPage + 1} - {Math.min(page * perPage, filtered.length)} of {filtered.length} items
+            </p>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(totalPages, 8) }, (_, i) => i + 1).map((p) => (
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={p === page ? "default" : "ghost"}
+                  className="h-8 w-8 p-0"
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
 
-      {/* Editor modal */}
-      {(adding || editing) && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => { setAdding(false); setEditing(null); }}>
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-xl font-extrabold mb-4">
-              {adding ? t("set.addRow") : t("common.edit")}
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>{t("set.name")}</label>
-                <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none" style={{ borderColor: "hsl(var(--admin-border))" }} />
-              </div>
-              <div>
-                <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>{t("set.value")}</label>
-                <input value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none" style={{ borderColor: "hsl(var(--admin-border))" }} />
-              </div>
-              <div>
-                <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>{t("set.store")}</label>
-                <input value={draft.store} onChange={(e) => setDraft({ ...draft, store: e.target.value })} className="w-full rounded-lg px-3 py-2 text-sm bg-white border outline-none" style={{ borderColor: "hsl(var(--admin-border))" }} />
-              </div>
+      {/* Editor dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => (!open ? closeDialog() : null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{adding ? t("set.addRow") : t("common.edit")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="draft-name" className="text-xs">{t("set.name")}</Label>
+              <Input
+                id="draft-name"
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              />
             </div>
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => { setAdding(false); setEditing(null); }} className="px-4 py-2 rounded-lg text-sm font-bold bg-muted">
-                {t("common.cancel")}
-              </button>
-              <button onClick={submit} className="admin-btn-primary px-4 py-2 text-sm">
-                {t("proc.save")}
-              </button>
+            <div className="space-y-1.5">
+              <Label htmlFor="draft-value" className="text-xs">{t("set.value")}</Label>
+              <Input
+                id="draft-value"
+                value={draft.value}
+                onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="draft-store" className="text-xs">{t("set.store")}</Label>
+              <Input
+                id="draft-store"
+                value={draft.store}
+                onChange={(e) => setDraft({ ...draft, store: e.target.value })}
+              />
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={submit}>{t("proc.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

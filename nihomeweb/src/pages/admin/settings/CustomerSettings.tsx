@@ -16,6 +16,7 @@ import {
   saveCustomerSettings,
   type CustomerSettings,
 } from "@/lib/settingsStore";
+import { Button } from "@/components/ui/button";
 
 const CustomerSettingsPage = () => {
   const { t } = useI18n();
@@ -31,16 +32,15 @@ const CustomerSettingsPage = () => {
 
   return (
     <AdminLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">
-          {t("set.customer")}
-        </h1>
-        <button onClick={save} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2.5 text-sm">
-          <Save className="w-4 h-4" /> {t("common.save")}
-        </button>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">{t("set.customer")}</h1>
+          <Button onClick={save}>
+            <Save className="mr-1.5 h-4 w-4" /> {t("common.save")}
+          </Button>
+        </header>
 
-      <div className="space-y-5">
+        <div className="space-y-4">
         <SettingSection title={t("set.section.common")}>
           <SettingRow label="Registration method">
             <SelectInput
@@ -162,6 +162,7 @@ const CustomerSettingsPage = () => {
             <Toggle on={s.externalAuthAutoRegister} onChange={(v) => upd("externalAuthAutoRegister", v)} />
           </SettingRow>
         </SettingSection>
+        </div>
       </div>
     </AdminLayout>
   );

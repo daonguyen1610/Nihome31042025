@@ -6,7 +6,6 @@ import {
   Trash2,
   Languages as LanguagesIcon,
   FileText,
-  ChevronDown,
   Check,
   X,
   Loader2,
@@ -17,6 +16,27 @@ import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 /* ─── Helpers ───────────────────────────────────── */
 const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions"];
@@ -27,9 +47,7 @@ function jsonToPlainText(raw: string): string {
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      // Handle array of strings
       if (parsed.every((v: unknown) => typeof v === "string")) return parsed.join("\n\n");
-      // Handle array of objects (e.g. Sections with heading/body)
       if (parsed.every((v: unknown) => typeof v === "object" && v !== null)) {
         return parsed.map((s: Record<string, string>) => {
           if (s.heading && s.body) return `## ${s.heading}\n${s.body}`;
@@ -45,7 +63,6 @@ function jsonToPlainText(raw: string): string {
 function plainTextToJson(text: string, field: string): string {
   if (!text.trim()) return "";
   if (field === "Sections") {
-    // Parse ## heading\nbody format back to [{heading,body}]
     const sections = text.split(/\n\n+/).filter(Boolean).map((block) => {
       const m = block.match(/^##\s+(.+)\n([\s\S]*)$/);
       if (m) return { heading: m[1].trim(), body: m[2].trim() };
@@ -53,7 +70,6 @@ function plainTextToJson(text: string, field: string): string {
     });
     return JSON.stringify(sections);
   }
-  // For Content, Challenges, Solutions: split by blank lines into array
   const parts = text.split(/\n\n+/).filter(Boolean);
   return JSON.stringify(parts);
 }
@@ -248,7 +264,6 @@ const TranslationsPage = () => {
     setEntityModalLang("en");
     try {
       const { data } = await api.get(`/translations/entity/${selectedType}/${item.id}`);
-      // Convert JSON fields to plain text for display
       const orig: Record<string, string> = data.original ?? {};
       for (const f of JSON_FIELDS) {
         if (orig[f]) orig[f] = jsonToPlainText(orig[f]);
@@ -273,7 +288,6 @@ const TranslationsPage = () => {
     setEntitySaving(true);
     try {
       const raw = entityTranslations[entityModalLang] ?? {};
-      // Convert plain text back to JSON for storage
       const fields: Record<string, string> = {};
       for (const [k, v] of Object.entries(raw)) {
         fields[k] = JSON_FIELDS.includes(k) ? plainTextToJson(v, k) : v;
@@ -322,414 +336,360 @@ const TranslationsPage = () => {
   /* ─── Render ─── */
   return (
     <AdminLayout>
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="font-display text-3xl lg:text-4xl font-extrabold tracking-tight">
-          {t("set.languages")} — Translations
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
-          Manage all UI translation keys and content translations
-        </p>
-      </div>
+      <div className="space-y-4 p-4 sm:p-6">
+        <header>
+          <h1 className="text-2xl font-semibold">{t("set.languages")} — Translations</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage all UI translation keys and content translations
+          </p>
+        </header>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-5 p-1 rounded-xl w-fit" style={{ background: "hsl(var(--admin-bg))" }}>
-        {[
-          { id: "static" as const, label: "UI Translations", icon: LanguagesIcon },
-          { id: "entity" as const, label: "Content Translations", icon: FileText },
-        ].map((tb) => (
-          <button
-            key={tb.id}
-            onClick={() => setTab(tb.id)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all"
-            style={
-              tab === tb.id
-                ? { background: "hsl(var(--admin-primary))", color: "#fff" }
-                : { color: "hsl(var(--admin-muted))" }
-            }
-          >
-            <tb.icon className="w-4 h-4" /> {tb.label}
-          </button>
-        ))}
-      </div>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "static" | "entity")} className="w-fit">
+          <TabsList>
+            <TabsTrigger value="static" className="gap-1.5">
+              <LanguagesIcon className="h-4 w-4" /> UI Translations
+            </TabsTrigger>
+            <TabsTrigger value="entity" className="gap-1.5">
+              <FileText className="h-4 w-4" /> Content Translations
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-      {/* ════════ TAB 1: Static UI Translations ════════ */}
-      {tab === "static" && (
-        <>
-          {/* Toolbar */}
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <div
-              className="flex items-center gap-2 rounded-xl px-4 py-2 border flex-1 min-w-[200px] max-w-md"
-              style={{ borderColor: "hsl(var(--admin-border))" }}
-            >
-              <Search className="w-4 h-4" style={{ color: "hsl(var(--admin-muted))" }} />
-              <input
-                value={searchQ}
-                onChange={(e) => { setSearchQ(e.target.value); setPage(1); }}
-                placeholder="Search key or value..."
-                className="bg-transparent text-sm outline-none flex-1"
-              />
-            </div>
-            <div className="relative">
-              <select
-                value={filterCat}
-                onChange={(e) => { setFilterCat(e.target.value); setPage(1); }}
-                className="appearance-none rounded-xl px-4 py-2 pr-9 text-sm font-semibold border bg-white"
-                style={{ borderColor: "hsl(var(--admin-border))" }}
+        {/* ════════ TAB 1: Static UI Translations ════════ */}
+        {tab === "static" && (
+          <div className="space-y-4">
+            {/* Toolbar */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative min-w-[200px] max-w-md flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchQ}
+                  onChange={(e) => { setSearchQ(e.target.value); setPage(1); }}
+                  placeholder="Search key or value..."
+                  className="h-9 pl-9"
+                />
+              </div>
+              <Select
+                value={filterCat || "__all__"}
+                onValueChange={(v) => { setFilterCat(v === "__all__" ? "" : v); setPage(1); }}
               >
-                <option value="">All categories</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "hsl(var(--admin-muted))" }} />
+                <SelectTrigger className="h-9 w-[200px]">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">All categories</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <AdminExportButton onClick={handleExportStaticTranslations} disabled={loading || pairs.length === 0} />
+              <Button onClick={openAdd}>
+                <Plus className="mr-1.5 h-4 w-4" /> Add Key
+              </Button>
             </div>
-            <AdminExportButton onClick={handleExportStaticTranslations} disabled={loading || pairs.length === 0} />
-            <button onClick={openAdd} className="admin-btn-primary inline-flex items-center gap-2 px-5 py-2 text-sm">
-              <Plus className="w-4 h-4" /> Add Key
-            </button>
-          </div>
 
-          {/* Table */}
-          <div className="admin-card overflow-hidden">
-            {loading ? (
+            {/* Table */}
+            <section className="overflow-hidden rounded-lg border bg-card">
+              {loading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full divide-y text-sm">
+                    <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium">Key</th>
+                        {ALL_LANGS.map((lang) => (
+                          <th key={lang} className="px-4 py-3 text-left font-medium">{LANG_LABELS[lang]}</th>
+                        ))}
+                        <th className="px-4 py-3 text-left font-medium">Category</th>
+                        <th className="w-32 px-4 py-3 text-left font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {paged.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                            No translations found.
+                          </td>
+                        </tr>
+                      )}
+                      {paged.map((p) => (
+                        <tr key={p.key} className="hover:bg-muted/40 transition">
+                          <td className="px-4 py-3">
+                            <code className="rounded bg-muted px-2 py-0.5 text-xs">{p.key}</code>
+                          </td>
+                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.vietnameseValue}</td>
+                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["en"] ?? "—"}</td>
+                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["zh"] ?? "—"}</td>
+                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["ja"] ?? "—"}</td>
+                          <td className="px-4 py-3">
+                            {p.category && (
+                              <Badge variant="outline" className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700">
+                                {p.category}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => openEdit(p)}
+                                aria-label="Edit"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => deletePair(p.key)}
+                                aria-label="Delete"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t px-4 py-3">
+                  <span className="text-xs text-muted-foreground">
+                    {pairs.length} keys · Page {page}/{totalPages}
+                  </span>
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1).map((p) => (
+                      <Button
+                        key={p}
+                        size="sm"
+                        variant={p === page ? "default" : "ghost"}
+                        className="h-8 w-8 p-0"
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </Button>
+                    ))}
+                    {totalPages > 10 && (
+                      <span className="px-2 py-1 text-xs text-muted-foreground">…</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* ════════ TAB 2: Entity (Content) Translations ════════ */}
+        {tab === "entity" && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Label className="text-sm">Content type:</Label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="h-9 w-[220px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {entityTypes.map((et) => (
+                    <SelectItem key={et.type} value={et.type}>{et.type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {entityLoading ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 animate-spin" style={{ color: "hsl(var(--admin-primary))" }} />
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : entityItems.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                No items found for this content type.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead style={{ background: "hsl(var(--admin-bg))" }}>
-                    <tr className="text-left">
-                      <th className="px-4 py-3 font-bold">Key</th>
-                      {ALL_LANGS.map((lang) => (
-                        <th key={lang} className="px-4 py-3 font-bold">{LANG_LABELS[lang]}</th>
-                      ))}
-                      <th className="px-4 py-3 font-bold">Category</th>
-                      <th className="px-4 py-3 font-bold w-32">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paged.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-                          No translations found.
-                        </td>
-                      </tr>
-                    )}
-                    {paged.map((p) => (
-                      <tr key={p.key} className="border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                        <td className="px-4 py-3">
-                          <code className="text-xs px-2 py-0.5 rounded" style={{ background: "hsl(var(--admin-bg))" }}>
-                            {p.key}
-                          </code>
-                        </td>
-                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.vietnameseValue}</td>
-                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.translations["en"] ?? "—"}</td>
-                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.translations["zh"] ?? "—"}</td>
-                        <td className="px-4 py-3 max-w-[160px] truncate text-xs">{p.translations["ja"] ?? "—"}</td>
-                        <td className="px-4 py-3">
-                          {p.category && (
-                            <span
-                              className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                              style={{ background: "hsl(var(--admin-bg))", color: "hsl(var(--admin-primary))" }}
-                            >
-                              {p.category}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1.5">
-                            <button
-                              onClick={() => openEdit(p)}
-                              className="p-1.5 rounded-md hover:bg-muted"
-                              title="Edit"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => deletePair(p.key)}
-                              className="p-1.5 rounded-md hover:bg-muted"
-                              title="Delete"
-                              style={{ color: "hsl(var(--admin-danger))" }}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "hsl(var(--admin-border))" }}>
-                <span className="text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-                  {pairs.length} keys · Page {page}/{totalPages}
-                </span>
-                <div className="flex gap-1">
-                  {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className="px-3 py-1 rounded-lg text-xs font-bold"
-                      style={
-                        p === page
-                          ? { background: "hsl(var(--admin-primary))", color: "#fff" }
-                          : { color: "hsl(var(--admin-muted))" }
-                      }
-                    >
-                      {p}
-                    </button>
-                  ))}
-                  {totalPages > 10 && (
-                    <span className="px-2 py-1 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>…</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ════════ TAB 2: Entity (Content) Translations ════════ */}
-      {tab === "entity" && (
-        <>
-          {/* Entity type selector */}
-          <div className="flex flex-wrap items-center gap-3 mb-5">
-            <label className="text-sm font-bold">Content type:</label>
-            <div className="relative">
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="appearance-none rounded-xl px-4 py-2 pr-9 text-sm font-semibold border bg-white"
-                style={{ borderColor: "hsl(var(--admin-border))" }}
-              >
-                {entityTypes.map((et) => (
-                  <option key={et.type} value={et.type}>{et.type}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "hsl(var(--admin-muted))" }} />
-            </div>
-          </div>
-
-          {entityLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "hsl(var(--admin-primary))" }} />
-            </div>
-          ) : entityItems.length === 0 ? (
-            <div className="admin-card p-8 text-center" style={{ color: "hsl(var(--admin-muted))" }}>
-              No items found for this content type.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {entityItems.map((item) => (
-                <div key={item.id} className="admin-card p-5 flex flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-sm truncate">{item.title}</h3>
-                      {item.description && (
-                        <p className="text-xs mt-0.5 truncate" style={{ color: "hsl(var(--admin-muted))" }}>
-                          {item.description}
-                        </p>
-                      )}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {entityItems.map((item) => (
+                  <div key={item.id} className="flex flex-col gap-3 rounded-lg border bg-card p-5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold">{item.title}</h3>
+                        {item.description && (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 font-mono text-xs text-muted-foreground">#{item.id}</span>
                     </div>
-                    <span className="text-xs shrink-0 font-mono" style={{ color: "hsl(var(--admin-muted))" }}>
-                      #{item.id}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      {item.hasTranslation ? (
+                        <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 font-medium text-emerald-700">
+                          <Check className="h-3 w-3" /> Translated ({item.translationCount}/{item.expectedFields})
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 border-amber-200 bg-amber-50 font-medium text-amber-700">
+                          <X className="h-3 w-3" /> Not translated
+                        </Badge>
+                      )}
+                      <Button size="sm" onClick={() => openEntityTranslate(item)}>
+                        <Pencil className="mr-1.5 h-3 w-3" /> Translate
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    {item.hasTranslation ? (
-                      <span
-                        className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: "hsl(142 71% 45% / 0.1)", color: "hsl(142 71% 35%)" }}
-                      >
-                        <Check className="w-3 h-3" /> Translated ({item.translationCount}/{item.expectedFields})
-                      </span>
-                    ) : (
-                      <span
-                        className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: "hsl(38 92% 50% / 0.1)", color: "hsl(38 92% 40%)" }}
-                      >
-                        <X className="w-3 h-3" /> Not translated
-                      </span>
-                    )}
-                    <button
-                      onClick={() => openEntityTranslate(item)}
-                      className="admin-btn-primary px-3 py-1.5 text-xs inline-flex items-center gap-1.5"
-                    >
-                      <Pencil className="w-3 h-3" /> Translate
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ════════ Static Translation Modal ════════ */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setModalOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-display text-xl font-extrabold mb-5">
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
               {modalMode === "add" ? "Add Translation Key" : "Edit Translation Key"}
-            </h3>
+            </DialogTitle>
+          </DialogHeader>
 
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>Key *</label>
-                <input
-                  value={draft.key}
-                  onChange={(e) => setDraft({ ...draft, key: e.target.value })}
-                  placeholder="e.g. home.hero.title"
-                  className="w-full rounded-lg px-3 py-2 text-sm border outline-none font-mono"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                  disabled={modalMode === "edit"}
-                />
-              </div>
-              <div>
-                <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>Category</label>
-                <input
-                  value={draft.category}
-                  onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-                  list="cat-suggestions"
-                  placeholder="e.g. home"
-                  className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                />
-                <datalist id="cat-suggestions">
-                  {categories.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="tk-key" className="text-xs">Key *</Label>
+              <Input
+                id="tk-key"
+                value={draft.key}
+                onChange={(e) => setDraft({ ...draft, key: e.target.value })}
+                placeholder="e.g. home.hero.title"
+                className="h-9 font-mono"
+                disabled={modalMode === "edit"}
+              />
             </div>
-
-            {/* Language fields */}
-            <div className="space-y-3">
-              {[
-                { lang: "vi", label: "🇻🇳 Tiếng Việt *", key: "vi" as const },
-                { lang: "en", label: "🇺🇸 English", key: "en" as const },
-                { lang: "zh", label: "🇨🇳 中文", key: "zh" as const },
-                { lang: "ja", label: "🇯🇵 日本語", key: "ja" as const },
-              ].map((l) => (
-                <div key={l.lang}>
-                  <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>
-                    {l.label}
-                  </label>
-                  <textarea
-                    value={draft[l.key]}
-                    onChange={(e) => setDraft({ ...draft, [l.key]: e.target.value })}
-                    rows={2}
-                    className="w-full rounded-lg px-3 py-2 text-sm border outline-none resize-none"
-                    style={{ borderColor: "hsl(var(--admin-border))" }}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setModalOpen(false)} className="px-4 py-2 rounded-lg text-sm font-bold bg-muted">
-                {t("common.cancel")}
-              </button>
-              <button onClick={savePair} className="admin-btn-primary px-4 py-2 text-sm">
-                {t("proc.save")}
-              </button>
+            <div className="space-y-1.5">
+              <Label htmlFor="tk-cat" className="text-xs">Category</Label>
+              <Input
+                id="tk-cat"
+                value={draft.category}
+                onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+                list="cat-suggestions"
+                placeholder="e.g. home"
+                className="h-9"
+              />
+              <datalist id="cat-suggestions">
+                {categories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="space-y-3">
+            {[
+              { lang: "vi", label: "🇻🇳 Tiếng Việt *", key: "vi" as const },
+              { lang: "en", label: "🇺🇸 English", key: "en" as const },
+              { lang: "zh", label: "🇨🇳 中文", key: "zh" as const },
+              { lang: "ja", label: "🇯🇵 日本語", key: "ja" as const },
+            ].map((l) => (
+              <div key={l.lang} className="space-y-1.5">
+                <Label htmlFor={`tk-${l.lang}`} className="text-xs">{l.label}</Label>
+                <Textarea
+                  id={`tk-${l.lang}`}
+                  value={draft[l.key]}
+                  onChange={(e) => setDraft({ ...draft, [l.key]: e.target.value })}
+                  rows={2}
+                />
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalOpen(false)}>{t("common.cancel")}</Button>
+            <Button onClick={savePair}>{t("proc.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ════════ Entity Translation Modal ════════ */}
-      {entityModalOpen && entityModalItem && entityModalType && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto p-4 pt-8 pb-8" onClick={() => setEntityModalOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-4xl p-6 my-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="font-display text-xl font-extrabold">
-                  Translate: {entityModalItem.title}
-                </h3>
-                <p className="text-xs mt-0.5" style={{ color: "hsl(var(--admin-muted))" }}>
+      <Dialog open={entityModalOpen} onOpenChange={setEntityModalOpen}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+          {entityModalItem && entityModalType && (
+            <>
+              <DialogHeader className="space-y-1">
+                <DialogTitle>Translate: {entityModalItem.title}</DialogTitle>
+                <p className="text-xs text-muted-foreground">
                   {entityModalType.type} #{entityModalItem.id}
                 </p>
-              </div>
-              {/* Language selector */}
-              <div className="flex gap-1 p-1 rounded-lg" style={{ background: "hsl(var(--admin-bg))" }}>
-                {SUPPORTED_LANGS.map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => setEntityModalLang(lang)}
-                    className="px-3 py-1.5 text-xs font-bold rounded-md transition"
-                    style={
-                      entityModalLang === lang
-                        ? { background: "hsl(var(--admin-primary))", color: "#fff" }
-                        : { color: "hsl(var(--admin-muted))" }
-                    }
-                  >
-                    {LANG_LABELS[lang]}
-                  </button>
-                ))}
-              </div>
-            </div>
+              </DialogHeader>
 
-            {/* Side-by-side fields */}
-            <div className="space-y-4">
-              {entityModalType.fields.map((field) => {
-                const isLong = ["Content", "Sections", "Challenges", "Solutions", "Description"].includes(field);
-                const rows = isLong ? 8 : 3;
-                return (
-                <div key={field} className="grid grid-cols-2 gap-4">
-                  {/* Original (VI) */}
-                  <div>
-                    <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>
-                      🇻🇳 {field} (Original)
-                    </label>
-                    <textarea
-                      value={entityOriginal[field] ?? ""}
-                      readOnly
-                      rows={rows}
-                      className="w-full rounded-lg px-3 py-2 text-sm border bg-gray-50 outline-none resize-y"
-                      style={{ borderColor: "hsl(var(--admin-border))" }}
-                    />
-                  </div>
-                  {/* Translation */}
-                  <div>
-                    <label className="text-xs uppercase tracking-wider font-bold mb-1 block" style={{ color: "hsl(var(--admin-muted))" }}>
-                      {LANG_LABELS[entityModalLang]} {field}
-                    </label>
-                    <textarea
-                      value={entityTranslations[entityModalLang]?.[field] ?? ""}
-                      onChange={(e) => updateEntityField(field, e.target.value)}
-                      rows={rows}
-                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none resize-y"
-                      style={{ borderColor: "hsl(var(--admin-border))" }}
-                    />
-                  </div>
+              <div className="flex justify-end">
+                <div className="inline-flex rounded-md border bg-muted p-1">
+                  {SUPPORTED_LANGS.map((lang) => (
+                    <button
+                      key={lang}
+                      type="button"
+                      onClick={() => setEntityModalLang(lang)}
+                      className={cn(
+                        "rounded-sm px-3 py-1.5 text-xs font-medium transition",
+                        entityModalLang === lang
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {LANG_LABELS[lang]}
+                    </button>
+                  ))}
                 </div>
-                );
-              })}
-            </div>
+              </div>
 
-            <div className="flex justify-end gap-2 mt-5">
-              <button onClick={() => setEntityModalOpen(false)} className="px-4 py-2 rounded-lg text-sm font-bold bg-muted">
-                {t("common.cancel")}
-              </button>
-              <button
-                onClick={saveEntityTranslations}
-                disabled={entitySaving}
-                className="admin-btn-primary px-4 py-2 text-sm inline-flex items-center gap-2"
-              >
-                {entitySaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {t("proc.save")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              <div className="space-y-4">
+                {entityModalType.fields.map((field) => {
+                  const isLong = ["Content", "Sections", "Challenges", "Solutions", "Description"].includes(field);
+                  const rows = isLong ? 8 : 3;
+                  return (
+                    <div key={field} className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">🇻🇳 {field} (Original)</Label>
+                        <Textarea
+                          value={entityOriginal[field] ?? ""}
+                          readOnly
+                          rows={rows}
+                          className="resize-y bg-muted/50"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">{LANG_LABELS[entityModalLang]} {field}</Label>
+                        <Textarea
+                          value={entityTranslations[entityModalLang]?.[field] ?? ""}
+                          onChange={(e) => updateEntityField(field, e.target.value)}
+                          rows={rows}
+                          className="resize-y"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEntityModalOpen(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button onClick={saveEntityTranslations} disabled={entitySaving}>
+                  {entitySaving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                  {t("proc.save")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };

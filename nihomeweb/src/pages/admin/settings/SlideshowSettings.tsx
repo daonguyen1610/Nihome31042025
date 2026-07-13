@@ -5,7 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify, type SlideshowAdminResponse, type UpsertSlideshowRequest } from "@/services/adminApi";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 
 type MediaKind = "image" | "video";
@@ -75,7 +78,6 @@ const SlideshowSettings = () => {
     setLoading(true);
     setError(null);
     try {
-      // Always load base Vietnamese content in editor to avoid overriding base fields with translated values.
       const res = await adminApi.getSlideshow("vi", false);
       const sorted = [...res.data].sort((a, b) => a.sortOrder - b.sortOrder);
       setSlides(sorted);
@@ -202,204 +204,190 @@ const SlideshowSettings = () => {
   if (error) return <PageError message={error} onRetry={loadSlides} />;
 
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-        <div className="xl:col-span-3 admin-card p-6">
-          <div className="flex items-center justify-between gap-3 mb-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        <section className="rounded-lg border bg-card p-6 xl:col-span-3">
+          <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-extrabold">{t("set.slideshow.title")}</h2>
-              <p className="text-xs mt-1" style={{ color: "hsl(var(--admin-muted))" }}>
+              <h2 className="text-lg font-semibold">{t("set.slideshow.title")}</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {t("set.slideshow.desc")}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={resetDraft}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border"
-              style={{ borderColor: "hsl(var(--admin-border))" }}
-            >
-              <Plus className="w-3.5 h-3.5" />
+            <Button type="button" size="sm" variant="outline" onClick={resetDraft}>
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
               {t("common.new")}
-            </button>
+            </Button>
           </div>
 
           {slides.length === 0 ? (
             <PageEmpty message={t("common.noData")} />
           ) : (
             <>
-            <BulkActionBar
-              selectedCount={selectedIds.size}
-              bulkDeleting={bulkDeleting}
-              onClear={clearSelection}
-              onBulkDelete={() => void handleBulkDelete()}
-            />
-            <div className="flex items-center gap-2 mb-2 px-1 text-xs" style={{ color: "hsl(var(--admin-muted))" }}>
-              <Checkbox
-                checked={
-                  allVisibleSelected
-                    ? true
-                    : someVisibleSelected
-                      ? "indeterminate"
-                      : false
-                }
-                onCheckedChange={(v) => toggleAllVisible(v === true)}
-                aria-label={t("common.selectAll")}
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={clearSelection}
+                onBulkDelete={() => void handleBulkDelete()}
               />
-              <span>{t("common.selectAll")}</span>
-            </div>
-            <div className="space-y-3">
-              {slides.map((slide) => (
-                <div
-                  key={slide.id}
-                  className="rounded-xl border p-3 flex flex-col sm:flex-row gap-3 sm:items-center"
-                  style={{ borderColor: "hsl(var(--admin-border))" }}
-                >
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selectedIds.has(slide.id)}
-                      onCheckedChange={(v) => toggleOne(slide.id, v === true)}
-                      aria-label={`${t("common.selectAll")} · ${slide.title}`}
-                    />
-                  </div>
-                  <div className="w-full sm:w-32 aspect-video rounded-lg overflow-hidden bg-muted shrink-0">
-                    {isVideoUrl(slide.imageUrl) ? (
-                      <video
-                        src={slide.imageUrl}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                        preload="metadata"
+              <div className="mb-2 flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                <Checkbox
+                  checked={
+                    allVisibleSelected
+                      ? true
+                      : someVisibleSelected
+                        ? "indeterminate"
+                        : false
+                  }
+                  onCheckedChange={(v) => toggleAllVisible(v === true)}
+                  aria-label={t("common.selectAll")}
+                />
+                <span>{t("common.selectAll")}</span>
+              </div>
+              <div className="space-y-3">
+                {slides.map((slide) => (
+                  <div
+                    key={slide.id}
+                    className="flex flex-col gap-3 rounded-lg border bg-background p-3 sm:flex-row sm:items-center"
+                  >
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedIds.has(slide.id)}
+                        onCheckedChange={(v) => toggleOne(slide.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${slide.title}`}
                       />
-                    ) : (
-                      <img
-                        src={slide.imageUrl}
-                        alt={slide.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                      />
-                    )}
+                    </div>
+                    <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-32">
+                      {isVideoUrl(slide.imageUrl) ? (
+                        <video
+                          src={slide.imageUrl}
+                          className="h-full w-full object-cover"
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img
+                          src={slide.imageUrl}
+                          alt={slide.title}
+                          className="h-full w-full object-cover"
+                          onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{slide.title}</p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        slug: {slide.slug} · sort: {slide.sortOrder} · {slide.isActive ? t("set.slideshow.statusActive") : t("set.slideshow.statusInactive")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => editSlide(slide)}
+                      >
+                        <Pencil className="mr-1 h-3.5 w-3.5" />
+                        {t("common.edit")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => removeSlide(slide)}
+                      >
+                        <Trash2 className="mr-1 h-3.5 w-3.5" />
+                        {t("common.delete")}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold truncate">{slide.title}</p>
-                    <p className="text-xs mt-0.5 truncate" style={{ color: "hsl(var(--admin-muted))" }}>
-                      slug: {slide.slug} · sort: {slide.sortOrder} · {slide.isActive ? t("set.slideshow.statusActive") : t("set.slideshow.statusInactive")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => editSlide(slide)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-bold rounded-lg hover:bg-muted"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      {t("common.edit")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeSlide(slide)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-2 text-xs font-bold rounded-lg hover:bg-muted"
-                      style={{ color: "hsl(var(--admin-danger))" }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      {t("common.delete")}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             </>
           )}
-        </div>
+        </section>
 
-        <div className="xl:col-span-2 admin-card p-6">
-          <h2 className="font-display text-lg font-extrabold mb-1">{titleHint}</h2>
-          <p className="text-xs mb-5" style={{ color: "hsl(var(--admin-muted))" }}>
+        <section className="rounded-lg border bg-card p-6 xl:col-span-2">
+          <h2 className="text-lg font-semibold">{titleHint}</h2>
+          <p className="mb-5 mt-1 text-xs text-muted-foreground">
             {t("set.slideshow.editorDesc")}
           </p>
 
           <div className="space-y-4">
-            <Field label={`${t("set.slideshow.fieldTitle")} *`}>
-              <input
-                className="admin-input"
+            <FieldRow label={`${t("set.slideshow.fieldTitle")} *`}>
+              <Input
                 value={draft.title}
                 onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
                 placeholder={t("set.slideshow.placeholderTitle")}
               />
-            </Field>
+            </FieldRow>
 
-            <Field label={t("set.slideshow.fieldSlug")}>
-              <input
-                className="admin-input"
+            <FieldRow label={t("set.slideshow.fieldSlug")}>
+              <Input
                 value={draft.slug}
                 onChange={(e) => setDraft((prev) => ({ ...prev, slug: e.target.value }))}
                 placeholder={t("set.slideshow.placeholderSlug")}
               />
-            </Field>
+            </FieldRow>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label={t("set.slideshow.fieldMediaType")}>
+              <FieldRow label={t("set.slideshow.fieldMediaType")}>
                 <select
-                  className="admin-input"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={draft.mediaKind}
                   onChange={(e) => setDraft((prev) => ({ ...prev, mediaKind: e.target.value as MediaKind }))}
                 >
                   <option value="image">{t("set.slideshow.mediaTypeImage")}</option>
                   <option value="video">{t("set.slideshow.mediaTypeVideo")}</option>
                 </select>
-              </Field>
-              <Field label={t("set.slideshow.fieldSortOrder")}>
-                <input
+              </FieldRow>
+              <FieldRow label={t("set.slideshow.fieldSortOrder")}>
+                <Input
                   type="number"
-                  className="admin-input"
                   value={draft.sortOrder}
                   onChange={(e) => setDraft((prev) => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))}
                 />
-              </Field>
+              </FieldRow>
             </div>
 
-            <Field label={t("set.slideshow.fieldSubtitle")}>
-              <input
-                className="admin-input"
+            <FieldRow label={t("set.slideshow.fieldSubtitle")}>
+              <Input
                 value={draft.subtitle ?? ""}
                 onChange={(e) => setDraft((prev) => ({ ...prev, subtitle: e.target.value }))}
                 placeholder={t("set.slideshow.placeholderSubtitle")}
               />
-            </Field>
+            </FieldRow>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label={t("set.slideshow.fieldLinkText")}>
-                <input
-                  className="admin-input"
+              <FieldRow label={t("set.slideshow.fieldLinkText")}>
+                <Input
                   value={draft.linkText ?? ""}
                   onChange={(e) => setDraft((prev) => ({ ...prev, linkText: e.target.value }))}
                   placeholder={t("set.slideshow.placeholderLinkText")}
                 />
-              </Field>
-              <Field label={t("set.slideshow.fieldLinkUrl")}>
-                <input
-                  className="admin-input"
+              </FieldRow>
+              <FieldRow label={t("set.slideshow.fieldLinkUrl")}>
+                <Input
                   value={draft.linkUrl ?? ""}
                   onChange={(e) => setDraft((prev) => ({ ...prev, linkUrl: e.target.value }))}
                   placeholder={t("set.slideshow.placeholderLinkUrl")}
                 />
-              </Field>
+              </FieldRow>
             </div>
 
-            <label className="inline-flex items-center gap-2 text-sm font-semibold">
-              <input
-                type="checkbox"
+            <label className="inline-flex items-center gap-2 text-sm font-medium">
+              <Checkbox
                 checked={draft.isActive}
-                onChange={(e) => setDraft((prev) => ({ ...prev, isActive: e.target.checked }))}
+                onCheckedChange={(v) => setDraft((prev) => ({ ...prev, isActive: v === true }))}
               />
               {t("set.slideshow.fieldIsActive")}
             </label>
 
             <div className="space-y-3">
-              <label
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold border cursor-pointer hover:bg-muted"
-                style={{ borderColor: "hsl(var(--admin-border))" }}
-              >
-                <Upload className="w-4 h-4" />
+              <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-accent hover:text-accent-foreground">
+                <Upload className="h-4 w-4" />
                 {uploading ? t("set.slideshow.uploading") : t("set.slideshow.uploadButton")}
                 <input
                   type="file"
@@ -411,11 +399,11 @@ const SlideshowSettings = () => {
               </label>
 
               <details>
-                <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground select-none">
+                <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
                   {t("media.url.toggleWithVideo")}
                 </summary>
-                <input
-                  className="admin-input mt-2"
+                <Input
+                  className="mt-2"
                   value={draft.imageUrl}
                   onChange={(e) =>
                     setDraft((prev) => ({
@@ -428,11 +416,11 @@ const SlideshowSettings = () => {
               </details>
 
               {draft.imageUrl && (
-                <div className="rounded-xl overflow-hidden bg-muted aspect-video">
+                <div className="aspect-video overflow-hidden rounded-lg bg-muted">
                   {draft.mediaKind === "video" ? (
                     <video
                       src={draft.imageUrl}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                       controls
                       preload="metadata"
                     />
@@ -440,7 +428,7 @@ const SlideshowSettings = () => {
                     <img
                       src={draft.imageUrl}
                       alt={draft.title || t("set.slideshow.previewAlt")}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                       onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
                     />
                   )}
@@ -448,29 +436,27 @@ const SlideshowSettings = () => {
               )}
             </div>
 
-            <button
+            <Button
               type="button"
               disabled={saving || uploading}
               onClick={saveSlide}
-              className="admin-btn-primary w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm disabled:opacity-50"
+              className="w-full"
             >
-              <Save className="w-4 h-4" />
+              <Save className="mr-1.5 h-4 w-4" />
               {draft.id ? t("form.update") : t("form.create")}
-            </button>
+            </Button>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
 };
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <label className="block">
-    <span className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "hsl(var(--admin-muted))" }}>
-      {label}
-    </span>
+const FieldRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <Label className="text-xs">{label}</Label>
     {children}
-  </label>
+  </div>
 );
 
 export default SlideshowSettings;
