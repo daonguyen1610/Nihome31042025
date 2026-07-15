@@ -1,5 +1,7 @@
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
 
@@ -7,11 +9,20 @@ namespace NihomeBackend.Data;
 
 public static class ContentSeeder
 {
+    // Vietnamese text scraped from the CMS and hand-typed canonical category
+    // names can use different Unicode normalization forms (NFC vs NFD) for the
+    // same diacritics, which makes ordinal ToLower() comparisons treat visually
+    // identical names as different keys and create duplicate category rows.
+    // Normalize to NFC before lower-casing so both sources compare equal.
+    private static string NormalizeCategoryKey(string name)
+        => name.Trim().Normalize(NormalizationForm.FormC).ToLowerInvariant();
+
     public static void Seed(AppDbContext db)
     {
         SeedActivities(db);
         SeedNews(db);
         SeedProjects(db);
+        SeedProjectTranslations(db);
         SeedServices(db);
         SeedLogos(db);
         SeedProcesses(db);
@@ -21,6 +32,138 @@ public static class ContentSeeder
         SeedContactMessages(db);
         SeedEntityTranslations(db);
         LinkCategories(db);
+        SeedCategories(db);
+    }
+
+    private static void SeedCategories(AppDbContext db)
+    {
+        var now = DateTime.UtcNow;
+
+        var projectCats = new[]
+        {
+            new { Name = "Nhà máy công nghiệp", NameEn = "Industrial Plant",       NameZh = "工业厂房",   NameJa = "工業プラント",  SortOrder = 0 },
+            new { Name = "Nhà xưởng sản xuất",  NameEn = "Manufacturing Workshop", NameZh = "生产车间",   NameJa = "製造工場",    SortOrder = 1 },
+            new { Name = "Tổ hợp công nghiệp",  NameEn = "Industrial Complex",     NameZh = "工业综合体",  NameJa = "工業団地",    SortOrder = 2 },
+            new { Name = "Nhà kho logistics",    NameEn = "Logistics Warehouse",    NameZh = "物流仓库",   NameJa = "物流倉庫",    SortOrder = 3 },
+            new { Name = "Văn phòng",            NameEn = "Office",                 NameZh = "办公楼",    NameJa = "オフィス",    SortOrder = 4 },
+            new { Name = "Nội thất văn phòng",   NameEn = "Office Interior",        NameZh = "办公室内装",  NameJa = "オフィス内装",  SortOrder = 5 },
+            new { Name = "Nội thất công nghiệp", NameEn = "Industrial Interior",    NameZh = "工业内装",   NameJa = "工業用内装",   SortOrder = 6 },
+            new { Name = "Công trình công cộng", NameEn = "Public Works",           NameZh = "公共工程",   NameJa = "公共施設",    SortOrder = 7 },
+            new { Name = "Khách sạn",            NameEn = "Hotel",                  NameZh = "酒店",     NameJa = "ホテル",     SortOrder = 8 },
+            new { Name = "Nhà hàng",             NameEn = "Restaurant",             NameZh = "餐厅",     NameJa = "レストラン",   SortOrder = 9 },
+            new { Name = "Thương mại",           NameEn = "Commercial",             NameZh = "商业",     NameJa = "商業施設",    SortOrder = 10 },
+            new { Name = "Nhà ở",                NameEn = "Residential",            NameZh = "住宅",     NameJa = "住宅",      SortOrder = 11 },
+            new { Name = "Bất động sản",         NameEn = "Real Estate",            NameZh = "房地产",    NameJa = "不動産",     SortOrder = 12 },
+            new { Name = "Studio",               NameEn = "Studio",                 NameZh = "工作室",    NameJa = "スタジオ",    SortOrder = 13 },
+            new { Name = "Nhà máy dược phẩm",   NameEn = "Pharmaceutical Plant",   NameZh = "制药厂",    NameJa = "製薬工場",    SortOrder = 14 },
+            new { Name = "Giáo dục",             NameEn = "Education",              NameZh = "教育",     NameJa = "教育施設",    SortOrder = 15 },
+        };
+
+        var existingProjCats = db.ProjectCategories
+            .ToDictionary(c => NormalizeCategoryKey(c.Name));
+        foreach (var seed in projectCats)
+        {
+            var key = NormalizeCategoryKey(seed.Name);
+            if (existingProjCats.TryGetValue(key, out var existing))
+            {
+                existing.SortOrder = seed.SortOrder;
+                if (string.IsNullOrWhiteSpace(existing.NameEn)) existing.NameEn = seed.NameEn;
+                if (string.IsNullOrWhiteSpace(existing.NameZh)) existing.NameZh = seed.NameZh;
+                if (string.IsNullOrWhiteSpace(existing.NameJa)) existing.NameJa = seed.NameJa;
+            }
+            else
+                db.ProjectCategories.Add(new ProjectCategory
+                {
+                    Name = seed.Name,
+                    NameVi = seed.Name,
+                    NameEn = seed.NameEn,
+                    NameZh = seed.NameZh,
+                    NameJa = seed.NameJa,
+                    IsActive = true,
+                    SortOrder = seed.SortOrder,
+                });
+        }
+
+        var activityCats = new[]
+        {
+            new { Name = "Khởi công",   NameEn = "Groundbreaking", NameZh = "奠基仪式", NameJa = "起工式",    SortOrder = 1 },
+            new { Name = "Khánh thành", NameEn = "Inauguration",   NameZh = "竣工典礼", NameJa = "竣工式",    SortOrder = 2 },
+            new { Name = "Sự kiện",     NameEn = "Event",          NameZh = "活动",   NameJa = "イベント",   SortOrder = 3 },
+            new { Name = "Dự án",       NameEn = "Project",        NameZh = "项目",   NameJa = "プロジェクト", SortOrder = 4 },
+            new { Name = "Giải thưởng", NameEn = "Award",          NameZh = "奖项",   NameJa = "受賞",     SortOrder = 5 },
+            new { Name = "Triển lãm",   NameEn = "Exhibition",     NameZh = "展览",   NameJa = "展示会",    SortOrder = 6 },
+            new { Name = "Cộng đồng",   NameEn = "Community",      NameZh = "社区",   NameJa = "コミュニティ", SortOrder = 7 },
+            new { Name = "Văn hóa",     NameEn = "Culture",        NameZh = "文化",   NameJa = "文化",     SortOrder = 8 },
+            new { Name = "Đào tạo",     NameEn = "Training",       NameZh = "培训",   NameJa = "研修",     SortOrder = 9 },
+            new { Name = "Dịch vụ",     NameEn = "Service",        NameZh = "服务",   NameJa = "サービス",   SortOrder = 10 },
+        };
+
+        var existingActCats = db.ActivityCategories
+            .ToDictionary(c => NormalizeCategoryKey(c.Name));
+        foreach (var seed in activityCats)
+        {
+            var key = NormalizeCategoryKey(seed.Name);
+            if (existingActCats.TryGetValue(key, out var existing))
+            {
+                existing.SortOrder = seed.SortOrder;
+                if (string.IsNullOrWhiteSpace(existing.NameEn)) existing.NameEn = seed.NameEn;
+                if (string.IsNullOrWhiteSpace(existing.NameZh)) existing.NameZh = seed.NameZh;
+                if (string.IsNullOrWhiteSpace(existing.NameJa)) existing.NameJa = seed.NameJa;
+            }
+            else
+                db.ActivityCategories.Add(new ActivityCategory
+                {
+                    Name = seed.Name,
+                    NameVi = seed.Name,
+                    NameEn = seed.NameEn,
+                    NameZh = seed.NameZh,
+                    NameJa = seed.NameJa,
+                    IsActive = true,
+                    SortOrder = seed.SortOrder,
+                });
+        }
+
+        var newsCats = new[]
+        {
+            new { Name = "Báo giá",    NameEn = "Quotation",   NameZh = "报价",   NameJa = "見積もり", SortOrder = 1 },
+            new { Name = "Dịch vụ",    NameEn = "Service",     NameZh = "服务",   NameJa = "サービス", SortOrder = 2 },
+            new { Name = "Dự án",      NameEn = "Project",     NameZh = "项目",   NameJa = "プロジェクト", SortOrder = 3 },
+            new { Name = "Kiến trúc",  NameEn = "Architecture", NameZh = "建筑",  NameJa = "建築",    SortOrder = 4 },
+            new { Name = "Kỹ thuật",   NameEn = "Engineering", NameZh = "工程技术", NameJa = "技術",    SortOrder = 5 },
+            new { Name = "Ngành",      NameEn = "Industry",    NameZh = "行业",   NameJa = "業界",    SortOrder = 6 },
+            new { Name = "Quy trình",  NameEn = "Process",     NameZh = "流程",   NameJa = "プロセス",  SortOrder = 7 },
+            new { Name = "Thiết kế",   NameEn = "Design",      NameZh = "设计",   NameJa = "デザイン",  SortOrder = 8 },
+            new { Name = "Tiêu chuẩn", NameEn = "Standards",   NameZh = "标准",   NameJa = "基準",    SortOrder = 9 },
+            new { Name = "Xu hướng",   NameEn = "Trends",      NameZh = "趋势",   NameJa = "トレンド",  SortOrder = 10 },
+            new { Name = "Đối tác",    NameEn = "Partners",    NameZh = "合作伙伴", NameJa = "パートナー", SortOrder = 11 },
+        };
+
+        var existingNewsCats = db.NewsCategories
+            .ToDictionary(c => NormalizeCategoryKey(c.Name));
+        foreach (var seed in newsCats)
+        {
+            var key = NormalizeCategoryKey(seed.Name);
+            if (existingNewsCats.TryGetValue(key, out var existing))
+            {
+                existing.SortOrder = seed.SortOrder;
+                if (string.IsNullOrWhiteSpace(existing.NameEn)) existing.NameEn = seed.NameEn;
+                if (string.IsNullOrWhiteSpace(existing.NameZh)) existing.NameZh = seed.NameZh;
+                if (string.IsNullOrWhiteSpace(existing.NameJa)) existing.NameJa = seed.NameJa;
+            }
+            else
+                db.NewsCategories.Add(new NewsCategory
+                {
+                    Name = seed.Name,
+                    NameVi = seed.Name,
+                    NameEn = seed.NameEn,
+                    NameZh = seed.NameZh,
+                    NameJa = seed.NameJa,
+                    IsActive = true,
+                    SortOrder = seed.SortOrder,
+                });
+        }
+
+        db.SaveChanges();
     }
 
     private static void LinkCategories(AppDbContext db)
@@ -32,16 +175,18 @@ public static class ContentSeeder
             .Distinct()
             .ToList();
         var existingActivityNames = db.ActivityCategories
-            .Select(c => c.Name.ToLower())
+            .Select(c => c.Name)
+            .ToList()
+            .Select(NormalizeCategoryKey)
             .ToHashSet();
         var nextOrder = (db.ActivityCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
         foreach (var name in activityCategoryNames)
         {
             var trimmed = name.Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
-            if (existingActivityNames.Contains(trimmed.ToLower())) continue;
-            db.ActivityCategories.Add(new ActivityCategory { Name = trimmed, IsActive = true, SortOrder = nextOrder++ });
-            existingActivityNames.Add(trimmed.ToLower());
+            if (existingActivityNames.Contains(NormalizeCategoryKey(trimmed))) continue;
+            db.ActivityCategories.Add(new ActivityCategory { Name = trimmed, NameVi = trimmed, IsActive = true, SortOrder = nextOrder++ });
+            existingActivityNames.Add(NormalizeCategoryKey(trimmed));
         }
 
         // Ensure ProjectCategory rows exist for every distinct Project.Category
@@ -51,36 +196,69 @@ public static class ContentSeeder
             .Distinct()
             .ToList();
         var existingProjectNames = db.ProjectCategories
-            .Select(c => c.Name.ToLower())
+            .Select(c => c.Name)
+            .ToList()
+            .Select(NormalizeCategoryKey)
             .ToHashSet();
         var nextProjectOrder = (db.ProjectCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
         foreach (var name in projectCategoryNames)
         {
             var trimmed = (name ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
-            if (existingProjectNames.Contains(trimmed.ToLower())) continue;
-            db.ProjectCategories.Add(new ProjectCategory { Name = trimmed, IsActive = true, SortOrder = nextProjectOrder++ });
-            existingProjectNames.Add(trimmed.ToLower());
+            if (existingProjectNames.Contains(NormalizeCategoryKey(trimmed))) continue;
+            db.ProjectCategories.Add(new ProjectCategory { Name = trimmed, NameVi = trimmed, IsActive = true, SortOrder = nextProjectOrder++ });
+            existingProjectNames.Add(NormalizeCategoryKey(trimmed));
+        }
+
+        // Ensure NewsCategory rows exist for every distinct NewsArticle.Category
+        var newsCategoryNames = db.NewsArticles
+            .Select(n => n.Category)
+            .Where(c => !string.IsNullOrEmpty(c))
+            .Distinct()
+            .ToList();
+        var existingNewsNames = db.NewsCategories
+            .Select(c => c.Name)
+            .ToList()
+            .Select(NormalizeCategoryKey)
+            .ToHashSet();
+        var nextNewsOrder = (db.NewsCategories.Max(c => (int?)c.SortOrder) ?? 0) + 1;
+        foreach (var name in newsCategoryNames)
+        {
+            var trimmed = (name ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+            if (existingNewsNames.Contains(NormalizeCategoryKey(trimmed))) continue;
+            db.NewsCategories.Add(new NewsCategory { Name = trimmed, NameVi = trimmed, IsActive = true, SortOrder = nextNewsOrder++ });
+            existingNewsNames.Add(NormalizeCategoryKey(trimmed));
         }
         db.SaveChanges();
 
         // Backfill FK on Activity rows
-        var activityCategoryMap = db.ActivityCategories.ToDictionary(c => c.Name.ToLower(), c => c.Id);
+        var activityCategoryMap = db.ActivityCategories.ToDictionary(c => NormalizeCategoryKey(c.Name), c => c.Id);
         foreach (var activity in db.Activities.Where(a => a.ActivityCategoryId == null && a.Category != ""))
         {
-            if (activityCategoryMap.TryGetValue(activity.Category.Trim().ToLower(), out var id))
+            if (activityCategoryMap.TryGetValue(NormalizeCategoryKey(activity.Category), out var id))
             {
                 activity.ActivityCategoryId = id;
             }
         }
 
         // Backfill FK on Project rows
-        var projectCategoryMap = db.ProjectCategories.ToDictionary(c => c.Name.ToLower(), c => c.Id);
+        var projectCategoryMap = db.ProjectCategories.ToDictionary(c => NormalizeCategoryKey(c.Name), c => c.Id);
         foreach (var project in db.Projects.Where(p => p.ProjectCategoryId == null && p.Category != null && p.Category != ""))
         {
-            if (projectCategoryMap.TryGetValue(project.Category!.Trim().ToLower(), out var id))
+            if (projectCategoryMap.TryGetValue(NormalizeCategoryKey(project.Category!), out var id))
             {
                 project.ProjectCategoryId = id;
+            }
+        }
+
+        // Backfill FK on News rows
+        var newsCategoryMap = db.NewsCategories.ToDictionary(c => NormalizeCategoryKey(c.Name), c => c.Id);
+        foreach (var article in db.NewsArticles.Where(n => n.NewsCategoryId == null && n.Category != ""))
+        {
+            if (newsCategoryMap.TryGetValue(NormalizeCategoryKey(article.Category), out var id))
+            {
+                article.NewsCategoryId = id;
             }
         }
         db.SaveChanges();
@@ -93,12 +271,14 @@ public static class ContentSeeder
         var manifest = LoadContentSeed("activities");
         if (manifest.Count == 0) return;
 
-        if (NeedsContentReseed(db.Activities, manifest, a => a.ImageUrl, a => a.ContentJson, IsLegacyStockActivityImage))
+        var existingSlugs = db.Activities.Select(a => a.Slug).ToHashSet();
+        var newItems = manifest.Where(item => !existingSlugs.Contains(item.Slug)).ToList();
+        if (newItems.Count > 0)
         {
-            ReseedFromManifest(db, EntityTypes.Activity, manifest, item =>
+            foreach (var item in newItems)
             {
                 var vi = item.GetTranslation("vi");
-                return new Activity
+                db.Activities.Add(new Activity
                 {
                     Slug = item.Slug,
                     Date = vi.Date.Length > 0 ? vi.Date : item.Date,
@@ -112,12 +292,15 @@ public static class ContentSeeder
                     SortOrder = item.SortOrder,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                };
-            });
-
-            var bySlug = db.Activities.Select(a => new { a.Id, a.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
-            SeedManifestTranslations(db, EntityTypes.Activity, manifest, bySlug);
+                });
+            }
+            db.SaveChanges();
         }
+
+        // Backfill only — never overwrites rows/translations already in the DB,
+        // so admin-added content and translations survive future restarts.
+        var bySlug = db.Activities.Select(a => new { a.Id, a.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
+        SeedManifestTranslations(db, EntityTypes.Activity, manifest, bySlug);
     }
 
     // ─── News (manifest-driven from legacy nicon.vn) ───────────────
@@ -127,12 +310,14 @@ public static class ContentSeeder
         var manifest = LoadContentSeed("news");
         if (manifest.Count == 0) return;
 
-        if (NeedsContentReseed(db.NewsArticles, manifest, a => a.ImageUrl, a => a.ContentJson, IsLegacyStockNewsImage))
+        var existingSlugs = db.NewsArticles.Select(n => n.Slug).ToHashSet();
+        var newItems = manifest.Where(item => !existingSlugs.Contains(item.Slug)).ToList();
+        if (newItems.Count > 0)
         {
-            ReseedFromManifest(db, EntityTypes.News, manifest, item =>
+            foreach (var item in newItems)
             {
                 var vi = item.GetTranslation("vi");
-                return new NewsArticle
+                db.NewsArticles.Add(new NewsArticle
                 {
                     Slug = item.Slug,
                     Date = vi.Date.Length > 0 ? vi.Date : item.Date,
@@ -145,108 +330,210 @@ public static class ContentSeeder
                     SortOrder = item.SortOrder,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow,
-                };
-            });
-
-            var bySlug = db.NewsArticles.Select(n => new { n.Id, n.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
-            SeedManifestTranslations(db, EntityTypes.News, manifest, bySlug);
+                });
+            }
+            db.SaveChanges();
         }
+
+        // Backfill only — never overwrites rows/translations already in the DB,
+        // so admin-added content and translations survive future restarts.
+        var bySlug = db.NewsArticles.Select(n => new { n.Id, n.Slug }).ToList().ToDictionary(x => x.Slug, x => x.Id);
+        SeedManifestTranslations(db, EntityTypes.News, manifest, bySlug);
     }
 
     // ─── Projects ───────────────────────────────────────────────────
 
     private static void SeedProjects(AppDbContext db)
     {
+        var manifest = LoadProjectSeed();
+        if (manifest.Count == 0) return;
+
         var existingSlugs = db.Projects.Select(p => p.Slug).ToHashSet();
+        var newItems = manifest
+            .Where(item => !existingSlugs.Contains(item.Slug))
+            .Select(item =>
+            {
+                var vi = item.GetTranslation("vi");
 
-        var items = new Project[]
+                // The scraper leaves some top-level fields blank when the legacy
+                // page had no distinct value for them; fall back to the vi
+                // translation block (Description/Year) or the first gallery
+                // image (ImageUrl) so cards/detail pages don't render blank.
+                var imageUrl = string.IsNullOrWhiteSpace(item.ImageUrl)
+                    ? (item.Gallery.FirstOrDefault() ?? "")
+                    : item.ImageUrl;
+                var description = string.IsNullOrWhiteSpace(item.Description)
+                    ? vi.Excerpt
+                    : item.Description;
+                var yearMatch = Regex.Match(vi.Date, @"\d{4}");
+                var year = yearMatch.Success ? yearMatch.Value : null;
+
+                return new Project
+                {
+                    Slug = item.Slug,
+                    ImageUrl = imageUrl,
+                    GalleryJson = item.Gallery.Count > 0 ? JsonSerializer.Serialize(item.Gallery) : null,
+                    Name = item.Name,
+                    Client = item.Client,
+                    Location = item.Location,
+                    Scale = item.Scale,
+                    Scope = item.Scope,
+                    Status = item.Status ?? WarnMissingStatus(item.Slug),
+                    Year = year,
+                    Category = string.IsNullOrWhiteSpace(item.Category) ? null : item.Category,
+                    Description = description,
+                    ContentJson = item.Content is { Count: > 0 } ? JsonSerializer.Serialize(item.Content) : "[]",
+                    ChallengesJson = item.Challenges is { Count: > 0 } ? JsonSerializer.Serialize(item.Challenges) : null,
+                    SolutionsJson = item.Solutions is { Count: > 0 } ? JsonSerializer.Serialize(item.Solutions) : null,
+                    SortOrder = item.SortOrder,
+                };
+            })
+            .ToList();
+
+        if (newItems.Count > 0)
         {
-            new() { Slug = "nha-may-bma", ImageUrl = "/images/projects/nha-may-bma/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/project-bma.jpg", "/images/projects/nha-may-bma/01.jpg" }), Name = "Nhà Máy BMA", Client = "Bảo Minh Ân Việt Nam", Location = "KCN Hựu Thạnh, Tây Ninh", Scale = "15.000 m²", Scope = "Thiết kế và Thi công", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Dự án Nhà Máy BMA là tổ hợp sản xuất hiện đại với quy mô 15.000 m², được thiết kế theo tiêu chuẩn công nghiệp quốc tế.", ChallengesJson = JsonSerializer.Serialize(new[] { "Yêu cầu tiến độ chặt chẽ trong vòng 10 tháng từ khởi công đến vận hành.", "Giải pháp kết cấu nhà xưởng nhịp lớn không cột giữa cho dây chuyền sản xuất.", "Tối ưu hệ thống thông gió và chiếu sáng tự nhiên để tiết kiệm năng lượng." }), SolutionsJson = JsonSerializer.Serialize(new[] { "Áp dụng kết cấu thép tiền chế nhịp 30m với mái lấy sáng polycarbonate.", "Thi công song song nhiều hạng mục, quản lý tiến độ bằng phần mềm BIM 4D.", "Hệ thống M&E đồng bộ, dự phòng công suất cho mở rộng tương lai 30%." }), HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "15.000 m²" }, new { label = "Thời gian", value = "10 tháng" }, new { label = "Nhịp kết cấu", value = "30 m" }, new { label = "Tiêu chuẩn", value = "ISO 9001" } }), SortOrder = 0 },
-            new() { Slug = "nha-xuong-nbdc", ImageUrl = "/images/projects/nha-xuong-nbdc/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/project-nbdc.jpg", "/images/projects/ttdtt-thu-duc/02.png" }), Name = "Nhà Xưởng NBDC", Client = "Công ty TNHH NBDC VN", Location = "KCN Giang Điền, Đồng Nai", Scale = "8.500 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà xưởng sản xuất", Description = "NICON cung cấp dịch vụ thiết kế kiến trúc và kết cấu trọn gói cho nhà xưởng sản xuất NBDC tại KCN Giang Điền.", ChallengesJson = JsonSerializer.Serialize(new[] { "Bố cục dây chuyền sản xuất phức tạp với nhiều khu vực chức năng.", "Yêu cầu tích hợp khu văn phòng điều hành và sản xuất trong cùng một khối." }), SolutionsJson = JsonSerializer.Serialize(new[] { "Phân khu rõ ràng với luồng di chuyển một chiều, giảm chéo nhau.", "Thiết kế khu văn phòng 2 tầng tích hợp với view nhìn xuống xưởng." }), HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "8.500 m²" }, new { label = "Khu chức năng", value = "5" }, new { label = "Nhân sự dự kiến", value = "200" }, new { label = "Năm", value = "2024" } }), SortOrder = 1 },
-            new() { Slug = "nha-may-lhh", ImageUrl = "/images/projects/nha-may-lhh/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-lhh/02.png", "/images/projects/nha-may-lhh/03.png" }), Name = "Nhà Máy Lâm Hiệp Hưng – Tân Toàn Phát", Client = "Lam Hiệp Hưng & Tân Toàn Phát", Location = "Tỉnh Bình Dương", Scale = "250.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2023", Category = "Tổ hợp công nghiệp", Description = "Một trong những dự án quy mô lớn nhất NICON đã thực hiện: tổ hợp nhà máy 250.000 m².", ChallengesJson = JsonSerializer.Serialize(new[] { "Quy hoạch tổng mặt bằng quy mô siêu lớn với nhiều khối công trình.", "Đồng bộ hạ tầng kỹ thuật trên diện tích lớn." }), SolutionsJson = JsonSerializer.Serialize(new[] { "Quy hoạch theo mô-đun, dễ dàng mở rộng và thay đổi công năng.", "Hệ thống đường nội bộ thiết kế cho xe container 40 feet." }), HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Tổng diện tích", value = "250.000 m²" }, new { label = "Khối công trình", value = "12" }, new { label = "Đường nội bộ", value = "5,2 km" }, new { label = "Năm", value = "2023" } }), SortOrder = 2 },
-            new() { Slug = "ttdtt-thu-duc", ImageUrl = "/images/projects/ttdtt-thu-duc/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/ttdtt-thu-duc/02.png", "/images/projects/ttdtt-thu-duc/03.png", "/images/projects/ttdtt-thu-duc/04.png" }), Name = "Trung Tâm Thể Dục Thể Thao Thủ Đức", Client = "Thủ Thiêm Group", Location = "Thủ Đức, TP.HCM", Scale = "12.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Công trình công cộng", Description = "Trung tâm thể dục thể thao đa năng phục vụ cộng đồng tại Thủ Đức.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "12.000 m²" }, new { label = "Nhịp mái", value = "45 m" }, new { label = "Sức chứa", value = "2.000 chỗ" }, new { label = "Năm", value = "2024" } }), SortOrder = 3 },
-            new() { Slug = "noi-that-b37", ImageUrl = "/images/projects/noi-that-b37/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/noi-that-b37/02.jpg", "/images/projects/noi-that-b37/03.jpg", "/images/projects/noi-that-b37/04.png" }), Name = "Văn Phòng B37", Client = "Nihome", Location = "Thủ Đức, TP.HCM", Scale = "1.200 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2024", Category = "Nội thất văn phòng", Description = "Thiết kế nội thất văn phòng hiện đại với phong cách tối giản, không gian mở.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "1.200 m²" }, new { label = "Sức chứa", value = "80 người" }, new { label = "Phòng họp", value = "6" }, new { label = "Năm", value = "2024" } }), SortOrder = 4 },
-            new() { Slug = "nha-may-trimas", ImageUrl = "/images/projects/nha-may-trimas/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-trimas/02.png", "/images/projects/nha-may-trimas/03.png", "/images/projects/nha-may-trimas/04.png" }), Name = "Nhà Máy Trimas Việt Nam", Client = "Rieke Packaging Vietnam Co., Ltd", Location = "VSIP IIA, TP.HCM", Scale = "10.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2022", Category = "Nhà máy công nghiệp", Description = "Dự án trọn gói thiết kế và thi công nhà máy sản xuất bao bì cho Trimas tại VSIP IIA.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "10.000 m²" }, new { label = "Tiêu chuẩn", value = "ISO Class 8" }, new { label = "Thời gian", value = "9 tháng" }, new { label = "Năm", value = "2022" } }), SortOrder = 5 },
-            new() { Slug = "nha-kho-apm", ImageUrl = "/images/projects/nha-kho-apm/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-kho-apm/02.png", "/images/projects/nha-kho-apm/03.png", "/images/projects/nha-kho-apm/04.png" }), Name = "Nhà Kho APM", Client = "Auto Components Việt Nam", Location = "KCN Việt Nam – Singapore, Bình Hòa, Thuận An, Bình Dương", Scale = "6.500 m²", Scope = "Thiết kế", Status = "completed", Year = "2022", Category = "Nhà kho logistics", Description = "Thiết kế nhà kho logistics cho Auto Components Việt Nam.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "6.500 m²" }, new { label = "Chiều cao", value = "12 m" }, new { label = "Dock loading", value = "6" }, new { label = "Năm", value = "2022" } }), SortOrder = 6 },
-            new() { Slug = "nha-may-jojo", ImageUrl = "/images/projects/nha-may-jojo/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-jojo/02.png", "/images/projects/nha-may-jojo/03.png" }), Name = "Nhà Máy JOJO", Client = "Phạm – Asset", Location = "KCN Hựu Thạnh, Long An", Scale = "7.800 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy sản xuất JOJO với yêu cầu cao về vệ sinh an toàn thực phẩm.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "7.800 m²" }, new { label = "Tiêu chuẩn", value = "HACCP" }, new { label = "Khu sạch", value = "3" }, new { label = "Năm", value = "2024" } }), SortOrder = 7 },
-            new() { Slug = "khach-san-d22", ImageUrl = "/images/projects/khach-san-d22/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/khach-san-d22/02.png", "/images/projects/khach-san-d22/03.png" }), Name = "Khách sạn D22", Client = "Nihome", Location = "Thủ Đức, TP.HCM", Scale = "4.500 m²", Scope = "Thiết kế và Thi công", Status = "ongoing", Year = "2024", Category = "Khách sạn", Description = "Khách sạn 4 sao với 80 phòng nghỉ, nhà hàng tầng trệt và khu spa.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "4.500 m²" }, new { label = "Số phòng", value = "80" }, new { label = "Tầng cao", value = "12" }, new { label = "Năm", value = "2024" } }), SortOrder = 8 },
-            // ── Ongoing projects from nicon.vn ──
-            new() { Slug = "nbdc-canteen", ImageUrl = "/images/projects/nbdc-canteen/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nbdc-canteen/02.png", "/images/projects/nbdc-canteen/03.png" }), Name = "NBDC Canteen", Client = "Công ty TNHH NBDC VN", Location = "KCN Giang Điền, Đồng Nai", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà xưởng sản xuất", Description = "Thiết kế nhà ăn cho khu công nghiệp NBDC tại KCN Giang Điền.", SortOrder = 9 },
-            new() { Slug = "nbdc-office", ImageUrl = "/images/projects/nbdc-office/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nbdc-office/02.png", "/images/projects/nbdc-office/03.png" }), Name = "NBDC Office", Client = "Công ty TNHH NBDC VN", Location = "KCN Giang Điền, Đồng Nai", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Văn phòng", Description = "Thiết kế văn phòng điều hành cho NBDC tại KCN Giang Điền.", SortOrder = 10 },
-            new() { Slug = "nha-may-ttp", ImageUrl = "/images/projects/nha-may-ttp/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-ttp/02.png", "/images/projects/nha-may-ttp/03.png" }), Name = "Nhà Máy Tân Toàn Phát", Client = "Lam Hiệp Hưng & Tân Toàn Phát", Location = "Tỉnh Bình Dương", Scale = "250.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Nhà máy thuộc tổ hợp Lâm Hiệp Hưng – Tân Toàn Phát tại Bình Dương.", SortOrder = 11 },
-            new() { Slug = "nha-may-lhh-2", ImageUrl = "/images/projects/nha-may-lhh-2/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-lhh-2/02.png", "/images/projects/nha-may-lhh-2/03.png" }), Name = "Nhà Máy Lâm Hiệp Hưng", Client = "Lam Hiệp Hưng", Location = "Tỉnh Bình Dương", Scale = "250.000 m²", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Nhà máy Lâm Hiệp Hưng tại Bình Dương, mở rộng dây chuyền sản xuất.", SortOrder = 12 },
-            // ── Completed projects from nicon.vn ──
-            new() { Slug = "nha-may-stfood", ImageUrl = "/images/projects/nha-may-stfood/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-stfood/02.png", "/images/projects/nha-may-stfood/03.png", "/images/projects/nha-may-stfood/04.png" }), Name = "Nhà Máy S.T.Food Marketing Việt Nam", Client = "S.T.FOOD MARKETING Vietnam Co. Ltd.", Location = "Đường 24, VSIP II-A, Tân Uyên, Bình Dương", Scale = "20.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2022", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất thực phẩm từ chủ đầu tư Thái Lan, thiết kế theo tiêu chuẩn GMP và HACCP.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "20.000 m²" }, new { label = "Tiêu chuẩn", value = "GMP/HACCP" }, new { label = "Thời gian", value = "14 tháng" }, new { label = "Năm", value = "2022" } }), SortOrder = 13 },
-            new() { Slug = "medicare-shop", ImageUrl = "/images/projects/medicare-shop/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/medicare-shop/02.jpg", "/images/projects/medicare-shop/03.jpg", "/images/projects/medicare-shop/04.jpg" }), Name = "Medicare Shop", Client = "Medicare Company", Location = "G3, Aeon Mall Bình Dương Canary", Scale = "250 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2020", Category = "Thương mại", Description = "Cửa hàng Medicare tại Aeon Mall Bình Dương Canary.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "250 m²" }, new { label = "Vị trí", value = "Aeon Mall" }, new { label = "Năm", value = "2020" } }), SortOrder = 14 },
-            new() { Slug = "nha-may-lhh-completed", ImageUrl = "/images/projects/nha-may-lhh-completed/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-lhh-completed/02.jpg", "/images/projects/nha-may-lhh-completed/03.jpg", "/images/projects/nha-may-lhh-completed/04.jpg" }), Name = "Nhà Máy Lâm Hiệp Hưng (Hoàn thành)", Client = "Lam Hiệp Hưng & Tân Toàn Phát", Location = "Tỉnh Bình Dương", Scale = "18.000 m²", Scope = "Thiết kế", Status = "completed", Year = "2019", Category = "Nhà máy công nghiệp", Description = "Dự án nhà máy Lâm Hiệp Hưng giai đoạn 1 đã hoàn thành.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "18.000 m²" }, new { label = "Năm", value = "2019" } }), SortOrder = 15 },
-            new() { Slug = "sctv-office", ImageUrl = "/images/projects/sctv-office/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/sctv-office/02.jpg" }), Name = "Văn Phòng SCTV", Client = "Đài Truyền hình Cáp Sài Gòn", Location = "Quận 2, TP.HCM", Scale = "4.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2020", Category = "Văn phòng", Description = "Thiết kế và thi công văn phòng SCTV tại Quận 2, TP.HCM.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "4.000 m²" }, new { label = "Năm", value = "2020" } }), SortOrder = 16 },
-            new() { Slug = "nha-may-hbfuller", ImageUrl = "/images/projects/nha-may-hbfuller/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-hbfuller/02.jpg", "/images/projects/nha-may-hbfuller/03.jpg" }), Name = "Nhà Máy H.B.Fuller", Client = "H.B.Fuller Co., Ltd.", Location = "Tỉnh Bình Dương", Scale = "", Scope = "MEP", Status = "completed", Year = "2019", Category = "Nhà máy công nghiệp", Description = "Thi công hệ thống MEP cho nhà máy H.B.Fuller tại Bình Dương.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Phạm vi", value = "MEP" }, new { label = "Năm", value = "2019" } }), SortOrder = 17 },
-            new() { Slug = "red-bull-expansion", ImageUrl = "/images/projects/red-bull-expansion/01.png", Name = "Dự Án Mở Rộng Red Bull", Client = "Red Bull (Việt Nam) Co., Ltd", Location = "Xa lộ Hà Nội, Bình Thắng, Dĩ An, Bình Dương", Scale = "2.000 m²", Scope = "Thiết kế", Status = "completed", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế mở rộng nhà máy Red Bull tại Bình Dương, giữ nguyên bản sắc thương hiệu.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "2.000 m²" }, new { label = "Năm", value = "2024" } }), SortOrder = 18 },
-            new() { Slug = "nha-may-great-lotus", ImageUrl = "/images/projects/nha-may-great-lotus/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-great-lotus/02.jpg", "/images/projects/nha-may-great-lotus/03.jpg", "/images/projects/nha-may-great-lotus/04.jpg" }), Name = "Nhà Máy Great Lotus Việt Nam", Client = "Great Lotus Manufacturing Vietnam Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "31.187 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2019", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy Great Lotus với quy mô hơn 31.000 m².", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "31.187 m²" }, new { label = "Năm", value = "2019" } }), SortOrder = 19 },
-            new() { Slug = "nha-may-advanced-casting", ImageUrl = "/images/projects/nha-may-advanced-casting/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-advanced-casting/02.jpg", "/images/projects/nha-may-advanced-casting/03.jpg" }), Name = "Nhà Máy Advanced Casting Asia", Client = "Advanced Casting Asia Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "15.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất Advanced Casting Asia tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "15.000 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 20 },
-            new() { Slug = "sctv-studio", ImageUrl = "/images/projects/sctv-studio/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/sctv-studio/02.jpg", "/images/projects/sctv-studio/03.jpg", "/images/projects/sctv-studio/04.jpg" }), Name = "SCTV Studio & Văn Phòng", Client = "Đài Truyền hình Cáp Sài Gòn", Location = "Quận 2, TP.HCM", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Studio", Description = "Trường quay truyền hình quy mô lớn nhất Việt Nam tại thời điểm xây dựng.", SortOrder = 21 },
-            new() { Slug = "nha-may-bkl", ImageUrl = "/images/projects/nha-may-bkl/01.jpg", Name = "Nhà Máy BKL", Client = "BKL International Ltd., Co", Location = "KCN Thịnh Phát, Bến Lức, Long An", Scale = "5.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy BKL tại KCN Thịnh Phát.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "5.000 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 22 },
-            new() { Slug = "nha-may-rebisco", ImageUrl = "/images/projects/nha-may-rebisco/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-rebisco/02.jpg", "/images/projects/nha-may-rebisco/03.jpg", "/images/projects/nha-may-rebisco/04.jpg" }), Name = "Nhà Máy Rebisco", Client = "Republic Biscuit Corporation", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "20.000 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2017", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất bánh kẹo Rebisco (Philippines) tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "20.000 m²" }, new { label = "Năm", value = "2017" } }), SortOrder = 23 },
-            new() { Slug = "nha-may-nestle", ImageUrl = "/images/projects/nha-may-nestle/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-nestle/02.jpg", "/images/projects/nha-may-nestle/03.jpg", "/images/projects/nha-may-nestle/04.jpg" }), Name = "Nhà Máy & Văn Phòng Nestlé Bình An", Client = "Nestlé Việt Nam", Location = "KCN Biên Hòa II, Đồng Nai", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2015", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy và văn phòng Nestlé Bình An.", SortOrder = 24 },
-            new() { Slug = "nha-may-ampharco", ImageUrl = "/images/projects/nha-may-ampharco/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-ampharco/02.jpg" }), Name = "Nhà Máy Ampharco U.S.A", Client = "Ampharco U.S.A", Location = "KCN Nhơn Trạch 3, Đồng Nai", Scale = "", Scope = "Thi công", Status = "completed", Year = "2016", Category = "Nhà máy dược phẩm", Description = "Thi công nhà máy dược phẩm Ampharco U.S.A tại Nhơn Trạch.", SortOrder = 25 },
-            new() { Slug = "konimiyaki-restaurant", ImageUrl = "/images/projects/konimiyaki-restaurant/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/konimiyaki-restaurant/02.jpg", "/images/projects/konimiyaki-restaurant/03.jpg", "/images/projects/konimiyaki-restaurant/04.jpg" }), Name = "Nhà Hàng Konimiyaki", Client = "Konimiyaki Restaurant", Location = "Quận 1, TP.HCM", Scale = "400 m²", Scope = "Thiết kế", Status = "completed", Year = "2018", Category = "Nhà hàng", Description = "Thiết kế nhà hàng Konimiyaki tại Quận 1, TP.HCM.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "400 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 26 },
-            new() { Slug = "nha-may-scon", ImageUrl = "/images/projects/nha-may-scon/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-scon/02.jpg", "/images/projects/nha-may-scon/03.jpg", "/images/projects/nha-may-scon/04.jpg" }), Name = "Nhà Máy SCON", Client = "SCON Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "8.337 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy SCON tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "8.337 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 27 },
-            new() { Slug = "nha-may-clotex", ImageUrl = "/images/projects/nha-may-clotex/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-clotex/02.jpg" }), Name = "Nhà Máy Clotex Labels Việt Nam", Client = "Clotex Labels (VN) Co. Ltd.", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "8.565 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Nhà máy nhãn mác Clotex Labels Vietnam tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "8.565 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 28 },
-            new() { Slug = "nha-may-amiba", ImageUrl = "/images/projects/nha-may-amiba/01.jpg", Name = "Nhà Máy Amiba", Client = "Amiba Vietnam Company Limited", Location = "VSIP II-A, Tân Uyên, Bình Dương", Scale = "20.000 m²", Scope = "Thi công", Status = "completed", Year = "2018", Category = "Nhà máy công nghiệp", Description = "Thi công nhà máy Amiba với diện tích 2 hecta tại VSIP II-A.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "20.000 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 29 },
-            new() { Slug = "nha-may-akati-wood", ImageUrl = "/images/projects/nha-may-akati-wood/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-akati-wood/02.jpg", "/images/projects/nha-may-akati-wood/03.jpg", "/images/projects/nha-may-akati-wood/04.jpg" }), Name = "Nhà Máy Akati Wood", Client = "Akati Dominant (Malaysia)", Location = "Bình Dương", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2016", Category = "Nhà máy công nghiệp", Description = "Nhà máy gỗ Akati Wood, chi nhánh của Akati Dominant từ Malaysia.", SortOrder = 30 },
-            new() { Slug = "nha-may-japan-plus", ImageUrl = "/images/projects/nha-may-japan-plus/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-japan-plus/02.jpg", "/images/projects/nha-may-japan-plus/03.jpg", "/images/projects/nha-may-japan-plus/04.jpg" }), Name = "Nhà Máy Japan Plus", Client = "Japan Plus (Nhật Bản)", Location = "KCN Đông Nam Củ Chi", Scale = "", Scope = "Thi công", Status = "completed", Year = "2016", Category = "Nhà máy công nghiệp", Description = "Nhà máy Japan Plus sản xuất hộp PE tại KCN Đông Nam Củ Chi.", SortOrder = 31 },
-            new() { Slug = "duoc-pham-trung-uong", ImageUrl = "/images/projects/duoc-pham-trung-uong/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/duoc-pham-trung-uong/02.jpg", "/images/projects/duoc-pham-trung-uong/03.jpg", "/images/projects/duoc-pham-trung-uong/04.jpg" }), Name = "Dược Phẩm Trung Ương TP.HCM", Client = "Công ty TNHH Dược Phẩm Trung Ương 1", Location = "TP.HCM", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "2020", Category = "Nhà máy dược phẩm", Description = "Thiết kế nhà máy dược phẩm Trung Ương tại TP.HCM.", SortOrder = 32 },
-            new() { Slug = "kumgang-office", ImageUrl = "/images/projects/kumgang-office/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/kumgang-office/02.jpg" }), Name = "Văn Phòng Kumgang", Client = "KUMGANG VINA CO., LTD", Location = "KCN Giang Điền, Trảng Bom, Đồng Nai", Scale = "180 m²", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2018", Category = "Văn phòng", Description = "Thiết kế và thi công văn phòng Kumgang Vina.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "180 m²" }, new { label = "Năm", value = "2018" } }), SortOrder = 33 },
-            new() { Slug = "nha-may-vda-hcm", ImageUrl = "/images/projects/nha-may-vda-hcm/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-vda-hcm/02.jpg", "/images/projects/nha-may-vda-hcm/03.jpg", "/images/projects/nha-may-vda-hcm/04.jpg" }), Name = "Nhà Máy VDA-HCM", Client = "VDA-HCM", Location = "KCN Cầu Tràm, Cần Đước, Long An", Scale = "", Scope = "Thiết kế và Thi công", Status = "completed", Year = "2017", Category = "Nhà máy công nghiệp", Description = "Thiết kế và thi công nhà máy VDA-HCM tại KCN Cầu Tràm.", SortOrder = 34 },
-            new() { Slug = "thu-thiem-dragon", ImageUrl = "/images/projects/thu-thiem-dragon/01.jpeg", Name = "Thu Thiêm Dragon Show Flat", Client = "Thu Thiêm Group", Location = "Quận 2, TP.HCM", Scale = "", Scope = "Thi công", Status = "completed", Year = "2015", Category = "Bất động sản", Description = "Thi công căn hộ mẫu Thu Thiêm Dragon tại Quận 2.", SortOrder = 35 },
-            new() { Slug = "nha-may-nam-ha-viet", ImageUrl = "/images/projects/nha-may-nam-ha-viet/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-nam-ha-viet/02.jpg" }), Name = "Nhà Máy Nam Hà Việt", Client = "Nam Hà Việt Co., Ltd.", Location = "KCN Rạch Bắp, Bến Cát, Bình Dương", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "2020", Category = "Nhà máy công nghiệp", Description = "Nhà máy sản xuất que hàn Nam Hà Việt.", SortOrder = 36 },
-            new() { Slug = "nha-may-yc-tec", ImageUrl = "/images/projects/nha-may-yc-tec/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-yc-tec/02.jpg" }), Name = "Nhà Máy YC TEC", Client = "YC TEC Group", Location = "KCN Sóng Thần II, Dĩ An, Bình Dương", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "2020", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy YC TEC tại KCN Sóng Thần II.", SortOrder = 37 },
-            // ── Additional ongoing projects from nicon.vn ──
-            new() { Slug = "d56-house", ImageUrl = "/images/projects/d56-house/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/d56-house/01.png", "/images/projects/d56-house/02.png" }), Name = "D56 House", Client = "Nihome Co., Ltd.", Location = "Thủ Đức, TP.HCM", Scale = "", Scope = "Thiết kế và Thi công", Status = "ongoing", Year = "2024", Category = "Nhà ở", Description = "Thiết kế và thi công nhà ở D56 tại Thủ Đức cho Nihome.", SortOrder = 38 },
-            new() { Slug = "swimming-pool-service-building", ImageUrl = "/images/projects/swimming-pool-service-building/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/swimming-pool-service-building/01.png", "/images/projects/swimming-pool-service-building/02.png", "/images/projects/swimming-pool-service-building/03.png", "/images/projects/swimming-pool-service-building/04.png", "/images/projects/swimming-pool-service-building/05.png", "/images/projects/swimming-pool-service-building/06.png", "/images/projects/swimming-pool-service-building/07.png" }), Name = "Swimming Pool Service Building", Client = "Thu Thiem Group Joint Stock Company", Location = "Thạnh Mỹ Lợi, Thủ Đức, TP.HCM", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Công trình công cộng", Description = "Thiết kế khu dịch vụ hồ bơi thuộc tổ hợp Thủ Đức Sport Center.", SortOrder = 39 },
-            new() { Slug = "thu-duc-multi-purpose-building", ImageUrl = "/images/projects/thu-duc-multi-purpose-building/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/thu-duc-multi-purpose-building/01.png", "/images/projects/thu-duc-multi-purpose-building/02.png", "/images/projects/thu-duc-multi-purpose-building/03.png", "/images/projects/thu-duc-multi-purpose-building/04.png", "/images/projects/thu-duc-multi-purpose-building/05.png", "/images/projects/thu-duc-multi-purpose-building/06.png", "/images/projects/thu-duc-multi-purpose-building/07.png", "/images/projects/thu-duc-multi-purpose-building/08.png" }), Name = "Thủ Đức Multi-Purpose Building", Client = "Thu Thiem Group Joint Stock Company", Location = "Thạnh Mỹ Lợi, Thủ Đức, TP.HCM", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Công trình công cộng", Description = "Thiết kế công trình đa năng thuộc khu liên hợp Thủ Đức.", SortOrder = 40 },
-            new() { Slug = "thu-duc-wedding-banquet", ImageUrl = "/images/projects/thu-duc-wedding-banquet/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/thu-duc-wedding-banquet/01.png", "/images/projects/thu-duc-wedding-banquet/02.png", "/images/projects/thu-duc-wedding-banquet/03.png", "/images/projects/thu-duc-wedding-banquet/04.png", "/images/projects/thu-duc-wedding-banquet/05.png", "/images/projects/thu-duc-wedding-banquet/06.png", "/images/projects/thu-duc-wedding-banquet/07.png", "/images/projects/thu-duc-wedding-banquet/08.png" }), Name = "Thủ Đức Wedding Banquet Restaurant", Client = "Thu Thiem Group Joint Stock Company", Location = "Thạnh Mỹ Lợi, Thủ Đức, TP.HCM", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà hàng", Description = "Thiết kế nhà hàng tiệc cưới thuộc tổ hợp Thủ Đức Sport Center.", SortOrder = 41 },
-            new() { Slug = "thu-duc-sport-service-building", ImageUrl = "/images/projects/thu-duc-sport-service-building/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/thu-duc-sport-service-building/01.png", "/images/projects/thu-duc-sport-service-building/02.png", "/images/projects/thu-duc-sport-service-building/03.png", "/images/projects/thu-duc-sport-service-building/04.png", "/images/projects/thu-duc-sport-service-building/05.png", "/images/projects/thu-duc-sport-service-building/06.png", "/images/projects/thu-duc-sport-service-building/07.png", "/images/projects/thu-duc-sport-service-building/08.png", "/images/projects/thu-duc-sport-service-building/09.png", "/images/projects/thu-duc-sport-service-building/10.png", "/images/projects/thu-duc-sport-service-building/11.png", "/images/projects/thu-duc-sport-service-building/12.png" }), Name = "Service Building - Thủ Đức Sport Center", Client = "Thu Thiem Group Joint Stock Company", Location = "Thạnh Mỹ Lợi, Thủ Đức, TP.HCM", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Công trình công cộng", Description = "Khu dịch vụ thuộc trung tâm thể thao Thủ Đức.", SortOrder = 42 },
-            new() { Slug = "thu-duc-sport-coffee", ImageUrl = "/images/projects/thu-duc-sport-coffee/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/thu-duc-sport-coffee/01.png", "/images/projects/thu-duc-sport-coffee/02.png", "/images/projects/thu-duc-sport-coffee/03.png" }), Name = "Coffee - Thủ Đức Sport Center", Client = "Thu Thiem Group Joint Stock Company", Location = "Thạnh Mỹ Lợi, Thủ Đức, TP.HCM", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Thương mại", Description = "Thiết kế quán cà phê thuộc trung tâm thể thao Thủ Đức.", SortOrder = 43 },
-            new() { Slug = "b37-interior", ImageUrl = "/images/projects/b37-interior/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/b37-interior/01.png", "/images/projects/b37-interior/02.png", "/images/projects/b37-interior/03.png", "/images/projects/b37-interior/04.png", "/images/projects/b37-interior/05.png", "/images/projects/b37-interior/06.png", "/images/projects/b37-interior/07.png", "/images/projects/b37-interior/08.png", "/images/projects/b37-interior/09.png", "/images/projects/b37-interior/10.png", "/images/projects/b37-interior/11.png", "/images/projects/b37-interior/12.png", "/images/projects/b37-interior/13.png", "/images/projects/b37-interior/14.png", "/images/projects/b37-interior/15.png", "/images/projects/b37-interior/16.png", "/images/projects/b37-interior/17.png", "/images/projects/b37-interior/18.png", "/images/projects/b37-interior/19.png", "/images/projects/b37-interior/20.png", "/images/projects/b37-interior/21.png", "/images/projects/b37-interior/22.png", "/images/projects/b37-interior/23.png", "/images/projects/b37-interior/24.png", "/images/projects/b37-interior/25.png", "/images/projects/b37-interior/26.png" }), Name = "Interior - Văn Phòng B37", Client = "Nihome Co., Ltd.", Location = "Thủ Đức, TP.HCM", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nội thất văn phòng", Description = "Thiết kế nội thất văn phòng B37 cho Nihome.", SortOrder = 44 },
-            new() { Slug = "d22-factory", ImageUrl = "/images/projects/d22-factory/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/d22-factory/01.png", "/images/projects/d22-factory/02.png", "/images/projects/d22-factory/03.png", "/images/projects/d22-factory/04.png", "/images/projects/d22-factory/05.png" }), Name = "Nhà Máy D22", Client = "NATCO Vietnam Co., Ltd.", Location = "Thuận An, Bình Dương", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy D22 cho NATCO Vietnam tại Thuận An.", SortOrder = 45 },
-            new() { Slug = "salad-stop-restaurant", ImageUrl = "/images/projects/salad-stop-restaurant/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/salad-stop-restaurant/01.jpg", "/images/projects/salad-stop-restaurant/02.jpg", "/images/projects/salad-stop-restaurant/03.jpg", "/images/projects/salad-stop-restaurant/04.jpg", "/images/projects/salad-stop-restaurant/05.jpg", "/images/projects/salad-stop-restaurant/06.jpg", "/images/projects/salad-stop-restaurant/07.jpg" }), Name = "Nhà Hàng Salad Stop", Client = "Salad Stop Company", Location = "TP.HCM", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà hàng", Description = "Thiết kế chuỗi nhà hàng Salad Stop.", SortOrder = 46 },
-            new() { Slug = "champion-lee-factory", ImageUrl = "/images/projects/champion-lee-factory/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/champion-lee-factory/01.png", "/images/projects/champion-lee-factory/02.png", "/images/projects/champion-lee-factory/03.png", "/images/projects/champion-lee-factory/04.png" }), Name = "Nhà Máy Champion Lee Group", Client = "Champion Lee Group", Location = "N-8A, Đường Số 4, KCN Long Hậu", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy Champion Lee Group tại KCN Long Hậu.", SortOrder = 47 },
-            new() { Slug = "jakob-workshop", ImageUrl = "/images/projects/jakob-workshop/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/jakob-workshop/01.png", "/images/projects/jakob-workshop/02.png", "/images/projects/jakob-workshop/03.png", "/images/projects/jakob-workshop/04.png", "/images/projects/jakob-workshop/05.png", "/images/projects/jakob-workshop/06.png", "/images/projects/jakob-workshop/07.png" }), Name = "Xưởng Jakob (Đề Xuất)", Client = "Jakob", Location = "Bình Dương", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế đề xuất xưởng Jakob tại Bình Dương.", SortOrder = 48 },
-            new() { Slug = "siegwerk-factory", ImageUrl = "/images/projects/siegwerk-factory/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/siegwerk-factory/01.png", "/images/projects/siegwerk-factory/02.png", "/images/projects/siegwerk-factory/03.png", "/images/projects/siegwerk-factory/04.png", "/images/projects/siegwerk-factory/05.png", "/images/projects/siegwerk-factory/06.png", "/images/projects/siegwerk-factory/07.png" }), Name = "Nhà Máy Siegwerk Việt Nam", Client = "Siegwerk", Location = "VSIP IIA, Bình Dương", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy Siegwerk tại VSIP IIA.", SortOrder = 49 },
-            new() { Slug = "great-lotus-interior", ImageUrl = "/images/projects/great-lotus-interior/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/great-lotus-interior/01.jpg", "/images/projects/great-lotus-interior/02.jpg", "/images/projects/great-lotus-interior/03.jpg", "/images/projects/great-lotus-interior/04.jpg", "/images/projects/great-lotus-interior/05.jpg", "/images/projects/great-lotus-interior/06.jpg", "/images/projects/great-lotus-interior/07.jpg", "/images/projects/great-lotus-interior/08.jpg", "/images/projects/great-lotus-interior/09.jpg", "/images/projects/great-lotus-interior/10.jpg", "/images/projects/great-lotus-interior/11.jpg", "/images/projects/great-lotus-interior/12.jpg" }), Name = "Nội Thất Nhà Máy Great Lotus", Client = "Great Lotus Manufacturing Vietnam Co. Ltd.", Location = "Lot 3, Đường 24, VSIP II-A, Bình Dương", Scale = "31.187 m²", Scope = "Turnkey", Status = "ongoing", Year = "2024", Category = "Nội thất công nghiệp", Description = "Hạng mục nội thất trọn gói (turnkey) cho nhà máy Great Lotus.", HighlightsJson = JsonSerializer.Serialize(new[] { new { label = "Diện tích", value = "31.187 m²" }, new { label = "Phạm vi", value = "Turnkey" } }), SortOrder = 50 },
-            new() { Slug = "quan-chi-factory", ImageUrl = "/images/projects/quan-chi-factory/01.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/quan-chi-factory/01.png", "/images/projects/quan-chi-factory/02.png", "/images/projects/quan-chi-factory/03.png", "/images/projects/quan-chi-factory/04.png", "/images/projects/quan-chi-factory/05.png" }), Name = "Nhà Máy Quan Chi", Client = "Quan Chi Co., Ltd.", Location = "VSIP IIA, Bình Dương", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Thiết kế nhà máy Quan Chi tại VSIP IIA.", SortOrder = 51 },
-            new() { Slug = "velrco-office", ImageUrl = "/images/projects/velrco-office/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/velrco-office/01.jpg", "/images/projects/velrco-office/02.jpg", "/images/projects/velrco-office/03.jpg", "/images/projects/velrco-office/04.jpg", "/images/projects/velrco-office/05.jpg" }), Name = "Văn Phòng Velrco", Client = "Velrco Company", Location = "", Scale = "", Scope = "Thiết kế", Status = "ongoing", Year = "2024", Category = "Văn phòng", Description = "Thiết kế văn phòng Velrco.", SortOrder = 52 },
-            new() { Slug = "semivina-nissi-factory", ImageUrl = "/images/projects/semivina-nissi-factory/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/semivina-nissi-factory/01.jpg", "/images/projects/semivina-nissi-factory/02.jpg", "/images/projects/semivina-nissi-factory/03.jpg", "/images/projects/semivina-nissi-factory/04.jpg", "/images/projects/semivina-nissi-factory/05.jpg" }), Name = "Nhà Máy Semivina – Nissi", Client = "Semivina – Nissi (Hàn Quốc)", Location = "VSIP II, Bình Dương", Scale = "", Scope = "Thiết kế và Thi công", Status = "ongoing", Year = "2024", Category = "Nhà máy công nghiệp", Description = "Nhà máy thiết bị chiếu sáng của nhà đầu tư Hàn Quốc tại VSIP II.", SortOrder = 53 },
-            // ── Additional legacy projects (NIH-23 sync) ──
-            new() { Slug = "nha-may-tien-len", ImageUrl = "/images/projects/nha-may-tien-len/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-tien-len/img-02.jpg", "/images/projects/nha-may-tien-len/img-03.jpg", "/images/projects/nha-may-tien-len/img-04.jpg" }), Name = "Nhà Máy Tiến Lên", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Khách hàng: Công ty Cổ phần Tiến Lên", SortOrder = 54 },
-            new() { Slug = "stc-canteen-coffee", ImageUrl = "/images/projects/quan-ca-phe-stc/img-02.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/quan-ca-phe-stc/img-03.jpg", "/images/projects/quan-ca-phe-stc/img-01.jpg", "/images/projects/quan-ca-phe-stc/img-04.jpg", "/images/projects/quan-ca-phe-stc/img-05.jpg", "/images/projects/quan-ca-phe-stc/img-07.jpg", "/images/projects/quan-ca-phe-stc/img-08.jpg", "/images/projects/quan-ca-phe-stc/img-09.jpg", "/images/projects/quan-ca-phe-stc/img-11.jpg", "/images/projects/stc-canteen-coffee-4/img-10.jpg", "/images/projects/quan-ca-phe-stc/img-10.jpg" }), Name = "STC Canteen – Coffee", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà hàng", Description = "Khách hàng: Công ty Phương Nam Star", SortOrder = 55 },
-            new() { Slug = "nha-hang-wrap-roll", ImageUrl = "/images/projects/nha-hang-wrap-roll/img-01.JPG", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-hang-wrap-roll/img-02.JPG", "/images/projects/nha-hang-wrap-roll/img-03.JPG", "/images/projects/nha-hang-wrap-roll/img-04.JPG", "/images/projects/nha-hang-wrap-roll/img-05.JPG", "/images/projects/nha-hang-wrap-roll/img-06.JPG" }), Name = "Nhà Hàng Wrap & Roll", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà hàng", Description = "Khách hàng: Công ty cổ phần nhà hàng gói & cuốn", SortOrder = 56 },
-            new() { Slug = "nha-o-gia-dinh", ImageUrl = "/images/projects/nha-o-gia-dinh/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-o-gia-dinh/img-02.jpg", "/images/projects/nha-o-gia-dinh/img-03.jpg", "/images/projects/nha-o-gia-dinh/img-04.jpg", "/images/projects/nha-o-gia-dinh/img-06.jpg", "/images/projects/nha-o-gia-dinh/img-08.jpg", "/images/projects/nha-o-gia-dinh/img-10.jpg", "/images/projects/nha-o-gia-dinh/img-11.jpg", "/images/projects/nha-o-gia-dinh/img-12.jpg", "/images/projects/nha-o-gia-dinh/img-13.jpg", "/images/projects/nha-o-gia-dinh/img-14.jpg", "/images/projects/nha-o-gia-dinh/img-15.jpg", "/images/projects/nha-o-gia-dinh/img-16.jpg", "/images/projects/nha-o-gia-dinh/img-17.jpg", "/images/projects/nha-o-gia-dinh/img-18.jpg", "/images/projects/nha-o-gia-dinh/img-19.jpg", "/images/projects/nha-o-gia-dinh/img-20.jpg", "/images/projects/nha-o-gia-dinh/img-22.jpg", "/images/projects/nha-o-gia-dinh/img-23.jpg", "/images/projects/nha-o-gia-dinh/img-24.jpg", "/images/projects/nha-o-gia-dinh/img-25.jpg", "/images/projects/nha-o-gia-dinh/img-26.jpg", "/images/projects/nha-o-gia-dinh/img-27.jpg", "/images/projects/nha-o-gia-dinh/img-28.jpg", "/images/projects/nha-o-gia-dinh/img-29.jpg", "/images/projects/nha-o-gia-dinh/img-30.jpg", "/images/projects/nha-o-gia-dinh/img-31.jpg", "/images/projects/nha-o-gia-dinh/img-32.jpg", "/images/projects/nha-o-gia-dinh/img-33.jpg", "/images/projects/nha-o-gia-dinh/img-34.jpg", "/images/projects/nha-o-gia-dinh/img-35.jpg" }), Name = "Nhà Ở Gia Đình", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà ở", Description = null, SortOrder = 57 },
-            new() { Slug = "nha-may-tan-thanh-long", ImageUrl = "/images/projects/nha-may-tan-thanh-long-4/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-tan-thanh-long-4/img-02.jpg", "/images/projects/nha-may-tan-thanh-long-4/img-03.jpg", "/images/projects/nha-may-tan-thanh-long-4/img-04.jpg" }), Name = "Nhà Máy Tân Thành Long", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Khách hàng: Công ty TNHH MTV Thiết Kế In Bao Bì Tân Thành Long", SortOrder = 58 },
-            new() { Slug = "ray-river-resort", ImageUrl = "/images/projects/ray-river-resort-2/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/ray-river-resort-2/img-02.jpg", "/images/projects/ray-river-resort-2/img-03.jpg", "/images/projects/ray-river-resort-2/img-04.jpg" }), Name = "Resort Sông Ray", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Khách sạn", Description = null, SortOrder = 59 },
-            new() { Slug = "nha-hang-okonomiyaki", ImageUrl = "/images/projects/konimiyaki-restaurant/01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/konimiyaki-restaurant/02.jpg", "/images/projects/konimiyaki-restaurant/03.jpg", "/images/projects/konimiyaki-restaurant/04.jpg", "/images/projects/nha-hang-konimiyaki/img-05.jpg" }), Name = "Nhà Hàng Okonomiyaki", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà hàng", Description = "Khách hàng: Nhà hàng Okonomiyaki", SortOrder = 60 },
-            new() { Slug = "nha-may-bmt", ImageUrl = "/images/projects/nha-may-bmt/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-bmt/img-02.jpg", "/images/projects/nha-may-bmt/img-03.jpg", "/images/projects/nha-may-bmt/img-04.jpg", "/images/projects/nha-may-bmt/img-05.jpg" }), Name = "Nhà Máy BMT", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Địa điểm: số 51, 52 Nhựt Chánh Khu công nghiệp-Bến Lức tỉnh Long An", SortOrder = 61 },
-            new() { Slug = "nha-hang-hokkaido", ImageUrl = "/images/projects/nha-hang-hokkaido/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-hang-hokkaido/img-02.jpg" }), Name = "Nhà Hàng Hokkaido", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà hàng", Description = null, SortOrder = 62 },
-            new() { Slug = "nha-may-inahvina", ImageUrl = "/images/projects/nha-may-cong-ty-inahvina/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-cong-ty-inahvina/img-02.jpg", "/images/projects/nha-may-cong-ty-inahvina/img-03.jpg", "/images/projects/nha-may-cong-ty-inahvina/img-05.jpg" }), Name = "Nhà Máy Inahvina", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Khách hàng: Nhà máy Công ty TNHH INAHVINA", SortOrder = 63 },
-            new() { Slug = "nha-may-dong-nhan", ImageUrl = "/images/projects/nha-may-dong-nhan/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-dong-nhan/img-02.jpg", "/images/projects/nha-may-dong-nhan/img-03.jpg" }), Name = "Nhà Máy Đông Nhân", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Khách hàng: Công ty TNHH Đồng Nhân", SortOrder = 64 },
-            new() { Slug = "khach-san-toan-vinh", ImageUrl = "/images/projects/khach-san-toan-vinh/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/khach-san-toan-vinh/img-02.jpg", "/images/projects/khach-san-toan-vinh/img-03.jpg" }), Name = "Khách Sạn Toàn Vinh", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Khách sạn", Description = null, SortOrder = 65 },
-            new() { Slug = "khach-san-y-linh", ImageUrl = "/images/projects/khach-san-y-linh/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/khach-san-y-linh/img-02.jpg" }), Name = "Khách Sạn Y Linh", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Khách sạn", Description = null, SortOrder = 66 },
-            new() { Slug = "ky-tuc-xa-soul-gear", ImageUrl = "/images/projects/mo-rong-nha-may-red-bull-2/thumb.png", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/ky-tuc-xa-soul-gear/img-01.jpg" }), Name = "Ký Túc Xá Soul Gear", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà ở", Description = "Khách hàng: Công ty Soul Gear VINA (Hàn Quốc)", SortOrder = 67 },
-            new() { Slug = "nha-may-js", ImageUrl = "/images/projects/nha-may-js/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/nha-may-js/img-02.jpg", "/images/projects/nha-may-js/img-03.jpg", "/images/projects/nha-may-js/img-04.jpg" }), Name = "Nhà Máy JS", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Địa điểm: Mỹ Phước 2 Khu công nghiệp, Tỉnh Bình Dương", SortOrder = 68 },
-            new() { Slug = "truong-quoc-te-acg", ImageUrl = "/images/projects/truong-quoc-te-acg/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/truong-quoc-te-acg/img-02.jpg", "/images/projects/truong-quoc-te-acg/img-03.jpg", "/images/projects/truong-quoc-te-acg/img-04.jpg" }), Name = "Trường Quốc Tế ACG", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Giáo dục", Description = "Địa điểm: Quận 2, TP Hồ Chí Minh", SortOrder = 69 },
-            new() { Slug = "khach-san-eden", ImageUrl = "/images/projects/khach-san-eden/img-01.jpg", Name = "Khách Sạn Eden", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Khách sạn", Description = "Địa điểm: 60 Mai Xuân Thưởng, Thành phố Quy Nhơn", SortOrder = 70 },
-            new() { Slug = "nha-may-dream-mekong", ImageUrl = "/images/projects/nha-may-dream-mekong/img-01.jpg", Name = "Nhà Máy Dream Mekong", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Khách hàng: Dream Mekong Viet nam (Hàn Quốc)", SortOrder = 71 },
-            new() { Slug = "long-khanh-hotel-resort", ImageUrl = "/images/projects/long-khanh-hotel-resort/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/long-khanh-hotel-resort/img-02.jpg" }), Name = "Long Khánh Hotel & Resort", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Khách sạn", Description = "Khách hàng: Long Khánh Hotel & Resort", SortOrder = 72 },
-            new() { Slug = "suzuki-showroom", ImageUrl = "/images/projects/suzuki-showroom/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/suzuki-showroom/img-02.jpg", "/images/projects/suzuki-showroom/img-03.jpg", "/images/projects/suzuki-showroom/img-04.jpg" }), Name = "Suzuki Showroom", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Thương mại", Description = "Địa điểm: Quận 5, TP Hồ Chí Minh", SortOrder = 73 },
-            new() { Slug = "kv-battery", ImageUrl = "/images/projects/kv-battery-2/img-01.jpg", GalleryJson = JsonSerializer.Serialize(new[] { "/images/projects/kv-battery-2/img-02.jpg" }), Name = "K&V Battery", Client = "", Location = "", Scale = "", Scope = "Thiết kế", Status = "completed", Year = "", Category = "Nhà máy công nghiệp", Description = "Khách hàng: K & V Battery Co., LTD (Hàn Quốc)", SortOrder = 74 },
+            db.Projects.AddRange(newItems);
+            db.SaveChanges();
+        }
+    }
 
-        };
+    // A missing "status" in the manifest previously defaulted to "ongoing" silently
+    // (via a C# property initializer, indistinguishable from an explicit value) —
+    // a completed project would seed as ongoing with no signal. Status is now
+    // nullable so this path only runs, and warns, when the manifest truly omits it.
+    private static string WarnMissingStatus(string slug)
+    {
+        Console.Error.WriteLine($"[ContentSeeder] Project '{slug}' has no \"status\" in the manifest; defaulting to \"ongoing\". Verify this is correct.");
+        return "ongoing";
+    }
 
-        var newItems = items.Where(p => !existingSlugs.Contains(p.Slug)).ToArray();
-        if (newItems.Length == 0) return;
+    private static List<ProjectSeedItem> LoadProjectSeed()
+    {
+        const string resourceName = "nihomebackend.Data.Seeds.content.projects.json";
+        var asm = Assembly.GetExecutingAssembly();
+        using var stream = asm.GetManifestResourceStream(resourceName);
+        if (stream is null) return [];
+        var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        return JsonSerializer.Deserialize<List<ProjectSeedItem>>(stream, opts) ?? [];
+    }
 
-        db.Projects.AddRange(newItems);
+    private sealed class ProjectSeedItem
+    {
+        public string Slug { get; set; } = "";
+        public string ImageUrl { get; set; } = "";
+        public List<string> Gallery { get; set; } = [];
+        public string Name { get; set; } = "";
+        public string Client { get; set; } = "";
+        public string Location { get; set; } = "";
+        public string Scale { get; set; } = "";
+        public string Scope { get; set; } = "";
+        public string? Status { get; set; }
+        public string? Category { get; set; }
+        public string? Description { get; set; }
+
+        // Each entry is either a plain string (paragraph) or an object like
+        // { "type": "image", "url": "/images/projects/<slug>/img-03.jpg" } —
+        // keep the raw JsonElement so dict items survive a Serialize round-trip.
+        public List<JsonElement>? Content { get; set; }
+        public List<string>? Challenges { get; set; }
+        public List<string>? Solutions { get; set; }
+        public int SortOrder { get; set; }
+
+        // Per-language overrides (vi/en/zh/ja), same shape as the
+        // Activities/News manifests. Only "vi" is consumed here — it backs
+        // the Description/Year fallbacks above (the top-level fields are
+        // blank on ~all rows). en/zh/ja live in project-translations.json
+        // and are consumed by SeedProjectTranslations() instead.
+        public Dictionary<string, ContentSeedTranslation> Translations { get; set; } = new();
+
+        public ContentSeedTranslation GetTranslation(string lang)
+            => Translations.TryGetValue(lang, out var t) ? t : new ContentSeedTranslation();
+    }
+
+    // ─── Project Translations ────────────────────────────────────────
+
+    private static void SeedProjectTranslations(AppDbContext db)
+    {
+        const string resourceName = "nihomebackend.Data.Seeds.content.project-translations.json";
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream is null) return;
+
+        using var doc = JsonDocument.Parse(stream);
+        if (doc.RootElement.ValueKind != JsonValueKind.Array) return;
+
+        var slugToId = db.Projects
+            .Select(p => new { p.Slug, p.Id })
+            .ToDictionary(x => x.Slug, x => x.Id);
+
+        var existing = db.EntityTranslations
+            .Where(t => t.EntityType == EntityTypes.Project)
+            .Select(t => new { t.EntityId, t.FieldName, t.LanguageCode, t.Id, t.Value })
+            .ToList()
+            .GroupBy(t => $"{t.EntityId}|{t.FieldName}|{t.LanguageCode}")
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var toAdd = new List<EntityTranslation>();
+        // Rows queued in this pass but not yet in `existing` (DB hasn't been hit
+        // again) — tracked separately so a same-pass duplicate (slug/field/lang
+        // repeated in project-translations.json) updates the pending row in place
+        // instead of a second insert, which would violate the unique index on
+        // (EntityType, EntityId, FieldName, LanguageCode).
+        var pending = new Dictionary<string, EntityTranslation>();
+        var now = DateTime.UtcNow;
+
+        foreach (var entry in doc.RootElement.EnumerateArray())
+        {
+            if (!entry.TryGetProperty("slug", out var slugProp)) continue;
+            var slug = slugProp.GetString();
+            if (slug is null || !slugToId.TryGetValue(slug, out var entityId)) continue;
+
+            foreach (var langProp in entry.EnumerateObject())
+            {
+                var lang = langProp.Name;
+                if (lang == "slug") continue;
+                if (langProp.Value.ValueKind != JsonValueKind.Object) continue;
+
+                foreach (var fieldProp in langProp.Value.EnumerateObject())
+                {
+                    var field = fieldProp.Name;
+                    var value = fieldProp.Value.GetString() ?? "";
+                    if (string.IsNullOrWhiteSpace(value)) continue;
+
+                    var key = $"{entityId}|{field}|{lang}";
+                    if (pending.TryGetValue(key, out var pendingRow))
+                    {
+                        pendingRow.Value = value;
+                        pendingRow.UpdatedAt = now;
+                    }
+                    else if (existing.TryGetValue(key, out var row))
+                    {
+                        if (row.Value != value)
+                        {
+                            var tracked = db.EntityTranslations.Find(row.Id);
+                            if (tracked != null) { tracked.Value = value; tracked.UpdatedAt = now; }
+                        }
+                    }
+                    else
+                    {
+                        var newRow = new EntityTranslation
+                        {
+                            EntityType = EntityTypes.Project,
+                            EntityId = entityId,
+                            FieldName = field,
+                            LanguageCode = lang,
+                            Value = value,
+                            CreatedAt = now,
+                            UpdatedAt = now,
+                        };
+                        toAdd.Add(newRow);
+                        pending[key] = newRow;
+                    }
+                }
+            }
+        }
+
+        if (toAdd.Count > 0) db.EntityTranslations.AddRange(toAdd);
         db.SaveChanges();
     }
 
@@ -254,17 +541,114 @@ public static class ContentSeeder
 
     private static void SeedServices(AppDbContext db)
     {
-        if (db.ServiceItems.Any()) return;
+        var now = DateTime.UtcNow;
 
-        var items = new ServiceItem[]
+        var seeds = new[]
         {
-            new() { Slug = "design-and-build", ShortTitle = "Design & Build", Title = "Tổng thầu Thiết kế và Thi công (D&B)", Tagline = "Một đầu mối — toàn bộ vòng đời dự án.", Intro = "Phương thức Design & Build (D&B) và EPC là hai phương pháp phổ biến nhất trong xây dựng công nghiệp và dân dụng. NICON đã hệ thống hoá quy trình D&B từ ngày đầu thành lập và liên tục hoàn thiện qua hơn 150 dự án.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Lợi thế của phương thức D&B / EPC", body = new[] { "Tối thiểu hóa nghĩa vụ quản lý cho chủ đầu tư — NICON đảm nhận toàn bộ điều phối và quản lý dự án.", "Giảm thiểu rủi ro không nhất quán giữa thiết kế và thi công.", "Linh hoạt đẩy nhanh tiến độ ngay cả khi thiết kế chưa hoàn chỉnh, giảm chi phí phát sinh.", "Chi phí quản lý hợp lý — chủ đầu tư dễ ước lượng và kiểm soát chất lượng do chỉ làm việc với một nhà thầu." } }, new { heading = "Phương pháp quản lý dự án tiên tiến", body = new[] { "Hợp tác chặt chẽ cùng Mori Construction (Nhật Bản), NICON ứng dụng quy trình BIM (Building Information Modeling) cho mọi giai đoạn.", "Đội ngũ chuyên viên BIM giàu kinh nghiệm cung cấp giải pháp đồng bộ, giúp chủ đầu tư có toàn bộ thông tin dự án và dự đoán rủi ro sớm." } }, new { heading = "Sản phẩm tốt nhất từ những con người tốt nhất", body = new[] { "NICON sở hữu mạng lưới đối tác quản lý quốc tế trong các lĩnh vực kiến trúc, kết cấu, nội thất và M&E.", "Đội ngũ giàu kinh nghiệm gồm project manager, kiến trúc sư, kỹ sư và công nhân lành nghề có thể xử lý các dự án QUY MÔ LỚN – TIẾN ĐỘ GẤP – CHẤT LƯỢNG CAO." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "BIM 4D / 5D", "ISO 9001:2015", "150+ dự án D&B", "Mori Group partner" }), SortOrder = 0 },
-            new() { Slug = "main-contractor", ShortTitle = "Main Contractor", Title = "Dịch vụ Tổng thầu chính (Main Contractor)", Tagline = "Quản lý trọn gói thi công — bàn giao chìa khóa trao tay.", Intro = "Với vai trò Tổng thầu chính Việt – Nhật, NICON thực hiện đầy đủ các nhiệm vụ của một dự án xây dựng công nghiệp.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Phạm vi công việc của Tổng thầu chính", body = new[] { "Quản lý toàn bộ công trường, điều phối các nhà thầu phụ và nhà cung cấp.", "Đảm bảo tiến độ, chất lượng và an toàn lao động (HSE) tại công trường.", "Báo cáo định kỳ cho chủ đầu tư bằng tiếng Việt – Anh – Nhật." } }, new { heading = "Phương pháp quản lý chuẩn quốc tế", body = new[] { "Áp dụng tiêu chuẩn quản lý dự án PMP và phương pháp Lean Construction.", "Sử dụng phần mềm MS Project, Primavera P6 cho lập tiến độ và kiểm soát chi phí.", "Quy trình QA/QC theo ISO 9001:2015 cho từng hạng mục thi công." } }, new { heading = "Đối tác chiến lược cùng Mori Group", body = new[] { "Sự hợp tác cùng Mori Industry Group (Nhật Bản) mang đến tiêu chuẩn kỹ thuật và văn hóa làm việc chuẩn Nhật cho mọi dự án NICON đảm nhận." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "18+ năm kinh nghiệm", "Quản lý PMP", "QA/QC ISO 9001", "An toàn HSE chuẩn Nhật" }), SortOrder = 1 },
-            new() { Slug = "general-contractor", ShortTitle = "General Contractor", Title = "Dịch vụ Tổng thầu (General Contractor)", Tagline = "Đảm nhận toàn bộ vòng đời thi công nhà máy công nghiệp.", Intro = "Với cương vị Tổng thầu Việt Nam – Nhật Bản, NICON thực hiện đầy đủ nhiệm vụ của một dự án xây dựng công nghiệp gồm thiết kế, xin phép, thi công và bàn giao trọn gói.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Vai trò Tổng thầu", body = new[] { "Quản lý toàn diện từ thiết kế cơ sở, thiết kế kỹ thuật đến bản vẽ thi công.", "Mua sắm vật tư – thiết bị (Procurement) và quản lý chuỗi cung ứng cho dự án.", "Tổ chức thi công, nghiệm thu từng phần và bàn giao công trình hoàn chỉnh." } }, new { heading = "Năng lực mega-project", body = new[] { "NICON đã thành công thực hiện các tổ hợp công nghiệp 250.000 m² như Lâm Hiệp Hưng – Tân Toàn Phát.", "Năng lực tổ chức công trường lớn với hàng trăm công nhân, thiết bị nặng và logistics phức tạp." } }, new { heading = "Cam kết chất lượng", body = new[] { "100% công trình bàn giao đúng tiến độ trong 5 năm gần nhất.", "Bảo hành 24 tháng cho phần xây dựng, 12 tháng cho phần MEP." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "Mega-project 250.000m²", "Procurement chuyên nghiệp", "Bảo hành 24 tháng", "Đa quốc gia" }), SortOrder = 2 },
-            new() { Slug = "mep-contractor", ShortTitle = "MEP Contractor", Title = "Dịch vụ Tổng thầu MEP", Tagline = "Hệ thống Cơ – Điện – Nước đồng bộ và tối ưu vận hành.", Intro = "MEP (Mechanical – Electrical – Plumbing) là phần quan trọng quyết định hiệu quả vận hành nhà máy. NICON cung cấp dịch vụ tổng thầu MEP độc lập hoặc tích hợp trong gói D&B, với đội ngũ kỹ sư chuyên ngành giàu kinh nghiệm.", SectionsJson = JsonSerializer.Serialize(new[] { new { heading = "Phạm vi MEP của NICON", body = new[] { "Hệ thống điện công nghiệp: trung – hạ thế, máy phát dự phòng, UPS, hệ chiếu sáng năng lượng cao.", "Hệ HVAC, thông gió và phòng sạch theo cấp ISO Class 5/7/8.", "Hệ cấp – thoát nước, nước nóng năng lượng mặt trời, hệ xử lý nước thải.", "Hệ PCCC sprinkler, báo cháy địa chỉ theo TCVN và NFPA." } }, new { heading = "Tích hợp và bàn giao", body = new[] { "Quy trình T&C (Testing & Commissioning) bài bản, có sự chứng kiến của tư vấn giám sát và chủ đầu tư.", "Bàn giao kèm hồ sơ As-built, sách hướng dẫn vận hành – bảo trì (O&M Manual).", "Đào tạo vận hành cho đội ngũ kỹ thuật của chủ đầu tư." } }, new { heading = "Quản lý dự án bằng BIM", body = new[] { "Mô hình MEP 3D phát hiện xung đột hạng mục trước khi thi công, giảm 80% chỉnh sửa hiện trường.", "Tài liệu BIM bàn giao cho chủ đầu tư phục vụ vận hành – bảo trì lâu dài." } } }), HighlightsJson = JsonSerializer.Serialize(new[] { "BIM MEP 3D", "Phòng sạch ISO 5-8", "T&C chuyên nghiệp", "O&M training" }), SortOrder = 3 },
+            new
+            {
+                Slug = "design-and-build", ShortTitle = "Design & Build", SortOrder = 0,
+                Title   = "Tổng thầu Thiết kế và Thi công (D&B)",
+                Tagline = "Một đầu mối — toàn bộ vòng đời dự án.",
+                Intro   = "Phương thức Design & Build (D&B) và EPC là hai phương pháp phổ biến nhất trong xây dựng công nghiệp và dân dụng. NICON đã hệ thống hoá quy trình D&B từ ngày đầu thành lập và liên tục hoàn thiện qua hơn 150 dự án.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Lợi thế của phương thức D&B / EPC", body = new[] { "Tối thiểu hóa nghĩa vụ quản lý cho chủ đầu tư — NICON đảm nhận toàn bộ điều phối và quản lý dự án.", "Giảm thiểu rủi ro không nhất quán giữa thiết kế và thi công.", "Linh hoạt đẩy nhanh tiến độ ngay cả khi thiết kế chưa hoàn chỉnh, giảm chi phí phát sinh.", "Chi phí quản lý hợp lý — chủ đầu tư dễ ước lượng và kiểm soát chất lượng do chỉ làm việc với một nhà thầu." } },
+                    new { heading = "Phương pháp quản lý dự án tiên tiến", body = new[] { "Hợp tác chặt chẽ cùng Mori Construction (Nhật Bản), NICON ứng dụng quy trình BIM (Building Information Modeling) cho mọi giai đoạn.", "Đội ngũ chuyên viên BIM giàu kinh nghiệm cung cấp giải pháp đồng bộ, giúp chủ đầu tư có toàn bộ thông tin dự án và dự đoán rủi ro sớm." } },
+                    new { heading = "Sản phẩm tốt nhất từ những con người tốt nhất", body = new[] { "NICON sở hữu mạng lưới đối tác quản lý quốc tế trong các lĩnh vực kiến trúc, kết cấu, nội thất và M&E.", "Đội ngũ giàu kinh nghiệm gồm project manager, kiến trúc sư, kỹ sư và công nhân lành nghề có thể xử lý các dự án QUY MÔ LỚN – TIẾN ĐỘ GẤP – CHẤT LƯỢNG CAO." } },
+                }),
+                HighlightsJson = JsonSerializer.Serialize(new[] { "BIM 4D / 5D", "ISO 9001:2015", "150+ Dự Án D&B", "Mori Group partner" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "Hiện nay, ngành xây dựng chủ yếu áp dụng hai phương thức: Thiết kế-Xây dựng và Kỹ thuật – Mua sắm – Xây dựng (EPC).\n\nNhận thấy đây là giải pháp tối ưu cho thị trường Việt Nam, chúng tôi đã áp dụng đồng bộ hệ thống này ngay từ ngày đầu thành lập. Sự phát triển nhanh chóng của công ty là minh chứng cho sự lựa chọn đúng đắn này.\n\nKỹ thuật - Mua sắm - Xây dựng (EPC): Nhà thầu chịu trách nhiệm hoàn toàn về mọi thứ từ thiết kế, mua sắm vật tư thiết bị, đến thi công và bàn giao.\n\nDesign-Build: Một phương pháp hiện đại tối ưu hóa mô hình truyền thống (Design-Bid-Build), giúp rút ngắn thời gian bằng cách thực hiện thiết kế chi tiết song song với hoặc ngay trước khi thi công, thay vì chờ đấu thầu.", imageUrl = "/images/upload/services/01921bad60bc4188b3e194f9d85bcf39.png" },
+                    new { text = "1. Phương pháp thiết kế - đấu thầu - xây dựng (truyền thống):\nChủ đầu tư phải lựa chọn nhiều nhà thầu cho từng giai đoạn riêng biệt: trao thiết kế cho công ty tư vấn chuyên nghiệp, thi công cho nhà thầu xây dựng và vật tư/thiết bị do nhà cung cấp cung cấp theo quy trình. Phương pháp này yêu cầu thiết kế chi tiết và được phê duyệt đầy đủ trước khi triển khai.\n\n2. Kỹ thuật - Mua sắm - Phương pháp xây dựng (Hiện đại):\nChủ đầu tư chỉ cần chuẩn bị thiết kế sơ bộ, sau đó chỉ định một nhà thầu duy nhất chịu trách nhiệm chìa khóa trao tay từ thiết kế chi tiết, mua sắm, thi công cho đến khi bàn giao dự án", imageUrl = "/images/upload/services/1bbb66eebdc3489abe7f6d40134a1b54.jpg" },
+                    new { text = "Áp dụng phương pháp Design-Build mang lại nhiều lợi ích vượt trội cho cả chủ đầu tư và nhà thầu:\n\nQuản lý hợp lý cho chủ đầu tư: Nhà thầu thay mặt chủ đầu tư chịu trách nhiệm hoàn toàn từ điều phối đến quản lý dự án.\n\nGiảm thiểu rủi ro không phù hợp giữa thiết kế và thực tế: Nhờ thiết kế tự quản lý, nhà thầu có thể dễ dàng điều chỉnh các biện pháp thi công phù hợp, có thể triển khai sớm ngay cả khi thiết kế chưa hoàn thành, từ đó đẩy nhanh tiến độ và giảm thiểu chi phí phát sinh.", imageUrl = "/images/upload/services/6d91a196a9ae44f483e30438c19a5b56.jpg" },
+                }),
+            },
+            new
+            {
+                Slug = "main-contractor", ShortTitle = "Main Contractor", SortOrder = 1,
+                Title   = "Dịch vụ Tổng thầu chính",
+                Tagline = "Quản lý trọn gói thi công — bàn giao chìa khóa trao tay.",
+                Intro   = "Với vai trò Tổng thầu chính Việt – Nhật, NICON thực hiện đầy đủ các nhiệm vụ của một dự án xây dựng công nghiệp.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Phạm vi công việc của Tổng thầu chính", body = new[] { "Quản lý toàn bộ công trường, điều phối các nhà thầu phụ và nhà cung cấp.", "Đảm bảo tiến độ, chất lượng và an toàn lao động (HSE) tại công trường.", "Báo cáo định kỳ cho chủ đầu tư bằng tiếng Việt – Anh – Nhật." } },
+                    new { heading = "Phương pháp quản lý chuẩn quốc tế", body = new[] { "Áp dụng tiêu chuẩn quản lý dự án PMP và phương pháp Lean Construction.", "Sử dụng phần mềm MS Project, Primavera P6 cho lập tiến độ và kiểm soát chi phí.", "Quy trình QA/QC theo ISO 9001:2015 cho từng hạng mục thi công." } },
+                    new { heading = "Đối tác chiến lược cùng Mori Group", body = new[] { "Sự hợp tác cùng Mori Industry Group (Nhật Bản) mang đến tiêu chuẩn kỹ thuật và văn hóa làm việc chuẩn Nhật cho mọi dự án NICON đảm nhận." } },
+                }),
+                HighlightsJson  = JsonSerializer.Serialize(new[] { "18+ năm kinh nghiệm", "Quản lý PMP", "QA/QC ISO 9001", "An toàn HSE chuẩn Nhật" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "", imageUrl = "/images/upload/services/69c646fb16ac4ec5b3be0e7e62a2ffc2.jpg" },
+                }),
+            },
+            new
+            {
+                Slug = "general-contractor", ShortTitle = "General Contractor", SortOrder = 2,
+                Title   = "Dịch vụ Tổng thầu",
+                Tagline = "Đảm nhận toàn bộ vòng đời thi công nhà máy công nghiệp.",
+                Intro   = "Với cương vị Tổng thầu Việt Nam – Nhật Bản, NICON thực hiện đầy đủ nhiệm vụ của một dự án xây dựng công nghiệp gồm thiết kế, xin phép, thi công và bàn giao trọn gói.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Vai trò Tổng thầu", body = new[] { "Quản lý toàn diện từ thiết kế cơ sở, thiết kế kỹ thuật đến bản vẽ thi công.", "Mua sắm vật tư – thiết bị (Procurement) và quản lý chuỗi cung ứng cho dự án.", "Tổ chức thi công, nghiệm thu từng phần và bàn giao công trình hoàn chỉnh." } },
+                    new { heading = "Năng lực mega-project", body = new[] { "NICON đã thành công thực hiện các tổ hợp công nghiệp 250.000 m² như Lâm Hiệp Hưng – Tân Toàn Phát.", "Năng lực tổ chức công trường lớn với hàng trăm công nhân, thiết bị nặng và logistics phức tạp." } },
+                    new { heading = "Cam kết chất lượng", body = new[] { "100% công trình bàn giao đúng tiến độ trong 5 năm gần nhất.", "Bảo hành 24 tháng cho phần xây dựng, 12 tháng cho phần MEP." } },
+                }),
+                HighlightsJson  = JsonSerializer.Serialize(new[] { "Mega-project 250.000m²", "Procurement chuyên nghiệp", "Bảo hành 24 tháng", "Đa quốc gia" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "", imageUrl = "/images/upload/services/2b6c2d8c9936439993180016b4654242.jpg" },
+                }),
+            },
+            new
+            {
+                Slug = "mep-contractor", ShortTitle = "MEP Contractor", SortOrder = 3,
+                Title   = "Dịch vụ Tổng thầu MEP",
+                Tagline = "Hệ thống Cơ – Điện – Nước đồng bộ và tối ưu vận hành.",
+                Intro   = "MEP (Mechanical – Electrical – Plumbing) là phần quan trọng quyết định hiệu quả vận hành nhà máy. NICON cung cấp dịch vụ tổng thầu MEP độc lập hoặc tích hợp trong gói D&B, với đội ngũ kỹ sư chuyên ngành giàu kinh nghiệm.",
+                SectionsJson = JsonSerializer.Serialize(new[] {
+                    new { heading = "Phạm vi MEP của NICON", body = new[] { "Hệ thống điện công nghiệp: trung – hạ thế, máy phát dự phòng, UPS, hệ chiếu sáng năng lượng cao.", "Hệ HVAC, thông gió và phòng sạch theo cấp ISO Class 5/7/8.", "Hệ cấp – thoát nước, nước nóng năng lượng mặt trời, hệ xử lý nước thải.", "Hệ PCCC sprinkler, báo cháy địa chỉ theo TCVN và NFPA." } },
+                    new { heading = "Tích hợp và bàn giao", body = new[] { "Quy trình T&C (Testing & Commissioning) bài bản, có sự chứng kiến của tư vấn giám sát và chủ đầu tư.", "Bàn giao kèm hồ sơ As-built, sách hướng dẫn vận hành – bảo trì (O&M Manual).", "Đào tạo vận hành cho đội ngũ kỹ thuật của chủ đầu tư." } },
+                    new { heading = "Quản lý dự án bằng BIM", body = new[] { "Mô hình MEP 3D phát hiện xung đột hạng mục trước khi thi công, giảm 80% chỉnh sửa hiện trường.", "Tài liệu BIM bàn giao cho chủ đầu tư phục vụ vận hành – bảo trì lâu dài." } },
+                }),
+                HighlightsJson  = JsonSerializer.Serialize(new[] { "BIM MEP 3D", "Phòng sạch ISO 5-8", "T&C chuyên nghiệp", "O&M training" }),
+                IntroBlocksJson = JsonSerializer.Serialize(new[] {
+                    new { text = "1. Quản lý\nBằng cách sử dụng Nicon làm đầu mối quản lý duy nhất, các công việc quản lý thông tin và quản lý nguồn nhân lực trở nên thuận tiện hơn.\n\n2. Chất lượng\nChất lượng dự án được đảm bảo bởi danh tiếng, uy tín và sự cam kết của Nicon.\n\n3. Tiến độ\nTiến độ dự án được đảm bảo bởi năng lực và sự cam kết của Nicon.\n\n4. Chi phí\nNgân sách dự án được quản lý một cách hiệu quả, giúp gia tăng lợi nhuận.", imageUrl = "/images/upload/services/cfec2296483c4862b38062bb787a03bb.jpg" },
+                    new { text = "", imageUrl = "/images/upload/services/be65ae444d6b48c7b3eb4f79badfc363.jpg" },
+                }),
+            },
         };
 
-        db.ServiceItems.AddRange(items);
+        var existing = db.ServiceItems.ToDictionary(s => s.Slug);
+
+        foreach (var seed in seeds)
+        {
+            if (existing.TryGetValue(seed.Slug, out var item))
+            {
+                item.Title = seed.Title;
+                item.ShortTitle = seed.ShortTitle;
+                item.Tagline = seed.Tagline;
+                item.Intro = seed.Intro;
+                item.SectionsJson = seed.SectionsJson;
+                item.HighlightsJson = seed.HighlightsJson;
+                item.IntroBlocksJson = seed.IntroBlocksJson;
+                item.SortOrder = seed.SortOrder;
+                item.UpdatedAt = now;
+            }
+            else
+            {
+                db.ServiceItems.Add(new ServiceItem
+                {
+                    Slug = seed.Slug,
+                    Title = seed.Title,
+                    ShortTitle = seed.ShortTitle,
+                    Tagline = seed.Tagline,
+                    Intro = seed.Intro,
+                    SectionsJson = seed.SectionsJson,
+                    HighlightsJson = seed.HighlightsJson,
+                    IntroBlocksJson = seed.IntroBlocksJson,
+                    SortOrder = seed.SortOrder,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+        }
+
         db.SaveChanges();
     }
 
@@ -487,6 +871,20 @@ public static class ContentSeeder
             });
         }
 
+        // Fix any localhost URLs in award logos
+        var awardLogoFixes = new Dictionary<string, string>
+        {
+            ["Top 10 Vietnam Leading Brands 2018"] = "/images/activities/activity-ceremony.jpg",
+            ["Vietnam Golden FDI 2019"] = "/images/activities/activity-opening.jpg",
+            ["Outstanding Design & Build Contractor"] = "/images/activities/activity-handover.jpg",
+        };
+        foreach (var (name, relUrl) in awardLogoFixes)
+        {
+            var logo = db.ClientLogos.FirstOrDefault(l => l.Kind == LogoKind.Award && l.Name == name);
+            if (logo != null && logo.ImageUrl != relUrl)
+                logo.ImageUrl = relUrl;
+        }
+
         db.SaveChanges();
     }
 
@@ -547,68 +945,49 @@ public static class ContentSeeder
 
     private static void SeedSlideshow(AppDbContext db)
     {
-        if (db.SlideshowItems.Any()) return;
-
-        var items = new SlideshowItem[]
+        var seeds = new[]
         {
-            new()
-            {
-                Slug = "hero-factory",
-                ImageUrl = "/images/projects/project-bma.jpg",
-                Title = "Tổng thầu Thiết kế & Thi công Nhà máy",
-                Subtitle = "Hơn 18 năm kinh nghiệm — 150+ dự án công nghiệp",
-                LinkUrl = "/projects",
-                LinkText = "Xem dự án",
-                IsActive = true,
-                SortOrder = 0,
-            },
-            new()
-            {
-                Slug = "hero-design-build",
-                ImageUrl = "/images/projects/project-nbdc.jpg",
-                Title = "Design & Build — Giải pháp trọn gói",
-                Subtitle = "Một đầu mối — toàn bộ vòng đời dự án từ thiết kế đến bàn giao",
-                LinkUrl = "/services/design-and-build",
-                LinkText = "Tìm hiểu thêm",
-                IsActive = true,
-                SortOrder = 1,
-            },
-            new()
-            {
-                Slug = "hero-industrial",
-                ImageUrl = "/images/projects/project-lhh.jpg",
-                Title = "Nhà máy Công nghiệp Quy mô lớn",
-                Subtitle = "Tổ hợp 250.000 m² — Tiêu chuẩn Nhật Bản cùng Mori Group",
-                LinkUrl = "/projects/nha-may-lhh",
-                LinkText = "Xem chi tiết",
-                IsActive = true,
-                SortOrder = 2,
-            },
-            new()
-            {
-                Slug = "hero-sports-center",
-                ImageUrl = "/images/projects/project-sports.jpg",
-                Title = "Công trình Thể dục Thể thao",
-                Subtitle = "Thiết kế không gian thể thao đa năng phục vụ cộng đồng",
-                LinkUrl = "/projects/ttdtt-thu-duc",
-                LinkText = "Khám phá",
-                IsActive = true,
-                SortOrder = 3,
-            },
-            new()
-            {
-                Slug = "hero-office",
-                ImageUrl = "/images/projects/project-office.jpg",
-                Title = "Nội thất Văn phòng Hiện đại",
-                Subtitle = "Phong cách tối giản — Không gian mở — Tiêu chuẩn quốc tế",
-                LinkUrl = "/projects/noi-that-b37",
-                LinkText = "Xem dự án",
-                IsActive = true,
-                SortOrder = 4,
-            },
+            new { Slug = "hero-factory",      ImageUrl = "/images/projects/project-bma.jpg",    Title = "Tổng thầu Thiết kế & Thi công Nhà máy",    Subtitle = "Hơn 18 năm kinh nghiệm — 150+ dự án công nghiệp",                            LinkUrl = "/projects",                   LinkText = "Xem dự án",     IsActive = true, SortOrder = 0 },
+            new { Slug = "hero-design-build", ImageUrl = "/images/projects/project-nbdc.jpg",   Title = "Design & Build — Giải pháp trọn gói",       Subtitle = "Một đầu mối — toàn bộ vòng đời dự án từ thiết kế đến bàn giao",              LinkUrl = "/services/design-and-build",  LinkText = "Tìm hiểu thêm", IsActive = true, SortOrder = 1 },
+            new { Slug = "hero-industrial",   ImageUrl = "/images/projects/project-lhh.jpg",    Title = "Nhà máy Công nghiệp Quy mô lớn",            Subtitle = "Tổ hợp 250.000 m² — Tiêu chuẩn Nhật Bản cùng Mori Group",                   LinkUrl = "/projects/nha-may-lhh",       LinkText = "Xem chi tiết",  IsActive = true, SortOrder = 2 },
+            new { Slug = "hero-sports-center",ImageUrl = "/images/projects/project-sports.jpg", Title = "Công trình Thể dục Thể thao",               Subtitle = "Thiết kế không gian thể thao đa năng phục vụ cộng đồng",                     LinkUrl = "/projects/ttdtt-thu-duc",     LinkText = "Khám phá",      IsActive = true, SortOrder = 3 },
+            new { Slug = "hero-office",       ImageUrl = "/images/projects/project-office.jpg", Title = "Nội thất Văn phòng Hiện đại",               Subtitle = "Phong cách tối giản — Không gian mở — Tiêu chuẩn quốc tế",                   LinkUrl = "/projects/noi-that-b37",      LinkText = "Xem dự án",     IsActive = true, SortOrder = 4 },
         };
 
-        db.SlideshowItems.AddRange(items);
+        var existing = db.SlideshowItems.ToDictionary(s => s.Slug);
+        var now = DateTime.UtcNow;
+
+        foreach (var s in seeds)
+        {
+            if (existing.TryGetValue(s.Slug, out var item))
+            {
+                item.ImageUrl = s.ImageUrl;
+                item.Title = s.Title;
+                item.Subtitle = s.Subtitle;
+                item.LinkUrl = s.LinkUrl;
+                item.LinkText = s.LinkText;
+                item.IsActive = s.IsActive;
+                item.SortOrder = s.SortOrder;
+                item.UpdatedAt = now;
+            }
+            else
+            {
+                db.SlideshowItems.Add(new SlideshowItem
+                {
+                    Slug = s.Slug,
+                    ImageUrl = s.ImageUrl,
+                    Title = s.Title,
+                    Subtitle = s.Subtitle,
+                    LinkUrl = s.LinkUrl,
+                    LinkText = s.LinkText,
+                    IsActive = s.IsActive,
+                    SortOrder = s.SortOrder,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+        }
+
         db.SaveChanges();
     }
 
@@ -618,163 +997,43 @@ public static class ContentSeeder
     {
         EnsureCatalogueDownloadsSection(db);
 
-        if (db.AboutSectionContents.Any()) return;
-
         var now = DateTime.UtcNow;
 
-        db.AboutSectionContents.AddRange(
-            new AboutSectionContent
+        var seeds = new AboutSectionContent[]
+        {
+            new() { Slug = "about-main", SortOrder = 0, IsActive = true, Eyebrow = "GIỚI THIỆU CHUNG", TitleA = "Đối tác của sự", TitleB = "phát triển từ 2006", Paragraph1 = "Hơn 18 năm đồng hành cùng các nhà đầu tư trong và ngoài nước, NICON kiến tạo những công trình công nghiệp và dân dụng đạt chuẩn quốc tế.", Paragraph2 = "NICON chuyên thiết kế và thi công xây dựng công nghiệp, dân dụng chất lượng cao. Là đơn vị tiên phong áp dụng phương pháp tích hợp từ khâu nghiên cứu, thiết kế đến thi công, NICON giúp tối ưu hóa quy trình và mang lại hiệu quả cao nhất cho khách hàng.", ImageUrl = "/images/upload/about/102daea54ad641cdb16005d9fd1ec3b6.png" },
+            new() { Slug = "stats-main", SortOrder = 1, IsActive = true, Eyebrow = "CHỈ SỐ NỔI BẬT", ItemsJson = JsonSerializer.Serialize(new[] { new { iconKey = "calendar", sortOrder = 0, isActive = true, num = "18+", label = "Năm kinh nghiệm" }, new { iconKey = "building", sortOrder = 1, isActive = true, num = "150+", label = "Dự án hoàn thành" }, new { iconKey = "users", sortOrder = 2, isActive = true, num = "80+", label = "Khách hàng đồng hành" }, new { iconKey = "award", sortOrder = 3, isActive = true, num = "ISO", label = "Chuẩn hóa chất lượng" } }) },
+            new() { Slug = "values-main", SortOrder = 2, IsActive = true, Eyebrow = "GIÁ TRỊ CỐT LÕI", TitleA = "Nền tảng phát triển", TitleB = "NICON", ItemsJson = JsonSerializer.Serialize(new[] { new { iconKey = "target", sortOrder = 0, isActive = true, title = "Mục tiêu rõ ràng", desc = "Mọi quyết định đều hướng đến hiệu quả đầu tư và mục tiêu dài hạn của khách hàng." }, new { iconKey = "shield", sortOrder = 1, isActive = true, title = "Kỷ luật chất lượng", desc = "Quy trình thi công, giám sát và nghiệm thu được kiểm soát nghiêm ngặt." }, new { iconKey = "compass", sortOrder = 2, isActive = true, title = "Định hướng bền vững", desc = "Ưu tiên giải pháp tối ưu vận hành, chi phí và vòng đời công trình." }, new { iconKey = "heart", sortOrder = 3, isActive = true, title = "Tận tâm đồng hành", desc = "Xây dựng niềm tin bằng cách làm việc minh bạch và trách nhiệm đến cùng." } }) },
+            new() { Slug = "strategy-main", SortOrder = 3, IsActive = true, Eyebrow = "CHIẾN LƯỢC", TitleA = "Tư duy hệ thống cho", TitleB = "mỗi dự án", Paragraph1 = "Tầm nhìn: Trở thành tổng thầu thiết kế - thi công uy tín hàng đầu trong lĩnh vực công nghiệp và dân dụng tại Việt Nam. Không chỉ là xây dựng các công trình chất lượng mà còn là xây dựng những mối quan hệ bền vững với khách hàng, đối tác, và cộng đồng.", Paragraph2 = "Định hướng tương lai: Liên tục nâng cao năng lực thiết kế, quản lý và công nghệ để đáp ứng các tiêu chuẩn quốc tế ngày càng cao.", ItemsJson = JsonSerializer.Serialize(new[] { new { iconKey = "home", sortOrder = 0, isActive = true, title = "Công trình dân dụng", desc = "Xây dựng các dự án dân dụng từ nhà ở, trường học, đến các tòa nhà thương mại." }, new { iconKey = "hammer", sortOrder = 1, isActive = true, title = "Công trình công nghiệp", desc = "Đảm nhận các dự án xây dựng nhà xưởng, khu công nghiệp, và các công trình liên quan đến sản xuất." }, new { iconKey = "layers", sortOrder = 2, isActive = true, title = "Xây dựng hạ tầng", desc = "Phát triển cơ sở hạ tầng từ giao thông, cấp thoát nước, đến các công trình năng lượng." }, new { iconKey = "wrench", sortOrder = 3, isActive = true, title = "Thiết kế công trình", desc = "Bao gồm các hạng mục kiến trúc, kết cấu, điện nước, hạ tầng, cảnh quan, và quy hoạch tổng thể." }, new { iconKey = "briefcase", sortOrder = 4, isActive = true, title = "Tư vấn đầu tư và đầu tư xây dựng", desc = "Cung cấp các giải pháp đầu tư hiệu quả và hỗ trợ trong việc triển khai dự án xây dựng." }, new { iconKey = "users-group", sortOrder = 5, isActive = true, title = "Tư vấn quản lý xây dựng", desc = "Đảm bảo quá trình thi công đạt chất lượng và tiến độ như cam kết." }, new { iconKey = "handshake", sortOrder = 6, isActive = true, title = "Cung cấp vật liệu xây dựng", desc = "Đảm bảo nguồn cung ứng vật liệu xây dựng chất lượng cao, phù hợp với yêu cầu kỹ thuật của từng dự án." }, new { iconKey = "building", sortOrder = 7, isActive = true, title = "Giao dịch bất động sản", desc = "Tư vấn và hỗ trợ các hoạt động mua bán, chuyển nhượng và quản lý bất động sản." } }) },
+            new() { Slug = "organization-main", SortOrder = 4, IsActive = true, Eyebrow = "TỔ CHỨC", TitleA = "Bộ máy điều hành", TitleB = "vững mạnh", ItemsJson = JsonSerializer.Serialize(new { board = new[] { new { sortOrder = 0, role = "Chủ tịch", name = "Kiến trúc sư. Võ Trí Nguyên" }, new { sortOrder = 1, role = "Phó chủ tịch", name = "Kỹ sư. Yoshihiro Mori" }, new { sortOrder = 2, role = "Phó chủ tịch", name = "Kiến trúc sư. Lê Thị Yến" }, new { sortOrder = 3, role = "Thư ký", name = "MBA.Võ Tố Uyên" } }, directors = new[] { new { sortOrder = 0, role = "Tổng giám đốc", name = "Kiến trúc sư. Võ Trí Nguyên" }, new { sortOrder = 1, role = "Giám đốc phát triển kinh doanh Nhật Bản", name = "Ông Yoshihiro Mori" }, new { sortOrder = 2, role = "phát triển kinh doanh khu vực châu Á", name = "Ông Richard Penalosa" }, new { sortOrder = 3, role = "Giám đốc thiết kế", name = "Kiến trúc sư. Lê Thị Yến" } }, companyChartUrl = "/images/upload/about/26ff4d672035407c989e7aaf1231f5d3.png", siteChartUrl = "/images/upload/about/9972ac8d4ff643a0a88acac542a1ee13.jpg" }) },
+            new() { Slug = "timeline-main", SortOrder = 5, IsActive = true, Eyebrow = "LỊCH SỬ", TitleA = "Dấu mốc phát triển", TitleB = "qua từng giai đoạn", ImageUrl = "/images/upload/cac99fa59b264bd7ade9789960bf781e.jpeg", ItemsJson = JsonSerializer.Serialize(new[] { new { sortOrder = 0, year = "2006", title = "Thành lập NICON", desc = "Đặt nền móng cho hành trình phát triển trong lĩnh vực xây dựng công nghiệp." }, new { sortOrder = 1, year = "2007", title = "Mở rộng đội ngũ", desc = "Tăng cường năng lực triển khai và quản lý dự án." }, new { sortOrder = 2, year = "2008", title = "Nhà thầu Thiết kế và Thi công", desc = "Bắt đầu đồng hành cùng nhiều nhà đầu tư nước ngoài." }, new { sortOrder = 3, year = "2010", title = "Tăng cường hợp tác", desc = "Tăng cường kết nối với các đối tác trong và ngoài nước." }, new { sortOrder = 4, year = "2016", title = "M&A với Mori Group (Nhật Bản)", desc = "Với sự hợp tác này, MORI INDUSTRY GROUP đã trở thành Đối tác chiến lược của NICON" }, new { sortOrder = 5, year = "2018", title = "Top 10 Thương hiệu dẫn đầu Việt Nam", desc = "Khẳng định vị thế tổng thầu uy tín với nhiều dự án quy mô lớn." }, new { sortOrder = 6, year = "2026", title = "Tiếp tục tăng trưởng", desc = "Khẳng định vị thế qua những công trình chất lượng và không ngừng mở rộng quy mô dự án." } }) },
+            new() { Slug = "certs-main", SortOrder = 6, IsActive = true, Eyebrow = "CHỨNG NHẬN", TitleA = "Tiêu chuẩn vận hành", TitleB = "đáng tin cậy", ItemsJson = JsonSerializer.Serialize(new[] { new { sortOrder = 0, name = "ISO 9001:2008", desc = "Hệ thống quản lý chất lượng.", imageUrl = "/images/upload/about/c8bb1be2415a4f1d9ba028a20fbd6d76.jpg" }, new { sortOrder = 1, name = "ISO 9001:2015", desc = "Chuẩn hóa quy trình và cải tiến liên tục.", imageUrl = "/images/upload/about/cf5320dd3930445da2ed045758f2a60b.jpg" }, new { sortOrder = 2, name = "ISO 14001:2015", desc = "Quản lý môi trường trong thi công và vận hành.", imageUrl = "/images/upload/about/4bc5031a2cb941ee8aeeb644a29a4d55.jpg" }, new { sortOrder = 3, name = "Certifications of Nicon JSC", desc = "Tiêu chuẩn thiết kế và thi công phòng sạch, nhà xưởng chuyên biệt.", imageUrl = "/images/upload/about/9681ac567906459da806ffb8ee92df68.jpg" } }) },
+            new() { Slug = "downloads-main", SortOrder = 7, IsActive = true, Eyebrow = "TÀI LIỆU", TitleA = "Hồ sơ năng lực", TitleB = "và tài liệu tham khảo", Paragraph1 = "Tổng hợp các tài liệu giới thiệu năng lực, chứng nhận và thông tin doanh nghiệp phục vụ đối tác, khách hàng và nhà đầu tư.", ItemsJson = JsonSerializer.Serialize(new[] { new { sortOrder = 0, name = "Company Profile", size = "77 KB", type = "JPEG", url = "/files/cv/d560cb8311a84a1784c8decf55c31884.jpeg" }, new { sortOrder = 1, name = "Brochure năng lực", size = "76.8 MB", type = "PDF", url = "/files/cv/71a61d81a6a14c25980dfbe9f01d1462.pdf" }, new { sortOrder = 2, name = "ISO Certificates", size = "82 KB", type = "JPG", url = "/files/cv/93ba59bb511e43f3a61c44ba4ea5b6f4.jpg" }, new { sortOrder = 3, name = "Danh mục dự án tiêu biểu", size = "74 KB", type = "JPEG", url = "/files/cv/25631b4fd7f64c538cbaeb9a7b1c0f83.jpeg" } }) },
+        };
+
+        var existing = db.AboutSectionContents.ToDictionary(a => a.Slug);
+        foreach (var seed in seeds)
+        {
+            if (existing.TryGetValue(seed.Slug, out var item))
             {
-                Slug = "about-main",
-                Eyebrow = "VỀ CHÚNG TÔI",
-                TitleA = "Đối tác của sự",
-                TitleB = "phát triển từ 2006",
-                Paragraph1 = "Hơn 18 năm đồng hành cùng các nhà đầu tư trong và ngoài nước, NICON kiến tạo những công trình công nghiệp và dân dụng đạt chuẩn quốc tế.",
-                Paragraph2 = "Chúng tôi tập trung vào chất lượng, tiến độ và an toàn, đảm bảo mỗi dự án đều mang lại hiệu quả đầu tư bền vững cho khách hàng.",
-                ImageUrl = "/images/activities/activity-handover.jpg",
-                IsActive = true,
-                SortOrder = 0,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
+                item.Eyebrow = seed.Eyebrow;
+                item.TitleA = seed.TitleA;
+                item.TitleB = seed.TitleB;
+                item.Paragraph1 = seed.Paragraph1;
+                item.Paragraph2 = seed.Paragraph2;
+                item.ImageUrl = seed.ImageUrl;
+                item.ItemsJson = seed.ItemsJson;
+                item.IsActive = seed.IsActive;
+                item.SortOrder = seed.SortOrder;
+                item.UpdatedAt = now;
+            }
+            else
             {
-                Slug = "values-main",
-                Eyebrow = "GIÁ TRỊ CỐT LÕI",
-                TitleA = "Nền tảng phát triển",
-                TitleB = "NICON",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { iconKey = "target", sortOrder = 0, isActive = true, title = "Mục tiêu rõ ràng", desc = "Mọi quyết định đều hướng đến hiệu quả đầu tư và mục tiêu dài hạn của khách hàng." },
-                    new { iconKey = "shield", sortOrder = 1, isActive = true, title = "Kỷ luật chất lượng", desc = "Quy trình thi công, giám sát và nghiệm thu được kiểm soát nghiêm ngặt." },
-                    new { iconKey = "compass", sortOrder = 2, isActive = true, title = "Định hướng bền vững", desc = "Ưu tiên giải pháp tối ưu vận hành, chi phí và vòng đời công trình." },
-                    new { iconKey = "heart", sortOrder = 3, isActive = true, title = "Tận tâm đồng hành", desc = "Xây dựng niềm tin bằng cách làm việc minh bạch và trách nhiệm đến cùng." },
-                }),
-                IsActive = true,
-                SortOrder = 2,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "stats-main",
-                Eyebrow = "CHỈ SỐ NỔI BẬT",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { iconKey = "calendar", sortOrder = 0, isActive = true, num = "18+", label = "Năm kinh nghiệm" },
-                    new { iconKey = "building", sortOrder = 1, isActive = true, num = "150+", label = "Dự án hoàn thành" },
-                    new { iconKey = "users", sortOrder = 2, isActive = true, num = "80+", label = "Khách hàng đồng hành" },
-                    new { iconKey = "award", sortOrder = 3, isActive = true, num = "ISO", label = "Chuẩn hóa chất lượng" },
-                }),
-                IsActive = true,
-                SortOrder = 1,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "strategy-main",
-                Eyebrow = "CHIẾN LƯỢC",
-                TitleA = "Tư duy hệ thống cho",
-                TitleB = "mỗi dự án",
-                Paragraph1 = "Tầm nhìn: Trở thành tổng thầu thiết kế - thi công uy tín hàng đầu trong lĩnh vực công nghiệp và dân dụng tại Việt Nam.",
-                Paragraph2 = "Định hướng tương lai: Liên tục nâng cao năng lực thiết kế, quản lý và công nghệ để đáp ứng các tiêu chuẩn quốc tế ngày càng cao.",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { iconKey = "building", sortOrder = 0, isActive = true, title = "Thiết kế - thi công tổng thể", desc = "Một đầu mối thống nhất giúp kiểm soát tiến độ, chi phí và chất lượng." },
-                    new { iconKey = "hammer", sortOrder = 1, isActive = true, title = "Kết cấu và hạ tầng công nghiệp", desc = "Tối ưu giải pháp nền móng, kết cấu và hạ tầng kỹ thuật." },
-                    new { iconKey = "layers", sortOrder = 2, isActive = true, title = "Cơ điện và hệ thống phụ trợ", desc = "Đảm bảo vận hành ổn định, an toàn và phù hợp tiêu chuẩn dự án." },
-                    new { iconKey = "wrench", sortOrder = 3, isActive = true, title = "Bảo trì và cải tạo", desc = "Đồng hành cùng khách hàng trong suốt vòng đời vận hành công trình." },
-                    new { iconKey = "briefcase", sortOrder = 4, isActive = true, title = "Tư vấn đầu tư", desc = "Hỗ trợ chủ đầu tư từ giai đoạn ý tưởng đến kế hoạch triển khai." },
-                    new { iconKey = "users-group", sortOrder = 5, isActive = true, title = "Phát triển đội ngũ", desc = "Tăng cường năng lực tổ chức để đáp ứng dự án có quy mô ngày càng lớn." },
-                }),
-                IsActive = true,
-                SortOrder = 3,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "organization-main",
-                Eyebrow = "TỔ CHỨC",
-                TitleA = "Bộ máy điều hành",
-                TitleB = "vững mạnh",
-                ItemsJson = JsonSerializer.Serialize(new
-                {
-                    board = new[]
-                    {
-                        new { sortOrder = 0, role = "Chủ tịch HĐQT", name = "Ông Võ Trí Nguyên" },
-                        new { sortOrder = 1, role = "Phó chủ tịch HĐQT", name = "Ông Trần Văn A" },
-                        new { sortOrder = 2, role = "Phó chủ tịch HĐQT", name = "Ông Nguyễn Văn B" },
-                        new { sortOrder = 3, role = "Thư ký HĐQT", name = "Bà Lê Thị C" },
-                    },
-                    directors = new[]
-                    {
-                        new { sortOrder = 0, role = "Tổng giám đốc", name = "Ông Võ Trí Nguyên" },
-                        new { sortOrder = 1, role = "Giám đốc BD Nhật Bản", name = "Ông Daisuke Mori" },
-                        new { sortOrder = 2, role = "Giám đốc BD châu Á", name = "Ông Kenji Sato" },
-                        new { sortOrder = 3, role = "Giám đốc thiết kế", name = "Bà Nguyễn Thị Lan" },
-                    },
-                }),
-                IsActive = true,
-                SortOrder = 4,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "timeline-main",
-                Eyebrow = "LỊCH SỬ",
-                TitleA = "Dấu mốc phát triển",
-                TitleB = "qua từng giai đoạn",
-                ImageUrl = "/images/activities/activity-opening.jpg",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { sortOrder = 0, year = "2006", title = "Thành lập NICON", desc = "Đặt nền móng cho hành trình phát triển trong lĩnh vực xây dựng công nghiệp." },
-                    new { sortOrder = 1, year = "2007", title = "Mở rộng đội ngũ", desc = "Tăng cường năng lực triển khai và quản lý dự án." },
-                    new { sortOrder = 2, year = "2010", title = "Chinh phục dự án FDI", desc = "Bắt đầu đồng hành cùng nhiều nhà đầu tư nước ngoài." },
-                    new { sortOrder = 3, year = "2016", title = "Chuẩn hóa quy trình", desc = "Nâng cao hiệu quả quản trị và kiểm soát chất lượng." },
-                    new { sortOrder = 4, year = "2018", title = "Mở rộng hợp tác chiến lược", desc = "Tăng cường kết nối với các đối tác trong và ngoài nước." },
-                    new { sortOrder = 5, year = "2024", title = "Tiếp tục tăng trưởng", desc = "Khẳng định vị thế tổng thầu uy tín với nhiều dự án quy mô lớn." },
-                }),
-                IsActive = true,
-                SortOrder = 5,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "certs-main",
-                Eyebrow = "CHỨNG NHẬN",
-                TitleA = "Tiêu chuẩn vận hành",
-                TitleB = "đáng tin cậy",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { sortOrder = 0, name = "ISO 9001:2008", desc = "Hệ thống quản lý chất lượng." },
-                    new { sortOrder = 1, name = "ISO 9001:2015", desc = "Chuẩn hóa quy trình và cải tiến liên tục." },
-                    new { sortOrder = 2, name = "ISO 14001", desc = "Quản lý môi trường trong thi công và vận hành." },
-                }),
-                IsActive = true,
-                SortOrder = 6,
-                CreatedAt = now,
-                UpdatedAt = now,
-            },
-            new AboutSectionContent
-            {
-                Slug = "downloads-main",
-                Eyebrow = "CATALOGUE",
-                TitleA = "Catalogue",
-                TitleB = "& hồ sơ năng lực",
-                Paragraph1 = "Tải Catalogue và các tài liệu giới thiệu năng lực, chứng nhận của NICON dành cho đối tác, khách hàng và nhà đầu tư.",
-                ItemsJson = JsonSerializer.Serialize(new[]
-                {
-                    new { sortOrder = 0, name = "NICON Brochure", size = "77 MB", type = "PDF", url = "/files/Nicon-brochure.pdf" },
-                }),
-                IsActive = true,
-                SortOrder = 7,
-                CreatedAt = now,
-                UpdatedAt = now,
-            });
+                seed.CreatedAt = now;
+                seed.UpdatedAt = now;
+                db.AboutSectionContents.Add(seed);
+            }
+        }
 
         db.SaveChanges();
     }
@@ -1167,171 +1426,7 @@ public static class ContentSeeder
         Add(EntityTypes.Slideshow, 5, "Subtitle", "en", "Minimalist style — Open space — International standards");
         Add(EntityTypes.Slideshow, 5, "LinkText", "en", "View Project");
 
-        // ─── Projects: English translations ───
-        Add(EntityTypes.Project, 1, "Name", "en", "BMA Factory");
-        Add(EntityTypes.Project, 1, "Description", "en", "The BMA Factory project is a modern 15,000 m² production complex, designed to international industrial standards.");
-
-        Add(EntityTypes.Project, 2, "Name", "en", "NBDC Workshop");
-        Add(EntityTypes.Project, 2, "Description", "en", "NICON provides full architecture and structural design for the NBDC production workshop at Giang Dien IP.");
-
-        Add(EntityTypes.Project, 3, "Name", "en", "Lam Hiep Hung – Tan Toan Phat Complex");
-        Add(EntityTypes.Project, 3, "Description", "en", "One of NICON's largest projects: a 250,000 m² industrial complex.");
-
-        Add(EntityTypes.Project, 4, "Name", "en", "Thu Duc Sports Center");
-        Add(EntityTypes.Project, 4, "Description", "en", "Multi-purpose sports and recreation center serving the Thu Duc community.");
-
-        Add(EntityTypes.Project, 5, "Name", "en", "B37 Office");
-        Add(EntityTypes.Project, 5, "Description", "en", "Modern office interior design with minimalist style and open space concept.");
-
-        Add(EntityTypes.Project, 6, "Name", "en", "TriMas Vietnam Factory");
-        Add(EntityTypes.Project, 6, "Description", "en", "Turnkey design and build of a packaging factory for TriMas at VSIP IIA.");
-
-        Add(EntityTypes.Project, 7, "Name", "en", "APM Warehouse");
-        Add(EntityTypes.Project, 7, "Description", "en", "Logistics warehouse design for Auto Components Vietnam.");
-
-        Add(EntityTypes.Project, 8, "Name", "en", "JOJO Factory");
-        Add(EntityTypes.Project, 8, "Description", "en", "Factory design with high food safety requirements, HACCP compliant.");
-
-        Add(EntityTypes.Project, 9, "Name", "en", "D22 Hotel");
-        Add(EntityTypes.Project, 9, "Description", "en", "4-star hotel with 80 rooms, ground-floor restaurant and spa.");
-
-        Add(EntityTypes.Project, 10, "Name", "en", "NBDC Canteen");
-        Add(EntityTypes.Project, 10, "Description", "en", "Canteen design for the NBDC industrial complex at Giang Dien IP.");
-
-        Add(EntityTypes.Project, 11, "Name", "en", "NBDC Office");
-        Add(EntityTypes.Project, 11, "Description", "en", "Executive office design for NBDC at Giang Dien IP.");
-
-        Add(EntityTypes.Project, 12, "Name", "en", "Tan Toan Phat Factory");
-        Add(EntityTypes.Project, 12, "Description", "en", "Factory within the Lam Hiep Hung – Tan Toan Phat complex in Binh Duong.");
-
-        Add(EntityTypes.Project, 13, "Name", "en", "Lam Hiep Hung Factory");
-        Add(EntityTypes.Project, 13, "Description", "en", "Lam Hiep Hung factory in Binh Duong, expanding production line.");
-
-        Add(EntityTypes.Project, 14, "Name", "en", "S.T.Food Marketing Vietnam Factory");
-        Add(EntityTypes.Project, 14, "Description", "en", "Food production factory for a Thai investor, designed to GMP and HACCP standards.");
-
-        Add(EntityTypes.Project, 15, "Name", "en", "Medicare Shop");
-        Add(EntityTypes.Project, 15, "Description", "en", "Medicare store at Aeon Mall Binh Duong Canary.");
-
-        Add(EntityTypes.Project, 16, "Name", "en", "Lam Hiep Hung Factory (Phase 1)");
-        Add(EntityTypes.Project, 16, "Description", "en", "Lam Hiep Hung factory phase 1 completed.");
-
-        Add(EntityTypes.Project, 17, "Name", "en", "SCTV Office");
-        Add(EntityTypes.Project, 17, "Description", "en", "Office design and construction for SCTV in District 2, HCMC.");
-
-        Add(EntityTypes.Project, 18, "Name", "en", "H.B.Fuller Factory");
-        Add(EntityTypes.Project, 18, "Description", "en", "MEP system construction for H.B.Fuller factory in Binh Duong.");
-
-        Add(EntityTypes.Project, 19, "Name", "en", "Red Bull Expansion Project");
-        Add(EntityTypes.Project, 19, "Description", "en", "Design for the Red Bull factory expansion in Binh Duong, preserving brand identity.");
-
-        Add(EntityTypes.Project, 20, "Name", "en", "Great Lotus Vietnam Factory");
-        Add(EntityTypes.Project, 20, "Description", "en", "Design and construction of the Great Lotus factory spanning over 31,000 m².");
-
-        Add(EntityTypes.Project, 21, "Name", "en", "Advanced Casting Asia Factory");
-        Add(EntityTypes.Project, 21, "Description", "en", "Advanced Casting Asia production factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 22, "Name", "en", "SCTV Studio & Office");
-        Add(EntityTypes.Project, 22, "Description", "en", "The largest TV studio in Vietnam at the time of construction.");
-
-        Add(EntityTypes.Project, 23, "Name", "en", "BKL Factory");
-        Add(EntityTypes.Project, 23, "Description", "en", "Design and construction of BKL factory at Thinh Phat IP.");
-
-        Add(EntityTypes.Project, 24, "Name", "en", "Rebisco Factory");
-        Add(EntityTypes.Project, 24, "Description", "en", "Rebisco confectionery factory (Philippines) at VSIP II-A.");
-
-        Add(EntityTypes.Project, 25, "Name", "en", "Nestlé Binh An Factory & Office");
-        Add(EntityTypes.Project, 25, "Description", "en", "Design and construction of Nestlé Binh An factory and office.");
-
-        Add(EntityTypes.Project, 26, "Name", "en", "Ampharco U.S.A Factory");
-        Add(EntityTypes.Project, 26, "Description", "en", "Pharmaceutical factory construction for Ampharco U.S.A at Nhon Trach.");
-
-        Add(EntityTypes.Project, 27, "Name", "en", "Konimiyaki Restaurant");
-        Add(EntityTypes.Project, 27, "Description", "en", "Restaurant design for Konimiyaki in District 1, HCMC.");
-
-        Add(EntityTypes.Project, 28, "Name", "en", "SCON Factory");
-        Add(EntityTypes.Project, 28, "Description", "en", "Design and construction of SCON factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 29, "Name", "en", "Clotex Labels Vietnam Factory");
-        Add(EntityTypes.Project, 29, "Description", "en", "Clotex Labels Vietnam factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 30, "Name", "en", "Amiba Factory");
-        Add(EntityTypes.Project, 30, "Description", "en", "Construction of the 2-hectare Amiba factory at VSIP II-A.");
-
-        Add(EntityTypes.Project, 31, "Name", "en", "Akati Wood Factory");
-        Add(EntityTypes.Project, 31, "Description", "en", "Akati Wood factory, a branch of Akati Dominant from Malaysia.");
-
-        Add(EntityTypes.Project, 32, "Name", "en", "Japan Plus Factory");
-        Add(EntityTypes.Project, 32, "Description", "en", "Japan Plus PE box production factory at Dong Nam Cu Chi IP.");
-
-        Add(EntityTypes.Project, 33, "Name", "en", "Central Pharmaceutical HCMC");
-        Add(EntityTypes.Project, 33, "Description", "en", "Pharmaceutical factory design in HCMC.");
-
-        Add(EntityTypes.Project, 34, "Name", "en", "Kumgang Office");
-        Add(EntityTypes.Project, 34, "Description", "en", "Office design and construction for Kumgang Vina.");
-
-        Add(EntityTypes.Project, 35, "Name", "en", "VDA-HCM Factory");
-        Add(EntityTypes.Project, 35, "Description", "en", "Design and construction of VDA-HCM factory at Cau Tram IP.");
-
-        Add(EntityTypes.Project, 36, "Name", "en", "Thu Thiem Dragon Show Flat");
-        Add(EntityTypes.Project, 36, "Description", "en", "Show flat construction for Thu Thiem Dragon in District 2.");
-
-        Add(EntityTypes.Project, 37, "Name", "en", "Nam Ha Viet Factory");
-        Add(EntityTypes.Project, 37, "Description", "en", "Welding rod production factory Nam Ha Viet.");
-
-        Add(EntityTypes.Project, 38, "Name", "en", "YC TEC Factory");
-        Add(EntityTypes.Project, 38, "Description", "en", "YC TEC factory design at Song Than II IP.");
-
-        // ─── Services: English translations ───
-        Add(EntityTypes.Service, 1, "Title", "en", "Design & Build General Contractor (D&B)");
-        Add(EntityTypes.Service, 1, "ShortTitle", "en", "Design & Build");
-        Add(EntityTypes.Service, 1, "Tagline", "en", "One point of contact — full project lifecycle from design to handover.");
-        Add(EntityTypes.Service, 1, "Intro", "en", "Design & Build (D&B) and EPC are the two most popular methods in industrial and civil construction. NICON has systemized the D&B process since inception and continuously refined it through 150+ projects.");
-
-        Add(EntityTypes.Service, 2, "Title", "en", "Main Contractor Services");
-        Add(EntityTypes.Service, 2, "ShortTitle", "en", "Main Contractor");
-        Add(EntityTypes.Service, 2, "Tagline", "en", "Full construction management — turnkey handover.");
-        Add(EntityTypes.Service, 2, "Intro", "en", "As a Vietnamese–Japanese Main Contractor, NICON fulfills all tasks of an industrial construction project.");
-
-        Add(EntityTypes.Service, 3, "Title", "en", "General Contractor Services");
-        Add(EntityTypes.Service, 3, "ShortTitle", "en", "General Contractor");
-        Add(EntityTypes.Service, 3, "Tagline", "en", "Handling the full lifecycle of industrial factory construction.");
-        Add(EntityTypes.Service, 3, "Intro", "en", "As a Vietnamese–Japanese General Contractor, NICON undertakes design, permitting, construction and turnkey handover.");
-
-        Add(EntityTypes.Service, 4, "Title", "en", "MEP Contractor Services");
-        Add(EntityTypes.Service, 4, "ShortTitle", "en", "MEP Contractor");
-        Add(EntityTypes.Service, 4, "Tagline", "en", "Synchronized Mechanical–Electrical–Plumbing systems optimized for operations.");
-        Add(EntityTypes.Service, 4, "Intro", "en", "MEP (Mechanical–Electrical–Plumbing) is the key system determining factory operational efficiency. NICON provides standalone or integrated MEP contracting within D&B packages.");
-
-        // ─── Service Sections: EN translations ───
-        Add(EntityTypes.Service, 1, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "Advantages of D&B / EPC", body = "Minimize management obligations for the investor — NICON handles all project coordination. Reduce inconsistency risk between design and construction. Accelerate schedule even before design is finalized, cutting change-order costs. Reasonable management fees — the investor works with a single contractor for easy cost estimation and quality control." },
-            new { heading = "Advanced Project Management", body = "In close partnership with Mori Construction (Japan), NICON applies BIM (Building Information Modeling) throughout every phase. An experienced BIM team delivers synchronized solutions, giving investors full project visibility and early risk detection." },
-            new { heading = "Best Products from the Best People", body = "NICON maintains an international partner network spanning architecture, structure, interiors and M&E. An experienced team of project managers, architects, engineers and skilled workers can handle LARGE-SCALE – TIGHT-SCHEDULE – HIGH-QUALITY projects." }
-        }));
-        Add(EntityTypes.Service, 2, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "Main Contractor Scope", body = "Full site management, subcontractor and supplier coordination. Ensure schedule, quality and HSE (Health Safety Environment) on site. Regular reporting to investors in Vietnamese, English and Japanese." },
-            new { heading = "International-Standard Management", body = "PMP project management standards and Lean Construction methods. MS Project and Primavera P6 for scheduling and cost control. QA/QC per ISO 9001:2015 for every work package." },
-            new { heading = "Strategic Partnership with Mori Group", body = "The partnership with Mori Industry Group (Japan) brings Japanese technical standards and work culture to every NICON project." }
-        }));
-        Add(EntityTypes.Service, 3, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "General Contractor Role", body = "Comprehensive management from schematic design, technical design to construction drawings. Material and equipment procurement and supply chain management. Construction execution, partial acceptance and complete handover." },
-            new { heading = "Mega-Project Capability", body = "NICON has successfully delivered 250,000 m² industrial complexes like Lam Hiep Hung – Tan Toan Phat. Capability to manage large sites with hundreds of workers, heavy equipment and complex logistics." },
-            new { heading = "Quality Commitment", body = "100% of projects delivered on schedule over the last 5 years. 24-month warranty for construction, 12-month warranty for MEP." }
-        }));
-        Add(EntityTypes.Service, 4, "Sections", "en", JsonSerializer.Serialize(new[] {
-            new { heading = "NICON MEP Scope", body = "Industrial electrical systems: medium/low voltage, backup generators, UPS, high-efficiency lighting. HVAC, ventilation and cleanroom systems per ISO Class 5/7/8. Water supply/drainage, solar hot water, wastewater treatment. Fire sprinkler and addressable alarm systems per TCVN and NFPA." },
-            new { heading = "Integration & Handover", body = "Rigorous T&C (Testing & Commissioning) process witnessed by supervision consultants and investors. Handover with as-built documentation, O&M manuals. Operational training for the investor's technical staff." },
-            new { heading = "BIM-Powered Project Management", body = "3D MEP models detect clashes before construction, reducing 80% of field rework. BIM deliverables support long-term operations and maintenance for the investor." }
-        }));
-
-        // ─── Project Challenges & Solutions: EN translations (Projects 1-3) ───
-        Add(EntityTypes.Project, 1, "Challenges", "en", JsonSerializer.Serialize(new[] { "Tight 10-month schedule from groundbreaking to commissioning.", "Large-span column-free structural solution for production lines.", "Optimizing ventilation and natural lighting for energy savings." }));
-        Add(EntityTypes.Project, 1, "Solutions", "en", JsonSerializer.Serialize(new[] { "Pre-engineered steel with 30m spans and polycarbonate skylights.", "Parallel construction of multiple work packages, managed with BIM 4D software.", "Synchronized M&E systems with 30% capacity reserve for future expansion." }));
-        Add(EntityTypes.Project, 2, "Challenges", "en", JsonSerializer.Serialize(new[] { "Complex production line layout with multiple functional zones.", "Requirement to integrate executive offices and production in one building." }));
-        Add(EntityTypes.Project, 2, "Solutions", "en", JsonSerializer.Serialize(new[] { "Clear zoning with one-way traffic flow to minimize cross-movement.", "Two-story integrated office with production floor overlook." }));
-        Add(EntityTypes.Project, 3, "Challenges", "en", JsonSerializer.Serialize(new[] { "Master planning for a mega-scale site with many building blocks.", "Synchronizing technical infrastructure across a large area." }));
-        Add(EntityTypes.Project, 3, "Solutions", "en", JsonSerializer.Serialize(new[] { "Modular master plan for easy expansion and function changes.", "Internal road system designed for 40-foot container trucks." }));
+        // Project translations are now handled by SeedProjectTranslations() via project-translations.json (slug-based).
 
         // ─── Slideshow: ZH translations ───
         Add(EntityTypes.Slideshow, 1, "Title", "zh", "工厂设计施工总承包商");
@@ -1566,96 +1661,32 @@ public static class ContentSeeder
         return JsonSerializer.Deserialize<List<ContentSeedItem>>(stream, opts) ?? [];
     }
 
-    // Stock placeholders that the original hand-curated seeder cycled across
-    // every Activity row. Their presence is the signal to re-seed from the
-    // legacy manifest.
-    private static bool IsLegacyStockActivityImage(string url) =>
-        url is "/images/activities/activity-ceremony.jpg"
-            or "/images/activities/activity-handover.jpg"
-            or "/images/activities/activity-opening.jpg";
-
-    // Stock thumbnails (news-fire-protection.jpeg, news-build-concept.jpeg, …)
-    // used by the legacy hand-curated News seeder. Per-slug folders use
-    // /images/news/<slug>/thumb.* so this prefix is unambiguous.
-    private static bool IsLegacyStockNewsImage(string url) =>
-        url.StartsWith("/images/news/news-", StringComparison.Ordinal);
-
-    private static bool NeedsContentReseed<T>(IQueryable<T> set, List<ContentSeedItem> manifest, Func<T, string> imageUrlOf, Func<T, string> contentJsonOf, Func<string, bool> isStockImage)
-        where T : class
-    {
-        var existing = set.ToList();
-        if (existing.Count == 0) return true;
-        if (existing.Count != manifest.Count) return true;
-        if (existing.Any(e => isStockImage(imageUrlOf(e)))) return true;
-
-        // Trigger reseed when the manifest carries inline-image content blocks
-        // (e.g. {"type":"image","url":...}) but the DB still has the legacy
-        // pure-string content. Detect by sniffing the first array element.
-        var manifestHasInlineImages = manifest.Any(item =>
-            item.GetTranslation("vi").Content.Any(c => c.ValueKind == JsonValueKind.Object));
-        if (!manifestHasInlineImages) return false;
-
-        var dbHasInlineImages = existing.Any(e =>
-        {
-            var json = contentJsonOf(e);
-            if (string.IsNullOrWhiteSpace(json) || json.Length < 2) return false;
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.ValueKind != JsonValueKind.Array) return false;
-                foreach (var el in doc.RootElement.EnumerateArray())
-                {
-                    if (el.ValueKind == JsonValueKind.Object) return true;
-                }
-            }
-            catch (JsonException) { /* malformed json — fall through */ }
-            return false;
-        });
-        return !dbHasInlineImages;
-    }
-
-    private static void ReseedFromManifest<T>(AppDbContext db, string entityType, List<ContentSeedItem> manifest, Func<ContentSeedItem, T> factory)
-        where T : class
-    {
-        // Wipe dependent translation rows first so they don't dangle once the
-        // entities (and their IDs) are recreated.
-        var staleTranslations = db.EntityTranslations.Where(t => t.EntityType == entityType).ToList();
-        if (staleTranslations.Count > 0)
-        {
-            db.EntityTranslations.RemoveRange(staleTranslations);
-        }
-
-        var dbSet = db.Set<T>();
-        var existing = dbSet.ToList();
-        if (existing.Count > 0)
-        {
-            dbSet.RemoveRange(existing);
-        }
-        db.SaveChanges();
-
-        foreach (var item in manifest)
-        {
-            dbSet.Add(factory(item));
-        }
-        db.SaveChanges();
-    }
-
     private static void SeedManifestTranslations(AppDbContext db, string entityType, List<ContentSeedItem> manifest, IDictionary<string, int> bySlug)
     {
+        var existingKeys = db.EntityTranslations
+            .Where(t => t.EntityType == entityType)
+            .Select(t => t.EntityId + "|" + t.FieldName + "|" + t.LanguageCode)
+            .ToHashSet();
+
         var now = DateTime.UtcNow;
         var rows = new List<EntityTranslation>();
+
+        void Add(int entityId, string field, string lang, string value)
+        {
+            var key = $"{entityId}|{field}|{lang}";
+            if (existingKeys.Contains(key)) return; // never overwrite admin-edited translations
+            rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = field, LanguageCode = lang, Value = value, CreatedAt = now, UpdatedAt = now });
+        }
+
         foreach (var item in manifest)
         {
             if (!bySlug.TryGetValue(item.Slug, out var entityId)) continue;
             foreach (var (lang, t) in item.Translations)
             {
                 if (lang == "vi") continue; // VI lives on the entity itself
-                if (!string.IsNullOrEmpty(t.Title))
-                    rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = "Title", LanguageCode = lang, Value = t.Title, CreatedAt = now, UpdatedAt = now });
-                if (!string.IsNullOrEmpty(t.Excerpt))
-                    rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = "Excerpt", LanguageCode = lang, Value = t.Excerpt, CreatedAt = now, UpdatedAt = now });
-                if (t.Content is { Count: > 0 })
-                    rows.Add(new EntityTranslation { EntityType = entityType, EntityId = entityId, FieldName = "Content", LanguageCode = lang, Value = JsonSerializer.Serialize(t.Content), CreatedAt = now, UpdatedAt = now });
+                if (!string.IsNullOrEmpty(t.Title)) Add(entityId, "Title", lang, t.Title);
+                if (!string.IsNullOrEmpty(t.Excerpt)) Add(entityId, "Excerpt", lang, t.Excerpt);
+                if (t.Content is { Count: > 0 }) Add(entityId, "Content", lang, JsonSerializer.Serialize(t.Content));
             }
         }
         if (rows.Count > 0)

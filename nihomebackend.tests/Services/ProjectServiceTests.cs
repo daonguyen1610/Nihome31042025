@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -19,9 +20,10 @@ public class ProjectServiceTests : IDisposable
     public ProjectServiceTests()
     {
         _db = DbContextFactory.Create();
+        var translationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hosted = new HostedImageService(Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp"));
         var catSvc = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
-        _sut = new ProjectService(_db, hosted, catSvc, NullLogger<ProjectService>.Instance);
+        _sut = new ProjectService(_db, translationSvc, hosted, catSvc, NullLogger<ProjectService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -127,5 +129,32 @@ public class ProjectServiceTests : IDisposable
     public async Task Delete_NonExisting_ReturnsFalse()
     {
         Assert.False(await _sut.DeleteAsync(404));
+    }
+
+    [Fact]
+    public async Task CreateAsync_PersistsContentBlocks()
+    {
+        var req = new UpsertProjectRequest
+        {
+            Slug = "test-content-blocks",
+            ImageUrl = "/images/test.jpg",
+            Name = "Test Project",
+            Client = "Test Client",
+            Location = "Test Location",
+            Scope = "Design",
+            Status = "ongoing",
+            Content = new object[]
+            {
+                new Dictionary<string, object> { ["type"] = "text", ["value"] = "Intro paragraph" },
+                new Dictionary<string, object> { ["type"] = "image", ["url"] = "/images/test-2.jpg", ["caption"] = "A caption" },
+            },
+        };
+
+        var created = await _sut.CreateAsync(req);
+
+        Assert.Equal(2, created.Content.Length);
+        var fetched = await _sut.GetBySlugAsync("test-content-blocks");
+        Assert.NotNull(fetched);
+        Assert.Equal(2, fetched!.Content.Length);
     }
 }

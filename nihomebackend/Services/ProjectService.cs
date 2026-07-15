@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,24 +8,40 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ProjectService(AppDbContext db, HostedImageService hostedImageService, ProjectCategoryService categorySvc, ILogger<ProjectService> logger)
+public class ProjectService(
+    AppDbContext db,
+    EntityTranslationService translationSvc,
+    HostedImageService hostedImageService,
+    ProjectCategoryService categorySvc,
+    ILogger<ProjectService> logger)
 {
 
-    public async Task<List<ProjectResponse>> GetAllAsync()
+    public async Task<List<ProjectResponse>> GetAllAsync(string lang = "vi")
     {
         var items = await db.Projects.AsNoTracking().OrderBy(p => p.SortOrder).ToListAsync();
-        logger.LogDebug("Fetched {Count} projects", items.Count);
-        return items.Select(MapToResponse).ToList();
+        logger.LogDebug("Fetched {Count} projects (lang={Lang})", items.Count, lang);
+        var translations = await translationSvc.GetBatchTranslationsAsync(
+            EntityTypes.Project, items.Select(p => p.Id), lang);
+
+        return items.Select(p =>
+        {
+            var t = translations.GetValueOrDefault(p.Id, new Dictionary<string, string>());
+            return MapToResponse(p, t);
+        }).ToList();
     }
 
-    public async Task<ProjectResponse?> GetBySlugAsync(string slug)
+    public async Task<ProjectResponse?> GetBySlugAsync(string slug, string lang = "vi")
     {
         var item = await db.Projects.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug);
         if (item == null)
         {
             logger.LogWarning("Project not found by slug {Slug}", slug);
+            return null;
         }
-        return item == null ? null : MapToResponse(item);
+
+        var t = await translationSvc.GetEntityTranslationsAsync(EntityTypes.Project, item.Id, lang);
+        logger.LogDebug("Fetched project {ProjectId} by slug {Slug} (lang={Lang})", item.Id, slug, lang);
+        return MapToResponse(item, t);
     }
 
     public async Task<ProjectResponse> CreateAsync(UpsertProjectRequest req)
@@ -49,12 +66,13 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
             ChallengesJson = req.Challenges != null ? JsonSerializer.Serialize(req.Challenges) : null,
             SolutionsJson = req.Solutions != null ? JsonSerializer.Serialize(req.Solutions) : null,
             HighlightsJson = req.Highlights.HasValue ? req.Highlights.Value.GetRawText() : null,
+            ContentJson = SerializeContent(req.Content),
             SortOrder = req.SortOrder,
         };
         db.Projects.Add(entity);
         await db.SaveChangesAsync();
         logger.LogInformation("Created project {ProjectId} (slug={Slug})", entity.Id, entity.Slug);
-        return MapToResponse(entity);
+        return MapToResponse(entity, new Dictionary<string, string>());
     }
 
     public async Task<ProjectResponse?> UpdateAsync(int id, UpsertProjectRequest req)
@@ -88,6 +106,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         entity.ChallengesJson = req.Challenges != null ? JsonSerializer.Serialize(req.Challenges) : null;
         entity.SolutionsJson = req.Solutions != null ? JsonSerializer.Serialize(req.Solutions) : null;
         entity.HighlightsJson = req.Highlights.HasValue ? req.Highlights.Value.GetRawText() : null;
+        entity.ContentJson = SerializeContent(req.Content);
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
@@ -99,7 +118,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         }
         DeleteRemovedGalleryImages(previousGallery, DeserializeGallery(entity.GalleryJson));
         logger.LogInformation("Updated project {ProjectId} (slug={Slug})", id, entity.Slug);
-        return MapToResponse(entity);
+        return MapToResponse(entity, new Dictionary<string, string>());
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -114,6 +133,7 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         var gallery = DeserializeGallery(entity.GalleryJson);
         db.Projects.Remove(entity);
         await db.SaveChangesAsync();
+        await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.Project, id);
         hostedImageService.DeleteIfManagedUpload(imageUrl);
         foreach (var url in gallery)
         {
@@ -123,13 +143,13 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         return true;
     }
 
-    private static ProjectResponse MapToResponse(Project p) => new()
+    private static ProjectResponse MapToResponse(Project p, Dictionary<string, string> t) => new()
     {
         Id = p.Id,
         Slug = p.Slug,
         ImageUrl = p.ImageUrl,
         Gallery = string.IsNullOrEmpty(p.GalleryJson) ? null : JsonSerializer.Deserialize<string[]>(p.GalleryJson),
-        Name = p.Name,
+        Name = t.GetValueOrDefault("Name", p.Name),
         Client = p.Client,
         Location = p.Location,
         Scale = p.Scale,
@@ -138,11 +158,73 @@ public class ProjectService(AppDbContext db, HostedImageService hostedImageServi
         Year = p.Year,
         Category = p.Category,
         CategoryId = p.ProjectCategoryId,
-        Description = p.Description,
-        Challenges = string.IsNullOrEmpty(p.ChallengesJson) ? null : JsonSerializer.Deserialize<string[]>(p.ChallengesJson),
-        Solutions = string.IsNullOrEmpty(p.SolutionsJson) ? null : JsonSerializer.Deserialize<string[]>(p.SolutionsJson),
+        Description = t.TryGetValue("Description", out var descTranslation) ? descTranslation : p.Description,
+        Challenges = DeserializeStringArray(t.TryGetValue("Challenges", out var challengesTranslation) ? challengesTranslation : p.ChallengesJson),
+        Solutions = DeserializeStringArray(t.TryGetValue("Solutions", out var solutionsTranslation) ? solutionsTranslation : p.SolutionsJson),
         Highlights = string.IsNullOrEmpty(p.HighlightsJson) ? null : JsonSerializer.Deserialize<JsonElement>(p.HighlightsJson),
+        Content = t.TryGetValue("Content", out var contentJson)
+            ? DeserializeContent(contentJson)
+            : DeserializeContent(p.ContentJson),
     };
+
+    private static string[]? DeserializeStringArray(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(json);
+        }
+        catch (JsonException)
+        {
+            // Challenges/Solutions can come from an admin-entered translation
+            // (Translations.tsx), which the API never validates as JSON before
+            // saving — fall back to no data instead of 500-ing the whole project
+            // response for every reader in that language.
+            return null;
+        }
+    }
+
+    private static string SerializeContent(object[] content) => JsonSerializer.Serialize(content ?? []);
+
+    private static object[] DeserializeContent(string? contentJson)
+    {
+        if (string.IsNullOrWhiteSpace(contentJson))
+            return [];
+
+        object[] result;
+        try
+        {
+            result = JsonSerializer.Deserialize<object[]>(contentJson) ?? [];
+        }
+        catch (JsonException)
+        {
+            // Content can come from an admin-entered translation, never
+            // validated as JSON before saving — degrade to empty content
+            // instead of 500-ing the whole project response.
+            return [];
+        }
+
+        // Auto-repair: previous admin UI bug stored the whole ContentItem JSON array
+        // as a single escaped string element — e.g. ["[{\"type\":\"image\",...},\"text\"]"].
+        // Unwrap and re-deserialize so images and text render correctly.
+        if (result.Length == 1
+            && result[0] is JsonElement el
+            && el.ValueKind == JsonValueKind.String)
+        {
+            var inner = el.GetString() ?? "";
+            if (inner.TrimStart().StartsWith('['))
+            {
+                try
+                {
+                    var repaired = JsonSerializer.Deserialize<object[]>(inner);
+                    if (repaired is { Length: > 0 }) return repaired;
+                }
+                catch { /* not valid JSON — keep original */ }
+            }
+        }
+
+        return result;
+    }
 
     private string? SerializeGallery(string[]? gallery)
     {

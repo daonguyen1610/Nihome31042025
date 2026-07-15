@@ -1,20 +1,26 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, MapPin, Maximize2, Briefcase, Calendar, Tag, Grid3X3, List } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
-import { useProject, useProjects } from "@/hooks/useContentApi";
+import { useProject, useProjects, useProjectCategories } from "@/hooks/useContentApi";
+import { resolveCategoryLabel } from "@/lib/category";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import ContentBlocks from "@/components/ContentBlocks";
 
 const ProjectDetail = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { slug } = useParams();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
   const { data: project, loading, error, refetch } = useProject(slug ?? "");
   const { data: allProjects } = useProjects();
+  const { data: categoryList } = useProjectCategories();
+  const categoriesById = useMemo(
+    () => new Map((categoryList ?? []).map((c) => [c.id, c])),
+    [categoryList],
+  );
 
   if (loading) return <Layout><PageLoading /></Layout>;
   if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
@@ -37,7 +43,7 @@ const ProjectDetail = () => {
     project.highlights && project.highlights.length > 0
       ? project.highlights
       : [
-          { label: t("proj.field.category"), value: project.category ?? "" },
+          { label: t("proj.field.category"), value: resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang) },
           { label: t("proj.field.scope"), value: project.scope ?? "" },
           { label: t("proj.scale"), value: project.scale ?? "" },
           { label: t("proj.field.year"), value: project.year ?? "" },
@@ -57,9 +63,9 @@ const ProjectDetail = () => {
             <span className={`chip ${project.status === "ongoing" ? "chip-orange" : "chip-success"} bg-white/95`}>
               {project.status === "ongoing" ? t("projDetail.statusOngoing") : t("projDetail.statusDone")}
             </span>
-            {project.category && (
+            {resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang) && (
               <span className="chip chip-primary bg-white/95">
-                {project.category}
+                {resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang)}
               </span>
             )}
             {project.scope && (
@@ -84,7 +90,7 @@ const ProjectDetail = () => {
               { icon: Maximize2, label: t("projDetail.scale"), value: project.scale },
               { icon: Briefcase, label: t("projDetail.scope"), value: project.scope },
               { icon: Calendar, label: t("projDetail.year"), value: project.year ?? "—" },
-              { icon: Tag, label: t("proj.field.category"), value: project.category ?? "—" },
+              { icon: Tag, label: t("proj.field.category"), value: resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang) || "—" },
             ].map((m, i) => (
               <div key={i} className="flex items-start gap-4">
                 <div className="w-11 h-11 rounded-2xl bg-gradient-primary text-white flex items-center justify-center shrink-0">

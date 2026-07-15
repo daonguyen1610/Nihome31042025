@@ -28,8 +28,9 @@ public class ActivitiesControllerTests : IDisposable
             _db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
+        var categorySvc = new ActivityCategoryService(_db, NullLogger<ActivityCategoryService>.Instance);
 
-        _service = new ActivityService(_db, entityTranslationSvc, hostedImageService, NullLogger<ActivityService>.Instance);
+        _service = new ActivityService(_db, entityTranslationSvc, hostedImageService, categorySvc, NullLogger<ActivityService>.Instance);
         _sut = new ActivitiesController(_service, new NoOpNotificationService());
     }
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -7,24 +8,36 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class ServiceItemService(AppDbContext db, ILogger<ServiceItemService> logger)
+public class ServiceItemService(
+    AppDbContext db,
+    ILogger<ServiceItemService> logger,
+    EntityTranslationService translationSvc)
 {
-
-    public async Task<List<ServiceResponse>> GetAllAsync()
+    public async Task<List<ServiceResponse>> GetAllAsync(string lang = "vi")
     {
         var items = await db.ServiceItems.AsNoTracking().OrderBy(s => s.SortOrder).ToListAsync();
         logger.LogDebug("Fetched {Count} service items", items.Count);
-        return items.Select(MapToResponse).ToList();
+
+        var translations = await translationSvc.GetBatchTranslationsAsync(
+            EntityTypes.Service, items.Select(x => x.Id), lang);
+
+        return items.Select(item =>
+        {
+            var t = translations.GetValueOrDefault(item.Id, new Dictionary<string, string>());
+            return MapWithTranslations(item, t);
+        }).ToList();
     }
 
-    public async Task<ServiceResponse?> GetBySlugAsync(string slug)
+    public async Task<ServiceResponse?> GetBySlugAsync(string slug, string lang = "vi")
     {
         var item = await db.ServiceItems.AsNoTracking().FirstOrDefaultAsync(s => s.Slug == slug);
         if (item == null)
         {
             logger.LogWarning("Service item not found by slug {Slug}", slug);
+            return null;
         }
-        return item == null ? null : MapToResponse(item);
+        var t = await translationSvc.GetEntityTranslationsAsync(EntityTypes.Service, item.Id, lang);
+        return MapWithTranslations(item, t);
     }
 
     public async Task<ServiceResponse> CreateAsync(UpsertServiceRequest req)
@@ -44,7 +57,7 @@ public class ServiceItemService(AppDbContext db, ILogger<ServiceItemService> log
         db.ServiceItems.Add(entity);
         await db.SaveChangesAsync();
         logger.LogInformation("Created service item {ServiceItemId} (slug={Slug})", entity.Id, entity.Slug);
-        return MapToResponse(entity);
+        return MapWithTranslations(entity, new Dictionary<string, string>());
     }
 
     public async Task<ServiceResponse?> UpdateAsync(int id, UpsertServiceRequest req)
@@ -69,7 +82,7 @@ public class ServiceItemService(AppDbContext db, ILogger<ServiceItemService> log
 
         await db.SaveChangesAsync();
         logger.LogInformation("Updated service item {ServiceItemId} (slug={Slug})", id, entity.Slug);
-        return MapToResponse(entity);
+        return MapWithTranslations(entity, new Dictionary<string, string>());
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -86,17 +99,83 @@ public class ServiceItemService(AppDbContext db, ILogger<ServiceItemService> log
         return true;
     }
 
-    private static ServiceResponse MapToResponse(ServiceItem s) => new()
+    private static ServiceResponse MapWithTranslations(ServiceItem s, Dictionary<string, string> t) => new()
     {
         Id = s.Id,
         Slug = s.Slug,
-        Title = s.Title,
-        ShortTitle = s.ShortTitle,
-        Tagline = s.Tagline,
-        Intro = s.Intro,
-        Sections = JsonSerializer.Deserialize<JsonElement>(s.SectionsJson),
-        Highlights = JsonSerializer.Deserialize<string[]>(s.HighlightsJson) ?? [],
-        IntroBlocks = JsonSerializer.Deserialize<JsonElement>(s.IntroBlocksJson),
+        Title = Coalesce(t, "Title", s.Title),
+        ShortTitle = Coalesce(t, "ShortTitle", s.ShortTitle),
+        Tagline = Coalesce(t, "Tagline", s.Tagline),
+        Intro = Coalesce(t, "Intro", s.Intro),
+        Sections = ResolveJsonElement(t, "Sections", s.SectionsJson),
+        Highlights = ResolveStringArray(t, "Highlights", s.HighlightsJson),
+        IntroBlocks = ResolveIntroBlocks(t, s.IntroBlocksJson),
         SortOrder = s.SortOrder,
     };
+
+    private static string Coalesce(Dictionary<string, string> t, string field, string original) =>
+        t.TryGetValue(field, out var v) && !string.IsNullOrWhiteSpace(v) ? v : original;
+
+    // Highlights is string[]: apply translation when it parses as a valid JSON string array.
+    private static string[] ResolveStringArray(Dictionary<string, string> t, string field, string originalJson)
+    {
+        if (t.TryGetValue(field, out var translated) && !string.IsNullOrWhiteSpace(translated))
+        {
+            try
+            {
+                var arr = JsonSerializer.Deserialize<string[]>(translated);
+                if (arr != null) return arr;
+            }
+            catch (JsonException) { }
+        }
+        return JsonSerializer.Deserialize<string[]>(
+            string.IsNullOrWhiteSpace(originalJson) ? "[]" : originalJson) ?? [];
+    }
+
+    // IntroBlocks: translate only the text field of each block, keep original imageUrl.
+    private static JsonElement ResolveIntroBlocks(Dictionary<string, string> t, string? introBlocksJson)
+    {
+        var origJson = string.IsNullOrWhiteSpace(introBlocksJson) ? "[]" : introBlocksJson;
+        if (t.TryGetValue("IntroBlocks", out var textsJson) && !string.IsNullOrWhiteSpace(textsJson))
+        {
+            try
+            {
+                var texts = JsonSerializer.Deserialize<string[]>(textsJson);
+                using var origDoc = JsonDocument.Parse(origJson);
+                if (texts != null && origDoc.RootElement.ValueKind == JsonValueKind.Array)
+                {
+                    var origArr = origDoc.RootElement.EnumerateArray().ToArray();
+                    var merged = origArr.Select((orig, idx) =>
+                    {
+                        var text = idx < texts.Length && !string.IsNullOrWhiteSpace(texts[idx])
+                            ? texts[idx]
+                            : (orig.TryGetProperty("text", out var tv) ? tv.GetString() ?? "" : "");
+                        var imageUrl = orig.TryGetProperty("imageUrl", out var iv) ? iv.GetString() : null;
+                        return new Dictionary<string, object?> { ["text"] = text, ["imageUrl"] = imageUrl };
+                    }).ToList();
+                    return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(merged));
+                }
+            }
+            catch (JsonException) { }
+        }
+        return JsonSerializer.Deserialize<JsonElement>(origJson);
+    }
+
+    // Sections is a JSON array blob: only apply translation when it parses as a valid JSON array.
+    private static JsonElement ResolveJsonElement(
+        Dictionary<string, string> t, string field, string originalJson)
+    {
+        if (t.TryGetValue(field, out var translated) && !string.IsNullOrWhiteSpace(translated))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(translated);
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                    return doc.RootElement.Clone();
+            }
+            catch (JsonException) { }
+        }
+        var fallback = string.IsNullOrWhiteSpace(originalJson) ? "[]" : originalJson;
+        return JsonSerializer.Deserialize<JsonElement>(fallback);
+    }
 }

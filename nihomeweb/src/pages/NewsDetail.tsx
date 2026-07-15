@@ -1,18 +1,26 @@
 import { Link, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, Calendar, Grid3X3, List, Tag } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
-import { useNewsItem, useNews } from "@/hooks/useContentApi";
+import { useNewsItem, useNews, useNewsCategories } from "@/hooks/useContentApi";
+import { resolveCategoryLabel } from "@/lib/category";
 import { PageLoading, PageError } from "@/components/PageState";
 import ContentBlocks from "@/components/ContentBlocks";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const NewsDetail = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { slug } = useParams();
   const { data: item, loading, error, refetch } = useNewsItem(slug ?? "");
   const { data: allNews } = useNews();
+  const { data: categoryList } = useNewsCategories();
+  const categoriesById = useMemo(
+    () => new Map((categoryList ?? []).map((c) => [c.id, c])),
+    [categoryList],
+  );
   const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (loading) return <Layout><PageLoading /></Layout>;
   if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
@@ -39,7 +47,7 @@ const NewsDetail = () => {
             <ArrowLeft className="w-4 h-4" /> {t("newsPage.backToList")}
           </Link>
           <div className="flex items-center gap-3 mb-5">
-            <span className="chip chip-primary">{item.category}</span>
+            <span className="chip chip-primary">{resolveCategoryLabel(item.newsCategoryId, item.category, categoriesById, lang)}</span>
             <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
               <Calendar className="w-3 h-3" /> {item.date}
             </span>
@@ -82,14 +90,31 @@ const NewsDetail = () => {
             </div>
             <div className={galleryMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-5" : "space-y-5 max-w-5xl mx-auto"}>
               {item.gallery.map((g, i) => (
-                <div key={`${g}-${i}`} className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted"}>
+                <button
+                  key={`${g}-${i}`}
+                  type="button"
+                  onClick={() => setSelectedImage(g)}
+                  className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted w-full text-left"}
+                >
                   <img src={g} alt={`${item.title} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                </div>
+                </button>
               ))}
             </div>
           </div>
         </section>
       )}
+
+      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="p-1 sm:max-w-6xl bg-transparent border-0 shadow-none">
+          {selectedImage ? (
+            <img
+              src={selectedImage}
+              alt={item.title}
+              className="w-full max-h-[85vh] object-contain rounded-xl"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* Related */}
       {related.length > 0 && (
@@ -105,7 +130,7 @@ const NewsDetail = () => {
                   </div>
                   <div className="p-6">
                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-2 inline-flex items-center gap-1.5">
-                      <Tag className="w-3 h-3" /> {n.category}
+                      <Tag className="w-3 h-3" /> {resolveCategoryLabel(n.newsCategoryId, n.category, categoriesById, lang)}
                     </p>
                     <h3 className="font-display text-lg font-extrabold leading-tight group-hover:text-primary transition-colors line-clamp-2">{n.title}</h3>
                   </div>

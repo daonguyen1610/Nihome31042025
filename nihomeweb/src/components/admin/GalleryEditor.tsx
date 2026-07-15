@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 interface GalleryEditorProps {
   items: string[];
   onChange: (items: string[]) => void;
+  folder?: string;
 }
 
-const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
+const GalleryEditor = ({ items, onChange, folder }: GalleryEditorProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -24,7 +25,7 @@ const GalleryEditor = ({ items, onChange }: GalleryEditorProps) => {
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        const res = await adminApi.uploadImage(file);
+        const res = await adminApi.uploadImage(file, undefined, folder);
         uploaded.push(res.data.imageUrl);
       }
       onChange([...items, ...uploaded]);

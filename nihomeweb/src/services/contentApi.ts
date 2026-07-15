@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import { resolveAssetUrl } from "@/lib/url";
 
 // --- Types matching backend DTOs ---
 
@@ -134,6 +135,10 @@ export interface SlideshowResponse {
 export interface ActivityCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
@@ -141,6 +146,10 @@ export interface ActivityCategoryResponse {
 export interface ProjectCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
@@ -148,6 +157,10 @@ export interface ProjectCategoryResponse {
 export interface NewsCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
@@ -262,44 +275,11 @@ export interface EntityTranslationRow {
   value: string;
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
-
-function getApiOrigin() {
-  const base = API_BASE;
-  if (!base) return "";
-
-  try {
-    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
-    return new URL(base, origin).origin;
-  } catch {
-    return "";
-  }
-}
-
-function resolveImageUrl(value: string) {
-  if (!value) return value;
-
-  if (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("data:")
-  ) {
-    return value;
-  }
-
-  if (!value.startsWith("/")) {
-    return value;
-  }
-
-  const apiOrigin = getApiOrigin();
-  return apiOrigin ? `${apiOrigin}${value}` : value;
-}
-
 function mapActivity(item: ActivityResponse): ActivityResponse {
   return {
     ...item,
-    imageUrl: resolveImageUrl(item.imageUrl),
-    gallery: item.gallery?.map(resolveImageUrl),
+    imageUrl: resolveAssetUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveAssetUrl),
     content: item.content.map(resolveContentItem),
   };
 }
@@ -307,8 +287,8 @@ function mapActivity(item: ActivityResponse): ActivityResponse {
 function mapNews(item: NewsResponse): NewsResponse {
   return {
     ...item,
-    imageUrl: resolveImageUrl(item.imageUrl),
-    gallery: item.gallery?.map(resolveImageUrl),
+    imageUrl: resolveAssetUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveAssetUrl),
     content: item.content.map(resolveContentItem),
   };
 }
@@ -316,24 +296,33 @@ function mapNews(item: NewsResponse): NewsResponse {
 function mapProject(item: ProjectResponse): ProjectResponse {
   return {
     ...item,
-    imageUrl: resolveImageUrl(item.imageUrl),
-    gallery: item.gallery?.map(resolveImageUrl),
+    imageUrl: resolveAssetUrl(item.imageUrl),
+    gallery: item.gallery?.map(resolveAssetUrl),
     content: item.content?.map(resolveContentItem),
   };
 }
 
 function mapLogo(item: LogoResponse): LogoResponse {
-  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+  return { ...item, imageUrl: resolveAssetUrl(item.imageUrl) };
 }
 
 function mapSlideshow(item: SlideshowResponse): SlideshowResponse {
-  return { ...item, imageUrl: resolveImageUrl(item.imageUrl) };
+  return { ...item, imageUrl: resolveAssetUrl(item.imageUrl) };
 }
 
 function resolveContentItem(item: ContentItem): ContentItem {
   if (typeof item === "string") return item;
-  if (item.type === "image") return { ...item, url: resolveImageUrl(item.url) };
+  if (item.type === "image") return { ...item, url: resolveAssetUrl(item.url) };
   return item; // text and youtube pass through unchanged
+}
+
+function mapService(item: ServiceResponse): ServiceResponse {
+  return {
+    ...item,
+    introBlocks: (item.introBlocks ?? []).map((b) =>
+      b.imageUrl ? { ...b, imageUrl: resolveAssetUrl(b.imageUrl) } : b
+    ),
+  };
 }
 
 function mapLogosGrouped(data: LogosGroupedResponse): LogosGroupedResponse {
@@ -382,17 +371,21 @@ export const contentApi = {
       .then((res) => ({ ...res, data: mapNews(res.data) })),
 
   // Projects
-  getProjects: () =>
-    api.get<ProjectResponse[]>("/projects")
+  getProjects: (lang = "vi") =>
+    api.get<ProjectResponse[]>(`/projects?lang=${lang}`)
       .then((res) => ({ ...res, data: res.data.map(mapProject) })),
 
-  getProject: (slug: string) =>
-    api.get<ProjectResponse>(`/projects/${slug}`)
+  getProject: (slug: string, lang = "vi") =>
+    api.get<ProjectResponse>(`/projects/${slug}?lang=${lang}`)
       .then((res) => ({ ...res, data: mapProject(res.data) })),
 
   // Services
-  getServices: () => api.get<ServiceResponse[]>("/services"),
-  getService: (slug: string) => api.get<ServiceResponse>(`/services/${slug}`),
+  getServices: (lang = "vi") =>
+    api.get<ServiceResponse[]>(`/services?lang=${lang}`)
+      .then((res) => ({ ...res, data: res.data.map(mapService) })),
+  getService: (slug: string, lang = "vi") =>
+    api.get<ServiceResponse>(`/services/${slug}?lang=${lang}`)
+      .then((res) => ({ ...res, data: mapService(res.data) })),
 
   // Logos
   getLogos: () =>
@@ -408,9 +401,9 @@ export const contentApi = {
       .then((res) => ({ ...res, data: res.data.map(mapSlideshow) })),
 
   // About sections
-  getAboutSections: (activeOnly = true) =>
-    api.get<AboutSectionResponse[]>(`/about-sections?activeOnly=${activeOnly}`)
-      .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveImageUrl(x.imageUrl) })) })),
+  getAboutSections: (lang = "vi", activeOnly = true) =>
+    api.get<AboutSectionResponse[]>(`/about-sections?lang=${lang}&activeOnly=${activeOnly}`)
+      .then((res) => ({ ...res, data: res.data.map((x) => ({ ...x, imageUrl: resolveAssetUrl(x.imageUrl) })) })),
 
   // Job positions (public)
   getJobPositions: (lang = "vi") =>

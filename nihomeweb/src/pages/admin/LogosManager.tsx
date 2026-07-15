@@ -206,7 +206,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
     try {
       const previousImageUrl =
         isEditing && form.imageUrl ? form.imageUrl : undefined;
-      const res = await adminApi.uploadImage(file, previousImageUrl);
+      const res = await adminApi.uploadImage(file, previousImageUrl, "logos");
       updateForm("imageUrl", res.data.imageUrl);
       toast({ title: t("logoAdmin.uploadSuccess") });
     } catch (error) {

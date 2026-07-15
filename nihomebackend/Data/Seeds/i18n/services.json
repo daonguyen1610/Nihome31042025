@@ -1,29 +1,5 @@
 [
   {
-    "key": "services.eyebrow",
-    "category": "services",
-    "vi": "Dịch vụ NICON",
-    "en": "NICON services",
-    "zh": "NICON 服务",
-    "ja": "NICONのサービス"
-  },
-  {
-    "key": "services.title",
-    "category": "services",
-    "vi": "Một đối tác. Toàn bộ quá trình.",
-    "en": "One partner. The entire process.",
-    "zh": "一个伙伴。完整的流程。",
-    "ja": "一つのパートナーで全工程を。"
-  },
-  {
-    "key": "services.desc",
-    "category": "services",
-    "vi": "Từ khảo sát, thiết kế, mua sắm đến thi công và bàn giao — NICON cung cấp giải pháp xây dựng trọn gói cho nhà máy, nhà xưởng và công trình dân dụng.",
-    "en": "From survey, design, procurement to construction and handover — NICON delivers turnkey solutions for factories, workshops and civil works.",
-    "zh": "从勘察、设计、采购到施工与交付 — NICON 为工厂、车间和民用工程提供一站式解决方案。",
-    "ja": "調査・設計・調達から施工・引渡しまで — NICONは工場・倉庫・民間建築の一括ソリューションを提供します。"
-  },
-  {
     "key": "services.cta.eyebrow",
     "category": "services",
     "vi": "Sẵn sàng triển khai dự án?",
@@ -48,44 +24,28 @@
     "ja": "NICONと一緒に"
   },
   {
-    "key": "svc.notFound",
-    "category": "svc",
-    "vi": "Không tìm thấy dịch vụ",
-    "en": "Service not found",
-    "zh": "未找到服务",
-    "ja": "サービスが見つかりません"
+    "key": "services.desc",
+    "category": "services",
+    "vi": "Từ khảo sát, thiết kế, mua sắm đến thi công và bàn giao — NICON cung cấp giải pháp xây dựng trọn gói cho nhà máy, nhà xưởng và công trình dân dụng.",
+    "en": "From survey, design, procurement to construction and handover — NICON delivers turnkey solutions for factories, workshops and civil works.",
+    "zh": "从勘察、设计、采购到施工与交付 — NICON 为工厂、车间和民用工程提供一站式解决方案。",
+    "ja": "調査・設計・調達から施工・引渡しまで — NICONは工場・倉庫・民間建築の一括ソリューションを提供します。"
   },
   {
-    "key": "svc.back",
-    "category": "svc",
-    "vi": "Quay lại dịch vụ",
-    "en": "Back to services",
-    "zh": "返回服务",
-    "ja": "サービスに戻る"
+    "key": "services.eyebrow",
+    "category": "services",
+    "vi": "Dịch vụ NICON",
+    "en": "NICON services",
+    "zh": "NICON 服务",
+    "ja": "NICONのサービス"
   },
   {
-    "key": "svc.others",
-    "category": "svc",
-    "vi": "Dịch vụ khác",
-    "en": "Other services",
-    "zh": "其他服务",
-    "ja": "その他のサービス"
-  },
-  {
-    "key": "svc.exploreMore",
-    "category": "svc",
-    "vi": "Khám phá thêm",
-    "en": "Explore more",
-    "zh": "探索更多",
-    "ja": "もっと見る"
-  },
-  {
-    "key": "svc.admin.title",
-    "category": "svc",
-    "vi": "Quản lý dịch vụ",
-    "en": "Services",
-    "zh": "服务管理",
-    "ja": "サービス管理"
+    "key": "services.title",
+    "category": "services",
+    "vi": "Một đối tác. Toàn bộ quá trình.",
+    "en": "One partner. The entire process.",
+    "zh": "一个伙伴。完整的流程。",
+    "ja": "一つのパートナーで全工程を。"
   },
   {
     "key": "svc.admin.add",
@@ -94,6 +54,62 @@
     "en": "Add service",
     "zh": "添加服务",
     "ja": "サービスを追加"
+  },
+  {
+    "key": "svc.admin.addBullet",
+    "category": "svc",
+    "vi": "+ Thêm dòng",
+    "en": "+ Add bullet",
+    "zh": "+ 添加要点",
+    "ja": "+ 箇条書きを追加"
+  },
+  {
+    "key": "svc.admin.addHighlight",
+    "category": "svc",
+    "vi": "+ Thêm điểm nổi bật",
+    "en": "+ Add highlight",
+    "zh": "+ 添加亮点",
+    "ja": "+ ハイライトを追加"
+  },
+  {
+    "key": "svc.admin.addIntroBlock",
+    "category": "svc",
+    "vi": "+ Thêm khối giới thiệu",
+    "en": "+ Add intro block",
+    "zh": "+ 添加介绍块",
+    "ja": "+ 紹介ブロックを追加"
+  },
+  {
+    "key": "svc.admin.addSection",
+    "category": "svc",
+    "vi": "+ Thêm mục",
+    "en": "+ Add section",
+    "zh": "+ 添加板块",
+    "ja": "+ セクションを追加"
+  },
+  {
+    "key": "svc.admin.basicInfo",
+    "category": "svc",
+    "vi": "Thông tin cơ bản",
+    "en": "Basic info",
+    "zh": "基本信息",
+    "ja": "基本情報"
+  },
+  {
+    "key": "svc.admin.bulletPh",
+    "category": "svc",
+    "vi": "Nội dung dòng...",
+    "en": "Bullet text...",
+    "zh": "要点内容...",
+    "ja": "箇条書きテキスト..."
+  },
+  {
+    "key": "svc.admin.confirmDel",
+    "category": "svc",
+    "vi": "Xác nhận xóa dịch vụ này?",
+    "en": "Delete this service?",
+    "zh": "确认删除此服务？",
+    "ja": "このサービスを削除しますか？"
   },
   {
     "key": "svc.admin.createTitle",
@@ -112,132 +128,12 @@
     "ja": "サービスを編集"
   },
   {
-    "key": "svc.admin.searchPh",
-    "category": "svc",
-    "vi": "Tìm theo tên hoặc slug...",
-    "en": "Search by name or slug...",
-    "zh": "按名称或slug搜索...",
-    "ja": "名前またはslugで検索..."
-  },
-  {
     "key": "svc.admin.empty",
     "category": "svc",
     "vi": "Chưa có dịch vụ nào",
     "en": "No services yet",
     "zh": "暂无服务",
     "ja": "サービスがまだありません"
-  },
-  {
-    "key": "svc.admin.confirmDel",
-    "category": "svc",
-    "vi": "Xác nhận xóa dịch vụ này?",
-    "en": "Delete this service?",
-    "zh": "确认删除此服务？",
-    "ja": "このサービスを削除しますか？"
-  },
-  {
-    "key": "svc.admin.slug",
-    "category": "svc",
-    "vi": "Slug (URL)",
-    "en": "Slug (URL)",
-    "zh": "Slug (URL)",
-    "ja": "スラッグ (URL)"
-  },
-  {
-    "key": "svc.admin.shortTitle",
-    "category": "svc",
-    "vi": "Tên ngắn (eyebrow)",
-    "en": "Short title (eyebrow)",
-    "zh": "短标题（眉题）",
-    "ja": "短いタイトル（アイブロー）"
-  },
-  {
-    "key": "svc.admin.tagline",
-    "category": "svc",
-    "vi": "Tagline (phụ đề)",
-    "en": "Tagline (subtitle)",
-    "zh": "标语（副标题）",
-    "ja": "タグライン（サブタイトル）"
-  },
-  {
-    "key": "svc.admin.intro",
-    "category": "svc",
-    "vi": "Giới thiệu",
-    "en": "Intro",
-    "zh": "简介",
-    "ja": "紹介"
-  },
-  {
-    "key": "svc.admin.highlights",
-    "category": "svc",
-    "vi": "Điểm nổi bật",
-    "en": "Highlights",
-    "zh": "亮点",
-    "ja": "ハイライト"
-  },
-  {
-    "key": "svc.admin.addHighlight",
-    "category": "svc",
-    "vi": "+ Thêm điểm nổi bật",
-    "en": "+ Add highlight",
-    "zh": "+ 添加亮点",
-    "ja": "+ ハイライトを追加"
-  },
-  {
-    "key": "svc.admin.highlightPh",
-    "category": "svc",
-    "vi": "VD: Thi công trọn gói",
-    "en": "E.g. Turnkey construction",
-    "zh": "例：一站式施工",
-    "ja": "例：一括施工"
-  },
-  {
-    "key": "svc.admin.sections",
-    "category": "svc",
-    "vi": "Các mục nội dung",
-    "en": "Content sections",
-    "zh": "内容板块",
-    "ja": "コンテンツセクション"
-  },
-  {
-    "key": "svc.admin.addSection",
-    "category": "svc",
-    "vi": "+ Thêm mục",
-    "en": "+ Add section",
-    "zh": "+ 添加板块",
-    "ja": "+ セクションを追加"
-  },
-  {
-    "key": "svc.admin.addBullet",
-    "category": "svc",
-    "vi": "+ Thêm dòng",
-    "en": "+ Add bullet",
-    "zh": "+ 添加要点",
-    "ja": "+ 箇条書きを追加"
-  },
-  {
-    "key": "svc.admin.sectionHeadingPh",
-    "category": "svc",
-    "vi": "Tiêu đề mục...",
-    "en": "Section heading...",
-    "zh": "板块标题...",
-    "ja": "セクション見出し..."
-  },
-  {
-    "key": "svc.admin.bulletPh",
-    "category": "svc",
-    "vi": "Nội dung dòng...",
-    "en": "Bullet text...",
-    "zh": "要点内容...",
-    "ja": "箇条書きテキスト..."
-  },
-  {
-    "key": "svc.admin.basicInfo",
-    "category": "svc",
-    "vi": "Thông tin cơ bản",
-    "en": "Basic info",
-    "zh": "基本信息",
-    "ja": "基本情報"
   },
   {
     "key": "svc.admin.fallbackError",
@@ -248,12 +144,28 @@
     "ja": "エラーが発生しました。もう一度お試しください"
   },
   {
-    "key": "svc.admin.introBlocks",
+    "key": "svc.admin.highlightPh",
     "category": "svc",
-    "vi": "Khối giới thiệu (văn bản + ảnh)",
-    "en": "Intro blocks (text + image)",
-    "zh": "介绍块（文字 + 图片）",
-    "ja": "紹介ブロック（テキスト＋画像）"
+    "vi": "VD: Thi công trọn gói",
+    "en": "E.g. Turnkey construction",
+    "zh": "例：一站式施工",
+    "ja": "例：一括施工"
+  },
+  {
+    "key": "svc.admin.highlights",
+    "category": "svc",
+    "vi": "Điểm nổi bật",
+    "en": "Highlights",
+    "zh": "亮点",
+    "ja": "ハイライト"
+  },
+  {
+    "key": "svc.admin.intro",
+    "category": "svc",
+    "vi": "Giới thiệu",
+    "en": "Intro",
+    "zh": "简介",
+    "ja": "紹介"
   },
   {
     "key": "svc.admin.introBlock",
@@ -264,12 +176,20 @@
     "ja": "ブロック"
   },
   {
-    "key": "svc.admin.addIntroBlock",
+    "key": "svc.admin.introBlockImage",
     "category": "svc",
-    "vi": "+ Thêm khối giới thiệu",
-    "en": "+ Add intro block",
-    "zh": "+ 添加介绍块",
-    "ja": "+ 紹介ブロックを追加"
+    "vi": "Tải ảnh lên",
+    "en": "Upload image",
+    "zh": "上传图片",
+    "ja": "画像をアップロード"
+  },
+  {
+    "key": "svc.admin.introBlockReplace",
+    "category": "svc",
+    "vi": "Đổi ảnh",
+    "en": "Replace image",
+    "zh": "更换图片",
+    "ja": "画像を変更"
   },
   {
     "key": "svc.admin.introBlockTextPh",
@@ -280,11 +200,99 @@
     "ja": "段落テキストを入力..."
   },
   {
-    "key": "svc.admin.introBlockImage",
+    "key": "svc.admin.introBlocks",
     "category": "svc",
-    "vi": "Tải ảnh lên",
-    "en": "Upload image",
-    "zh": "上传图片",
-    "ja": "画像をアップロード"
+    "vi": "Khối giới thiệu (văn bản + ảnh)",
+    "en": "Intro blocks (text + image)",
+    "zh": "介绍块（文字 + 图片）",
+    "ja": "紹介ブロック（テキスト＋画像）"
+  },
+  {
+    "key": "svc.admin.searchPh",
+    "category": "svc",
+    "vi": "Tìm theo tên hoặc slug...",
+    "en": "Search by name or slug...",
+    "zh": "按名称或slug搜索...",
+    "ja": "名前またはslugで検索..."
+  },
+  {
+    "key": "svc.admin.sectionHeadingPh",
+    "category": "svc",
+    "vi": "Tiêu đề mục...",
+    "en": "Section heading...",
+    "zh": "板块标题...",
+    "ja": "セクション見出し..."
+  },
+  {
+    "key": "svc.admin.sections",
+    "category": "svc",
+    "vi": "Các mục nội dung",
+    "en": "Content sections",
+    "zh": "内容板块",
+    "ja": "コンテンツセクション"
+  },
+  {
+    "key": "svc.admin.shortTitle",
+    "category": "svc",
+    "vi": "Tên ngắn (eyebrow)",
+    "en": "Short title (eyebrow)",
+    "zh": "短标题（眉题）",
+    "ja": "短いタイトル（アイブロー）"
+  },
+  {
+    "key": "svc.admin.slug",
+    "category": "svc",
+    "vi": "Slug (URL)",
+    "en": "Slug (URL)",
+    "zh": "Slug (URL)",
+    "ja": "スラッグ (URL)"
+  },
+  {
+    "key": "svc.admin.tagline",
+    "category": "svc",
+    "vi": "Tagline (phụ đề)",
+    "en": "Tagline (subtitle)",
+    "zh": "标语（副标题）",
+    "ja": "タグライン（サブタイトル）"
+  },
+  {
+    "key": "svc.admin.title",
+    "category": "svc",
+    "vi": "Quản lý dịch vụ",
+    "en": "Services",
+    "zh": "服务管理",
+    "ja": "サービス管理"
+  },
+  {
+    "key": "svc.back",
+    "category": "svc",
+    "vi": "Quay lại dịch vụ",
+    "en": "Back to services",
+    "zh": "返回服务",
+    "ja": "サービスに戻る"
+  },
+  {
+    "key": "svc.exploreMore",
+    "category": "svc",
+    "vi": "Khám phá thêm",
+    "en": "Explore more",
+    "zh": "探索更多",
+    "ja": "もっと見る"
+  },
+  {
+    "key": "svc.notFound",
+    "category": "svc",
+    "vi": "Không tìm thấy dịch vụ",
+    "en": "Service not found",
+    "zh": "未找到服务",
+    "ja": "サービスが見つかりません"
+  },
+  {
+    "key": "svc.others",
+    "category": "svc",
+    "vi": "Dịch vụ khác",
+    "en": "Other services",
+    "zh": "其他服务",
+    "ja": "その他のサービス"
   }
 ]

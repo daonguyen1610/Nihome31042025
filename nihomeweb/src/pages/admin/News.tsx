@@ -26,33 +26,39 @@ import {
 } from "@/components/ui/select";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
+import { resolveCategoryLabel } from "@/lib/category";
 
 const AdminNews = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState("all");
+  const [catId, setCatId] = useState<number | "all">("all");
   const { data: items, loading, error, refetch } = useNews();
   const { data: categoryMaster } = useNewsCategories(true);
 
   const list = useMemo(() => items ?? [], [items]);
-  const categories = useMemo(() => {
-    const fromMaster = (categoryMaster ?? []).map((c) => c.name);
-    const fromNews = list.map((a) => a.category).filter(Boolean);
-    const unique = Array.from(new Set([...fromMaster, ...fromNews])).sort((a, b) =>
-      a.localeCompare(b, "vi"),
-    );
-    return ["all", ...unique];
-  }, [categoryMaster, list]);
+  const categoriesById = useMemo(
+    () => new Map((categoryMaster ?? []).map((c) => [c.id, c])),
+    [categoryMaster],
+  );
+  const filterOptions = useMemo(() => {
+    const ids = new Set<number>();
+    (categoryMaster ?? []).forEach((c) => ids.add(c.id));
+    list.forEach((a) => { if (a.newsCategoryId != null) ids.add(a.newsCategoryId); });
+    return Array.from(ids)
+      .map((id) => ({ id, label: resolveCategoryLabel(id, undefined, categoriesById, lang) }))
+      .filter((opt) => opt.label)
+      .sort((a, b) => a.label.localeCompare(b.label, lang));
+  }, [categoryMaster, list, categoriesById, lang]);
   const filtered = useMemo(
     () =>
       list.filter((a) => {
-        const matchCat = cat === "all" || a.category === cat;
+        const matchCat = catId === "all" || a.newsCategoryId === catId;
         if (!matchCat) return false;
         if (!q.trim()) return true;
         return matchesSearch(a.title, q) || matchesSearch(a.category, q) || matchesSearch(a.slug, q);
       }),
-    [list, cat, q],
+    [list, catId, q],
   );
 
   const handleDelete = async (a: NewsResponse) => {
@@ -85,7 +91,7 @@ const AdminNews = () => {
   });
   useEffect(() => {
     clearSelection();
-  }, [cat, q, clearSelection]);
+  }, [catId, q, clearSelection]);
 
   const handleExport = () => {
     downloadCsv({
@@ -94,7 +100,7 @@ const AdminNews = () => {
         { header: "ID", value: "id" },
         { header: "Slug", value: "slug" },
         { header: t("adminNews.col.post"), value: "title" },
-        { header: t("adminNews.col.category"), value: "category" },
+        { header: t("adminNews.col.category"), value: (row) => resolveCategoryLabel(row.newsCategoryId, row.category, categoriesById, lang) },
         { header: t("common.date"), value: "date" },
         { header: "Excerpt", value: "excerpt" },
         { header: "Content", value: (row) => row.content.map((item) => (typeof item === "string" ? item : JSON.stringify(item))).join("\n\n") },
@@ -146,14 +152,18 @@ const AdminNews = () => {
           </div>
           <div className="w-full sm:w-[200px]">
             <Label className="text-xs" htmlFor="news-category">{t("adminNews.col.category")}</Label>
-            <Select value={cat} onValueChange={setCat}>
+            <Select
+              value={catId === "all" ? "all" : String(catId)}
+              onValueChange={(v) => setCatId(v === "all" ? "all" : Number(v))}
+            >
               <SelectTrigger id="news-category" className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c === "all" ? t("adminNews.allCategories") : c}
+                <SelectItem value="all">{t("adminNews.allCategories")}</SelectItem>
+                {filterOptions.map((opt) => (
+                  <SelectItem key={opt.id} value={String(opt.id)}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -221,13 +231,16 @@ const AdminNews = () => {
                       </Link>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3">
-                      {a.category ? (
-                        <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
-                          {a.category}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
+                      {(() => {
+                        const label = resolveCategoryLabel(a.newsCategoryId, a.category, categoriesById, lang);
+                        return label ? (
+                          <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
+                            {label}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        );
+                      })()}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.date}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-right">

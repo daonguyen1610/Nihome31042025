@@ -12,6 +12,7 @@ public class ActivityService(
     AppDbContext db,
     EntityTranslationService translationSvc,
     HostedImageService hostedImageService,
+    ActivityCategoryService categorySvc,
     ILogger<ActivityService> logger)
 {
 
@@ -45,7 +46,7 @@ public class ActivityService(
 
     public async Task<ActivityResponse> CreateAsync(UpsertActivityRequest req)
     {
-        var (categoryId, categoryName) = await ResolveCategoryAsync(req.CategoryId, req.Category);
+        var (categoryId, categoryName) = await categorySvc.ResolveAsync(req.CategoryId, req.Category);
         var normalizedImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
 
         var entity = new Activity
@@ -81,7 +82,7 @@ public class ActivityService(
         var nextImageUrl = hostedImageService.NormalizeImageUrl(req.ImageUrl);
         var previousGallery = DeserializeGallery(entity.GalleryJson);
 
-        var (categoryId, categoryName) = await ResolveCategoryAsync(req.CategoryId, req.Category);
+        var (categoryId, categoryName) = await categorySvc.ResolveAsync(req.CategoryId, req.Category);
 
         entity.Slug = req.Slug;
         entity.Date = req.Date;
@@ -151,11 +152,30 @@ public class ActivityService(
     private static object[] DeserializeContent(string? contentJson)
     {
         if (string.IsNullOrWhiteSpace(contentJson))
-        {
             return [];
+
+        var result = JsonSerializer.Deserialize<object[]>(contentJson) ?? [];
+
+        // Auto-repair: previous admin UI bug stored the whole ContentItem JSON array
+        // as a single escaped string element — e.g. ["[{\"type\":\"image\",...},\"text\"]"].
+        // Unwrap and re-deserialize so images and text render correctly.
+        if (result.Length == 1
+            && result[0] is JsonElement el
+            && el.ValueKind == JsonValueKind.String)
+        {
+            var inner = el.GetString() ?? "";
+            if (inner.TrimStart().StartsWith('['))
+            {
+                try
+                {
+                    var repaired = JsonSerializer.Deserialize<object[]>(inner);
+                    if (repaired is { Length: > 0 }) return repaired;
+                }
+                catch { /* not valid JSON — keep original */ }
+            }
         }
 
-        return JsonSerializer.Deserialize<object[]>(contentJson) ?? [];
+        return result;
     }
 
     private string? SerializeGallery(string[]? gallery)
@@ -190,48 +210,5 @@ public class ActivityService(
                 hostedImageService.DeleteIfManagedUpload(url);
             }
         }
-    }
-
-    private async Task<(int? Id, string Name)> ResolveCategoryAsync(int? categoryId, string? categoryName)
-    {
-        if (categoryId.HasValue)
-        {
-            var byId = await db.ActivityCategories.FindAsync(categoryId.Value);
-            if (byId == null)
-            {
-                throw new InvalidOperationException("Danh mục bài đăng không tồn tại.");
-            }
-            return (byId.Id, byId.Name);
-        }
-
-        var normalizedName = (categoryName ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(normalizedName))
-        {
-            return (null, string.Empty);
-        }
-
-        var existing = await db.ActivityCategories
-            .FirstOrDefaultAsync(c => c.Name.ToLower() == normalizedName.ToLower());
-
-        if (existing != null)
-        {
-            return (existing.Id, existing.Name);
-        }
-
-        var maxSortOrder = await db.ActivityCategories
-            .AsNoTracking()
-            .Select(c => (int?)c.SortOrder)
-            .MaxAsync() ?? 0;
-
-        var created = new ActivityCategory
-        {
-            Name = normalizedName,
-            IsActive = true,
-            SortOrder = maxSortOrder + 1,
-        };
-        db.ActivityCategories.Add(created);
-        await db.SaveChangesAsync();
-        logger.LogInformation("Auto-created activity category {CategoryName} from activity payload", normalizedName);
-        return (created.Id, created.Name);
     }
 }

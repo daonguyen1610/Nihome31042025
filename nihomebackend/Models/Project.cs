@@ -24,6 +24,8 @@ public class Project
     public string? SolutionsJson { get; set; }
     /// <summary>JSON array of { label, value } objects.</summary>
     public string? HighlightsJson { get; set; }
+    /// <summary>JSON array of { type, value } | { type, url, caption } content blocks.</summary>
+    public string ContentJson { get; set; } = "[]";
     public int SortOrder { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { localizedName } from "@/lib/category";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -36,13 +37,19 @@ type CategoryKind = "activities" | "projects" | "news";
 type CategoryItem = ActivityCategoryResponse | ProjectCategoryResponse | NewsCategoryResponse;
 
 type CategoryFormData = {
-  name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 };
 
 const emptyForm: CategoryFormData = {
-  name: "",
+  nameVi: "",
+  nameEn: "",
+  nameZh: "",
+  nameJa: "",
   isActive: true,
   sortOrder: 0,
 };
@@ -72,7 +79,7 @@ const parseTab = (raw: string | null): CategoryKind => {
 };
 
 const Categories = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = parseTab(searchParams.get("tab"));
@@ -111,8 +118,11 @@ const Categories = () => {
   }, [loadData]);
 
   const filtered = useMemo(
-    () => items.filter((i) => i.name.toLowerCase().includes(q.trim().toLowerCase())),
-    [items, q],
+    () => items.filter((i) =>
+      localizedName(i, lang).toLowerCase().includes(q.trim().toLowerCase()) ||
+      (i.nameVi || i.name || "").toLowerCase().includes(q.trim().toLowerCase())
+    ),
+    [items, q, lang],
   );
 
   const switchTab = (next: CategoryKind) => {
@@ -135,7 +145,10 @@ const Categories = () => {
   const startEdit = (item: CategoryItem) => {
     setEditingId(item.id);
     setForm({
-      name: item.name,
+      nameVi: item.nameVi || item.name,
+      nameEn: item.nameEn,
+      nameZh: item.nameZh,
+      nameJa: item.nameJa,
       isActive: item.isActive,
       sortOrder: item.sortOrder,
     });
@@ -151,15 +164,19 @@ const Categories = () => {
   const submitForm = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.name.trim()) {
-      toast({ title: t("form.required"), description: t("cat.name"), variant: "destructive" });
+    if (!form.nameVi.trim()) {
+      toast({ title: t("form.required"), description: t("cat.nameVi"), variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
     try {
       const payload: UpsertActivityCategoryRequest | UpsertProjectCategoryRequest | UpsertNewsCategoryRequest = {
-        name: form.name.trim(),
+        name: form.nameVi.trim(),
+        nameVi: form.nameVi.trim(),
+        nameEn: form.nameEn.trim(),
+        nameZh: form.nameZh.trim(),
+        nameJa: form.nameJa.trim(),
         isActive: form.isActive,
         sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
       };
@@ -263,7 +280,10 @@ const Categories = () => {
       ),
       columns: [
         { header: "ID", value: "id" },
-        { header: t("cat.name"), value: "name" },
+        { header: t("cat.nameVi"), value: "nameVi" },
+        { header: t("cat.nameEn"), value: "nameEn" },
+        { header: t("cat.nameZh"), value: "nameZh" },
+        { header: t("cat.nameJa"), value: "nameJa" },
         { header: t("cat.published"), value: (row) => (row.isActive ? "Yes" : "No") },
         { header: t("cat.order"), value: "sortOrder" },
       ],
@@ -341,14 +361,41 @@ const Categories = () => {
             </DialogHeader>
             <form onSubmit={submitForm} className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="cat-name">{t("cat.name")}</Label>
+                <Label className="text-xs" htmlFor="cat-name-vi">{t("cat.nameVi")}</Label>
                 <Input
-                  id="cat-name"
-                  value={form.name}
-                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder={t("cat.name")}
+                  id="cat-name-vi"
+                  value={form.nameVi}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nameVi: e.target.value }))}
+                  placeholder={t("cat.nameViPh")}
                   autoFocus
                   required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs" htmlFor="cat-name-en">{t("cat.nameEn")}</Label>
+                <Input
+                  id="cat-name-en"
+                  value={form.nameEn}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nameEn: e.target.value }))}
+                  placeholder={t("cat.nameEnPh")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs" htmlFor="cat-name-zh">{t("cat.nameZh")}</Label>
+                <Input
+                  id="cat-name-zh"
+                  value={form.nameZh}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nameZh: e.target.value }))}
+                  placeholder={t("cat.nameZhPh")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs" htmlFor="cat-name-ja">{t("cat.nameJa")}</Label>
+                <Input
+                  id="cat-name-ja"
+                  value={form.nameJa}
+                  onChange={(e) => setForm((prev) => ({ ...prev, nameJa: e.target.value }))}
+                  placeholder={t("cat.nameJaPh")}
                 />
               </div>
               <div className="space-y-1.5">
@@ -435,10 +482,10 @@ const Categories = () => {
                         <Checkbox
                           checked={selectedIds.has(item.id)}
                           onCheckedChange={(v) => toggleOne(item.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${item.name}`}
+                          aria-label={`${t("common.selectAll")} · ${localizedName(item, lang)}`}
                         />
                       </td>
-                      <td className="px-3 py-3 font-medium">{item.name}</td>
+                      <td className="px-3 py-3 font-medium">{localizedName(item, lang)}</td>
                       <td className="px-3 py-3">
                         {item.isActive ? (
                           <Check className="h-4 w-4 text-emerald-600" />

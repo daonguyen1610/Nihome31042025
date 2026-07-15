@@ -30,12 +30,16 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
 
     public async Task<NewsCategoryResponse> CreateAsync(UpsertNewsCategoryRequest req)
     {
-        var normalizedName = NormalizeName(req.Name);
-        await EnsureNameUniqueAsync(normalizedName);
+        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+        await EnsureNameUniqueAsync(nameVi);
 
         var entity = new NewsCategory
         {
-            Name = normalizedName,
+            Name = nameVi,
+            NameVi = nameVi,
+            NameEn = (req.NameEn ?? "").Trim(),
+            NameZh = (req.NameZh ?? "").Trim(),
+            NameJa = (req.NameJa ?? "").Trim(),
             IsActive = req.IsActive,
             SortOrder = req.SortOrder,
         };
@@ -57,15 +61,19 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
         }
 
         var previousName = entity.Name;
-        var normalizedName = NormalizeName(req.Name);
-        await EnsureNameUniqueAsync(normalizedName, id);
+        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+        await EnsureNameUniqueAsync(nameVi, id);
 
-        entity.Name = normalizedName;
+        entity.Name = nameVi;
+        entity.NameVi = nameVi;
+        entity.NameEn = (req.NameEn ?? "").Trim();
+        entity.NameZh = (req.NameZh ?? "").Trim();
+        entity.NameJa = (req.NameJa ?? "").Trim();
         entity.IsActive = req.IsActive;
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
 
-        await UpdateNewsForRenamedCategoryAsync(id, previousName, normalizedName);
+        await UpdateNewsForRenamedCategoryAsync(id, previousName, nameVi);
         await db.SaveChangesAsync();
 
         logger.LogInformation("Updated news category {CategoryId} ({CategoryName})", entity.Id, entity.Name);
@@ -97,6 +105,50 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
         return true;
     }
 
+    public async Task<(int? Id, string Name)> ResolveAsync(int? categoryId, string? categoryName)
+    {
+        if (categoryId.HasValue)
+        {
+            var byId = await db.NewsCategories.FindAsync(categoryId.Value);
+            if (byId == null)
+            {
+                throw new InvalidOperationException("Danh mục tin tức không tồn tại.");
+            }
+            return (byId.Id, byId.Name);
+        }
+
+        var trimmed = (categoryName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            return (null, string.Empty);
+        }
+
+        var existing = await db.NewsCategories
+            .FirstOrDefaultAsync(c => c.Name.ToLower() == trimmed.ToLower());
+
+        if (existing != null)
+        {
+            return (existing.Id, existing.Name);
+        }
+
+        var maxSortOrder = await db.NewsCategories
+            .AsNoTracking()
+            .Select(c => (int?)c.SortOrder)
+            .MaxAsync() ?? 0;
+
+        var created = new NewsCategory
+        {
+            Name = trimmed,
+            NameVi = trimmed,
+            IsActive = true,
+            SortOrder = maxSortOrder + 1,
+        };
+        db.NewsCategories.Add(created);
+        await db.SaveChangesAsync();
+        logger.LogInformation("Auto-created news category {CategoryName} from news payload", trimmed);
+        return (created.Id, created.Name);
+    }
+
     private async Task SeedFromNewsIfEmptyAsync()
     {
         if (await db.NewsCategories.AsNoTracking().AnyAsync())
@@ -122,6 +174,7 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
             .Select((name, index) => new NewsCategory
             {
                 Name = name,
+                NameVi = name,
                 IsActive = true,
                 SortOrder = index + 1,
             })
@@ -189,6 +242,10 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
     {
         Id = item.Id,
         Name = item.Name,
+        NameVi = string.IsNullOrWhiteSpace(item.NameVi) ? item.Name : item.NameVi,
+        NameEn = item.NameEn ?? "",
+        NameZh = item.NameZh ?? "",
+        NameJa = item.NameJa ?? "",
         IsActive = item.IsActive,
         SortOrder = item.SortOrder,
     };

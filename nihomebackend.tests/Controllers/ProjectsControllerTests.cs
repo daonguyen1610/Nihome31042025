@@ -26,10 +26,11 @@ public class ProjectsControllerTests : IDisposable
     {
         _db = DbContextFactory.Create();
 
+        var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
         var categoryService = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
-        var service = new ProjectService(_db, hostedImageService, categoryService, NullLogger<ProjectService>.Instance);
+        var service = new ProjectService(_db, entityTranslationSvc, hostedImageService, categoryService, NullLogger<ProjectService>.Instance);
         _sut = new ProjectsController(service, new NoOpAuditLogger(), new NoOpNotificationService());
     }
 
@@ -292,10 +293,11 @@ public class ProjectsControllerTests : IDisposable
         await _db.SaveChangesAsync();
 
         var notificationSvc = NotificationServiceTestFactory.Create(_db);
+        var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
         var categoryService = new ProjectCategoryService(_db, NullLogger<ProjectCategoryService>.Instance);
-        var projectSvc = new ProjectService(_db, hostedImageService, categoryService, NullLogger<ProjectService>.Instance);
+        var projectSvc = new ProjectService(_db, entityTranslationSvc, hostedImageService, categoryService, NullLogger<ProjectService>.Instance);
         var sut = new ProjectsController(projectSvc, new NoOpAuditLogger(), notificationSvc);
 
         var req = new UpsertProjectRequest
