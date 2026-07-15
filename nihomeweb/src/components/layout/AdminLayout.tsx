@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
+  ChevronRight,
   FolderTree,
   Users,
   UserCog,
@@ -36,6 +37,8 @@ import {
   UserPlus,
   UserRound,
   Target,
+  KeyRound,
+  User as UserIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -45,8 +48,18 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import LanguageToggle from "@/components/LanguageToggle";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import logoNicon from "@/assets/logo-nicon.png";
 import type { LucideIcon } from "lucide-react";
+
+const SIDEBAR_STORAGE_KEY = "nicon.admin.sidebar.collapsed";
 
 type NavItem = {
   to: string;
@@ -63,7 +76,21 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "1" : "0");
+    } catch {
+      /* ignore quota / privacy-mode errors */
+    }
+  }, [collapsed]);
   const user = useAppSelector((state) => state.auth.user);
   const { permissions } = usePermissions();
 
@@ -195,6 +222,35 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     navigate("/login");
   };
 
+  // Breadcrumb: derive from current path against the flat item list.
+  const flatItems = useMemo(() => {
+    const all: { to: string; label: string; groupLabel?: string }[] = [
+      { to: dashboardItem.to, label: dashboardItem.label },
+      { to: notificationsItem.to, label: notificationsItem.label },
+    ];
+    for (const g of rawGroups) {
+      for (const it of g.items) {
+        all.push({ to: it.to, label: it.label, groupLabel: g.label });
+      }
+    }
+    return all;
+  }, [dashboardItem, notificationsItem, rawGroups]);
+
+  const breadcrumb = useMemo(() => {
+    const path = location.pathname;
+    // find longest matching route so nested routes still resolve correctly
+    const matches = flatItems
+      .filter((it) => path === it.to || path.startsWith(`${it.to}/`))
+      .sort((a, b) => b.to.length - a.to.length);
+    const current = matches[0];
+    const crumbs: { label: string; to?: string }[] = [{ label: t("nav.dashboard"), to: "/admin" }];
+    if (!current) return crumbs;
+    if (current.to === "/admin") return crumbs;
+    if (current.groupLabel) crumbs.push({ label: current.groupLabel });
+    crumbs.push({ label: current.label });
+    return crumbs;
+  }, [flatItems, location.pathname, t]);
+
   const renderItem = (item: NavItem) => {
     const active = item.end
       ? location.pathname === item.to
@@ -208,17 +264,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         className={cn(
           "flex items-center gap-3 rounded-xl text-sm font-semibold transition-all",
           collapsed ? "px-3 py-3 justify-center" : "px-4 py-2.5",
-        )}
-        style={
           active
-            ? {
-                background:
-                  "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
-                color: "white",
-                boxShadow: "0 8px 18px -6px hsl(var(--admin-primary) / 0.45)",
-              }
-            : { color: "hsl(var(--admin-sidebar-text))" }
-        }
+            ? "bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-md shadow-primary/40"
+            : "text-foreground/70 hover:bg-muted",
+        )}
       >
         <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
         {!collapsed && <span className="truncate">{item.label}</span>}
@@ -231,12 +280,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:sticky top-0 left-0 z-40 h-screen transition-all duration-300 bg-white border-r flex flex-col",
+          "fixed lg:sticky top-0 left-0 z-40 h-screen transition-all duration-300 bg-background border-r flex flex-col",
           collapsed ? "lg:w-20" : "lg:w-72",
           "w-72",
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
-        style={{ borderColor: "hsl(var(--admin-border))" }}
       >
         <div className={cn("py-7 flex items-center justify-between", collapsed ? "px-4" : "px-7")}>
           <Link to="/admin" className="flex items-center gap-2 min-w-0">
@@ -278,10 +326,9 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                 <button
                   onClick={() => toggleGroup(g.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-[11px] uppercase tracking-[0.18em] font-bold transition",
+                    "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-[11px] uppercase tracking-[0.18em] font-bold transition text-muted-foreground",
                     groupActive ? "" : "hover:bg-muted/60",
                   )}
-                  style={{ color: "hsl(var(--admin-muted))" }}
                 >
                   <g.icon className="w-3.5 h-3.5" />
                   <span className="flex-1 text-left">{g.label}</span>
@@ -295,18 +342,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           })}
         </nav>
 
-        <div
-          className="px-4 py-5 border-t space-y-1"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-        >
+        <div className="px-4 py-5 border-t space-y-1">
           <Link
             to="/"
             title={collapsed ? t("nav.viewSite") : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-xl text-sm font-semibold hover:bg-muted transition",
+              "flex items-center gap-3 rounded-xl text-sm font-semibold hover:bg-muted transition text-foreground/70",
               collapsed ? "px-3 py-2.5 justify-center" : "px-4 py-2.5",
             )}
-            style={{ color: "hsl(var(--admin-sidebar-text))" }}
           >
             <ExternalLink className="w-4 h-4" /> {!collapsed && t("nav.viewSite")}
           </Link>
@@ -314,10 +357,9 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             onClick={handleLogout}
             title={collapsed ? t("nav.logout") : undefined}
             className={cn(
-              "w-full flex items-center gap-3 rounded-xl text-sm font-semibold hover:bg-muted transition",
+              "w-full flex items-center gap-3 rounded-xl text-sm font-semibold hover:bg-destructive/10 transition text-destructive",
               collapsed ? "px-3 py-2.5 justify-center" : "px-4 py-2.5",
             )}
-            style={{ color: "hsl(var(--admin-danger))" }}
           >
             <LogOut className="w-4 h-4" /> {!collapsed && t("nav.logout")}
           </button>
@@ -334,47 +376,88 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       {/* Main */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Topbar */}
-        <header
-          className="sticky top-0 z-20 h-16 bg-white/85 backdrop-blur-xl border-b flex items-center px-5 lg:px-8 gap-3"
-          style={{ borderColor: "hsl(var(--admin-border))" }}
-        >
+        <header className="sticky top-0 z-20 h-16 bg-background/85 backdrop-blur-xl border-b flex items-center px-5 lg:px-8 gap-3">
           <button
             onClick={() => setOpen(true)}
             className="lg:hidden w-9 h-9 rounded-full bg-muted flex items-center justify-center"
+            aria-label={t("nav.openSidebar")}
           >
             <Menu className="w-4 h-4" />
           </button>
           <button
             onClick={() => setCollapsed((c) => !c)}
             className="hidden lg:flex w-9 h-9 rounded-full bg-muted hover:bg-muted/70 items-center justify-center transition"
-            aria-label="Toggle sidebar"
-            title={collapsed ? "Mở rộng" : "Thu nhỏ"}
+            aria-label={t("nav.toggleSidebar")}
+            title={collapsed ? t("nav.expand") : t("nav.collapse")}
           >
             {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           </button>
+
+          {/* Breadcrumb */}
+          <nav aria-label="breadcrumb" className="hidden md:flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+            {breadcrumb.map((c, i) => {
+              const isLast = i === breadcrumb.length - 1;
+              return (
+                <span key={`${c.label}-${i}`} className="flex items-center gap-1.5 min-w-0">
+                  {i > 0 && <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-60" />}
+                  {c.to && !isLast ? (
+                    <Link to={c.to} className="truncate hover:text-foreground transition">
+                      {c.label}
+                    </Link>
+                  ) : (
+                    <span className={cn("truncate", isLast && "text-foreground font-medium")}>
+                      {c.label}
+                    </span>
+                  )}
+                </span>
+              );
+            })}
+          </nav>
+
           <div className="ml-auto flex items-center gap-3">
             <LanguageToggle />
             <NotificationBell />
-            <div
-              className="hidden md:flex items-center gap-3 pl-3 border-l"
-              style={{ borderColor: "hsl(var(--admin-border))" }}
-            >
-              <div
-                className="w-9 h-9 rounded-full text-white flex items-center justify-center font-bold text-xs"
-                style={{
-                  background:
-                    "linear-gradient(135deg, hsl(var(--admin-primary)), hsl(22 95% 58%))",
-                }}
-              >
-                {user?.fullName?.[0]?.toUpperCase() ?? "A"}
-              </div>
-              <div className="text-xs">
-                <p className="font-bold leading-tight">{user?.fullName ?? "Admin"}</p>
-                <p style={{ color: "hsl(var(--admin-muted))" }}>
-                  {user?.email ?? "admin@nicon.vn"}
-                </p>
-              </div>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 pl-3 md:border-l md:border-border rounded-full md:rounded-md p-1 hover:bg-muted transition"
+                  aria-label={t("nav.userMenu")}
+                >
+                  <div className="w-9 h-9 rounded-full text-primary-foreground flex items-center justify-center font-bold text-xs bg-gradient-to-br from-primary to-orange-500">
+                    {user?.fullName?.[0]?.toUpperCase() ?? "A"}
+                  </div>
+                  <div className="hidden md:block text-xs text-left">
+                    <p className="font-bold leading-tight">{user?.fullName ?? "Admin"}</p>
+                    <p className="text-muted-foreground">{user?.email ?? "admin@nicon.vn"}</p>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <p className="text-sm font-medium">{user?.fullName ?? "Admin"}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email ?? "admin@nicon.vn"}</p>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/admin/profile">
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    {t("nav.myProfile")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/admin/profile?tab=security">
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    {t("nav.changePassword")}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {t("nav.logout")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
