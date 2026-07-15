@@ -94,19 +94,25 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   const user = useAppSelector((state) => state.auth.user);
   const { permissions } = usePermissions();
 
-  const dashboardItem: NavItem = {
-    to: "/admin",
-    label: t("nav.dashboard"),
-    icon: LayoutDashboard,
-    end: true,
-    permission: ADMIN_PERMS.dashboard,
-  };
-  const notificationsItem: NavItem = {
-    to: "/admin/notifications",
-    label: t("notify.title"),
-    icon: Bell,
-    permission: ADMIN_PERMS.notifications,
-  };
+  const dashboardItem: NavItem = useMemo(
+    () => ({
+      to: "/admin",
+      label: t("nav.dashboard"),
+      icon: LayoutDashboard,
+      end: true,
+      permission: ADMIN_PERMS.dashboard,
+    }),
+    [t],
+  );
+  const notificationsItem: NavItem = useMemo(
+    () => ({
+      to: "/admin/notifications",
+      label: t("notify.title"),
+      icon: Bell,
+      permission: ADMIN_PERMS.notifications,
+    }),
+    [t],
+  );
 
   const rawGroups: NavGroup[] = useMemo(
     () => [
