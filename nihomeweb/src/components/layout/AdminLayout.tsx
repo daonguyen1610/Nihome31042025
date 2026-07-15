@@ -91,6 +91,22 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       /* ignore quota / privacy-mode errors */
     }
   }, [collapsed]);
+  // The `collapsed` preference is desktop-only: the mobile drawer must always
+  // render the full labelled nav even when the desktop layout was last left
+  // collapsed. Track viewport via matchMedia so `effectiveCollapsed` flips
+  // back to false whenever we drop below the `lg` breakpoint (1024px).
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return true;
+    return window.matchMedia("(min-width: 1024px)").matches;
+  });
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  const effectiveCollapsed = collapsed && isDesktop;
   const user = useAppSelector((state) => state.auth.user);
   const { permissions } = usePermissions();
 
@@ -266,17 +282,18 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         key={item.to}
         to={item.to}
         onClick={() => setOpen(false)}
-        title={collapsed ? item.label : undefined}
+        title={effectiveCollapsed ? item.label : undefined}
+        aria-current={active ? "page" : undefined}
         className={cn(
           "flex items-center gap-3 rounded-xl text-sm font-semibold transition-all",
-          collapsed ? "px-3 py-3 justify-center" : "px-4 py-2.5",
+          effectiveCollapsed ? "px-3 py-3 justify-center" : "px-4 py-2.5",
           active
             ? "bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-md shadow-primary/40"
             : "text-foreground/70 hover:bg-muted",
         )}
       >
         <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        {!effectiveCollapsed && <span className="truncate">{item.label}</span>}
       </Link>
     );
   };
@@ -287,17 +304,17 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       <aside
         className={cn(
           "fixed lg:sticky top-0 left-0 z-40 h-screen transition-all duration-300 bg-background border-r flex flex-col",
-          collapsed ? "lg:w-20" : "lg:w-72",
+          effectiveCollapsed ? "lg:w-20" : "lg:w-72",
           "w-72",
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className={cn("py-7 flex items-center justify-between", collapsed ? "px-4" : "px-7")}>
+        <div className={cn("py-7 flex items-center justify-between", effectiveCollapsed ? "px-4" : "px-7")}>
           <Link to="/admin" className="flex items-center gap-2 min-w-0">
             <img
               src={logoNicon}
               alt="NICON"
-              className={cn("w-auto object-contain transition-all", collapsed ? "h-9" : "h-11")}
+              className={cn("w-auto object-contain transition-all", effectiveCollapsed ? "h-9" : "h-11")}
             />
           </Link>
           <button
@@ -319,7 +336,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
               location.pathname.startsWith(it.to),
             );
             const isOpen = openGroups[g.id] ?? false;
-            if (collapsed) {
+            if (effectiveCollapsed) {
               // In collapsed mode: render items directly as icons
               return (
                 <div key={g.id} className="pt-1">
@@ -331,6 +348,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
               <div key={g.id} className="pt-2">
                 <button
                   onClick={() => toggleGroup(g.id)}
+                  aria-expanded={isOpen}
+                  aria-controls={`admin-nav-group-${g.id}`}
                   className={cn(
                     "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-[11px] uppercase tracking-[0.18em] font-bold transition text-muted-foreground",
                     groupActive ? "" : "hover:bg-muted/60",
@@ -342,7 +361,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                     className={cn("w-3.5 h-3.5 transition-transform", isOpen ? "rotate-180" : "")}
                   />
                 </button>
-                {isOpen && <div className="mt-1 space-y-1">{g.items.map(renderItem)}</div>}
+                {isOpen && (
+                  <div id={`admin-nav-group-${g.id}`} className="mt-1 space-y-1">
+                    {g.items.map(renderItem)}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -351,23 +374,23 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         <div className="px-4 py-5 border-t space-y-1">
           <Link
             to="/"
-            title={collapsed ? t("nav.viewSite") : undefined}
+            title={effectiveCollapsed ? t("nav.viewSite") : undefined}
             className={cn(
               "flex items-center gap-3 rounded-xl text-sm font-semibold hover:bg-muted transition text-foreground/70",
-              collapsed ? "px-3 py-2.5 justify-center" : "px-4 py-2.5",
+              effectiveCollapsed ? "px-3 py-2.5 justify-center" : "px-4 py-2.5",
             )}
           >
-            <ExternalLink className="w-4 h-4" /> {!collapsed && t("nav.viewSite")}
+            <ExternalLink className="w-4 h-4" /> {!effectiveCollapsed && t("nav.viewSite")}
           </Link>
           <button
             onClick={handleLogout}
-            title={collapsed ? t("nav.logout") : undefined}
+            title={effectiveCollapsed ? t("nav.logout") : undefined}
             className={cn(
               "w-full flex items-center gap-3 rounded-xl text-sm font-semibold hover:bg-destructive/10 transition text-destructive",
-              collapsed ? "px-3 py-2.5 justify-center" : "px-4 py-2.5",
+              effectiveCollapsed ? "px-3 py-2.5 justify-center" : "px-4 py-2.5",
             )}
           >
-            <LogOut className="w-4 h-4" /> {!collapsed && t("nav.logout")}
+            <LogOut className="w-4 h-4" /> {!effectiveCollapsed && t("nav.logout")}
           </button>
         </div>
       </aside>
@@ -446,13 +469,13 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/admin/profile">
+                  <Link to="/my-profile">
                     <UserIcon className="mr-2 h-4 w-4" />
                     {t("nav.myProfile")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/admin/profile?tab=security">
+                  <Link to="/my-profile?tab=security">
                     <KeyRound className="mr-2 h-4 w-4" />
                     {t("nav.changePassword")}
                   </Link>
