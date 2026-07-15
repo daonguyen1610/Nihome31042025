@@ -232,9 +232,6 @@ const MATRIX_PATH_EXCLUSIONS = new Set<string>([
   "/admin/slideshow",
   // /admin/posts redirects to /admin/activities; no independent permission gate.
   "/admin/posts",
-  // Alias inside admin area for the header dropdown; renders the same MyProfile
-  // page as /my-profile, gated only by ProtectedRoute (any authenticated user).
-  "/admin/profile",
   // Process sub-groups all gated by ADMIN_PERMS.processes; /admin/processes/general
   // already proves the gate works for the whole group.
   "/admin/processes/ptcskh",
