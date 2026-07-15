@@ -214,6 +214,8 @@ curl -X GET http://localhost:5000/api/resource
 
 ## Quality Check
 
+* Test manual with playwright in the integrated browser. Ensure all the changes match with the test.
+
 ### Backend
 
 ```bash
@@ -271,3 +273,4 @@ Every response MUST include:
 * When a feature or bug fix is complete, commit the work.
 * Write commit messages following the 50/72 rule.
 * Only add files related to the commit — do not use `git add -A` blindly.
+* Write the commit simple, do not add too much in the git commit. And describe the changes based on the feature not based on changes in commit.
