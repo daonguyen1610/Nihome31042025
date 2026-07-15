@@ -117,19 +117,23 @@ export function useNewsItem(slug: string) {
 }
 
 export function useProjects() {
-  return useFetch<ProjectResponse[]>(() => contentApi.getProjects(), []);
+  const { lang } = useI18n();
+  return useFetch<ProjectResponse[]>(() => contentApi.getProjects(lang), [lang]);
 }
 
 export function useProject(slug: string) {
-  return useFetch<ProjectResponse>(() => contentApi.getProject(slug), [slug]);
+  const { lang } = useI18n();
+  return useFetch<ProjectResponse>(() => contentApi.getProject(slug, lang), [slug, lang]);
 }
 
 export function useServices() {
-  return useFetch<ServiceResponse[]>(() => contentApi.getServices(), []);
+  const { lang } = useI18n();
+  return useFetch<ServiceResponse[]>(() => contentApi.getServices(lang), [lang]);
 }
 
 export function useService(slug: string) {
-  return useFetch<ServiceResponse>(() => contentApi.getService(slug), [slug]);
+  const { lang } = useI18n();
+  return useFetch<ServiceResponse>(() => contentApi.getService(slug, lang), [slug, lang]);
 }
 
 export function useLogos() {

@@ -5,31 +5,44 @@ import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/PageHeader";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
-import { useNews } from "@/hooks/useContentApi";
+import { useNews, useNewsCategories } from "@/hooks/useContentApi";
+import { resolveCategoryLabel } from "@/lib/category";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 
 const News = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { data: news, loading, error, refetch } = useNews();
+  const { data: categoryList } = useNewsCategories();
   const ALL = t("common.all");
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState(ALL);
+  const [catId, setCatId] = useState<number | "all">("all");
 
-  const sourceCategories = useMemo(
-    () => Array.from(new Set((news ?? []).map((n) => n.category))),
+  const categoriesById = useMemo(
+    () => new Map((categoryList ?? []).map((c) => [c.id, c])),
+    [categoryList],
+  );
+
+  const sourceCategoryIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          (news ?? [])
+            .map((n) => n.newsCategoryId)
+            .filter((id): id is number => id != null),
+        ),
+      ),
     [news],
   );
-  const categories = useMemo(() => [ALL, ...sourceCategories], [ALL, sourceCategories]);
-  const isAll = cat === ALL || !sourceCategories.includes(cat);
+  const isAll = catId === "all" || !sourceCategoryIds.includes(catId);
 
   const filtered = useMemo(() => {
     const ql = q.toLowerCase();
     return (news ?? []).filter((n) => {
-      const matchCat = isAll || n.category === cat;
+      const matchCat = isAll || n.newsCategoryId === catId;
       const matchQ = !q || n.title.toLowerCase().includes(ql);
       return matchCat && matchQ;
     });
-  }, [news, cat, q, isAll]);
+  }, [news, catId, q, isAll]);
 
   const [featured, ...rest] = filtered;
 
@@ -44,18 +57,29 @@ const News = () => {
       <section className="py-10 bg-background border-b border-border">
         <div className="container-custom flex flex-col lg:flex-row lg:items-center gap-5 justify-between">
           <div className="flex flex-wrap gap-2">
-            {categories.map((c) => (
+            <button
+              onClick={() => setCatId("all")}
+              className={cn(
+                "btn-pill px-5 py-2.5 text-xs uppercase tracking-wider border transition-all",
+                isAll
+                  ? "btn-gradient text-white border-transparent"
+                  : "bg-secondary border-border text-foreground/70 hover:text-foreground"
+              )}
+            >
+              {ALL}
+            </button>
+            {sourceCategoryIds.map((id) => (
               <button
-                key={c}
-                onClick={() => setCat(c)}
+                key={id}
+                onClick={() => setCatId(id)}
                 className={cn(
                   "btn-pill px-5 py-2.5 text-xs uppercase tracking-wider border transition-all",
-                  (isAll && c === ALL) || cat === c
+                  !isAll && catId === id
                     ? "btn-gradient text-white border-transparent"
                     : "bg-secondary border-border text-foreground/70 hover:text-foreground"
                 )}
               >
-                {c}
+                {resolveCategoryLabel(id, undefined, categoriesById, lang)}
               </button>
             ))}
           </div>
@@ -91,7 +115,7 @@ const News = () => {
                   </div>
                   <div className="p-8 lg:p-12 flex flex-col justify-center">
                     <div className="flex items-center gap-3 mb-5">
-                      <span className="chip chip-primary">{featured.category}</span>
+                      <span className="chip chip-primary">{resolveCategoryLabel(featured.newsCategoryId, featured.category, categoriesById, lang)}</span>
                       <span className="text-xs uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                         <Calendar className="w-3 h-3" /> {featured.date}
                       </span>
@@ -119,7 +143,7 @@ const News = () => {
                     <div className="image-zoom aspect-[4/3] bg-muted relative">
                       <img src={n.imageUrl} alt="" loading="lazy" className="w-full h-full object-cover" />
                       <span className="absolute top-5 left-5 chip chip-primary bg-white/95">
-                        {n.category}
+                        {resolveCategoryLabel(n.newsCategoryId, n.category, categoriesById, lang)}
                       </span>
                     </div>
                     <div className="p-6">

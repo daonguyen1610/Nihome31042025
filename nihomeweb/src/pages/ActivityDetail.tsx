@@ -1,18 +1,26 @@
 import { Link, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowUpRight, Calendar, Grid3X3, List, User } from "lucide-react";
 import Layout from "@/components/layout/Layout";
 import { useI18n } from "@/lib/i18n";
-import { useActivity, useActivities } from "@/hooks/useContentApi";
+import { useActivity, useActivities, useActivityCategories } from "@/hooks/useContentApi";
+import { resolveCategoryLabel } from "@/lib/category";
 import { PageLoading, PageError } from "@/components/PageState";
 import ContentBlocks from "@/components/ContentBlocks";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const ActivityDetail = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { slug } = useParams();
   const { data: a, loading, error, refetch } = useActivity(slug ?? "");
   const { data: allActivities } = useActivities();
+  const { data: categoryList } = useActivityCategories();
+  const categoriesById = useMemo(
+    () => new Map((categoryList ?? []).map((c) => [c.id, c])),
+    [categoryList],
+  );
   const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   if (loading) return <Layout><PageLoading /></Layout>;
   if (error) return <Layout><PageError message={error} onRetry={refetch} /></Layout>;
@@ -41,7 +49,7 @@ const ActivityDetail = () => {
           <Link to="/activities" className="inline-flex items-center gap-2 text-white/80 hover:text-white text-xs uppercase tracking-[0.22em] font-bold mb-5 w-fit">
             <ArrowLeft className="w-4 h-4" /> {t("actPage.backToList")}
           </Link>
-          <span className="chip chip-orange bg-white/95 mb-5 w-fit">{a.category}</span>
+          <span className="chip chip-orange bg-white/95 mb-5 w-fit">{resolveCategoryLabel(a.categoryId, a.category, categoriesById, lang)}</span>
           <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.05] tracking-tight max-w-4xl text-balance">
             {a.title}
           </h1>
@@ -77,14 +85,31 @@ const ActivityDetail = () => {
             </div>
             <div className={galleryMode === "grid" ? "grid grid-cols-1 md:grid-cols-3 gap-5" : "space-y-5 max-w-5xl mx-auto"}>
               {a.gallery.map((g, i) => (
-                <div key={`${g}-${i}`} className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted"}>
+                <button
+                  key={`${g}-${i}`}
+                  type="button"
+                  onClick={() => setSelectedImage(g)}
+                  className={galleryMode === "grid" ? "image-zoom rounded-3xl overflow-hidden aspect-[4/3] bg-muted w-full text-left" : "image-zoom rounded-3xl overflow-hidden aspect-video bg-muted w-full text-left"}
+                >
                   <img src={g} alt={`${a.title} ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-                </div>
+                </button>
               ))}
             </div>
           </div>
         </section>
       )}
+
+      <Dialog open={Boolean(selectedImage)} onOpenChange={(open) => !open && setSelectedImage(null)}>
+        <DialogContent className="p-1 sm:max-w-6xl bg-transparent border-0 shadow-none">
+          {selectedImage ? (
+            <img
+              src={selectedImage}
+              alt={a.title}
+              className="w-full max-h-[85vh] object-contain rounded-xl"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <section className="py-16 bg-surface">
         <div className="container-custom">

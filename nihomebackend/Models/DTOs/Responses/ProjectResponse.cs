@@ -21,4 +21,5 @@ public class ProjectResponse
     public string[]? Challenges { get; set; }
     public string[]? Solutions { get; set; }
     public JsonElement? Highlights { get; set; }
+    public object[] Content { get; set; } = [];
 }

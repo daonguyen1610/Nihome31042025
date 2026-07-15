@@ -160,6 +160,41 @@ When you add a new string to any component:
 
 This is a non-negotiable quality gate. A task that adds UI strings without updating the seed files is not done.
 
+## Media URL Rules
+
+Backend-served media must be stored and seeded as host-relative paths such as `/images/...`.
+
+Do not hardcode development hosts like `localhost`, fixed ports, or environment-specific DNS names in frontend URL helpers, content seeds, or admin translation tools. If the frontend runs separately from the backend during development, centralize URL resolution in `src/lib/url.ts` and resolve path-only media against the current API origin.
+
+## Shared Helpers
+
+Before adding a new formatting/localization helper (URL resolution, localized display-name selection, date/currency formatting, etc.) or copying one into a page component, check `src/lib/` for an existing helper that already does the job. Extend or import it instead of writing a page-local duplicate — this is how `resolveImageUrl`/`normalizeContentUrl` and per-page `localizedName` functions ended up as parallel implementations of the same logic.
+
+## Upload Folder Convention
+
+Every call to `adminApi.uploadImage()` and `adminApi.uploadVideo()` **must** pass a `folder` argument.
+Omitting it uploads to the flat root and breaks the organised `wwwroot/images/upload/` structure.
+
+Use the following folder names (must be `[\w\-]+` segments, no leading/trailing slashes):
+
+| Page / entity              | folder value                        |
+|----------------------------|-------------------------------------|
+| Project thumbnail & gallery | `projects/<slug>`                  |
+| Activity thumbnail & gallery | `activities/<slug>`               |
+| News thumbnail & gallery   | `news/<slug>`                       |
+| Slideshow items            | `slideshow`                         |
+| Client logos               | `logos`                             |
+| Services page images       | `services`                          |
+| About page images          | `about`                             |
+| Any future entity          | `<entity-type>/<slug>` or a fixed name |
+
+When adding a new admin form that uploads images:
+1. Choose a folder name following the table above.
+2. Pass it to every `uploadImage` / `uploadVideo` call, `GalleryEditor folder=`, and `ContentBlockEditor folder=` on that page.
+3. Update this table with the new mapping.
+
+The backend `SanitizeFolder` method validates segment characters — only `[A-Za-z0-9_-]` per path segment are allowed.
+
 ## Done Criteria
 
 A task is only considered done correctly when:

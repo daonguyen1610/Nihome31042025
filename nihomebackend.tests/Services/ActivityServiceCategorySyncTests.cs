@@ -21,7 +21,8 @@ public class ActivityServiceCategorySyncTests : IDisposable
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        _sut = new ActivityService(_db, entityTranslationSvc, hostedImageService, NullLogger<ActivityService>.Instance);
+        var categorySvc = new ActivityCategoryService(_db, NullLogger<ActivityCategoryService>.Instance);
+        _sut = new ActivityService(_db, entityTranslationSvc, hostedImageService, categorySvc, NullLogger<ActivityService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();
@@ -44,5 +45,24 @@ public class ActivityServiceCategorySyncTests : IDisposable
         var category = _db.ActivityCategories.SingleOrDefault(c => c.Name == "Groundbreaking");
         Assert.NotNull(category);
         Assert.True(category!.IsActive);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AutoCreatedActivityCategory_HasNameViPopulated()
+    {
+        await _sut.CreateAsync(new UpsertActivityRequest
+        {
+            Slug = "post-with-another-new-category",
+            Date = "25.04.2026",
+            ImageUrl = "/images/post2.jpg",
+            Category = "Ribbon Cutting",
+            Title = "Ribbon Cutting Post",
+            Excerpt = "Excerpt",
+            Content = ["Paragraph"],
+            SortOrder = 1,
+        });
+
+        var category = _db.ActivityCategories.Single(c => c.Name == "Ribbon Cutting");
+        Assert.Equal("Ribbon Cutting", category.NameVi);
     }
 }

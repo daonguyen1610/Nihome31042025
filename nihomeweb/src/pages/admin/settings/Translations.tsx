@@ -14,6 +14,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
+import { toHostRelativeUrl } from "@/lib/url";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { Badge } from "@/components/ui/badge";
@@ -39,37 +40,127 @@ import {
 import { cn } from "@/lib/utils";
 
 /* ─── Helpers ───────────────────────────────────── */
-const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions"];
 
-/** Try to parse a JSON array of strings into plain text (paragraphs separated by blank lines). */
-function jsonToPlainText(raw: string): string {
+// Fields stored as JSON in the DB that need plain-text conversion for the editor.
+const JSON_FIELDS = ["Content", "Sections", "Challenges", "Solutions", "Highlights", "IntroBlocks", "ItemsJson", "Requirements"];
+
+/** i18n key for the hint shown below the translation textarea so users know the expected format. */
+function fieldHintKey(field: string): string | null {
+  if (field === "Sections") return "adminTranslations.hint.sections";
+  if (field === "Highlights") return "adminTranslations.hint.highlights";
+  if (field === "IntroBlocks") return "adminTranslations.hint.introBlocks";
+  if (field === "Content") return "adminTranslations.hint.content";
+  return null;
+}
+
+/**
+ * Convert a backend JSON blob to human-readable plain text for the editor.
+ * Must be paired with plainTextToJson when saving.
+ */
+function jsonToPlainText(raw: string, field: string): string {
   if (!raw) return "";
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      if (parsed.every((v: unknown) => typeof v === "string")) return parsed.join("\n\n");
-      if (parsed.every((v: unknown) => typeof v === "object" && v !== null)) {
-        return parsed.map((s: Record<string, string>) => {
-          if (s.heading && s.body) return `## ${s.heading}\n${s.body}`;
-          return JSON.stringify(s);
-        }).join("\n\n");
+    if (!Array.isArray(parsed)) return raw;
+
+    // ContentItem[] — mixed strings and ContentBlock objects (activities/news/projects Content field)
+    if (field === "Content") {
+      // Repair: previous bug stored the whole ContentItem JSON as a single string element.
+      // Detect pattern ["[{...},...text...]"] and unwrap it before converting.
+      if (parsed.length === 1 && typeof parsed[0] === "string") {
+        const inner = (parsed[0] as string).trim();
+        if (inner.startsWith("[")) {
+          try {
+            const repaired = JSON.parse(inner);
+            if (Array.isArray(repaired)) return jsonToPlainText(inner, field);
+          } catch { /* not JSON, fall through to render as text */ }
+        }
       }
+
+      return (parsed as Array<unknown>).map((item) => {
+        if (typeof item === "string") return item;
+        const b = item as Record<string, unknown>;
+        if (b.type === "text" && typeof b.value === "string") return b.value;
+        if (b.type === "image" && typeof b.url === "string") {
+          const url = toHostRelativeUrl(b.url);
+          const caption = typeof b.caption === "string" ? ` | ${b.caption}` : "";
+          return `[IMAGE: ${url}${caption}]`;
+        }
+        if (b.type === "youtube" && typeof b.url === "string") {
+          return `[YOUTUBE: ${b.url}]`;
+        }
+        return "";
+      }).filter(Boolean).join("\n\n");
     }
-  } catch { /* not JSON, return as-is */ }
+
+    // string[] — Highlights (one per line), IntroBlocks (--- separator), Content/etc (blank-line-separated)
+    if (parsed.every((v: unknown) => typeof v === "string")) {
+      if (field === "Highlights") return (parsed as string[]).join("\n");
+      if (field === "IntroBlocks") return (parsed as string[]).join("\n---\n");
+      return (parsed as string[]).join("\n\n");
+    }
+
+    // object[] — Sections: ## Heading\nBullet1\nBullet2
+    if (parsed.every((v: unknown) => typeof v === "object" && v !== null)) {
+      return (parsed as Record<string, unknown>[]).map((s) => {
+        const heading = typeof s.heading === "string" ? s.heading : "";
+        const bodyArr = Array.isArray(s.body)
+          ? (s.body as unknown[]).map(String)
+          : typeof s.body === "string" ? [s.body] : [];
+        return `## ${heading}\n${bodyArr.join("\n")}`;
+      }).join("\n\n");
+    }
+  } catch { /* not JSON */ }
   return raw;
 }
 
-/** Convert plain text back to JSON array string for storage. */
+/** Convert plain text back to JSON for storage. Must mirror jsonToPlainText exactly. */
 function plainTextToJson(text: string, field: string): string {
   if (!text.trim()) return "";
+
+  if (field === "Content") {
+    // Mixed ContentItem[] — paragraphs + [IMAGE: url] / [IMAGE: url | caption] / [YOUTUBE: url]
+    const parts = text.split(/\n\n+/).filter(Boolean);
+    const items = parts.map((part) => {
+      const t = part.trim();
+      const imgMatch = t.match(/^\[IMAGE:\s*(.*?)(?:\s*\|\s*(.*?))?\]$/s);
+      if (imgMatch) {
+        const url = imgMatch[1].trim();
+        const caption = imgMatch[2]?.trim();
+        return caption ? { type: "image", url, caption } : { type: "image", url };
+      }
+      const ytMatch = t.match(/^\[YOUTUBE:\s*(.*?)\]$/s);
+      if (ytMatch) return { type: "youtube", url: ytMatch[1].trim() };
+      return t; // plain text paragraph stored as string
+    }).filter(Boolean);
+    return JSON.stringify(items);
+  }
+
   if (field === "Sections") {
+    // ## Heading\nBullet1\nBullet2\n\n## Next section...
     const sections = text.split(/\n\n+/).filter(Boolean).map((block) => {
-      const m = block.match(/^##\s+(.+)\n([\s\S]*)$/);
-      if (m) return { heading: m[1].trim(), body: m[2].trim() };
-      return { heading: "", body: block.trim() };
+      const lines = block.split("\n");
+      const m = lines[0].match(/^##\s+(.*)/);
+      const heading = m ? m[1].trim() : "";
+      const body = (m ? lines.slice(1) : lines).map((l) => l.trim()).filter(Boolean);
+      return { heading, body };
     });
     return JSON.stringify(sections);
   }
+
+  if (field === "Highlights") {
+    // One per line → string[]
+    const items = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    return JSON.stringify(items);
+  }
+
+  if (field === "IntroBlocks") {
+    // Blocks separated by "---" on its own line → string[]; blank lines within blocks are preserved
+    const items = text.split(/\n-{3,}\n/).map((l) => l.trim()).filter(Boolean);
+    return JSON.stringify(items);
+  }
+
+  // Challenges, Solutions, Requirements — blank-line separated → string[]
   const parts = text.split(/\n\n+/).filter(Boolean);
   return JSON.stringify(parts);
 }
@@ -264,17 +355,54 @@ const TranslationsPage = () => {
     setEntityModalLang("en");
     try {
       const { data } = await api.get(`/translations/entity/${selectedType}/${item.id}`);
-      const orig: Record<string, string> = data.original ?? {};
+
+      // Keep raw original so we can extract media blocks for pre-population
+      const rawOrig: Record<string, string> = { ...(data.original ?? {}) };
+
+      // Convert JSON fields to plain text for display
+      const orig: Record<string, string> = { ...rawOrig };
       for (const f of JSON_FIELDS) {
-        if (orig[f]) orig[f] = jsonToPlainText(orig[f]);
+        if (orig[f]) orig[f] = jsonToPlainText(orig[f], f);
       }
       setEntityOriginal(orig);
+
       const trans: Record<string, Record<string, string>> = data.translations ?? {};
       for (const lang of Object.keys(trans)) {
         for (const f of JSON_FIELDS) {
-          if (trans[lang][f]) trans[lang][f] = jsonToPlainText(trans[lang][f]);
+          if (trans[lang][f]) trans[lang][f] = jsonToPlainText(trans[lang][f], f);
         }
       }
+
+      // Pre-populate empty Content translations with media blocks from original.
+      // Images and videos are language-neutral — only text paragraphs need translation.
+      if (rawOrig["Content"]) {
+        try {
+          const origItems = JSON.parse(rawOrig["Content"]) as Array<unknown>;
+          const mediaText = origItems
+            .filter((it) => typeof it === "object" && it !== null &&
+              ((it as Record<string, string>).type === "image" || (it as Record<string, string>).type === "youtube"))
+            .map((it) => {
+              const b = it as Record<string, string>;
+              if (b.type === "image") {
+                const url = toHostRelativeUrl(b.url);
+                const caption = b.caption ? ` | ${b.caption}` : "";
+                return `[IMAGE: ${url}${caption}]`;
+              }
+              return `[YOUTUBE: ${b.url}]`;
+            })
+            .join("\n\n");
+
+          if (mediaText) {
+            for (const lang of SUPPORTED_LANGS) {
+              if (!trans[lang]) trans[lang] = {};
+              if (!trans[lang]["Content"]) {
+                trans[lang]["Content"] = mediaText;
+              }
+            }
+          }
+        } catch { /* ignore parse errors */ }
+      }
+
       setEntityTranslations(trans);
     } catch {
       setEntityOriginal({});
@@ -650,8 +778,11 @@ const TranslationsPage = () => {
 
               <div className="space-y-4">
                 {entityModalType.fields.map((field) => {
-                  const isLong = ["Content", "Sections", "Challenges", "Solutions", "Description"].includes(field);
-                  const rows = isLong ? 8 : 3;
+                  const rows =
+                    ["Content", "Sections", "Challenges", "Solutions", "Description", "IntroBlocks"].includes(field) ? 8
+                    : ["Highlights", "Requirements"].includes(field) ? 5
+                    : 3;
+                  const hintKey = fieldHintKey(field);
                   return (
                     <div key={field} className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
@@ -660,7 +791,7 @@ const TranslationsPage = () => {
                           value={entityOriginal[field] ?? ""}
                           readOnly
                           rows={rows}
-                          className="resize-y bg-muted/50"
+                          className="resize-y bg-muted/50 font-mono"
                         />
                       </div>
                       <div className="space-y-1.5">
@@ -669,8 +800,13 @@ const TranslationsPage = () => {
                           value={entityTranslations[entityModalLang]?.[field] ?? ""}
                           onChange={(e) => updateEntityField(field, e.target.value)}
                           rows={rows}
-                          className="resize-y"
+                          className="resize-y font-mono"
                         />
+                        {hintKey && (
+                          <p className="text-[11px] leading-relaxed text-muted-foreground">
+                            {t(hintKey)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );

@@ -68,6 +68,20 @@ Rationale: To reduce backend load without widening scope to SignalR, the admin s
 
 Rationale: User and role management now uses the ASP.NET Core `/api/users` contract, existing `UserRole` enum values, and Redux-backed auth route guards. Roles remain fixed system roles in this phase; no dynamic role table is introduced.
 
+### 2026-07-11 - Backend-served media URLs are host-relative
+
+Rationale: The frontend is built into and served by the ASP.NET backend in deployment, so seeded/stored media should use paths such as `/images/...` instead of fixed development hosts. Frontend URL helpers may resolve path-only media against the current API origin for split dev servers, but must not special-case `localhost`.
+
+### 2026-07-13 - Project content is real nicon.vn data via `ContentJson`, not fabricated fields
+
+Rationale: The original 75 seeded `Project` rows were fictional placeholder data (invented names, Challenges/Solutions text) that never matched the company's real project catalog on nicon.vn. Before adding a `ContentJson` block field (mirroring `Activity.ContentJson`), all 85 live nicon.vn project pages were inspected directly (with a cookie-persistent client, not a stateless one — an earlier stateless-fetch pass wrongly concluded the site had no rich content, because it silently fell back to English on every request and never saw the real Vietnamese CMS content). 5 of 85 have substantial narrative content justifying block-based storage; the rest are simple labeled-fields-plus-gallery pages that fit the existing `Description`/`Gallery` columns. `ContentSeeder.SeedProjects()` now loads all 74 real projects (85 scraped minus 11 confirmed CMS duplicates, most of them the same project double-listed under both `projectsongoing` and `projectscompleted`) from `Data/Seeds/content/projects.json` via the same manifest-driven pattern as `SeedActivities`/`SeedNews`, replacing the hardcoded fake array entirely. Do not fabricate `Challenges`/`Solutions`/`Highlights` for future project imports — the live site has none of these sections on any page.
+
+Known consequence: because `ContentSeeder` is backfill-only by design (never deletes/overwrites existing rows), any database that already had the old 75 fake project rows seeded into it keeps them indefinitely — the new seeder only adds the 74 real rows for slugs that don't already exist. A fresh database (new clone, CI, `docker compose down -v && up`) gets only the 74 real projects; a long-lived dev database may carry both until someone manually removes the fake rows via the admin UI.
+
+### 2026-07-13 - `TranslationSeeder` now dedupes within a single seed pass
+
+Rationale: found while resetting a dev database to verify the project-import work above — on a genuinely fresh database the backend failed to start at all. `TranslationSeeder.Seed()` snapshotted existing DB rows once before looping over every `i18n/*.json` seed file; two files (`profile.json` and `user-profile.json`) both define the key `profilePage.about.eyebrow`/`vi`, so both got queued as new inserts in the same pass and hit the unique `(Key, LanguageCode)` index. This had been dormant on every long-lived dev database (whichever file seeded first "won," masking the duplicate) and would have broken every fresh clone or CI run. Fixed by registering each newly-queued row immediately so a same-pass duplicate updates in place instead of double-inserting. Unrelated to the project-import work but blocking its verification, so fixed in the same branch as a separate, clearly-labeled commit.
+
 ## Open Questions
 
 ### Should the `legacy/` reference folders remain long term?
@@ -90,6 +104,10 @@ Why it matters: content, project, recruitment, settings, and system screens curr
 ### What deployment/environment contract should this Vite app use?
 
 Why it matters: Vercel or another host will need clear build commands, output directory, environment variables, and API routing/proxy assumptions.
+
+### Should Project field-extraction use fuzzy title matching?
+
+Why it matters: 7 of the 74 real projects (e.g. `stfood-marketing-factory-vn`, `nha-may-bma-tai-kcn-huu-thanh`, the Lâm Hiệp Hưng - Tân Toàn Phát trio) don't get `Client`/`Location`/`Scale`/`Scope` lifted out of their scraped content into the dedicated `Project` columns, because the scraped content's title-echo line doesn't *exactly* match the project's title field (different wording or punctuation from the source CMS, not just case). The underlying text is preserved intact inside `ContentJson` (nothing is lost), but those 7 projects show blank client/location badges in the UI where a fuzzy or partial title match would have extracted them. Should `tools/scrape_legacy_data/fixup_projects.py`'s `extract_fields_from_content()` be revisited with a fuzzy-match strategy before the next re-scrape, or is manual admin cleanup for these 7 acceptable?
 
 ## Handoff Notes
 

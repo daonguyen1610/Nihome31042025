@@ -1,5 +1,3 @@
-using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 
 namespace NihomeBackend.Services;
@@ -9,7 +7,6 @@ public class UploadedImageCleanupService(
     IWebHostEnvironment env,
     ILogger<UploadedImageCleanupService> logger) : BackgroundService
 {
-    private const string ManagedImagePrefix = "/images/upload/";
     private static readonly TimeSpan RunInterval = TimeSpan.FromHours(6);
     private static readonly TimeSpan MinFileAgeToDelete = TimeSpan.FromHours(24);
 
@@ -49,20 +46,25 @@ public class UploadedImageCleanupService(
         var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload");
         Directory.CreateDirectory(uploadDir);
 
-        var referencedFiles = await GetReferencedFileNamesAsync(cancellationToken);
+        using var scope = scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var referencedPaths = await ReferencedUploadedImages.GetAsync(db, cancellationToken);
         var now = DateTime.UtcNow;
         var totalFiles = 0;
         var deletedCount = 0;
         var skippedReferencedCount = 0;
         var skippedRecentCount = 0;
 
-        foreach (var filePath in Directory.EnumerateFiles(uploadDir))
+        // Scan recursively to handle organised subfolders (e.g. upload/projects/slug/uuid.jpg)
+        foreach (var filePath in Directory.EnumerateFiles(uploadDir, "*", SearchOption.AllDirectories))
         {
             cancellationToken.ThrowIfCancellationRequested();
             totalFiles++;
 
-            var fileName = Path.GetFileName(filePath);
-            if (referencedFiles.Contains(fileName))
+            // Use path relative to uploadDir so it matches what the DB stores
+            // e.g. "projects/nha-may-bma/uuid.jpg" or just "uuid.jpg"
+            var relPath = Path.GetRelativePath(uploadDir, filePath).Replace('\\', '/');
+            if (referencedPaths.Contains(relPath))
             {
                 skippedReferencedCount++;
                 continue;
@@ -92,93 +94,5 @@ public class UploadedImageCleanupService(
             skippedReferencedCount,
             skippedRecentCount,
             deletedCount);
-    }
-
-    private async Task<HashSet<string>> GetReferencedFileNamesAsync(CancellationToken cancellationToken)
-    {
-        using var scope = scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var referenced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        void AddIfManaged(string? imageUrl)
-        {
-            if (string.IsNullOrWhiteSpace(imageUrl) ||
-                !imageUrl.StartsWith(ManagedImagePrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                return;
-            }
-
-            var fileName = Path.GetFileName(imageUrl);
-            if (!string.IsNullOrWhiteSpace(fileName))
-            {
-                referenced.Add(fileName);
-            }
-        }
-
-        var activityImageUrls = await db.Activities
-            .AsNoTracking()
-            .Select(x => x.ImageUrl)
-            .ToListAsync(cancellationToken);
-        foreach (var imageUrl in activityImageUrls)
-        {
-            AddIfManaged(imageUrl);
-        }
-
-        var newsImageUrls = await db.NewsArticles
-            .AsNoTracking()
-            .Select(x => x.ImageUrl)
-            .ToListAsync(cancellationToken);
-        foreach (var imageUrl in newsImageUrls)
-        {
-            AddIfManaged(imageUrl);
-        }
-
-        var projectImages = await db.Projects
-            .AsNoTracking()
-            .Select(x => new { x.ImageUrl, x.GalleryJson })
-            .ToListAsync(cancellationToken);
-        foreach (var project in projectImages)
-        {
-            AddIfManaged(project.ImageUrl);
-
-            if (string.IsNullOrWhiteSpace(project.GalleryJson))
-            {
-                continue;
-            }
-
-            try
-            {
-                var gallery = JsonSerializer.Deserialize<string[]>(project.GalleryJson) ?? [];
-                foreach (var galleryImageUrl in gallery)
-                {
-                    AddIfManaged(galleryImageUrl);
-                }
-            }
-            catch (JsonException)
-            {
-                // Ignore malformed legacy data to keep cleanup resilient.
-            }
-        }
-
-        var logoImageUrls = await db.ClientLogos
-            .AsNoTracking()
-            .Select(x => x.ImageUrl)
-            .ToListAsync(cancellationToken);
-        foreach (var imageUrl in logoImageUrls)
-        {
-            AddIfManaged(imageUrl);
-        }
-
-        var slideshowImageUrls = await db.SlideshowItems
-            .AsNoTracking()
-            .Select(x => x.ImageUrl)
-            .ToListAsync(cancellationToken);
-        foreach (var imageUrl in slideshowImageUrls)
-        {
-            AddIfManaged(imageUrl);
-        }
-
-        return referenced;
     }
 }

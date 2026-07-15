@@ -54,6 +54,7 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 * Use meaningful naming.
 * Keep methods small and focused.
 * Avoid duplicate logic.
+* Before adding a new helper/utility (URL resolution, localized-name selection, formatting, etc.), search the codebase (`src/lib/`, `Services/`) for an existing one that already does the job and reuse or extend it instead of writing a parallel implementation.
 * Avoid deep nesting.
 * Remove unused code.
 
@@ -86,6 +87,8 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 * Update the translation and content keys in the ASP .NET DbSeeder aligned with frontend.
 * Check `npm run lint` and fix the issues.
 * No hardcode like the category in the React. All need to fetch from the backend API to avoid the hardcode.
+* Do not hardcode frontend media/backend hosts such as localhost. Backend-served media must be stored as host-relative paths like `/images/...`; frontend helpers may resolve those paths against the current API origin.
+* Entities with per-language fields (e.g. `NameVi`/`Name`/`NameZh`/`NameJa`) must have every language field populated on every write path — create, auto-create-from-legacy-data, seed, and migration. Do not rely on read-time fallback to compensate for missing writes.
 * Follow the nihomeweb/CLAUDE.md for strictly developing the web UI application.
 
 ---

@@ -24,7 +24,8 @@ public class NewsServiceTests : IDisposable
         _db = DbContextFactory.Create();
         _translationSvc = new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions()));
         var hosted = new HostedImageService(Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp"));
-        _sut = new NewsService(_db, _translationSvc, hosted, NullLogger<NewsService>.Instance);
+        var categorySvc = new NewsCategoryService(_db, NullLogger<NewsCategoryService>.Instance);
+        _sut = new NewsService(_db, _translationSvc, hosted, categorySvc, NullLogger<NewsService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

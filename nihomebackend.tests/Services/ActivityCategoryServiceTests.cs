@@ -65,6 +65,7 @@ public class ActivityCategoryServiceTests : IDisposable
         Assert.Equal(2, result.Count);
         Assert.Contains(result, item => item.Name == "Event");
         Assert.Contains(result, item => item.Name == "News");
+        Assert.All(result, item => Assert.Equal(item.Name, item.NameVi));
     }
 
     [Fact]
@@ -79,6 +80,17 @@ public class ActivityCategoryServiceTests : IDisposable
 
         Assert.Single(result);
         Assert.Equal("Active", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_FallsBackNameVi_ForLegacyRows()
+    {
+        _db.ActivityCategories.Add(new ActivityCategory { Name = "Legacy", NameVi = "", IsActive = true, SortOrder = 1 });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync();
+
+        Assert.Equal("Legacy", result[0].NameVi);
     }
 
     [Fact]
@@ -172,5 +184,60 @@ public class ActivityCategoryServiceTests : IDisposable
 
         Assert.True(deleted);
         Assert.Empty(_db.ActivityCategories);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ReturnsExisting_WhenIdProvided()
+    {
+        var category = new ActivityCategory { Name = "Event", IsActive = true, SortOrder = 1 };
+        _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
+
+        var (id, name) = await _sut.ResolveAsync(category.Id, categoryName: "ignored");
+
+        Assert.Equal(category.Id, id);
+        Assert.Equal("Event", name);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_Throws_WhenIdNotFound()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.ResolveAsync(categoryId: 999, categoryName: null));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ReturnsEmpty_WhenBothInputsMissing()
+    {
+        var (id, name) = await _sut.ResolveAsync(categoryId: null, categoryName: "   ");
+
+        Assert.Null(id);
+        Assert.Equal(string.Empty, name);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_FindsExistingByName_CaseInsensitive()
+    {
+        var category = new ActivityCategory { Name = "Event", IsActive = true, SortOrder = 1 };
+        _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
+
+        var (id, name) = await _sut.ResolveAsync(categoryId: null, categoryName: " event ");
+
+        Assert.Equal(category.Id, id);
+        Assert.Equal("Event", name);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_AutoCreatesCategory_WhenNameNotFound_AndSetsNameVi()
+    {
+        var (id, name) = await _sut.ResolveAsync(categoryId: null, categoryName: " Brand New ");
+
+        Assert.NotNull(id);
+        Assert.Equal("Brand New", name);
+        var stored = Assert.Single(_db.ActivityCategories);
+        Assert.Equal("Brand New", stored.Name);
+        Assert.Equal("Brand New", stored.NameVi);
+        Assert.True(stored.IsActive);
+        Assert.Equal(1, stored.SortOrder);
     }
 }

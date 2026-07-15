@@ -48,6 +48,7 @@ public class ProjectCategoryServiceTests : IDisposable
         Assert.Equal(2, result.Count);
         Assert.Contains(result, c => c.Name == "Factory");
         Assert.Contains(result, c => c.Name == "Hotel");
+        Assert.All(result, c => Assert.Equal(c.Name, c.NameVi));
     }
 
     [Fact]
@@ -62,6 +63,17 @@ public class ProjectCategoryServiceTests : IDisposable
 
         Assert.Single(result);
         Assert.Equal("Active", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_FallsBackNameVi_ForLegacyRows()
+    {
+        _db.ProjectCategories.Add(new ProjectCategory { Name = "Legacy", NameVi = "", IsActive = true, SortOrder = 1 });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.GetAllAsync();
+
+        Assert.Equal("Legacy", result[0].NameVi);
     }
 
     [Fact]
@@ -177,6 +189,7 @@ public class ProjectCategoryServiceTests : IDisposable
         Assert.Equal("Brand New", name);
         var stored = Assert.Single(_db.ProjectCategories);
         Assert.Equal("Brand New", stored.Name);
+        Assert.Equal("Brand New", stored.NameVi);
         Assert.True(stored.IsActive);
         Assert.Equal(1, stored.SortOrder);
     }

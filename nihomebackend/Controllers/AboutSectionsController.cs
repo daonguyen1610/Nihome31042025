@@ -15,14 +15,16 @@ public class AboutSectionsController(AboutSectionService svc) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAll([FromQuery] bool activeOnly = true) =>
-        Ok(await svc.GetAllAsync(activeOnly));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string lang = "vi",
+        [FromQuery] bool activeOnly = true) =>
+        Ok(await svc.GetAllAsync(lang, activeOnly));
 
     [HttpGet("{slug}")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetBySlug(string slug)
+    public async Task<IActionResult> GetBySlug(string slug, [FromQuery] string lang = "vi")
     {
-        var item = await svc.GetBySlugAsync(slug);
+        var item = await svc.GetBySlugAsync(slug, lang);
         return item == null ? NotFound() : Ok(item);
     }
 

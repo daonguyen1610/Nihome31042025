@@ -26,7 +26,8 @@ public class NewsControllerTests : IDisposable
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var service = new NewsService(_db, entityTranslationSvc, hostedImageService, NullLogger<NewsService>.Instance);
+        var categorySvc = new NewsCategoryService(_db, NullLogger<NewsCategoryService>.Instance);
+        var service = new NewsService(_db, entityTranslationSvc, hostedImageService, categorySvc, NullLogger<NewsService>.Instance);
         _sut = new NewsController(service, new NoOpAuditLogger(), new NoOpNotificationService());
     }
 
@@ -239,7 +240,8 @@ public class NewsControllerTests : IDisposable
         var entityTranslationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var newsSvc = new NewsService(_db, entityTranslationSvc, hostedImageService, NullLogger<NewsService>.Instance);
+        var categorySvc = new NewsCategoryService(_db, NullLogger<NewsCategoryService>.Instance);
+        var newsSvc = new NewsService(_db, entityTranslationSvc, hostedImageService, categorySvc, NullLogger<NewsService>.Instance);
         var sut = new NewsController(newsSvc, new NoOpAuditLogger(), notificationSvc);
 
         var req = new UpsertNewsRequest

@@ -5,15 +5,21 @@ import Layout from "@/components/layout/Layout";
 import PageHeader from "@/components/PageHeader";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
-import { useProjects } from "@/hooks/useContentApi";
+import { useProjects, useProjectCategories } from "@/hooks/useContentApi";
+import { resolveCategoryLabel } from "@/lib/category";
 import { PageLoading, PageError, PageEmpty } from "@/components/PageState";
 
 const filterIds = ["all", "ongoing", "completed"] as const;
 type FilterId = (typeof filterIds)[number];
 
 const Projects = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { data: projects, loading, error, refetch } = useProjects();
+  const { data: categoryList } = useProjectCategories();
+  const categoriesById = useMemo(
+    () => new Map((categoryList ?? []).map((c) => [c.id, c])),
+    [categoryList],
+  );
   const [searchParams, setSearchParams] = useSearchParams();
   const initial = (searchParams.get("status") as FilterId) || "all";
   const [filter, setFilter] = useState<FilterId>(
@@ -128,7 +134,7 @@ const Projects = () => {
                     )}
                   </div>
                   <div className="p-6">
-                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">{p.category}</p>
+                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">{resolveCategoryLabel(p.categoryId, p.category, categoriesById, lang)}</p>
                     <h3 className="font-display text-xl lg:text-2xl font-extrabold mb-3 group-hover:text-primary transition-colors leading-tight">
                       {p.name}
                     </h3>

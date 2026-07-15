@@ -10,6 +10,10 @@ public static class EntityTypes
     public const string ProcessDocument = "ProcessDocument";
     public const string Slideshow = "Slideshow";
     public const string JobPosition = "JobPosition";
+    public const string About = "About";
+    public const string ActivityCategory = "ActivityCategory";
+    public const string NewsCategory = "NewsCategory";
+    public const string ProjectCategory = "ProjectCategory";
     public const string Lead = "Lead";
     public const string LeadActivity = "LeadActivity";
     public const string Customer = "Customer";

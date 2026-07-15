@@ -24,7 +24,8 @@ public class ActivityServiceCrudTests : IDisposable
         _db = DbContextFactory.Create();
         _translationSvc = new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions()));
         var hosted = new HostedImageService(Mock.Of<IWebHostEnvironment>(e => e.ContentRootPath == "/tmp"));
-        _sut = new ActivityService(_db, _translationSvc, hosted, NullLogger<ActivityService>.Instance);
+        var categorySvc = new ActivityCategoryService(_db, NullLogger<ActivityCategoryService>.Instance);
+        _sut = new ActivityService(_db, _translationSvc, hosted, categorySvc, NullLogger<ActivityService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

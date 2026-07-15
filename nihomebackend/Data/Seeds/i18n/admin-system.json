@@ -1,83 +1,1219 @@
 [
   {
-    "key": "proc.general",
-    "category": "proc",
-    "vi": "Quy trình chung",
-    "en": "General processes",
-    "zh": "通用流程",
-    "ja": "一般プロセス"
+    "key": "aboutAdmin.addCert",
+    "category": "aboutAdmin",
+    "vi": "Thêm chứng nhận",
+    "en": "Add certification",
+    "zh": "添加认证",
+    "ja": "認定を追加"
   },
   {
-    "key": "proc.ptcskh",
-    "category": "proc",
-    "vi": "Quy trình phát triển và chăm sóc khách hàng",
-    "en": "Customer development & care",
-    "zh": "客户开发与关怀流程",
-    "ja": "顧客開発・ケアプロセス"
+    "key": "aboutAdmin.addDownload",
+    "category": "aboutAdmin",
+    "vi": "Thêm tài liệu",
+    "en": "Add document",
+    "zh": "添加文档",
+    "ja": "ドキュメントを追加"
   },
   {
-    "key": "proc.dt",
-    "category": "proc",
-    "vi": "Quy trình đấu thầu",
-    "en": "Bidding processes",
-    "zh": "招标流程",
-    "ja": "入札プロセス"
+    "key": "aboutAdmin.addMember",
+    "category": "aboutAdmin",
+    "vi": "Thêm thành viên",
+    "en": "Add member",
+    "zh": "添加成员",
+    "ja": "メンバーを追加"
   },
   {
-    "key": "proc.tk",
-    "category": "proc",
-    "vi": "Quy trình thiết kế",
-    "en": "Design processes",
-    "zh": "设计流程",
-    "ja": "設計プロセス"
+    "key": "aboutAdmin.addMilestone",
+    "category": "aboutAdmin",
+    "vi": "Thêm mốc",
+    "en": "Add milestone",
+    "zh": "添加里程碑",
+    "ja": "マイルストーンを追加"
   },
   {
-    "key": "proc.tc",
-    "category": "proc",
-    "vi": "Quy trình thi công",
-    "en": "Construction processes",
-    "zh": "施工流程",
-    "ja": "施工プロセス"
+    "key": "aboutAdmin.addStat",
+    "category": "aboutAdmin",
+    "vi": "Thêm chỉ số",
+    "en": "Add stat",
+    "zh": "添加指标",
+    "ja": "統計を追加"
   },
   {
-    "key": "proc.ttqtct",
-    "category": "proc",
-    "vi": "Quy trình thanh toán, quyết toán công trình",
-    "en": "Payment & settlement",
-    "zh": "工程结算流程",
-    "ja": "工事清算プロセス"
+    "key": "aboutAdmin.addStatDialog",
+    "category": "aboutAdmin",
+    "vi": "Thêm chỉ số",
+    "en": "Add stat",
+    "zh": "添加指标",
+    "ja": "統計を追加"
   },
   {
-    "key": "proc.qlns",
-    "category": "proc",
-    "vi": "Quy trình quản lý nhân sự",
-    "en": "HR management",
-    "zh": "人事管理流程",
-    "ja": "人事管理プロセス"
+    "key": "aboutAdmin.addStatNew",
+    "category": "aboutAdmin",
+    "vi": "Thêm chỉ số mới",
+    "en": "Add new stat",
+    "zh": "添加新指标",
+    "ja": "新しい統計を追加"
   },
   {
-    "key": "proc.mhdgncu",
-    "category": "proc",
-    "vi": "Quy trình mua hàng, đánh giá NCU, thầu phụ",
-    "en": "Procurement & supplier evaluation",
-    "zh": "采购与供应商评估流程",
-    "ja": "調達・サプライヤー評価プロセス"
+    "key": "aboutAdmin.addStrategy",
+    "category": "aboutAdmin",
+    "vi": "Thêm lĩnh vực",
+    "en": "Add area",
+    "zh": "添加领域",
+    "ja": "分野を追加"
   },
   {
-    "key": "proc.title",
-    "category": "proc",
-    "vi": "Tiêu đề quy trình",
-    "en": "Process title",
-    "zh": "流程标题",
-    "ja": "プロセスタイトル"
+    "key": "aboutAdmin.addValue",
+    "category": "aboutAdmin",
+    "vi": "Thêm giá trị",
+    "en": "Add value",
+    "zh": "添加价值",
+    "ja": "価値を追加"
   },
   {
-    "key": "proc.code",
-    "category": "proc",
-    "vi": "Mã quy trình",
-    "en": "Process code",
-    "zh": "流程编号",
-    "ja": "プロセスコード"
+    "key": "aboutAdmin.boardList",
+    "category": "aboutAdmin",
+    "vi": "Ban quản lý",
+    "en": "Board of Directors",
+    "zh": "董事会",
+    "ja": "取締役会"
+  },
+  {
+    "key": "aboutAdmin.category",
+    "category": "aboutAdmin",
+    "vi": "Danh mục: profilePage",
+    "en": "Category: profilePage",
+    "zh": "分类: profilePage",
+    "ja": "カテゴリ: profilePage"
+  },
+  {
+    "key": "aboutAdmin.certsList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách chứng nhận",
+    "en": "Certifications list",
+    "zh": "认证列表",
+    "ja": "認定リスト"
+  },
+  {
+    "key": "aboutAdmin.chooseIcon",
+    "category": "aboutAdmin",
+    "vi": "Chọn icon",
+    "en": "Choose icon",
+    "zh": "选择图标",
+    "ja": "アイコンを選択"
+  },
+  {
+    "key": "aboutAdmin.defaultItemDesc",
+    "category": "aboutAdmin",
+    "vi": "Mô tả sẽ hiển thị ở đây.",
+    "en": "Description will appear here.",
+    "zh": "描述会显示在这里。",
+    "ja": "説明がここに表示されます。"
+  },
+  {
+    "key": "aboutAdmin.defaultItemTitle",
+    "category": "aboutAdmin",
+    "vi": "Nội dung mới",
+    "en": "New item",
+    "zh": "新内容",
+    "ja": "新しい項目"
+  },
+  {
+    "key": "aboutAdmin.defaultStatLabel",
+    "category": "aboutAdmin",
+    "vi": "Mô tả chỉ số",
+    "en": "Stat description",
+    "zh": "指标描述",
+    "ja": "統計の説明"
+  },
+  {
+    "key": "aboutAdmin.defaultStatValue",
+    "category": "aboutAdmin",
+    "vi": "Chỉ số mới",
+    "en": "New stat",
+    "zh": "新指标",
+    "ja": "新しい統計"
+  },
+  {
+    "key": "aboutAdmin.description",
+    "category": "aboutAdmin",
+    "vi": "Chỉnh trực tiếp bộ key",
+    "en": "Edit directly the key set",
+    "zh": "直接编辑键集合",
+    "ja": "キーセットを直接編集"
+  },
+  {
+    "key": "aboutAdmin.directorsList",
+    "category": "aboutAdmin",
+    "vi": "Ban giám đốc",
+    "en": "Executive Board",
+    "zh": "执行委员会",
+    "ja": "執行委員会"
+  },
+  {
+    "key": "aboutAdmin.downloadsList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách tài liệu",
+    "en": "Documents list",
+    "zh": "文档列表",
+    "ja": "ドキュメントリスト"
+  },
+  {
+    "key": "aboutAdmin.editItemDialogDesc",
+    "category": "aboutAdmin",
+    "vi": "Chọn icon, chỉnh thứ tự hiển thị và nội dung giống flow cũ trong manage settings.",
+    "en": "Choose an icon, adjust display order, and edit content in the same flow as the old manage settings.",
+    "zh": "按照旧版 manage settings 的流程选择图标、调整显示顺序并编辑内容。",
+    "ja": "旧 manage settings と同じ流れで、アイコン選択、表示順変更、内容編集を行います。"
+  },
+  {
+    "key": "aboutAdmin.editStat",
+    "category": "aboutAdmin",
+    "vi": "Chỉnh sửa chỉ số",
+    "en": "Edit stat",
+    "zh": "编辑指标",
+    "ja": "統計を編集"
+  },
+  {
+    "key": "aboutAdmin.editStatDesc",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật icon, giá trị, mô tả và trạng thái hiển thị cho chỉ số đang chọn.",
+    "en": "Update the icon, value, description and visibility for the selected stat.",
+    "zh": "更新所选指标的图标、数值、描述和显示状态。",
+    "ja": "選択した統計のアイコン、値、説明、表示状態を更新します。"
+  },
+  {
+    "key": "aboutAdmin.editStatDialog",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật chỉ số",
+    "en": "Update stat",
+    "zh": "更新指标",
+    "ja": "統計を更新"
+  },
+  {
+    "key": "aboutAdmin.editStatDialogDesc",
+    "category": "aboutAdmin",
+    "vi": "Điều chỉnh thứ tự, icon và trạng thái hiển thị cho block chỉ số.",
+    "en": "Adjust order, icon, and visibility for the stats block.",
+    "zh": "调整指标区块的顺序、图标和显示状态。",
+    "ja": "統計ブロックの順序、アイコン、表示状態を調整します。"
+  },
+  {
+    "key": "aboutAdmin.editStrategyDialog",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật lĩnh vực hoạt động",
+    "en": "Update operating area",
+    "zh": "更新业务领域",
+    "ja": "事業領域を更新"
+  },
+  {
+    "key": "aboutAdmin.editValueDialog",
+    "category": "aboutAdmin",
+    "vi": "Cập nhật giá trị cốt lõi",
+    "en": "Update core value",
+    "zh": "更新核心价值",
+    "ja": "コアバリューを更新"
+  },
+  {
+    "key": "aboutAdmin.empty",
+    "category": "aboutAdmin",
+    "vi": "Không có dữ liệu phù hợp.",
+    "en": "No matching data.",
+    "zh": "没有匹配的数据。",
+    "ja": "一致するデータがありません。"
+  },
+  {
+    "key": "aboutAdmin.emptyValue",
+    "category": "aboutAdmin",
+    "vi": "(chưa có)",
+    "en": "(empty)",
+    "zh": "（暂无）",
+    "ja": "（未設定）"
+  },
+  {
+    "key": "aboutAdmin.fieldCertImage",
+    "category": "aboutAdmin",
+    "vi": "Ảnh chứng nhận",
+    "en": "Certificate image",
+    "zh": "证书图片",
+    "ja": "証明書の画像"
+  },
+  {
+    "key": "aboutAdmin.fieldCertName",
+    "category": "aboutAdmin",
+    "vi": "Tên chứng nhận",
+    "en": "Certification name",
+    "zh": "认证名称",
+    "ja": "認定名"
+  },
+  {
+    "key": "aboutAdmin.fieldDesc",
+    "category": "aboutAdmin",
+    "vi": "Mô tả",
+    "en": "Description",
+    "zh": "描述",
+    "ja": "説明"
+  },
+  {
+    "key": "aboutAdmin.fieldDocName",
+    "category": "aboutAdmin",
+    "vi": "Tên tài liệu",
+    "en": "Document name",
+    "zh": "文档名称",
+    "ja": "ドキュメント名"
+  },
+  {
+    "key": "aboutAdmin.fieldEyebrow",
+    "category": "aboutAdmin",
+    "vi": "Nhãn nhỏ",
+    "en": "Eyebrow label",
+    "zh": "小标签",
+    "ja": "アイブロウラベル"
+  },
+  {
+    "key": "aboutAdmin.fieldFileSize",
+    "category": "aboutAdmin",
+    "vi": "Dung lượng",
+    "en": "File size",
+    "zh": "文件大小",
+    "ja": "ファイルサイズ"
+  },
+  {
+    "key": "aboutAdmin.fieldFileType",
+    "category": "aboutAdmin",
+    "vi": "Loại file",
+    "en": "File type",
+    "zh": "文件类型",
+    "ja": "ファイル種別"
+  },
+  {
+    "key": "aboutAdmin.fieldIcon",
+    "category": "aboutAdmin",
+    "vi": "Icon",
+    "en": "Icon",
+    "zh": "图标",
+    "ja": "アイコン"
+  },
+  {
+    "key": "aboutAdmin.fieldImage",
+    "category": "aboutAdmin",
+    "vi": "Hình ảnh",
+    "en": "Image",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "aboutAdmin.fieldName",
+    "category": "aboutAdmin",
+    "vi": "Họ tên",
+    "en": "Full name",
+    "zh": "姓名",
+    "ja": "氏名"
+  },
+  {
+    "key": "aboutAdmin.fieldParagraph1",
+    "category": "aboutAdmin",
+    "vi": "Mô tả 1",
+    "en": "Description 1",
+    "zh": "描述 1",
+    "ja": "説明 1"
+  },
+  {
+    "key": "aboutAdmin.fieldParagraph2",
+    "category": "aboutAdmin",
+    "vi": "Mô tả 2",
+    "en": "Description 2",
+    "zh": "描述 2",
+    "ja": "説明 2"
+  },
+  {
+    "key": "aboutAdmin.fieldRole",
+    "category": "aboutAdmin",
+    "vi": "Chức danh",
+    "en": "Role",
+    "zh": "职位",
+    "ja": "役職"
+  },
+  {
+    "key": "aboutAdmin.fieldSlug",
+    "category": "aboutAdmin",
+    "vi": "Mã phần",
+    "en": "Section slug",
+    "zh": "版块标识",
+    "ja": "セクションスラッグ"
+  },
+  {
+    "key": "aboutAdmin.fieldSortOrder",
+    "category": "aboutAdmin",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "表示順"
+  },
+  {
+    "key": "aboutAdmin.fieldStatus",
+    "category": "aboutAdmin",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "aboutAdmin.fieldTitle",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "aboutAdmin.fieldTitleA",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề dòng 1",
+    "en": "Title line 1",
+    "zh": "标题第1行",
+    "ja": "タイトル行1"
+  },
+  {
+    "key": "aboutAdmin.fieldTitleB",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề dòng 2 hoặc phần nhấn mạnh",
+    "en": "Title line 2 or emphasis",
+    "zh": "标题第2行或强调部分",
+    "ja": "タイトル行2または強調"
+  },
+  {
+    "key": "aboutAdmin.fieldUrl",
+    "category": "aboutAdmin",
+    "vi": "Đường dẫn",
+    "en": "URL",
+    "zh": "链接",
+    "ja": "URL"
+  },
+  {
+    "key": "aboutAdmin.fieldVisible",
+    "category": "aboutAdmin",
+    "vi": "Hiển thị",
+    "en": "Visible",
+    "zh": "显示",
+    "ja": "表示"
+  },
+  {
+    "key": "aboutAdmin.fieldYear",
+    "category": "aboutAdmin",
+    "vi": "Năm",
+    "en": "Year",
+    "zh": "年份",
+    "ja": "年"
+  },
+  {
+    "key": "aboutAdmin.hiddenHint",
+    "category": "aboutAdmin",
+    "vi": "Ẩn khỏi trang khách hàng",
+    "en": "Hidden from the client page",
+    "zh": "从客户端页面隐藏",
+    "ja": "クライアントページから非表示"
+  },
+  {
+    "key": "aboutAdmin.iconCurrentLabel",
+    "category": "aboutAdmin",
+    "vi": "Icon hiện tại",
+    "en": "Current icon",
+    "zh": "当前图标",
+    "ja": "現在のアイコン"
+  },
+  {
+    "key": "aboutAdmin.iconDialogHint",
+    "category": "aboutAdmin",
+    "vi": "Chỉnh sửa icon, thứ tự hiển thị và trạng thái trong popup để giữ logic đồng nhất giữa admin và trang client.",
+    "en": "Edit icon, display order, and visibility in the popup so admin and client stay aligned.",
+    "zh": "在弹窗中编辑图标、显示顺序和可见状态，以保持管理端与客户端逻辑一致。",
+    "ja": "管理画面とクライアントのロジックを一致させるため、ポップアップ内でアイコン、表示順、表示状態を編集します。"
+  },
+  {
+    "key": "aboutAdmin.langPrefix",
+    "category": "aboutAdmin",
+    "vi": "Ngôn ngữ:",
+    "en": "Language:",
+    "zh": "语言:",
+    "ja": "言語:"
+  },
+  {
+    "key": "aboutAdmin.languages",
+    "category": "aboutAdmin",
+    "vi": "4 ngôn ngữ",
+    "en": "4 languages",
+    "zh": "4 种语言",
+    "ja": "4 言語"
+  },
+  {
+    "key": "aboutAdmin.loadError",
+    "category": "aboutAdmin",
+    "vi": "Không tải được nội dung trang Về chúng tôi.",
+    "en": "Failed to load about page content.",
+    "zh": "无法加载关于我们页面内容。",
+    "ja": "「私たちについて」ページの内容を読み込めません。"
+  },
+  {
+    "key": "aboutAdmin.maxStats",
+    "category": "aboutAdmin",
+    "vi": "Đã đạt tối đa 4 chỉ số. Xóa một chỉ số nếu muốn thêm chỉ số mới.",
+    "en": "Maximum 4 stats reached. Delete one to add a new stat.",
+    "zh": "已达到最多 4 个指标。删除一个以添加新指标。",
+    "ja": "最大4つの統計に達しました。新しい統計を追加するには1つ削除してください。"
+  },
+  {
+    "key": "aboutAdmin.missingDataTitle",
+    "category": "aboutAdmin",
+    "vi": "Thiếu dữ liệu",
+    "en": "Missing data",
+    "zh": "缺少数据",
+    "ja": "データ不足"
+  },
+  {
+    "key": "aboutAdmin.noItems",
+    "category": "aboutAdmin",
+    "vi": "Chưa có dữ liệu. Hãy thêm item mới để bắt đầu.",
+    "en": "No items yet. Add a new item to get started.",
+    "zh": "暂无数据。请先添加一个新项目。",
+    "ja": "まだデータがありません。新しい項目を追加してください。"
+  },
+  {
+    "key": "aboutAdmin.noStats",
+    "category": "aboutAdmin",
+    "vi": "Chưa có chỉ số nào. Nhấn \"Thêm chỉ số\" để thêm.",
+    "en": "No stats yet. Click \"Add stat\" to add one.",
+    "zh": "暂无指标。点击\"添加指标\"来添加。",
+    "ja": "統計がありません。\"統計を追加\"をクリックして追加してください。"
+  },
+  {
+    "key": "aboutAdmin.org.companyChart",
+    "category": "aboutAdmin",
+    "vi": "Sơ đồ tổ chức công ty",
+    "en": "Company Org Chart",
+    "zh": "公司组织架构图",
+    "ja": "会社組織図"
+  },
+  {
+    "key": "aboutAdmin.org.siteChart",
+    "category": "aboutAdmin",
+    "vi": "Sơ đồ tổ chức công trường",
+    "en": "Site Org Chart",
+    "zh": "工地组织架构图",
+    "ja": "現場組織図"
+  },
+  {
+    "key": "aboutAdmin.pageDesc",
+    "category": "aboutAdmin",
+    "vi": "Quản lý đầy đủ các block hiển thị trên trang client `/profile` bằng form trực quan cho từng phần.",
+    "en": "Manage all content blocks displayed on the `/profile` page using an intuitive form for each section.",
+    "zh": "通过直观的表单管理 `/profile` 页面上显示的所有内容块。",
+    "ja": "`/profile` ページに表示されるすべてのコンテンツブロックを直感的なフォームで管理します。"
+  },
+  {
+    "key": "aboutAdmin.placeholderEyebrow",
+    "category": "aboutAdmin",
+    "vi": "VỀ CHÚNG TÔI",
+    "en": "ABOUT US",
+    "zh": "关于我们",
+    "ja": "私たちについて"
+  },
+  {
+    "key": "aboutAdmin.placeholderImagePath",
+    "category": "aboutAdmin",
+    "vi": "/images/upload/...",
+    "en": "/images/upload/...",
+    "zh": "/images/upload/...",
+    "ja": "/images/upload/..."
+  },
+  {
+    "key": "aboutAdmin.placeholderParagraph1",
+    "category": "aboutAdmin",
+    "vi": "Đoạn mô tả 1",
+    "en": "Description paragraph 1",
+    "zh": "描述段落 1",
+    "ja": "説明段落 1"
+  },
+  {
+    "key": "aboutAdmin.placeholderParagraph2",
+    "category": "aboutAdmin",
+    "vi": "Đoạn mô tả 2",
+    "en": "Description paragraph 2",
+    "zh": "描述段落 2",
+    "ja": "説明段落 2"
+  },
+  {
+    "key": "aboutAdmin.placeholderSlug",
+    "category": "aboutAdmin",
+    "vi": "stats-main",
+    "en": "stats-main",
+    "zh": "stats-main",
+    "ja": "stats-main"
+  },
+  {
+    "key": "aboutAdmin.placeholderStatLabel",
+    "category": "aboutAdmin",
+    "vi": "Năm kinh nghiệm",
+    "en": "Years of experience",
+    "zh": "经验年限",
+    "ja": "経験年数"
+  },
+  {
+    "key": "aboutAdmin.placeholderStatValue",
+    "category": "aboutAdmin",
+    "vi": "18+",
+    "en": "18+",
+    "zh": "18+",
+    "ja": "18+"
+  },
+  {
+    "key": "aboutAdmin.placeholderTitleA",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề chính",
+    "en": "Main title",
+    "zh": "主标题",
+    "ja": "メインタイトル"
+  },
+  {
+    "key": "aboutAdmin.placeholderTitleB",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề nhấn mạnh",
+    "en": "Highlighted title",
+    "zh": "强调标题",
+    "ja": "強調タイトル"
+  },
+  {
+    "key": "aboutAdmin.preview",
+    "category": "aboutAdmin",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "aboutAdmin.previewLive",
+    "category": "aboutAdmin",
+    "vi": "Trực tiếp",
+    "en": "Live",
+    "zh": "实时",
+    "ja": "ライブ"
+  },
+  {
+    "key": "aboutAdmin.previewTitle",
+    "category": "aboutAdmin",
+    "vi": "Xem trước trên trang khách hàng",
+    "en": "Preview on client page",
+    "zh": "在客户端页面预览",
+    "ja": "クライアントページでプレビュー"
+  },
+  {
+    "key": "aboutAdmin.profileManagerDesc",
+    "category": "aboutAdmin",
+    "vi": "Quản lý toàn bộ nội dung text đang hiển thị trên trang Profile/Về chúng tôi của client.",
+    "en": "Manage all text content displayed on the client Profile/About page.",
+    "zh": "管理客户端简介/关于我们页面上显示的所有文本内容。",
+    "ja": "クライアント側のプロフィール/会社概要ページに表示される全テキストを管理します。"
+  },
+  {
+    "key": "aboutAdmin.ready",
+    "category": "aboutAdmin",
+    "vi": "Sẵn sàng cập nhật",
+    "en": "Ready to update",
+    "zh": "准备更新",
+    "ja": "更新準備完了"
+  },
+  {
+    "key": "aboutAdmin.saveError",
+    "category": "aboutAdmin",
+    "vi": "Không cập nhật được nội dung. Vui lòng thử lại.",
+    "en": "Failed to update content. Please try again.",
+    "zh": "更新内容失败，请重试。",
+    "ja": "コンテンツの更新に失敗しました。再試行してください。"
+  },
+  {
+    "key": "aboutAdmin.saveItem",
+    "category": "aboutAdmin",
+    "vi": "Lưu nội dung",
+    "en": "Save item",
+    "zh": "保存内容",
+    "ja": "項目を保存"
+  },
+  {
+    "key": "aboutAdmin.saveSection",
+    "category": "aboutAdmin",
+    "vi": "Lưu section",
+    "en": "Save section",
+    "zh": "保存区块",
+    "ja": "セクションを保存"
+  },
+  {
+    "key": "aboutAdmin.saveStat",
+    "category": "aboutAdmin",
+    "vi": "Lưu chỉ số",
+    "en": "Save stat",
+    "zh": "保存指标",
+    "ja": "統計を保存"
+  },
+  {
+    "key": "aboutAdmin.saving",
+    "category": "aboutAdmin",
+    "vi": "Đang lưu...",
+    "en": "Saving...",
+    "zh": "保存中...",
+    "ja": "保存中..."
+  },
+  {
+    "key": "aboutAdmin.searchPlaceholder",
+    "category": "aboutAdmin",
+    "vi": "Tìm theo key hoặc nội dung",
+    "en": "Search by key or content",
+    "zh": "按键名或内容搜索",
+    "ja": "キーまたは内容で検索"
+  },
+  {
+    "key": "aboutAdmin.section.about",
+    "category": "aboutAdmin",
+    "vi": "About",
+    "en": "About",
+    "zh": "关于",
+    "ja": "概要"
+  },
+  {
+    "key": "aboutAdmin.section.aboutDesc",
+    "category": "aboutAdmin",
+    "vi": "Ảnh lãnh đạo, headline 2 phần và phần giới thiệu công ty.",
+    "en": "Leadership image, two-part headline, and company introduction.",
+    "zh": "领导图片、两段式标题和公司介绍。",
+    "ja": "リーダーシップ画像、2分割見出し、会社紹介です。"
+  },
+  {
+    "key": "aboutAdmin.section.certifications",
+    "category": "aboutAdmin",
+    "vi": "Chứng nhận",
+    "en": "Certifications",
+    "zh": "认证",
+    "ja": "認証"
+  },
+  {
+    "key": "aboutAdmin.section.certificationsDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và 3 card chứng nhận.",
+    "en": "Section title and three certification cards.",
+    "zh": "区块标题和三个认证卡片。",
+    "ja": "セクション見出しと3つの認証カードです。"
+  },
+  {
+    "key": "aboutAdmin.section.downloads",
+    "category": "aboutAdmin",
+    "vi": "Tài liệu tải xuống",
+    "en": "Downloads",
+    "zh": "下载资料",
+    "ja": "ダウンロード資料"
+  },
+  {
+    "key": "aboutAdmin.section.downloadsDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề, mô tả và danh sách tài liệu tải xuống.",
+    "en": "Title, description, and downloadable document list.",
+    "zh": "标题、说明和可下载资料列表。",
+    "ja": "タイトル、説明、ダウンロード資料一覧です。"
+  },
+  {
+    "key": "aboutAdmin.section.header",
+    "category": "aboutAdmin",
+    "vi": "Header trang",
+    "en": "Page header",
+    "zh": "页面页眉",
+    "ja": "ページヘッダー"
+  },
+  {
+    "key": "aboutAdmin.section.headerDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề lớn và mô tả đầu trang Profile.",
+    "en": "Main title and description at the top of the Profile page.",
+    "zh": "简介页面顶部的主标题和说明。",
+    "ja": "プロフィールページ上部のメインタイトルと説明です。"
+  },
+  {
+    "key": "aboutAdmin.section.nav",
+    "category": "aboutAdmin",
+    "vi": "Menu neo",
+    "en": "Anchor menu",
+    "zh": "锚点菜单",
+    "ja": "アンカーメニュー"
+  },
+  {
+    "key": "aboutAdmin.section.navDesc",
+    "category": "aboutAdmin",
+    "vi": "Các nhãn điều hướng sticky bên dưới header.",
+    "en": "Sticky navigation labels below the header.",
+    "zh": "页眉下方的固定导航标签。",
+    "ja": "ヘッダー下の固定ナビゲーションラベルです。"
+  },
+  {
+    "key": "aboutAdmin.section.organization",
+    "category": "aboutAdmin",
+    "vi": "Tổ chức",
+    "en": "Organization",
+    "zh": "组织",
+    "ja": "組織"
+  },
+  {
+    "key": "aboutAdmin.section.organizationDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và danh sách lãnh đạo.",
+    "en": "Section title and leadership list.",
+    "zh": "区块标题和领导名单。",
+    "ja": "セクション見出しとリーダー一覧です。"
+  },
+  {
+    "key": "aboutAdmin.section.stats",
+    "category": "aboutAdmin",
+    "vi": "Số liệu",
+    "en": "Stats",
+    "zh": "数据",
+    "ja": "実績数値"
+  },
+  {
+    "key": "aboutAdmin.section.statsDesc",
+    "category": "aboutAdmin",
+    "vi": "Các card số liệu ngay dưới section About.",
+    "en": "Metric cards directly below the About section.",
+    "zh": "关于区块下方的统计卡片。",
+    "ja": "概要セクション直下の数値カードです。"
+  },
+  {
+    "key": "aboutAdmin.section.strategy",
+    "category": "aboutAdmin",
+    "vi": "Chiến lược",
+    "en": "Strategy",
+    "zh": "战略",
+    "ja": "戦略"
+  },
+  {
+    "key": "aboutAdmin.section.strategyDesc",
+    "category": "aboutAdmin",
+    "vi": "Headline, tầm nhìn và định hướng tương lai.",
+    "en": "Headline, vision, and future direction.",
+    "zh": "标题、愿景和未来方向。",
+    "ja": "見出し、ビジョン、今後の方向性です。"
+  },
+  {
+    "key": "aboutAdmin.section.timeline",
+    "category": "aboutAdmin",
+    "vi": "Timeline",
+    "en": "Timeline",
+    "zh": "时间线",
+    "ja": "沿革"
+  },
+  {
+    "key": "aboutAdmin.section.timelineDesc",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề timeline và các mốc phát triển.",
+    "en": "Timeline title and development milestones.",
+    "zh": "时间线标题和发展里程碑。",
+    "ja": "沿革タイトルと発展の節目です。"
+  },
+  {
+    "key": "aboutAdmin.section.values",
+    "category": "aboutAdmin",
+    "vi": "Giá trị & lĩnh vực",
+    "en": "Values & business lines",
+    "zh": "价值观与业务领域",
+    "ja": "価値観と事業領域"
+  },
+  {
+    "key": "aboutAdmin.section.valuesDesc",
+    "category": "aboutAdmin",
+    "vi": "Giá trị cốt lõi và các lĩnh vực hoạt động.",
+    "en": "Core values and business activity areas.",
+    "zh": "核心价值观和业务活动领域。",
+    "ja": "コアバリューと事業活動領域です。"
+  },
+  {
+    "key": "aboutAdmin.statLabel",
+    "category": "aboutAdmin",
+    "vi": "Mô tả (ví dụ: Năm kinh nghiệm)",
+    "en": "Description (e.g. Years of experience)",
+    "zh": "描述（例如：年经验）",
+    "ja": "説明（例：経験年数）"
+  },
+  {
+    "key": "aboutAdmin.statPosition",
+    "category": "aboutAdmin",
+    "vi": "Vị trí",
+    "en": "Position",
+    "zh": "位置",
+    "ja": "位置"
+  },
+  {
+    "key": "aboutAdmin.statValue",
+    "category": "aboutAdmin",
+    "vi": "Giá trị (ví dụ: 18+, 150+, ISO)",
+    "en": "Value (e.g. 18+, 150+, ISO)",
+    "zh": "数值（例如：18+、150+、ISO）",
+    "ja": "値（例：18+、150+、ISO）"
+  },
+  {
+    "key": "aboutAdmin.statsList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách chỉ số",
+    "en": "Stats list",
+    "zh": "指标列表",
+    "ja": "統計リスト"
+  },
+  {
+    "key": "aboutAdmin.statusActive",
+    "category": "aboutAdmin",
+    "vi": "Hoạt động",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "aboutAdmin.statusHidden",
+    "category": "aboutAdmin",
+    "vi": "Tạm ẩn",
+    "en": "Hidden",
+    "zh": "隐藏",
+    "ja": "非表示"
+  },
+  {
+    "key": "aboutAdmin.strategyList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách lĩnh vực",
+    "en": "Areas list",
+    "zh": "领域列表",
+    "ja": "分野リスト"
+  },
+  {
+    "key": "aboutAdmin.synced",
+    "category": "aboutAdmin",
+    "vi": "Đã đồng bộ",
+    "en": "Synced",
+    "zh": "已同步",
+    "ja": "同期済み"
+  },
+  {
+    "key": "aboutAdmin.tab.certs",
+    "category": "aboutAdmin",
+    "vi": "Chứng nhận",
+    "en": "Certifications",
+    "zh": "认证",
+    "ja": "認定"
+  },
+  {
+    "key": "aboutAdmin.tab.downloads",
+    "category": "aboutAdmin",
+    "vi": "Tài liệu",
+    "en": "Documents",
+    "zh": "文档",
+    "ja": "ドキュメント"
+  },
+  {
+    "key": "aboutAdmin.tab.intro",
+    "category": "aboutAdmin",
+    "vi": "Giới thiệu",
+    "en": "Introduction",
+    "zh": "介绍",
+    "ja": "紹介"
+  },
+  {
+    "key": "aboutAdmin.tab.organization",
+    "category": "aboutAdmin",
+    "vi": "Tổ chức",
+    "en": "Organization",
+    "zh": "组织",
+    "ja": "組織"
+  },
+  {
+    "key": "aboutAdmin.tab.stats",
+    "category": "aboutAdmin",
+    "vi": "Chỉ số",
+    "en": "Stats",
+    "zh": "统计",
+    "ja": "統計"
+  },
+  {
+    "key": "aboutAdmin.tab.strategy",
+    "category": "aboutAdmin",
+    "vi": "Chiến lược",
+    "en": "Strategy",
+    "zh": "战略",
+    "ja": "戦略"
+  },
+  {
+    "key": "aboutAdmin.tab.timeline",
+    "category": "aboutAdmin",
+    "vi": "Lịch sử",
+    "en": "History",
+    "zh": "历史",
+    "ja": "歴史"
+  },
+  {
+    "key": "aboutAdmin.tab.values",
+    "category": "aboutAdmin",
+    "vi": "Giá trị cốt lõi",
+    "en": "Core Values",
+    "zh": "核心价值",
+    "ja": "コアバリュー"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.certs",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề và danh sách chứng nhận.",
+    "en": "Heading and list of certifications.",
+    "zh": "标题和认证列表。",
+    "ja": "見出しと認定リスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.downloads",
+    "category": "aboutAdmin",
+    "vi": "Section tài liệu tải xuống và danh sách file.",
+    "en": "Downloadable documents section and file list.",
+    "zh": "可下载文档版块和文件列表。",
+    "ja": "ダウンロード可能なドキュメントセクションとファイルリスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.intro",
+    "category": "aboutAdmin",
+    "vi": "Block mở đầu của trang Về Chúng Tôi.",
+    "en": "Opening block of the About Us page.",
+    "zh": "关于我们页面的开头块。",
+    "ja": "会社概要ページの冒頭ブロック。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.organization",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và danh sách nhân sự điều hành.",
+    "en": "Section heading and list of executive personnel.",
+    "zh": "版块标题和管理人员列表。",
+    "ja": "セクション見出しと経営陣リスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.stats",
+    "category": "aboutAdmin",
+    "vi": "Các chỉ số nổi bật nằm ngay dưới phần giới thiệu.",
+    "en": "Key metrics displayed just below the introduction.",
+    "zh": "紧接在介绍下方显示的关键指标。",
+    "ja": "紹介文の直下に表示される主要指標。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.strategy",
+    "category": "aboutAdmin",
+    "vi": "Section chiến lược và các lĩnh vực hoạt động.",
+    "en": "Strategy section and areas of operation.",
+    "zh": "战略版块和业务领域。",
+    "ja": "戦略セクションと事業領域。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.timeline",
+    "category": "aboutAdmin",
+    "vi": "Timeline lịch sử phát triển và hình minh họa.",
+    "en": "Development history timeline and illustration.",
+    "zh": "发展历史时间线和插图。",
+    "ja": "発展の歴史タイムラインとイラスト。"
+  },
+  {
+    "key": "aboutAdmin.tabDesc.values",
+    "category": "aboutAdmin",
+    "vi": "Tiêu đề section và danh sách thẻ giá trị cốt lõi.",
+    "en": "Section heading and list of core value cards.",
+    "zh": "版块标题和核心价值卡片列表。",
+    "ja": "セクション見出しとコアバリューカードのリスト。"
+  },
+  {
+    "key": "aboutAdmin.timelineList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách mốc thời gian",
+    "en": "Timeline milestones",
+    "zh": "时间线里程碑",
+    "ja": "タイムラインのマイルストーン"
+  },
+  {
+    "key": "aboutAdmin.title",
+    "category": "aboutAdmin",
+    "vi": "Quản lý nội dung trang Về chúng tôi",
+    "en": "About page content management",
+    "zh": "关于我们页面内容管理",
+    "ja": "「私たちについて」ページのコンテンツ管理"
+  },
+  {
+    "key": "aboutAdmin.unsaved",
+    "category": "aboutAdmin",
+    "vi": "Có thay đổi chưa lưu",
+    "en": "You have unsaved changes",
+    "zh": "有未保存的更改",
+    "ja": "未保存の変更があります"
+  },
+  {
+    "key": "aboutAdmin.upload",
+    "category": "aboutAdmin",
+    "vi": "Tải lên",
+    "en": "Upload",
+    "zh": "上传",
+    "ja": "アップロード"
+  },
+  {
+    "key": "aboutAdmin.uploadDoc",
+    "category": "aboutAdmin",
+    "vi": "Tải tài liệu",
+    "en": "Upload document",
+    "zh": "上传文档",
+    "ja": "文書をアップロード"
+  },
+  {
+    "key": "aboutAdmin.validationItem",
+    "category": "aboutAdmin",
+    "vi": "Vui lòng nhập tiêu đề và mô tả.",
+    "en": "Please enter both the title and description.",
+    "zh": "请输入标题和描述。",
+    "ja": "タイトルと説明を入力してください。"
+  },
+  {
+    "key": "aboutAdmin.validationStat",
+    "category": "aboutAdmin",
+    "vi": "Vui lòng nhập đầy đủ giá trị và mô tả chỉ số.",
+    "en": "Please enter both the stat value and description.",
+    "zh": "请输入完整的指标数值和描述。",
+    "ja": "統計の値と説明を入力してください。"
+  },
+  {
+    "key": "aboutAdmin.valuesList",
+    "category": "aboutAdmin",
+    "vi": "Danh sách giá trị",
+    "en": "Values list",
+    "zh": "价值列表",
+    "ja": "価値リスト"
+  },
+  {
+    "key": "aboutAdmin.viHint",
+    "category": "aboutAdmin",
+    "vi": "Tiếng Việt (bắt buộc)",
+    "en": "Vietnamese (required)",
+    "zh": "越南语（必填）",
+    "ja": "ベトナム語（必須）"
+  },
+  {
+    "key": "aboutAdmin.viRequired",
+    "category": "aboutAdmin",
+    "vi": "Giá trị tiếng Việt là bắt buộc.",
+    "en": "Vietnamese value is required.",
+    "zh": "越南语内容为必填。",
+    "ja": "ベトナム語の値は必須です。"
+  },
+  {
+    "key": "aboutAdmin.visibleHint",
+    "category": "aboutAdmin",
+    "vi": "Hiển thị trên trang khách hàng",
+    "en": "Visible on the client page",
+    "zh": "显示在客户端页面",
+    "ja": "クライアントページに表示"
+  },
+  {
+    "key": "contentBlocks.addImage",
+    "category": "contentBlocks",
+    "vi": "Thêm ảnh",
+    "en": "Add image",
+    "zh": "添加图片",
+    "ja": "画像を追加"
+  },
+  {
+    "key": "contentBlocks.addText",
+    "category": "contentBlocks",
+    "vi": "Thêm đoạn văn",
+    "en": "Add text",
+    "zh": "添加文本",
+    "ja": "テキストを追加"
+  },
+  {
+    "key": "contentBlocks.addYoutube",
+    "category": "contentBlocks",
+    "vi": "Thêm YouTube",
+    "en": "Add YouTube",
+    "zh": "添加YouTube",
+    "ja": "YouTubeを追加"
+  },
+  {
+    "key": "contentBlocks.captionPlaceholder",
+    "category": "contentBlocks",
+    "vi": "Chú thích ảnh (tùy chọn)",
+    "en": "Caption (optional)",
+    "zh": "图片说明（可选）",
+    "ja": "キャプション（任意）"
+  },
+  {
+    "key": "contentBlocks.dragToReorder",
+    "category": "contentBlocks",
+    "vi": "Kéo để sắp xếp lại",
+    "en": "Drag to reorder",
+    "zh": "拖动以重新排序",
+    "ja": "ドラッグして並べ替え"
+  },
+  {
+    "key": "contentBlocks.empty",
+    "category": "contentBlocks",
+    "vi": "Chưa có nội dung.",
+    "en": "No content blocks yet.",
+    "zh": "暂无内容块。",
+    "ja": "コンテンツブロックはまだありません。"
+  },
+  {
+    "key": "contentBlocks.image",
+    "category": "contentBlocks",
+    "vi": "Hình ảnh",
+    "en": "Image block",
+    "zh": "图片块",
+    "ja": "画像ブロック"
+  },
+  {
+    "key": "contentBlocks.moveDown",
+    "category": "contentBlocks",
+    "vi": "Di chuyển xuống",
+    "en": "Move down",
+    "zh": "下移",
+    "ja": "下へ移動"
+  },
+  {
+    "key": "contentBlocks.moveUp",
+    "category": "contentBlocks",
+    "vi": "Di chuyển lên",
+    "en": "Move up",
+    "zh": "上移",
+    "ja": "上へ移動"
+  },
+  {
+    "key": "contentBlocks.text",
+    "category": "contentBlocks",
+    "vi": "Đoạn văn",
+    "en": "Text block",
+    "zh": "文本块",
+    "ja": "テキストブロック"
+  },
+  {
+    "key": "contentBlocks.youtube",
+    "category": "contentBlocks",
+    "vi": "YouTube",
+    "en": "YouTube",
+    "zh": "YouTube",
+    "ja": "YouTube"
+  },
+  {
+    "key": "contentBlocks.youtubePlaceholder",
+    "category": "contentBlocks",
+    "vi": "https://www.youtube.com/watch?v=...",
+    "en": "https://www.youtube.com/watch?v=...",
+    "zh": "https://www.youtube.com/watch?v=...",
+    "ja": "https://www.youtube.com/watch?v=..."
+  },
+  {
+    "key": "contentBlocks.youtubeTitle",
+    "category": "contentBlocks",
+    "vi": "Video YouTube",
+    "en": "YouTube video",
+    "zh": "YouTube 视频",
+    "ja": "YouTubeビデオ"
   },
   {
     "key": "proc.add",
@@ -88,292 +1224,12 @@
     "ja": "プロセスを追加"
   },
   {
-    "key": "proc.searchPh",
+    "key": "proc.addFiles",
     "category": "proc",
-    "vi": "Tìm theo tiêu đề hoặc mã...",
-    "en": "Search by title or code...",
-    "zh": "按标题或编号搜索...",
-    "ja": "タイトルまたはコードで検索..."
-  },
-  {
-    "key": "proc.empty",
-    "category": "proc",
-    "vi": "Chưa có quy trình nào.",
-    "en": "No processes yet.",
-    "zh": "暂无流程。",
-    "ja": "プロセスがありません。"
-  },
-  {
-    "key": "proc.download",
-    "category": "proc",
-    "vi": "Tải xuống",
-    "en": "Download",
-    "zh": "下载",
-    "ja": "ダウンロード"
-  },
-  {
-    "key": "proc.view",
-    "category": "proc",
-    "vi": "Xem chi tiết",
-    "en": "View details",
-    "zh": "查看详情",
-    "ja": "詳細を見る"
-  },
-  {
-    "key": "proc.edit",
-    "category": "proc",
-    "vi": "Chỉnh sửa quy trình",
-    "en": "Edit process",
-    "zh": "编辑流程",
-    "ja": "プロセスを編集"
-  },
-  {
-    "key": "proc.contentType",
-    "category": "proc",
-    "vi": "Loại nội dung",
-    "en": "Content type",
-    "zh": "内容类型",
-    "ja": "コンテンツタイプ"
-  },
-  {
-    "key": "proc.text",
-    "category": "proc",
-    "vi": "Văn bản",
-    "en": "Text",
-    "zh": "文本",
-    "ja": "テキスト"
-  },
-  {
-    "key": "proc.image",
-    "category": "proc",
-    "vi": "Hình ảnh",
-    "en": "Image",
-    "zh": "图片",
-    "ja": "画像"
-  },
-  {
-    "key": "proc.content",
-    "category": "proc",
-    "vi": "Nội dung",
-    "en": "Content",
-    "zh": "内容",
-    "ja": "内容"
-  },
-  {
-    "key": "proc.uploadImage",
-    "category": "proc",
-    "vi": "Tải ảnh lên",
-    "en": "Upload image",
-    "zh": "上传图片",
-    "ja": "画像をアップロード"
-  },
-  {
-    "key": "proc.imageUrl",
-    "category": "proc",
-    "vi": "Hoặc dán URL ảnh",
-    "en": "Or paste image URL",
-    "zh": "或粘贴图片URL",
-    "ja": "または画像URLを貼り付け"
-  },
-  {
-    "key": "proc.contentPh",
-    "category": "proc",
-    "vi": "Nhập nội dung chi tiết quy trình...",
-    "en": "Enter process details...",
-    "zh": "输入流程详细内容...",
-    "ja": "プロセスの詳細を入力..."
-  },
-  {
-    "key": "proc.noContent",
-    "category": "proc",
-    "vi": "Chưa có nội dung chi tiết.",
-    "en": "No content yet.",
-    "zh": "暂无详细内容。",
-    "ja": "詳細内容がありません。"
-  },
-  {
-    "key": "proc.save",
-    "category": "proc",
-    "vi": "Lưu",
-    "en": "Save",
-    "zh": "保存",
-    "ja": "保存"
-  },
-  {
-    "key": "proc.cancel",
-    "category": "proc",
-    "vi": "Hủy",
-    "en": "Cancel",
-    "zh": "取消",
-    "ja": "キャンセル"
-  },
-  {
-    "key": "proc.images",
-    "category": "proc",
-    "vi": "Ảnh",
-    "en": "Images",
-    "zh": "图片",
-    "ja": "画像"
-  },
-  {
-    "key": "proc.files",
-    "category": "proc",
-    "vi": "Tài liệu",
-    "en": "Documents",
-    "zh": "文件",
-    "ja": "ファイル"
-  },
-  {
-    "key": "proc.noImages",
-    "category": "proc",
-    "vi": "Chưa có ảnh quy trình.",
-    "en": "No process images yet.",
-    "zh": "暂无流程图片。",
-    "ja": "流程画像がありません。"
-  },
-  {
-    "key": "proc.noFiles",
-    "category": "proc",
-    "vi": "Chưa có tài liệu tải xuống.",
-    "en": "No files to download.",
-    "zh": "暂无可下载文件。",
-    "ja": "ダウンロードファイルがありません。"
-  },
-  {
-    "key": "proc.uploadFile",
-    "category": "proc",
-    "vi": "Tải file lên",
-    "en": "Upload file",
-    "zh": "上传文件",
-    "ja": "ファイルをアップロード"
-  },
-  {
-    "key": "proc.hide",
-    "category": "proc",
-    "vi": "Ẩn",
-    "en": "Hide",
-    "zh": "收起",
-    "ja": "非表示"
-  },
-  {
-    "key": "proc.stackView",
-    "category": "proc",
-    "vi": "Ghép dọc",
-    "en": "Stack view",
-    "zh": "垂直视图",
-    "ja": "縦積み表示"
-  },
-  {
-    "key": "proc.gridView",
-    "category": "proc",
-    "vi": "Lưới",
-    "en": "Grid",
-    "zh": "网格",
-    "ja": "グリッド"
-  },
-  {
-    "key": "proc.createTitle",
-    "category": "proc",
-    "vi": "Thêm quy trình mới",
-    "en": "Add new process",
-    "zh": "添加新流程",
-    "ja": "新しいプロセスを追加"
-  },
-  {
-    "key": "proc.editTitle",
-    "category": "proc",
-    "vi": "Chỉnh sửa quy trình",
-    "en": "Edit process",
-    "zh": "编辑流程",
-    "ja": "プロセスを編集"
-  },
-  {
-    "key": "proc.fieldCode",
-    "category": "proc",
-    "vi": "Mã quy trình",
-    "en": "Process code",
-    "zh": "流程编号",
-    "ja": "プロセスコード"
-  },
-  {
-    "key": "proc.fieldTitle",
-    "category": "proc",
-    "vi": "Tiêu đề",
-    "en": "Title",
-    "zh": "标题",
-    "ja": "タイトル"
-  },
-  {
-    "key": "proc.fieldSortOrder",
-    "category": "proc",
-    "vi": "Thứ tự",
-    "en": "Sort order",
-    "zh": "排序",
-    "ja": "並び順"
-  },
-  {
-    "key": "proc.codePh",
-    "category": "proc",
-    "vi": "Ví dụ: QT-01",
-    "en": "e.g. QT-01",
-    "zh": "例如：QT-01",
-    "ja": "例：QT-01"
-  },
-  {
-    "key": "proc.titlePh",
-    "category": "proc",
-    "vi": "Nhập tiêu đề quy trình...",
-    "en": "Enter process title...",
-    "zh": "输入流程标题...",
-    "ja": "プロセスタイトルを入力..."
-  },
-  {
-    "key": "proc.confirmDelete",
-    "category": "proc",
-    "vi": "Xoá quy trình này?",
-    "en": "Delete this process?",
-    "zh": "确定删除此流程？",
-    "ja": "このプロセスを削除しますか？"
-  },
-  {
-    "key": "proc.delete",
-    "category": "proc",
-    "vi": "Xoá quy trình",
-    "en": "Delete process",
-    "zh": "删除流程",
-    "ja": "プロセスを削除"
-  },
-  {
-    "key": "proc.requiredTitle",
-    "category": "proc",
-    "vi": "Vui lòng nhập tiêu đề quy trình.",
-    "en": "Please enter a process title.",
-    "zh": "请输入流程标题。",
-    "ja": "プロセスタイトルを入力してください。"
-  },
-  {
-    "key": "proc.fallbackError",
-    "category": "proc",
-    "vi": "Không thể lưu quy trình. Vui lòng thử lại.",
-    "en": "Failed to save process. Please try again.",
-    "zh": "保存流程失败，请重试。",
-    "ja": "プロセスの保存に失敗しました。もう一度お試しください。"
-  },
-  {
-    "key": "proc.basicInfo",
-    "category": "proc",
-    "vi": "Thông tin cơ bản",
-    "en": "Basic information",
-    "zh": "基本信息",
-    "ja": "基本情報"
-  },
-  {
-    "key": "proc.assets",
-    "category": "proc",
-    "vi": "Hình ảnh & Tài liệu",
-    "en": "Images & Documents",
-    "zh": "图片与文件",
-    "ja": "画像と文書"
+    "vi": "Thêm tài liệu",
+    "en": "Add documents",
+    "zh": "添加文件",
+    "ja": "文書を追加"
   },
   {
     "key": "proc.addImages",
@@ -384,12 +1240,268 @@
     "ja": "画像を追加"
   },
   {
-    "key": "proc.addFiles",
+    "key": "proc.assets",
     "category": "proc",
-    "vi": "Thêm tài liệu",
-    "en": "Add documents",
-    "zh": "添加文件",
-    "ja": "文書を追加"
+    "vi": "Hình ảnh & Tài liệu",
+    "en": "Images & Documents",
+    "zh": "图片与文件",
+    "ja": "画像と文書"
+  },
+  {
+    "key": "proc.basicInfo",
+    "category": "proc",
+    "vi": "Thông tin cơ bản",
+    "en": "Basic information",
+    "zh": "基本信息",
+    "ja": "基本情報"
+  },
+  {
+    "key": "proc.cancel",
+    "category": "proc",
+    "vi": "Hủy",
+    "en": "Cancel",
+    "zh": "取消",
+    "ja": "キャンセル"
+  },
+  {
+    "key": "proc.code",
+    "category": "proc",
+    "vi": "Mã quy trình",
+    "en": "Process code",
+    "zh": "流程编号",
+    "ja": "プロセスコード"
+  },
+  {
+    "key": "proc.codePh",
+    "category": "proc",
+    "vi": "Ví dụ: QT-01",
+    "en": "e.g. QT-01",
+    "zh": "例如：QT-01",
+    "ja": "例：QT-01"
+  },
+  {
+    "key": "proc.confirmDelete",
+    "category": "proc",
+    "vi": "Xoá quy trình này?",
+    "en": "Delete this process?",
+    "zh": "确定删除此流程？",
+    "ja": "このプロセスを削除しますか？"
+  },
+  {
+    "key": "proc.content",
+    "category": "proc",
+    "vi": "Nội dung",
+    "en": "Content",
+    "zh": "内容",
+    "ja": "内容"
+  },
+  {
+    "key": "proc.contentPh",
+    "category": "proc",
+    "vi": "Nhập nội dung chi tiết quy trình...",
+    "en": "Enter process details...",
+    "zh": "输入流程详细内容...",
+    "ja": "プロセスの詳細を入力..."
+  },
+  {
+    "key": "proc.contentType",
+    "category": "proc",
+    "vi": "Loại nội dung",
+    "en": "Content type",
+    "zh": "内容类型",
+    "ja": "コンテンツタイプ"
+  },
+  {
+    "key": "proc.createTitle",
+    "category": "proc",
+    "vi": "Thêm quy trình mới",
+    "en": "Add new process",
+    "zh": "添加新流程",
+    "ja": "新しいプロセスを追加"
+  },
+  {
+    "key": "proc.delete",
+    "category": "proc",
+    "vi": "Xoá quy trình",
+    "en": "Delete process",
+    "zh": "删除流程",
+    "ja": "プロセスを削除"
+  },
+  {
+    "key": "proc.download",
+    "category": "proc",
+    "vi": "Tải xuống",
+    "en": "Download",
+    "zh": "下载",
+    "ja": "ダウンロード"
+  },
+  {
+    "key": "proc.dt",
+    "category": "proc",
+    "vi": "Quy trình đấu thầu",
+    "en": "Bidding processes",
+    "zh": "招标流程",
+    "ja": "入札プロセス"
+  },
+  {
+    "key": "proc.edit",
+    "category": "proc",
+    "vi": "Chỉnh sửa quy trình",
+    "en": "Edit process",
+    "zh": "编辑流程",
+    "ja": "プロセスを編集"
+  },
+  {
+    "key": "proc.editTitle",
+    "category": "proc",
+    "vi": "Chỉnh sửa quy trình",
+    "en": "Edit process",
+    "zh": "编辑流程",
+    "ja": "プロセスを編集"
+  },
+  {
+    "key": "proc.empty",
+    "category": "proc",
+    "vi": "Chưa có quy trình nào.",
+    "en": "No processes yet.",
+    "zh": "暂无流程。",
+    "ja": "プロセスがありません。"
+  },
+  {
+    "key": "proc.fallbackError",
+    "category": "proc",
+    "vi": "Không thể lưu quy trình. Vui lòng thử lại.",
+    "en": "Failed to save process. Please try again.",
+    "zh": "保存流程失败，请重试。",
+    "ja": "プロセスの保存に失敗しました。もう一度お試しください。"
+  },
+  {
+    "key": "proc.fieldCode",
+    "category": "proc",
+    "vi": "Mã quy trình",
+    "en": "Process code",
+    "zh": "流程编号",
+    "ja": "プロセスコード"
+  },
+  {
+    "key": "proc.fieldSortOrder",
+    "category": "proc",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "並び順"
+  },
+  {
+    "key": "proc.fieldTitle",
+    "category": "proc",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "proc.files",
+    "category": "proc",
+    "vi": "Tài liệu",
+    "en": "Documents",
+    "zh": "文件",
+    "ja": "ファイル"
+  },
+  {
+    "key": "proc.general",
+    "category": "proc",
+    "vi": "Quy trình chung",
+    "en": "General processes",
+    "zh": "通用流程",
+    "ja": "一般プロセス"
+  },
+  {
+    "key": "proc.gridView",
+    "category": "proc",
+    "vi": "Lưới",
+    "en": "Grid",
+    "zh": "网格",
+    "ja": "グリッド"
+  },
+  {
+    "key": "proc.hide",
+    "category": "proc",
+    "vi": "Ẩn",
+    "en": "Hide",
+    "zh": "收起",
+    "ja": "非表示"
+  },
+  {
+    "key": "proc.image",
+    "category": "proc",
+    "vi": "Hình ảnh",
+    "en": "Image",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "proc.imageUrl",
+    "category": "proc",
+    "vi": "Hoặc dán URL ảnh",
+    "en": "Or paste image URL",
+    "zh": "或粘贴图片URL",
+    "ja": "または画像URLを貼り付け"
+  },
+  {
+    "key": "proc.images",
+    "category": "proc",
+    "vi": "Ảnh",
+    "en": "Images",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "proc.mhdgncu",
+    "category": "proc",
+    "vi": "Quy trình mua hàng, đánh giá NCU, thầu phụ",
+    "en": "Procurement & supplier evaluation",
+    "zh": "采购与供应商评估流程",
+    "ja": "調達・サプライヤー評価プロセス"
+  },
+  {
+    "key": "proc.noContent",
+    "category": "proc",
+    "vi": "Chưa có nội dung chi tiết.",
+    "en": "No content yet.",
+    "zh": "暂无详细内容。",
+    "ja": "詳細内容がありません。"
+  },
+  {
+    "key": "proc.noFiles",
+    "category": "proc",
+    "vi": "Chưa có tài liệu tải xuống.",
+    "en": "No files to download.",
+    "zh": "暂无可下载文件。",
+    "ja": "ダウンロードファイルがありません。"
+  },
+  {
+    "key": "proc.noImages",
+    "category": "proc",
+    "vi": "Chưa có ảnh quy trình.",
+    "en": "No process images yet.",
+    "zh": "暂无流程图片。",
+    "ja": "流程画像がありません。"
+  },
+  {
+    "key": "proc.ptcskh",
+    "category": "proc",
+    "vi": "Quy trình phát triển và chăm sóc khách hàng",
+    "en": "Customer development & care",
+    "zh": "客户开发与关怀流程",
+    "ja": "顧客開発・ケアプロセス"
+  },
+  {
+    "key": "proc.qlns",
+    "category": "proc",
+    "vi": "Quy trình quản lý nhân sự",
+    "en": "HR management",
+    "zh": "人事管理流程",
+    "ja": "人事管理プロセス"
   },
   {
     "key": "proc.removeAsset",
@@ -400,12 +1512,92 @@
     "ja": "削除"
   },
   {
-    "key": "proc.uploading",
+    "key": "proc.requiredTitle",
     "category": "proc",
-    "vi": "Đang tải lên...",
-    "en": "Uploading...",
-    "zh": "上传中...",
-    "ja": "アップロード中..."
+    "vi": "Vui lòng nhập tiêu đề quy trình.",
+    "en": "Please enter a process title.",
+    "zh": "请输入流程标题。",
+    "ja": "プロセスタイトルを入力してください。"
+  },
+  {
+    "key": "proc.save",
+    "category": "proc",
+    "vi": "Lưu",
+    "en": "Save",
+    "zh": "保存",
+    "ja": "保存"
+  },
+  {
+    "key": "proc.searchPh",
+    "category": "proc",
+    "vi": "Tìm theo tiêu đề hoặc mã...",
+    "en": "Search by title or code...",
+    "zh": "按标题或编号搜索...",
+    "ja": "タイトルまたはコードで検索..."
+  },
+  {
+    "key": "proc.stackView",
+    "category": "proc",
+    "vi": "Ghép dọc",
+    "en": "Stack view",
+    "zh": "垂直视图",
+    "ja": "縦積み表示"
+  },
+  {
+    "key": "proc.tc",
+    "category": "proc",
+    "vi": "Quy trình thi công",
+    "en": "Construction processes",
+    "zh": "施工流程",
+    "ja": "施工プロセス"
+  },
+  {
+    "key": "proc.text",
+    "category": "proc",
+    "vi": "Văn bản",
+    "en": "Text",
+    "zh": "文本",
+    "ja": "テキスト"
+  },
+  {
+    "key": "proc.title",
+    "category": "proc",
+    "vi": "Tiêu đề quy trình",
+    "en": "Process title",
+    "zh": "流程标题",
+    "ja": "プロセスタイトル"
+  },
+  {
+    "key": "proc.titlePh",
+    "category": "proc",
+    "vi": "Nhập tiêu đề quy trình...",
+    "en": "Enter process title...",
+    "zh": "输入流程标题...",
+    "ja": "プロセスタイトルを入力..."
+  },
+  {
+    "key": "proc.tk",
+    "category": "proc",
+    "vi": "Quy trình thiết kế",
+    "en": "Design processes",
+    "zh": "设计流程",
+    "ja": "設計プロセス"
+  },
+  {
+    "key": "proc.ttqtct",
+    "category": "proc",
+    "vi": "Quy trình thanh toán, quyết toán công trình",
+    "en": "Payment & settlement",
+    "zh": "工程结算流程",
+    "ja": "工事清算プロセス"
+  },
+  {
+    "key": "proc.uploadFile",
+    "category": "proc",
+    "vi": "Tải file lên",
+    "en": "Upload file",
+    "zh": "上传文件",
+    "ja": "ファイルをアップロード"
   },
   {
     "key": "proc.uploadHint",
@@ -414,6 +1606,886 @@
     "en": "You can select multiple files at once.",
     "zh": "可以一次选择多个文件。",
     "ja": "複数のファイルを同時に選択できます。"
+  },
+  {
+    "key": "proc.uploadImage",
+    "category": "proc",
+    "vi": "Tải ảnh lên",
+    "en": "Upload image",
+    "zh": "上传图片",
+    "ja": "画像をアップロード"
+  },
+  {
+    "key": "proc.uploading",
+    "category": "proc",
+    "vi": "Đang tải lên...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "proc.view",
+    "category": "proc",
+    "vi": "Xem chi tiết",
+    "en": "View details",
+    "zh": "查看详情",
+    "ja": "詳細を見る"
+  },
+  {
+    "key": "set.add",
+    "category": "set",
+    "vi": "Thêm mới",
+    "en": "Add new",
+    "zh": "新增",
+    "ja": "新規追加"
+  },
+  {
+    "key": "set.addRow",
+    "category": "set",
+    "vi": "Thêm mới một dòng",
+    "en": "Add new row",
+    "zh": "添加新行",
+    "ja": "新しい行を追加"
+  },
+  {
+    "key": "set.adminAllowedIp",
+    "category": "set",
+    "vi": "IP cho phép truy cập admin",
+    "en": "Admin area allowed IP",
+    "zh": "管理区允许的IP",
+    "ja": "管理エリア許可IP"
+  },
+  {
+    "key": "set.avatarSize",
+    "category": "set",
+    "vi": "Kích thước avatar",
+    "en": "Avatar size",
+    "zh": "头像尺寸",
+    "ja": "アバターサイズ"
+  },
+  {
+    "key": "set.canonicalUrls",
+    "category": "set",
+    "vi": "Bật canonical URLs",
+    "en": "Enable canonical URLs",
+    "zh": "启用规范URL",
+    "ja": "正規URL有効"
+  },
+  {
+    "key": "set.captchaEnabled",
+    "category": "set",
+    "vi": "Bật CAPTCHA",
+    "en": "CAPTCHA enabled",
+    "zh": "启用验证码",
+    "ja": "CAPTCHA有効"
+  },
+  {
+    "key": "set.categoryThumb",
+    "category": "set",
+    "vi": "Ảnh danh mục",
+    "en": "Category thumbnail size",
+    "zh": "分类缩略图尺寸",
+    "ja": "カテゴリサムネイルサイズ"
+  },
+  {
+    "key": "set.culture",
+    "category": "set",
+    "vi": "Mã văn hoá",
+    "en": "Language culture",
+    "zh": "语言文化代码",
+    "ja": "言語カルチャー"
+  },
+  {
+    "key": "set.customHead",
+    "category": "set",
+    "vi": "Custom thẻ <head>",
+    "en": "Custom <head> tag",
+    "zh": "自定义<head>标签",
+    "ja": "カスタム<head>タグ"
+  },
+  {
+    "key": "set.default",
+    "category": "set",
+    "vi": "Mặc định",
+    "en": "Default",
+    "zh": "默认",
+    "ja": "デフォルト"
+  },
+  {
+    "key": "set.defaultPageTitle",
+    "category": "set",
+    "vi": "Tiêu đề trang mặc định",
+    "en": "Default page title",
+    "zh": "默认页面标题",
+    "ja": "デフォルトページタイトル"
+  },
+  {
+    "key": "set.displayName",
+    "category": "set",
+    "vi": "Tên hiển thị",
+    "en": "Display name",
+    "zh": "显示名称",
+    "ja": "表示名"
+  },
+  {
+    "key": "set.displayOrder",
+    "category": "set",
+    "vi": "Thứ tự hiển thị",
+    "en": "Display order",
+    "zh": "显示顺序",
+    "ja": "表示順"
+  },
+  {
+    "key": "set.email",
+    "category": "set",
+    "vi": "Tài khoản email",
+    "en": "Email accounts",
+    "zh": "邮箱账户",
+    "ja": "メールアカウント"
+  },
+  {
+    "key": "set.emailTemplates",
+    "category": "set",
+    "vi": "Mẫu email",
+    "en": "Email templates",
+    "zh": "邮件模板",
+    "ja": "メールテンプレート"
+  },
+  {
+    "key": "set.flag",
+    "category": "set",
+    "vi": "Cờ",
+    "en": "Flag",
+    "zh": "旗帜",
+    "ja": "フラグ"
+  },
+  {
+    "key": "set.forceSsl",
+    "category": "set",
+    "vi": "Bắt buộc SSL",
+    "en": "Force SSL",
+    "zh": "强制SSL",
+    "ja": "SSL強制"
+  },
+  {
+    "key": "set.general",
+    "category": "set",
+    "vi": "Cài đặt chung",
+    "en": "General settings",
+    "zh": "常规设置",
+    "ja": "一般設定"
+  },
+  {
+    "key": "set.imageQuality",
+    "category": "set",
+    "vi": "Chất lượng ảnh (0–100)",
+    "en": "Image quality (0–100)",
+    "zh": "图片质量 (0–100)",
+    "ja": "画像品質 (0–100)"
+  },
+  {
+    "key": "set.imageStorage",
+    "category": "set",
+    "vi": "Lưu trữ ảnh",
+    "en": "Image storage",
+    "zh": "图片存储",
+    "ja": "画像ストレージ"
+  },
+  {
+    "key": "set.languages",
+    "category": "set",
+    "vi": "Ngôn ngữ",
+    "en": "Languages",
+    "zh": "语言",
+    "ja": "言語"
+  },
+  {
+    "key": "set.markDefault",
+    "category": "set",
+    "vi": "Đặt làm mặc định",
+    "en": "Set as default",
+    "zh": "设为默认",
+    "ja": "デフォルトに設定"
+  },
+  {
+    "key": "set.maxImageSize",
+    "category": "set",
+    "vi": "Kích thước ảnh tối đa",
+    "en": "Maximum image size",
+    "zh": "最大图片尺寸",
+    "ja": "最大画像サイズ"
+  },
+  {
+    "key": "set.media",
+    "category": "set",
+    "vi": "Cài đặt media",
+    "en": "Media settings",
+    "zh": "媒体设置",
+    "ja": "メディア設定"
+  },
+  {
+    "key": "set.metaDescription",
+    "category": "set",
+    "vi": "Meta description mặc định",
+    "en": "Default meta description",
+    "zh": "默认元描述",
+    "ja": "デフォルトメタディスクリプション"
+  },
+  {
+    "key": "set.metaKeywords",
+    "category": "set",
+    "vi": "Meta keywords mặc định",
+    "en": "Default meta keywords",
+    "zh": "默认元关键词",
+    "ja": "デフォルトメタキーワード"
+  },
+  {
+    "key": "set.name",
+    "category": "set",
+    "vi": "Tên",
+    "en": "Name",
+    "zh": "名称",
+    "ja": "名前"
+  },
+  {
+    "key": "set.otp.forgotDesc",
+    "category": "set",
+    "vi": "Yêu cầu xác thực OTP để đặt lại mật khẩu",
+    "en": "Require OTP verification to reset password",
+    "zh": "重置密码时需要 OTP 验证",
+    "ja": "パスワード再設定時に OTP 認証を要求"
+  },
+  {
+    "key": "set.otp.forgotLabel",
+    "category": "set",
+    "vi": "Bật OTP cho quên mật khẩu",
+    "en": "Enable OTP for forgot password",
+    "zh": "启用忘记密码 OTP",
+    "ja": "パスワード再設定用 OTP を有効化"
+  },
+  {
+    "key": "set.otp.loadError",
+    "category": "set",
+    "vi": "Không thể tải cấu hình OTP.",
+    "en": "Could not load OTP settings.",
+    "zh": "无法加载 OTP 设置。",
+    "ja": "OTP 設定を読み込めません。"
+  },
+  {
+    "key": "set.otp.loading",
+    "category": "set",
+    "vi": "Đang tải cấu hình OTP...",
+    "en": "Loading OTP settings...",
+    "zh": "正在加载 OTP 设置...",
+    "ja": "OTP 設定を読み込み中..."
+  },
+  {
+    "key": "set.otp.registrationDesc",
+    "category": "set",
+    "vi": "Yêu cầu xác thực OTP khi người dùng mới đăng ký",
+    "en": "Require OTP verification when new users register",
+    "zh": "新用户注册时需要 OTP 验证",
+    "ja": "新規ユーザー登録時に OTP 認証を要求"
+  },
+  {
+    "key": "set.otp.registrationLabel",
+    "category": "set",
+    "vi": "Bật OTP cho đăng ký",
+    "en": "Enable OTP for registration",
+    "zh": "启用注册 OTP",
+    "ja": "登録用 OTP を有効化"
+  },
+  {
+    "key": "set.otp.saveError",
+    "category": "set",
+    "vi": "Không thể lưu cấu hình OTP.",
+    "en": "Could not save OTP settings.",
+    "zh": "无法保存 OTP 设置。",
+    "ja": "OTP 設定を保存できません。"
+  },
+  {
+    "key": "set.otp.saving",
+    "category": "set",
+    "vi": "Đang lưu...",
+    "en": "Saving...",
+    "zh": "正在保存...",
+    "ja": "保存中..."
+  },
+  {
+    "key": "set.otp.securityTitle",
+    "category": "set",
+    "vi": "Cài đặt bảo mật",
+    "en": "Security settings",
+    "zh": "安全设置",
+    "ja": "セキュリティ設定"
+  },
+  {
+    "key": "set.pageTitleSeparator",
+    "category": "set",
+    "vi": "Dấu phân cách tiêu đề",
+    "en": "Page title separator",
+    "zh": "页面标题分隔符",
+    "ja": "ページタイトル区切り"
+  },
+  {
+    "key": "set.pictureZoom",
+    "category": "set",
+    "vi": "Zoom ảnh",
+    "en": "Picture zoom",
+    "zh": "图片缩放",
+    "ja": "画像ズーム"
+  },
+  {
+    "key": "set.postThumb",
+    "category": "set",
+    "vi": "Ảnh bài viết",
+    "en": "Post thumbnail size",
+    "zh": "文章缩略图尺寸",
+    "ja": "投稿サムネイルサイズ"
+  },
+  {
+    "key": "set.projectThumb",
+    "category": "set",
+    "vi": "Ảnh dự án",
+    "en": "Project image size",
+    "zh": "项目图片尺寸",
+    "ja": "プロジェクト画像サイズ"
+  },
+  {
+    "key": "set.published",
+    "category": "set",
+    "vi": "Hiển thị",
+    "en": "Published",
+    "zh": "已发布",
+    "ja": "公開"
+  },
+  {
+    "key": "set.search",
+    "category": "set",
+    "vi": "Tìm kiếm",
+    "en": "Search",
+    "zh": "搜索",
+    "ja": "検索"
+  },
+  {
+    "key": "set.section.account",
+    "category": "set",
+    "vi": "Tài khoản",
+    "en": "Account",
+    "zh": "账户",
+    "ja": "アカウント"
+  },
+  {
+    "key": "set.section.captcha",
+    "category": "set",
+    "vi": "CAPTCHA",
+    "en": "CAPTCHA",
+    "zh": "验证码",
+    "ja": "CAPTCHA"
+  },
+  {
+    "key": "set.section.common",
+    "category": "set",
+    "vi": "Chung",
+    "en": "Common",
+    "zh": "通用",
+    "ja": "共通"
+  },
+  {
+    "key": "set.section.external",
+    "category": "set",
+    "vi": "Xác thực ngoài",
+    "en": "External authentication",
+    "zh": "外部认证",
+    "ja": "外部認証"
+  },
+  {
+    "key": "set.section.password",
+    "category": "set",
+    "vi": "Mật khẩu & bảo mật",
+    "en": "Password and security",
+    "zh": "密码与安全",
+    "ja": "パスワードとセキュリティ"
+  },
+  {
+    "key": "set.section.profile",
+    "category": "set",
+    "vi": "Hồ sơ",
+    "en": "Profile",
+    "zh": "个人资料",
+    "ja": "プロフィール"
+  },
+  {
+    "key": "set.section.security",
+    "category": "set",
+    "vi": "Bảo mật",
+    "en": "Security",
+    "zh": "安全",
+    "ja": "セキュリティ"
+  },
+  {
+    "key": "set.section.seo",
+    "category": "set",
+    "vi": "SEO",
+    "en": "SEO",
+    "zh": "SEO",
+    "ja": "SEO"
+  },
+  {
+    "key": "set.section.sitemap",
+    "category": "set",
+    "vi": "Sitemap",
+    "en": "Sitemap",
+    "zh": "站点地图",
+    "ja": "サイトマップ"
+  },
+  {
+    "key": "set.section.social",
+    "category": "set",
+    "vi": "Mạng xã hội",
+    "en": "Social media",
+    "zh": "社交媒体",
+    "ja": "ソーシャルメディア"
+  },
+  {
+    "key": "set.section.thumbnails",
+    "category": "set",
+    "vi": "Kích thước ảnh",
+    "en": "Thumbnail sizes",
+    "zh": "缩略图尺寸",
+    "ja": "サムネイルサイズ"
+  },
+  {
+    "key": "set.section.timezone",
+    "category": "set",
+    "vi": "Múi giờ",
+    "en": "Time zone",
+    "zh": "时区",
+    "ja": "タイムゾーン"
+  },
+  {
+    "key": "set.sitemapEnabled",
+    "category": "set",
+    "vi": "Bật sitemap",
+    "en": "Sitemap enabled",
+    "zh": "启用站点地图",
+    "ja": "サイトマップ有効"
+  },
+  {
+    "key": "set.slideshow",
+    "category": "set",
+    "vi": "Slideshow và media",
+    "en": "Slideshow & media",
+    "zh": "幻灯片与媒体",
+    "ja": "スライドショーとメディア"
+  },
+  {
+    "key": "set.slideshow.createHint",
+    "category": "set",
+    "vi": "Tạo slide mới",
+    "en": "Create new slide",
+    "zh": "创建新幻灯片",
+    "ja": "新しいスライドを作成"
+  },
+  {
+    "key": "set.slideshow.desc",
+    "category": "set",
+    "vi": "Quản lý banner trang chủ, hỗ trợ ảnh và video ngắn.",
+    "en": "Manage homepage banners with support for images and short videos.",
+    "zh": "管理首页横幅，支持图片和短视频。",
+    "ja": "トップページのバナーを管理し、画像と短い動画に対応します。"
+  },
+  {
+    "key": "set.slideshow.editHint",
+    "category": "set",
+    "vi": "Cập nhật slide đang chọn",
+    "en": "Update selected slide",
+    "zh": "更新所选幻灯片",
+    "ja": "選択中のスライドを更新"
+  },
+  {
+    "key": "set.slideshow.editorDesc",
+    "category": "set",
+    "vi": "Bạn có thể dán URL hoặc upload trực tiếp từ máy.",
+    "en": "You can paste a URL or upload directly from your device.",
+    "zh": "您可以粘贴 URL 或直接从设备上传。",
+    "ja": "URLを貼り付けるか、端末から直接アップロードできます。"
+  },
+  {
+    "key": "set.slideshow.fieldIsActive",
+    "category": "set",
+    "vi": "Hiển thị",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "set.slideshow.fieldLinkText",
+    "category": "set",
+    "vi": "Nút CTA",
+    "en": "CTA text",
+    "zh": "CTA 文案",
+    "ja": "CTA テキスト"
+  },
+  {
+    "key": "set.slideshow.fieldLinkUrl",
+    "category": "set",
+    "vi": "Link URL",
+    "en": "Link URL",
+    "zh": "链接 URL",
+    "ja": "リンク URL"
+  },
+  {
+    "key": "set.slideshow.fieldMediaType",
+    "category": "set",
+    "vi": "Loại media",
+    "en": "Media type",
+    "zh": "媒体类型",
+    "ja": "メディア種別"
+  },
+  {
+    "key": "set.slideshow.fieldMediaUrl",
+    "category": "set",
+    "vi": "Media URL",
+    "en": "Media URL",
+    "zh": "媒体 URL",
+    "ja": "メディア URL"
+  },
+  {
+    "key": "set.slideshow.fieldSlug",
+    "category": "set",
+    "vi": "Slug",
+    "en": "Slug",
+    "zh": "Slug",
+    "ja": "Slug"
+  },
+  {
+    "key": "set.slideshow.fieldSortOrder",
+    "category": "set",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "表示順"
+  },
+  {
+    "key": "set.slideshow.fieldSubtitle",
+    "category": "set",
+    "vi": "Mô tả ngắn",
+    "en": "Subtitle",
+    "zh": "副标题",
+    "ja": "サブタイトル"
+  },
+  {
+    "key": "set.slideshow.fieldTitle",
+    "category": "set",
+    "vi": "Tiêu đề slide",
+    "en": "Slide title",
+    "zh": "幻灯片标题",
+    "ja": "スライドタイトル"
+  },
+  {
+    "key": "set.slideshow.loadError",
+    "category": "set",
+    "vi": "Không thể tải slideshow",
+    "en": "Failed to load slideshow",
+    "zh": "无法加载幻灯片",
+    "ja": "スライドショーを読み込めません"
+  },
+  {
+    "key": "set.slideshow.mediaTypeImage",
+    "category": "set",
+    "vi": "Hình ảnh",
+    "en": "Image",
+    "zh": "图片",
+    "ja": "画像"
+  },
+  {
+    "key": "set.slideshow.mediaTypeVideo",
+    "category": "set",
+    "vi": "Video",
+    "en": "Video",
+    "zh": "视频",
+    "ja": "動画"
+  },
+  {
+    "key": "set.slideshow.placeholderLinkText",
+    "category": "set",
+    "vi": "Xem thêm",
+    "en": "Learn more",
+    "zh": "查看更多",
+    "ja": "詳細を見る"
+  },
+  {
+    "key": "set.slideshow.placeholderLinkUrl",
+    "category": "set",
+    "vi": "/projects",
+    "en": "/projects",
+    "zh": "/projects",
+    "ja": "/projects"
+  },
+  {
+    "key": "set.slideshow.placeholderMediaUrl",
+    "category": "set",
+    "vi": "/images/upload/...",
+    "en": "/images/upload/...",
+    "zh": "/images/upload/...",
+    "ja": "/images/upload/..."
+  },
+  {
+    "key": "set.slideshow.placeholderSlug",
+    "category": "set",
+    "vi": "Tuỳ chọn, để trống sẽ tự tạo",
+    "en": "Optional, auto-generated if empty",
+    "zh": "可选，留空则自动生成",
+    "ja": "任意。未入力の場合は自動生成"
+  },
+  {
+    "key": "set.slideshow.placeholderSubtitle",
+    "category": "set",
+    "vi": "Subtitle",
+    "en": "Subtitle",
+    "zh": "副标题",
+    "ja": "サブタイトル"
+  },
+  {
+    "key": "set.slideshow.placeholderTitle",
+    "category": "set",
+    "vi": "Tiêu đề slide",
+    "en": "Slide title",
+    "zh": "幻灯片标题",
+    "ja": "スライドタイトル"
+  },
+  {
+    "key": "set.slideshow.previewAlt",
+    "category": "set",
+    "vi": "Xem trước media",
+    "en": "Media preview",
+    "zh": "媒体预览",
+    "ja": "メディアプレビュー"
+  },
+  {
+    "key": "set.slideshow.statusActive",
+    "category": "set",
+    "vi": "active",
+    "en": "active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "set.slideshow.statusInactive",
+    "category": "set",
+    "vi": "inactive",
+    "en": "inactive",
+    "zh": "停用",
+    "ja": "無効"
+  },
+  {
+    "key": "set.slideshow.title",
+    "category": "set",
+    "vi": "Slideshow và media",
+    "en": "Slideshow & media",
+    "zh": "幻灯片与媒体",
+    "ja": "スライドショーとメディア"
+  },
+  {
+    "key": "set.slideshow.uploadButton",
+    "category": "set",
+    "vi": "Upload ảnh / video",
+    "en": "Upload image / video",
+    "zh": "上传图片 / 视频",
+    "ja": "画像 / 動画をアップロード"
+  },
+  {
+    "key": "set.slideshow.uploading",
+    "category": "set",
+    "vi": "Đang upload...",
+    "en": "Uploading...",
+    "zh": "上传中...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "set.value",
+    "category": "set",
+    "vi": "Giá trị",
+    "en": "Value",
+    "zh": "值",
+    "ja": "値"
+  },
+  {
+    "key": "set.www.doesntMatter",
+    "category": "set",
+    "vi": "Không quan trọng",
+    "en": "Doesn't matter",
+    "zh": "无所谓",
+    "ja": "どちらでも"
+  },
+  {
+    "key": "set.www.with",
+    "category": "set",
+    "vi": "Có www",
+    "en": "With www",
+    "zh": "有www",
+    "ja": "wwwあり"
+  },
+  {
+    "key": "set.www.without",
+    "category": "set",
+    "vi": "Không có www",
+    "en": "Without www",
+    "zh": "无www",
+    "ja": "wwwなし"
+  },
+  {
+    "key": "set.wwwPrefix",
+    "category": "set",
+    "vi": "Yêu cầu WWW prefix",
+    "en": "WWW prefix requirement",
+    "zh": "WWW前缀要求",
+    "ja": "WWWプレフィックス要件"
+  },
+  {
+    "key": "settings.address",
+    "category": "settings",
+    "vi": "Địa chỉ",
+    "en": "Address",
+    "zh": "地址",
+    "ja": "住所"
+  },
+  {
+    "key": "settings.centerDesc",
+    "category": "settings",
+    "vi": "Quản lý cài đặt tổng hợp cho hệ thống NICON",
+    "en": "Manage all NICON system settings",
+    "zh": "管理所有NICON系统设置",
+    "ja": "NICONシステムの全設定を管理"
+  },
+  {
+    "key": "settings.company",
+    "category": "settings",
+    "vi": "Thông tin công ty",
+    "en": "Company info",
+    "zh": "公司信息",
+    "ja": "会社情報"
+  },
+  {
+    "key": "settings.companyDesc",
+    "category": "settings",
+    "vi": "Cập nhật thông tin hiển thị toàn site.",
+    "en": "Update information shown across the site.",
+    "zh": "更新网站显示的信息。",
+    "ja": "サイト全体に表示される情報を更新。"
+  },
+  {
+    "key": "settings.companyName",
+    "category": "settings",
+    "vi": "Tên công ty",
+    "en": "Company name",
+    "zh": "公司名称",
+    "ja": "会社名"
+  },
+  {
+    "key": "settings.feat.analytics",
+    "category": "settings",
+    "vi": "Theo dõi analytics",
+    "en": "Analytics tracking",
+    "zh": "分析跟踪",
+    "ja": "アナリティクス追跡"
+  },
+  {
+    "key": "settings.feat.analyticsDesc",
+    "category": "settings",
+    "vi": "Bật theo dõi hành vi người dùng.",
+    "en": "Enable user behavior tracking.",
+    "zh": "启用用户行为跟踪。",
+    "ja": "ユーザー行動追跡を有効化。"
+  },
+  {
+    "key": "settings.feat.chat",
+    "category": "settings",
+    "vi": "Live chat",
+    "en": "Live chat",
+    "zh": "在线聊天",
+    "ja": "ライブチャット"
+  },
+  {
+    "key": "settings.feat.chatDesc",
+    "category": "settings",
+    "vi": "Tích hợp widget chat trực tuyến.",
+    "en": "Integrate live chat widget.",
+    "zh": "集成在线聊天小部件。",
+    "ja": "ライブチャットウィジェットを統合。"
+  },
+  {
+    "key": "settings.feat.multilang",
+    "category": "settings",
+    "vi": "Đa ngôn ngữ (VI/EN)",
+    "en": "Multi-language (VI/EN)",
+    "zh": "多语言 (VI/EN)",
+    "ja": "多言語 (VI/EN)"
+  },
+  {
+    "key": "settings.feat.multilangDesc",
+    "category": "settings",
+    "vi": "Bật chuyển đổi tiếng Việt và tiếng Anh.",
+    "en": "Enable Vietnamese and English toggle.",
+    "zh": "启用越南语和英语切换。",
+    "ja": "ベトナム語と英語の切替を有効化。"
+  },
+  {
+    "key": "settings.feat.recruitment",
+    "category": "settings",
+    "vi": "Trang tuyển dụng",
+    "en": "Recruitment page",
+    "zh": "招聘页面",
+    "ja": "採用ページ"
+  },
+  {
+    "key": "settings.feat.recruitmentDesc",
+    "category": "settings",
+    "vi": "Hiển thị các vị trí tuyển dụng công khai.",
+    "en": "Show public job positions.",
+    "zh": "显示公开招聘职位。",
+    "ja": "公開求人情報を表示。"
+  },
+  {
+    "key": "settings.map.loadError",
+    "category": "settings",
+    "vi": "Không tải được cấu hình bản đồ.",
+    "en": "Failed to load map setting.",
+    "zh": "无法加载地图设置。",
+    "ja": "地図設定を読み込めません。"
+  },
+  {
+    "key": "settings.map.preview",
+    "category": "settings",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "settings.map.previewEmpty",
+    "category": "settings",
+    "vi": "Chưa cấu hình URL bản đồ.",
+    "en": "No map URL configured yet.",
+    "zh": "尚未配置地图网址。",
+    "ja": "地図 URL がまだ設定されていません。"
+  },
+  {
+    "key": "settings.map.saveError",
+    "category": "settings",
+    "vi": "Không lưu được cấu hình bản đồ.",
+    "en": "Failed to save map setting.",
+    "zh": "保存地图设置失败。",
+    "ja": "地図設定の保存に失敗しました。"
+  },
+  {
+    "key": "settings.map.saved",
+    "category": "settings",
+    "vi": "Đã lưu cấu hình bản đồ.",
+    "en": "Map setting saved.",
+    "zh": "地图设置已保存。",
+    "ja": "地図設定を保存しました。"
   },
   {
     "key": "settings.map.tab",
@@ -448,92 +2520,220 @@
     "ja": "Google マップから埋め込み URL を貼り付けます（共有 → 地図を埋め込む → HTML をコピー → src の値）。公開のお問い合わせページに表示されます。"
   },
   {
-    "key": "settings.map.preview",
+    "key": "settings.phone",
     "category": "settings",
-    "vi": "Xem trước",
-    "en": "Preview",
-    "zh": "预览",
-    "ja": "プレビュー"
+    "vi": "Điện thoại",
+    "en": "Phone",
+    "zh": "电话",
+    "ja": "電話"
   },
   {
-    "key": "settings.map.previewEmpty",
+    "key": "settings.saved",
     "category": "settings",
-    "vi": "Chưa cấu hình URL bản đồ.",
-    "en": "No map URL configured yet.",
-    "zh": "尚未配置地图网址。",
-    "ja": "地図 URL がまだ設定されていません。"
+    "vi": "Đã lưu cài đặt",
+    "en": "Settings saved",
+    "zh": "设置已保存",
+    "ja": "設定を保存しました"
   },
   {
-    "key": "settings.map.saved",
+    "key": "settings.system",
     "category": "settings",
-    "vi": "Đã lưu cấu hình bản đồ.",
-    "en": "Map setting saved.",
-    "zh": "地图设置已保存。",
-    "ja": "地図設定を保存しました。"
+    "vi": "Tuỳ chọn hệ thống",
+    "en": "System options",
+    "zh": "系统选项",
+    "ja": "システムオプション"
   },
   {
-    "key": "settings.map.saveError",
+    "key": "settings.systemDesc",
     "category": "settings",
-    "vi": "Không lưu được cấu hình bản đồ.",
-    "en": "Failed to save map setting.",
-    "zh": "保存地图设置失败。",
-    "ja": "地図設定の保存に失敗しました。"
+    "vi": "Bật/tắt các tính năng trên website.",
+    "en": "Toggle features on the website.",
+    "zh": "启用/禁用网站功能。",
+    "ja": "ウェブサイトの機能を切り替え。"
   },
   {
-    "key": "settings.map.loadError",
+    "key": "settings.title",
     "category": "settings",
-    "vi": "Không tải được cấu hình bản đồ.",
-    "en": "Failed to load map setting.",
-    "zh": "无法加载地图设置。",
-    "ja": "地図設定を読み込めません。"
+    "vi": "Cài đặt",
+    "en": "Settings",
+    "zh": "设置",
+    "ja": "設定"
   },
   {
-    "key": "sys.queue.title",
+    "key": "sys.log.clear",
     "category": "sys",
-    "vi": "Hàng đợi email",
-    "en": "Message queue",
-    "zh": "邮件队列",
-    "ja": "メールキュー"
+    "vi": "Xoá tất cả",
+    "en": "Clear log",
+    "zh": "清除日志",
+    "ja": "ログをクリア"
   },
   {
-    "key": "sys.queue.subject",
+    "key": "sys.log.fullMessage",
     "category": "sys",
-    "vi": "Tiêu đề",
-    "en": "Subject",
-    "zh": "主题",
-    "ja": "件名"
+    "vi": "Nội dung đầy đủ",
+    "en": "Full message",
+    "zh": "完整消息",
+    "ja": "完全なメッセージ"
   },
   {
-    "key": "sys.queue.from",
+    "key": "sys.log.level",
     "category": "sys",
-    "vi": "Từ",
-    "en": "From",
-    "zh": "发件人",
-    "ja": "差出人"
+    "vi": "Mức độ",
+    "en": "Log level",
+    "zh": "级别",
+    "ja": "レベル"
   },
   {
-    "key": "sys.queue.to",
+    "key": "sys.log.message",
     "category": "sys",
-    "vi": "Đến",
-    "en": "To",
-    "zh": "收件人",
-    "ja": "宛先"
+    "vi": "Tin nhắn",
+    "en": "Message",
+    "zh": "消息",
+    "ja": "メッセージ"
   },
   {
-    "key": "sys.queue.fromAddr",
+    "key": "sys.log.pageUrl",
     "category": "sys",
-    "vi": "Địa chỉ gửi",
-    "en": "From address",
-    "zh": "发送地址",
-    "ja": "送信アドレス"
+    "vi": "URL trang",
+    "en": "Page URL",
+    "zh": "页面URL",
+    "ja": "ページURL"
   },
   {
-    "key": "sys.queue.toAddr",
+    "key": "sys.log.shortMessage",
     "category": "sys",
-    "vi": "Địa chỉ nhận",
-    "en": "To address",
-    "zh": "接收地址",
-    "ja": "受信アドレス"
+    "vi": "Nội dung ngắn",
+    "en": "Short message",
+    "zh": "简短消息",
+    "ja": "短いメッセージ"
+  },
+  {
+    "key": "sys.log.title",
+    "category": "sys",
+    "vi": "Log hệ thống",
+    "en": "System log",
+    "zh": "系统日志",
+    "ja": "システムログ"
+  },
+  {
+    "key": "sys.maint.backupNow",
+    "category": "sys",
+    "vi": "Sao lưu ngay",
+    "en": "Backup now",
+    "zh": "立即备份",
+    "ja": "今すぐバックアップ"
+  },
+  {
+    "key": "sys.maint.backupOk",
+    "category": "sys",
+    "vi": "Đã tạo bản sao lưu",
+    "en": "Backup created",
+    "zh": "备份已创建",
+    "ja": "バックアップを作成しました"
+  },
+  {
+    "key": "sys.maint.backups",
+    "category": "sys",
+    "vi": "Sao lưu CSDL",
+    "en": "Database backups",
+    "zh": "数据库备份",
+    "ja": "データベースバックアップ"
+  },
+  {
+    "key": "sys.maint.createdBefore",
+    "category": "sys",
+    "vi": "Tạo trước ngày",
+    "en": "Created before",
+    "zh": "创建于此日期之前",
+    "ja": "この日付より前に作成"
+  },
+  {
+    "key": "sys.maint.deleteCarts",
+    "category": "sys",
+    "vi": "Xoá giỏ hàng đã bỏ",
+    "en": "Deleting abandoned shopping carts",
+    "zh": "删除废弃购物车",
+    "ja": "放棄されたカートを削除"
+  },
+  {
+    "key": "sys.maint.deleteExports",
+    "category": "sys",
+    "vi": "Xoá file xuất cũ",
+    "en": "Deleting old exported files",
+    "zh": "删除旧导出文件",
+    "ja": "古いエクスポートファイルを削除"
+  },
+  {
+    "key": "sys.maint.deleteGuests",
+    "category": "sys",
+    "vi": "Xoá khách vãng lai",
+    "en": "Deleting guest customers",
+    "zh": "删除访客用户",
+    "ja": "ゲストユーザーを削除"
+  },
+  {
+    "key": "sys.maint.download",
+    "category": "sys",
+    "vi": "Tải về",
+    "en": "Download",
+    "zh": "下载",
+    "ja": "ダウンロード"
+  },
+  {
+    "key": "sys.maint.endDate",
+    "category": "sys",
+    "vi": "Đến ngày",
+    "en": "End date",
+    "zh": "结束日期",
+    "ja": "終了日"
+  },
+  {
+    "key": "sys.maint.fileName",
+    "category": "sys",
+    "vi": "Tên file",
+    "en": "File name",
+    "zh": "文件名",
+    "ja": "ファイル名"
+  },
+  {
+    "key": "sys.maint.fileSize",
+    "category": "sys",
+    "vi": "Kích thước",
+    "en": "File size",
+    "zh": "文件大小",
+    "ja": "ファイルサイズ"
+  },
+  {
+    "key": "sys.maint.onlyEmptyCart",
+    "category": "sys",
+    "vi": "Chỉ khi không có giỏ hàng",
+    "en": "Only without shopping cart",
+    "zh": "仅无购物车",
+    "ja": "カートがない場合のみ"
+  },
+  {
+    "key": "sys.maint.restore",
+    "category": "sys",
+    "vi": "Khôi phục",
+    "en": "Restore",
+    "zh": "恢复",
+    "ja": "復元"
+  },
+  {
+    "key": "sys.maint.startDate",
+    "category": "sys",
+    "vi": "Từ ngày",
+    "en": "Start date",
+    "zh": "开始日期",
+    "ja": "開始日"
+  },
+  {
+    "key": "sys.maint.title",
+    "category": "sys",
+    "vi": "Bảo trì",
+    "en": "Maintenance",
+    "zh": "维护",
+    "ja": "メンテナンス"
   },
   {
     "key": "sys.queue.createdOn",
@@ -544,28 +2744,12 @@
     "ja": "作成日"
   },
   {
-    "key": "sys.queue.sentOn",
+    "key": "sys.queue.deleteAll",
     "category": "sys",
-    "vi": "Ngày gửi",
-    "en": "Sent on",
-    "zh": "发送日期",
-    "ja": "送信日"
-  },
-  {
-    "key": "sys.queue.priority",
-    "category": "sys",
-    "vi": "Mức ưu tiên",
-    "en": "Priority",
-    "zh": "优先级",
-    "ja": "優先度"
-  },
-  {
-    "key": "sys.queue.onlyNotSent",
-    "category": "sys",
-    "vi": "Chỉ email chưa gửi",
-    "en": "Load not sent emails only",
-    "zh": "仅未发送邮件",
-    "ja": "未送信メールのみ"
+    "vi": "Xoá tất cả",
+    "en": "Delete all",
+    "zh": "删除全部",
+    "ja": "すべて削除"
   },
   {
     "key": "sys.queue.deleteSelected",
@@ -576,124 +2760,84 @@
     "ja": "選択項目を削除"
   },
   {
-    "key": "sys.queue.deleteAll",
+    "key": "sys.queue.from",
     "category": "sys",
-    "vi": "Xoá tất cả",
-    "en": "Delete all",
-    "zh": "删除全部",
-    "ja": "すべて削除"
+    "vi": "Từ",
+    "en": "From",
+    "zh": "发件人",
+    "ja": "差出人"
   },
   {
-    "key": "sys.tasks.title",
+    "key": "sys.queue.fromAddr",
     "category": "sys",
-    "vi": "Tác vụ định kỳ",
-    "en": "Schedule tasks",
-    "zh": "定时任务",
-    "ja": "定期タスク"
+    "vi": "Địa chỉ gửi",
+    "en": "From address",
+    "zh": "发送地址",
+    "ja": "送信アドレス"
   },
   {
-    "key": "sys.tasks.note1",
+    "key": "sys.queue.onlyNotSent",
     "category": "sys",
-    "vi": "Khoảng thời gian tác vụ không nên vượt quá 24 ngày.",
-    "en": "Task period should not exceed 24 days.",
-    "zh": "任务周期不应超过24天。",
-    "ja": "タスクの間隔は24日を超えないでください。"
+    "vi": "Chỉ email chưa gửi",
+    "en": "Load not sent emails only",
+    "zh": "仅未发送邮件",
+    "ja": "未送信メールのみ"
   },
   {
-    "key": "sys.tasks.note2",
+    "key": "sys.queue.priority",
     "category": "sys",
-    "vi": "Đừng quên khởi động lại ứng dụng sau khi sửa tác vụ.",
-    "en": "Do not forget to restart the application once a task has been modified.",
-    "zh": "修改任务后请重启应用。",
-    "ja": "タスク変更後はアプリを再起動してください。"
+    "vi": "Mức ưu tiên",
+    "en": "Priority",
+    "zh": "优先级",
+    "ja": "優先度"
   },
   {
-    "key": "sys.tasks.name",
+    "key": "sys.queue.sentOn",
     "category": "sys",
-    "vi": "Tên",
-    "en": "Name",
-    "zh": "名称",
-    "ja": "名前"
+    "vi": "Ngày gửi",
+    "en": "Sent on",
+    "zh": "发送日期",
+    "ja": "送信日"
   },
   {
-    "key": "sys.tasks.seconds",
+    "key": "sys.queue.subject",
     "category": "sys",
-    "vi": "Giây (chu kỳ chạy)",
-    "en": "Seconds (run period)",
-    "zh": "秒 (运行周期)",
-    "ja": "秒 (実行間隔)"
+    "vi": "Tiêu đề",
+    "en": "Subject",
+    "zh": "主题",
+    "ja": "件名"
   },
   {
-    "key": "sys.tasks.enabled",
+    "key": "sys.queue.title",
     "category": "sys",
-    "vi": "Bật",
-    "en": "Enabled",
-    "zh": "启用",
-    "ja": "有効"
+    "vi": "Hàng đợi email",
+    "en": "Message queue",
+    "zh": "邮件队列",
+    "ja": "メールキュー"
   },
   {
-    "key": "sys.tasks.stopOnError",
+    "key": "sys.queue.to",
     "category": "sys",
-    "vi": "Dừng khi lỗi",
-    "en": "Stop on error",
-    "zh": "出错时停止",
-    "ja": "エラー時に停止"
+    "vi": "Đến",
+    "en": "To",
+    "zh": "收件人",
+    "ja": "宛先"
   },
   {
-    "key": "sys.tasks.lastStart",
+    "key": "sys.queue.toAddr",
     "category": "sys",
-    "vi": "Bắt đầu gần nhất",
-    "en": "Last start date",
-    "zh": "最近开始",
-    "ja": "最終開始日"
+    "vi": "Địa chỉ nhận",
+    "en": "To address",
+    "zh": "接收地址",
+    "ja": "受信アドレス"
   },
   {
-    "key": "sys.tasks.lastEnd",
+    "key": "sys.se.editPage",
     "category": "sys",
-    "vi": "Kết thúc gần nhất",
-    "en": "Last end date",
-    "zh": "最近结束",
-    "ja": "最終終了日"
-  },
-  {
-    "key": "sys.tasks.lastSuccess",
-    "category": "sys",
-    "vi": "Thành công gần nhất",
-    "en": "Last success date",
-    "zh": "最近成功",
-    "ja": "最終成功日"
-  },
-  {
-    "key": "sys.tasks.runNow",
-    "category": "sys",
-    "vi": "Chạy ngay",
-    "en": "Run now",
-    "zh": "立即运行",
-    "ja": "今すぐ実行"
-  },
-  {
-    "key": "sys.tasks.runOk",
-    "category": "sys",
-    "vi": "Đã chạy tác vụ",
-    "en": "Task executed",
-    "zh": "任务已执行",
-    "ja": "タスクを実行しました"
-  },
-  {
-    "key": "sys.se.title",
-    "category": "sys",
-    "vi": "Tên trang thân thiện SEO",
-    "en": "Search engine friendly page names",
-    "zh": "SEO友好页面名",
-    "ja": "SEOフレンドリーページ名"
-  },
-  {
-    "key": "sys.se.searchPh",
-    "category": "sys",
-    "vi": "Tìm theo tên...",
-    "en": "Search by name...",
-    "zh": "按名称搜索...",
-    "ja": "名前で検索..."
+    "vi": "Sửa trang",
+    "en": "Edit page",
+    "zh": "编辑页面",
+    "ja": "ページを編集"
   },
   {
     "key": "sys.se.entityId",
@@ -728,11 +2872,155 @@
     "ja": "言語"
   },
   {
-    "key": "sys.se.editPage",
+    "key": "sys.se.searchPh",
     "category": "sys",
-    "vi": "Sửa trang",
-    "en": "Edit page",
-    "zh": "编辑页面",
-    "ja": "ページを編集"
+    "vi": "Tìm theo tên...",
+    "en": "Search by name...",
+    "zh": "按名称搜索...",
+    "ja": "名前で検索..."
+  },
+  {
+    "key": "sys.se.title",
+    "category": "sys",
+    "vi": "Tên trang thân thiện SEO",
+    "en": "Search engine friendly page names",
+    "zh": "SEO友好页面名",
+    "ja": "SEOフレンドリーページ名"
+  },
+  {
+    "key": "sys.tasks.enabled",
+    "category": "sys",
+    "vi": "Bật",
+    "en": "Enabled",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "sys.tasks.lastEnd",
+    "category": "sys",
+    "vi": "Kết thúc gần nhất",
+    "en": "Last end date",
+    "zh": "最近结束",
+    "ja": "最終終了日"
+  },
+  {
+    "key": "sys.tasks.lastStart",
+    "category": "sys",
+    "vi": "Bắt đầu gần nhất",
+    "en": "Last start date",
+    "zh": "最近开始",
+    "ja": "最終開始日"
+  },
+  {
+    "key": "sys.tasks.lastSuccess",
+    "category": "sys",
+    "vi": "Thành công gần nhất",
+    "en": "Last success date",
+    "zh": "最近成功",
+    "ja": "最終成功日"
+  },
+  {
+    "key": "sys.tasks.name",
+    "category": "sys",
+    "vi": "Tên",
+    "en": "Name",
+    "zh": "名称",
+    "ja": "名前"
+  },
+  {
+    "key": "sys.tasks.note1",
+    "category": "sys",
+    "vi": "Khoảng thời gian tác vụ không nên vượt quá 24 ngày.",
+    "en": "Task period should not exceed 24 days.",
+    "zh": "任务周期不应超过24天。",
+    "ja": "タスクの間隔は24日を超えないでください。"
+  },
+  {
+    "key": "sys.tasks.note2",
+    "category": "sys",
+    "vi": "Đừng quên khởi động lại ứng dụng sau khi sửa tác vụ.",
+    "en": "Do not forget to restart the application once a task has been modified.",
+    "zh": "修改任务后请重启应用。",
+    "ja": "タスク変更後はアプリを再起動してください。"
+  },
+  {
+    "key": "sys.tasks.runNow",
+    "category": "sys",
+    "vi": "Chạy ngay",
+    "en": "Run now",
+    "zh": "立即运行",
+    "ja": "今すぐ実行"
+  },
+  {
+    "key": "sys.tasks.runOk",
+    "category": "sys",
+    "vi": "Đã chạy tác vụ",
+    "en": "Task executed",
+    "zh": "任务已执行",
+    "ja": "タスクを実行しました"
+  },
+  {
+    "key": "sys.tasks.seconds",
+    "category": "sys",
+    "vi": "Giây (chu kỳ chạy)",
+    "en": "Seconds (run period)",
+    "zh": "秒 (运行周期)",
+    "ja": "秒 (実行間隔)"
+  },
+  {
+    "key": "sys.tasks.stopOnError",
+    "category": "sys",
+    "vi": "Dừng khi lỗi",
+    "en": "Stop on error",
+    "zh": "出错时停止",
+    "ja": "エラー時に停止"
+  },
+  {
+    "key": "sys.tasks.title",
+    "category": "sys",
+    "vi": "Tác vụ định kỳ",
+    "en": "Schedule tasks",
+    "zh": "定时任务",
+    "ja": "定期タスク"
+  },
+  {
+    "key": "sys.warn.title",
+    "category": "sys",
+    "vi": "Cảnh báo hệ thống",
+    "en": "Warnings",
+    "zh": "系统警告",
+    "ja": "システム警告"
+  },
+  {
+    "key": "adminTranslations.hint.sections",
+    "category": "adminTranslations",
+    "vi": "Định dạng: dòng đầu \"## Tiêu đề mục\", mỗi gạch đầu dòng một dòng bên dưới. Cách dòng trống giữa các mục.",
+    "en": "Format: \"## Section heading\" on first line, one bullet per line below. Blank line between sections.",
+    "zh": "格式：第一行为\"## 小节标题\"，下面每行一个要点。各小节之间用空行分隔。",
+    "ja": "形式：1行目に「## セクション見出し」、以降は1行に1項目。セクション間は空行で区切ってください。"
+  },
+  {
+    "key": "adminTranslations.hint.highlights",
+    "category": "adminTranslations",
+    "vi": "Mỗi điểm nổi bật một dòng.",
+    "en": "One highlight per line.",
+    "zh": "每行一个亮点。",
+    "ja": "1行につき1つのハイライトを入力してください。"
+  },
+  {
+    "key": "adminTranslations.hint.introBlocks",
+    "category": "adminTranslations",
+    "vi": "Ngăn cách các khối bằng dấu \"---\" trên một dòng riêng. Có thể xuống dòng và để dòng trống tự do trong mỗi khối.",
+    "en": "Separate blocks with \"---\" on its own line. You can use Enter and blank lines freely within each block.",
+    "zh": "各区块之间用单独一行的\"---\"分隔。区块内部可自由换行和留空行。",
+    "ja": "各ブロックは単独行の「---」で区切ってください。ブロック内では改行や空行を自由に使えます。"
+  },
+  {
+    "key": "adminTranslations.hint.content",
+    "category": "adminTranslations",
+    "vi": "Các đoạn văn cách nhau bằng dòng trống. Ảnh hiển thị dạng [IMAGE: /path.jpg] — chỉ dịch các đoạn văn bản; giữ nguyên các dòng ảnh/video.",
+    "en": "Paragraphs separated by blank lines. Images are shown as [IMAGE: /path.jpg] — translate only the text paragraphs; keep image/video lines unchanged.",
+    "zh": "段落之间用空行分隔。图片显示为 [IMAGE: /path.jpg] —— 只翻译文字段落，图片/视频行请保持不变。",
+    "ja": "段落は空行で区切ります。画像は [IMAGE: /path.jpg] の形式で表示されます — テキスト段落のみ翻訳し、画像/動画の行はそのままにしてください。"
   }
 ]

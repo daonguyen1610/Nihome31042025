@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -8,7 +10,6 @@ using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 using System.Text.Json;
 using Xunit;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace nihomebackend.tests.Controllers;
 
@@ -20,7 +21,8 @@ public class ServicesControllerTests : IDisposable
     public ServicesControllerTests()
     {
         _db = DbContextFactory.Create();
-        var service = new ServiceItemService(_db, NullLogger<ServiceItemService>.Instance);
+        var translationSvc = new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions()));
+        var service = new ServiceItemService(_db, NullLogger<ServiceItemService>.Instance, translationSvc);
         _sut = new ServicesController(service);
     }
 

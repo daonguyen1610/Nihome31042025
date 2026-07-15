@@ -26,33 +26,39 @@ import {
 } from "@/components/ui/select";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
+import { resolveCategoryLabel } from "@/lib/category";
 
 const AdminActivities = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState("all");
+  const [catId, setCatId] = useState<number | "all">("all");
   const { data: items, loading, error, refetch } = useActivities();
   const { data: categoryMaster } = useActivityCategories(true);
 
   const list = useMemo(() => items ?? [], [items]);
-  const categories = useMemo(() => {
-    const fromMaster = (categoryMaster ?? []).map((c) => c.name);
-    const fromPosts = list.map((a) => a.category).filter(Boolean);
-    const unique = Array.from(new Set([...fromMaster, ...fromPosts])).sort((a, b) =>
-      a.localeCompare(b, "vi"),
-    );
-    return ["all", ...unique];
-  }, [categoryMaster, list]);
+  const categoriesById = useMemo(
+    () => new Map((categoryMaster ?? []).map((c) => [c.id, c])),
+    [categoryMaster],
+  );
+  const filterOptions = useMemo(() => {
+    const ids = new Set<number>();
+    (categoryMaster ?? []).forEach((c) => ids.add(c.id));
+    list.forEach((a) => { if (a.categoryId != null) ids.add(a.categoryId); });
+    return Array.from(ids)
+      .map((id) => ({ id, label: resolveCategoryLabel(id, undefined, categoriesById, lang) }))
+      .filter((opt) => opt.label)
+      .sort((a, b) => a.label.localeCompare(b.label, lang));
+  }, [categoryMaster, list, categoriesById, lang]);
   const filtered = useMemo(
     () =>
       list.filter((a) => {
-        const matchCat = cat === "all" || a.category === cat;
+        const matchCat = catId === "all" || a.categoryId === catId;
         if (!matchCat) return false;
         if (!q.trim()) return true;
         return matchesSearch(a.title, q) || matchesSearch(a.category, q) || matchesSearch(a.slug, q);
       }),
-    [list, cat, q],
+    [list, catId, q],
   );
 
   const handleDelete = async (a: ActivityResponse) => {
@@ -85,7 +91,7 @@ const AdminActivities = () => {
   });
   useEffect(() => {
     clearSelection();
-  }, [cat, q, clearSelection]);
+  }, [catId, q, clearSelection]);
 
   const handleExport = () => {
     downloadCsv({
@@ -94,7 +100,7 @@ const AdminActivities = () => {
         { header: "ID", value: "id" },
         { header: "Slug", value: "slug" },
         { header: t("activities.col.post"), value: "title" },
-        { header: t("activities.col.category"), value: "category" },
+        { header: t("activities.col.category"), value: (row) => resolveCategoryLabel(row.categoryId, row.category, categoriesById, lang) },
         { header: t("activities.col.author"), value: (row) => row.author ?? "" },
         { header: t("common.date"), value: "date" },
         { header: "Excerpt", value: "excerpt" },
@@ -147,14 +153,18 @@ const AdminActivities = () => {
           </div>
           <div className="w-full sm:w-[200px]">
             <Label className="text-xs" htmlFor="activities-category">{t("activities.col.category")}</Label>
-            <Select value={cat} onValueChange={setCat}>
+            <Select
+              value={catId === "all" ? "all" : String(catId)}
+              onValueChange={(v) => setCatId(v === "all" ? "all" : Number(v))}
+            >
               <SelectTrigger id="activities-category" className="h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c === "all" ? t("activities.allCategories") : c}
+                <SelectItem value="all">{t("activities.allCategories")}</SelectItem>
+                {filterOptions.map((opt) => (
+                  <SelectItem key={opt.id} value={String(opt.id)}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -223,13 +233,16 @@ const AdminActivities = () => {
                       </Link>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3">
-                      {a.category ? (
-                        <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
-                          {a.category}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
+                      {(() => {
+                        const label = resolveCategoryLabel(a.categoryId, a.category, categoriesById, lang);
+                        return label ? (
+                          <Badge variant="outline" className={cn("whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700")}>
+                            {label}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        );
+                      })()}
                     </td>
                     <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.author ?? "—"}</td>
                     <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{a.date}</td>

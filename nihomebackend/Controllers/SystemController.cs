@@ -43,6 +43,7 @@ public class SystemController(
     public async Task<IActionResult> UploadImage(
         [FromForm] IFormFile? file,
         [FromForm] string? previousImageUrl,
+        [FromForm] string? folder,
         CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
@@ -63,7 +64,8 @@ public class SystemController(
 
         try
         {
-            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload");
+            var safeFolder = SanitizeFolder(folder);
+            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload", safeFolder);
             Directory.CreateDirectory(uploadDir);
 
             var fileName = $"{Guid.NewGuid():N}{extension}";
@@ -74,10 +76,11 @@ public class SystemController(
 
             DeleteManagedUpload(previousImageUrl, fileName);
 
-            return Ok(new
-            {
-                imageUrl = $"/images/upload/{fileName}"
-            });
+            var urlPath = string.IsNullOrEmpty(safeFolder)
+                ? $"/images/upload/{fileName}"
+                : $"/images/upload/{safeFolder}/{fileName}";
+
+            return Ok(new { imageUrl = urlPath });
         }
         catch (Exception ex)
         {
@@ -91,6 +94,7 @@ public class SystemController(
     public async Task<IActionResult> UploadVideo(
         [FromForm] IFormFile? file,
         [FromForm] string? previousImageUrl,
+        [FromForm] string? folder,
         CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
@@ -111,7 +115,8 @@ public class SystemController(
 
         try
         {
-            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload");
+            var safeFolder = SanitizeFolder(folder);
+            var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload", safeFolder);
             Directory.CreateDirectory(uploadDir);
 
             var fileName = $"{Guid.NewGuid():N}{extension}";
@@ -122,10 +127,11 @@ public class SystemController(
 
             DeleteManagedUpload(previousImageUrl, fileName);
 
-            return Ok(new
-            {
-                mediaUrl = $"/images/upload/{fileName}"
-            });
+            var urlPath = string.IsNullOrEmpty(safeFolder)
+                ? $"/images/upload/{fileName}"
+                : $"/images/upload/{safeFolder}/{fileName}";
+
+            return Ok(new { mediaUrl = urlPath });
         }
         catch (Exception ex)
         {
@@ -186,7 +192,9 @@ public class SystemController(
             return;
         }
 
-        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", "images", "upload", previousFileName);
+        // Use the full URL path to support subfolder structure (e.g. /images/upload/projects/slug/uuid.jpg)
+        var relativePath = imageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", relativePath);
         if (System.IO.File.Exists(fullPath))
         {
             System.IO.File.Delete(fullPath);
@@ -212,5 +220,21 @@ public class SystemController(
         }
 
         return imageUrl;
+    }
+
+    // Allow only safe subfolder names: letters, digits, hyphens, forward slashes.
+    // Prevents path traversal attacks (blocks "..", absolute paths, etc.).
+    private static string SanitizeFolder(string? folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder))
+            return string.Empty;
+
+        // Strip any leading/trailing slashes and collapse repeated slashes
+        var parts = folder
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(p => p != ".." && p != "." && System.Text.RegularExpressions.Regex.IsMatch(p, @"^[\w\-]+$"))
+            .ToArray();
+
+        return string.Join("/", parts);
     }
 }

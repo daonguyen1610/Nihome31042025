@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify } from "@/services/adminApi";
 import type { UpsertProjectRequest } from "@/services/adminApi";
 import { useProject, useProjectCategories } from "@/hooks/useContentApi";
+import { localizedName } from "@/lib/category";
 import { PageLoading, PageError } from "@/components/PageState";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
@@ -28,6 +29,7 @@ interface FormData {
   status: string;
   year: string;
   category: string;
+  categoryId: number | null;
   description: string;
   challenges: string[];
   solutions: string[];
@@ -48,6 +50,7 @@ const empty: FormData = {
   status: "ongoing",
   year: "",
   category: "",
+  categoryId: null,
   description: "",
   challenges: [],
   solutions: [],
@@ -58,7 +61,7 @@ const empty: FormData = {
 const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { data: existing, loading, error, refetch } = useProject(mode === "edit" ? (slug ?? "") : "");
   const { data: categories } = useProjectCategories(true);
@@ -69,10 +72,11 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [pendingImagePreview, setPendingImagePreview] = useState<string | null>(null);
 
-  const categoryOptions = useMemo(
-    () => (categories ?? []).map((c) => c.name).sort((a, b) => a.localeCompare(b, "vi")),
-    [categories],
-  );
+  const categoryOptions = useMemo(() => {
+    return (categories ?? [])
+      .map((item) => ({ id: item.id, name: item.name, label: localizedName(item, lang) }))
+      .sort((a, b) => a.label.localeCompare(b.label, lang));
+  }, [categories, lang]);
 
   if (mode === "edit" && existing && !initialized) {
     setData({
@@ -88,6 +92,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
       status: existing.status,
       year: existing.year ?? "",
       category: existing.category ?? "",
+      categoryId: existing.categoryId ?? null,
       description: existing.description ?? "",
       challenges: existing.challenges ?? [],
       solutions: existing.solutions ?? [],
@@ -122,9 +127,11 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
     try {
       if (pendingImageFile) {
         setUploadingImage(true);
+        const folder = `projects/${data.slug || slugify(data.name)}`;
         const upload = await adminApi.uploadImage(
           pendingImageFile,
           mode === "edit" ? data.imageUrl : undefined,
+          folder,
         );
         imageUrl = upload.data.imageUrl;
       }
@@ -141,10 +148,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
         status: data.status,
         year: data.year || undefined,
         category: data.category || undefined,
-        categoryId:
-          (categories ?? []).find(
-            (c) => c.name.toLowerCase() === (data.category || "").trim().toLowerCase(),
-          )?.id ?? null,
+        categoryId: data.categoryId,
         description: data.description || undefined,
         challenges: data.challenges.length ? data.challenges : undefined,
         solutions: data.solutions.length ? data.solutions : undefined,
@@ -244,15 +248,21 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               <Field label={t("proj.field.category")}>
                 <select
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={data.category}
-                  onChange={(e) => update("category", e.target.value)}
+                  value={data.categoryId != null ? String(data.categoryId) : ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const found = categoryOptions.find((opt) => String(opt.id) === v);
+                    setData((d) => ({ ...d, categoryId: found?.id ?? null, category: found?.name ?? d.category }));
+                  }}
                 >
                   <option value="">-- Chọn danh mục --</option>
                   {[
                     ...categoryOptions,
-                    ...(data.category && !categoryOptions.includes(data.category) ? [data.category] : []),
+                    ...(data.categoryId == null && data.category && !categoryOptions.some((opt) => opt.name === data.category)
+                      ? [{ id: -1, name: data.category, label: data.category }]
+                      : []),
                   ].map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
                   ))}
                 </select>
               </Field>
@@ -296,6 +306,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <ContentBlockEditor
               value={data.content}
               onChange={(items) => update("content", items)}
+              folder={`projects/${data.slug || slugify(data.name)}`}
             />
           </div>
 
@@ -352,7 +363,7 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <p className="mb-4 text-xs text-muted-foreground">
               {t("media.gallery.descProject")}
             </p>
-            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
+            <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} folder={`projects/${data.slug || slugify(data.name)}`} />
           </div>
 
           <Button

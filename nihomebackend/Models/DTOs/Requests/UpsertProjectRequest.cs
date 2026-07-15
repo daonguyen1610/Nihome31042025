@@ -21,5 +21,6 @@ public class UpsertProjectRequest
     public string[]? Challenges { get; set; }
     public string[]? Solutions { get; set; }
     public JsonElement? Highlights { get; set; }
+    [Required] public object[] Content { get; set; } = [];
     public int SortOrder { get; set; }
 }

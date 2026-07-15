@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
+import { resolveCategoryLabel } from "@/lib/category";
 
 const PROJECT_STATUS_STYLES = {
   ongoing: "border-amber-200 bg-amber-50 text-amber-700",
@@ -38,26 +39,32 @@ const PROJECT_STATUS_DOT = {
 } as const;
 
 const AdminProjects = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const [tab, setTab] = useState<"all" | "ongoing" | "completed">("all");
-  const [cat, setCat] = useState("all");
+  const [catId, setCatId] = useState<number | "all">("all");
   const [q, setQ] = useState("");
   const { data: items, loading, error, refetch } = useProjects();
   const { data: categoryMaster } = useProjectCategories(true);
 
   const list = useMemo(() => items ?? [], [items]);
+  const categoriesById = useMemo(
+    () => new Map((categoryMaster ?? []).map((c) => [c.id, c])),
+    [categoryMaster],
+  );
   const categoryOptions = useMemo(() => {
-    const fromMaster = (categoryMaster ?? []).map((c) => c.name);
-    const fromProjects = list.map((p) => p.category ?? "").filter(Boolean);
-    return Array.from(new Set([...fromMaster, ...fromProjects])).sort((a, b) =>
-      a.localeCompare(b, "vi"),
-    );
-  }, [categoryMaster, list]);
+    const ids = new Set<number>();
+    (categoryMaster ?? []).forEach((c) => ids.add(c.id));
+    list.forEach((p) => { if (p.categoryId != null) ids.add(p.categoryId); });
+    return Array.from(ids)
+      .map((id) => ({ id, label: resolveCategoryLabel(id, undefined, categoriesById, lang) }))
+      .filter((opt) => opt.label)
+      .sort((a, b) => a.label.localeCompare(b.label, lang));
+  }, [categoryMaster, list, categoriesById, lang]);
   const filtered = useMemo(() => {
     return list.filter((p) => {
       if (tab !== "all" && p.status !== tab) return false;
-      if (cat !== "all" && (p.category ?? "") !== cat) return false;
+      if (catId !== "all" && p.categoryId !== catId) return false;
       if (!q.trim()) return true;
       return (
         matchesSearch(p.name, q) ||
@@ -67,7 +74,7 @@ const AdminProjects = () => {
         matchesSearch(p.category, q)
       );
     });
-  }, [list, tab, cat, q]);
+  }, [list, tab, catId, q]);
 
   const handleDelete = async (p: ProjectResponse) => {
     if (!confirm(t("form.confirmDelete"))) return;
@@ -99,7 +106,7 @@ const AdminProjects = () => {
   });
   useEffect(() => {
     clearSelection();
-  }, [tab, cat, q, clearSelection]);
+  }, [tab, catId, q, clearSelection]);
 
   const handleExport = () => {
     downloadCsv({
@@ -117,7 +124,7 @@ const AdminProjects = () => {
           value: (row) => (row.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")),
         },
         { header: "Year", value: (row) => row.year ?? "" },
-        { header: "Category", value: (row) => row.category ?? "" },
+        { header: "Category", value: (row) => resolveCategoryLabel(row.categoryId, row.category, categoriesById, lang) },
         { header: "Description", value: (row) => row.description ?? "" },
         { header: "Challenges", value: (row) => row.challenges ?? [] },
         { header: "Solutions", value: (row) => row.solutions ?? [] },
@@ -169,14 +176,17 @@ const AdminProjects = () => {
             </div>
             <div className="w-full sm:w-[220px]">
               <Label className="text-xs" htmlFor="projects-category">{t("activities.col.category")}</Label>
-              <Select value={cat} onValueChange={setCat}>
+              <Select
+                value={catId === "all" ? "all" : String(catId)}
+                onValueChange={(v) => setCatId(v === "all" ? "all" : Number(v))}
+              >
                 <SelectTrigger id="projects-category" className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("common.all")}</SelectItem>
-                  {categoryOptions.map((option) => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  {categoryOptions.map((opt) => (
+                    <SelectItem key={opt.id} value={String(opt.id)}>{opt.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -267,11 +277,14 @@ const AdminProjects = () => {
                   </Badge>
                 </Link>
                 <div className="p-4">
-                  {p.category && (
-                    <p className="text-[10px] uppercase tracking-wide font-medium mb-1 text-primary">
-                      {p.category}
-                    </p>
-                  )}
+                  {(() => {
+                    const label = resolveCategoryLabel(p.categoryId, p.category, categoriesById, lang);
+                    return label ? (
+                      <p className="text-[10px] uppercase tracking-wide font-medium mb-1 text-primary">
+                        {label}
+                      </p>
+                    ) : null;
+                  })()}
                   <h3 className="text-base font-semibold mb-2 line-clamp-1">{p.name}</h3>
                   <div className="space-y-1 text-xs mb-3 text-muted-foreground">
                     <p className="flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {p.location}</p>

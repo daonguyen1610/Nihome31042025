@@ -64,62 +64,6 @@
     "ja": "削除"
   },
   {
-    "key": "common.selectAll",
-    "category": "common",
-    "vi": "Chọn tất cả",
-    "en": "Select all",
-    "zh": "全选",
-    "ja": "すべて選択"
-  },
-  {
-    "key": "common.clearSelection",
-    "category": "common",
-    "vi": "Bỏ chọn",
-    "en": "Clear selection",
-    "zh": "取消选择",
-    "ja": "選択解除"
-  },
-  {
-    "key": "common.selectedCount",
-    "category": "common",
-    "vi": "Đã chọn {count}",
-    "en": "{count} selected",
-    "zh": "已选 {count}",
-    "ja": "{count} 件選択中"
-  },
-  {
-    "key": "common.deleteSelected",
-    "category": "common",
-    "vi": "Xoá đã chọn",
-    "en": "Delete selected",
-    "zh": "删除所选",
-    "ja": "選択を削除"
-  },
-  {
-    "key": "common.confirmDeleteMany",
-    "category": "common",
-    "vi": "Bạn có chắc muốn xoá {count} bản ghi đã chọn? Hành động này không thể hoàn tác.",
-    "en": "Delete {count} selected records? This action cannot be undone.",
-    "zh": "确认删除已选 {count} 条记录？此操作无法撤销。",
-    "ja": "選択した {count} 件を削除しますか？この操作は取り消せません。"
-  },
-  {
-    "key": "common.bulkDeleteSuccess",
-    "category": "common",
-    "vi": "Đã xoá {count} bản ghi",
-    "en": "Deleted {count} records",
-    "zh": "已删除 {count} 条记录",
-    "ja": "{count} 件を削除しました"
-  },
-  {
-    "key": "common.bulkDeletePartial",
-    "category": "common",
-    "vi": "Đã xoá {success} bản ghi · {failed} thất bại",
-    "en": "Deleted {success} · {failed} failed",
-    "zh": "已删除 {success} 条 · {failed} 条失败",
-    "ja": "{success} 件削除 · {failed} 件失敗"
-  },
-  {
     "key": "common.view",
     "category": "common",
     "vi": "Xem",
@@ -278,102 +222,6 @@
     "en": "Rows per page",
     "zh": "每页行数",
     "ja": "1ページあたりの行数"
-  },
-  {
-    "key": "site.nav.home",
-    "category": "site",
-    "vi": "Trang chủ",
-    "en": "Home",
-    "zh": "首页",
-    "ja": "ホーム"
-  },
-  {
-    "key": "site.nav.profile",
-    "category": "site",
-    "vi": "Giới thiệu",
-    "en": "About",
-    "zh": "关于我们",
-    "ja": "会社概要"
-  },
-  {
-    "key": "site.nav.services",
-    "category": "site",
-    "vi": "Dịch vụ",
-    "en": "Services",
-    "zh": "服务",
-    "ja": "サービス"
-  },
-  {
-    "key": "site.nav.projects",
-    "category": "site",
-    "vi": "Dự án",
-    "en": "Projects",
-    "zh": "项目",
-    "ja": "プロジェクト"
-  },
-  {
-    "key": "site.nav.news",
-    "category": "site",
-    "vi": "Tin tức",
-    "en": "News",
-    "zh": "新闻",
-    "ja": "ニュース"
-  },
-  {
-    "key": "site.nav.activities",
-    "category": "site",
-    "vi": "Hoạt động",
-    "en": "Activities",
-    "zh": "活动",
-    "ja": "活動"
-  },
-  {
-    "key": "site.nav.clients",
-    "category": "site",
-    "vi": "Khách hàng",
-    "en": "Clients",
-    "zh": "客户",
-    "ja": "クライアント"
-  },
-  {
-    "key": "site.nav.recruitment",
-    "category": "site",
-    "vi": "Tuyển dụng",
-    "en": "Careers",
-    "zh": "招聘",
-    "ja": "採用情報"
-  },
-  {
-    "key": "site.nav.contact",
-    "category": "site",
-    "vi": "Liên hệ",
-    "en": "Contact",
-    "zh": "联系",
-    "ja": "お問い合わせ"
-  },
-  {
-    "key": "site.nav.search",
-    "category": "site",
-    "vi": "Tìm kiếm",
-    "en": "Search",
-    "zh": "搜索",
-    "ja": "検索"
-  },
-  {
-    "key": "site.nav.login",
-    "category": "site",
-    "vi": "Đăng nhập",
-    "en": "Login",
-    "zh": "登录",
-    "ja": "ログイン"
-  },
-  {
-    "key": "site.nav.menu",
-    "category": "site",
-    "vi": "Menu",
-    "en": "Menu",
-    "zh": "菜单",
-    "ja": "メニュー"
   },
   {
     "key": "nf.title",
@@ -718,5 +566,453 @@
     "en": "Close",
     "zh": "关闭",
     "ja": "閉じる"
+  },
+  {
+    "key": "common.change",
+    "category": "common",
+    "vi": "Thay đổi",
+    "en": "Change",
+    "zh": "更改",
+    "ja": "変更"
+  },
+  {
+    "key": "common.noData",
+    "category": "common",
+    "vi": "Chưa có dữ liệu",
+    "en": "No data yet",
+    "zh": "暂无数据",
+    "ja": "データなし"
+  },
+  {
+    "key": "form.selectCategory",
+    "category": "form",
+    "vi": "Chọn danh mục",
+    "en": "Select category",
+    "zh": "选择分类",
+    "ja": "カテゴリを選択"
+  },
+  {
+    "key": "gallery.viewGrid",
+    "category": "gallery",
+    "vi": "Xem dạng lưới",
+    "en": "Grid view",
+    "zh": "网格视图",
+    "ja": "グリッド表示"
+  },
+  {
+    "key": "gallery.viewList",
+    "category": "gallery",
+    "vi": "Xem dạng dọc",
+    "en": "List view",
+    "zh": "列表视图",
+    "ja": "リスト表示"
+  },
+  {
+    "key": "help.contact.channels",
+    "category": "help",
+    "vi": "Kênh liên hệ khác",
+    "en": "Other channels",
+    "zh": "其他联系渠道",
+    "ja": "その他の連絡先"
+  },
+  {
+    "key": "help.contact.desc",
+    "category": "help",
+    "vi": "Đội ngũ kỹ thuật sẽ phản hồi trong vòng 24 giờ làm việc.",
+    "en": "Our technical team will reply within 24 business hours.",
+    "zh": "技术团队将在24个工作小时内回复。",
+    "ja": "技術チームが24営業時間以内に返信します。"
+  },
+  {
+    "key": "help.contact.email",
+    "category": "help",
+    "vi": "Email hỗ trợ",
+    "en": "Support email",
+    "zh": "支持邮箱",
+    "ja": "サポートメール"
+  },
+  {
+    "key": "help.contact.high",
+    "category": "help",
+    "vi": "Cao",
+    "en": "High",
+    "zh": "高",
+    "ja": "高"
+  },
+  {
+    "key": "help.contact.hours",
+    "category": "help",
+    "vi": "Giờ làm việc",
+    "en": "Working hours",
+    "zh": "工作时间",
+    "ja": "営業時間"
+  },
+  {
+    "key": "help.contact.hoursVal",
+    "category": "help",
+    "vi": "T2–T6: 08:00–17:30",
+    "en": "Mon–Fri: 08:00–17:30",
+    "zh": "周一至周五: 08:00–17:30",
+    "ja": "月〜金: 08:00–17:30"
+  },
+  {
+    "key": "help.contact.low",
+    "category": "help",
+    "vi": "Thấp",
+    "en": "Low",
+    "zh": "低",
+    "ja": "低"
+  },
+  {
+    "key": "help.contact.message",
+    "category": "help",
+    "vi": "Mô tả chi tiết",
+    "en": "Detailed message",
+    "zh": "详细描述",
+    "ja": "詳細メッセージ"
+  },
+  {
+    "key": "help.contact.messagePh",
+    "category": "help",
+    "vi": "Bao gồm bước thực hiện, ảnh chụp màn hình nếu có...",
+    "en": "Include steps, screenshots if any...",
+    "zh": "包括操作步骤、截图等...",
+    "ja": "手順やスクリーンショットがあれば含めてください..."
+  },
+  {
+    "key": "help.contact.normal",
+    "category": "help",
+    "vi": "Bình thường",
+    "en": "Normal",
+    "zh": "普通",
+    "ja": "通常"
+  },
+  {
+    "key": "help.contact.phone",
+    "category": "help",
+    "vi": "Hotline",
+    "en": "Hotline",
+    "zh": "热线",
+    "ja": "ホットライン"
+  },
+  {
+    "key": "help.contact.priority",
+    "category": "help",
+    "vi": "Mức ưu tiên",
+    "en": "Priority",
+    "zh": "优先级",
+    "ja": "優先度"
+  },
+  {
+    "key": "help.contact.send",
+    "category": "help",
+    "vi": "Gửi yêu cầu",
+    "en": "Send request",
+    "zh": "发送请求",
+    "ja": "リクエストを送信"
+  },
+  {
+    "key": "help.contact.sent",
+    "category": "help",
+    "vi": "Đã gửi yêu cầu hỗ trợ",
+    "en": "Support request sent",
+    "zh": "支持请求已发送",
+    "ja": "サポートリクエストを送信しました"
+  },
+  {
+    "key": "help.contact.sentDesc",
+    "category": "help",
+    "vi": "Mã ticket đã được tạo, chúng tôi sẽ liên hệ qua email.",
+    "en": "Ticket created. We'll contact you via email.",
+    "zh": "工单已创建,我们将通过邮件联系您。",
+    "ja": "チケットが作成されました。メールでご連絡します。"
+  },
+  {
+    "key": "help.contact.subject",
+    "category": "help",
+    "vi": "Tiêu đề",
+    "en": "Subject",
+    "zh": "主题",
+    "ja": "件名"
+  },
+  {
+    "key": "help.contact.subjectPh",
+    "category": "help",
+    "vi": "Mô tả ngắn gọn vấn đề bạn gặp...",
+    "en": "Briefly describe your issue...",
+    "zh": "简要描述您遇到的问题...",
+    "ja": "問題を簡潔に記述してください..."
+  },
+  {
+    "key": "help.contact.title",
+    "category": "help",
+    "vi": "Gửi yêu cầu hỗ trợ",
+    "en": "Send a support request",
+    "zh": "发送支持请求",
+    "ja": "サポートリクエストを送信"
+  },
+  {
+    "key": "help.contact.urgent",
+    "category": "help",
+    "vi": "Khẩn cấp",
+    "en": "Urgent",
+    "zh": "紧急",
+    "ja": "緊急"
+  },
+  {
+    "key": "help.desc",
+    "category": "help",
+    "vi": "Tìm câu trả lời, tài liệu hướng dẫn và liên hệ đội hỗ trợ NICON.",
+    "en": "Find answers, guides and reach the NICON support team.",
+    "zh": "查找答案、使用指南并联系 NICON 支持团队。",
+    "ja": "回答やガイドを見つけ、NICONサポートチームに連絡。"
+  },
+  {
+    "key": "help.faq.empty",
+    "category": "help",
+    "vi": "Không có câu hỏi phù hợp.",
+    "en": "No matching questions.",
+    "zh": "没有匹配的问题。",
+    "ja": "一致する質問がありません。"
+  },
+  {
+    "key": "help.guide.title",
+    "category": "help",
+    "vi": "Hướng dẫn các module chính",
+    "en": "Main module guides",
+    "zh": "主要模块指南",
+    "ja": "主要モジュールガイド"
+  },
+  {
+    "key": "help.search.ph",
+    "category": "help",
+    "vi": "Tìm theo từ khoá: bài đăng, dự án, cài đặt...",
+    "en": "Search keywords: posts, projects, settings...",
+    "zh": "搜索关键词：文章、项目、设置...",
+    "ja": "キーワード検索：投稿、プロジェクト、設定..."
+  },
+  {
+    "key": "help.shortcut.desc",
+    "category": "help",
+    "vi": "Tăng tốc thao tác trong bảng điều khiển admin.",
+    "en": "Speed up your admin workflow.",
+    "zh": "加速管理面板操作。",
+    "ja": "管理画面の操作を高速化。"
+  },
+  {
+    "key": "help.shortcut.title",
+    "category": "help",
+    "vi": "Phím tắt hữu ích",
+    "en": "Useful shortcuts",
+    "zh": "常用快捷键",
+    "ja": "便利なショートカット"
+  },
+  {
+    "key": "help.tab.contact",
+    "category": "help",
+    "vi": "Liên hệ hỗ trợ",
+    "en": "Contact support",
+    "zh": "联系支持",
+    "ja": "サポートに連絡"
+  },
+  {
+    "key": "help.tab.faq",
+    "category": "help",
+    "vi": "Câu hỏi thường gặp",
+    "en": "FAQ",
+    "zh": "常见问题",
+    "ja": "よくある質問"
+  },
+  {
+    "key": "help.tab.guide",
+    "category": "help",
+    "vi": "Hướng dẫn nhanh",
+    "en": "Quick guide",
+    "zh": "快速指南",
+    "ja": "クイックガイド"
+  },
+  {
+    "key": "help.tab.shortcuts",
+    "category": "help",
+    "vi": "Phím tắt",
+    "en": "Keyboard shortcuts",
+    "zh": "键盘快捷键",
+    "ja": "キーボードショートカット"
+  },
+  {
+    "key": "help.title",
+    "category": "help",
+    "vi": "Trợ giúp & Hỗ trợ",
+    "en": "Help & Support",
+    "zh": "帮助与支持",
+    "ja": "ヘルプとサポート"
+  },
+  {
+    "key": "help.version",
+    "category": "help",
+    "vi": "Phiên bản hệ thống",
+    "en": "System version",
+    "zh": "系统版本",
+    "ja": "システムバージョン"
+  },
+  {
+    "key": "media.url.upload",
+    "category": "media",
+    "vi": "Tải lên",
+    "en": "Upload",
+    "zh": "上传",
+    "ja": "アップロード"
+  },
+  {
+    "key": "notify.delete",
+    "category": "notify",
+    "vi": "Xóa thông báo",
+    "en": "Delete notification",
+    "zh": "删除通知",
+    "ja": "通知を削除"
+  },
+  {
+    "key": "notify.empty",
+    "category": "notify",
+    "vi": "Chưa có thông báo nào",
+    "en": "No notifications yet",
+    "zh": "暂无通知",
+    "ja": "通知はまだありません"
+  },
+  {
+    "key": "notify.error",
+    "category": "notify",
+    "vi": "Không thể tải thông báo",
+    "en": "Unable to load notifications",
+    "zh": "无法加载通知",
+    "ja": "通知を読み込めません"
+  },
+  {
+    "key": "notify.loadMore",
+    "category": "notify",
+    "vi": "Tải thêm",
+    "en": "Load more",
+    "zh": "加载更多",
+    "ja": "さらに読み込む"
+  },
+  {
+    "key": "notify.loading",
+    "category": "notify",
+    "vi": "Đang tải thông báo...",
+    "en": "Loading notifications...",
+    "zh": "正在加载通知...",
+    "ja": "通知を読み込み中..."
+  },
+  {
+    "key": "notify.markAllRead",
+    "category": "notify",
+    "vi": "Đã đọc tất cả",
+    "en": "Mark all read",
+    "zh": "全部标为已读",
+    "ja": "すべて既読"
+  },
+  {
+    "key": "notify.open",
+    "category": "notify",
+    "vi": "Mở thông báo",
+    "en": "Open notifications",
+    "zh": "打开通知",
+    "ja": "通知を開く"
+  },
+  {
+    "key": "notify.pageTitle",
+    "category": "notify",
+    "vi": "Trung tâm thông báo",
+    "en": "Notification center",
+    "zh": "通知中心",
+    "ja": "通知センター"
+  },
+  {
+    "key": "notify.refresh",
+    "category": "notify",
+    "vi": "Làm mới",
+    "en": "Refresh",
+    "zh": "刷新",
+    "ja": "更新"
+  },
+  {
+    "key": "notify.title",
+    "category": "notify",
+    "vi": "Thông báo",
+    "en": "Notifications",
+    "zh": "通知",
+    "ja": "通知"
+  },
+  {
+    "key": "notify.unreadCount",
+    "category": "notify",
+    "vi": "{count} chưa đọc",
+    "en": "{count} unread",
+    "zh": "{count} 条未读",
+    "ja": "{count} 件未読"
+  },
+  {
+    "key": "notify.viewAll",
+    "category": "notify",
+    "vi": "Xem tất cả thông báo",
+    "en": "View all notifications",
+    "zh": "查看所有通知",
+    "ja": "すべての通知を見る"
+  },
+  {
+    "key": "common.selectAll",
+    "category": "common",
+    "vi": "Chọn tất cả",
+    "en": "Select all",
+    "zh": "全选",
+    "ja": "すべて選択"
+  },
+  {
+    "key": "common.clearSelection",
+    "category": "common",
+    "vi": "Bỏ chọn",
+    "en": "Clear selection",
+    "zh": "取消选择",
+    "ja": "選択解除"
+  },
+  {
+    "key": "common.selectedCount",
+    "category": "common",
+    "vi": "Đã chọn {count}",
+    "en": "{count} selected",
+    "zh": "已选 {count}",
+    "ja": "{count} 件選択中"
+  },
+  {
+    "key": "common.deleteSelected",
+    "category": "common",
+    "vi": "Xoá đã chọn",
+    "en": "Delete selected",
+    "zh": "删除所选",
+    "ja": "選択を削除"
+  },
+  {
+    "key": "common.confirmDeleteMany",
+    "category": "common",
+    "vi": "Bạn có chắc muốn xoá {count} bản ghi đã chọn? Hành động này không thể hoàn tác.",
+    "en": "Delete {count} selected records? This action cannot be undone.",
+    "zh": "确认删除已选 {count} 条记录？此操作无法撤销。",
+    "ja": "選択した {count} 件を削除しますか？この操作は取り消せません。"
+  },
+  {
+    "key": "common.bulkDeleteSuccess",
+    "category": "common",
+    "vi": "Đã xoá {count} bản ghi",
+    "en": "Deleted {count} records",
+    "zh": "已删除 {count} 条记录",
+    "ja": "{count} 件を削除しました"
+  },
+  {
+    "key": "common.bulkDeletePartial",
+    "category": "common",
+    "vi": "Đã xoá {success} bản ghi · {failed} thất bại",
+    "en": "Deleted {success} · {failed} failed",
+    "zh": "已删除 {success} 条 · {failed} 条失败",
+    "ja": "{success} 件削除 · {failed} 件失敗"
   }
 ]

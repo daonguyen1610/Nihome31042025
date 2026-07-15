@@ -26,8 +26,9 @@ public class ActivityServiceImageUrlTests : IDisposable
         var translationService = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == _contentRootPath));
+        var categorySvc = new ActivityCategoryService(_db, NullLogger<ActivityCategoryService>.Instance);
 
-        _sut = new ActivityService(_db, translationService, hostedImageService, NullLogger<ActivityService>.Instance);
+        _sut = new ActivityService(_db, translationService, hostedImageService, categorySvc, NullLogger<ActivityService>.Instance);
     }
 
     public void Dispose()

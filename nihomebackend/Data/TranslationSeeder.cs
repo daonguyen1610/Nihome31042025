@@ -59,7 +59,7 @@ public static class TranslationSeeder
                         continue;
                     }
 
-                    newTranslations.Add(new Translation
+                    var newRow = new Translation
                     {
                         Key = key,
                         LanguageCode = lang,
@@ -67,7 +67,15 @@ public static class TranslationSeeder
                         Category = category,
                         CreatedAt = now,
                         UpdatedAt = now,
-                    });
+                    };
+                    newTranslations.Add(newRow);
+                    // Two seed files can legitimately define the same key (e.g.
+                    // profile.json and user-profile.json both have
+                    // profilePage.about.eyebrow) — register it immediately so a
+                    // later duplicate in this same pass is treated as an update,
+                    // not a second insert, which SaveChanges() would otherwise
+                    // reject on the unique (Key, LanguageCode) index.
+                    existingRows[compositeKey] = newRow;
                 }
             }
         }

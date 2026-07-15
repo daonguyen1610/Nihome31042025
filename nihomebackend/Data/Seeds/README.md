@@ -64,9 +64,15 @@ Each entry looks like:
 }
 ```
 
-`ContentSeeder` is **idempotent** but it _will_ drop and re-seed the table
-when the row count diverges from the manifest, or when an existing row
-still carries one of the legacy stock thumbnails (see
-`IsLegacyStockActivityImage` / `IsLegacyStockNewsImage`). Existing
-EntityTranslation rows for the entity type are wiped at the same time so
-they never dangle.
+`ContentSeeder` is **backfill-only** for `activities.json` / `news.json`: it
+adds rows for slugs missing from the DB and adds `entity_translations` rows
+that don't exist yet, but it never deletes or overwrites a row/translation
+that's already in the database. This is deliberate — once an admin edits an
+Activity/News entry or adds a translation via the CMS, that edit lives only
+in the DB (never written back into the JSON manifest), so treating the
+manifest as authoritative and re-seeding from it would silently destroy the
+admin's work on every restart where the manifest and DB drift apart. That
+used to happen (row-count mismatch or legacy stock-thumbnail detection
+triggered a full drop-and-reseed) and was the root cause of translations
+disappearing after a backend restart; the destructive path has been
+removed.

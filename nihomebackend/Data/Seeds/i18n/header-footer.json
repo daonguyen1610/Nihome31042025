@@ -414,5 +414,117 @@
     "en": "Employment types",
     "zh": "工作形式",
     "ja": "雇用形態"
+  },
+  {
+    "key": "nav.help",
+    "category": "nav",
+    "vi": "Trợ giúp",
+    "en": "Help",
+    "zh": "帮助",
+    "ja": "ヘルプ"
+  },
+  {
+    "key": "nav.map",
+    "category": "nav",
+    "vi": "Bản đồ",
+    "en": "Map",
+    "zh": "地图",
+    "ja": "マップ"
+  },
+  {
+    "key": "site.nav.activities",
+    "category": "site",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "活動"
+  },
+  {
+    "key": "site.nav.clients",
+    "category": "site",
+    "vi": "Khách hàng",
+    "en": "Clients",
+    "zh": "客户",
+    "ja": "クライアント"
+  },
+  {
+    "key": "site.nav.contact",
+    "category": "site",
+    "vi": "Liên hệ",
+    "en": "Contact",
+    "zh": "联系",
+    "ja": "お問い合わせ"
+  },
+  {
+    "key": "site.nav.home",
+    "category": "site",
+    "vi": "Trang chủ",
+    "en": "Home",
+    "zh": "首页",
+    "ja": "ホーム"
+  },
+  {
+    "key": "site.nav.login",
+    "category": "site",
+    "vi": "Đăng nhập",
+    "en": "Login",
+    "zh": "登录",
+    "ja": "ログイン"
+  },
+  {
+    "key": "site.nav.menu",
+    "category": "site",
+    "vi": "Menu",
+    "en": "Menu",
+    "zh": "菜单",
+    "ja": "メニュー"
+  },
+  {
+    "key": "site.nav.news",
+    "category": "site",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
+  },
+  {
+    "key": "site.nav.profile",
+    "category": "site",
+    "vi": "Giới thiệu",
+    "en": "About",
+    "zh": "关于我们",
+    "ja": "会社概要"
+  },
+  {
+    "key": "site.nav.projects",
+    "category": "site",
+    "vi": "Dự án",
+    "en": "Projects",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "site.nav.recruitment",
+    "category": "site",
+    "vi": "Tuyển dụng",
+    "en": "Careers",
+    "zh": "招聘",
+    "ja": "採用情報"
+  },
+  {
+    "key": "site.nav.search",
+    "category": "site",
+    "vi": "Tìm kiếm",
+    "en": "Search",
+    "zh": "搜索",
+    "ja": "検索"
+  },
+  {
+    "key": "site.nav.services",
+    "category": "site",
+    "vi": "Dịch vụ",
+    "en": "Services",
+    "zh": "服务",
+    "ja": "サービス"
   }
 ]

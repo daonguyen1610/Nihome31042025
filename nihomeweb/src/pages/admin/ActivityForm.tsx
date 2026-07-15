@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { adminApi, slugify } from "@/services/adminApi";
 import type { UpsertActivityRequest } from "@/services/adminApi";
 import { useActivity, useActivityCategories } from "@/hooks/useContentApi";
+import { localizedName } from "@/lib/category";
 import { PageLoading, PageError } from "@/components/PageState";
 import GalleryEditor from "@/components/admin/GalleryEditor";
 import FeaturedImageUploader from "@/components/admin/FeaturedImageUploader";
@@ -31,6 +32,7 @@ interface FormData {
   imageUrl: string;
   gallery: string[];
   category: string;
+  categoryId: number | null;
   title: string;
   excerpt: string;
   content: ContentItem[];
@@ -63,6 +65,7 @@ const empty: FormData = {
   imageUrl: "",
   gallery: [],
   category: "",
+  categoryId: null,
   title: "",
   excerpt: "",
   content: [],
@@ -72,10 +75,10 @@ const empty: FormData = {
 const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { data: existing, loading, error, refetch } = useActivity(mode === "edit" ? (slug ?? "") : "");
-  const { data: categories } = useActivityCategories();
+  const { data: categories } = useActivityCategories(true);
   const [data, setData] = useState<FormData>(empty);
   const [initialized, setInitialized] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -92,6 +95,7 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
       imageUrl: existing.imageUrl,
       gallery: existing.gallery ?? [],
       category: existing.category,
+      categoryId: existing.categoryId ?? null,
       title: existing.title,
       excerpt: existing.excerpt,
       content: existing.content ?? [],
@@ -103,9 +107,11 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setData((d) => ({ ...d, [key]: value }));
 
-  const categoryOptions = Array.from(
-    new Set((categories ?? []).map((item) => item.name).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b, "vi"));
+  const categoryOptions = useMemo(() => {
+    return (categories ?? [])
+      .map((item) => ({ id: item.id, name: item.name, label: localizedName(item, lang) }))
+      .sort((a, b) => a.label.localeCompare(b.label, lang));
+  }, [categories, lang]);
 
   useEffect(() => {
     if (!pendingImageFile) {
@@ -133,9 +139,11 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
     try {
       if (pendingImageFile) {
         setUploadingImage(true);
+        const folder = `activities/${data.slug || slugify(data.title)}`;
         const upload = await adminApi.uploadImage(
           pendingImageFile,
           mode === "edit" ? data.imageUrl : undefined,
+          folder,
         );
         imageUrl = upload.data.imageUrl;
       }
@@ -146,10 +154,7 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
       imageUrl,
       gallery: data.gallery.length ? data.gallery : undefined,
       category: data.category,
-      categoryId:
-        (categories ?? []).find(
-          (c) => c.name.toLowerCase() === data.category.trim().toLowerCase(),
-        )?.id ?? null,
+      categoryId: data.categoryId,
       author: data.author || undefined,
       title: data.title,
       excerpt: data.excerpt,
@@ -204,16 +209,24 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
                 </Field>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <Field label={t("activities.field.category")}>
-                    <Select value={data.category || undefined} onValueChange={(v) => update("category", v)}>
+                    <Select
+                      value={data.categoryId != null ? String(data.categoryId) : undefined}
+                      onValueChange={(v) => {
+                        const found = categoryOptions.find((opt) => String(opt.id) === v);
+                        setData((d) => ({ ...d, categoryId: found?.id ?? null, category: found?.name ?? d.category }));
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder={t("form.selectCategory")} />
                       </SelectTrigger>
                       <SelectContent>
                         {[
                           ...categoryOptions,
-                          ...(data.category && !categoryOptions.includes(data.category) ? [data.category] : []),
-                        ].map((option) => (
-                          <SelectItem key={option} value={option}>{option}</SelectItem>
+                          ...(data.categoryId == null && data.category && !categoryOptions.some((opt) => opt.name === data.category)
+                            ? [{ id: -1, name: data.category, label: data.category }]
+                            : []),
+                        ].map((opt) => (
+                          <SelectItem key={opt.id} value={String(opt.id)}>{opt.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -231,7 +244,7 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
             <div className="rounded-lg border bg-card p-6">
               <h2 className="mb-4 text-base font-semibold">{t("form.content")}</h2>
               <Field label={t("activities.field.content")}>
-                <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} />
+                <ContentBlockEditor value={data.content} onChange={(items) => update("content", items)} folder={`activities/${data.slug || slugify(data.title)}`} />
               </Field>
             </div>
           </div>
@@ -260,7 +273,7 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
               <p className="mb-4 text-xs text-muted-foreground">
                 {t("media.gallery.descPost")}
               </p>
-              <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} />
+              <GalleryEditor items={data.gallery} onChange={(items) => update("gallery", items)} folder={`activities/${data.slug || slugify(data.title)}`} />
             </div>
 
             <Button type="submit" disabled={submitting || uploadingImage} className="w-full">

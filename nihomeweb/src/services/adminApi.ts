@@ -147,21 +147,33 @@ export interface SlideshowAdminResponse {
   sortOrder: number;
 }
 
-export interface UpsertActivityCategoryRequest {
-  name: string;
-  isActive?: boolean;
-  sortOrder?: number;
-}
-
 export interface ActivityCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
 
+export interface UpsertActivityCategoryRequest {
+  name: string;
+  nameVi?: string;
+  nameEn?: string;
+  nameZh?: string;
+  nameJa?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
 export interface UpsertProjectCategoryRequest {
   name: string;
+  nameVi?: string;
+  nameEn?: string;
+  nameZh?: string;
+  nameJa?: string;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -169,12 +181,20 @@ export interface UpsertProjectCategoryRequest {
 export interface ProjectCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
 
 export interface UpsertNewsCategoryRequest {
   name: string;
+  nameVi?: string;
+  nameEn?: string;
+  nameZh?: string;
+  nameJa?: string;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -182,6 +202,10 @@ export interface UpsertNewsCategoryRequest {
 export interface NewsCategoryResponse {
   id: number;
   name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 }
@@ -783,23 +807,26 @@ export interface DeleteAuditRangeParams {
 }
 
 // ─── Admin API ───────────────────────────────────────────────
+//
+// Upload folder convention — ALWAYS pass `folder` to uploadImage / uploadVideo:
+//   projects/<slug>   activities/<slug>   news/<slug>
+//   slideshow         logos               services        about
+// Omitting `folder` uploads to the flat root and breaks the organised structure.
 
 export const adminApi = {
-  uploadImage: (file: File, previousImageUrl?: string) => {
+  uploadImage: (file: File, previousImageUrl?: string, folder?: string) => {
     const formData = new FormData();
     formData.append("file", file);
-    if (previousImageUrl) {
-      formData.append("previousImageUrl", previousImageUrl);
-    }
+    if (previousImageUrl) formData.append("previousImageUrl", previousImageUrl);
+    if (folder) formData.append("folder", folder);
     return api.post<{ imageUrl: string }>("/system/upload-image", formData);
   },
 
-  uploadVideo: (file: File, previousImageUrl?: string) => {
+  uploadVideo: (file: File, previousImageUrl?: string, folder?: string) => {
     const formData = new FormData();
     formData.append("file", file);
-    if (previousImageUrl) {
-      formData.append("previousImageUrl", previousImageUrl);
-    }
+    if (previousImageUrl) formData.append("previousImageUrl", previousImageUrl);
+    if (folder) formData.append("folder", folder);
     return api.post<{ mediaUrl: string }>("/system/upload-video", formData);
   },
 
