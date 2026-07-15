@@ -168,6 +168,62 @@
     "ja": "ログアウト"
   },
   {
+    "key": "nav.myProfile",
+    "category": "nav",
+    "vi": "Hồ sơ của tôi",
+    "en": "My profile",
+    "zh": "我的资料",
+    "ja": "マイプロフィール"
+  },
+  {
+    "key": "nav.changePassword",
+    "category": "nav",
+    "vi": "Đổi mật khẩu",
+    "en": "Change password",
+    "zh": "修改密码",
+    "ja": "パスワード変更"
+  },
+  {
+    "key": "nav.userMenu",
+    "category": "nav",
+    "vi": "Menu tài khoản",
+    "en": "Account menu",
+    "zh": "账户菜单",
+    "ja": "アカウントメニュー"
+  },
+  {
+    "key": "nav.openSidebar",
+    "category": "nav",
+    "vi": "Mở sidebar",
+    "en": "Open sidebar",
+    "zh": "打开侧边栏",
+    "ja": "サイドバーを開く"
+  },
+  {
+    "key": "nav.toggleSidebar",
+    "category": "nav",
+    "vi": "Ẩn/hiện sidebar",
+    "en": "Toggle sidebar",
+    "zh": "切换侧边栏",
+    "ja": "サイドバー切替"
+  },
+  {
+    "key": "nav.expand",
+    "category": "nav",
+    "vi": "Mở rộng",
+    "en": "Expand",
+    "zh": "展开",
+    "ja": "展開"
+  },
+  {
+    "key": "nav.collapse",
+    "category": "nav",
+    "vi": "Thu nhỏ",
+    "en": "Collapse",
+    "zh": "收起",
+    "ja": "折りたたむ"
+  },
+  {
     "key": "nav.menu",
     "category": "nav",
     "vi": "Menu chính",

@@ -93,6 +93,8 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/my-profile" element={<MyProfile />} />
+              {/* Alias inside admin area so the header dropdown can link to /admin/profile */}
+              <Route path="/admin/profile" element={<MyProfile />} />
             </Route>
             <Route path="/forbidden" element={<Forbidden />} />
             <Route element={<ProtectedRoute />}>
