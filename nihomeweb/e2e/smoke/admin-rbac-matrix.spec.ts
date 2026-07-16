@@ -129,9 +129,10 @@ const matrix: RoleExpectation[] = [
     ],
   },
   {
-    // QS: content.projects.view + processes.view
+    // QS: content.projects.view + processes.view + crm.quotes.view (read-only
+    // access to approved quotes for takeoff / cost tracking).
     user: TEST_USERS.qs,
-    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/processes/general"],
+    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/processes/general"],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
