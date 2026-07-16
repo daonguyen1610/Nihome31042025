@@ -57,6 +57,11 @@
   { "key": "quotes.action.cancel", "category": "quotes", "vi": "Huỷ báo giá", "en": "Cancel quote", "zh": "取消报价", "ja": "見積をキャンセル" },
   { "key": "quotes.action.delete", "category": "quotes", "vi": "Xoá (chỉ Draft)", "en": "Delete (Draft only)", "zh": "删除（仅草稿）", "ja": "削除（下書きのみ）" },
 
+  { "key": "quotes.log.create", "category": "quotes", "vi": "Tạo mới", "en": "Created", "zh": "创建", "ja": "作成" },
+  { "key": "quotes.log.update", "category": "quotes", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+  { "key": "quotes.log.newVersion", "category": "quotes", "vi": "Sinh phiên bản mới", "en": "New version spawned", "zh": "生成新版本", "ja": "新規版発行" },
+  { "key": "quotes.log.extendValidity", "category": "quotes", "vi": "Gia hạn hiệu lực", "en": "Validity extended", "zh": "延长有效期", "ja": "有効期限延長" },
+
   { "key": "quotes.validation.missingFields", "category": "quotes", "vi": "Vui lòng nhập đủ thông tin bắt buộc.", "en": "Please fill in all required fields.", "zh": "请填写所有必填字段。", "ja": "必須項目を入力してください。" },
   { "key": "quotes.validation.pickOpportunity", "category": "quotes", "vi": "Chọn Cơ hội cho báo giá.", "en": "Pick an Opportunity for the quote.", "zh": "请选择商机。", "ja": "商談を選択してください。" },
   { "key": "quotes.validation.unitCostRequired", "category": "quotes", "vi": "Diện tích và đơn giá/m² phải > 0.", "en": "Area and unit price / m² must be > 0.", "zh": "面积和单价/m²需大于0。", "ja": "面積と単価は0より大きい値が必要です。" },

@@ -16,6 +16,7 @@ import {
   ThumbsDown,
   ThumbsUp,
   Trash2,
+  User,
   XCircle,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -350,15 +351,15 @@ const AdminQuoteDetail = () => {
     <AdminLayout>
       {/* ---------- Header ---------- */}
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
             <Button variant="ghost" size="sm" asChild className="h-7 px-2">
               <Link to="/admin/quotes">
                 <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <span>
-              {t("quotes.field.opportunity")}: {quote.opportunityName ?? "—"} · {quote.customerName ?? "—"}
+            <span className="truncate">
+              {t("quotes.field.opportunity")}: {quote.opportunityName ?? "—"}
             </span>
           </div>
           <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight">
@@ -368,10 +369,12 @@ const AdminQuoteDetail = () => {
             </Badge>
             <span className="text-sm font-normal text-muted-foreground">V{quote.version}</span>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <Calendar className="mr-1 inline h-3.5 w-3.5" />
-            {t("quotes.field.validUntil")}: {new Date(quote.validUntil).toLocaleDateString()}
-          </p>
+          {quote.customerName && (
+            <p className="mt-1 truncate text-sm text-muted-foreground">
+              <User className="mr-1 inline h-3.5 w-3.5" />
+              {t("quotes.field.customer")}: {quote.customerName}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -417,6 +420,49 @@ const AdminQuoteDetail = () => {
           )}
         </div>
       </div>
+
+      {/* ---------- Meta strip ---------- */}
+      {/* At-a-glance summary so the key numbers stay visible without scrolling
+          to the side panel on narrow screens. */}
+      <dl className="mb-4 grid grid-cols-2 gap-2 rounded-lg border bg-card p-3 text-sm sm:grid-cols-4">
+        <div className="min-w-0">
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("quotes.field.grandTotal")}
+          </dt>
+          <dd className="truncate text-base font-semibold">
+            {formatVnd(quote.grandTotal)} ₫
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("quotes.field.validUntil")}
+          </dt>
+          <dd className="flex items-center gap-1 truncate">
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{new Date(quote.validUntil).toLocaleDateString()}</span>
+            {quote.isExpired && (
+              <Badge variant="outline" className="ml-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700">
+                {t("quotes.status.Expired")}
+              </Badge>
+            )}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("quotes.field.owner")}
+          </dt>
+          <dd className="flex items-center gap-1 truncate">
+            <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">{quote.ownerName ?? "—"}</span>
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            {t("quotes.field.method")}
+          </dt>
+          <dd className="truncate">{t(`quotes.method.${quote.method}`)}</dd>
+        </div>
+      </dl>
 
       {/* ---------- Body ---------- */}
       <Tabs
@@ -604,15 +650,15 @@ const AdminQuoteDetail = () => {
             <ul className="space-y-2 text-sm">
               {quote.approvalLogs.map((l) => (
                 <li key={l.id} className="border-b pb-2 last:border-b-0 last:pb-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{l.action}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <span className="font-medium">{translateAction(l.action, t)}</span>
                     <span className="text-xs text-muted-foreground">
                       {new Date(l.createdAt).toLocaleString()}
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {l.fromStatus ? `${l.fromStatus} → ` : ""}
-                    {l.toStatus}
+                    {l.fromStatus ? `${translateStatus(l.fromStatus, t)} → ` : ""}
+                    {translateStatus(l.toStatus, t)}
                     {l.byUserName ? ` · ${l.byUserName}` : ""}
                   </div>
                   {l.note && <div className="mt-1 text-xs italic">"{l.note}"</div>}
@@ -655,6 +701,34 @@ const AdminQuoteDetail = () => {
 };
 
 // -------- helpers --------
+
+/** Map the backend PascalCase action name to the shared t() key. */
+function translateAction(action: string, t: (k: string) => string): string {
+  const map: Record<string, string> = {
+    Create: "quotes.log.create",
+    Update: "quotes.log.update",
+    Submit: "quotes.action.submit",
+    Approve: "quotes.action.approve",
+    RejectInternal: "quotes.action.rejectInternal",
+    Send: "quotes.action.send",
+    CustomerApprove: "quotes.action.customerApprove",
+    CustomerReject: "quotes.action.customerReject",
+    Cancel: "quotes.action.cancel",
+    ExtendValidity: "quotes.log.extendValidity",
+    NewVersion: "quotes.log.newVersion",
+  };
+  const key = map[action];
+  if (!key) return action;
+  const translated = t(key);
+  return translated === key ? action : translated;
+}
+
+/** Backend enum → translated status label; leaves unknown values as-is. */
+function translateStatus(status: string, t: (k: string) => string): string {
+  const key = `quotes.status.${status}`;
+  const translated = t(key);
+  return translated === key ? status : translated;
+}
 
 function workflowIcon(k: WorkflowKind) {
   const cls = "mr-1.5 h-4 w-4";
