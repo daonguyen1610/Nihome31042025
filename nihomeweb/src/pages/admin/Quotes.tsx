@@ -365,7 +365,7 @@ const AdminQuotes = () => {
                   const isPending = pendingAction === r.id;
                   return (
                     <tr key={r.id} className="hover:bg-muted/20">
-                      <Td>
+                      <Td className="whitespace-nowrap">
                         <Link
                           to={`/admin/quotes/${r.id}`}
                           className="font-medium text-primary hover:underline"
