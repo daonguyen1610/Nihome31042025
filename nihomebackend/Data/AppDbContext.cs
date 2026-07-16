@@ -54,6 +54,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityActivity> OpportunityActivities => Set<OpportunityActivity>();
+    public DbSet<Quote> Quotes => Set<Quote>();
+    public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
+    public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
+    public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
 
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
@@ -434,6 +438,95 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(a => a.OpportunityId);
             b.HasIndex(a => a.OccurredAt);
+        });
+
+        modelBuilder.Entity<Quote>(b =>
+        {
+            b.ToTable("quotes");
+            b.HasKey(q => q.Id);
+            b.Property(q => q.Code).HasMaxLength(40).IsRequired();
+            b.HasIndex(q => q.Code).IsUnique();
+            b.Property(q => q.Method).HasConversion<string>().HasMaxLength(20);
+            b.Property(q => q.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(q => q.PackageDescription).HasMaxLength(2000);
+            b.Property(q => q.Note).HasMaxLength(4000);
+            b.Property(q => q.AreaSqm).HasColumnType("decimal(18,2)");
+            b.Property(q => q.UnitPricePerSqm).HasColumnType("decimal(18,2)");
+            b.Property(q => q.Subtotal).HasColumnType("decimal(18,2)");
+            b.Property(q => q.DiscountPercent).HasColumnType("decimal(5,2)");
+            b.Property(q => q.VatPercent).HasColumnType("decimal(5,2)");
+            b.Property(q => q.GrandTotal).HasColumnType("decimal(18,2)");
+            b.HasOne(q => q.Opportunity)
+                .WithMany()
+                .HasForeignKey(q => q.OpportunityId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(q => q.Owner)
+                .WithMany()
+                .HasForeignKey(q => q.OwnerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(q => q.OpportunityId);
+            b.HasIndex(q => q.OwnerUserId);
+            b.HasIndex(q => q.Status);
+            b.HasIndex(q => q.ValidUntil);
+            b.HasIndex(q => q.CreatedAt);
+        });
+
+        modelBuilder.Entity<QuoteItem>(b =>
+        {
+            b.ToTable("quote_items");
+            b.HasKey(i => i.Id);
+            b.Property(i => i.ItemCode).HasMaxLength(60);
+            b.Property(i => i.Name).HasMaxLength(300).IsRequired();
+            b.Property(i => i.Unit).HasMaxLength(30).IsRequired();
+            b.Property(i => i.Quantity).HasColumnType("decimal(18,4)");
+            b.Property(i => i.UnitPrice).HasColumnType("decimal(18,2)");
+            b.Property(i => i.Amount).HasColumnType("decimal(18,2)");
+            b.HasOne(i => i.Quote)
+                .WithMany(q => q.Items)
+                .HasForeignKey(i => i.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(i => i.QuoteId);
+        });
+
+        modelBuilder.Entity<QuoteApprovalLog>(b =>
+        {
+            b.ToTable("quote_approval_logs");
+            b.HasKey(l => l.Id);
+            b.Property(l => l.Action).HasConversion<string>().HasMaxLength(40);
+            b.Property(l => l.FromStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(l => l.ToStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(l => l.Note).HasMaxLength(2000);
+            b.HasOne(l => l.Quote)
+                .WithMany(q => q.ApprovalLogs)
+                .HasForeignKey(l => l.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(l => l.By)
+                .WithMany()
+                .HasForeignKey(l => l.ByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(l => l.QuoteId);
+            b.HasIndex(l => l.CreatedAt);
+        });
+
+        modelBuilder.Entity<QuoteVersionSnapshot>(b =>
+        {
+            b.ToTable("quote_version_snapshots");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Method).HasConversion<string>().HasMaxLength(20);
+            b.Property(s => s.PackageDescription).HasMaxLength(2000);
+            b.Property(s => s.ItemsJson).HasColumnType("nvarchar(max)");
+            b.Property(s => s.AreaSqm).HasColumnType("decimal(18,2)");
+            b.Property(s => s.UnitPricePerSqm).HasColumnType("decimal(18,2)");
+            b.Property(s => s.Subtotal).HasColumnType("decimal(18,2)");
+            b.Property(s => s.DiscountPercent).HasColumnType("decimal(5,2)");
+            b.Property(s => s.VatPercent).HasColumnType("decimal(5,2)");
+            b.Property(s => s.GrandTotal).HasColumnType("decimal(18,2)");
+            b.HasOne(s => s.Quote)
+                .WithMany(q => q.VersionSnapshots)
+                .HasForeignKey(s => s.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(s => s.QuoteId);
+            b.HasIndex(s => new { s.QuoteId, s.VersionNumber }).IsUnique();
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

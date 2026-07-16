@@ -95,6 +95,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILeadService, LeadService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<IOpportunityService, OpportunityService>();
+        services.AddScoped<IQuoteService, QuoteService>();
         services.AddScoped<HostedImageService>();
 
         // Content services

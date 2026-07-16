@@ -74,6 +74,7 @@
     { "module": "crm.opportunities", "action": "view.all" },
     { "module": "crm.opportunities", "action": "manage" },
     { "module": "crm.quotes", "action": "view" },
+    { "module": "crm.quotes", "action": "view.all" },
     { "module": "crm.quotes", "action": "manage" },
     { "module": "crm.quotes", "action": "approve" },
     { "module": "crm.quotes", "action": "send" },
