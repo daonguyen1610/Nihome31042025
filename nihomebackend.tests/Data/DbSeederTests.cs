@@ -54,17 +54,27 @@ public class DbSeederTests : IDisposable
         DbSeeder.Seed(_db);
 
         var quotes = _db.Quotes.ToList();
-        Assert.Equal(4, quotes.Count);
+        Assert.Equal(9, quotes.Count);
         Assert.All(quotes, q =>
         {
             Assert.StartsWith("QT-", q.Code);
             Assert.True(q.GrandTotal > 0m, $"Quote {q.Code} should have positive grand total");
+            Assert.NotNull(q.Note);
+            Assert.StartsWith("[SAMPLE_QUOTE]", q.Note);
         });
-        // Every non-Draft seeded quote has at least one approval log entry
-        // for its Create + subsequent transitions.
-        Assert.Contains(quotes, q => q.Status == QuoteStatus.PendingApproval);
-        Assert.Contains(quotes, q => q.Status == QuoteStatus.Approved);
-        Assert.Contains(quotes, q => q.Status == QuoteStatus.SentToCustomer);
+        // Every declared QuoteStatus (bar Draft, which we intentionally have
+        // two of) must be present at least once for the filter/badge demo.
+        var statuses = quotes.Select(q => q.Status).ToHashSet();
+        Assert.Contains(QuoteStatus.Draft, statuses);
+        Assert.Contains(QuoteStatus.PendingApproval, statuses);
+        Assert.Contains(QuoteStatus.Approved, statuses);
+        Assert.Contains(QuoteStatus.SentToCustomer, statuses);
+        Assert.Contains(QuoteStatus.CustomerApproved, statuses);
+        Assert.Contains(QuoteStatus.Rejected, statuses);
+        Assert.Contains(QuoteStatus.Expired, statuses);
+        Assert.Contains(QuoteStatus.Cancelled, statuses);
+        // A version snapshot exists so the Versions tab has V1 + V2.
+        Assert.NotEmpty(_db.QuoteVersionSnapshots.ToList());
     }
 
     [Fact]
@@ -72,11 +82,14 @@ public class DbSeederTests : IDisposable
     {
         DbSeeder.Seed(_db);
         var firstRun = _db.Quotes.Count();
+        var firstSnaps = _db.QuoteVersionSnapshots.Count();
 
         DbSeeder.Seed(_db);
         var secondRun = _db.Quotes.Count();
+        var secondSnaps = _db.QuoteVersionSnapshots.Count();
 
         Assert.Equal(firstRun, secondRun);
+        Assert.Equal(firstSnaps, secondSnaps);
     }
 
     private static SiteSettings CreateSettings(string otpEmailBodyTemplate)
