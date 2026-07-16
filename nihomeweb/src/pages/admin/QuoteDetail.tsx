@@ -339,8 +339,11 @@ const AdminQuoteDetail = () => {
   if (!quote || !form) return null;
 
   const workflowKinds = WORKFLOW_BY_STATUS[quote.status];
-  const showEditToggle =
-    canManage && !editing && quote.status !== "Cancelled" && quote.status !== "Rejected";
+  const isTerminal =
+    quote.status === "CustomerApproved" ||
+    quote.status === "Rejected" ||
+    quote.status === "Cancelled";
+  const showEditToggle = canManage && !editing && !isTerminal;
   const canDelete = canManage && quote.status === "Draft";
 
   return (
@@ -439,7 +442,7 @@ const AdminQuoteDetail = () => {
 
         {/* ---------- CONTENT ---------- */}
         <TabsContent value="content" className="mt-4">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-6">
             <div className="min-w-0 space-y-4">
               {quote.method === "UnitCost" ? (
                 <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4">
@@ -760,15 +763,15 @@ const BoqTable = ({
 
       {/* Desktop table (md+). */}
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[720px] divide-y text-sm">
+        <table className="w-full min-w-[560px] divide-y text-sm">
           <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
             <tr>
-              <th className="w-24 px-2 py-1.5 text-left font-medium">{t("quotes.boq.code")}</th>
+              <th className="hidden w-24 px-2 py-1.5 text-left font-medium lg:table-cell">{t("quotes.boq.code")}</th>
               <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
-              <th className="w-24 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
-              <th className="w-28 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
-              <th className="w-36 px-2 py-1.5 text-right font-medium">{t("quotes.boq.unitPrice")}</th>
-              <th className="w-36 px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
+              <th className="w-16 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
+              <th className="w-24 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
+              <th className="w-32 px-2 py-1.5 text-right font-medium">{t("quotes.boq.unitPrice")}</th>
+              <th className="w-32 px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
               {editing && <th className="w-10 px-2 py-1.5" />}
             </tr>
           </thead>
@@ -777,7 +780,7 @@ const BoqTable = ({
               const amount = Math.round(row.quantity * row.unitPrice * 100) / 100;
               return (
                 <tr key={idx}>
-                  <td className="px-2 py-1">
+                  <td className="hidden px-2 py-1 lg:table-cell">
                     <Input
                       className="h-8"
                       value={row.itemCode ?? ""}

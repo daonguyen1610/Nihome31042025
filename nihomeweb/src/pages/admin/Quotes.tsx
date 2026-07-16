@@ -343,9 +343,10 @@ const AdminQuotes = () => {
         </div>
       ) : (
         <>
-          {/* Desktop table (md+). Below md the layout switches to a card list. */}
-          <div className="hidden overflow-x-auto rounded-lg border bg-card md:block">
-            <table className="w-full min-w-[960px] divide-y text-sm">
+          {/* Desktop table (xl+ only — sidebar-open laptops still cramp a
+              9-col table at lg, so we defer to xl to avoid horizontal scroll). */}
+          <div className="hidden overflow-x-auto rounded-lg border bg-card xl:block">
+            <table className="w-full min-w-[900px] divide-y text-sm">
               <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                 <tr>
                   <Th>{t("quotes.field.code")}</Th>
@@ -354,8 +355,8 @@ const AdminQuotes = () => {
                   <Th className="text-right">{t("quotes.field.grandTotal")}</Th>
                   <Th>{t("quotes.field.status")}</Th>
                   <Th>{t("quotes.field.validUntil")}</Th>
-                  <Th className="hidden lg:table-cell">{t("quotes.field.owner")}</Th>
-                  <Th className="hidden text-right lg:table-cell">{t("quotes.field.version")}</Th>
+                  <Th>{t("quotes.field.owner")}</Th>
+                  <Th className="text-right">{t("quotes.field.version")}</Th>
                   <Th className="w-[220px] text-right">&nbsp;</Th>
                 </tr>
               </thead>
@@ -383,8 +384,8 @@ const AdminQuotes = () => {
                       <Td className="whitespace-nowrap text-muted-foreground">
                         {new Date(r.validUntil).toLocaleDateString()}
                       </Td>
-                      <Td className="hidden lg:table-cell">{r.ownerName ?? "—"}</Td>
-                      <Td className="hidden text-right lg:table-cell">V{r.version}</Td>
+                      <Td>{r.ownerName ?? "—"}</Td>
+                      <Td className="text-right">V{r.version}</Td>
                       <Td className="text-right">
                         <RowActions
                           row={r}
@@ -407,8 +408,8 @@ const AdminQuotes = () => {
             </table>
           </div>
 
-          {/* Mobile card list (<md). Same data, no horizontal scroll. */}
-          <ul className="grid gap-2 md:hidden">
+          {/* Card grid (<xl). Single col on phones, 2 cols from sm upward. */}
+          <ul className="grid gap-2 sm:grid-cols-2 xl:hidden">
             {rows.map((r) => {
               const isPending = pendingAction === r.id;
               return (
