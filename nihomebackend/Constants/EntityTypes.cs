@@ -21,4 +21,5 @@ public static class EntityTypes
     public const string CustomerActivity = "CustomerActivity";
     public const string Opportunity = "Opportunity";
     public const string OpportunityActivity = "OpportunityActivity";
+    public const string Quote = "Quote";
 }
