@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.Data;
@@ -29,6 +30,7 @@ public static class SampleCrmDataSeeder
         SeedLeads(db, owner, now);
         SeedCustomers(db, owner, now);
         SeedOpportunities(db, owner, now);
+        SeedQuotes(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -297,5 +299,173 @@ public static class SampleCrmDataSeeder
             });
             db.SaveChanges();
         }
+    }
+
+    private static void SeedQuotes(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var sampleOpps = db.Opportunities
+            .Where(o => o.Name.StartsWith(SampleTag))
+            .OrderBy(o => o.Id)
+            .ToList();
+        if (sampleOpps.Count == 0) return;
+
+        // Deterministic per-opportunity samples covering every non-terminal
+        // state so the admin UI has something to demo (filters, workflow
+        // buttons, versioning, expiring badge) without hand-crafting quotes.
+        // Method/status/items tuned so each shape gets exercised.
+        var seeds = new (int OppIndex, QuoteMethod Method, QuoteStatus Status, int ValidDays, string Note)[]
+        {
+            (0, QuoteMethod.UnitCost, QuoteStatus.Draft,           30, "Báo giá mẫu — nháp, suất đầu tư."),
+            (1, QuoteMethod.Boq,      QuoteStatus.PendingApproval, 30, "Báo giá mẫu — chờ duyệt nội bộ, BOQ."),
+            (2, QuoteMethod.UnitCost, QuoteStatus.Approved,        30, "Báo giá mẫu — đã duyệt, sẵn gửi khách."),
+            (3, QuoteMethod.Boq,      QuoteStatus.SentToCustomer,   2, "Báo giá mẫu — đã gửi khách, sắp hết hạn."),
+        };
+
+        var year = now.Year;
+        // Compute the next sequential code once so we can assign quotes
+        // deterministically without racing GenerateCodeAsync in the service.
+        var nextSeq = 1 + (db.Quotes.AsNoTracking()
+            .Where(q => q.Code.StartsWith($"QT-{year}-"))
+            .Select(q => q.Code)
+            .AsEnumerable()
+            .Select(c => int.TryParse(c.AsSpan($"QT-{year}-".Length), out var n) ? n : 0)
+            .DefaultIfEmpty(0)
+            .Max());
+
+        for (var i = 0; i < seeds.Length; i++)
+        {
+            var (oppIndex, method, status, validDays, note) = seeds[i];
+            if (oppIndex >= sampleOpps.Count) continue;
+
+            var opp = sampleOpps[oppIndex];
+            // Idempotency: skip if any quote already exists for this
+            // opportunity — a partial re-seed would otherwise stack duplicates.
+            if (db.Quotes.Any(q => q.OpportunityId == opp.Id)) continue;
+
+            var code = $"QT-{year}-{nextSeq++:D4}";
+            var validUntil = now.AddDays(validDays);
+            var quote = new Quote
+            {
+                Code = code,
+                OpportunityId = opp.Id,
+                OwnerUserId = opp.OwnerUserId,
+                Method = method,
+                Version = 1,
+                DiscountPercent = i == 3 ? 5m : 0m,
+                VatPercent = 8m,
+                ValidUntil = validUntil,
+                Note = note,
+                Status = status,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            };
+
+            if (method == QuoteMethod.UnitCost)
+            {
+                quote.AreaSqm = 120m + oppIndex * 40m;
+                quote.UnitPricePerSqm = 8_000_000m + oppIndex * 1_500_000m;
+                quote.PackageDescription = "Gói mẫu bao gồm thi công phần thô + hoàn thiện cơ bản.";
+            }
+            else
+            {
+                quote.Items = new List<QuoteItem>
+                {
+                    NewItem("BOQ-001", "Bê tông móng M300", "m3", 25m, 1_450_000m, 1),
+                    NewItem("BOQ-002", "Cốt thép D16",       "kg", 1_200m, 24_500m, 2),
+                    NewItem("BOQ-003", "Ván khuôn thép",     "m2", 180m,   85_000m, 3),
+                    NewItem("BOQ-004", "Sơn Dulux nội thất", "m2", 350m,   75_000m, 4),
+                };
+            }
+
+            RecomputeTotals(quote);
+
+            // Workflow timestamps + approval log match the seeded status.
+            switch (status)
+            {
+                case QuoteStatus.PendingApproval:
+                    quote.SubmittedAt = now;
+                    quote.SubmittedByUserId = owner.Id;
+                    break;
+                case QuoteStatus.Approved:
+                    quote.SubmittedAt = now.AddMinutes(-30);
+                    quote.SubmittedByUserId = owner.Id;
+                    quote.ApprovedAt = now.AddMinutes(-10);
+                    quote.ApprovedByUserId = owner.Id;
+                    break;
+                case QuoteStatus.SentToCustomer:
+                    quote.SubmittedAt = now.AddHours(-2);
+                    quote.SubmittedByUserId = owner.Id;
+                    quote.ApprovedAt = now.AddHours(-1);
+                    quote.ApprovedByUserId = owner.Id;
+                    quote.SentAt = now.AddMinutes(-15);
+                    quote.SentByUserId = owner.Id;
+                    break;
+            }
+
+            db.Quotes.Add(quote);
+            db.SaveChanges();
+
+            db.QuoteApprovalLogs.Add(new QuoteApprovalLog
+            {
+                QuoteId = quote.Id,
+                Action = QuoteWorkflowAction.Create,
+                FromStatus = null,
+                ToStatus = QuoteStatus.Draft,
+                ByUserId = owner.Id,
+                Note = "Seed mẫu.",
+                CreatedAt = now,
+            });
+            if (status >= QuoteStatus.PendingApproval && status <= QuoteStatus.SentToCustomer)
+            {
+                AppendLog(db, quote.Id, QuoteWorkflowAction.Submit, QuoteStatus.Draft, QuoteStatus.PendingApproval, owner.Id, quote.SubmittedAt ?? now);
+            }
+            if (status >= QuoteStatus.Approved && status <= QuoteStatus.SentToCustomer)
+            {
+                AppendLog(db, quote.Id, QuoteWorkflowAction.Approve, QuoteStatus.PendingApproval, QuoteStatus.Approved, owner.Id, quote.ApprovedAt ?? now);
+            }
+            if (status == QuoteStatus.SentToCustomer)
+            {
+                AppendLog(db, quote.Id, QuoteWorkflowAction.Send, QuoteStatus.Approved, QuoteStatus.SentToCustomer, owner.Id, quote.SentAt ?? now);
+            }
+            db.SaveChanges();
+        }
+    }
+
+    private static QuoteItem NewItem(string code, string name, string unit, decimal qty, decimal price, int sort) => new()
+    {
+        ItemCode = code,
+        Name = name,
+        Unit = unit,
+        Quantity = qty,
+        UnitPrice = price,
+        Amount = decimal.Round(qty * price, 2, MidpointRounding.AwayFromZero),
+        SortOrder = sort,
+    };
+
+    private static void RecomputeTotals(Quote q)
+    {
+        var subtotal = q.Method == QuoteMethod.Boq
+            ? q.Items.Sum(i => i.Amount)
+            : decimal.Round((q.AreaSqm ?? 0m) * (q.UnitPricePerSqm ?? 0m), 2, MidpointRounding.AwayFromZero);
+        var afterDiscount = subtotal * (1 - q.DiscountPercent / 100m);
+        var vat = afterDiscount * (q.VatPercent / 100m);
+        q.Subtotal = decimal.Round(subtotal, 2, MidpointRounding.AwayFromZero);
+        q.GrandTotal = decimal.Round(afterDiscount + vat, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static void AppendLog(AppDbContext db, int quoteId, QuoteWorkflowAction action,
+        QuoteStatus from, QuoteStatus to, int userId, DateTime at)
+    {
+        db.QuoteApprovalLogs.Add(new QuoteApprovalLog
+        {
+            QuoteId = quoteId,
+            Action = action,
+            FromStatus = from,
+            ToStatus = to,
+            ByUserId = userId,
+            CreatedAt = at,
+        });
     }
 }
