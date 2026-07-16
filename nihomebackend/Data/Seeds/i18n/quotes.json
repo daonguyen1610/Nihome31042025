@@ -60,5 +60,28 @@
   { "key": "quotes.validation.missingFields", "category": "quotes", "vi": "Vui lòng nhập đủ thông tin bắt buộc.", "en": "Please fill in all required fields.", "zh": "请填写所有必填字段。", "ja": "必須項目を入力してください。" },
   { "key": "quotes.validation.pickOpportunity", "category": "quotes", "vi": "Chọn Cơ hội cho báo giá.", "en": "Pick an Opportunity for the quote.", "zh": "请选择商机。", "ja": "商談を選択してください。" },
   { "key": "quotes.validation.unitCostRequired", "category": "quotes", "vi": "Diện tích và đơn giá/m² phải > 0.", "en": "Area and unit price / m² must be > 0.", "zh": "面积和单价/m²需大于0。", "ja": "面積と単価は0より大きい値が必要です。" },
-  { "key": "quotes.validation.boqRequired", "category": "quotes", "vi": "BOQ phải có ít nhất 1 dòng.", "en": "BOQ needs at least 1 item.", "zh": "BOQ 至少需要1行。", "ja": "BOQには少なくとも1行が必要です。" }
+  { "key": "quotes.validation.boqRequired", "category": "quotes", "vi": "BOQ phải có ít nhất 1 dòng.", "en": "BOQ needs at least 1 item.", "zh": "BOQ 至少需要1行。", "ja": "BOQには少なくとも1行が必要です。" },
+
+  { "key": "quotes.tab.content", "category": "quotes", "vi": "Nội dung", "en": "Content", "zh": "内容", "ja": "内容" },
+  { "key": "quotes.tab.versions", "category": "quotes", "vi": "Phiên bản", "en": "Versions", "zh": "版本", "ja": "バージョン" },
+  { "key": "quotes.tab.workflow", "category": "quotes", "vi": "Luồng duyệt", "en": "Workflow", "zh": "审批流程", "ja": "承認履歴" },
+
+  { "key": "quotes.version.current", "category": "quotes", "vi": "Hiện tại", "en": "Current", "zh": "当前", "ja": "現行" },
+  { "key": "quotes.preview.unsaved", "category": "quotes", "vi": "Chưa lưu — tổng cộng đang là dự tính, hãy bấm Lưu để cập nhật.", "en": "Unsaved — grand total is a preview, click Save to commit.", "zh": "未保存 — 总计为预览，请点击保存。", "ja": "未保存 — 合計はプレビューです。保存してください。" },
+
+  { "key": "quotes.action.noteOptional", "category": "quotes", "vi": "Ghi chú (tuỳ chọn — bắt buộc cho các thao tác từ chối).", "en": "Note (optional — required for rejection actions).", "zh": "备注（可选 — 拒绝操作需填写）。", "ja": "備考（任意 — 却下時は必須）。" },
+
+  { "key": "quotes.boq.title", "category": "quotes", "vi": "Bảng khối lượng (BOQ)", "en": "Bill of quantities", "zh": "工程量清单", "ja": "数量明細" },
+  { "key": "quotes.boq.paste", "category": "quotes", "vi": "Dán từ Excel", "en": "Paste from Excel", "zh": "从Excel粘贴", "ja": "Excelから貼付" },
+  { "key": "quotes.boq.addRow", "category": "quotes", "vi": "Thêm dòng", "en": "Add row", "zh": "添加行", "ja": "行追加" },
+  { "key": "quotes.boq.code", "category": "quotes", "vi": "Mã", "en": "Code", "zh": "编号", "ja": "コード" },
+  { "key": "quotes.boq.name", "category": "quotes", "vi": "Hạng mục", "en": "Item", "zh": "项目", "ja": "項目" },
+  { "key": "quotes.boq.unit", "category": "quotes", "vi": "Đơn vị", "en": "Unit", "zh": "单位", "ja": "単位" },
+  { "key": "quotes.boq.qty", "category": "quotes", "vi": "Khối lượng", "en": "Quantity", "zh": "数量", "ja": "数量" },
+  { "key": "quotes.boq.unitPrice", "category": "quotes", "vi": "Đơn giá", "en": "Unit price", "zh": "单价", "ja": "単価" },
+  { "key": "quotes.boq.amount", "category": "quotes", "vi": "Thành tiền", "en": "Amount", "zh": "金额", "ja": "金額" },
+
+  { "key": "quotes.paste.ok", "category": "quotes", "vi": "Đã thêm dòng từ clipboard.", "en": "Rows appended from clipboard.", "zh": "已从剪贴板追加。", "ja": "クリップボードから追加しました。" },
+  { "key": "quotes.paste.empty", "category": "quotes", "vi": "Clipboard không có dữ liệu hợp lệ.", "en": "Clipboard has no valid rows.", "zh": "剪贴板无有效行。", "ja": "クリップボードに有効な行がありません。" },
+  { "key": "quotes.paste.needsPermission", "category": "quotes", "vi": "Trình duyệt chưa cho phép truy cập clipboard.", "en": "Clipboard access blocked by the browser.", "zh": "浏览器阻止了剪贴板访问。", "ja": "ブラウザがクリップボードアクセスを拒否しました。" }
 ]
