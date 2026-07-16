@@ -342,129 +342,133 @@ const AdminQuotes = () => {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border bg-card">
-          <table className="min-w-[1100px] w-full divide-y text-sm">
-            <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-              <tr>
-                <Th>{t("quotes.field.code")}</Th>
-                <Th>{t("quotes.field.opportunity")}</Th>
-                <Th>{t("quotes.field.customer")}</Th>
-                <Th className="text-right">{t("quotes.field.grandTotal")}</Th>
-                <Th>{t("quotes.field.status")}</Th>
-                <Th>{t("quotes.field.validUntil")}</Th>
-                <Th>{t("quotes.field.owner")}</Th>
-                <Th className="text-right">{t("quotes.field.version")}</Th>
-                <Th className="text-right w-[220px]">&nbsp;</Th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.map((r) => {
-                const actions = ACTIONS_BY_STATUS[r.status];
-                const isPending = pendingAction === r.id;
-                return (
-                  <tr key={r.id} className="hover:bg-muted/20">
-                    <Td>
-                      <Link
-                        to={`/admin/quotes/${r.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {r.code}
-                      </Link>
-                    </Td>
-                    <Td>{r.opportunityName ?? "—"}</Td>
-                    <Td>{r.customerName ?? "—"}</Td>
-                    <Td className="text-right font-medium">{formatVnd(r.grandTotal)} ₫</Td>
-                    <Td>
-                      <div className="flex items-center gap-1.5">
-                        <Badge
-                          variant="outline"
-                          className={cn("whitespace-nowrap", STATUS_STYLES[r.status])}
+        <>
+          {/* Desktop table (md+). Below md the layout switches to a card list. */}
+          <div className="hidden overflow-x-auto rounded-lg border bg-card md:block">
+            <table className="w-full min-w-[960px] divide-y text-sm">
+              <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+                <tr>
+                  <Th>{t("quotes.field.code")}</Th>
+                  <Th>{t("quotes.field.opportunity")}</Th>
+                  <Th>{t("quotes.field.customer")}</Th>
+                  <Th className="text-right">{t("quotes.field.grandTotal")}</Th>
+                  <Th>{t("quotes.field.status")}</Th>
+                  <Th>{t("quotes.field.validUntil")}</Th>
+                  <Th className="hidden lg:table-cell">{t("quotes.field.owner")}</Th>
+                  <Th className="hidden text-right lg:table-cell">{t("quotes.field.version")}</Th>
+                  <Th className="w-[220px] text-right">&nbsp;</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((r) => {
+                  const isPending = pendingAction === r.id;
+                  return (
+                    <tr key={r.id} className="hover:bg-muted/20">
+                      <Td>
+                        <Link
+                          to={`/admin/quotes/${r.id}`}
+                          className="font-medium text-primary hover:underline"
                         >
-                          {t(`quotes.status.${r.status}`)}
-                        </Badge>
-                        {r.isExpiringSoon && (
-                          <span
-                            className="inline-flex items-center gap-1 rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700"
-                            title={t("quotes.expiringSoon")}
-                          >
-                            <AlertTriangle className="h-3 w-3" />
-                            {t("quotes.expiringSoon")}
-                          </span>
-                        )}
-                      </div>
-                    </Td>
-                    <Td className="whitespace-nowrap text-muted-foreground">
+                          {r.code}
+                        </Link>
+                      </Td>
+                      <Td>{r.opportunityName ?? "—"}</Td>
+                      <Td>{r.customerName ?? "—"}</Td>
+                      <Td className="whitespace-nowrap text-right font-medium">
+                        {formatVnd(r.grandTotal)} ₫
+                      </Td>
+                      <Td>
+                        <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
+                      </Td>
+                      <Td className="whitespace-nowrap text-muted-foreground">
+                        {new Date(r.validUntil).toLocaleDateString()}
+                      </Td>
+                      <Td className="hidden lg:table-cell">{r.ownerName ?? "—"}</Td>
+                      <Td className="hidden text-right lg:table-cell">V{r.version}</Td>
+                      <Td className="text-right">
+                        <RowActions
+                          row={r}
+                          canManage={canManage}
+                          canApprove={canApprove}
+                          canSend={canSend}
+                          pending={isPending}
+                          onSubmit={handleSubmit}
+                          onApprove={handleApprove}
+                          onSend={handleSend}
+                          onCancel={handleCancel}
+                          onDelete={handleDelete}
+                          t={t}
+                        />
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list (<md). Same data, no horizontal scroll. */}
+          <ul className="grid gap-2 md:hidden">
+            {rows.map((r) => {
+              const isPending = pendingAction === r.id;
+              return (
+                <li
+                  key={r.id}
+                  className="rounded-lg border bg-card p-3 shadow-sm"
+                >
+                  <div className="mb-1 flex items-start justify-between gap-2">
+                    <Link
+                      to={`/admin/quotes/${r.id}`}
+                      className="text-base font-semibold text-primary hover:underline"
+                    >
+                      {r.code}
+                    </Link>
+                    <span className="whitespace-nowrap text-xs text-muted-foreground">
+                      V{r.version}
+                    </span>
+                  </div>
+                  <div className="mb-2 text-sm text-foreground">
+                    {r.opportunityName ?? "—"}
+                  </div>
+                  {r.customerName && (
+                    <div className="mb-2 text-xs text-muted-foreground">
+                      {r.customerName}
+                    </div>
+                  )}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
+                    <div className="whitespace-nowrap text-sm font-semibold">
+                      {formatVnd(r.grandTotal)} ₫
+                    </div>
+                  </div>
+                  <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                    <span>
+                      {t("quotes.field.validUntil")}:{" "}
                       {new Date(r.validUntil).toLocaleDateString()}
-                    </Td>
-                    <Td>{r.ownerName ?? "—"}</Td>
-                    <Td className="text-right">V{r.version}</Td>
-                    <Td className="text-right">
-                      <div className="flex flex-wrap justify-end gap-1">
-                        {canManage && actions.includes("submit") && (
-                          <IconAction
-                            title={t("quotes.action.submit")}
-                            onClick={() => void handleSubmit(r.id)}
-                            disabled={isPending}
-                          >
-                            <ThumbsUp className="h-3.5 w-3.5" />
-                          </IconAction>
-                        )}
-                        {canApprove && actions.includes("approve") && (
-                          <IconAction
-                            title={t("quotes.action.approve")}
-                            onClick={() => void handleApprove(r.id)}
-                            disabled={isPending}
-                          >
-                            <CheckCheck className="h-3.5 w-3.5" />
-                          </IconAction>
-                        )}
-                        {canSend && actions.includes("send") && (
-                          <IconAction
-                            title={t("quotes.action.send")}
-                            onClick={() => void handleSend(r.id)}
-                            disabled={isPending}
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                          </IconAction>
-                        )}
-                        {canManage && actions.includes("cancel") && (
-                          <IconAction
-                            title={t("quotes.action.cancel")}
-                            onClick={() => void handleCancel(r.id)}
-                            disabled={isPending}
-                          >
-                            <Ban className="h-3.5 w-3.5" />
-                          </IconAction>
-                        )}
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2"
-                          title={t("common.edit")}
-                        >
-                          <Link to={`/admin/quotes/${r.id}`}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                        {canManage && actions.includes("delete") && (
-                          <IconAction
-                            title={t("quotes.action.delete")}
-                            onClick={() => void handleDelete(r.id)}
-                            disabled={isPending}
-                            danger
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </IconAction>
-                        )}
-                      </div>
-                    </Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </span>
+                    {r.ownerName && <span className="truncate">{r.ownerName}</span>}
+                  </div>
+                  <div className="-mx-1 flex flex-wrap items-center gap-1 border-t pt-2">
+                    <RowActions
+                      row={r}
+                      canManage={canManage}
+                      canApprove={canApprove}
+                      canSend={canSend}
+                      pending={isPending}
+                      onSubmit={handleSubmit}
+                      onApprove={handleApprove}
+                      onSend={handleSend}
+                      onCancel={handleCancel}
+                      onDelete={handleDelete}
+                      t={t}
+                      compact
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       {rows.length > 0 && totalPages > 1 && (
@@ -686,29 +690,120 @@ const Td = ({
   className?: string;
 }) => <td className={cn("px-3 py-2 align-middle", className)}>{children}</td>;
 
-const IconAction = ({
-  title,
-  onClick,
-  disabled,
-  danger,
-  children,
+// -------- shared row/card action bar --------
+
+interface RowActionsProps {
+  row: QuoteListItemResponse;
+  canManage: boolean;
+  canApprove: boolean;
+  canSend: boolean;
+  pending: boolean;
+  onSubmit: (id: number) => void;
+  onApprove: (id: number) => void;
+  onSend: (id: number) => void;
+  onCancel: (id: number) => void;
+  onDelete: (id: number) => Promise<void> | void;
+  t: (k: string) => string;
+  /** When true, action labels render alongside the icon for touch targets. */
+  compact?: boolean;
+}
+
+const RowActions = ({
+  row,
+  canManage,
+  canApprove,
+  canSend,
+  pending,
+  onSubmit,
+  onApprove,
+  onSend,
+  onCancel,
+  onDelete,
+  t,
+  compact,
+}: RowActionsProps) => {
+  const actions = ACTIONS_BY_STATUS[row.status];
+  const btn = (
+    label: string,
+    icon: React.ReactNode,
+    onClick: () => void,
+    opts: { danger?: boolean } = {},
+  ) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "h-8 px-2",
+        opts.danger && "text-destructive hover:text-destructive",
+      )}
+      title={label}
+      onClick={onClick}
+      disabled={pending}
+    >
+      {icon}
+      {compact && <span className="ml-1 text-xs">{label}</span>}
+    </Button>
+  );
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap gap-1",
+        compact ? "justify-start" : "justify-end",
+      )}
+    >
+      {canManage && actions.includes("submit") &&
+        btn(t("quotes.action.submit"), <ThumbsUp className="h-3.5 w-3.5" />, () => onSubmit(row.id))}
+      {canApprove && actions.includes("approve") &&
+        btn(t("quotes.action.approve"), <CheckCheck className="h-3.5 w-3.5" />, () => onApprove(row.id))}
+      {canSend && actions.includes("send") &&
+        btn(t("quotes.action.send"), <Send className="h-3.5 w-3.5" />, () => onSend(row.id))}
+      {canManage && actions.includes("cancel") &&
+        btn(t("quotes.action.cancel"), <Ban className="h-3.5 w-3.5" />, () => onCancel(row.id))}
+      <Button
+        asChild
+        variant="ghost"
+        size="sm"
+        className="h-8 px-2"
+        title={t("common.edit")}
+        disabled={pending}
+      >
+        <Link to={`/admin/quotes/${row.id}`}>
+          <Pencil className="h-3.5 w-3.5" />
+          {compact && <span className="ml-1 text-xs">{t("common.edit")}</span>}
+        </Link>
+      </Button>
+      {canManage && actions.includes("delete") &&
+        btn(t("quotes.action.delete"), <Trash2 className="h-3.5 w-3.5" />, () => void onDelete(row.id), { danger: true })}
+    </div>
+  );
+};
+
+const StatusCell = ({
+  status,
+  expiring,
+  t,
 }: {
-  title: string;
-  onClick: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-  children: React.ReactNode;
+  status: QuoteStatus;
+  expiring: boolean;
+  t: (k: string) => string;
 }) => (
-  <Button
-    variant="ghost"
-    size="sm"
-    className={cn("h-7 px-2", danger && "text-destructive hover:text-destructive")}
-    title={title}
-    onClick={onClick}
-    disabled={disabled}
-  >
-    {children}
-  </Button>
+  <div className="flex flex-wrap items-center gap-1.5">
+    <Badge
+      variant="outline"
+      className={cn("whitespace-nowrap", STATUS_STYLES[status])}
+    >
+      {t(`quotes.status.${status}`)}
+    </Badge>
+    {expiring && (
+      <span
+        className="inline-flex items-center gap-1 rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700"
+        title={t("quotes.expiringSoon")}
+      >
+        <AlertTriangle className="h-3 w-3" />
+        {t("quotes.expiringSoon")}
+      </span>
+    )}
+  </div>
 );
 
 export default AdminQuotes;
