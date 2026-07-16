@@ -33,6 +33,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/leads",
   "/admin/customers",
   "/admin/opportunities",
+  "/admin/quotes",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -79,18 +80,20 @@ const matrix: RoleExpectation[] = [
   },
   {
     // SALE: crm.leads.{view|manage|convert} + crm.customers.{view|manage} +
+    // crm.opportunities.{view|manage} + crm.quotes.{view|manage|send} +
     // contacts.* + recruitment.applications.view + dashboard.view. Sales role
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/contacts", "/admin/recruitment"],
   },
   {
-    // SALES_MANAGER: crm.** (full) + contacts.view + recruitment.applications.view.
-    // Same admin footprint as SALE but with view.all across CRM entities;
-    // the routes rendered are identical (server enforces scope).
+    // SALES_MANAGER: crm.** (full — includes quotes.approve on top of manage)
+    // + contacts.view + recruitment.applications.view. Same admin footprint
+    // as SALE plus view.all across CRM entities; routes rendered are
+    // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/contacts", "/admin/recruitment"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view (manage-only routes
