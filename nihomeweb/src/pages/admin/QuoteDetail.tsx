@@ -439,8 +439,8 @@ const AdminQuoteDetail = () => {
 
         {/* ---------- CONTENT ---------- */}
         <TabsContent value="content" className="mt-4">
-          <div className="grid gap-4 lg:grid-cols-[1fr,320px]">
-            <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="min-w-0 space-y-4">
               {quote.method === "UnitCost" ? (
                 <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4">
                   <FormField label={t("quotes.field.areaSqm")}>
@@ -536,7 +536,7 @@ const AdminQuoteDetail = () => {
                 <span className="font-semibold">{t("quotes.field.grandTotal")}</span>
                 <span className="text-lg font-bold text-primary">{formatVnd(preview?.grandTotal ?? quote.grandTotal)} ₫</span>
               </div>
-              <p className="text-xs italic text-muted-foreground">
+              <p className="break-words text-xs italic text-muted-foreground">
                 <span className="mr-1 font-medium not-italic">{t("quotes.field.grandTotalInWords")}:</span>
                 {quote.grandTotalInWords}
               </p>
@@ -741,7 +741,7 @@ const BoqTable = ({
 }) => {
   const items = form.items ?? [];
   return (
-    <div className="overflow-x-auto rounded-lg border bg-card">
+    <div className="rounded-lg border bg-card">
       <div className="flex items-center justify-between border-b bg-muted/30 p-2 text-xs uppercase tracking-wide text-muted-foreground">
         <span>{t("quotes.boq.title")}</span>
         {editing && (
@@ -757,90 +757,184 @@ const BoqTable = ({
           </div>
         )}
       </div>
-      <table className="min-w-[800px] w-full divide-y text-sm">
-        <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
-          <tr>
-            <th className="w-24 px-2 py-1.5 text-left font-medium">{t("quotes.boq.code")}</th>
-            <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
-            <th className="w-24 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
-            <th className="w-28 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
-            <th className="w-36 px-2 py-1.5 text-right font-medium">{t("quotes.boq.unitPrice")}</th>
-            <th className="w-36 px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
-            {editing && <th className="w-10 px-2 py-1.5" />}
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {items.map((row, idx) => {
-            const amount = Math.round(row.quantity * row.unitPrice * 100) / 100;
-            return (
-              <tr key={idx}>
-                <td className="px-2 py-1">
-                  <Input
-                    className="h-8"
-                    value={row.itemCode ?? ""}
-                    disabled={!editing}
-                    onChange={(e) => onChange(idx, { itemCode: e.target.value || null })}
-                  />
+
+      {/* Desktop table (md+). */}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[720px] divide-y text-sm">
+          <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
+            <tr>
+              <th className="w-24 px-2 py-1.5 text-left font-medium">{t("quotes.boq.code")}</th>
+              <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
+              <th className="w-24 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
+              <th className="w-28 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
+              <th className="w-36 px-2 py-1.5 text-right font-medium">{t("quotes.boq.unitPrice")}</th>
+              <th className="w-36 px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
+              {editing && <th className="w-10 px-2 py-1.5" />}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {items.map((row, idx) => {
+              const amount = Math.round(row.quantity * row.unitPrice * 100) / 100;
+              return (
+                <tr key={idx}>
+                  <td className="px-2 py-1">
+                    <Input
+                      className="h-8"
+                      value={row.itemCode ?? ""}
+                      disabled={!editing}
+                      onChange={(e) => onChange(idx, { itemCode: e.target.value || null })}
+                    />
+                  </td>
+                  <td className="px-2 py-1">
+                    <Input
+                      className="h-8"
+                      value={row.name}
+                      disabled={!editing}
+                      onChange={(e) => onChange(idx, { name: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-1">
+                    <Input
+                      className="h-8"
+                      value={row.unit}
+                      disabled={!editing}
+                      onChange={(e) => onChange(idx, { unit: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-1">
+                    <Input
+                      className="h-8 text-right"
+                      inputMode="decimal"
+                      value={row.quantity}
+                      disabled={!editing}
+                      onChange={(e) => onChange(idx, { quantity: Number(e.target.value) || 0 })}
+                    />
+                  </td>
+                  <td className="px-2 py-1">
+                    <Input
+                      className="h-8 text-right"
+                      inputMode="numeric"
+                      value={row.unitPrice ? formatVnd(row.unitPrice) : ""}
+                      disabled={!editing}
+                      onChange={(e) => onChange(idx, { unitPrice: parseVnd(e.target.value) || 0 })}
+                    />
+                  </td>
+                  <td className="px-2 py-1 text-right font-medium">{formatVnd(amount)} ₫</td>
+                  {editing && (
+                    <td className="px-2 py-1 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-1 text-destructive hover:text-destructive"
+                        onClick={() => onRemove(idx)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+            {items.length === 0 && (
+              <tr>
+                <td colSpan={editing ? 7 : 6} className="px-2 py-6 text-center text-muted-foreground">
+                  {t("quotes.validation.boqRequired")}
                 </td>
-                <td className="px-2 py-1">
-                  <Input
-                    className="h-8"
-                    value={row.name}
-                    disabled={!editing}
-                    onChange={(e) => onChange(idx, { name: e.target.value })}
-                  />
-                </td>
-                <td className="px-2 py-1">
-                  <Input
-                    className="h-8"
-                    value={row.unit}
-                    disabled={!editing}
-                    onChange={(e) => onChange(idx, { unit: e.target.value })}
-                  />
-                </td>
-                <td className="px-2 py-1">
-                  <Input
-                    className="h-8 text-right"
-                    inputMode="decimal"
-                    value={row.quantity}
-                    disabled={!editing}
-                    onChange={(e) => onChange(idx, { quantity: Number(e.target.value) || 0 })}
-                  />
-                </td>
-                <td className="px-2 py-1">
-                  <Input
-                    className="h-8 text-right"
-                    inputMode="numeric"
-                    value={row.unitPrice ? formatVnd(row.unitPrice) : ""}
-                    disabled={!editing}
-                    onChange={(e) => onChange(idx, { unitPrice: parseVnd(e.target.value) || 0 })}
-                  />
-                </td>
-                <td className="px-2 py-1 text-right font-medium">{formatVnd(amount)} ₫</td>
-                {editing && (
-                  <td className="px-2 py-1 text-right">
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile card list (<md). Every row becomes a stacked card so no
+          horizontal scroll is required on narrow screens. Fields stay
+          editable when the parent is in edit mode. */}
+      <ul className="divide-y md:hidden">
+        {items.length === 0 && (
+          <li className="p-4 text-center text-sm text-muted-foreground">
+            {t("quotes.validation.boqRequired")}
+          </li>
+        )}
+        {items.map((row, idx) => {
+          const amount = Math.round(row.quantity * row.unitPrice * 100) / 100;
+          return (
+            <li key={idx} className="space-y-2 p-3">
+              {editing ? (
+                <>
+                  <div className="grid grid-cols-[1fr,auto] items-start gap-2">
+                    <Input
+                      className="h-9 text-sm font-medium"
+                      placeholder={t("quotes.boq.name")}
+                      value={row.name}
+                      onChange={(e) => onChange(idx, { name: e.target.value })}
+                    />
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-1 text-destructive hover:text-destructive"
+                      className="h-9 px-2 text-destructive hover:text-destructive"
                       onClick={() => onRemove(idx)}
+                      aria-label={t("quotes.action.delete")}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  </td>
-                )}
-              </tr>
-            );
-          })}
-          {items.length === 0 && (
-            <tr>
-              <td colSpan={editing ? 7 : 6} className="px-2 py-6 text-center text-muted-foreground">
-                {t("quotes.validation.boqRequired")}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      className="h-9"
+                      placeholder={t("quotes.boq.code")}
+                      value={row.itemCode ?? ""}
+                      onChange={(e) => onChange(idx, { itemCode: e.target.value || null })}
+                    />
+                    <Input
+                      className="h-9"
+                      placeholder={t("quotes.boq.unit")}
+                      value={row.unit}
+                      onChange={(e) => onChange(idx, { unit: e.target.value })}
+                    />
+                    <Input
+                      className="h-9 text-right"
+                      inputMode="decimal"
+                      placeholder={t("quotes.boq.qty")}
+                      value={row.quantity}
+                      onChange={(e) => onChange(idx, { quantity: Number(e.target.value) || 0 })}
+                    />
+                    <Input
+                      className="h-9 text-right"
+                      inputMode="numeric"
+                      placeholder={t("quotes.boq.unitPrice")}
+                      value={row.unitPrice ? formatVnd(row.unitPrice) : ""}
+                      onChange={(e) => onChange(idx, { unitPrice: parseVnd(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded bg-muted/30 px-2 py-1 text-sm">
+                    <span className="text-muted-foreground">{t("quotes.boq.amount")}</span>
+                    <span className="font-semibold">{formatVnd(amount)} ₫</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{row.name}</div>
+                      {row.itemCode && (
+                        <div className="text-xs text-muted-foreground">
+                          {t("quotes.boq.code")}: {row.itemCode}
+                        </div>
+                      )}
+                    </div>
+                    <div className="whitespace-nowrap text-sm font-semibold">
+                      {formatVnd(amount)} ₫
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {row.quantity} {row.unit} × {formatVnd(row.unitPrice)} ₫
+                  </div>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 };
