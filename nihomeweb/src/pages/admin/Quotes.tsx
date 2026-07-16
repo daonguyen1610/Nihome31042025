@@ -42,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   adminApi,
   QUOTE_STATUSES,
@@ -502,24 +503,19 @@ const AdminQuotes = () => {
           <div className="space-y-3">
             <div>
               <Label>{t("quotes.field.opportunity")}</Label>
-              <Select
-                value={createForm.opportunityId ? String(createForm.opportunityId) : ""}
-                onValueChange={(v) =>
-                  setCreateForm({ ...createForm, opportunityId: Number(v) })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  {opportunities.map((o) => (
-                    <SelectItem key={o.id} value={String(o.id)}>
-                      {o.name}
-                      {o.customerName ? ` · ${o.customerName}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                value={createForm.opportunityId ? String(createForm.opportunityId) : null}
+                onChange={(v) => setCreateForm({ ...createForm, opportunityId: Number(v) })}
+                options={opportunities.map((o) => ({
+                  value: String(o.id),
+                  label: o.name,
+                  hint: o.customerName,
+                  keywords: `${o.customerName ?? ""} ${o.id}`,
+                }))}
+                placeholder="—"
+                searchPlaceholder={t("quotes.filter.search")}
+                emptyText={t("quotes.empty")}
+              />
             </div>
             <div>
               <Label>{t("quotes.field.method")}</Label>

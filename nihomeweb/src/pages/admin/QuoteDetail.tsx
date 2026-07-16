@@ -358,9 +358,9 @@ const AdminQuoteDetail = () => {
               {t("quotes.field.opportunity")}: {quote.opportunityName ?? "—"} · {quote.customerName ?? "—"}
             </span>
           </div>
-          <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight">
+          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold tracking-tight">
             {quote.code}
-            <Badge variant="outline" className={cn("text-xs", STATUS_STYLES[quote.status])}>
+            <Badge variant="outline" className={cn("whitespace-nowrap text-xs", STATUS_STYLES[quote.status])}>
               {t(`quotes.status.${quote.status}`)}
             </Badge>
             <span className="text-sm font-normal text-muted-foreground">V{quote.version}</span>

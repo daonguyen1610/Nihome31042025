@@ -125,6 +125,29 @@ public class QuoteServiceTests : IDisposable
             _sut.SubmitAsync(quote.Id, new(), user.Id, true, true));
     }
 
+    // Regression: Submit for a BOQ quote must load Items in the transition
+    // guard, otherwise the "BOQ needs ≥ 1 item" check triggers false-positive.
+    [Fact]
+    public async Task Submit_BoqWithItems_Succeeds()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opp.Id,
+            Method = QuoteMethod.Boq,
+            DiscountPercent = 0m,
+            VatPercent = 10m,
+            Items = new()
+            {
+                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10, UnitPrice = 1_000_000 },
+            },
+        }, user.Id, canManage: true);
+
+        var resp = await _sut.SubmitAsync(created.Id, new(), user.Id, true, true);
+        Assert.NotNull(resp);
+        Assert.Equal("PendingApproval", resp!.Status);
+    }
+
     [Fact]
     public async Task Approve_WithoutApprovePermission_Throws()
     {

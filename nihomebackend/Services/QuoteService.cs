@@ -499,7 +499,11 @@ public class QuoteService(
             throw new QuoteOperationException($"Không có quyền thực hiện thao tác {action}.");
         }
 
-        var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id, ct);
+        // Include Items so guards like Submit's "BOQ needs ≥ 1 item" can inspect
+        // the true row count instead of the default-empty navigation collection.
+        var quote = await db.Quotes
+            .Include(q => q.Items)
+            .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
 
