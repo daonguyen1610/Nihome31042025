@@ -683,6 +683,190 @@ export interface OpportunityPipelineParams {
   maxValue?: number;
 }
 
+// ─── Quotes (NIH-84) ─────────────────────────────────────────
+
+export type QuoteMethod = "UnitCost" | "Boq";
+
+export const QUOTE_METHODS: QuoteMethod[] = ["UnitCost", "Boq"];
+
+export type QuoteStatus =
+  | "Draft"
+  | "PendingApproval"
+  | "Approved"
+  | "SentToCustomer"
+  | "CustomerApproved"
+  | "Rejected"
+  | "Expired"
+  | "Cancelled";
+
+export const QUOTE_STATUSES: QuoteStatus[] = [
+  "Draft",
+  "PendingApproval",
+  "Approved",
+  "SentToCustomer",
+  "CustomerApproved",
+  "Rejected",
+  "Expired",
+  "Cancelled",
+];
+
+export interface QuoteItemInput {
+  itemCode?: string | null;
+  name: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  sortOrder?: number;
+}
+
+export interface QuoteItemResponse {
+  id: number;
+  itemCode?: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  sortOrder: number;
+}
+
+export interface QuoteApprovalLogResponse {
+  id: number;
+  action: string;
+  fromStatus?: string;
+  toStatus: string;
+  byUserId?: number;
+  byUserName?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface QuoteVersionResponse {
+  version: number;
+  method: QuoteMethod;
+  areaSqm?: number;
+  unitPricePerSqm?: number;
+  packageDescription?: string;
+  subtotal: number;
+  discountPercent: number;
+  vatPercent: number;
+  grandTotal: number;
+  items: QuoteItemResponse[];
+  capturedAt: string;
+  isCurrent: boolean;
+}
+
+export interface QuoteResponse {
+  id: number;
+  code: string;
+  opportunityId: number;
+  opportunityName?: string;
+  customerId?: number;
+  customerName?: string;
+  ownerUserId?: number;
+  ownerName?: string;
+  method: QuoteMethod;
+  version: number;
+  areaSqm?: number;
+  unitPricePerSqm?: number;
+  packageDescription?: string;
+  subtotal: number;
+  discountPercent: number;
+  vatPercent: number;
+  grandTotal: number;
+  grandTotalInWords: string;
+  status: QuoteStatus;
+  validUntil: string;
+  isExpired: boolean;
+  note?: string;
+  submittedAt?: string;
+  approvedAt?: string;
+  sentAt?: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: QuoteItemResponse[];
+  approvalLogs: QuoteApprovalLogResponse[];
+}
+
+export interface QuoteListItemResponse {
+  id: number;
+  code: string;
+  opportunityId: number;
+  opportunityName?: string;
+  customerName?: string;
+  ownerUserId?: number;
+  ownerName?: string;
+  version: number;
+  method: QuoteMethod;
+  grandTotal: number;
+  status: QuoteStatus;
+  validUntil: string;
+  isExpiringSoon: boolean;
+  updatedAt: string;
+}
+
+export interface QuoteListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: QuoteListItemResponse[];
+}
+
+export interface QuoteVersionsResponse {
+  quoteId: number;
+  versions: QuoteVersionResponse[];
+}
+
+export interface CreateQuoteRequest {
+  opportunityId: number;
+  ownerUserId?: number | null;
+  method: QuoteMethod;
+  areaSqm?: number | null;
+  unitPricePerSqm?: number | null;
+  packageDescription?: string;
+  items?: QuoteItemInput[];
+  discountPercent: number;
+  vatPercent: number;
+  validUntil?: string | null;
+  note?: string;
+}
+
+export interface UpdateQuoteRequest {
+  ownerUserId?: number | null;
+  areaSqm?: number | null;
+  unitPricePerSqm?: number | null;
+  packageDescription?: string;
+  items?: QuoteItemInput[];
+  discountPercent: number;
+  vatPercent: number;
+  validUntil?: string | null;
+  note?: string;
+}
+
+export interface QuoteWorkflowRequest {
+  note?: string;
+}
+
+export interface ExtendQuoteValidityRequest {
+  newValidUntil: string;
+  note?: string;
+}
+
+export interface QuoteListParams {
+  status?: QuoteStatus;
+  opportunityId?: number;
+  customerId?: number;
+  ownerUserId?: number;
+  createdFrom?: string;
+  createdTo?: string;
+  minValue?: number;
+  maxValue?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -1113,6 +1297,45 @@ export const adminApi = {
   deleteOpportunity: (id: number) => api.delete(`/opportunities/${id}`),
   addOpportunityActivity: (id: number, body: AddOpportunityActivityRequest) =>
     api.post<OpportunityActivityResponse>(`/opportunities/${id}/activities`, body),
+
+  // Quotes (NIH-84)
+  listQuotes: (params: QuoteListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.status) q.append("status", params.status);
+    if (params.opportunityId != null) q.append("opportunityId", String(params.opportunityId));
+    if (params.customerId != null) q.append("customerId", String(params.customerId));
+    if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
+    if (params.createdFrom) q.append("createdFrom", params.createdFrom);
+    if (params.createdTo) q.append("createdTo", params.createdTo);
+    if (params.minValue != null) q.append("minValue", String(params.minValue));
+    if (params.maxValue != null) q.append("maxValue", String(params.maxValue));
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<QuoteListResponse>(`/quotes${qs ? `?${qs}` : ""}`);
+  },
+  getQuote: (id: number) => api.get<QuoteResponse>(`/quotes/${id}`),
+  getQuoteVersions: (id: number) => api.get<QuoteVersionsResponse>(`/quotes/${id}/versions`),
+  createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
+  updateQuote: (id: number, body: UpdateQuoteRequest) => api.put<QuoteResponse>(`/quotes/${id}`, body),
+  submitQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/submit`, body),
+  approveQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/approve`, body),
+  rejectQuoteInternal: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/reject-internal`, body),
+  sendQuoteToCustomer: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/send`, body),
+  markQuoteCustomerApproved: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/customer-approve`, body),
+  markQuoteCustomerRejected: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/customer-reject`, body),
+  cancelQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/cancel`, body),
+  extendQuoteValidity: (id: number, body: ExtendQuoteValidityRequest) =>
+    api.post<QuoteResponse>(`/quotes/${id}/extend-validity`, body),
+  deleteQuote: (id: number) => api.delete(`/quotes/${id}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
