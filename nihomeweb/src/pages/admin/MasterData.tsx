@@ -44,7 +44,6 @@ const CODE_RE = /^[a-z0-9][a-z0-9_-]{0,79}$/;
 type FormData = {
   code: string;
   name: string;
-  labelKey: string;
   description: string;
   isActive: boolean;
   sortOrder: number;
@@ -53,7 +52,6 @@ type FormData = {
 const emptyForm: FormData = {
   code: "",
   name: "",
-  labelKey: "",
   description: "",
   isActive: true,
   sortOrder: 0,
@@ -174,8 +172,7 @@ const MasterData = () => {
     return options.filter(
       (o) =>
         o.code.toLowerCase().includes(q) ||
-        o.name.toLowerCase().includes(q) ||
-        (o.labelKey?.toLowerCase().includes(q) ?? false),
+        o.name.toLowerCase().includes(q),
     );
   }, [options, query]);
 
@@ -219,7 +216,6 @@ const MasterData = () => {
     setForm({
       code: option.code,
       name: option.name,
-      labelKey: option.labelKey ?? "",
       description: option.description ?? "",
       isActive: option.isActive,
       sortOrder: option.sortOrder,
@@ -243,7 +239,6 @@ const MasterData = () => {
     const payload: UpsertMasterDataOptionRequest = {
       code,
       name,
-      labelKey: form.labelKey.trim() || null,
       description: form.description.trim() || null,
       isActive: form.isActive,
       sortOrder: Number.isFinite(form.sortOrder) ? Math.max(0, form.sortOrder) : 0,
@@ -373,11 +368,22 @@ const MasterData = () => {
             <div className="rounded-full bg-muted p-3">
               <SearchIcon className="h-5 w-5" aria-hidden />
             </div>
-            <p>{t("masterData.empty")}</p>
-            {canManage && (
-              <Button size="sm" onClick={openCreate}>
-                <Plus className="mr-1.5 h-4 w-4" /> {t("masterData.newOption")}
-              </Button>
+            {options.length === 0 ? (
+              <>
+                <p>{t("masterData.empty")}</p>
+                {canManage && (
+                  <Button size="sm" onClick={openCreate}>
+                    <Plus className="mr-1.5 h-4 w-4" /> {t("masterData.newOption")}
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <p>{t("masterData.noMatch")}</p>
+                <Button variant="outline" size="sm" onClick={() => setQuery("")}>
+                  {t("common.reset")}
+                </Button>
+              </>
             )}
           </div>
         ) : (
@@ -420,12 +426,6 @@ const MasterData = () => {
                   <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                     <dt className="text-muted-foreground">{t("masterData.field.sortOrder")}</dt>
                     <dd className="font-medium">{o.sortOrder}</dd>
-                    {o.labelKey && (
-                      <>
-                        <dt className="text-muted-foreground">{t("masterData.field.labelKey")}</dt>
-                        <dd className="break-all font-mono">{o.labelKey}</dd>
-                      </>
-                    )}
                     {o.description && (
                       <>
                         <dt className="text-muted-foreground">{t("masterData.field.description")}</dt>
@@ -473,8 +473,8 @@ const MasterData = () => {
                       </th>
                     )}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("masterData.field.code")}</th>
-                    <th className="min-w-[180px] px-3 py-3 text-left font-medium">{t("masterData.field.name")}</th>
-                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("masterData.field.labelKey")}</th>
+                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("masterData.field.name")}</th>
+                    <th className="min-w-[240px] px-3 py-3 text-left font-medium">{t("masterData.field.description")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("masterData.field.sortOrder")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("masterData.field.isActive")}</th>
                     {canManage && (
@@ -495,9 +495,9 @@ const MasterData = () => {
                         </td>
                       )}
                       <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{o.code}</td>
-                      <td className="min-w-[180px] px-3 py-3 font-medium">{o.name}</td>
-                      <td className="min-w-[220px] break-all px-3 py-3 font-mono text-xs text-muted-foreground">
-                        {o.labelKey ?? "—"}
+                      <td className="min-w-[220px] px-3 py-3 font-medium">{o.name}</td>
+                      <td className="min-w-[240px] break-words px-3 py-3 text-xs text-muted-foreground">
+                        {o.description ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3">{o.sortOrder}</td>
                       <td className="whitespace-nowrap px-3 py-3">
@@ -588,20 +588,6 @@ const MasterData = () => {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="h-9"
               />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="md-labelKey" className="text-xs">
-                {t("masterData.field.labelKey")}
-              </Label>
-              <Input
-                id="md-labelKey"
-                value={form.labelKey}
-                onChange={(e) => setForm({ ...form, labelKey: e.target.value })}
-                placeholder={`masterData.${activeCategory || "category"}.${form.code || "code"}.label`}
-                className="h-9 font-mono text-xs"
-              />
-              <p className="text-xs text-muted-foreground">{t("masterData.labelKeyHint")}</p>
             </div>
 
             <div className="space-y-1.5">

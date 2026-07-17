@@ -800,6 +800,14 @@
     "ja": "このカテゴリにはまだオプションがありません。"
   },
   {
+    "key": "masterData.noMatch",
+    "category": "masterData",
+    "vi": "Không có giá trị nào khớp với từ khoá tìm kiếm.",
+    "en": "No options match your search.",
+    "zh": "没有选项匹配您的搜索。",
+    "ja": "検索に一致するオプションはありません。"
+  },
+  {
     "key": "masterData.field.code",
     "category": "masterData",
     "vi": "Mã",
@@ -814,14 +822,6 @@
     "en": "Display name",
     "zh": "显示名称",
     "ja": "表示名"
-  },
-  {
-    "key": "masterData.field.labelKey",
-    "category": "masterData",
-    "vi": "Khóa i18n",
-    "en": "i18n label key",
-    "zh": "i18n 键",
-    "ja": "i18n ラベルキー"
   },
   {
     "key": "masterData.field.description",
@@ -870,14 +870,6 @@
     "en": "Lowercase letters, digits, dash or underscore (max 80 chars). Cannot be changed after creation.",
     "zh": "仅限小写字母、数字、连字符或下划线（最多 80 个字符）。创建后无法修改。",
     "ja": "小文字・数字・ハイフン・アンダースコアのみ（最大 80 文字）。作成後は変更できません。"
-  },
-  {
-    "key": "masterData.labelKeyHint",
-    "category": "masterData",
-    "vi": "Tùy chọn. Nếu để trống, hệ thống sẽ tự đặt theo mẫu masterData.{danh mục}.{mã}.label.",
-    "en": "Optional. Auto-filled to masterData.{category}.{code}.label when left blank.",
-    "zh": "可选。留空时将自动生成 masterData.{category}.{code}.label。",
-    "ja": "任意。空欄の場合は masterData.{category}.{code}.label が自動的に設定されます。"
   },
   {
     "key": "masterData.codeInvalid",
