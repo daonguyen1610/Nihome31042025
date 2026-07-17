@@ -305,8 +305,8 @@ const AdminLeads = () => {
           </div>
         </header>
 
-        <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
-          <div className="min-w-[220px] flex-1">
+        <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div>
             <Label className="text-xs" htmlFor="lead-search">{t("leads.filter.search")}</Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -320,7 +320,7 @@ const AdminLeads = () => {
             </div>
           </div>
 
-          <div className="w-[170px]">
+          <div>
             <Label className="text-xs">{t("leads.filter.status")}</Label>
             <Select
               value={statusFilter || "__all"}
@@ -343,7 +343,7 @@ const AdminLeads = () => {
             </Select>
           </div>
 
-          <div className="w-[170px]">
+          <div>
             <Label className="text-xs">{t("leads.filter.source")}</Label>
             <Select
               value={sourceFilter || "__all"}
@@ -393,8 +393,119 @@ const AdminLeads = () => {
                 onBulkDelete={() => void handleBulkDelete()}
               />
             )}
-            <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-[880px] w-full divide-y text-sm">
+
+            {/* Mobile / tablet card view (<lg) */}
+            <div className="grid gap-3 lg:hidden">
+              {canManage && leads.length > 1 && (
+                <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
+                  <Checkbox
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(v) => toggleAllVisible(v === true)}
+                    aria-label={t("common.selectAll")}
+                  />
+                  <span>
+                    {allVisibleSelected ? t("common.deselectAll") : t("common.selectAll")}
+                  </span>
+                </label>
+              )}
+              {leads.map((lead) => (
+                <article
+                  key={lead.id}
+                  className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/40"
+                  onClick={() => void openDetail(lead.id)}
+                >
+                  <header className="flex items-start gap-2">
+                    {canManage && (
+                      <div
+                        className="pt-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(lead.id)}
+                          onCheckedChange={(v) => toggleOne(lead.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · ${lead.name}`}
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words text-sm font-semibold leading-tight">{lead.name}</h3>
+                      {lead.companyName && (
+                        <p className="mt-0.5 text-xs text-muted-foreground break-words">{lead.companyName}</p>
+                      )}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "shrink-0 gap-1.5 whitespace-nowrap font-medium",
+                        LEAD_STATUS_STYLES[lead.status],
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          LEAD_STATUS_DOT[lead.status],
+                        )}
+                      />
+                      {t(`leads.status.${lead.status}`)}
+                    </Badge>
+                  </header>
+
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                    {(lead.phone || lead.email) && (
+                      <div className="col-span-2">
+                        <dt className="text-muted-foreground">
+                          {t("leads.field.phone")} / {t("leads.field.email")}
+                        </dt>
+                        <dd className="mt-0.5">
+                          {lead.phone && <div className="font-medium">{lead.phone}</div>}
+                          {lead.email && <div className="text-muted-foreground break-all">{lead.email}</div>}
+                        </dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt className="text-muted-foreground">{t("leads.field.source")}</dt>
+                      <dd className="font-medium">{sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">{t("leads.field.createdAt")}</dt>
+                      <dd className="font-medium">{new Date(lead.createdAt).toLocaleDateString()}</dd>
+                    </div>
+                    {canSeeAll && lead.ownerName && (
+                      <div className="col-span-2">
+                        <dt className="text-muted-foreground">{t("leads.field.owner")}</dt>
+                        <dd className="font-medium">{lead.ownerName}</dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  <footer className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void handleDelete(lead.id);
+                      }}
+                      title={t("common.delete")}
+                      aria-label={t("common.delete")}
+                      className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </footer>
+                </article>
+              ))}
+            </div>
+
+            {/* Desktop table (lg+) */}
+            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <table className="w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   {canManage && (
@@ -529,7 +640,7 @@ const AdminLeads = () => {
 
       {/* Create dialog */}
       <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{t("leads.new")}</DialogTitle>
             <DialogDescription>{t("leads.field.contactRequired")}</DialogDescription>
@@ -597,7 +708,7 @@ const AdminLeads = () => {
               <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">{createError}</p>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setCreating(false)} disabled={saving}>
               {t("common.cancel")}
             </Button>
@@ -610,7 +721,7 @@ const AdminLeads = () => {
 
       {/* Detail drawer (as wide dialog) */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(open) => !open && closeDetail()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
           {detailLoading ? (
             <>
               <DialogHeader>
@@ -734,7 +845,7 @@ const AdminLeads = () => {
                 )}
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
                 {canConvert && detail.status !== "Converted" && detail.status !== "Junk" && detail.status !== "NotInterested" && (
                   <Button onClick={() => setConvertOpen(true)}>
                     <ArrowRight className="mr-1.5 h-4 w-4" /> {t("leads.convert.button")}
@@ -751,12 +862,12 @@ const AdminLeads = () => {
 
       {/* Convert confirmation */}
       <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md sm:w-full">
           <DialogHeader>
             <DialogTitle>{t("leads.convert.confirmTitle")}</DialogTitle>
             <DialogDescription>{t("leads.convert.confirmBody")}</DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setConvertOpen(false)} disabled={converting}>
               {t("common.cancel")}
             </Button>
