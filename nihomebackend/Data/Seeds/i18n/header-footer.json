@@ -288,14 +288,6 @@
     "ja": "ロール管理"
   },
   {
-    "key": "nav.customerRoles",
-    "category": "nav",
-    "vi": "Phân quyền",
-    "en": "Customer roles",
-    "zh": "客户角色",
-    "ja": "顧客ロール"
-  },
-  {
     "key": "nav.onlineCustomers",
     "category": "nav",
     "vi": "Người dùng trực tuyến",
