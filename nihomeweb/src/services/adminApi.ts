@@ -454,6 +454,40 @@ export interface UpsertMasterDataOptionRequest {
   sortOrder: number;
 }
 
+// -------- Workflow config (NIH-225) --------
+
+export interface WorkflowStep {
+  order: number;
+  name: string;
+  approverRoleCode: string;
+  slaHours: number;
+  requireAllApprovers: boolean;
+  conditionExpression?: string | null;
+}
+
+export interface WorkflowConfig {
+  id: number;
+  module: string;
+  action: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  steps: WorkflowStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertWorkflowConfigRequest {
+  module: string;
+  action: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  steps: WorkflowStep[];
+}
+
 // -------- CRM Customer --------
 
 export type CustomerType = "Individual" | "Company";
@@ -1619,6 +1653,18 @@ export const adminApi = {
     api.put<MasterDataOption>(`/master-data/options/${id}`, body),
   deleteMasterDataOption: (id: number) =>
     api.delete(`/master-data/options/${id}`),
+
+  // Workflow config (NIH-225)
+  listWorkflows: (includeInactive = false) =>
+    api.get<WorkflowConfig[]>("/workflows", { params: { includeInactive } }),
+  getWorkflow: (id: number) =>
+    api.get<WorkflowConfig>(`/workflows/${id}`),
+  createWorkflow: (body: UpsertWorkflowConfigRequest) =>
+    api.post<WorkflowConfig>("/workflows", body),
+  updateWorkflow: (id: number, body: UpsertWorkflowConfigRequest) =>
+    api.put<WorkflowConfig>(`/workflows/${id}`, body),
+  deleteWorkflow: (id: number) =>
+    api.delete(`/workflows/${id}`),
 
   // Users / RBAC
   getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>

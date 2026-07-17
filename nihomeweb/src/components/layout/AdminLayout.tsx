@@ -206,6 +206,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/languages", label: t("set.languages"), icon: Languages, permission: ADMIN_PERMS.translations },
           { to: "/admin/translations", label: t("nav.translations"), icon: Languages, permission: ADMIN_PERMS.translations },
           { to: "/admin/master-data", label: t("nav.masterData"), icon: Database, permission: ADMIN_PERMS.masterData },
+          { to: "/admin/workflows", label: t("nav.workflows"), icon: Workflow, permission: ADMIN_PERMS.workflow },
           { to: "/admin/email-templates", label: t("set.emailTemplates"), icon: Mail, permission: ADMIN_PERMS.emailTemplates },
           { to: "/admin/activity-log", label: t("nav.activityLog"), icon: History, permission: ADMIN_PERMS.activityLog },
         ],

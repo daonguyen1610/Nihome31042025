@@ -46,6 +46,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     // Master data — generic category-driven lookup for CRM / Design / Permit modules.
     public DbSet<MasterDataOption> MasterDataOptions => Set<MasterDataOption>();
 
+    // Workflow — reusable approval flow definitions (NIH-225 config, runtime later).
+    public DbSet<WorkflowConfig> WorkflowConfigs => Set<WorkflowConfig>();
+
     // CRM — M1 chain (Lead → Customer → Opportunity → Quote/Bid → Contract)
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<LeadActivity> LeadActivities => Set<LeadActivity>();
@@ -305,6 +308,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<MasterDataOption>().HasKey(m => m.Id);
         modelBuilder.Entity<MasterDataOption>().HasIndex(m => new { m.Category, m.Code }).IsUnique();
         modelBuilder.Entity<MasterDataOption>().HasIndex(m => m.Category);
+
+        modelBuilder.Entity<WorkflowConfig>().ToTable("workflow_configs");
+        modelBuilder.Entity<WorkflowConfig>().HasKey(w => w.Id);
+        modelBuilder.Entity<WorkflowConfig>().HasIndex(w => new { w.Module, w.Action }).IsUnique();
+        modelBuilder.Entity<WorkflowConfig>().HasIndex(w => w.Module);
 
         modelBuilder.Entity<Lead>(b =>
         {
