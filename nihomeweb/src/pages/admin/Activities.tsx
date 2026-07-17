@@ -192,7 +192,74 @@ const AdminActivities = () => {
             onClear={clearSelection}
             onBulkDelete={() => void handleBulkDelete()}
           />
-          <div className="overflow-x-auto rounded-lg border">
+
+          {/* Mobile / tablet card view (<lg) */}
+          <ul className="grid gap-3 lg:hidden">
+            {filtered.map((a) => {
+              const label = resolveCategoryLabel(a.categoryId, a.category, categoriesById, lang);
+              return (
+                <li key={a.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                  <div className="flex items-start gap-2">
+                    <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                      <Checkbox
+                        checked={selectedIds.has(a.id)}
+                        onCheckedChange={(v) => toggleOne(a.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${a.title}`}
+                      />
+                    </span>
+                    <Link
+                      to={`/admin/activities/${a.slug}`}
+                      className="flex min-w-0 flex-1 items-start gap-2 hover:opacity-80 transition"
+                    >
+                      <img src={a.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+                      <div className="min-w-0">
+                        <h3 className="line-clamp-2 break-words text-sm font-semibold leading-tight">{a.title}</h3>
+                        {label && (
+                          <Badge
+                            variant="outline"
+                            className="mt-1 whitespace-normal border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                          >
+                            {label}
+                          </Badge>
+                        )}
+                      </div>
+                    </Link>
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-muted-foreground">{t("activities.col.author")}</dt>
+                    <dd className="font-medium">{a.author ?? "—"}</dd>
+                    <dt className="text-muted-foreground">{t("common.date")}</dt>
+                    <dd className="font-medium">{a.date}</dd>
+                  </dl>
+                  <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                    <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
+                      <Link to={`/admin/activities/${a.slug}`}>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")}>
+                      <Link to={`/admin/activities/${a.slug}/edit`}>
+                        <Edit className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(a)}
+                      title={t("common.delete")}
+                      aria-label={t("common.delete")}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Desktop table (lg+) */}
+          <div className="hidden overflow-x-auto rounded-lg border lg:block">
             <table className="min-w-[800px] w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
