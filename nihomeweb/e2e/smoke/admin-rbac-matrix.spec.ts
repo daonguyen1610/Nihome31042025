@@ -53,6 +53,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/settings",
   "/admin/languages",
   "/admin/translations",
+  "/admin/master-data",
   "/admin/email-templates",
   "/admin/activity-log",
 ] as const;
@@ -87,7 +88,7 @@ const matrix: RoleExpectation[] = [
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contacts", "/admin/recruitment", "/admin/master-data"],
   },
   {
     // SALES_MANAGER: crm.** (full — includes quotes.approve on top of manage)
@@ -95,7 +96,7 @@ const matrix: RoleExpectation[] = [
     // as SALE plus view.all across CRM entities; routes rendered are
     // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contacts", "/admin/recruitment", "/admin/master-data"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view (manage-only routes
@@ -116,6 +117,7 @@ const matrix: RoleExpectation[] = [
       "/admin/awards",
       "/admin/languages",
       "/admin/translations",
+      "/admin/master-data",
       "/admin/processes/general",
     ],
   },
@@ -128,6 +130,7 @@ const matrix: RoleExpectation[] = [
       "/admin/projects",
       "/admin/processes/general",
       "/admin/recruitment",
+      "/admin/master-data",
     ],
   },
   {
@@ -135,17 +138,17 @@ const matrix: RoleExpectation[] = [
     // crm.tenders.view (read-only access to approved quotes / tenders
     // for takeoff / cost tracking).
     user: TEST_USERS.qs,
-    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/processes/general"],
+    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/processes/general", "/admin/master-data"],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
     user: TEST_USERS.accountant,
-    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contacts", "/admin/activity-log"],
+    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contacts", "/admin/activity-log", "/admin/master-data"],
   },
   {
     // WAREHOUSE: processes.view only (plus dashboard)
     user: TEST_USERS.warehouse,
-    allowed: ["/admin", "/admin/notifications", "/admin/processes/general"],
+    allowed: ["/admin", "/admin/notifications", "/admin/processes/general", "/admin/master-data"],
   },
   {
     // BGD: **.view + dashboard.view + system.audit.view — every view route.
