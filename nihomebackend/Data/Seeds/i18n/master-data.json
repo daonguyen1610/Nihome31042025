@@ -104,6 +104,14 @@
     "ja": "能力書類タグ"
   },
   {
+    "key": "masterData.category.tender_checklist_default.title",
+    "category": "masterData",
+    "vi": "Checklist gói thầu mặc định",
+    "en": "Default tender checklist",
+    "zh": "默认投标清单",
+    "ja": "既定入札チェックリスト"
+  },
+  {
     "key": "masterData.customer_type.individual.label",
     "category": "masterData",
     "vi": "Cá nhân",
@@ -694,5 +702,53 @@
     "en": "Other",
     "zh": "其他",
     "ja": "その他"
+  },
+  {
+    "key": "masterData.tender_checklist_default.capability.label",
+    "category": "masterData",
+    "vi": "Hồ sơ năng lực",
+    "en": "Capability profile",
+    "zh": "能力资料",
+    "ja": "能力資料"
+  },
+  {
+    "key": "masterData.tender_checklist_default.legal.label",
+    "category": "masterData",
+    "vi": "Hồ sơ pháp nhân",
+    "en": "Legal-entity documents",
+    "zh": "法人文件",
+    "ja": "法人書類"
+  },
+  {
+    "key": "masterData.tender_checklist_default.bid-bond.label",
+    "category": "masterData",
+    "vi": "Bảo lãnh dự thầu",
+    "en": "Bid bond",
+    "zh": "投标保证金",
+    "ja": "入札保証"
+  },
+  {
+    "key": "masterData.tender_checklist_default.boq.label",
+    "category": "masterData",
+    "vi": "BOQ",
+    "en": "Bill of quantities (BOQ)",
+    "zh": "工程量清单 (BOQ)",
+    "ja": "数量明細 (BOQ)"
+  },
+  {
+    "key": "masterData.tender_checklist_default.method.label",
+    "category": "masterData",
+    "vi": "Thuyết minh biện pháp thi công",
+    "en": "Construction method statement",
+    "zh": "施工方案说明",
+    "ja": "施工方法説明"
+  },
+  {
+    "key": "masterData.tender_checklist_default.schedule.label",
+    "category": "masterData",
+    "vi": "Tiến độ",
+    "en": "Schedule",
+    "zh": "进度计划",
+    "ja": "工程表"
   }
 ]

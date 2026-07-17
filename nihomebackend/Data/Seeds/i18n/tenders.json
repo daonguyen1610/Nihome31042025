@@ -1,0 +1,44 @@
+[
+  { "key": "nav.tenders", "category": "nav", "vi": "Đấu thầu", "en": "Tenders", "zh": "投标", "ja": "入札" },
+
+  { "key": "tenders.title", "category": "tenders", "vi": "Quản lý Gói thầu", "en": "Tender management", "zh": "投标管理", "ja": "入札管理" },
+  { "key": "tenders.subtitle", "category": "tenders", "vi": "Tạo, theo dõi deadline và checklist cho từng gói thầu.", "en": "Create, track deadlines and checklist for each tender.", "zh": "为每个投标创建、跟踪截止日期和检查清单。", "ja": "各入札の作成、締切追跡、チェックリスト管理。" },
+  { "key": "tenders.new", "category": "tenders", "vi": "Tạo gói thầu", "en": "New tender", "zh": "新建投标", "ja": "新規入札" },
+  { "key": "tenders.created", "category": "tenders", "vi": "Đã tạo gói thầu", "en": "Tender created", "zh": "投标已创建", "ja": "入札を作成しました" },
+  { "key": "tenders.updated", "category": "tenders", "vi": "Đã cập nhật gói thầu", "en": "Tender updated", "zh": "投标已更新", "ja": "入札を更新しました" },
+  { "key": "tenders.deleted", "category": "tenders", "vi": "Đã xoá gói thầu", "en": "Tender deleted", "zh": "投标已删除", "ja": "入札を削除しました" },
+  { "key": "tenders.empty", "category": "tenders", "vi": "Chưa có gói thầu nào.", "en": "No tenders yet.", "zh": "暂无投标。", "ja": "入札がまだありません。" },
+
+  { "key": "tenders.field.code", "category": "tenders", "vi": "Mã gói", "en": "Code", "zh": "编号", "ja": "番号" },
+  { "key": "tenders.field.name", "category": "tenders", "vi": "Tên gói thầu", "en": "Tender name", "zh": "投标名称", "ja": "入札名" },
+  { "key": "tenders.field.customer", "category": "tenders", "vi": "Chủ đầu tư", "en": "Customer", "zh": "客户", "ja": "顧客" },
+  { "key": "tenders.field.openingDate", "category": "tenders", "vi": "Ngày mở thầu", "en": "Opening date", "zh": "开标日期", "ja": "開札日" },
+  { "key": "tenders.field.deadline", "category": "tenders", "vi": "Deadline nộp", "en": "Submission deadline", "zh": "提交截止日期", "ja": "提出締切" },
+  { "key": "tenders.field.preparer", "category": "tenders", "vi": "Người phụ trách", "en": "Preparer", "zh": "负责人", "ja": "担当者" },
+  { "key": "tenders.field.infoSource", "category": "tenders", "vi": "Nguồn thông tin", "en": "Info source", "zh": "信息来源", "ja": "情報源" },
+  { "key": "tenders.field.note", "category": "tenders", "vi": "Ghi chú", "en": "Note", "zh": "备注", "ja": "備考" },
+  { "key": "tenders.field.status", "category": "tenders", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "ステータス" },
+  { "key": "tenders.field.checklist", "category": "tenders", "vi": "% Checklist", "en": "Checklist %", "zh": "清单 %", "ja": "チェックリスト %" },
+  { "key": "tenders.field.updatedAt", "category": "tenders", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+
+  { "key": "tenders.status.Preparing", "category": "tenders", "vi": "Đang chuẩn bị", "en": "Preparing", "zh": "准备中", "ja": "準備中" },
+  { "key": "tenders.status.Submitted", "category": "tenders", "vi": "Đã nộp", "en": "Submitted", "zh": "已提交", "ja": "提出済み" },
+  { "key": "tenders.status.Won", "category": "tenders", "vi": "Trúng", "en": "Won", "zh": "中标", "ja": "落札" },
+  { "key": "tenders.status.Lost", "category": "tenders", "vi": "Trượt", "en": "Lost", "zh": "落标", "ja": "失注" },
+  { "key": "tenders.status.Cancelled", "category": "tenders", "vi": "Đã huỷ", "en": "Cancelled", "zh": "已取消", "ja": "キャンセル" },
+
+  { "key": "tenders.filter.search", "category": "tenders", "vi": "Tìm mã, tên gói, chủ đầu tư...", "en": "Search by code / name / customer...", "zh": "按编号/名称/客户搜索...", "ja": "番号・名称・顧客で検索..." },
+  { "key": "tenders.filter.allStatus", "category": "tenders", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべてのステータス" },
+  { "key": "tenders.filter.allCustomers", "category": "tenders", "vi": "Tất cả khách hàng", "en": "All customers", "zh": "全部客户", "ja": "すべての顧客" },
+  { "key": "tenders.filter.allPreparers", "category": "tenders", "vi": "Tất cả người phụ trách", "en": "All preparers", "zh": "全部负责人", "ja": "すべての担当者" },
+
+  { "key": "tenders.badge.deadlineImminent", "category": "tenders", "vi": "Sát hạn", "en": "Deadline near", "zh": "临近截止", "ja": "締切間近" },
+
+  { "key": "tenders.form.customerRequired", "category": "tenders", "vi": "Vui lòng chọn Chủ đầu tư.", "en": "Please pick a Customer.", "zh": "请选择客户。", "ja": "顧客を選択してください。" },
+  { "key": "tenders.form.deadlineRequired", "category": "tenders", "vi": "Deadline nộp phải là ngày trong tương lai.", "en": "Submission deadline must be in the future.", "zh": "提交截止日期必须为未来日期。", "ja": "提出締切は未来の日付である必要があります。" },
+  { "key": "tenders.form.readOnlyAfterSubmit", "category": "tenders", "vi": "Sau khi đã nộp, chỉ có thể sửa Ghi chú.", "en": "After submission only the Note can be edited.", "zh": "提交后只能修改备注。", "ja": "提出後は備考のみ編集可能です。" },
+
+  { "key": "tenders.delete.confirmTitle", "category": "tenders", "vi": "Xoá gói thầu?", "en": "Delete tender?", "zh": "删除投标？", "ja": "入札を削除しますか？" },
+  { "key": "tenders.delete.confirmBody", "category": "tenders", "vi": "Chỉ có thể xoá gói thầu \"{name}\" khi còn ở trạng thái Đang chuẩn bị. Hành động này không thể hoàn tác.", "en": "\"{name}\" can only be deleted while it is Preparing. This cannot be undone.", "zh": "\"{name}\" 仅在准备中状态可删除。此操作无法撤销。", "ja": "「{name}」は準備中の場合のみ削除可能です。取り消せません。" },
+  { "key": "tenders.delete.confirm", "category": "tenders", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
+]

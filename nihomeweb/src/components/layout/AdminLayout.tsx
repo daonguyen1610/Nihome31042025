@@ -142,6 +142,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/customers", label: t("nav.customers"), icon: UserRound, permission: ADMIN_PERMS.customers },
           { to: "/admin/opportunities", label: t("nav.opportunities"), icon: Target, permission: ADMIN_PERMS.opportunities },
           { to: "/admin/quotes", label: t("nav.quotes"), icon: FileSpreadsheet, permission: ADMIN_PERMS.quotes },
+          { to: "/admin/tenders", label: t("nav.tenders"), icon: Briefcase, permission: ADMIN_PERMS.tenders },
           { to: "/admin/capability-documents", label: t("nav.capabilityDocs"), icon: FolderTree, permission: ADMIN_PERMS.capabilityDocs },
         ],
       },
