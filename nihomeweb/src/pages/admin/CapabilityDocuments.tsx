@@ -308,6 +308,12 @@ const CapabilityDocuments = () => {
     }
   };
 
+  // -------- quick-view preview --------
+  // The list row already contains every field we want to show, so no extra
+  // fetch is needed. Full editing still happens through openEdit(), which the
+  // preview footer can invoke as a shortcut.
+  const [previewRow, setPreviewRow] = useState<CapabilityDocumentResponse | null>(null);
+
   // -------- ZIP download --------
   const downloadZip = async () => {
     if (selectedIds.size === 0) return;
@@ -558,13 +564,18 @@ const CapabilityDocuments = () => {
                 </label>
               )}
               {rows.map((r) => (
-                <article key={r.id} className="rounded-lg border bg-white p-3 shadow-sm">
+                <article
+                  key={r.id}
+                  className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
+                  onClick={() => setPreviewRow(r)}
+                >
                   <header className="flex items-start gap-2">
-                    <Checkbox
-                      className="mt-1 shrink-0"
-                      checked={selectedIds.has(r.id)}
-                      onCheckedChange={(v) => toggleOne(r.id, Boolean(v))}
-                    />
+                    <span onClick={(e) => e.stopPropagation()} className="mt-1 shrink-0">
+                      <Checkbox
+                        checked={selectedIds.has(r.id)}
+                        onCheckedChange={(v) => toggleOne(r.id, Boolean(v))}
+                      />
+                    </span>
                     <div className="min-w-0 flex-1">
                       <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
                       <p className="mt-0.5 break-all text-xs text-muted-foreground">{r.originalFileName}</p>
@@ -600,7 +611,10 @@ const CapabilityDocuments = () => {
                     </div>
                   </dl>
 
-                  <footer className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                  <footer
+                    className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {renderRowActions(r)}
                   </footer>
                 </article>
@@ -609,14 +623,14 @@ const CapabilityDocuments = () => {
 
             {/* Desktop table view (lg+) */}
             <div className="hidden overflow-x-auto rounded-md border lg:block">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[1000px] text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="w-10 px-3 py-2">
                       <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(Boolean(v))} />
                     </th>
-                    <th className="px-3 py-2">{t("capDocs.field.name")}</th>
-                    <th className="px-3 py-2">{t("capDocs.field.tag")}</th>
+                    <th className="min-w-[240px] px-3 py-2">{t("capDocs.field.name")}</th>
+                    <th className="min-w-[140px] px-3 py-2">{t("capDocs.field.tag")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.issuedDate")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.expiryDate")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.version")}</th>
@@ -627,11 +641,15 @@ const CapabilityDocuments = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.id} className="border-t align-top hover:bg-slate-50/50">
-                      <td className="px-3 py-2">
+                    <tr
+                      key={r.id}
+                      className="cursor-pointer border-t align-top hover:bg-slate-50/50"
+                      onClick={() => setPreviewRow(r)}
+                    >
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={(v) => toggleOne(r.id, Boolean(v))} />
                       </td>
-                      <td className="max-w-[280px] px-3 py-2">
+                      <td className="min-w-[240px] px-3 py-2">
                         <div className="font-medium">{r.name}</div>
                         <div className="break-all text-xs text-muted-foreground">{r.originalFileName}</div>
                       </td>
@@ -652,7 +670,7 @@ const CapabilityDocuments = () => {
                       <td className="whitespace-nowrap px-3 py-2">V{r.currentVersion}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{formatBytes(r.fileSize)}</td>
                       <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">{renderRowActions(r)}</div>
                       </td>
                     </tr>
@@ -831,6 +849,124 @@ const CapabilityDocuments = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick-view preview dialog — read-only summary of the row.
+          The list already contains every field the preview shows, so
+          no extra API call is needed. Full editing still happens in
+          the Edit dialog above. */}
+      <Dialog
+        open={previewRow !== null}
+        onOpenChange={(o) => !o && setPreviewRow(null)}
+      >
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
+          <DialogHeader>
+            <DialogTitle className="break-words text-base md:text-lg">
+              {previewRow?.name}
+            </DialogTitle>
+            <DialogDescription className="break-all text-xs md:text-sm">
+              V{previewRow?.currentVersion} · {previewRow?.originalFileName}
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewRow && (
+            <div className="space-y-4 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">
+                  {localTagLabel(previewRow.tagCode, previewRow.tagLabel)}
+                </Badge>
+                {previewRow.expiryState !== "none" && previewRow.expiryState !== "ok" && (
+                  <Badge
+                    variant="outline"
+                    className={EXPIRY_BADGE_STYLES[previewRow.expiryState]}
+                  >
+                    {expiryLabel(previewRow.expiryState)}
+                  </Badge>
+                )}
+              </div>
+
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("capDocs.field.issuedDate")}</dt>
+                  <dd className="font-medium">{formatDate(previewRow.issuedDate, lang)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("capDocs.field.expiryDate")}</dt>
+                  <dd className="font-medium">{formatDate(previewRow.expiryDate, lang)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("capDocs.field.fileSize")}</dt>
+                  <dd className="font-medium">{formatBytes(previewRow.fileSize)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("capDocs.field.version")}</dt>
+                  <dd className="font-medium">
+                    V{previewRow.currentVersion}
+                    {previewRow.previousVersionCount > 0 && (
+                      <span className="ml-1 text-xs text-muted-foreground">
+                        (+{previewRow.previousVersionCount})
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                {previewRow.uploadedByName && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">{t("capDocs.field.uploadedBy")}</dt>
+                    <dd className="font-medium">{previewRow.uploadedByName}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("capDocs.field.updatedAt")}</dt>
+                  <dd className="font-medium">{formatDate(previewRow.updatedAt, lang)}</dd>
+                </div>
+              </dl>
+
+              {previewRow.description && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("capDocs.field.description")}
+                  </div>
+                  <p className="whitespace-pre-wrap break-words">{previewRow.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setPreviewRow(null)}
+              className="w-full sm:w-auto"
+            >
+              {t("common.close")}
+            </Button>
+            {previewRow && (
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <a
+                  href={resolveAssetUrl(previewRow.filePath)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Download className="mr-1.5 h-3.5 w-3.5" />
+                  {t("capDocs.action.download")}
+                </a>
+              </Button>
+            )}
+            {previewRow && canManage && (
+              <Button
+                onClick={() => {
+                  const id = previewRow.id;
+                  setPreviewRow(null);
+                  void openEdit(id);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                {t("capDocs.action.edit")}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
