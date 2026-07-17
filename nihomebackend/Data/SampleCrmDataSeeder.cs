@@ -14,7 +14,7 @@ public static class SampleCrmDataSeeder
 {
     private const string SampleTag = "[SAMPLE]";
 
-    public static void Seed(AppDbContext db)
+    public static void Seed(AppDbContext db, string? webRootPath = null)
     {
         var now = DateTime.UtcNow;
 
@@ -31,7 +31,7 @@ public static class SampleCrmDataSeeder
         SeedCustomers(db, owner, now);
         SeedOpportunities(db, owner, now);
         SeedQuotes(db, owner, now);
-        SeedCapabilityDocuments(db, owner, now);
+        SeedCapabilityDocuments(db, owner, now, webRootPath);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -600,16 +600,15 @@ public static class SampleCrmDataSeeder
     /// <summary>
     /// Seeds a small shared capability-document library (NIH-98) so every
     /// tag chip and expiry badge on the FE has real data out-of-the-box.
-    /// Physical files are NOT written to disk — the rows carry synthetic
-    /// paths under <c>/files/capability/</c>. Real Sales users still upload
-    /// their own binaries; sample rows exist purely so the admin grid,
-    /// filters and version tab render populated on a fresh DB.
+    /// When <paramref name="webRootPath"/> is supplied the seeder also
+    /// drops tiny placeholder PDFs under <c>wwwroot/files/capability/</c>
+    /// so the download link on each row resolves on a fresh install. The
+    /// physical-file check runs on every boot (not just the first) so
+    /// deployments that lose the file store still self-heal, while the
+    /// DB rows are inserted only once.
     /// </summary>
-    private static void SeedCapabilityDocuments(AppDbContext db, ApplicationUser owner, DateTime now)
+    private static void SeedCapabilityDocuments(AppDbContext db, ApplicationUser owner, DateTime now, string? webRootPath = null)
     {
-        if (db.CapabilityDocuments.Any(d => d.Description != null
-            && d.Description.StartsWith(SampleCapabilityMarker))) return;
-
         // Curated to cover every tag + every expiry-state band so the FE
         // filters have at least one row each to render.
         var seeds = new (string Name, string Tag, int? IssuedDaysAgo, int? ExpiryDaysFromNow, string File)[]
@@ -623,9 +622,57 @@ public static class SampleCrmDataSeeder
             ("Hồ sơ năng lực tổng hợp 2026",          "khac",      -30,       null,                    "ho-so-nang-luc-2026.pdf"),
         };
 
+        // Phase 1 — self-heal physical files whenever webRoot is known.
+        // Runs on every boot so a wiped/rebuilt file store repopulates
+        // without requiring a DB reset. Also patches the FileSize column
+        // on existing sample rows so the FE grid reflects the actual
+        // placeholder file size rather than the estimate we wrote on
+        // first insert.
+        string? storageDir = null;
+        if (!string.IsNullOrEmpty(webRootPath))
+        {
+            storageDir = Path.Combine(webRootPath, "files", "capability");
+            Directory.CreateDirectory(storageDir);
+            var fileSizes = new Dictionary<string, long>();
+            foreach (var (name, _, _, _, file) in seeds)
+            {
+                var fullPath = Path.Combine(storageDir, file);
+                if (!File.Exists(fullPath))
+                {
+                    File.WriteAllBytes(fullPath, BuildPlaceholderPdf(name));
+                }
+                fileSizes[$"/files/capability/{file}"] = new FileInfo(fullPath).Length;
+            }
+            var paths = fileSizes.Keys.ToList();
+            var existing = db.CapabilityDocuments.Where(d => paths.Contains(d.FilePath)).ToList();
+            var patched = false;
+            foreach (var row in existing)
+            {
+                if (fileSizes.TryGetValue(row.FilePath, out var actualSize) && row.FileSize != actualSize)
+                {
+                    row.FileSize = actualSize;
+                    patched = true;
+                }
+            }
+            if (patched) db.SaveChanges();
+        }
+
+        // Phase 2 — DB rows are inserted only when the sample set is
+        // absent, so admin edits (e.g. renaming a sample row) are not
+        // clobbered on subsequent boots.
+        if (db.CapabilityDocuments.Any(d => d.Description != null
+            && d.Description.StartsWith(SampleCapabilityMarker))) return;
+
         var i = 0;
         foreach (var (name, tag, issuedDaysAgo, expiryDaysFromNow, file) in seeds)
         {
+            long size = 512 * 1024 * (i + 1);
+            if (storageDir is not null)
+            {
+                var fullPath = Path.Combine(storageDir, file);
+                if (File.Exists(fullPath)) size = new FileInfo(fullPath).Length;
+            }
+
             var doc = new CapabilityDocument
             {
                 Name = name,
@@ -635,7 +682,7 @@ public static class SampleCrmDataSeeder
                 Description = $"{SampleCapabilityMarker} Sample capability document.",
                 FilePath = $"/files/capability/{file}",
                 OriginalFileName = file,
-                FileSize = 512 * 1024 * (i + 1),
+                FileSize = size,
                 ContentType = "application/pdf",
                 CurrentVersion = 1,
                 UploadedByUserId = owner.Id,
@@ -648,5 +695,47 @@ public static class SampleCrmDataSeeder
         }
 
         db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Build a minimal valid single-page PDF containing the document's
+    /// display name. Kept intentionally small (well under 1KB) — real
+    /// customer files still replace these via the upload endpoint.
+    /// </summary>
+    private static byte[] BuildPlaceholderPdf(string title)
+    {
+        // Escape PDF-string metacharacters and strip anything outside
+        // WinAnsi so the built-in Helvetica font can render it.
+        var safeTitle = new string(title
+            .Where(c => c is >= (char)0x20 and < (char)0x7F)
+            .ToArray())
+            .Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
+        if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Nihome capability document (sample)";
+
+        // Hand-rolled PDF — six objects, one page, one Helvetica text run.
+        var streamContent = $"BT /F1 14 Tf 40 740 Td ({safeTitle}) Tj ET";
+        var streamBytes = System.Text.Encoding.ASCII.GetBytes(streamContent);
+        var sb = new System.Text.StringBuilder();
+        sb.Append("%PDF-1.4\n");
+        var offsets = new List<int>();
+        void WriteObj(string body)
+        {
+            offsets.Add(sb.Length);
+            sb.Append(body);
+        }
+        WriteObj("1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n");
+        WriteObj("2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n");
+        WriteObj("3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n");
+        WriteObj($"4 0 obj<</Length {streamBytes.Length}>>stream\n{streamContent}\nendstream\nendobj\n");
+        WriteObj("5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n");
+        var xrefOffset = sb.Length;
+        sb.Append("xref\n0 6\n0000000000 65535 f\n");
+        foreach (var off in offsets)
+        {
+            sb.Append($"{off:D10} 00000 n\n");
+        }
+        sb.Append("trailer<</Size 6/Root 1 0 R>>\n");
+        sb.Append($"startxref\n{xrefOffset}\n%%EOF\n");
+        return System.Text.Encoding.ASCII.GetBytes(sb.ToString());
     }
 }

@@ -23,3 +23,7 @@ TestResults/
 nihomebackend/wwwroot/index.html
 nihomebackend/wwwroot/favicon.svg
 nihomebackend/wwwroot/assets/
+
+# Capability-document placeholders are regenerated at boot by
+# SampleCrmDataSeeder — never commit the generated PDFs.
+nihomebackend/wwwroot/files/capability/

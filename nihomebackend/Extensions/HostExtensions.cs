@@ -37,7 +37,12 @@ public static class HostExtensions
         try
         {
             logger.LogInformation("Starting database seeding...");
-            DbSeeder.Seed(db);
+            // NOTE: intentionally NOT using app.Environment.WebRootPath because
+            // this project points WebRootPath at the compiled SPA (/nihomeweb/dist)
+            // via a custom Kestrel setup. Seeded assets belong under the API's
+            // own wwwroot, next to /files/capability/ etc.
+            var webRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+            DbSeeder.Seed(db, webRoot);
             logger.LogInformation("Database seeding completed successfully.");
         }
         catch (Exception ex)

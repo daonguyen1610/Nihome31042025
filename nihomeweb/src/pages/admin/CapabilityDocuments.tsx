@@ -245,7 +245,7 @@ const CapabilityDocuments = () => {
   const submitEdit = async () => {
     if (!editing || !editForm) return;
     if (!editForm.name.trim() || !editForm.tagCode) {
-      setEditError(t("common.validation.missingFields") ?? "");
+      setEditError(t("capDocs.validation.missingFields"));
       return;
     }
     setSavingEdit(true);
@@ -351,22 +351,67 @@ const CapabilityDocuments = () => {
   const localTagLabel = (code: string, fallback?: string | null) =>
     tagsById.get(code)?.name ?? fallback ?? code;
 
+  const renderRowActions = (r: CapabilityDocumentResponse) => (
+    <>
+      <Button asChild size="icon" variant="ghost" title={t("capDocs.action.download")}>
+        <a href={resolveAssetUrl(r.filePath)} target="_blank" rel="noreferrer" aria-label={t("capDocs.action.download")}>
+          <Download className="h-4 w-4" />
+        </a>
+      </Button>
+      {canManage && (
+        <>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => void openEdit(r.id)}
+            title={t("capDocs.action.edit")}
+            aria-label={t("capDocs.action.edit")}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+            onClick={() => setDeleting(r)}
+            title={t("capDocs.action.delete")}
+            aria-label={t("capDocs.action.delete")}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </>
+      )}
+    </>
+  );
+
   // -------- render --------
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{t("capDocs.title")}</h1>
+      <div className="space-y-4 md:space-y-6">
+        {/* Header */}
+        <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{t("capDocs.title")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t("capDocs.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchList()} disabled={loading}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchList()}
+              disabled={loading}
+              className="flex-1 md:flex-none"
+            >
               <RefreshCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
               {t("common.refresh") ?? "Refresh"}
             </Button>
             {canManage && (
-              <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={busy || !uploadTag}>
+              <Button
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={busy || !uploadTag}
+                className="flex-1 md:flex-none"
+              >
                 <Plus className="mr-2 h-4 w-4" />
                 {t("capDocs.new")}
               </Button>
@@ -389,7 +434,7 @@ const CapabilityDocuments = () => {
         {canManage && (
           <div
             className={cn(
-              "rounded-lg border-2 border-dashed p-4 text-center transition-colors",
+              "rounded-lg border-2 border-dashed p-3 transition-colors md:p-4",
               dragging ? "border-primary bg-primary/5" : "border-slate-200",
             )}
             onDragOver={(e) => {
@@ -399,17 +444,17 @@ const CapabilityDocuments = () => {
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
           >
-            <div className="flex flex-col items-center gap-2 text-sm md:flex-row md:justify-between md:text-left">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Upload className="h-5 w-5" />
-                <span>{t("capDocs.form.dropHint")}</span>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-2 text-sm text-muted-foreground md:items-center">
+                <Upload className="mt-0.5 h-5 w-5 shrink-0 md:mt-0" />
+                <span className="text-left">{t("capDocs.form.dropHint")}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 md:shrink-0">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t("capDocs.field.tag")}
                 </Label>
                 <Select value={uploadTag} onValueChange={setUploadTag}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full min-w-[160px] md:w-[200px]">
                     <SelectValue placeholder={t("capDocs.field.tag")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -423,7 +468,7 @@ const CapabilityDocuments = () => {
               </div>
             </div>
             {busy && (
-              <p className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 {t("capDocs.form.uploading")}
               </p>
@@ -449,7 +494,9 @@ const CapabilityDocuments = () => {
               setPage(1);
             }}
           >
-            <SelectTrigger><SelectValue placeholder={t("capDocs.filter.allTags")} /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder={t("capDocs.filter.allTags")} />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_VALUE}>{t("capDocs.filter.allTags")}</SelectItem>
               {tags.map((tag) => (
@@ -464,7 +511,9 @@ const CapabilityDocuments = () => {
               setPage(1);
             }}
           >
-            <SelectTrigger><SelectValue placeholder={t("capDocs.filter.allExpiry")} /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder={t("capDocs.filter.allExpiry")} />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_VALUE}>{t("capDocs.filter.allExpiry")}</SelectItem>
               {CAPABILITY_DOCUMENT_EXPIRY_STATES.map((state) => (
@@ -489,7 +538,7 @@ const CapabilityDocuments = () => {
           </div>
         )}
 
-        {/* Table */}
+        {/* List */}
         {loading ? (
           <PageLoading />
         ) : error ? (
@@ -499,83 +548,124 @@ const CapabilityDocuments = () => {
             {t("capDocs.empty")}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="w-10 px-3 py-2">
-                    <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(Boolean(v))} />
-                  </th>
-                  <th className="px-3 py-2">{t("capDocs.field.name")}</th>
-                  <th className="px-3 py-2">{t("capDocs.field.tag")}</th>
-                  <th className="px-3 py-2">{t("capDocs.field.issuedDate")}</th>
-                  <th className="px-3 py-2">{t("capDocs.field.expiryDate")}</th>
-                  <th className="px-3 py-2">{t("capDocs.field.version")}</th>
-                  <th className="px-3 py-2">{t("capDocs.field.fileSize")}</th>
-                  <th className="px-3 py-2">{t("capDocs.field.updatedAt")}</th>
-                  <th className="w-32 px-3 py-2 text-right">{" "}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-t hover:bg-slate-50/50">
-                    <td className="px-3 py-2">
-                      <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={(v) => toggleOne(r.id, Boolean(v))} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="font-medium">{r.name}</div>
-                      <div className="text-xs text-muted-foreground">{r.originalFileName}</div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge variant="outline">{localTagLabel(r.tagCode, r.tagLabel)}</Badge>
-                    </td>
-                    <td className="px-3 py-2">{formatDate(r.issuedDate, lang)}</td>
-                    <td className="px-3 py-2">
-                      <div>{formatDate(r.expiryDate, lang)}</div>
-                      {r.expiryState !== "none" && r.expiryState !== "ok" && (
-                        <Badge className={cn("mt-1", EXPIRY_BADGE_STYLES[r.expiryState])} variant="outline">
-                          {expiryLabel(r.expiryState)}
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">V{r.currentVersion}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{formatBytes(r.fileSize)}</td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex justify-end gap-1">
-                        <Button asChild size="icon" variant="ghost" title={t("capDocs.action.download")}>
-                          <a href={resolveAssetUrl(r.filePath)} target="_blank" rel="noreferrer">
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                        {canManage && (
-                          <>
-                            <Button size="icon" variant="ghost" onClick={() => void openEdit(r.id)} title={t("capDocs.action.edit")}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="text-rose-600 hover:text-rose-700"
-                              onClick={() => setDeleting(r)}
-                              title={t("capDocs.action.delete")}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+          <>
+            {/* Mobile / tablet card view (<lg) */}
+            <div className="grid gap-3 lg:hidden">
+              {rows.length > 1 && (
+                <label className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm text-muted-foreground">
+                  <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(Boolean(v))} />
+                  <span>{allSelected ? t("capDocs.deselectAll") : t("capDocs.selectAll")}</span>
+                </label>
+              )}
+              {rows.map((r) => (
+                <article key={r.id} className="rounded-lg border bg-white p-3 shadow-sm">
+                  <header className="flex items-start gap-2">
+                    <Checkbox
+                      className="mt-1 shrink-0"
+                      checked={selectedIds.has(r.id)}
+                      onCheckedChange={(v) => toggleOne(r.id, Boolean(v))}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
+                      <p className="mt-0.5 break-all text-xs text-muted-foreground">{r.originalFileName}</p>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0 whitespace-nowrap">V{r.currentVersion}</Badge>
+                  </header>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline">{localTagLabel(r.tagCode, r.tagLabel)}</Badge>
+                    {r.expiryState !== "none" && r.expiryState !== "ok" && (
+                      <Badge variant="outline" className={EXPIRY_BADGE_STYLES[r.expiryState]}>
+                        {expiryLabel(r.expiryState)}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                    <div>
+                      <dt className="text-muted-foreground">{t("capDocs.field.issuedDate")}</dt>
+                      <dd className="font-medium">{formatDate(r.issuedDate, lang)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">{t("capDocs.field.expiryDate")}</dt>
+                      <dd className="font-medium">{formatDate(r.expiryDate, lang)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">{t("capDocs.field.fileSize")}</dt>
+                      <dd className="font-medium">{formatBytes(r.fileSize)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">{t("capDocs.field.updatedAt")}</dt>
+                      <dd className="font-medium">{formatDate(r.updatedAt, lang)}</dd>
+                    </div>
+                  </dl>
+
+                  <footer className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                    {renderRowActions(r)}
+                  </footer>
+                </article>
+              ))}
+            </div>
+
+            {/* Desktop table view (lg+) */}
+            <div className="hidden overflow-x-auto rounded-md border lg:block">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
+                  <tr>
+                    <th className="w-10 px-3 py-2">
+                      <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(Boolean(v))} />
+                    </th>
+                    <th className="px-3 py-2">{t("capDocs.field.name")}</th>
+                    <th className="px-3 py-2">{t("capDocs.field.tag")}</th>
+                    <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.issuedDate")}</th>
+                    <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.expiryDate")}</th>
+                    <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.version")}</th>
+                    <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.fileSize")}</th>
+                    <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.updatedAt")}</th>
+                    <th className="w-32 px-3 py-2 text-right"> </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-t align-top hover:bg-slate-50/50">
+                      <td className="px-3 py-2">
+                        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={(v) => toggleOne(r.id, Boolean(v))} />
+                      </td>
+                      <td className="max-w-[280px] px-3 py-2">
+                        <div className="font-medium">{r.name}</div>
+                        <div className="break-all text-xs text-muted-foreground">{r.originalFileName}</div>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline" className="whitespace-nowrap">
+                          {localTagLabel(r.tagCode, r.tagLabel)}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2">{formatDate(r.issuedDate, lang)}</td>
+                      <td className="whitespace-nowrap px-3 py-2">
+                        <div>{formatDate(r.expiryDate, lang)}</div>
+                        {r.expiryState !== "none" && r.expiryState !== "ok" && (
+                          <Badge className={cn("mt-1", EXPIRY_BADGE_STYLES[r.expiryState])} variant="outline">
+                            {expiryLabel(r.expiryState)}
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2">V{r.currentVersion}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{formatBytes(r.fileSize)}</td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end gap-1">{renderRowActions(r)}</div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* Pagination */}
         {total > pageSize && (
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex flex-col items-center justify-between gap-2 text-sm sm:flex-row">
             <span className="text-muted-foreground">
               {page} / {totalPages} · {total}
             </span>
@@ -593,10 +683,12 @@ const CapabilityDocuments = () => {
 
       {/* Edit dialog */}
       <Dialog open={!!editing} onOpenChange={(v) => !v && (setEditing(null), setEditForm(null))}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
           <DialogHeader>
-            <DialogTitle>{editing?.name}</DialogTitle>
-            <DialogDescription>V{editing?.currentVersion} · {editing?.originalFileName}</DialogDescription>
+            <DialogTitle className="break-words text-base md:text-lg">{editing?.name}</DialogTitle>
+            <DialogDescription className="break-all text-xs md:text-sm">
+              V{editing?.currentVersion} · {editing?.originalFileName}
+            </DialogDescription>
           </DialogHeader>
           {editForm && (
             <div className="space-y-3">
@@ -671,9 +763,9 @@ const CapabilityDocuments = () => {
                 ) : (
                   <ul className="mt-1 divide-y rounded-md border">
                     {editing?.versions.map((v) => (
-                      <li key={v.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <div>
-                          <div className="font-medium">V{v.versionNumber} · {v.originalFileName}</div>
+                      <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                        <div className="min-w-0 flex-1">
+                          <div className="break-words font-medium">V{v.versionNumber} · {v.originalFileName}</div>
                           <div className="text-xs text-muted-foreground">
                             {formatDate(v.createdAt, lang)} · {formatBytes(v.fileSize)}
                           </div>
@@ -692,11 +784,20 @@ const CapabilityDocuments = () => {
               {editError && <p className="text-sm text-rose-600">{editError}</p>}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => (setEditing(null), setEditForm(null))} disabled={savingEdit}>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="ghost"
+              onClick={() => (setEditing(null), setEditForm(null))}
+              disabled={savingEdit}
+              className="w-full sm:w-auto"
+            >
               {t("common.cancel") ?? "Cancel"}
             </Button>
-            <Button onClick={() => void submitEdit()} disabled={savingEdit || !canManage}>
+            <Button
+              onClick={() => void submitEdit()}
+              disabled={savingEdit || !canManage}
+              className="w-full sm:w-auto"
+            >
               {savingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {t("common.save") ?? "Save"}
             </Button>
@@ -706,17 +807,19 @@ const CapabilityDocuments = () => {
 
       {/* Delete confirm (2-step per AC) */}
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] max-w-md sm:w-full">
           <AlertDialogHeader>
             <AlertDialogTitle>{t("capDocs.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="break-words">
               {t("capDocs.delete.confirmBody").replace("{name}", deleting?.name ?? "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>{t("capDocs.delete.cancel")}</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <AlertDialogCancel disabled={busy} className="w-full sm:w-auto">
+              {t("capDocs.delete.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
+              className="w-full bg-rose-600 hover:bg-rose-700 sm:w-auto"
               onClick={(e) => {
                 e.preventDefault();
                 void confirmDelete();
