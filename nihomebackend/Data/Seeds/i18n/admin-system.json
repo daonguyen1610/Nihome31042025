@@ -2496,6 +2496,14 @@
     "ja": "地図"
   },
   {
+    "key": "settings.tab.security",
+    "category": "settings",
+    "vi": "Bảo mật",
+    "en": "Security",
+    "zh": "安全",
+    "ja": "セキュリティ"
+  },
+  {
     "key": "settings.map.title",
     "category": "settings",
     "vi": "Google Maps nhúng",

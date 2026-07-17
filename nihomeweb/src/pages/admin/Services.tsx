@@ -17,6 +17,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -482,6 +483,10 @@ const AdminServices = () => {
     clearSelection();
   }, [q, clearSelection]);
 
+  // Row / card click opens a read-only preview dialog. All fields we show
+  // are already on the list row so no extra fetch is needed.
+  const [previewRow, setPreviewRow] = useState<ServiceResponse | null>(null);
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.slug.trim() || !form.shortTitle.trim() || !form.tagline.trim() || !form.intro.trim()) {
@@ -591,7 +596,83 @@ const AdminServices = () => {
               onClear={clearSelection}
               onBulkDelete={() => void handleBulkDelete()}
             />
-            <div className="overflow-x-auto rounded-lg border">
+
+            {/* Mobile / tablet card view (<lg). Full row is clickable so
+                users can tap the card to open the preview dialog; per-row
+                buttons and the checkbox stopPropagation. */}
+            <ul className="grid gap-3 lg:hidden">
+              {filtered.map((s) => (
+                <li
+                  key={s.id}
+                  className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/40"
+                  onClick={() => setPreviewRow(s)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span
+                        onClick={(e) => e.stopPropagation()}
+                        className="pt-0.5"
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(s.id)}
+                          onCheckedChange={(v) => toggleOne(s.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · ${s.title}`}
+                        />
+                      </span>
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-semibold leading-tight">{s.title}</h3>
+                        <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">
+                          /{s.slug}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 whitespace-nowrap border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                    >
+                      {s.shortTitle}
+                    </Badge>
+                  </div>
+                  {s.tagline && (
+                    <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                      {s.tagline}
+                    </p>
+                  )}
+                  <div
+                    className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
+                      <a href={`/services/${s.slug}`} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => startEdit(s)}
+                      title={t("svc.admin.editTitle")}
+                      aria-label={t("svc.admin.editTitle")}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(s)}
+                      title={t("common.delete")}
+                      aria-label={t("common.delete")}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            {/* Desktop table (lg+) */}
+            <div className="hidden overflow-x-auto rounded-lg border lg:block">
               <table className="min-w-[800px] w-full divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -610,14 +691,18 @@ const AdminServices = () => {
                     </th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">#</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("svc.admin.shortTitle")}</th>
-                    <th className="px-3 py-3 text-left font-medium">{t("form.title")}</th>
+                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("form.title")}</th>
                     <th className="hidden px-3 py-3 text-left font-medium md:table-cell">{t("svc.admin.tagline")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {filtered.map((s) => (
-                    <tr key={s.id} className="hover:bg-muted/40 transition">
+                    <tr
+                      key={s.id}
+                      className="cursor-pointer hover:bg-muted/40 transition"
+                      onClick={() => setPreviewRow(s)}
+                    >
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedIds.has(s.id)}
@@ -633,14 +718,17 @@ const AdminServices = () => {
                           {s.shortTitle}
                         </Badge>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="min-w-[220px] px-3 py-3">
                         <div className="font-medium">{s.title}</div>
                         <div className="mt-0.5 font-mono text-xs text-muted-foreground">/{s.slug}</div>
                       </td>
                       <td className="hidden max-w-xs px-3 py-3 md:table-cell">
                         <span className="block truncate text-xs text-muted-foreground">{s.tagline}</span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right">
+                      <td
+                        className="whitespace-nowrap px-3 py-3 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="inline-flex items-center gap-1">
                           <Button asChild variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")}>
                             <a href={`/services/${s.slug}`} target="_blank" rel="noopener noreferrer">
@@ -873,6 +961,122 @@ const AdminServices = () => {
               </button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick-view preview dialog. Read-only summary — full editing is
+          via the pencil button which opens the heavy edit dialog above. */}
+      <Dialog
+        open={previewRow !== null}
+        onOpenChange={(o) => !o && setPreviewRow(null)}
+      >
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
+          <DialogHeader>
+            <DialogTitle className="break-words text-base md:text-lg">
+              {previewRow?.title}
+            </DialogTitle>
+            <DialogDescription className="break-all text-xs md:text-sm">
+              /{previewRow?.slug}
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewRow && (
+            <div className="space-y-4 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                >
+                  {previewRow.shortTitle}
+                </Badge>
+              </div>
+
+              {previewRow.tagline && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("svc.admin.tagline")}
+                  </div>
+                  <p className="mt-0.5">{previewRow.tagline}</p>
+                </div>
+              )}
+
+              {previewRow.intro && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("svc.admin.intro")}
+                  </div>
+                  <p className="mt-0.5 whitespace-pre-wrap break-words">
+                    {previewRow.intro}
+                  </p>
+                </div>
+              )}
+
+              {previewRow.highlights.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("svc.admin.highlights")}
+                    <span className="ml-1">({previewRow.highlights.length})</span>
+                  </div>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                    {previewRow.highlights.map((h, i) => (
+                      <li key={i}>{h}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {previewRow.sections.length > 0 && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("svc.admin.sections")}
+                    <span className="ml-1">({previewRow.sections.length})</span>
+                  </div>
+                  <ul className="mt-1 space-y-1 pl-1">
+                    {previewRow.sections.map((sec, i) => (
+                      <li key={i} className="font-medium">
+                        {sec.heading || `#${i + 1}`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setPreviewRow(null)}
+              className="w-full sm:w-auto"
+            >
+              {t("common.close")}
+            </Button>
+            {previewRow && (
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <a
+                  href={`/services/${previewRow.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  {t("common.view")}
+                </a>
+              </Button>
+            )}
+            {previewRow && (
+              <Button
+                onClick={() => {
+                  const row = previewRow;
+                  setPreviewRow(null);
+                  startEdit(row);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                {t("svc.admin.editTitle")}
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       </div>
