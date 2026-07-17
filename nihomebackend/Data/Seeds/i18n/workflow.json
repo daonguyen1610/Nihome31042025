@@ -1,0 +1,242 @@
+[
+  {
+    "key": "nav.workflows",
+    "category": "nav",
+    "vi": "Luồng duyệt",
+    "en": "Approval workflows",
+    "zh": "审批流程",
+    "ja": "承認フロー"
+  },
+  {
+    "key": "workflow.title",
+    "category": "workflow",
+    "vi": "Cấu hình luồng duyệt",
+    "en": "Approval workflows",
+    "zh": "审批流程配置",
+    "ja": "承認フロー設定"
+  },
+  {
+    "key": "workflow.subtitle",
+    "category": "workflow",
+    "vi": "Định nghĩa các bước duyệt dùng chung cho từng nghiệp vụ (báo giá, hợp đồng, giấy phép…).",
+    "en": "Define reusable approval chains per module (quotes, contracts, permits…).",
+    "zh": "为每个模块（报价、合同、许可…）定义可重用的审批链。",
+    "ja": "モジュールごとの再利用可能な承認チェーンを定義します（見積、契約、許可…）。"
+  },
+  {
+    "key": "workflow.newWorkflow",
+    "category": "workflow",
+    "vi": "Thêm luồng duyệt",
+    "en": "New workflow",
+    "zh": "新增流程",
+    "ja": "新規フロー"
+  },
+  {
+    "key": "workflow.searchPlaceholder",
+    "category": "workflow",
+    "vi": "Tìm theo module, action hoặc tên…",
+    "en": "Search by module, action or name…",
+    "zh": "按模块、操作或名称搜索…",
+    "ja": "モジュール・アクション・名称で検索…"
+  },
+  {
+    "key": "workflow.empty",
+    "category": "workflow",
+    "vi": "Chưa có luồng duyệt nào.",
+    "en": "No workflows configured yet.",
+    "zh": "尚未配置任何审批流程。",
+    "ja": "承認フローが未設定です。"
+  },
+  {
+    "key": "workflow.noMatch",
+    "category": "workflow",
+    "vi": "Không có luồng duyệt nào khớp với từ khoá tìm kiếm.",
+    "en": "No workflows match your search.",
+    "zh": "没有匹配搜索的审批流程。",
+    "ja": "検索に一致する承認フローはありません。"
+  },
+  {
+    "key": "workflow.createModalTitle",
+    "category": "workflow",
+    "vi": "Thêm luồng duyệt mới",
+    "en": "New approval workflow",
+    "zh": "新增审批流程",
+    "ja": "新規承認フロー"
+  },
+  {
+    "key": "workflow.editModalTitle",
+    "category": "workflow",
+    "vi": "Chỉnh sửa luồng duyệt",
+    "en": "Edit approval workflow",
+    "zh": "编辑审批流程",
+    "ja": "承認フローを編集"
+  },
+  {
+    "key": "workflow.dialogHelp",
+    "category": "workflow",
+    "vi": "Mỗi cặp module + action chỉ được có một luồng duyệt. Vai trò duyệt phải nằm trong danh sách RBAC.",
+    "en": "Each module + action pair can have only one workflow. Approver roles must exist in RBAC.",
+    "zh": "每个模块 + 操作组合只能配置一个流程。审批角色必须存在于 RBAC 中。",
+    "ja": "モジュールとアクションの組合せは 1 つのフローのみ。承認ロールは RBAC に存在する必要があります。"
+  },
+  {
+    "key": "workflow.identifierHint",
+    "category": "workflow",
+    "vi": "Module và action dùng chữ thường, số, dấu chấm hoặc gạch ngang (tối đa 60 ký tự).",
+    "en": "Module and action use lowercase letters, digits, dot or dash (max 60 chars).",
+    "zh": "模块和操作使用小写字母、数字、点或连字符（最多 60 个字符）。",
+    "ja": "モジュール・アクションは小文字・数字・ドット・ハイフンのみ（最大 60 文字）。"
+  },
+  {
+    "key": "workflow.identifierInvalid",
+    "category": "workflow",
+    "vi": "Module hoặc action không hợp lệ.",
+    "en": "Invalid module or action identifier.",
+    "zh": "模块或操作标识符无效。",
+    "ja": "モジュールまたはアクションの識別子が無効です。"
+  },
+  {
+    "key": "workflow.stepsTitle",
+    "category": "workflow",
+    "vi": "Các bước duyệt",
+    "en": "Approval steps",
+    "zh": "审批步骤",
+    "ja": "承認ステップ"
+  },
+  {
+    "key": "workflow.addStep",
+    "category": "workflow",
+    "vi": "Thêm bước",
+    "en": "Add step",
+    "zh": "添加步骤",
+    "ja": "ステップを追加"
+  },
+  {
+    "key": "workflow.moveUp",
+    "category": "workflow",
+    "vi": "Chuyển lên trên",
+    "en": "Move up",
+    "zh": "上移",
+    "ja": "上へ"
+  },
+  {
+    "key": "workflow.moveDown",
+    "category": "workflow",
+    "vi": "Chuyển xuống dưới",
+    "en": "Move down",
+    "zh": "下移",
+    "ja": "下へ"
+  },
+  {
+    "key": "workflow.approverPlaceholder",
+    "category": "workflow",
+    "vi": "Chọn vai trò duyệt…",
+    "en": "Select approver role…",
+    "zh": "选择审批角色…",
+    "ja": "承認ロールを選択…"
+  },
+  {
+    "key": "workflow.stepsRequired",
+    "category": "workflow",
+    "vi": "Cần ít nhất một bước duyệt.",
+    "en": "At least one approval step is required.",
+    "zh": "至少需要一个审批步骤。",
+    "ja": "少なくとも 1 つの承認ステップが必要です。"
+  },
+  {
+    "key": "workflow.stepFieldsRequired",
+    "category": "workflow",
+    "vi": "Mỗi bước cần có tên và vai trò duyệt.",
+    "en": "Each step needs a name and an approver role.",
+    "zh": "每个步骤都需要名称和审批角色。",
+    "ja": "各ステップに名称と承認ロールが必要です。"
+  },
+  {
+    "key": "workflow.field.module",
+    "category": "workflow",
+    "vi": "Module",
+    "en": "Module",
+    "zh": "模块",
+    "ja": "モジュール"
+  },
+  {
+    "key": "workflow.field.action",
+    "category": "workflow",
+    "vi": "Hành động",
+    "en": "Action",
+    "zh": "操作",
+    "ja": "アクション"
+  },
+  {
+    "key": "workflow.field.name",
+    "category": "workflow",
+    "vi": "Tên luồng",
+    "en": "Workflow name",
+    "zh": "流程名称",
+    "ja": "フロー名"
+  },
+  {
+    "key": "workflow.field.description",
+    "category": "workflow",
+    "vi": "Mô tả",
+    "en": "Description",
+    "zh": "描述",
+    "ja": "説明"
+  },
+  {
+    "key": "workflow.field.steps",
+    "category": "workflow",
+    "vi": "Số bước",
+    "en": "Steps",
+    "zh": "步骤数",
+    "ja": "ステップ数"
+  },
+  {
+    "key": "workflow.field.sortOrder",
+    "category": "workflow",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "並び順"
+  },
+  {
+    "key": "workflow.field.isActive",
+    "category": "workflow",
+    "vi": "Kích hoạt",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "workflow.field.stepName",
+    "category": "workflow",
+    "vi": "Tên bước",
+    "en": "Step name",
+    "zh": "步骤名称",
+    "ja": "ステップ名"
+  },
+  {
+    "key": "workflow.field.approverRole",
+    "category": "workflow",
+    "vi": "Vai trò duyệt",
+    "en": "Approver role",
+    "zh": "审批角色",
+    "ja": "承認ロール"
+  },
+  {
+    "key": "workflow.field.slaHours",
+    "category": "workflow",
+    "vi": "SLA (giờ)",
+    "en": "SLA (hours)",
+    "zh": "SLA（小时）",
+    "ja": "SLA（時間）"
+  },
+  {
+    "key": "workflow.field.requireAll",
+    "category": "workflow",
+    "vi": "Cần tất cả duyệt",
+    "en": "Require all approvers",
+    "zh": "需所有人审批",
+    "ja": "全員承認が必要"
+  }
+]

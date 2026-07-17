@@ -90,6 +90,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IRoleService, RoleService>();
         services.AddScoped<IMasterDataService, MasterDataService>();
+        services.AddScoped<IWorkflowConfigService, WorkflowConfigService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ILeadService, LeadService>();

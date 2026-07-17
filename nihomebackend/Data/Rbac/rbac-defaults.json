@@ -62,6 +62,9 @@
     { "module": "master-data", "action": "view" },
     { "module": "master-data", "action": "manage" },
 
+    { "module": "workflow", "action": "view" },
+    { "module": "workflow", "action": "manage" },
+
     { "module": "crm.leads", "action": "view" },
     { "module": "crm.leads", "action": "view.all" },
     { "module": "crm.leads", "action": "manage" },
@@ -139,6 +142,7 @@
         "contacts.*",
         "recruitment.applications.view",
         "master-data.view",
+        "workflow.view",
         "crm.leads.view",
         "crm.leads.manage",
         "crm.leads.convert",
@@ -158,6 +162,7 @@
         "contacts.*",
         "recruitment.applications.view",
         "master-data.view",
+        "workflow.view",
         "crm.**",
         "profile.me.*"
       ]
@@ -169,6 +174,7 @@
         "content.**",
         "processes.view",
         "master-data.view",
+        "workflow.view",
         "design.projects.view",
         "design.concepts.view", "design.concepts.manage",
         "design.basic.view", "design.basic.manage",
@@ -184,6 +190,7 @@
         "content.**",
         "processes.view",
         "master-data.view",
+        "workflow.view",
         "design.**",
         "profile.me.*"
       ]
@@ -192,6 +199,7 @@
       "patterns": [
         "dashboard.view",
         "master-data.view",
+        "workflow.view",
         "design.projects.view",
         "design.concepts.view",
         "design.basic.view", "design.basic.manage",
@@ -205,6 +213,7 @@
       "patterns": [
         "dashboard.view",
         "master-data.view",
+        "workflow.view",
         "design.projects.view",
         "design.basic.view", "design.basic.manage",
         "design.shop.view", "design.shop.manage",
@@ -217,6 +226,7 @@
       "patterns": [
         "dashboard.view",
         "master-data.view",
+        "workflow.view",
         "design.projects.view",
         "design.basic.view", "design.basic.manage",
         "design.shop.view", "design.shop.manage",
@@ -233,6 +243,7 @@
         "processes.*",
         "recruitment.applications.view",
         "master-data.view",
+        "workflow.view",
         "crm.contracts.view",
         "crm.surveys.view",
         "design.projects.view",
@@ -248,6 +259,7 @@
       "patterns": [
         "dashboard.view",
         "master-data.view",
+        "workflow.view",
         "crm.contracts.view",
         "design.projects.view",
         "design.basic.view",
@@ -261,6 +273,7 @@
         "content.projects.view",
         "processes.view",
         "master-data.view",
+        "workflow.view",
         "crm.quotes.view",
         "crm.tenders.view",
         "crm.contracts.view",
@@ -275,6 +288,7 @@
         "contacts.view",
         "system.audit.view",
         "master-data.view",
+        "workflow.view",
         "crm.customers.view",
         "crm.customers.view.all",
         "crm.contracts.view",
@@ -282,7 +296,7 @@
       ]
     },
     "WAREHOUSE": {
-      "patterns": ["dashboard.view", "processes.view", "master-data.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "profile.me.*"]
     },
     "BGD": {
       "patterns": ["dashboard.view", "**.view", "**.view.all", "system.audit.view", "profile.me.*"]
