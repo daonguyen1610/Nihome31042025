@@ -124,6 +124,17 @@ public class TenderServiceTests : IDisposable
         Assert.True(resp.IsDeadlineImminent);
     }
 
+    [Fact]
+    public async Task CreateAsync_WithoutPreparer_DefaultsToCaller()
+    {
+        var req = ValidCreate();
+        req.PreparerUserId = null;
+
+        var resp = await _sut.CreateAsync(req, _userId);
+
+        Assert.Equal(_userId, resp.PreparerUserId);
+    }
+
     // ---------------- Update ----------------
 
     [Fact]
