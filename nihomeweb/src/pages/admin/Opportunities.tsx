@@ -535,7 +535,104 @@ const AdminOpportunities = () => {
                   onBulkDelete={() => void handleBulkDelete()}
                 />
               )}
-              <div className="overflow-x-auto rounded-lg border">
+
+              {/* Mobile / tablet card view (<lg). Keeps the row-click-to-detail
+                  affordance and inline edit/delete for parity with the table. */}
+              <ul className="grid gap-3 lg:hidden">
+                {rows.map((o) => {
+                  const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
+                  return (
+                    <li
+                      key={o.id}
+                      className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30"
+                      onClick={() => void openDetail(o.id)}
+                    >
+                      <header className="flex items-start gap-2">
+                        {canManage && (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              className="mt-1"
+                              checked={selectedIds.has(o.id)}
+                              onCheckedChange={(v) => toggleOne(o.id, v === true)}
+                              aria-label={`${t("common.selectAll")} · ${o.name}`}
+                            />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="break-words text-sm font-semibold leading-tight">{o.name}</h3>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "shrink-0 gap-1.5 whitespace-nowrap font-medium",
+                            OPPORTUNITY_STAGE_STYLES[o.stage],
+                          )}
+                        >
+                          <span className={cn("h-1.5 w-1.5 rounded-full", OPPORTUNITY_STAGE_DOT[o.stage])} />
+                          {t(`opportunities.stage.${o.stage}`)}
+                        </Badge>
+                      </header>
+
+                      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                        <div>
+                          <dt className="text-muted-foreground">{t("opportunities.field.estimatedValue")}</dt>
+                          <dd className="tabular-nums font-medium">{formatVnd(o.estimatedValue)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">{t("opportunities.field.winProbability")}</dt>
+                          <dd className="font-medium">{o.winProbability}%</dd>
+                        </div>
+                        <div>
+                          <dt className="text-muted-foreground">{t("opportunities.field.expectedCloseDate")}</dt>
+                          <dd className={cn("font-medium", overdue && "flex items-center gap-1 text-destructive")}>
+                            {overdue && <AlertTriangle className="h-3 w-3" aria-label={t("opportunities.overdue")} />}
+                            {o.expectedCloseDate ? new Date(o.expectedCloseDate).toLocaleDateString() : "—"}
+                          </dd>
+                        </div>
+                        {canSeeAll && (
+                          <div>
+                            <dt className="text-muted-foreground">{t("opportunities.field.owner")}</dt>
+                            <dd className="truncate font-medium">{o.ownerName ?? "—"}</dd>
+                          </div>
+                        )}
+                      </dl>
+
+                      {canManage && (
+                        <footer
+                          className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => void openDetail(o.id, { startEditing: true })}
+                            title={t("common.edit")}
+                            aria-label={t("common.edit")}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                            onClick={() => void handleDelete(o.id)}
+                            title={t("common.delete")}
+                            aria-label={t("common.delete")}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </footer>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+
+              {/* Desktop table view (lg+) */}
+              <div className="hidden overflow-x-auto rounded-lg border lg:block">
                 <table className="min-w-[960px] w-full divide-y text-sm">
                   <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
