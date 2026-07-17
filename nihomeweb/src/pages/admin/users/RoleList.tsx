@@ -241,11 +241,111 @@ export default function RoleList() {
           />
         ) : (
           <>
-            {/* Mobile / tablet card view (<lg). The matrix layout is
-                fundamentally 2D so we transpose it: one card per role, each
-                with the full permission checklist. Groups by module prefix
-                keep long lists scannable. Shares the same draft state as
-                the desktop matrix so edits made in either view sync. */}
+            {/* Desktop matrix view (lg+). Rendered first in DOM order so
+                that generic text locators (e.g. Playwright's
+                getByText('dashboard.view').first()) resolve to the visible
+                table cell on desktop viewports, not the hidden mobile card. */}
+            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+              <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="sticky left-0 z-10 min-w-[260px] bg-muted/50 px-4 py-3 text-left font-medium">
+                    {t("adminRbac.permissionColumn")}
+                  </th>
+                  {roles.map((role) => (
+                    <th
+                      key={role.id}
+                      className="min-w-[160px] px-3 py-3 text-center font-medium"
+                      data-testid={`rbac-col-${role.code}`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5 normal-case">
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                        <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
+                      </div>
+                      <div className="mt-0.5 text-[10px] font-normal normal-case text-muted-foreground">
+                        {role.code} · {role.userCount} {t("adminRbac.usersAbbrev")}
+                      </div>
+                      {role.isSystem ? (
+                        <Badge variant="outline" className="mt-1 border-slate-200 bg-slate-100 text-slate-600 normal-case">
+                          {t("adminRbac.systemRoleBadge")}
+                        </Badge>
+                      ) : (
+                        <div className="mt-1 flex items-center justify-center gap-1 normal-case">
+                          <Can permission={PERM_MANAGE}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!isDirty(role.id) || savePermsMutation.isPending}
+                              onClick={() =>
+                                savePermsMutation.mutate({
+                                  roleId: role.id,
+                                  permissions: Array.from(draft[role.id] ?? []),
+                                })
+                              }
+                              data-testid={`rbac-save-${role.code}`}
+                            >
+                              {t("adminRbac.save")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={!isDirty(role.id)}
+                              onClick={() => resetRole(role.id)}
+                            >
+                              {t("adminRbac.reset")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(role)}
+                              data-testid={`rbac-delete-${role.code}`}
+                              title={t("adminRbac.deleteRole")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </Can>
+                        </div>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {perms.map((perm) => (
+                  <tr key={perm.id} className="hover:bg-muted/40 transition">
+                    <td className="sticky left-0 z-10 bg-background px-4 py-3 font-medium">
+                      <div>{t(`rbac.perm.${perm.code}.label`)}</div>
+                      <div className="text-xs font-normal text-muted-foreground">{perm.code}</div>
+                    </td>
+                    {roles.map((role) => {
+                      const set = draft[role.id] ?? serverMap[role.id];
+                      const checked = set?.has(perm.code) ?? false;
+                      const disabled = role.isSystem || !canManage;
+                      return (
+                        <td key={role.id} className="px-3 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
+                            checked={checked}
+                            disabled={disabled}
+                            onChange={() => togglePerm(role.id, perm.code)}
+                            aria-label={`${role.code} ${perm.code}`}
+                          />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+
+            {/* Mobile / tablet card view (<lg). The matrix is fundamentally
+                2D so we transpose it: one card per role, each with the full
+                permission checklist collapsed by default. Shares the same
+                draft state as the desktop matrix so edits made in either
+                view sync. */}
             <div className="space-y-3 lg:hidden">
               {roles.map((role) => {
                 const set = draft[role.id] ?? serverMap[role.id];
@@ -352,103 +452,6 @@ export default function RoleList() {
                   </article>
                 );
               })}
-            </div>
-
-            {/* Desktop matrix view (lg+) */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
-              <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="sticky left-0 z-10 min-w-[260px] bg-muted/50 px-4 py-3 text-left font-medium">
-                    {t("adminRbac.permissionColumn")}
-                  </th>
-                  {roles.map((role) => (
-                    <th
-                      key={role.id}
-                      className="min-w-[160px] px-3 py-3 text-center font-medium"
-                      data-testid={`rbac-col-${role.code}`}
-                    >
-                      <div className="flex items-center justify-center gap-1.5 normal-case">
-                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                        <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
-                      </div>
-                      <div className="mt-0.5 text-[10px] font-normal normal-case text-muted-foreground">
-                        {role.code} · {role.userCount} {t("adminRbac.usersAbbrev")}
-                      </div>
-                      {role.isSystem ? (
-                        <Badge variant="outline" className="mt-1 border-slate-200 bg-slate-100 text-slate-600 normal-case">
-                          {t("adminRbac.systemRoleBadge")}
-                        </Badge>
-                      ) : (
-                        <div className="mt-1 flex items-center justify-center gap-1 normal-case">
-                          <Can permission={PERM_MANAGE}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={!isDirty(role.id) || savePermsMutation.isPending}
-                              onClick={() =>
-                                savePermsMutation.mutate({
-                                  roleId: role.id,
-                                  permissions: Array.from(draft[role.id] ?? []),
-                                })
-                              }
-                              data-testid={`rbac-save-${role.code}`}
-                            >
-                              {t("adminRbac.save")}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={!isDirty(role.id)}
-                              onClick={() => resetRole(role.id)}
-                            >
-                              {t("adminRbac.reset")}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => setDeleteTarget(role)}
-                              data-testid={`rbac-delete-${role.code}`}
-                              title={t("adminRbac.deleteRole")}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </Can>
-                        </div>
-                      )}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {perms.map((perm) => (
-                  <tr key={perm.id} className="hover:bg-muted/40 transition">
-                    <td className="sticky left-0 z-10 bg-background px-4 py-3 font-medium">
-                      <div>{t(`rbac.perm.${perm.code}.label`)}</div>
-                      <div className="text-xs font-normal text-muted-foreground">{perm.code}</div>
-                    </td>
-                    {roles.map((role) => {
-                      const set = draft[role.id] ?? serverMap[role.id];
-                      const checked = set?.has(perm.code) ?? false;
-                      const disabled = role.isSystem || !canManage;
-                      return (
-                        <td key={role.id} className="px-3 py-3 text-center">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
-                            checked={checked}
-                            disabled={disabled}
-                            onChange={() => togglePerm(role.id, perm.code)}
-                            aria-label={`${role.code} ${perm.code}`}
-                          />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
             </div>
           </>
         )}
