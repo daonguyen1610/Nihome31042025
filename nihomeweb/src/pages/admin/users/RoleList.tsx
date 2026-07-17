@@ -240,8 +240,107 @@ export default function RoleList() {
             }}
           />
         ) : (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
+          <>
+            {/* Mobile / tablet card view (<lg). The matrix layout is
+                fundamentally 2D so we transpose it: one card per role, each
+                with the full permission checklist. Groups by module prefix
+                keep long lists scannable. Shares the same draft state as
+                the desktop matrix so edits made in either view sync. */}
+            <div className="space-y-3 lg:hidden">
+              {roles.map((role) => {
+                const set = draft[role.id] ?? serverMap[role.id];
+                const dirty = isDirty(role.id);
+                return (
+                  <article
+                    key={role.id}
+                    className="rounded-lg border bg-card shadow-sm"
+                    data-testid={`rbac-card-${role.code}`}
+                  >
+                    <header className="flex flex-wrap items-start justify-between gap-2 border-b p-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <h3 className="truncate text-sm font-semibold">
+                            {role.labelKey ? t(role.labelKey) : role.name}
+                          </h3>
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {role.code} · {role.userCount} {t("adminRbac.usersAbbrev")}
+                        </p>
+                      </div>
+                      {role.isSystem ? (
+                        <Badge variant="outline" className="border-slate-200 bg-slate-100 text-slate-600">
+                          {t("adminRbac.systemRoleBadge")}
+                        </Badge>
+                      ) : (
+                        <Can permission={PERM_MANAGE}>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={!dirty || savePermsMutation.isPending}
+                              onClick={() =>
+                                savePermsMutation.mutate({
+                                  roleId: role.id,
+                                  permissions: Array.from(draft[role.id] ?? []),
+                                })
+                              }
+                            >
+                              {t("adminRbac.save")}
+                            </Button>
+                            <Button size="sm" variant="ghost" disabled={!dirty} onClick={() => resetRole(role.id)}>
+                              {t("adminRbac.reset")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(role)}
+                              title={t("adminRbac.deleteRole")}
+                              aria-label={t("adminRbac.deleteRole")}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </Can>
+                      )}
+                    </header>
+
+                    <ul className="divide-y">
+                      {perms.map((perm) => {
+                        const checked = set?.has(perm.code) ?? false;
+                        const disabled = role.isSystem || !canManage;
+                        const inputId = `rbac-m-${role.id}-${perm.id}`;
+                        return (
+                          <li key={perm.id} className="flex items-start gap-3 px-3 py-2">
+                            <input
+                              id={inputId}
+                              type="checkbox"
+                              className="mt-0.5 h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
+                              checked={checked}
+                              disabled={disabled}
+                              onChange={() => togglePerm(role.id, perm.code)}
+                            />
+                            <label htmlFor={inputId} className="min-w-0 flex-1 cursor-pointer">
+                              <span className="block text-sm font-medium leading-tight">
+                                {t(`rbac.perm.${perm.code}.label`)}
+                              </span>
+                              <span className="block break-all text-xs text-muted-foreground">
+                                {perm.code}
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </article>
+                );
+              })}
+            </div>
+
+            {/* Desktop matrix view (lg+) */}
+            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+              <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   <th className="sticky left-0 z-10 min-w-[260px] bg-muted/50 px-4 py-3 text-left font-medium">
@@ -334,12 +433,13 @@ export default function RoleList() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{t("adminRbac.createRole")}</DialogTitle>
           </DialogHeader>
@@ -375,7 +475,7 @@ export default function RoleList() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button variant="ghost" onClick={() => setCreateOpen(false)}>
               {t("adminRbac.cancel")}
             </Button>
@@ -396,7 +496,7 @@ export default function RoleList() {
           if (!open) setDeleteTarget(null);
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] max-w-md sm:w-full">
           <AlertDialogHeader>
             <AlertDialogTitle>{t("adminRbac.deleteRole")}</AlertDialogTitle>
             <AlertDialogDescription>
@@ -405,7 +505,7 @@ export default function RoleList() {
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <AlertDialogCancel>{t("adminRbac.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
