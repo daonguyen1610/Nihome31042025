@@ -2504,6 +2504,150 @@
     "ja": "セキュリティ"
   },
   {
+    "key": "translations.subtitle",
+    "category": "translations",
+    "vi": "Quản lý toàn bộ khóa dịch giao diện và bản dịch nội dung",
+    "en": "Manage all UI translation keys and content translations",
+    "zh": "管理所有界面翻译键和内容翻译",
+    "ja": "すべての UI 翻訳キーとコンテンツ翻訳を管理"
+  },
+  {
+    "key": "translations.tab.ui",
+    "category": "translations",
+    "vi": "Dịch giao diện",
+    "en": "UI Translations",
+    "zh": "界面翻译",
+    "ja": "UI 翻訳"
+  },
+  {
+    "key": "translations.tab.entity",
+    "category": "translations",
+    "vi": "Dịch nội dung",
+    "en": "Content Translations",
+    "zh": "内容翻译",
+    "ja": "コンテンツ翻訳"
+  },
+  {
+    "key": "translations.searchPlaceholder",
+    "category": "translations",
+    "vi": "Tìm theo khóa hoặc giá trị…",
+    "en": "Search key or value…",
+    "zh": "按键或值搜索…",
+    "ja": "キーまたは値で検索…"
+  },
+  {
+    "key": "translations.allCategories",
+    "category": "translations",
+    "vi": "Tất cả danh mục",
+    "en": "All categories",
+    "zh": "所有分类",
+    "ja": "すべてのカテゴリ"
+  },
+  {
+    "key": "translations.addKey",
+    "category": "translations",
+    "vi": "Thêm khóa",
+    "en": "Add key",
+    "zh": "添加键",
+    "ja": "キーを追加"
+  },
+  {
+    "key": "translations.field.key",
+    "category": "translations",
+    "vi": "Khóa",
+    "en": "Key",
+    "zh": "键",
+    "ja": "キー"
+  },
+  {
+    "key": "translations.field.category",
+    "category": "translations",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "translations.empty",
+    "category": "translations",
+    "vi": "Chưa có bản dịch nào.",
+    "en": "No translations found.",
+    "zh": "未找到任何翻译。",
+    "ja": "翻訳が見つかりません。"
+  },
+  {
+    "key": "translations.contentType",
+    "category": "translations",
+    "vi": "Loại nội dung",
+    "en": "Content type",
+    "zh": "内容类型",
+    "ja": "コンテンツタイプ"
+  },
+  {
+    "key": "translations.entityEmpty",
+    "category": "translations",
+    "vi": "Không có mục nào cho loại nội dung này.",
+    "en": "No items found for this content type.",
+    "zh": "此内容类型没有项目。",
+    "ja": "このコンテンツタイプに項目はありません。"
+  },
+  {
+    "key": "translations.translated",
+    "category": "translations",
+    "vi": "Đã dịch",
+    "en": "Translated",
+    "zh": "已翻译",
+    "ja": "翻訳済み"
+  },
+  {
+    "key": "translations.notTranslated",
+    "category": "translations",
+    "vi": "Chưa dịch",
+    "en": "Not translated",
+    "zh": "未翻译",
+    "ja": "未翻訳"
+  },
+  {
+    "key": "translations.translate",
+    "category": "translations",
+    "vi": "Dịch",
+    "en": "Translate",
+    "zh": "翻译",
+    "ja": "翻訳"
+  },
+  {
+    "key": "translations.addModalTitle",
+    "category": "translations",
+    "vi": "Thêm khóa dịch",
+    "en": "Add translation key",
+    "zh": "添加翻译键",
+    "ja": "翻訳キーを追加"
+  },
+  {
+    "key": "translations.editModalTitle",
+    "category": "translations",
+    "vi": "Sửa khóa dịch",
+    "en": "Edit translation key",
+    "zh": "编辑翻译键",
+    "ja": "翻訳キーを編集"
+  },
+  {
+    "key": "translations.entityModalTitle",
+    "category": "translations",
+    "vi": "Dịch: {name}",
+    "en": "Translate: {name}",
+    "zh": "翻译：{name}",
+    "ja": "翻訳：{name}"
+  },
+  {
+    "key": "translations.pageInfo",
+    "category": "translations",
+    "vi": "{count} khóa · Trang {page}/{total}",
+    "en": "{count} keys · Page {page}/{total}",
+    "zh": "{count} 个键 · 第 {page}/{total} 页",
+    "ja": "{count} 件 · ページ {page}/{total}"
+  },
+  {
     "key": "settings.map.title",
     "category": "settings",
     "vi": "Google Maps nhúng",
