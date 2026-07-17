@@ -39,9 +39,9 @@ public class TenderServiceTests : IDisposable
         _db.Customers.Add(customer);
         _db.MasterDataOptions.AddRange(
             new MasterDataOption { Category = "tender_checklist_default", Code = "capability", Name = "Hồ sơ năng lực", IsActive = true, SortOrder = 1 },
-            new MasterDataOption { Category = "tender_checklist_default", Code = "legal",      Name = "Hồ sơ pháp nhân", IsActive = true, SortOrder = 2 },
-            new MasterDataOption { Category = "tender_checklist_default", Code = "boq",        Name = "BOQ",              IsActive = true, SortOrder = 3 },
-            new MasterDataOption { Category = "tender_checklist_default", Code = "inactive",   Name = "Skipped",         IsActive = false, SortOrder = 9 }
+            new MasterDataOption { Category = "tender_checklist_default", Code = "legal", Name = "Hồ sơ pháp nhân", IsActive = true, SortOrder = 2 },
+            new MasterDataOption { Category = "tender_checklist_default", Code = "boq", Name = "BOQ", IsActive = true, SortOrder = 3 },
+            new MasterDataOption { Category = "tender_checklist_default", Code = "inactive", Name = "Skipped", IsActive = false, SortOrder = 9 }
         );
         _db.SaveChanges();
         _customerId = customer.Id;
