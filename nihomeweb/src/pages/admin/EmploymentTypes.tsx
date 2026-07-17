@@ -356,7 +356,7 @@ const EmploymentTypes = () => {
           </div>
         </section>
 
-        {/* Table */}
+        {/* List */}
         <div className="space-y-2">
           <BulkActionBar
             selectedCount={isEmp ? empSelectedIds.size : dropSelectedIds.size}
@@ -364,7 +364,105 @@ const EmploymentTypes = () => {
             onClear={isEmp ? empClearSelection : dropClearSelection}
             onBulkDelete={() => void (isEmp ? empBulkDelete() : dropBulkDelete())}
           />
-          <div className="overflow-x-auto rounded-lg border">
+
+          {/* Mobile / tablet card view (<lg). Same shape for both tabs so
+              we reuse the render inline. */}
+          <ul className="grid gap-3 lg:hidden">
+            {loading ? (
+              <li className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                {t("common.loading")}
+              </li>
+            ) : filtered.length === 0 ? (
+              <li className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                {t("empTypes.noData")}
+              </li>
+            ) : isEmp ? (
+              filteredEmp.map((item) => (
+                <li key={item.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <Checkbox
+                        className="mt-1 shrink-0"
+                        checked={empSelectedIds.has(item.id)}
+                        onCheckedChange={(v) => empToggleOne(item.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${item.name}`}
+                      />
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-semibold leading-tight">{item.name}</h3>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">{item.code}</p>
+                      </div>
+                    </div>
+                    {item.isActive ? (
+                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("empTypes.active")} />
+                    ) : (
+                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("empTypes.active")} />
+                    )}
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-muted-foreground">{t("empTypes.sortOrder")}</dt>
+                    <dd className="font-medium">{item.sortOrder}</dd>
+                  </dl>
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => startEmpEdit(item)}>
+                      <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeEmp(item)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                    </Button>
+                  </div>
+                </li>
+              ))
+            ) : (
+              filteredDrop.map((item) => (
+                <li key={item.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <Checkbox
+                        className="mt-1 shrink-0"
+                        checked={dropSelectedIds.has(item.id)}
+                        onCheckedChange={(v) => dropToggleOne(item.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${item.name}`}
+                      />
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-semibold leading-tight">{item.name}</h3>
+                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">{item.code}</p>
+                      </div>
+                    </div>
+                    {item.isActive ? (
+                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("empTypes.active")} />
+                    ) : (
+                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("empTypes.active")} />
+                    )}
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-muted-foreground">{t("empTypes.sortOrder")}</dt>
+                    <dd className="font-medium">{item.sortOrder}</dd>
+                  </dl>
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => startDropEdit(item)}>
+                      <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeDrop(item)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                    </Button>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+
+          {/* Desktop table (lg+) */}
+          <div className="hidden overflow-x-auto rounded-lg border lg:block">
             <table className="min-w-[700px] w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -396,7 +494,7 @@ const EmploymentTypes = () => {
               </thead>
               <tbody className="divide-y">
                 {loading ? (
-                  <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">...</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">{t("common.loading")}</td></tr>
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">{t("empTypes.noData")}</td></tr>
                 ) : isEmp ? (

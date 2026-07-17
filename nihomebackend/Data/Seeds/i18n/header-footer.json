@@ -288,14 +288,6 @@
     "ja": "ロール管理"
   },
   {
-    "key": "nav.onlineCustomers",
-    "category": "nav",
-    "vi": "Người dùng trực tuyến",
-    "en": "Online users",
-    "zh": "在线用户",
-    "ja": "オンラインユーザー"
-  },
-  {
     "key": "nav.activityLog",
     "category": "nav",
     "vi": "Nhật ký hoạt động",
