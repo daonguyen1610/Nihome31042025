@@ -281,126 +281,222 @@ export default function UserList() {
               onClear={clearSelection}
               onBulkDelete={() => void handleBulkDelete()}
             />
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="min-w-[900px] w-full divide-y text-sm">
-                <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="w-10 px-3 py-3 text-left">
-                      <Checkbox
-                        checked={
-                          allVisibleSelected
-                            ? true
-                            : someVisibleSelected
-                              ? "indeterminate"
-                              : false
-                        }
-                        onCheckedChange={(v) => toggleAllVisible(v === true)}
-                        aria-label={t("common.selectAll")}
-                      />
-                    </th>
-                    <th className="px-3 py-3 text-left font-medium">{t("adminUsers.user")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.phoneNumber")}</th>
-                    <th className="px-3 py-3 text-left font-medium">{t("adminUsers.email")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.role")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("common.status")}</th>
-                    <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {items.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
-                        {t("adminUsers.empty")}
-                      </td>
-                    </tr>
-                  ) : (
-                    items.map((user) => {
-                      const disabled = busyUserId === user.id;
 
-                      return (
-                        <tr key={user.id} className="align-middle hover:bg-muted/40 transition">
-                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+            {items.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                {t("adminUsers.empty")}
+              </div>
+            ) : (
+              <>
+                {/* Mobile / tablet card view (<lg). Preserves avatar, role
+                    badge, active toggle, bulk-select + inline edit/delete. */}
+                <ul className="grid gap-3 lg:hidden">
+                  {items.map((user) => {
+                    const disabled = busyUserId === user.id;
+                    return (
+                      <li key={user.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                        <header className="flex items-start gap-3">
+                          <div onClick={(e) => e.stopPropagation()}>
                             <Checkbox
+                              className="mt-1"
                               checked={selectedIds.has(user.id)}
                               onCheckedChange={(v) => toggleOne(user.id, v === true)}
                               aria-label={`${t("common.selectAll")} · ${user.fullName ?? user.phoneNumber}`}
                             />
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                                {user.avatarUrl ? (
-                                  <img src={user.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
-                                ) : (
-                                  user.fullName?.[0]?.toUpperCase() ?? <UserRound className="h-4 w-4" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate font-medium">{user.fullName ?? t("adminUsers.unnamed")}</p>
-                                <p className="text-xs text-muted-foreground">ID #{user.id}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3 font-medium">{user.phoneNumber}</td>
-                          <td className="px-3 py-3">{user.email ?? "—"}</td>
-                          <td className="whitespace-nowrap px-3 py-3">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "whitespace-nowrap font-medium",
-                                ROLE_STYLES[user.role] ?? ROLE_STYLES.USER,
-                              )}
+                          </div>
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                            {user.avatarUrl ? (
+                              <img src={user.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                            ) : (
+                              user.fullName?.[0]?.toUpperCase() ?? <UserRound className="h-4 w-4" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold">{user.fullName ?? t("adminUsers.unnamed")}</p>
+                            <p className="text-xs text-muted-foreground">ID #{user.id}</p>
+                          </div>
+                        </header>
+
+                        <div className="mt-2">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "whitespace-normal font-medium",
+                              ROLE_STYLES[user.role] ?? ROLE_STYLES.USER,
+                            )}
+                          >
+                            {roleLabelMap.get(user.role) ?? user.role}
+                          </Badge>
+                        </div>
+
+                        <dl className="mt-3 grid grid-cols-1 gap-y-2 text-xs sm:grid-cols-2 sm:gap-x-3">
+                          <div className="min-w-0">
+                            <dt className="text-muted-foreground">{t("adminUsers.phoneNumber")}</dt>
+                            <dd className="truncate font-medium">{user.phoneNumber}</dd>
+                          </div>
+                          <div className="min-w-0">
+                            <dt className="text-muted-foreground">{t("adminUsers.email")}</dt>
+                            <dd className="truncate font-medium">{user.email ?? "—"}</dd>
+                          </div>
+                        </dl>
+
+                        <footer className="mt-3 flex items-center justify-between gap-2 border-t pt-2">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={user.isActive}
+                              onCheckedChange={() => toggleActive(user)}
+                              disabled={disabled}
+                              aria-label={t("adminUsers.active")}
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {user.isActive ? t("adminUsers.active") : t("adminUsers.inactive")}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEdit(user)}
+                              disabled={disabled}
+                              title={t("common.edit")}
+                              aria-label={t("common.edit")}
                             >
-                              {roleLabelMap.get(user.role) ?? user.role}
-                            </Badge>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={user.isActive}
-                                onCheckedChange={() => toggleActive(user)}
-                                disabled={disabled}
-                                aria-label={t("adminUsers.active")}
+                              {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteUser(user)}
+                              disabled={disabled}
+                              title={t("common.delete")}
+                              aria-label={t("common.delete")}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </footer>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {/* Desktop table (lg+) */}
+                <div className="hidden overflow-x-auto rounded-lg border lg:block">
+                  <table className="min-w-[900px] w-full divide-y text-sm">
+                    <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="w-10 px-3 py-3 text-left">
+                          <Checkbox
+                            checked={
+                              allVisibleSelected
+                                ? true
+                                : someVisibleSelected
+                                  ? "indeterminate"
+                                  : false
+                            }
+                            onCheckedChange={(v) => toggleAllVisible(v === true)}
+                            aria-label={t("common.selectAll")}
+                          />
+                        </th>
+                        <th className="px-3 py-3 text-left font-medium">{t("adminUsers.user")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.phoneNumber")}</th>
+                        <th className="px-3 py-3 text-left font-medium">{t("adminUsers.email")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("adminUsers.role")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("common.status")}</th>
+                        <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("common.actions")}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {items.map((user) => {
+                        const disabled = busyUserId === user.id;
+                        return (
+                          <tr key={user.id} className="align-middle hover:bg-muted/40 transition">
+                            <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.has(user.id)}
+                                onCheckedChange={(v) => toggleOne(user.id, v === true)}
+                                aria-label={`${t("common.selectAll")} · ${user.fullName ?? user.phoneNumber}`}
                               />
-                              <span className="text-xs text-muted-foreground">
-                                {user.isActive ? t("adminUsers.active") : t("adminUsers.inactive")}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap px-3 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openEdit(user)}
-                                disabled={disabled}
-                                title={t("common.edit")}
-                                aria-label={t("common.edit")}
+                            </td>
+                            <td className="px-3 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                                  {user.avatarUrl ? (
+                                    <img src={user.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                                  ) : (
+                                    user.fullName?.[0]?.toUpperCase() ?? <UserRound className="h-4 w-4" />
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-medium">{user.fullName ?? t("adminUsers.unnamed")}</p>
+                                  <p className="text-xs text-muted-foreground">ID #{user.id}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 font-medium">{user.phoneNumber}</td>
+                            <td className="px-3 py-3">{user.email ?? "—"}</td>
+                            <td className="whitespace-nowrap px-3 py-3">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "whitespace-nowrap font-medium",
+                                  ROLE_STYLES[user.role] ?? ROLE_STYLES.USER,
+                                )}
                               >
-                                {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deleteUser(user)}
-                                disabled={disabled}
-                                title={t("common.delete")}
-                                aria-label={t("common.delete")}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                                {roleLabelMap.get(user.role) ?? user.role}
+                              </Badge>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3">
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={user.isActive}
+                                  onCheckedChange={() => toggleActive(user)}
+                                  disabled={disabled}
+                                  aria-label={t("adminUsers.active")}
+                                />
+                                <span className="text-xs text-muted-foreground">
+                                  {user.isActive ? t("adminUsers.active") : t("adminUsers.inactive")}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-3 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEdit(user)}
+                                  disabled={disabled}
+                                  title={t("common.edit")}
+                                  aria-label={t("common.edit")}
+                                >
+                                  {disabled ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Edit className="h-4 w-4" />}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => deleteUser(user)}
+                                  disabled={disabled}
+                                  title={t("common.delete")}
+                                  aria-label={t("common.delete")}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
 
             <div className="flex flex-col gap-3 rounded-lg border bg-card px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-muted-foreground">
