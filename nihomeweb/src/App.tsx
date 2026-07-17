@@ -41,6 +41,7 @@ import AdminOpportunities from "./pages/admin/Opportunities.tsx";
 import AdminQuotes from "./pages/admin/Quotes.tsx";
 import AdminQuoteDetail from "./pages/admin/QuoteDetail.tsx";
 import AdminCapabilityDocuments from "./pages/admin/CapabilityDocuments.tsx";
+import AdminTenders from "./pages/admin/Tenders.tsx";
 import AdminRecruitment from "./pages/admin/Recruitment.tsx";
 import EmploymentTypes from "./pages/admin/EmploymentTypes.tsx";
 import SettingsCenter from "./pages/admin/SettingsCenter.tsx";
@@ -152,6 +153,9 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.capabilityDocs} />}>
                 <Route path="/admin/capability-documents" element={<AdminCapabilityDocuments />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.tenders} />}>
+                <Route path="/admin/tenders" element={<AdminTenders />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                 <Route path="/admin/recruitment" element={<AdminRecruitment />} />

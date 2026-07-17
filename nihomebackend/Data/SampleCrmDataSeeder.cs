@@ -32,6 +32,7 @@ public static class SampleCrmDataSeeder
         SeedOpportunities(db, owner, now);
         SeedQuotes(db, owner, now);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
+        SeedTenders(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -737,5 +738,83 @@ public static class SampleCrmDataSeeder
         sb.Append("trailer<</Size 6/Root 1 0 R>>\n");
         sb.Append($"startxref\n{xrefOffset}\n%%EOF\n");
         return System.Text.Encoding.ASCII.GetBytes(sb.ToString());
+    }
+
+    private const string SampleTenderMarker = "[SAMPLE_TENDER]";
+
+    /// <summary>
+    /// Seed a curated set of tender rows tied to existing sample
+    /// customers so the FE list, deadline badge and status filter all
+    /// have populated data on a fresh DB. Idempotent — skipped when
+    /// any sample tender already exists.
+    /// </summary>
+    private static void SeedTenders(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        if (db.Tenders.Any(t => t.Note != null && t.Note.StartsWith(SampleTenderMarker))) return;
+
+        var customers = db.Customers.Where(c => c.Name.StartsWith(SampleTag))
+            .OrderBy(c => c.Id).Take(3).ToList();
+        if (customers.Count == 0) return;
+
+        var templates = db.MasterDataOptions
+            .Where(o => o.Category == "tender_checklist_default" && o.IsActive)
+            .OrderBy(o => o.SortOrder)
+            .ToList();
+
+        var year = now.Year;
+        var nextSeq = 1 + db.Tenders.Count(t => t.Code.StartsWith($"TD-{year}-"));
+
+        var seeds = new (string Name, int CustomerIdx, int DaysToDeadline, TenderStatus Status)[]
+        {
+            ("Gói thầu xây dựng Nhà máy Alpha",       0, 21,  TenderStatus.Preparing),
+            ("Gói thầu MEP Nhà xưởng Beta",           1, 2,   TenderStatus.Preparing),   // deadline imminent
+            ("Gói thầu hoàn thiện nội thất Gamma",    2, -5,  TenderStatus.Submitted),   // past deadline, already submitted
+        };
+
+        var i = 0;
+        foreach (var (name, custIdx, daysToDeadline, status) in seeds)
+        {
+            if (custIdx >= customers.Count) continue;
+            var customer = customers[custIdx];
+            var code = $"TD-{year}-{nextSeq++:D4}";
+            var deadline = now.AddDays(daysToDeadline);
+            var tender = new Tender
+            {
+                Code = code,
+                Name = name,
+                CustomerId = customer.Id,
+                OpeningDate = now.AddDays(daysToDeadline - 14),
+                SubmissionDeadline = deadline,
+                PreparerUserId = owner.Id,
+                InfoSource = "Referral",
+                Status = status,
+                Note = $"{SampleTenderMarker} Sample tender for demo.",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-7 + i),
+                UpdatedAt = now.AddDays(-1 + i),
+            };
+            db.Tenders.Add(tender);
+            db.SaveChanges();
+
+            // Attach default checklist derived from master data.
+            var itemsToAdd = templates.Select((tpl, idx) => new TenderChecklistItem
+            {
+                TenderId = tender.Id,
+                TemplateCode = tpl.Code,
+                Title = tpl.Name,
+                // Roughly half of items done on the "Preparing" tenders so the
+                // % completion badge has something interesting to render.
+                Status = status == TenderStatus.Submitted
+                    ? TenderChecklistItemStatus.Submitted
+                    : (idx < 3 ? TenderChecklistItemStatus.Done : TenderChecklistItemStatus.NotStarted),
+                SortOrder = tpl.SortOrder != 0 ? tpl.SortOrder : idx + 1,
+                CreatedAt = now.AddDays(-3),
+                UpdatedAt = now.AddDays(-1),
+            }).ToList();
+            db.TenderChecklistItems.AddRange(itemsToAdd);
+            db.SaveChanges();
+            i++;
+        }
     }
 }

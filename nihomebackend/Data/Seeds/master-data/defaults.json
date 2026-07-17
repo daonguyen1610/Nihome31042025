@@ -105,6 +105,18 @@
     },
 
     {
+      "category": "tender_checklist_default",
+      "options": [
+        { "code": "capability",    "name": "Hồ sơ năng lực",               "sortOrder": 1 },
+        { "code": "legal",         "name": "Hồ sơ pháp nhân",              "sortOrder": 2 },
+        { "code": "bid-bond",      "name": "Bảo lãnh dự thầu",             "sortOrder": 3 },
+        { "code": "boq",           "name": "BOQ",                          "sortOrder": 4 },
+        { "code": "method",        "name": "Thuyết minh biện pháp thi công", "sortOrder": 5 },
+        { "code": "schedule",      "name": "Tiến độ",                      "sortOrder": 6 }
+      ]
+    },
+
+    {
       "category": "contract_status",
       "options": [
         { "code": "draft",       "name": "Bản nháp", "sortOrder": 1 },

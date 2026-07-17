@@ -60,6 +60,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
     public DbSet<CapabilityDocument> CapabilityDocuments => Set<CapabilityDocument>();
     public DbSet<CapabilityDocumentVersion> CapabilityDocumentVersions => Set<CapabilityDocumentVersion>();
+    public DbSet<Tender> Tenders => Set<Tender>();
+    public DbSet<TenderChecklistItem> TenderChecklistItems => Set<TenderChecklistItem>();
 
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
@@ -567,6 +569,54 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(v => v.CapabilityDocumentId);
             b.HasIndex(v => new { v.CapabilityDocumentId, v.VersionNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<Tender>(b =>
+        {
+            b.ToTable("tenders");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.Code).HasMaxLength(40).IsRequired();
+            b.HasIndex(t => t.Code).IsUnique();
+            b.Property(t => t.Name).HasMaxLength(300).IsRequired();
+            b.Property(t => t.InfoSource).HasMaxLength(200);
+            b.Property(t => t.Note).HasMaxLength(4000);
+            b.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(t => t.LostReasonCode).HasMaxLength(80);
+            b.Property(t => t.LostNote).HasMaxLength(2000);
+            b.HasOne(t => t.Customer)
+                .WithMany()
+                .HasForeignKey(t => t.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(t => t.Preparer)
+                .WithMany()
+                .HasForeignKey(t => t.PreparerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(t => t.CustomerId);
+            b.HasIndex(t => t.PreparerUserId);
+            b.HasIndex(t => t.Status);
+            b.HasIndex(t => t.SubmissionDeadline);
+            b.HasIndex(t => t.CreatedAt);
+        });
+
+        modelBuilder.Entity<TenderChecklistItem>(b =>
+        {
+            b.ToTable("tender_checklist_items");
+            b.HasKey(i => i.Id);
+            b.Property(i => i.TemplateCode).HasMaxLength(80);
+            b.Property(i => i.Title).HasMaxLength(300).IsRequired();
+            b.Property(i => i.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(i => i.FilePath).HasMaxLength(500);
+            b.Property(i => i.OriginalFileName).HasMaxLength(300);
+            b.HasOne(i => i.Tender)
+                .WithMany(t => t.ChecklistItems)
+                .HasForeignKey(i => i.TenderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(i => i.Owner)
+                .WithMany()
+                .HasForeignKey(i => i.OwnerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(i => i.TenderId);
+            b.HasIndex(i => new { i.TenderId, i.SortOrder });
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

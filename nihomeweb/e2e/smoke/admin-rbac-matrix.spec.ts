@@ -35,6 +35,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/opportunities",
   "/admin/quotes",
   "/admin/capability-documents",
+  "/admin/tenders",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -86,7 +87,7 @@ const matrix: RoleExpectation[] = [
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contacts", "/admin/recruitment"],
   },
   {
     // SALES_MANAGER: crm.** (full — includes quotes.approve on top of manage)
@@ -94,7 +95,7 @@ const matrix: RoleExpectation[] = [
     // as SALE plus view.all across CRM entities; routes rendered are
     // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/contacts", "/admin/recruitment"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contacts", "/admin/recruitment"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view (manage-only routes
@@ -130,10 +131,11 @@ const matrix: RoleExpectation[] = [
     ],
   },
   {
-    // QS: content.projects.view + processes.view + crm.quotes.view (read-only
-    // access to approved quotes for takeoff / cost tracking).
+    // QS: content.projects.view + processes.view + crm.quotes.view +
+    // crm.tenders.view (read-only access to approved quotes / tenders
+    // for takeoff / cost tracking).
     user: TEST_USERS.qs,
-    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/processes/general"],
+    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/processes/general"],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)

@@ -959,6 +959,110 @@ export interface CapabilityDocumentListParams {
   pageSize?: number;
 }
 
+// ─── Tenders (NIH-85 / NIH-95 / NIH-96) ────────────────────────
+
+export type TenderStatus = "Preparing" | "Submitted" | "Won" | "Lost" | "Cancelled";
+
+export const TENDER_STATUSES: TenderStatus[] = [
+  "Preparing",
+  "Submitted",
+  "Won",
+  "Lost",
+  "Cancelled",
+];
+
+export type TenderChecklistItemStatus = "NotStarted" | "Preparing" | "Done" | "Submitted";
+
+export interface TenderChecklistItemResponse {
+  id: number;
+  templateCode?: string | null;
+  title: string;
+  status: TenderChecklistItemStatus;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  internalDeadline?: string | null;
+  filePath?: string | null;
+  originalFileName?: string | null;
+  sortOrder: number;
+}
+
+export interface TenderResponse {
+  id: number;
+  code: string;
+  name: string;
+  customerId: number;
+  customerName: string;
+  openingDate?: string | null;
+  submissionDeadline: string;
+  preparerUserId?: number | null;
+  preparerName?: string | null;
+  infoSource?: string | null;
+  status: TenderStatus;
+  note?: string | null;
+  wonOpportunityId?: number | null;
+  lostReasonCode?: string | null;
+  lostNote?: string | null;
+  closedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  checklistItems: TenderChecklistItemResponse[];
+  checklistCompletionPercent: number;
+  isDeadlineImminent: boolean;
+}
+
+export interface TenderListItemResponse {
+  id: number;
+  code: string;
+  name: string;
+  customerId: number;
+  customerName: string;
+  openingDate?: string | null;
+  submissionDeadline: string;
+  preparerUserId?: number | null;
+  preparerName?: string | null;
+  status: TenderStatus;
+  checklistCompletionPercent: number;
+  isDeadlineImminent: boolean;
+  updatedAt: string;
+}
+
+export interface TenderListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: TenderListItemResponse[];
+}
+
+export interface CreateTenderRequest {
+  name: string;
+  customerId: number;
+  openingDate?: string | null;
+  submissionDeadline: string;
+  preparerUserId?: number | null;
+  infoSource?: string | null;
+  note?: string | null;
+}
+
+export interface UpdateTenderRequest {
+  name: string;
+  openingDate?: string | null;
+  submissionDeadline: string;
+  preparerUserId?: number | null;
+  infoSource?: string | null;
+  note?: string | null;
+}
+
+export interface TenderListParams {
+  status?: string;
+  customerId?: number;
+  preparerUserId?: number;
+  openingMonth?: number;
+  openingYear?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -1461,6 +1565,25 @@ export const adminApi = {
     api.delete(`/capability-documents/${id}`),
   downloadCapabilityDocumentsZip: (ids: number[]) =>
     api.post<Blob>(`/capability-documents/download-zip`, { ids }, { responseType: "blob" }),
+
+  // Tenders (NIH-85 / NIH-95 / NIH-96)
+  listTenders: (params: TenderListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.status) q.append("status", params.status);
+    if (params.customerId != null) q.append("customerId", String(params.customerId));
+    if (params.preparerUserId != null) q.append("preparerUserId", String(params.preparerUserId));
+    if (params.openingMonth != null) q.append("openingMonth", String(params.openingMonth));
+    if (params.openingYear != null) q.append("openingYear", String(params.openingYear));
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<TenderListResponse>(`/tenders${qs ? `?${qs}` : ""}`);
+  },
+  getTender: (id: number) => api.get<TenderResponse>(`/tenders/${id}`),
+  createTender: (body: CreateTenderRequest) => api.post<TenderResponse>("/tenders", body),
+  updateTender: (id: number, body: UpdateTenderRequest) => api.put<TenderResponse>(`/tenders/${id}`, body),
+  deleteTender: (id: number) => api.delete(`/tenders/${id}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
