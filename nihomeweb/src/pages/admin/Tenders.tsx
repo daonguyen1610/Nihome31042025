@@ -538,7 +538,7 @@ const AdminTenders = () => {
 
             {/* Desktop table */}
             <div className="hidden overflow-x-auto rounded-md border lg:block">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[960px] text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
                     {canManage && (
@@ -557,8 +557,8 @@ const AdminTenders = () => {
                         />
                       </th>
                     )}
-                    <th className="px-3 py-2">{t("tenders.field.name")}</th>
-                    <th className="whitespace-nowrap px-3 py-2">{t("tenders.field.customer")}</th>
+                    <th className="min-w-[220px] px-3 py-2">{t("tenders.field.name")}</th>
+                    <th className="min-w-[160px] px-3 py-2">{t("tenders.field.customer")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("tenders.field.deadline")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("tenders.field.status")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("tenders.field.checklist")}</th>
@@ -589,11 +589,11 @@ const AdminTenders = () => {
                             />
                           </td>
                         )}
-                        <td className="max-w-[280px] px-3 py-2">
+                        <td className="min-w-[220px] px-3 py-2">
                           <div className="font-medium">{r.name}</div>
-                          <div className="text-xs text-muted-foreground">{r.code}</div>
+                          <div className="whitespace-nowrap text-xs text-muted-foreground">{r.code}</div>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2">{r.customerName}</td>
+                        <td className="min-w-[160px] px-3 py-2">{r.customerName}</td>
                         <td className="whitespace-nowrap px-3 py-2">
                           <div className={cn(r.isDeadlineImminent && "font-semibold text-rose-700")}>
                             {formatDate(r.submissionDeadline, lang)}
