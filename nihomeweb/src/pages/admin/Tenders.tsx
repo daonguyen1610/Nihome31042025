@@ -49,7 +49,7 @@ import {
   type TenderListParams,
   type TenderResponse,
   type TenderStatus,
-  type UpdateTenderRequest,
+  type UserListItemResponse,
 } from "@/services/adminApi";
 
 const ALL_VALUE = "__all__";
@@ -89,6 +89,7 @@ const AdminTenders = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.tendersManage);
+  const canPickPreparer = has(ADMIN_PERMS.users);
 
   // -------- list state --------
   const [rows, setRows] = useState<TenderListItemResponse[]>([]);
@@ -135,6 +136,7 @@ const AdminTenders = () => {
 
   // -------- customers for filter + form --------
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [preparers, setPreparers] = useState<UserListItemResponse[]>([]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -144,11 +146,19 @@ const AdminTenders = () => {
       } catch {
         /* non-fatal — filter/form dropdowns just stay empty */
       }
+      if (canPickPreparer) {
+        try {
+          const { data } = await adminApi.getUsers({ take: 200 });
+          if (!cancelled) setPreparers(data.items.filter((u) => u.isActive));
+        } catch {
+          /* non-fatal — preparer field will be hidden */
+        }
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [canPickPreparer]);
   const customerOptions = useMemo(
     () => customers.map((c) => ({ value: String(c.id), label: c.name })),
     [customers],
@@ -218,7 +228,7 @@ const AdminTenders = () => {
           preparerUserId: form.preparerUserId ?? null,
           infoSource: form.infoSource?.trim() || null,
           note: form.note?.trim() || null,
-        } as UpdateTenderRequest);
+        });
         toast({ title: t("tenders.updated") });
       } else {
         await adminApi.createTender({
@@ -271,8 +281,8 @@ const AdminTenders = () => {
             size="icon"
             variant="ghost"
             onClick={() => void openEdit(r.id)}
-            title={t("capDocs.action.edit") ?? "Edit"}
-            aria-label={t("capDocs.action.edit") ?? "Edit"}
+            title={t("common.edit")}
+            aria-label={t("common.edit")}
           >
             <Pencil className="h-4 w-4" />
           </Button>
@@ -281,8 +291,8 @@ const AdminTenders = () => {
             variant="ghost"
             className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
             onClick={() => setDeleting(r)}
-            title={t("capDocs.action.delete") ?? "Delete"}
-            aria-label={t("capDocs.action.delete") ?? "Delete"}
+            title={t("common.delete")}
+            aria-label={t("common.delete")}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -303,7 +313,7 @@ const AdminTenders = () => {
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()} disabled={loading} className="flex-1 md:flex-none">
               <RefreshCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
-              {t("common.refresh") ?? "Refresh"}
+              {t("common.refresh")}
             </Button>
             {canManage && (
               <Button size="sm" onClick={openCreate} className="flex-1 md:flex-none">
@@ -368,7 +378,13 @@ const AdminTenders = () => {
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
           <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
-            {t("tenders.empty")}
+            <p>{t("tenders.empty")}</p>
+            {canManage && (
+              <Button size="sm" onClick={openCreate} className="mt-3">
+                <Plus className="mr-2 h-4 w-4" />
+                {t("tenders.emptyCta")}
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -509,12 +525,16 @@ const AdminTenders = () => {
             <DialogTitle>
               {isEdit ? editingDetail!.name : t("tenders.new")}
             </DialogTitle>
-            {isEdit && (
-              <DialogDescription className="text-xs">
-                {editingDetail!.code} · {statusLabel(editingDetail!.status)}
-                {editLocked && ` · ${t("tenders.form.readOnlyAfterSubmit")}`}
-              </DialogDescription>
-            )}
+            <DialogDescription className="text-xs">
+              {isEdit ? (
+                <>
+                  {editingDetail!.code} · {statusLabel(editingDetail!.status)}
+                  {editLocked && ` · ${t("tenders.form.readOnlyAfterSubmit")}`}
+                </>
+              ) : (
+                t("tenders.form.createHint")
+              )}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
@@ -536,7 +556,7 @@ const AdminTenders = () => {
                   value={form.customerId ? String(form.customerId) : ""}
                   onChange={(v) => setForm({ ...form, customerId: Number(v) || 0 })}
                   options={customerOptions}
-                  placeholder={t("tenders.filter.allCustomers")}
+                  placeholder={t("tenders.form.customerPlaceholder")}
                 />
               )}
             </div>
@@ -565,14 +585,29 @@ const AdminTenders = () => {
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
                 <Label>{t("tenders.field.preparer")}</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  placeholder="User ID"
-                  value={form.preparerUserId ?? ""}
-                  onChange={(e) => setForm({ ...form, preparerUserId: e.target.value ? Number(e.target.value) : null })}
-                  disabled={editLocked}
-                />
+                {canPickPreparer ? (
+                  <Select
+                    value={form.preparerUserId ? String(form.preparerUserId) : ""}
+                    onValueChange={(v) => setForm({ ...form, preparerUserId: v ? Number(v) : null })}
+                    disabled={editLocked}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("tenders.form.preparerPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {preparers.map((u) => (
+                        <SelectItem key={u.id} value={String(u.id)}>
+                          {u.fullName || u.phoneNumber}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={editingDetail?.preparerName ?? t("tenders.form.preparerReadOnlyHint")}
+                    disabled
+                  />
+                )}
               </div>
               <div className="space-y-1">
                 <Label>{t("tenders.field.infoSource")}</Label>
@@ -598,11 +633,11 @@ const AdminTenders = () => {
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={saving} className="w-full sm:w-auto">
-              {t("common.cancel") ?? "Cancel"}
+              {t("common.cancel")}
             </Button>
             <Button onClick={() => void submitForm()} disabled={saving || !canManage} className="w-full sm:w-auto">
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("common.save") ?? "Save"}
+              {t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -619,7 +654,7 @@ const AdminTenders = () => {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <AlertDialogCancel disabled={busyDelete} className="w-full sm:w-auto">
-              {t("capDocs.delete.cancel") ?? t("common.cancel")}
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               className="w-full bg-rose-600 hover:bg-rose-700 sm:w-auto"

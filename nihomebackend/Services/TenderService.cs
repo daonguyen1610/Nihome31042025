@@ -147,6 +147,11 @@ public class TenderService(
             throw new TenderOperationException($"Người phụ trách #{request.PreparerUserId} không tồn tại.");
         }
 
+        // Default the preparer to the caller when the client didn't pick one.
+        // Sales users don't have users.view so the FE picker isn't visible
+        // to them — auto-assignment keeps the tender owned by a real person.
+        var effectivePreparerId = request.PreparerUserId ?? callerUserId;
+
         var year = DateTime.UtcNow.Year;
         var nextSeq = 1 + await db.Tenders
             .Where(t => t.Code.StartsWith($"TD-{year}-"))
@@ -160,7 +165,7 @@ public class TenderService(
             CustomerId = customer.Id,
             OpeningDate = request.OpeningDate,
             SubmissionDeadline = request.SubmissionDeadline,
-            PreparerUserId = request.PreparerUserId,
+            PreparerUserId = effectivePreparerId,
             InfoSource = TrimOrNull(request.InfoSource),
             Note = TrimOrNull(request.Note),
             Status = TenderStatus.Preparing,

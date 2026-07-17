@@ -8,6 +8,7 @@
   { "key": "tenders.updated", "category": "tenders", "vi": "Đã cập nhật gói thầu", "en": "Tender updated", "zh": "投标已更新", "ja": "入札を更新しました" },
   { "key": "tenders.deleted", "category": "tenders", "vi": "Đã xoá gói thầu", "en": "Tender deleted", "zh": "投标已删除", "ja": "入札を削除しました" },
   { "key": "tenders.empty", "category": "tenders", "vi": "Chưa có gói thầu nào.", "en": "No tenders yet.", "zh": "暂无投标。", "ja": "入札がまだありません。" },
+  { "key": "tenders.emptyCta", "category": "tenders", "vi": "Tạo gói thầu đầu tiên", "en": "Create the first tender", "zh": "创建首个投标", "ja": "最初の入札を作成" },
 
   { "key": "tenders.field.code", "category": "tenders", "vi": "Mã gói", "en": "Code", "zh": "编号", "ja": "番号" },
   { "key": "tenders.field.name", "category": "tenders", "vi": "Tên gói thầu", "en": "Tender name", "zh": "投标名称", "ja": "入札名" },
@@ -37,6 +38,10 @@
   { "key": "tenders.form.customerRequired", "category": "tenders", "vi": "Vui lòng chọn Chủ đầu tư.", "en": "Please pick a Customer.", "zh": "请选择客户。", "ja": "顧客を選択してください。" },
   { "key": "tenders.form.deadlineRequired", "category": "tenders", "vi": "Deadline nộp phải là ngày trong tương lai.", "en": "Submission deadline must be in the future.", "zh": "提交截止日期必须为未来日期。", "ja": "提出締切は未来の日付である必要があります。" },
   { "key": "tenders.form.readOnlyAfterSubmit", "category": "tenders", "vi": "Sau khi đã nộp, chỉ có thể sửa Ghi chú.", "en": "After submission only the Note can be edited.", "zh": "提交后只能修改备注。", "ja": "提出後は備考のみ編集可能です。" },
+  { "key": "tenders.form.preparerPlaceholder", "category": "tenders", "vi": "Chọn người phụ trách", "en": "Pick a preparer", "zh": "选择负责人", "ja": "担当者を選択" },
+  { "key": "tenders.form.preparerReadOnlyHint", "category": "tenders", "vi": "Chưa được gán", "en": "Not assigned", "zh": "未分配", "ja": "未割当" },
+  { "key": "tenders.form.customerPlaceholder", "category": "tenders", "vi": "Chọn chủ đầu tư", "en": "Pick a customer", "zh": "选择客户", "ja": "顧客を選択" },
+  { "key": "tenders.form.createHint", "category": "tenders", "vi": "Điền thông tin gói thầu và bấm Lưu để bắt đầu.", "en": "Fill in the tender details and click Save to start.", "zh": "填写投标信息并点击保存以开始。", "ja": "入札情報を入力し、保存で開始します。" },
 
   { "key": "tenders.delete.confirmTitle", "category": "tenders", "vi": "Xoá gói thầu?", "en": "Delete tender?", "zh": "删除投标？", "ja": "入札を削除しますか？" },
   { "key": "tenders.delete.confirmBody", "category": "tenders", "vi": "Chỉ có thể xoá gói thầu \"{name}\" khi còn ở trạng thái Đang chuẩn bị. Hành động này không thể hoàn tác.", "en": "\"{name}\" can only be deleted while it is Preparing. This cannot be undone.", "zh": "\"{name}\" 仅在准备中状态可删除。此操作无法撤销。", "ja": "「{name}」は準備中の場合のみ削除可能です。取り消せません。" },
