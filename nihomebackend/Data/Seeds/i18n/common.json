@@ -968,6 +968,14 @@
     "ja": "すべて選択"
   },
   {
+    "key": "common.deselectAll",
+    "category": "common",
+    "vi": "Bỏ chọn tất cả",
+    "en": "Deselect all",
+    "zh": "取消全选",
+    "ja": "選択解除"
+  },
+  {
     "key": "common.clearSelection",
     "category": "common",
     "vi": "Bỏ chọn",
