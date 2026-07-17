@@ -466,19 +466,19 @@ const TranslationsPage = () => {
     <AdminLayout>
       <div className="space-y-4 p-4 sm:p-6">
         <header>
-          <h1 className="text-2xl font-semibold">{t("set.languages")} — Translations</h1>
+          <h1 className="text-2xl font-semibold">{t("nav.translations")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage all UI translation keys and content translations
+            {t("translations.subtitle")}
           </p>
         </header>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as "static" | "entity")} className="w-fit">
           <TabsList>
             <TabsTrigger value="static" className="gap-1.5">
-              <LanguagesIcon className="h-4 w-4" /> UI Translations
+              <LanguagesIcon className="h-4 w-4" /> {t("translations.tab.ui")}
             </TabsTrigger>
             <TabsTrigger value="entity" className="gap-1.5">
-              <FileText className="h-4 w-4" /> Content Translations
+              <FileText className="h-4 w-4" /> {t("translations.tab.entity")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -493,7 +493,7 @@ const TranslationsPage = () => {
                 <Input
                   value={searchQ}
                   onChange={(e) => { setSearchQ(e.target.value); setPage(1); }}
-                  placeholder="Search key or value..."
+                  placeholder={t("translations.searchPlaceholder")}
                   className="h-9 pl-9"
                 />
               </div>
@@ -502,10 +502,10 @@ const TranslationsPage = () => {
                 onValueChange={(v) => { setFilterCat(v === "__all__" ? "" : v); setPage(1); }}
               >
                 <SelectTrigger className="h-9 w-[200px]">
-                  <SelectValue placeholder="All categories" />
+                  <SelectValue placeholder={t("translations.allCategories")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">All categories</SelectItem>
+                  <SelectItem value="__all__">{t("translations.allCategories")}</SelectItem>
                   {categories.map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
@@ -513,7 +513,7 @@ const TranslationsPage = () => {
               </Select>
               <AdminExportButton onClick={handleExportStaticTranslations} disabled={loading || pairs.length === 0} />
               <Button onClick={openAdd}>
-                <Plus className="mr-1.5 h-4 w-4" /> Add Key
+                <Plus className="mr-1.5 h-4 w-4" /> {t("translations.addKey")}
               </Button>
             </div>
 
@@ -523,77 +523,130 @@ const TranslationsPage = () => {
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full divide-y text-sm">
-                    <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium">Key</th>
-                        {ALL_LANGS.map((lang) => (
-                          <th key={lang} className="px-4 py-3 text-left font-medium">{LANG_LABELS[lang]}</th>
-                        ))}
-                        <th className="px-4 py-3 text-left font-medium">Category</th>
-                        <th className="w-32 px-4 py-3 text-left font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {paged.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                            No translations found.
-                          </td>
-                        </tr>
-                      )}
-                      {paged.map((p) => (
-                        <tr key={p.key} className="hover:bg-muted/40 transition">
-                          <td className="px-4 py-3">
-                            <code className="rounded bg-muted px-2 py-0.5 text-xs">{p.key}</code>
-                          </td>
-                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.vietnameseValue}</td>
-                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["en"] ?? "—"}</td>
-                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["zh"] ?? "—"}</td>
-                          <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["ja"] ?? "—"}</td>
-                          <td className="px-4 py-3">
-                            {p.category && (
-                              <Badge variant="outline" className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700">
-                                {p.category}
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-1">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                onClick={() => openEdit(p)}
-                                aria-label="Edit"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => deletePair(p.key)}
-                                aria-label="Delete"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              ) : paged.length === 0 ? (
+                <div className="px-4 py-12 text-center text-muted-foreground">
+                  {t("translations.empty")}
                 </div>
+              ) : (
+                <>
+                  {/* Mobile / tablet card view (<lg). Table has 7 columns and 4
+                      of them are language values, which do not fit on a phone. */}
+                  <ul className="grid gap-3 p-3 lg:hidden">
+                    {paged.map((p) => (
+                      <li key={p.key} className="rounded-lg border bg-card p-3 shadow-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <code className="break-all rounded bg-muted px-2 py-0.5 text-xs">{p.key}</code>
+                          {p.category && (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 whitespace-normal border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                            >
+                              {p.category}
+                            </Badge>
+                          )}
+                        </div>
+                        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                          <dt className="text-muted-foreground">🇻🇳 VI</dt>
+                          <dd className="min-w-0 break-words">{p.vietnameseValue || "—"}</dd>
+                          <dt className="text-muted-foreground">🇺🇸 EN</dt>
+                          <dd className="min-w-0 break-words">{p.translations["en"] ?? "—"}</dd>
+                          <dt className="text-muted-foreground">🇨🇳 ZH</dt>
+                          <dd className="min-w-0 break-words">{p.translations["zh"] ?? "—"}</dd>
+                          <dt className="text-muted-foreground">🇯🇵 JA</dt>
+                          <dd className="min-w-0 break-words">{p.translations["ja"] ?? "—"}</dd>
+                        </dl>
+                        <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() => openEdit(p)}
+                            aria-label={t("common.edit")}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => deletePair(p.key)}
+                            aria-label={t("common.delete")}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Desktop table (lg+) */}
+                  <div className="hidden overflow-x-auto lg:block">
+                    <table className="w-full min-w-[900px] divide-y text-sm">
+                      <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium">{t("translations.field.key")}</th>
+                          {ALL_LANGS.map((lang) => (
+                            <th key={lang} className="px-4 py-3 text-left font-medium">{LANG_LABELS[lang]}</th>
+                          ))}
+                          <th className="px-4 py-3 text-left font-medium">{t("translations.field.category")}</th>
+                          <th className="w-32 px-4 py-3 text-left font-medium">{t("common.actions")}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {paged.map((p) => (
+                          <tr key={p.key} className="hover:bg-muted/40 transition">
+                            <td className="px-4 py-3">
+                              <code className="rounded bg-muted px-2 py-0.5 text-xs">{p.key}</code>
+                            </td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.vietnameseValue}</td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["en"] ?? "—"}</td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["zh"] ?? "—"}</td>
+                            <td className="max-w-[160px] truncate px-4 py-3 text-xs">{p.translations["ja"] ?? "—"}</td>
+                            <td className="px-4 py-3">
+                              {p.category && (
+                                <Badge variant="outline" className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700">
+                                  {p.category}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-1">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  onClick={() => openEdit(p)}
+                                  aria-label={t("common.edit")}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => deletePair(p.key)}
+                                  aria-label={t("common.delete")}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
 
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t px-4 py-3">
                   <span className="text-xs text-muted-foreground">
-                    {pairs.length} keys · Page {page}/{totalPages}
+                    {t("translations.pageInfo")
+                      .replace("{count}", String(pairs.length))
+                      .replace("{page}", String(page))
+                      .replace("{total}", String(totalPages))}
                   </span>
                   <div className="flex gap-1">
                     {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1).map((p) => (
@@ -621,7 +674,7 @@ const TranslationsPage = () => {
         {tab === "entity" && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
-              <Label className="text-sm">Content type:</Label>
+              <Label className="text-sm">{t("translations.contentType")}:</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="h-9 w-[220px]">
                   <SelectValue />
@@ -640,7 +693,7 @@ const TranslationsPage = () => {
               </div>
             ) : entityItems.length === 0 ? (
               <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-                No items found for this content type.
+                {t("translations.entityEmpty")}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -660,15 +713,15 @@ const TranslationsPage = () => {
                     <div className="flex items-center justify-between">
                       {item.hasTranslation ? (
                         <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 font-medium text-emerald-700">
-                          <Check className="h-3 w-3" /> Translated ({item.translationCount}/{item.expectedFields})
+                          <Check className="h-3 w-3" /> {t("translations.translated")} ({item.translationCount}/{item.expectedFields})
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="gap-1 border-amber-200 bg-amber-50 font-medium text-amber-700">
-                          <X className="h-3 w-3" /> Not translated
+                          <X className="h-3 w-3" /> {t("translations.notTranslated")}
                         </Badge>
                       )}
                       <Button size="sm" onClick={() => openEntityTranslate(item)}>
-                        <Pencil className="mr-1.5 h-3 w-3" /> Translate
+                        <Pencil className="mr-1.5 h-3 w-3" /> {t("translations.translate")}
                       </Button>
                     </div>
                   </div>
@@ -681,16 +734,16 @@ const TranslationsPage = () => {
 
       {/* ════════ Static Translation Modal ════════ */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>
-              {modalMode === "add" ? "Add Translation Key" : "Edit Translation Key"}
+              {modalMode === "add" ? t("translations.addModalTitle") : t("translations.editModalTitle")}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="tk-key" className="text-xs">Key *</Label>
+              <Label htmlFor="tk-key" className="text-xs">{t("translations.field.key")} *</Label>
               <Input
                 id="tk-key"
                 value={draft.key}
@@ -701,7 +754,7 @@ const TranslationsPage = () => {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tk-cat" className="text-xs">Category</Label>
+              <Label htmlFor="tk-cat" className="text-xs">{t("translations.field.category")}</Label>
               <Input
                 id="tk-cat"
                 value={draft.category}
@@ -737,20 +790,22 @@ const TranslationsPage = () => {
             ))}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setModalOpen(false)}>{t("common.cancel")}</Button>
-            <Button onClick={savePair}>{t("proc.save")}</Button>
+            <Button onClick={savePair}>{t("common.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ════════ Entity Translation Modal ════════ */}
       <Dialog open={entityModalOpen} onOpenChange={setEntityModalOpen}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto sm:w-full">
           {entityModalItem && entityModalType && (
             <>
               <DialogHeader className="space-y-1">
-                <DialogTitle>Translate: {entityModalItem.title}</DialogTitle>
+                <DialogTitle className="break-words">
+                  {t("translations.entityModalTitle").replace("{name}", entityModalItem.title)}
+                </DialogTitle>
                 <p className="text-xs text-muted-foreground">
                   {entityModalType.type} #{entityModalItem.id}
                 </p>
@@ -813,13 +868,13 @@ const TranslationsPage = () => {
                 })}
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
                 <Button variant="outline" onClick={() => setEntityModalOpen(false)}>
                   {t("common.cancel")}
                 </Button>
                 <Button onClick={saveEntityTranslations} disabled={entitySaving}>
                   {entitySaving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-                  {t("proc.save")}
+                  {t("common.save")}
                 </Button>
               </DialogFooter>
             </>
