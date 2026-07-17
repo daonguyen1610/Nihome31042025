@@ -40,6 +40,22 @@
     "ja": "保存中..."
   },
   {
+    "key": "common.on",
+    "category": "common",
+    "vi": "Bật",
+    "en": "On",
+    "zh": "开",
+    "ja": "オン"
+  },
+  {
+    "key": "common.off",
+    "category": "common",
+    "vi": "Tắt",
+    "en": "Off",
+    "zh": "关",
+    "ja": "オフ"
+  },
+  {
     "key": "common.cancel",
     "category": "common",
     "vi": "Huỷ",

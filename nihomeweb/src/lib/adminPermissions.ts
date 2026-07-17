@@ -63,4 +63,6 @@ export const ADMIN_PERMS = {
   usersManage: "users.manage",
   rbacRoles: "rbac.roles.view",
   rbacRolesManage: "rbac.roles.manage",
+  masterData: "master-data.view",
+  masterDataManage: "master-data.manage",
 } as const;

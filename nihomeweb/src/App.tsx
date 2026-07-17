@@ -61,6 +61,7 @@ import AboutContent from "./pages/admin/AboutContent.tsx";
 import ProcessList from "./pages/admin/ProcessList.tsx";
 import LanguagesPage from "./pages/admin/settings/Languages.tsx";
 import TranslationsPage from "./pages/admin/settings/Translations.tsx";
+import MasterDataPage from "./pages/admin/MasterData.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -174,6 +175,9 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.translations} />}>
                 <Route path="/admin/languages" element={<LanguagesPage />} />
                 <Route path="/admin/translations" element={<TranslationsPage />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.masterData} />}>
+                <Route path="/admin/master-data" element={<MasterDataPage />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.categories} />}>
                 <Route path="/admin/categories" element={<AdminCategories />} />

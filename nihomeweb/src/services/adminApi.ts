@@ -435,6 +435,23 @@ export interface MasterDataOption {
   description?: string;
   sortOrder: number;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MasterDataCategory {
+  category: string;
+  totalCount: number;
+  activeCount: number;
+}
+
+export interface UpsertMasterDataOptionRequest {
+  code: string;
+  name: string;
+  labelKey?: string | null;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 // -------- CRM Customer --------
@@ -1588,6 +1605,20 @@ export const adminApi = {
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
     api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`),
+
+  // Master data admin (NIH-230)
+  listMasterDataCategories: () =>
+    api.get<MasterDataCategory[]>("/master-data/categories"),
+  listMasterDataByCategory: (category: string, includeInactive = false) =>
+    api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`, {
+      params: { includeInactive },
+    }),
+  createMasterDataOption: (category: string, body: UpsertMasterDataOptionRequest) =>
+    api.post<MasterDataOption>(`/master-data/${encodeURIComponent(category)}`, body),
+  updateMasterDataOption: (id: number, body: UpsertMasterDataOptionRequest) =>
+    api.put<MasterDataOption>(`/master-data/options/${id}`, body),
+  deleteMasterDataOption: (id: number) =>
+    api.delete(`/master-data/options/${id}`),
 
   // Users / RBAC
   getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>
