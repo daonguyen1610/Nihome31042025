@@ -750,5 +750,141 @@
     "en": "Schedule",
     "zh": "进度计划",
     "ja": "工程表"
+  },
+  {
+    "key": "masterData.title",
+    "category": "masterData",
+    "vi": "Dữ liệu chuẩn",
+    "en": "Master data",
+    "zh": "主数据",
+    "ja": "マスタデータ"
+  },
+  {
+    "key": "masterData.subtitle",
+    "category": "masterData",
+    "vi": "Quản lý các danh mục dùng chung: trạng thái, nguồn, phân loại...",
+    "en": "Manage shared enum-style catalogs: statuses, sources, classifications...",
+    "zh": "管理共享枚举目录：状态、来源、分类…",
+    "ja": "共有列挙型カタログを管理：ステータス、ソース、分類…"
+  },
+  {
+    "key": "masterData.category",
+    "category": "masterData",
+    "vi": "Danh mục",
+    "en": "Category",
+    "zh": "分类",
+    "ja": "カテゴリ"
+  },
+  {
+    "key": "masterData.newOption",
+    "category": "masterData",
+    "vi": "Thêm giá trị",
+    "en": "New option",
+    "zh": "新增选项",
+    "ja": "オプションを追加"
+  },
+  {
+    "key": "masterData.searchPlaceholder",
+    "category": "masterData",
+    "vi": "Tìm theo mã hoặc tên…",
+    "en": "Search by code or name…",
+    "zh": "按代码或名称搜索…",
+    "ja": "コードまたは名前で検索…"
+  },
+  {
+    "key": "masterData.empty",
+    "category": "masterData",
+    "vi": "Chưa có giá trị nào trong danh mục này.",
+    "en": "No options in this category yet.",
+    "zh": "此分类下暂无选项。",
+    "ja": "このカテゴリにはまだオプションがありません。"
+  },
+  {
+    "key": "masterData.field.code",
+    "category": "masterData",
+    "vi": "Mã",
+    "en": "Code",
+    "zh": "代码",
+    "ja": "コード"
+  },
+  {
+    "key": "masterData.field.name",
+    "category": "masterData",
+    "vi": "Tên hiển thị",
+    "en": "Display name",
+    "zh": "显示名称",
+    "ja": "表示名"
+  },
+  {
+    "key": "masterData.field.labelKey",
+    "category": "masterData",
+    "vi": "Khóa i18n",
+    "en": "i18n label key",
+    "zh": "i18n 键",
+    "ja": "i18n ラベルキー"
+  },
+  {
+    "key": "masterData.field.description",
+    "category": "masterData",
+    "vi": "Mô tả",
+    "en": "Description",
+    "zh": "描述",
+    "ja": "説明"
+  },
+  {
+    "key": "masterData.field.sortOrder",
+    "category": "masterData",
+    "vi": "Thứ tự",
+    "en": "Sort order",
+    "zh": "排序",
+    "ja": "並び順"
+  },
+  {
+    "key": "masterData.field.isActive",
+    "category": "masterData",
+    "vi": "Kích hoạt",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "masterData.createModalTitle",
+    "category": "masterData",
+    "vi": "Thêm giá trị mới",
+    "en": "New option",
+    "zh": "新增选项",
+    "ja": "新規オプション"
+  },
+  {
+    "key": "masterData.editModalTitle",
+    "category": "masterData",
+    "vi": "Sửa giá trị",
+    "en": "Edit option",
+    "zh": "编辑选项",
+    "ja": "オプションを編集"
+  },
+  {
+    "key": "masterData.codeHint",
+    "category": "masterData",
+    "vi": "Chỉ chữ thường, số, dấu gạch ngang hoặc gạch dưới (tối đa 80 ký tự). Không sửa được sau khi tạo.",
+    "en": "Lowercase letters, digits, dash or underscore (max 80 chars). Cannot be changed after creation.",
+    "zh": "仅限小写字母、数字、连字符或下划线（最多 80 个字符）。创建后无法修改。",
+    "ja": "小文字・数字・ハイフン・アンダースコアのみ（最大 80 文字）。作成後は変更できません。"
+  },
+  {
+    "key": "masterData.labelKeyHint",
+    "category": "masterData",
+    "vi": "Tùy chọn. Nếu để trống, hệ thống sẽ tự đặt theo mẫu masterData.{danh mục}.{mã}.label.",
+    "en": "Optional. Auto-filled to masterData.{category}.{code}.label when left blank.",
+    "zh": "可选。留空时将自动生成 masterData.{category}.{code}.label。",
+    "ja": "任意。空欄の場合は masterData.{category}.{code}.label が自動的に設定されます。"
+  },
+  {
+    "key": "masterData.codeInvalid",
+    "category": "masterData",
+    "vi": "Mã không hợp lệ. Chỉ chữ thường, số, gạch ngang/dưới, dài 1–80 ký tự.",
+    "en": "Invalid code. Only lowercase letters, digits, dash or underscore, 1–80 chars.",
+    "zh": "代码格式无效。仅限小写字母、数字、连字符或下划线，长度 1–80。",
+    "ja": "コードが無効です。小文字・数字・ハイフン・アンダースコア、1〜80 文字のみ。"
   }
 ]

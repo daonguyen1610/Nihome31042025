@@ -296,6 +296,14 @@
     "ja": "アクティビティログ"
   },
   {
+    "key": "nav.masterData",
+    "category": "nav",
+    "vi": "Dữ liệu chuẩn",
+    "en": "Master data",
+    "zh": "主数据",
+    "ja": "マスタデータ"
+  },
+  {
     "key": "nav.content",
     "category": "nav",
     "vi": "Quản lý nội dung",
