@@ -5,7 +5,14 @@ namespace NihomeBackend.Data;
 
 public static class DbSeeder
 {
-    public static void Seed(AppDbContext db)
+    /// <summary>
+    /// Seed the database with baseline users, RBAC, master-data, content
+    /// translations and sample CRM rows. <paramref name="webRootPath"/>
+    /// is optional — when provided, seeders that need to drop physical
+    /// demo assets (e.g. capability-document PDFs so download links
+    /// resolve on a fresh install) know where to write them.
+    /// </summary>
+    public static void Seed(AppDbContext db, string? webRootPath = null)
     {
         var now = DateTime.UtcNow;
 
@@ -139,7 +146,7 @@ public static class DbSeeder
         MasterDataSeeder.Seed(db);
         NotificationTemplateSeeder.Seed(db);
         SeedBusinessRoleUsers(db);
-        SampleCrmDataSeeder.Seed(db);
+        SampleCrmDataSeeder.Seed(db, webRootPath);
     }
 
     // Phone numbers used here are stable, predictable test credentials so the

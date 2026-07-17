@@ -26,6 +26,10 @@
   { "key": "capDocs.filter.allTags", "category": "capability-docs", "vi": "Tất cả phân loại", "en": "All tags", "zh": "全部分类", "ja": "すべての分類" },
   { "key": "capDocs.filter.allExpiry", "category": "capability-docs", "vi": "Tất cả trạng thái", "en": "All expiry states", "zh": "全部状态", "ja": "すべての状態" },
 
+  { "key": "capDocs.selectAll", "category": "capability-docs", "vi": "Chọn tất cả", "en": "Select all", "zh": "全选", "ja": "すべて選択" },
+  { "key": "capDocs.deselectAll", "category": "capability-docs", "vi": "Bỏ chọn tất cả", "en": "Deselect all", "zh": "取消全选", "ja": "選択解除" },
+  { "key": "capDocs.validation.missingFields", "category": "capability-docs", "vi": "Vui lòng nhập đủ Tên và Phân loại.", "en": "Please provide both Name and Tag.", "zh": "请填写名称和分类。", "ja": "名前と分類を入力してください。" },
+
   { "key": "capDocs.expiry.none", "category": "capability-docs", "vi": "Không hạn", "en": "No expiry", "zh": "无期限", "ja": "期限なし" },
   { "key": "capDocs.expiry.ok", "category": "capability-docs", "vi": "Còn hiệu lực", "en": "In date", "zh": "有效", "ja": "有効" },
   { "key": "capDocs.expiry.warning", "category": "capability-docs", "vi": "Sắp hết hạn (≤60 ngày)", "en": "Expiring soon (≤60 days)", "zh": "即将到期 (≤60天)", "ja": "期限間近 (≤60日)" },
