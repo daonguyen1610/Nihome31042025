@@ -1296,6 +1296,22 @@
     "ja": "案件一覧・パイプライン・詳細の閲覧を許可します。"
   },
   {
+    "key": "rbac.perm.crm.opportunities.view.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ Cơ hội",
+    "en": "View all opportunities",
+    "zh": "查看全部商机",
+    "ja": "全ての案件を表示"
+  },
+  {
+    "key": "rbac.perm.crm.opportunities.view.all.description",
+    "category": "rbac",
+    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy cơ hội của mọi Sales.",
+    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see opportunities owned by any user.",
+    "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的商机。",
+    "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者の案件を閲覧可能。"
+  },
+  {
     "key": "rbac.perm.crm.opportunities.manage.label",
     "category": "rbac",
     "vi": "Quản lý cơ hội",
@@ -1326,6 +1342,22 @@
     "en": "Allows viewing quote lists, versions and details.",
     "zh": "允许查看报价列表、版本和详情。",
     "ja": "見積一覧・バージョン・詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.view.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ Báo giá",
+    "en": "View all quotes",
+    "zh": "查看全部报价",
+    "ja": "全ての見積を表示"
+  },
+  {
+    "key": "rbac.perm.crm.quotes.view.all.description",
+    "category": "rbac",
+    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy báo giá của mọi Sales.",
+    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see quotes owned by any user.",
+    "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的报价。",
+    "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者の見積を閲覧可能。"
   },
   {
     "key": "rbac.perm.crm.quotes.manage.label",
