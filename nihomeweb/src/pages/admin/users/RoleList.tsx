@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -250,6 +250,7 @@ export default function RoleList() {
               {roles.map((role) => {
                 const set = draft[role.id] ?? serverMap[role.id];
                 const dirty = isDirty(role.id);
+                const grantedCount = set?.size ?? 0;
                 return (
                   <article
                     key={role.id}
@@ -306,33 +307,48 @@ export default function RoleList() {
                       )}
                     </header>
 
-                    <ul className="divide-y">
-                      {perms.map((perm) => {
-                        const checked = set?.has(perm.code) ?? false;
-                        const disabled = role.isSystem || !canManage;
-                        const inputId = `rbac-m-${role.id}-${perm.id}`;
-                        return (
-                          <li key={perm.id} className="flex items-start gap-3 px-3 py-2">
-                            <input
-                              id={inputId}
-                              type="checkbox"
-                              className="mt-0.5 h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
-                              checked={checked}
-                              disabled={disabled}
-                              onChange={() => togglePerm(role.id, perm.code)}
-                            />
-                            <label htmlFor={inputId} className="min-w-0 flex-1 cursor-pointer">
-                              <span className="block text-sm font-medium leading-tight">
-                                {t(`rbac.perm.${perm.code}.label`)}
-                              </span>
-                              <span className="block break-all text-xs text-muted-foreground">
-                                {perm.code}
-                              </span>
-                            </label>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    {/* Collapsed by default on mobile to keep the list scannable.
+                        Native <details> gives us open/close for free. The summary
+                        exposes the granted-count so users can compare roles without
+                        expanding each card. */}
+                    <details className="group">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+                        <span className="text-muted-foreground">
+                          {t("adminRbac.permissionColumn")}
+                          <span className="ml-2 text-xs">
+                            ({grantedCount}/{perms.length})
+                          </span>
+                        </span>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                      </summary>
+                      <ul className="divide-y border-t">
+                        {perms.map((perm) => {
+                          const checked = set?.has(perm.code) ?? false;
+                          const disabled = role.isSystem || !canManage;
+                          const inputId = `rbac-m-${role.id}-${perm.id}`;
+                          return (
+                            <li key={perm.id} className="flex items-start gap-3 px-3 py-2">
+                              <input
+                                id={inputId}
+                                type="checkbox"
+                                className="mt-0.5 h-4 w-4 cursor-pointer disabled:cursor-not-allowed"
+                                checked={checked}
+                                disabled={disabled}
+                                onChange={() => togglePerm(role.id, perm.code)}
+                              />
+                              <label htmlFor={inputId} className="min-w-0 flex-1 cursor-pointer">
+                                <span className="block text-sm font-medium leading-tight">
+                                  {t(`rbac.perm.${perm.code}.label`)}
+                                </span>
+                                <span className="block break-all text-xs text-muted-foreground">
+                                  {perm.code}
+                                </span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </details>
                   </article>
                 );
               })}
