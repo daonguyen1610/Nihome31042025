@@ -421,7 +421,97 @@ const ActivityLog = () => {
               onBulkDelete={() => void handleBulkDelete()}
             />
           )}
-          <div className="overflow-x-auto">
+
+          {/* Mobile / tablet card view (<lg). Audit rows are wide (8-9
+              columns) so a horizontally-scrolling table on a phone is
+              painful — stack into cards. */}
+          <ul className="grid gap-3 p-3 lg:hidden">
+            {loading && items.length === 0 && (
+              <li className="rounded-lg border border-dashed p-10 text-center">
+                <Loader2 className="inline-block h-5 w-5 animate-spin text-primary" />
+              </li>
+            )}
+            {!loading && items.length === 0 && (
+              <li className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                {t("common.empty")}
+              </li>
+            )}
+            {items.map((l) => (
+              <li key={l.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-start gap-2">
+                    {canManageAudit && (
+                      <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                        <Checkbox
+                          checked={selectedIds.has(l.id)}
+                          onCheckedChange={(v) => toggleOne(l.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · ${l.action}`}
+                        />
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="break-all font-mono text-xs font-semibold">{l.action}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(l.createdAt)}</p>
+                    </div>
+                  </div>
+                  <StatusBadge status={l.status} />
+                </div>
+
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                  <dt className="text-muted-foreground">{t("log.detail.resource")}</dt>
+                  <dd className="min-w-0">
+                    <span className="font-medium">{l.resourceType}</span>
+                    {l.resourceId && (
+                      <span className="ml-1 font-mono text-[10px] text-muted-foreground">#{l.resourceId}</span>
+                    )}
+                  </dd>
+
+                  <dt className="text-muted-foreground">{t("log.actor")}</dt>
+                  <dd className="min-w-0">
+                    {l.actorPhone ? (
+                      <>
+                        <span className="font-medium">{l.actorPhone}</span>
+                        {l.actorRole && (
+                          <span className="ml-1 text-[10px] text-muted-foreground">{l.actorRole}</span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">{l.actorType}</span>
+                    )}
+                  </dd>
+
+                  <dt className="text-muted-foreground">{t("log.ip")}</dt>
+                  <dd className="font-mono">{l.ipAddress ?? "—"}</dd>
+                </dl>
+
+                {l.message && (
+                  <p className="mt-2 line-clamp-2 break-words text-xs text-muted-foreground" title={l.message}>
+                    {l.message}
+                  </p>
+                )}
+
+                <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                  <Button size="sm" variant="ghost" onClick={() => setSelected(l)}>
+                    <Eye className="mr-1 h-3.5 w-3.5" /> {t("common.view")}
+                  </Button>
+                  {canManageAudit && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => onDeleteOne(l.id)}
+                      aria-label={t("common.delete")}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop table (lg+) */}
+          <div className="hidden overflow-x-auto lg:block">
             <table data-testid="audit-log-table" className="w-full min-w-[1100px] divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>

@@ -489,7 +489,99 @@ const AdminRecruitment = () => {
                 <p>{applications.length === 0 ? t("recruit.noApplications") : t("common.noData")}</p>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border">
+              <>
+                {/* Mobile / tablet card view (<lg) */}
+                <ul className="grid gap-3 lg:hidden">
+                  {filteredApplications.map((a) => (
+                    <li key={a.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                      <div className="flex items-start gap-2">
+                        <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                          <Checkbox
+                            checked={appSelectedIds.has(a.id)}
+                            onCheckedChange={(v) => appToggleOne(a.id, v === true)}
+                            aria-label={`${t("common.selectAll")} · ${a.candidateName}`}
+                          />
+                        </span>
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                          {a.candidateName[0]?.toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words text-sm font-semibold leading-tight">{a.candidateName}</p>
+                          <p className="mt-0.5 break-all text-xs text-muted-foreground">{a.email}</p>
+                          {a.phone && (
+                            <p className="text-xs text-muted-foreground">{a.phone}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                        <dt className="text-muted-foreground">{t("recruit.position")}</dt>
+                        <dd className="min-w-0 break-words font-medium">{a.positionTitle}</dd>
+                        <dt className="text-muted-foreground">{t("recruit.experience")}</dt>
+                        <dd>{a.experienceYears != null ? `${a.experienceYears} ${t("recruit.expYears")}` : "—"}</dd>
+                        <dt className="text-muted-foreground">{t("recruit.appliedOn")}</dt>
+                        <dd>{new Date(a.appliedAt).toLocaleDateString("vi-VN")}</dd>
+                      </dl>
+
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+                        <Select value={a.status} onValueChange={(v) => updateAppStatus(a.id, v)}>
+                          <SelectTrigger
+                            className={cn(
+                              "h-7 gap-1.5 rounded-full border px-2.5 text-xs font-medium w-auto min-w-[110px]",
+                              APP_STATUS_STYLES[a.status] ?? APP_STATUS_STYLES.new,
+                            )}
+                          >
+                            <span className={cn("h-1.5 w-1.5 rounded-full", APP_STATUS_DOT[a.status] ?? APP_STATUS_DOT.new)} />
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new">{t("recruit.status.new")}</SelectItem>
+                            <SelectItem value="interview">{t("recruit.status.interview")}</SelectItem>
+                            <SelectItem value="hired">{t("recruit.status.hired")}</SelectItem>
+                            <SelectItem value="rejected">{t("recruit.status.rejected")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="inline-flex items-center gap-1">
+                          {a.coverLetter && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title={t("common.view")}
+                              aria-label={t("common.view")}
+                              onClick={() => alert(a.coverLetter)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {a.cvUrl && (
+                            <Button asChild variant="ghost" size="icon" title="CV" aria-label="CV">
+                              <a
+                                href={`${import.meta.env.VITE_API_URL ?? ""}${a.cvUrl}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <FileDown className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteApp(a.id)}
+                            title={t("recruit.delete")}
+                            aria-label={t("recruit.delete")}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Desktop table (lg+) */}
+                <div className="hidden overflow-x-auto rounded-lg border lg:block">
                 <table className="min-w-[900px] w-full divide-y text-sm">
                   <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
@@ -620,7 +712,8 @@ const AdminRecruitment = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </div>
         </section>
