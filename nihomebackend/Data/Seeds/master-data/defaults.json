@@ -92,6 +92,19 @@
     },
 
     {
+      "category": "capability_document_tag",
+      "options": [
+        { "code": "phap-nhan",   "name": "Pháp nhân", "sortOrder": 1 },
+        { "code": "kien-truc",   "name": "Kiến trúc", "sortOrder": 2 },
+        { "code": "ket-cau",     "name": "Kết cấu",   "sortOrder": 3 },
+        { "code": "mep",         "name": "MEP",       "sortOrder": 4 },
+        { "code": "iso",         "name": "ISO",       "sortOrder": 5 },
+        { "code": "giay-phep",   "name": "Giấy phép", "sortOrder": 6 },
+        { "code": "khac",        "name": "Khác",      "sortOrder": 99 }
+      ]
+    },
+
+    {
       "category": "contract_status",
       "options": [
         { "code": "draft",       "name": "Bản nháp", "sortOrder": 1 },

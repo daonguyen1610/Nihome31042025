@@ -37,6 +37,8 @@ export const ADMIN_PERMS = {
   quotesApprove: "crm.quotes.approve",
   quotesSend: "crm.quotes.send",
   quotesViewAll: "crm.quotes.view.all",
+  capabilityDocs: "crm.capability-docs.view",
+  capabilityDocsManage: "crm.capability-docs.manage",
   recruitment: "recruitment.applications.view",
   recruitmentPositions: "recruitment.positions.view",
   recruitmentOptions: "recruitment.options.view",

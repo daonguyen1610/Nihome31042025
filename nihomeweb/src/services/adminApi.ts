@@ -867,6 +867,98 @@ export interface QuoteListParams {
   pageSize?: number;
 }
 
+// ─── Capability Documents (NIH-98) ────────────────────────────
+
+/** Bucket returned by the backend for the expiry badge. */
+export type CapabilityDocumentExpiryState = "none" | "expired" | "critical" | "warning" | "ok";
+
+export const CAPABILITY_DOCUMENT_EXPIRY_STATES: CapabilityDocumentExpiryState[] = [
+  "none",
+  "expired",
+  "critical",
+  "warning",
+  "ok",
+];
+
+export interface CapabilityDocumentVersionResponse {
+  id: number;
+  versionNumber: number;
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+  uploadedByUserId?: number | null;
+  uploadedByName?: string | null;
+  createdAt: string;
+}
+
+export interface CapabilityDocumentResponse {
+  id: number;
+  name: string;
+  tagCode: string;
+  tagLabel?: string | null;
+  issuedDate?: string | null;
+  expiryDate?: string | null;
+  description?: string | null;
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+  currentVersion: number;
+  expiryState: CapabilityDocumentExpiryState;
+  uploadedByUserId?: number | null;
+  uploadedByName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  previousVersionCount: number;
+}
+
+export interface CapabilityDocumentDetailResponse extends CapabilityDocumentResponse {
+  versions: CapabilityDocumentVersionResponse[];
+}
+
+export interface CapabilityDocumentListResponse {
+  items: CapabilityDocumentResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface UpsertCapabilityDocumentRequest {
+  name: string;
+  tagCode: string;
+  issuedDate?: string | null;
+  expiryDate?: string | null;
+  description?: string | null;
+  filePath?: string;
+  originalFileName?: string;
+  fileSize?: number;
+  contentType?: string;
+}
+
+export interface ReplaceCapabilityDocumentFileRequest {
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+}
+
+export interface CapabilityDocumentUploadResponse {
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+}
+
+export interface CapabilityDocumentListParams {
+  tagCode?: string;
+  issuedYear?: number;
+  search?: string;
+  expiryState?: CapabilityDocumentExpiryState;
+  page?: number;
+  pageSize?: number;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -1336,6 +1428,39 @@ export const adminApi = {
   extendQuoteValidity: (id: number, body: ExtendQuoteValidityRequest) =>
     api.post<QuoteResponse>(`/quotes/${id}/extend-validity`, body),
   deleteQuote: (id: number) => api.delete(`/quotes/${id}`),
+
+  // Capability documents (NIH-98)
+  listCapabilityDocuments: (params: CapabilityDocumentListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.tagCode) q.append("tagCode", params.tagCode);
+    if (params.issuedYear != null) q.append("issuedYear", String(params.issuedYear));
+    if (params.search) q.append("search", params.search);
+    if (params.expiryState) q.append("expiryState", params.expiryState);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<CapabilityDocumentListResponse>(`/capability-documents${qs ? `?${qs}` : ""}`);
+  },
+  getCapabilityDocument: (id: number) =>
+    api.get<CapabilityDocumentDetailResponse>(`/capability-documents/${id}`),
+  uploadCapabilityDocument: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<CapabilityDocumentUploadResponse>(
+      "/capability-documents/upload",
+      formData,
+    );
+  },
+  createCapabilityDocument: (body: UpsertCapabilityDocumentRequest) =>
+    api.post<CapabilityDocumentResponse>("/capability-documents", body),
+  updateCapabilityDocument: (id: number, body: UpsertCapabilityDocumentRequest) =>
+    api.put<CapabilityDocumentResponse>(`/capability-documents/${id}`, body),
+  replaceCapabilityDocumentFile: (id: number, body: ReplaceCapabilityDocumentFileRequest) =>
+    api.post<CapabilityDocumentResponse>(`/capability-documents/${id}/replace-file`, body),
+  deleteCapabilityDocument: (id: number) =>
+    api.delete(`/capability-documents/${id}`),
+  downloadCapabilityDocumentsZip: (ids: number[]) =>
+    api.post<Blob>(`/capability-documents/download-zip`, { ids }, { responseType: "blob" }),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
