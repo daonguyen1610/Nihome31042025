@@ -416,8 +416,8 @@ const AdminCustomers = () => {
           </div>
         </header>
 
-        <section className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
-          <div className="min-w-[220px] flex-1">
+        <section className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="sm:col-span-2 lg:col-span-1">
             <Label className="text-xs" htmlFor="customer-search">{t("customers.filter.search")}</Label>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -430,7 +430,7 @@ const AdminCustomers = () => {
               />
             </div>
           </div>
-          <div className="w-[150px]">
+          <div>
             <Label className="text-xs">{t("customers.filter.type")}</Label>
             <Select
               value={typeFilter || "__all"}
@@ -448,7 +448,7 @@ const AdminCustomers = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="w-[170px]">
+          <div>
             <Label className="text-xs">{t("customers.filter.status")}</Label>
             <Select
               value={statusFilter || "__all"}
@@ -466,7 +466,7 @@ const AdminCustomers = () => {
               </SelectContent>
             </Select>
           </div>
-          <div className="w-[170px]">
+          <div>
             <Label className="text-xs">{t("customers.filter.source")}</Label>
             <Select
               value={sourceFilter || "__all"}
@@ -512,8 +512,140 @@ const AdminCustomers = () => {
                 onBulkDelete={() => void handleBulkDelete()}
               />
             )}
-            <div className="overflow-x-auto rounded-lg border">
-            <table className="min-w-[960px] w-full divide-y text-sm">
+
+            {/* Mobile / tablet card view — one <article> per customer. */}
+            <div className="grid gap-2 lg:hidden">
+              {canManage && rows.length > 1 && (
+                <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
+                  <Checkbox
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(v) => toggleAllVisible(v === true)}
+                    aria-label={t("common.selectAll")}
+                  />
+                  <span>{allVisibleSelected ? t("common.deselectAll") : t("common.selectAll")}</span>
+                </label>
+              )}
+              {rows.map((c) => {
+                const primary = primaryContact(c);
+                return (
+                  <article
+                    key={c.id}
+                    className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/40"
+                    onClick={() => void openDetail(c.id)}
+                  >
+                    <header className="flex items-start gap-2">
+                      {canManage && (
+                        <div className="shrink-0 pt-0.5" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedIds.has(c.id)}
+                            onCheckedChange={(v) => toggleOne(c.id, v === true)}
+                            aria-label={`${t("common.selectAll")} · ${c.name}`}
+                          />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words text-sm font-semibold leading-tight">{c.name}</h3>
+                        {c.type === "Company" && c.taxId && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">MST: {c.taxId}</p>
+                        )}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn("shrink-0 whitespace-nowrap font-medium", CUSTOMER_TYPE_STYLES[c.type])}
+                      >
+                        {t(`customers.type.${c.type}`)}
+                      </Badge>
+                    </header>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "gap-1.5 whitespace-nowrap font-medium",
+                          CUSTOMER_STATUS_STYLES[c.relationshipStatus],
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "h-1.5 w-1.5 rounded-full",
+                            CUSTOMER_STATUS_DOT[c.relationshipStatus],
+                          )}
+                        />
+                        {t(`customers.status.${c.relationshipStatus}`)}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode}
+                      </span>
+                    </div>
+
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <div className="min-w-0">
+                        <dt className="text-muted-foreground">{t("customers.field.primaryContact")}</dt>
+                        <dd className="mt-0.5 min-w-0">
+                          {primary ? (
+                            <>
+                              <div className="truncate font-medium">{primary.fullName}</div>
+                              <div className="truncate text-muted-foreground">
+                                {primary.phone || primary.email || "—"}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </dd>
+                      </div>
+                      {canSeeAll && (
+                        <div className="min-w-0">
+                          <dt className="text-muted-foreground">{t("customers.field.owner")}</dt>
+                          <dd className="mt-0.5 truncate font-medium">{c.ownerName || "—"}</dd>
+                        </div>
+                      )}
+                      <div className={cn("min-w-0", !canSeeAll && "col-start-2")}>
+                        <dt className="text-muted-foreground">{t("customers.field.createdAt")}</dt>
+                        <dd className="mt-0.5 font-medium">{new Date(c.createdAt).toLocaleDateString()}</dd>
+                      </div>
+                    </dl>
+
+                    {canManage && (
+                      <footer
+                        className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => void openDetail(c.id, { startEditing: true })}
+                          title={t("common.edit")}
+                          aria-label={t("common.edit")}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          onClick={() => void handleDelete(c.id)}
+                          title={t("common.delete")}
+                          aria-label={t("common.delete")}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </footer>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+
+            {/* Desktop table view (lg+). */}
+            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <table className="w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   {canManage && (
@@ -676,7 +808,7 @@ const AdminCustomers = () => {
           }
         }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{t("customers.new")}</DialogTitle>
             <DialogDescription>{t("customers.validation.primaryContact")}</DialogDescription>
@@ -827,7 +959,7 @@ const AdminCustomers = () => {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md sm:w-full">
           <DialogHeader>
             <DialogTitle>{t("customers.duplicate.title")}</DialogTitle>
             <DialogDescription>
@@ -868,7 +1000,7 @@ const AdminCustomers = () => {
 
       {/* Detail dialog */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(o) => !o && closeDetail()}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto sm:w-full">
           {detailLoading ? (
             <>
               <DialogHeader>
