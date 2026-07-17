@@ -439,7 +439,66 @@ const Categories = () => {
             onClear={clearSelection}
             onBulkDelete={() => void handleBulkDelete()}
           />
-          <div className="overflow-x-auto rounded-lg border">
+
+          {/* Mobile / tablet card view (<lg). Rows are compact so a card
+              per item is friendlier than a horizontally-scrolling table. */}
+          <ul className="grid gap-3 lg:hidden">
+            {loading ? (
+              <li className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                {t("common.loading")}
+              </li>
+            ) : filtered.length === 0 ? (
+              <li className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                {t("cat.empty")}
+              </li>
+            ) : (
+              filtered.map((item) => (
+                <li
+                  key={item.id}
+                  className="rounded-lg border bg-card p-3 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <Checkbox
+                        className="mt-1 shrink-0"
+                        checked={selectedIds.has(item.id)}
+                        onCheckedChange={(v) => toggleOne(item.id, v === true)}
+                        aria-label={`${t("common.selectAll")} · ${localizedName(item, lang)}`}
+                      />
+                      <h3 className="min-w-0 break-words text-sm font-semibold leading-tight">
+                        {localizedName(item, lang)}
+                      </h3>
+                    </div>
+                    {item.isActive ? (
+                      <Check className="h-4 w-4 shrink-0 text-emerald-600" aria-label={t("cat.published")} />
+                    ) : (
+                      <X className="h-4 w-4 shrink-0 text-muted-foreground" aria-label={t("cat.published")} />
+                    )}
+                  </div>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-muted-foreground">{t("cat.order")}</dt>
+                    <dd className="font-medium">{item.sortOrder}</dd>
+                  </dl>
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>
+                      <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => remove(item)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                    </Button>
+                  </div>
+                </li>
+              ))
+            )}
+          </ul>
+
+          {/* Desktop table (lg+) */}
+          <div className="hidden overflow-x-auto rounded-lg border lg:block">
             <table className="min-w-[700px] w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -466,7 +525,7 @@ const Categories = () => {
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">
-                      Loading...
+                      {t("common.loading")}
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
