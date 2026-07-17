@@ -14,15 +14,18 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -51,6 +54,7 @@ import {
   type QuoteListItemResponse,
   type QuoteListParams,
   type QuoteMethod,
+  type QuoteResponse,
   type QuoteStatus,
 } from "@/services/adminApi";
 
@@ -252,6 +256,65 @@ const AdminQuotes = () => {
     await runAction(id, () => adminApi.deleteQuote(id), "quotes.updated");
   };
 
+  // ---------- bulk selection (Draft-only, canManage-only) ----------
+  // Non-Draft quotes can't be deleted by the workflow, so we don't expose
+  // checkboxes on them — mirroring the per-row delete button gating.
+  const deletableIds = useMemo(
+    () =>
+      canManage
+        ? rows
+            .filter((r) => ACTIONS_BY_STATUS[r.status].includes("delete"))
+            .map((r) => r.id)
+        : [],
+    [rows, canManage],
+  );
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds: deletableIds,
+    deleteOne: (id) => adminApi.deleteQuote(id),
+    onAfter: fetchList,
+  });
+
+  // ---------- quick-view preview dialog ----------
+  // Click on a row/card opens a summary dialog. Full editing still happens
+  // on /admin/quotes/:id — the dialog is read-only info + shortcut buttons.
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const [preview, setPreview] = useState<QuoteResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (previewId == null) {
+      setPreview(null);
+      setPreviewError(null);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    (async () => {
+      try {
+        const { data } = await adminApi.getQuote(previewId);
+        if (!cancelled) setPreview(data);
+      } catch (err) {
+        if (!cancelled) setPreviewError(extractApiError(err));
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [previewId]);
+
   const totalPages = useMemo(
     () => (total > 0 ? Math.ceil(total / pageSize) : 1),
     [total],
@@ -343,12 +406,38 @@ const AdminQuotes = () => {
         </div>
       ) : (
         <>
+          {canManage && (
+            <div className="mb-2">
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={clearSelection}
+                onBulkDelete={() => void handleBulkDelete()}
+              />
+            </div>
+          )}
           {/* Desktop table (xl+ only — sidebar-open laptops still cramp a
               9-col table at lg, so we defer to xl to avoid horizontal scroll). */}
           <div className="hidden overflow-x-auto rounded-lg border bg-card xl:block">
             <table className="w-full min-w-[900px] divide-y text-sm">
               <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                 <tr>
+                  {canManage && (
+                    <Th className="w-8">
+                      <Checkbox
+                        aria-label={t("common.selectAll")}
+                        disabled={deletableIds.length === 0}
+                        checked={
+                          allVisibleSelected
+                            ? true
+                            : someVisibleSelected
+                              ? "indeterminate"
+                              : false
+                        }
+                        onCheckedChange={(v) => toggleAllVisible(v === true)}
+                      />
+                    </Th>
+                  )}
                   <Th>{t("quotes.field.code")}</Th>
                   <Th>{t("quotes.field.opportunity")}</Th>
                   <Th>{t("quotes.field.customer")}</Th>
@@ -363,9 +452,28 @@ const AdminQuotes = () => {
               <tbody className="divide-y">
                 {rows.map((r) => {
                   const isPending = pendingAction === r.id;
+                  const canDelete =
+                    canManage && ACTIONS_BY_STATUS[r.status].includes("delete");
                   return (
-                    <tr key={r.id} className="hover:bg-muted/20">
-                      <Td className="whitespace-nowrap">
+                    <tr
+                      key={r.id}
+                      className="cursor-pointer hover:bg-muted/20"
+                      onClick={() => setPreviewId(r.id)}
+                    >
+                      {canManage && (
+                        <Td onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            aria-label={`${t("common.selectAll")} · ${r.code}`}
+                            disabled={!canDelete}
+                            checked={selectedIds.has(r.id)}
+                            onCheckedChange={(v) => toggleOne(r.id, v === true)}
+                          />
+                        </Td>
+                      )}
+                      <Td
+                        className="whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Link
                           to={`/admin/quotes/${r.id}`}
                           className="font-medium text-primary hover:underline"
@@ -386,7 +494,10 @@ const AdminQuotes = () => {
                       </Td>
                       <Td>{r.ownerName ?? "—"}</Td>
                       <Td className="text-right">V{r.version}</Td>
-                      <Td className="text-right">
+                      <Td
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <RowActions
                           row={r}
                           canManage={canManage}
@@ -412,18 +523,34 @@ const AdminQuotes = () => {
           <ul className="grid gap-2 sm:grid-cols-2 xl:hidden">
             {rows.map((r) => {
               const isPending = pendingAction === r.id;
+              const canDelete =
+                canManage && ACTIONS_BY_STATUS[r.status].includes("delete");
               return (
                 <li
                   key={r.id}
-                  className="rounded-lg border bg-card p-3 shadow-sm"
+                  className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/20"
+                  onClick={() => setPreviewId(r.id)}
                 >
                   <div className="mb-1 flex items-start justify-between gap-2">
-                    <Link
-                      to={`/admin/quotes/${r.id}`}
-                      className="text-base font-semibold text-primary hover:underline"
-                    >
-                      {r.code}
-                    </Link>
+                    <div className="flex min-w-0 items-start gap-2">
+                      {canManage && (
+                        <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                          <Checkbox
+                            aria-label={`${t("common.selectAll")} · ${r.code}`}
+                            disabled={!canDelete}
+                            checked={selectedIds.has(r.id)}
+                            onCheckedChange={(v) => toggleOne(r.id, v === true)}
+                          />
+                        </span>
+                      )}
+                      <Link
+                        to={`/admin/quotes/${r.id}`}
+                        className="text-base font-semibold text-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {r.code}
+                      </Link>
+                    </div>
                     <span className="whitespace-nowrap text-xs text-muted-foreground">
                       V{r.version}
                     </span>
@@ -449,7 +576,10 @@ const AdminQuotes = () => {
                     </span>
                     {r.ownerName && <span className="truncate">{r.ownerName}</span>}
                   </div>
-                  <div className="-mx-1 flex flex-wrap items-center gap-1 border-t pt-2">
+                  <div
+                    className="-mx-1 flex flex-wrap items-center gap-1 border-t pt-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <RowActions
                       row={r}
                       canManage={canManage}
@@ -665,6 +795,153 @@ const AdminQuotes = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Quick-view preview dialog. Read-only summary — full editing is on
+          /admin/quotes/:id. Fetches the full QuoteResponse so we can show
+          subtotal / discount / VAT / grand total instead of just list-item
+          fields. */}
+      <Dialog
+        open={previewId !== null}
+        onOpenChange={(o) => !o && setPreviewId(null)}
+      >
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
+          <DialogHeader>
+            <DialogTitle>{preview?.code ?? t("quotes.field.code")}</DialogTitle>
+            <DialogDescription>
+              {preview?.opportunityName ?? t("quotes.title")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewLoading ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("common.loading")}
+            </div>
+          ) : previewError ? (
+            <p className="text-sm text-destructive">{previewError}</p>
+          ) : preview ? (
+            <div className="space-y-4 text-sm">
+              <StatusCell
+                status={preview.status}
+                expiring={false}
+                t={t}
+              />
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("quotes.field.customer")}
+                  </dt>
+                  <dd className="font-medium">{preview.customerName ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("quotes.field.owner")}
+                  </dt>
+                  <dd className="font-medium">{preview.ownerName ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("quotes.field.method")}
+                  </dt>
+                  <dd className="font-medium">
+                    {t(`quotes.method.${preview.method}`)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("quotes.field.version")}
+                  </dt>
+                  <dd className="font-medium">V{preview.version}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    {t("quotes.field.validUntil")}
+                  </dt>
+                  <dd className="font-medium">
+                    {new Date(preview.validUntil).toLocaleDateString()}
+                  </dd>
+                </div>
+                {preview.method === "UnitCost" && preview.areaSqm != null && (
+                  <div>
+                    <dt className="text-xs text-muted-foreground">
+                      {t("quotes.field.areaSqm")}
+                    </dt>
+                    <dd className="font-medium">
+                      {preview.areaSqm} × {formatVnd(preview.unitPricePerSqm ?? 0)} ₫
+                    </dd>
+                  </div>
+                )}
+              </dl>
+
+              {preview.packageDescription && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("quotes.field.packageDescription")}
+                  </div>
+                  <p className="whitespace-pre-wrap">{preview.packageDescription}</p>
+                </div>
+              )}
+
+              <div className="rounded-md border bg-muted/30 p-3">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{t("quotes.field.subtotal")}</span>
+                  <span>{formatVnd(preview.subtotal)} ₫</span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    {t("quotes.field.discountPercent")} ({preview.discountPercent}%)
+                  </span>
+                  <span>
+                    −{formatVnd((preview.subtotal * preview.discountPercent) / 100)} ₫
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>
+                    {t("quotes.field.vatPercent")} ({preview.vatPercent}%)
+                  </span>
+                  <span>
+                    +
+                    {formatVnd(
+                      ((preview.subtotal *
+                        (100 - preview.discountPercent)) /
+                        100) *
+                        (preview.vatPercent / 100),
+                    )}{" "}
+                    ₫
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between border-t pt-2 text-base font-semibold">
+                  <span>{t("quotes.field.grandTotal")}</span>
+                  <span>{formatVnd(preview.grandTotal)} ₫</span>
+                </div>
+              </div>
+
+              {preview.note && (
+                <div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("quotes.field.note")}
+                  </div>
+                  <p className="whitespace-pre-wrap">{preview.note}</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => setPreviewId(null)}>
+              {t("common.close")}
+            </Button>
+            {preview && (
+              <Button asChild>
+                <Link to={`/admin/quotes/${preview.id}`}>
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                  {t("common.edit")}
+                </Link>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
@@ -686,10 +963,16 @@ const Th = ({
 const Td = ({
   children,
   className,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <td className={cn("px-3 py-2 align-middle", className)}>{children}</td>;
+  onClick?: React.MouseEventHandler<HTMLTableCellElement>;
+}) => (
+  <td className={cn("px-3 py-2 align-middle", className)} onClick={onClick}>
+    {children}
+  </td>
+);
 
 // -------- shared row/card action bar --------
 
