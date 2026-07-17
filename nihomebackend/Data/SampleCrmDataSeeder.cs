@@ -31,6 +31,7 @@ public static class SampleCrmDataSeeder
         SeedCustomers(db, owner, now);
         SeedOpportunities(db, owner, now);
         SeedQuotes(db, owner, now);
+        SeedCapabilityDocuments(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -592,5 +593,60 @@ public static class SampleCrmDataSeeder
             Note = note,
             CreatedAt = at,
         });
+    }
+
+    private const string SampleCapabilityMarker = "[SAMPLE_CAP]";
+
+    /// <summary>
+    /// Seeds a small shared capability-document library (NIH-98) so every
+    /// tag chip and expiry badge on the FE has real data out-of-the-box.
+    /// Physical files are NOT written to disk — the rows carry synthetic
+    /// paths under <c>/files/capability/</c>. Real Sales users still upload
+    /// their own binaries; sample rows exist purely so the admin grid,
+    /// filters and version tab render populated on a fresh DB.
+    /// </summary>
+    private static void SeedCapabilityDocuments(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        if (db.CapabilityDocuments.Any(d => d.Description != null
+            && d.Description.StartsWith(SampleCapabilityMarker))) return;
+
+        // Curated to cover every tag + every expiry-state band so the FE
+        // filters have at least one row each to render.
+        var seeds = new (string Name, string Tag, int? IssuedDaysAgo, int? ExpiryDaysFromNow, string File)[]
+        {
+            ("Giấy chứng nhận đăng ký doanh nghiệp", "phap-nhan", -365 * 3, null,                    "phap-nhan-erc.pdf"),
+            ("Portfolio Kiến trúc 2026",              "kien-truc", -120,      null,                    "portfolio-kien-truc-2026.pdf"),
+            ("Hồ sơ Kết cấu — Nhà máy Alpha",         "ket-cau",   -200,      365,                     "ho-so-ket-cau-alpha.pdf"),
+            ("Hồ sơ MEP — Nhà xưởng Beta",            "mep",       -180,      45,                      "ho-so-mep-beta.pdf"),
+            ("Chứng nhận ISO 9001:2015",              "iso",       -400,      -30,                     "iso-9001-2015.pdf"),
+            ("Giấy phép xây dựng tổng thầu",          "giay-phep", -365 * 2, 25,                      "giay-phep-xay-dung.pdf"),
+            ("Hồ sơ năng lực tổng hợp 2026",          "khac",      -30,       null,                    "ho-so-nang-luc-2026.pdf"),
+        };
+
+        var i = 0;
+        foreach (var (name, tag, issuedDaysAgo, expiryDaysFromNow, file) in seeds)
+        {
+            var doc = new CapabilityDocument
+            {
+                Name = name,
+                TagCode = tag,
+                IssuedDate = issuedDaysAgo.HasValue ? now.AddDays(issuedDaysAgo.Value) : null,
+                ExpiryDate = expiryDaysFromNow.HasValue ? now.AddDays(expiryDaysFromNow.Value) : null,
+                Description = $"{SampleCapabilityMarker} Sample capability document.",
+                FilePath = $"/files/capability/{file}",
+                OriginalFileName = file,
+                FileSize = 512 * 1024 * (i + 1),
+                ContentType = "application/pdf",
+                CurrentVersion = 1,
+                UploadedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-14 + i),
+                UpdatedAt = now.AddDays(-14 + i),
+            };
+            db.CapabilityDocuments.Add(doc);
+            i++;
+        }
+
+        db.SaveChanges();
     }
 }

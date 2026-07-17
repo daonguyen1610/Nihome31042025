@@ -58,6 +58,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
+    public DbSet<CapabilityDocument> CapabilityDocuments => Set<CapabilityDocument>();
+    public DbSet<CapabilityDocumentVersion> CapabilityDocumentVersions => Set<CapabilityDocumentVersion>();
 
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
@@ -527,6 +529,44 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(s => s.QuoteId);
             b.HasIndex(s => new { s.QuoteId, s.VersionNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<CapabilityDocument>(b =>
+        {
+            b.ToTable("capability_documents");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.Name).HasMaxLength(300).IsRequired();
+            b.Property(d => d.TagCode).HasMaxLength(80).IsRequired();
+            b.Property(d => d.Description).HasMaxLength(2000);
+            b.Property(d => d.FilePath).HasMaxLength(500).IsRequired();
+            b.Property(d => d.OriginalFileName).HasMaxLength(300).IsRequired();
+            b.Property(d => d.ContentType).HasMaxLength(150).IsRequired();
+            b.HasOne(d => d.UploadedBy)
+                .WithMany()
+                .HasForeignKey(d => d.UploadedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(d => d.TagCode);
+            b.HasIndex(d => d.ExpiryDate);
+            b.HasIndex(d => d.CreatedAt);
+        });
+
+        modelBuilder.Entity<CapabilityDocumentVersion>(b =>
+        {
+            b.ToTable("capability_document_versions");
+            b.HasKey(v => v.Id);
+            b.Property(v => v.FilePath).HasMaxLength(500).IsRequired();
+            b.Property(v => v.OriginalFileName).HasMaxLength(300).IsRequired();
+            b.Property(v => v.ContentType).HasMaxLength(150).IsRequired();
+            b.HasOne(v => v.CapabilityDocument)
+                .WithMany(d => d.Versions)
+                .HasForeignKey(v => v.CapabilityDocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(v => v.UploadedBy)
+                .WithMany()
+                .HasForeignKey(v => v.UploadedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(v => v.CapabilityDocumentId);
+            b.HasIndex(v => new { v.CapabilityDocumentId, v.VersionNumber }).IsUnique();
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

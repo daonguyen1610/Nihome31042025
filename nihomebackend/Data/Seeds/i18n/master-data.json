@@ -96,6 +96,14 @@
     "ja": "許可ステータス"
   },
   {
+    "key": "masterData.category.capability_document_tag.title",
+    "category": "masterData",
+    "vi": "Loại hồ sơ năng lực",
+    "en": "Capability document tag",
+    "zh": "能力文件类别",
+    "ja": "能力書類タグ"
+  },
+  {
     "key": "masterData.customer_type.individual.label",
     "category": "masterData",
     "vi": "Cá nhân",
@@ -630,5 +638,61 @@
     "en": "Expired",
     "zh": "已过期",
     "ja": "期限切れ"
+  },
+  {
+    "key": "masterData.capability_document_tag.phap-nhan.label",
+    "category": "masterData",
+    "vi": "Pháp nhân",
+    "en": "Legal entity",
+    "zh": "法人",
+    "ja": "法人"
+  },
+  {
+    "key": "masterData.capability_document_tag.kien-truc.label",
+    "category": "masterData",
+    "vi": "Kiến trúc",
+    "en": "Architecture",
+    "zh": "建筑",
+    "ja": "建築"
+  },
+  {
+    "key": "masterData.capability_document_tag.ket-cau.label",
+    "category": "masterData",
+    "vi": "Kết cấu",
+    "en": "Structure",
+    "zh": "结构",
+    "ja": "構造"
+  },
+  {
+    "key": "masterData.capability_document_tag.mep.label",
+    "category": "masterData",
+    "vi": "MEP",
+    "en": "MEP",
+    "zh": "机电",
+    "ja": "MEP"
+  },
+  {
+    "key": "masterData.capability_document_tag.iso.label",
+    "category": "masterData",
+    "vi": "ISO",
+    "en": "ISO",
+    "zh": "ISO",
+    "ja": "ISO"
+  },
+  {
+    "key": "masterData.capability_document_tag.giay-phep.label",
+    "category": "masterData",
+    "vi": "Giấy phép",
+    "en": "License",
+    "zh": "许可证",
+    "ja": "許可"
+  },
+  {
+    "key": "masterData.capability_document_tag.khac.label",
+    "category": "masterData",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
   }
 ]

@@ -1,0 +1,54 @@
+[
+  { "key": "nav.capabilityDocs", "category": "nav", "vi": "Hồ sơ năng lực", "en": "Capability docs", "zh": "能力文件", "ja": "能力書類" },
+
+  { "key": "capDocs.title", "category": "capability-docs", "vi": "Kho hồ sơ năng lực", "en": "Capability documents", "zh": "能力文件库", "ja": "能力書類ライブラリ" },
+  { "key": "capDocs.subtitle", "category": "capability-docs", "vi": "Kho hồ sơ dùng chung cho mọi gói thầu — không cần upload lại mỗi lần dự thầu.", "en": "Shared repository re-used by every tender — never re-upload the same file twice.", "zh": "所有投标共享的文档库，无需重复上传。", "ja": "全ての入札で共有するリポジトリ。同じファイルを再アップロード不要。" },
+  { "key": "capDocs.new", "category": "capability-docs", "vi": "Tải lên hồ sơ", "en": "Upload document", "zh": "上传文件", "ja": "書類をアップロード" },
+  { "key": "capDocs.empty", "category": "capability-docs", "vi": "Chưa có hồ sơ nào.", "en": "No documents yet.", "zh": "暂无文件。", "ja": "まだ書類がありません。" },
+  { "key": "capDocs.emptyCta", "category": "capability-docs", "vi": "Tải lên hồ sơ đầu tiên", "en": "Upload the first document", "zh": "上传第一份文件", "ja": "最初の書類をアップロード" },
+  { "key": "capDocs.saved", "category": "capability-docs", "vi": "Đã lưu hồ sơ", "en": "Document saved", "zh": "文档已保存", "ja": "書類を保存しました" },
+  { "key": "capDocs.uploaded", "category": "capability-docs", "vi": "Đã tải lên {count} hồ sơ", "en": "Uploaded {count} document(s)", "zh": "已上传 {count} 份文档", "ja": "{count} 件をアップロードしました" },
+  { "key": "capDocs.deleted", "category": "capability-docs", "vi": "Đã xoá hồ sơ", "en": "Document deleted", "zh": "文档已删除", "ja": "書類を削除しました" },
+  { "key": "capDocs.replaced", "category": "capability-docs", "vi": "Đã thay file (phiên bản mới)", "en": "File replaced (new version)", "zh": "文件已替换（新版本）", "ja": "ファイルを置換しました（新版）" },
+
+  { "key": "capDocs.field.name", "category": "capability-docs", "vi": "Tên hồ sơ", "en": "Document name", "zh": "文件名", "ja": "書類名" },
+  { "key": "capDocs.field.tag", "category": "capability-docs", "vi": "Phân loại", "en": "Tag", "zh": "分类", "ja": "分類" },
+  { "key": "capDocs.field.issuedDate", "category": "capability-docs", "vi": "Ngày cấp", "en": "Issued date", "zh": "签发日期", "ja": "発行日" },
+  { "key": "capDocs.field.expiryDate", "category": "capability-docs", "vi": "Ngày hết hạn", "en": "Expiry date", "zh": "到期日期", "ja": "有効期限" },
+  { "key": "capDocs.field.description", "category": "capability-docs", "vi": "Mô tả", "en": "Description", "zh": "描述", "ja": "説明" },
+  { "key": "capDocs.field.file", "category": "capability-docs", "vi": "File", "en": "File", "zh": "文件", "ja": "ファイル" },
+  { "key": "capDocs.field.fileSize", "category": "capability-docs", "vi": "Dung lượng", "en": "Size", "zh": "大小", "ja": "サイズ" },
+  { "key": "capDocs.field.version", "category": "capability-docs", "vi": "Phiên bản", "en": "Version", "zh": "版本", "ja": "版" },
+  { "key": "capDocs.field.uploadedBy", "category": "capability-docs", "vi": "Người tải lên", "en": "Uploaded by", "zh": "上传人", "ja": "アップロード者" },
+  { "key": "capDocs.field.updatedAt", "category": "capability-docs", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+
+  { "key": "capDocs.filter.search", "category": "capability-docs", "vi": "Tìm theo tên hoặc file...", "en": "Search by name or file...", "zh": "按名称或文件名搜索...", "ja": "名前・ファイル名で検索..." },
+  { "key": "capDocs.filter.allTags", "category": "capability-docs", "vi": "Tất cả phân loại", "en": "All tags", "zh": "全部分类", "ja": "すべての分類" },
+  { "key": "capDocs.filter.allExpiry", "category": "capability-docs", "vi": "Tất cả trạng thái", "en": "All expiry states", "zh": "全部状态", "ja": "すべての状態" },
+
+  { "key": "capDocs.expiry.none", "category": "capability-docs", "vi": "Không hạn", "en": "No expiry", "zh": "无期限", "ja": "期限なし" },
+  { "key": "capDocs.expiry.ok", "category": "capability-docs", "vi": "Còn hiệu lực", "en": "In date", "zh": "有效", "ja": "有効" },
+  { "key": "capDocs.expiry.warning", "category": "capability-docs", "vi": "Sắp hết hạn (≤60 ngày)", "en": "Expiring soon (≤60 days)", "zh": "即将到期 (≤60天)", "ja": "期限間近 (≤60日)" },
+  { "key": "capDocs.expiry.critical", "category": "capability-docs", "vi": "Rất gấp (≤30 ngày)", "en": "Critical (≤30 days)", "zh": "紧急 (≤30天)", "ja": "緊急 (≤30日)" },
+  { "key": "capDocs.expiry.expired", "category": "capability-docs", "vi": "Đã hết hạn", "en": "Expired", "zh": "已过期", "ja": "期限切れ" },
+
+  { "key": "capDocs.action.edit", "category": "capability-docs", "vi": "Chỉnh sửa", "en": "Edit", "zh": "编辑", "ja": "編集" },
+  { "key": "capDocs.action.replace", "category": "capability-docs", "vi": "Thay file", "en": "Replace file", "zh": "替换文件", "ja": "ファイル差替" },
+  { "key": "capDocs.action.download", "category": "capability-docs", "vi": "Tải xuống", "en": "Download", "zh": "下载", "ja": "ダウンロード" },
+  { "key": "capDocs.action.downloadZip", "category": "capability-docs", "vi": "Tải ZIP đã chọn", "en": "Download selected ZIP", "zh": "下载所选 ZIP", "ja": "選択をZIPで保存" },
+  { "key": "capDocs.action.delete", "category": "capability-docs", "vi": "Xoá", "en": "Delete", "zh": "删除", "ja": "削除" },
+
+  { "key": "capDocs.form.dropHint", "category": "capability-docs", "vi": "Kéo thả file hoặc bấm để chọn (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, tối đa 20MB)", "en": "Drag & drop or click to pick file (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, max 20MB)", "zh": "拖放或点击选择文件 (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, 最大20MB)", "ja": "ドラッグ&ドロップ or クリックで選択 (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, 最大20MB)" },
+  { "key": "capDocs.form.selectTagFirst", "category": "capability-docs", "vi": "Chọn phân loại trước khi tải lên.", "en": "Pick a tag before uploading.", "zh": "上传前请先选择分类。", "ja": "アップロード前に分類を選択してください。" },
+  { "key": "capDocs.form.uploading", "category": "capability-docs", "vi": "Đang tải lên...", "en": "Uploading...", "zh": "上传中...", "ja": "アップロード中..." },
+  { "key": "capDocs.form.uploadFailed", "category": "capability-docs", "vi": "Tải lên thất bại: {message}", "en": "Upload failed: {message}", "zh": "上传失败：{message}", "ja": "アップロード失敗：{message}" },
+
+  { "key": "capDocs.delete.confirmTitle", "category": "capability-docs", "vi": "Xoá hồ sơ?", "en": "Delete document?", "zh": "删除文档？", "ja": "書類を削除？" },
+  { "key": "capDocs.delete.confirmBody", "category": "capability-docs", "vi": "Toàn bộ phiên bản của \"{name}\" sẽ bị xoá vĩnh viễn. Hành động này không thể hoàn tác.", "en": "All versions of \"{name}\" will be permanently removed. This cannot be undone.", "zh": "\"{name}\" 的所有版本将被永久删除。此操作无法撤销。", "ja": "「{name}」の全バージョンを完全に削除します。取り消せません。" },
+  { "key": "capDocs.delete.confirm", "category": "capability-docs", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" },
+  { "key": "capDocs.delete.cancel", "category": "capability-docs", "vi": "Huỷ", "en": "Cancel", "zh": "取消", "ja": "キャンセル" },
+
+  { "key": "capDocs.versions.title", "category": "capability-docs", "vi": "Phiên bản trước", "en": "Previous versions", "zh": "历史版本", "ja": "過去のバージョン" },
+  { "key": "capDocs.versions.empty", "category": "capability-docs", "vi": "Chưa có phiên bản cũ.", "en": "No previous versions.", "zh": "暂无历史版本。", "ja": "過去のバージョンはありません。" },
+  { "key": "capDocs.versions.current", "category": "capability-docs", "vi": "Hiện tại", "en": "Current", "zh": "当前", "ja": "現行" }
+]
