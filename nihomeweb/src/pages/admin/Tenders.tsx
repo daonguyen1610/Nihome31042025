@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -273,6 +276,63 @@ const AdminTenders = () => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusLabel = (s: TenderStatus) => t(`tenders.status.${s}`);
 
+  // -------- bulk selection (Preparing-only, canManage-only) --------
+  // Backend rejects delete on non-Preparing tenders (audit trail rule),
+  // so we mirror that in the checkbox availability.
+  const deletableIds = useMemo(
+    () =>
+      canManage
+        ? rows.filter((r) => r.status === "Preparing").map((r) => r.id)
+        : [],
+    [rows, canManage],
+  );
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds: deletableIds,
+    deleteOne: (id) => adminApi.deleteTender(id),
+    onAfter: fetchList,
+  });
+
+  // -------- quick-view preview dialog --------
+  // Row click opens a read-only summary. Edit still opens the pencil-button
+  // form dialog; this dialog is info-only + a shortcut to Edit.
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const [preview, setPreview] = useState<TenderResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (previewId == null) {
+      setPreview(null);
+      setPreviewError(null);
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    (async () => {
+      try {
+        const { data } = await adminApi.getTender(previewId);
+        if (!cancelled) setPreview(data);
+      } catch (err) {
+        if (!cancelled) setPreviewError(extractApiError(err));
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [previewId]);
+
   const renderRowActions = (r: TenderListItemResponse) => (
     <>
       {canManage && (
@@ -388,59 +448,92 @@ const AdminTenders = () => {
           </div>
         ) : (
           <>
+            {canManage && (
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={clearSelection}
+                onBulkDelete={() => void handleBulkDelete()}
+              />
+            )}
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
-              {rows.map((r) => (
-                <article key={r.id} className="rounded-lg border bg-white p-3 shadow-sm">
-                  <header className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{r.code} · {r.customerName}</p>
-                    </div>
-                    <Badge className={cn("shrink-0 whitespace-nowrap", STATUS_BADGE_STYLES[r.status])} variant="outline">
-                      {statusLabel(r.status)}
-                    </Badge>
-                  </header>
-
-                  {r.isDeadlineImminent && (
-                    <div className="mt-2 flex items-center gap-1 text-xs text-rose-700">
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      <span>{t("tenders.badge.deadlineImminent")}</span>
-                    </div>
-                  )}
-
-                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-                    <div>
-                      <dt className="text-muted-foreground">{t("tenders.field.deadline")}</dt>
-                      <dd className={cn("font-medium", r.isDeadlineImminent && "text-rose-700")}>
-                        {formatDate(r.submissionDeadline, lang)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("tenders.field.openingDate")}</dt>
-                      <dd className="font-medium">{formatDate(r.openingDate, lang)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("tenders.field.preparer")}</dt>
-                      <dd className="font-medium">{r.preparerName ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("tenders.field.checklist")}</dt>
-                      <dd>
-                        <div className="flex items-center gap-2">
-                          <Progress value={r.checklistCompletionPercent} className="h-1.5" />
-                          <span className="text-xs tabular-nums text-muted-foreground">{r.checklistCompletionPercent}%</span>
+              {rows.map((r) => {
+                const canDelete = canManage && r.status === "Preparing";
+                return (
+                  <article
+                    key={r.id}
+                    className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
+                    onClick={() => setPreviewId(r.id)}
+                  >
+                    <header className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-start gap-2">
+                        {canManage && (
+                          <span
+                            onClick={(e) => e.stopPropagation()}
+                            className="pt-0.5"
+                          >
+                            <Checkbox
+                              aria-label={`${t("common.selectAll")} · ${r.name}`}
+                              disabled={!canDelete}
+                              checked={selectedIds.has(r.id)}
+                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
+                            />
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
+                          <p className="mt-0.5 text-xs text-muted-foreground">{r.code} · {r.customerName}</p>
                         </div>
-                      </dd>
-                    </div>
-                  </dl>
+                      </div>
+                      <Badge className={cn("shrink-0 whitespace-nowrap", STATUS_BADGE_STYLES[r.status])} variant="outline">
+                        {statusLabel(r.status)}
+                      </Badge>
+                    </header>
 
-                  <footer className="mt-3 flex items-center justify-between gap-1 border-t pt-2">
-                    <span className="text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</span>
-                    <div className="flex gap-1">{renderRowActions(r)}</div>
-                  </footer>
-                </article>
-              ))}
+                    {r.isDeadlineImminent && (
+                      <div className="mt-2 flex items-center gap-1 text-xs text-rose-700">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        <span>{t("tenders.badge.deadlineImminent")}</span>
+                      </div>
+                    )}
+
+                    <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <div>
+                        <dt className="text-muted-foreground">{t("tenders.field.deadline")}</dt>
+                        <dd className={cn("font-medium", r.isDeadlineImminent && "text-rose-700")}>
+                          {formatDate(r.submissionDeadline, lang)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("tenders.field.openingDate")}</dt>
+                        <dd className="font-medium">{formatDate(r.openingDate, lang)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("tenders.field.preparer")}</dt>
+                        <dd className="font-medium">{r.preparerName ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("tenders.field.checklist")}</dt>
+                        <dd>
+                          <div className="flex items-center gap-2">
+                            <Progress value={r.checklistCompletionPercent} className="h-1.5" />
+                            <span className="text-xs tabular-nums text-muted-foreground">{r.checklistCompletionPercent}%</span>
+                          </div>
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <footer
+                      className="mt-3 flex items-center justify-between gap-1 border-t pt-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</span>
+                      <div className="flex gap-1">{renderRowActions(r)}</div>
+                    </footer>
+                  </article>
+                );
+              })}
             </div>
 
             {/* Desktop table */}
@@ -448,6 +541,22 @@ const AdminTenders = () => {
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
+                    {canManage && (
+                      <th className="w-8 px-3 py-2">
+                        <Checkbox
+                          aria-label={t("common.selectAll")}
+                          disabled={deletableIds.length === 0}
+                          checked={
+                            allVisibleSelected
+                              ? true
+                              : someVisibleSelected
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(v) => toggleAllVisible(v === true)}
+                        />
+                      </th>
+                    )}
                     <th className="px-3 py-2">{t("tenders.field.name")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("tenders.field.customer")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("tenders.field.deadline")}</th>
@@ -459,41 +568,61 @@ const AdminTenders = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.id} className="border-t align-top hover:bg-slate-50/50">
-                      <td className="max-w-[280px] px-3 py-2">
-                        <div className="font-medium">{r.name}</div>
-                        <div className="text-xs text-muted-foreground">{r.code}</div>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2">{r.customerName}</td>
-                      <td className="whitespace-nowrap px-3 py-2">
-                        <div className={cn(r.isDeadlineImminent && "font-semibold text-rose-700")}>
-                          {formatDate(r.submissionDeadline, lang)}
-                        </div>
-                        {r.isDeadlineImminent && (
-                          <Badge variant="outline" className="mt-1 border-rose-200 bg-rose-50 text-rose-700">
-                            {t("tenders.badge.deadlineImminent")}
-                          </Badge>
+                  {rows.map((r) => {
+                    const canDelete = canManage && r.status === "Preparing";
+                    return (
+                      <tr
+                        key={r.id}
+                        className="cursor-pointer border-t align-top hover:bg-slate-50/50"
+                        onClick={() => setPreviewId(r.id)}
+                      >
+                        {canManage && (
+                          <td
+                            className="px-3 py-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              aria-label={`${t("common.selectAll")} · ${r.name}`}
+                              disabled={!canDelete}
+                              checked={selectedIds.has(r.id)}
+                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
+                            />
+                          </td>
                         )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2">
-                        <Badge className={STATUS_BADGE_STYLES[r.status]} variant="outline">
-                          {statusLabel(r.status)}
-                        </Badge>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <Progress value={r.checklistCompletionPercent} className="h-1.5 w-20" />
-                          <span className="text-xs tabular-nums text-muted-foreground">{r.checklistCompletionPercent}%</span>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{r.preparerName ?? "—"}</td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-1">{renderRowActions(r)}</div>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="max-w-[280px] px-3 py-2">
+                          <div className="font-medium">{r.name}</div>
+                          <div className="text-xs text-muted-foreground">{r.code}</div>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2">{r.customerName}</td>
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <div className={cn(r.isDeadlineImminent && "font-semibold text-rose-700")}>
+                            {formatDate(r.submissionDeadline, lang)}
+                          </div>
+                          {r.isDeadlineImminent && (
+                            <Badge variant="outline" className="mt-1 border-rose-200 bg-rose-50 text-rose-700">
+                              {t("tenders.badge.deadlineImminent")}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <Badge className={STATUS_BADGE_STYLES[r.status]} variant="outline">
+                            {statusLabel(r.status)}
+                          </Badge>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Progress value={r.checklistCompletionPercent} className="h-1.5 w-20" />
+                            <span className="text-xs tabular-nums text-muted-foreground">{r.checklistCompletionPercent}%</span>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{r.preparerName ?? "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{formatDate(r.updatedAt, lang)}</td>
+                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1">{renderRowActions(r)}</div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -669,6 +798,119 @@ const AdminTenders = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quick-view preview dialog. Read-only summary — Edit still opens the
+          form dialog via the pencil button (or the button in the footer here). */}
+      <Dialog
+        open={previewId !== null}
+        onOpenChange={(o) => !o && setPreviewId(null)}
+      >
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
+          <DialogHeader>
+            <DialogTitle className="break-words">
+              {preview?.name ?? t("tenders.title")}
+            </DialogTitle>
+            <DialogDescription>
+              {preview
+                ? `${preview.code} · ${preview.customerName}`
+                : t("common.loading")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewLoading ? (
+            <div className="flex items-center justify-center py-8 text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("common.loading")}
+            </div>
+          ) : previewError ? (
+            <p className="text-sm text-rose-600">{previewError}</p>
+          ) : preview ? (
+            <div className="space-y-4 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  className={STATUS_BADGE_STYLES[preview.status]}
+                  variant="outline"
+                >
+                  {statusLabel(preview.status)}
+                </Badge>
+                {preview.isDeadlineImminent && (
+                  <span className="inline-flex items-center gap-1 rounded bg-rose-50 px-1.5 py-0.5 text-xs font-medium text-rose-700">
+                    <AlertTriangle className="h-3 w-3" />
+                    {t("tenders.badge.deadlineImminent")}
+                  </span>
+                )}
+              </div>
+
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("tenders.field.deadline")}</dt>
+                  <dd className={cn("font-medium", preview.isDeadlineImminent && "text-rose-700")}>
+                    {formatDate(preview.submissionDeadline, lang)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("tenders.field.openingDate")}</dt>
+                  <dd className="font-medium">{formatDate(preview.openingDate, lang)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("tenders.field.preparer")}</dt>
+                  <dd className="font-medium">{preview.preparerName ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("tenders.field.infoSource")}</dt>
+                  <dd className="font-medium break-words">{preview.infoSource ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("tenders.field.updatedAt")}</dt>
+                  <dd className="font-medium">{formatDate(preview.updatedAt, lang)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{t("tenders.field.checklist")}</dt>
+                  <dd className="flex items-center gap-2">
+                    <Progress
+                      value={preview.checklistCompletionPercent}
+                      className="h-1.5 w-24"
+                    />
+                    <span className="tabular-nums text-muted-foreground">
+                      {preview.checklistCompletionPercent}%
+                    </span>
+                  </dd>
+                </div>
+              </dl>
+
+              {preview.note && (
+                <div>
+                  <div className="text-xs text-muted-foreground">{t("tenders.field.note")}</div>
+                  <p className="whitespace-pre-wrap break-words">{preview.note}</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setPreviewId(null)}
+              className="w-full sm:w-auto"
+            >
+              {t("common.close")}
+            </Button>
+            {preview && canManage && (
+              <Button
+                onClick={() => {
+                  const id = preview.id;
+                  setPreviewId(null);
+                  void openEdit(id);
+                }}
+                className="w-full sm:w-auto"
+              >
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                {t("common.edit")}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 };
