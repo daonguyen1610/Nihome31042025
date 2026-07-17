@@ -218,6 +218,12 @@ curl -X GET http://localhost:5000/api/resource
 ## Quality Check
 
 * Test manual with playwright in the integrated browser. Ensure all the changes match with the test.
+* Ensure the quality of code: Clean code, no hardcode, reusable functions.
+* Ensure all test passed: unittest, integration test, E2E test.
+* Ensure no breaking changes the UI, the UI must be cleaned, easy to use for the users.
+* Ensure the UI must be clean in every responsive. For example: Scale to mobile, tablet we should use cardview to show, ensure the spacings between the components.
+* Ensure write the tests to cover all scenarios.
+* Ensure the Seeder mock the data to showcase the functionalities.
 
 ### Backend
 
