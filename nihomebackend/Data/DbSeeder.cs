@@ -144,6 +144,7 @@ public static class DbSeeder
         TranslationSeeder.Seed(db);
         RbacSeeder.Seed(db);
         MasterDataSeeder.Seed(db);
+        WorkflowConfigSeeder.Seed(db);
         NotificationTemplateSeeder.Seed(db);
         SeedBusinessRoleUsers(db);
         SampleCrmDataSeeder.Seed(db, webRootPath);
