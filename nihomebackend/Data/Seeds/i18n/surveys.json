@@ -4,6 +4,7 @@
   { "key": "surveys.title", "category": "surveys", "vi": "Quản lý Phiếu khảo sát", "en": "Survey management", "zh": "勘察记录管理", "ja": "調査記録の管理" },
   { "key": "surveys.subtitle", "category": "surveys", "vi": "Tra cứu phiếu khảo sát theo dự án, khách hàng và trạng thái đồng bộ Drive.", "en": "Look up surveys by project, customer and Drive sync state.", "zh": "按项目、客户和 Drive 同步状态查询勘察记录。", "ja": "案件・顧客・Drive 同期状態で調査記録を検索します。" },
   { "key": "surveys.empty", "category": "surveys", "vi": "Chưa có phiếu khảo sát nào.", "en": "No surveys yet.", "zh": "暂无勘察记录。", "ja": "調査記録がまだありません。" },
+  { "key": "surveys.emptyFiltered", "category": "surveys", "vi": "Không có phiếu nào khớp bộ lọc hiện tại.", "en": "No surveys match the current filters.", "zh": "没有符合当前筛选条件的记录。", "ja": "現在の条件に一致する調査はありません。" },
   { "key": "surveys.total", "category": "surveys", "vi": "{count} phiếu", "en": "{count} surveys", "zh": "{count} 条", "ja": "{count} 件" },
   { "key": "surveys.paginationLabel", "category": "surveys", "vi": "Trang {page} / {totalPages}", "en": "Page {page} of {totalPages}", "zh": "第 {page} / {totalPages} 页", "ja": "{page} / {totalPages} ページ" },
 
