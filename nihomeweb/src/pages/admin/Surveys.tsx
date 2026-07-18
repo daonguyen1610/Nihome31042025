@@ -129,7 +129,7 @@ const DriveStatusBadge = ({ status, error }: { status: SurveyDriveSyncStatus; er
           : CloudOff;
 
   const badge = (
-    <Badge variant="outline" className={cn("gap-1", DRIVE_STATUS_BADGE[status])}>
+    <Badge variant="outline" className={cn("gap-1 whitespace-nowrap", DRIVE_STATUS_BADGE[status])}>
       <Icon className={cn("h-3 w-3", status === "Syncing" && "animate-spin")} />
       {t(`surveys.driveStatus.${status}`)}
     </Badge>
@@ -709,7 +709,7 @@ const AdminSurveys = () => {
                     <th className="px-3 py-2">{t("surveys.field.surveyDate")}</th>
                     <th className="px-3 py-2">{t("surveys.field.surveyor")}</th>
                     <th className="px-3 py-2">{t("surveys.field.projectOrOpportunity")}</th>
-                    <th className="px-3 py-2">{t("surveys.field.driveStatus")}</th>
+                    <th className="whitespace-nowrap px-3 py-2">{t("surveys.field.driveStatus")}</th>
                     {canManage ? <th className="px-3 py-2 text-right"></th> : null}
                   </tr>
                 </thead>
@@ -746,7 +746,7 @@ const AdminSurveys = () => {
                         <td className="min-w-[180px] px-3 py-2 text-xs">
                           {r.linkedProjectName ?? r.linkedOpportunityName ?? "—"}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="whitespace-nowrap px-3 py-2">
                           <DriveStatusBadge status={r.driveSyncStatus} error={r.driveSyncError} />
                         </td>
                         {canManage ? (
