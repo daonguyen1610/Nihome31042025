@@ -146,7 +146,7 @@ const HeaderCard = ({ tender }: HeaderProps) => {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h1 className="truncate text-xl font-bold text-slate-900 md:text-2xl">{tender.name}</h1>
-            <Badge className={cn("border capitalize", STATUS_BADGE_STYLES[tender.status])} variant="outline">
+            <Badge className={cn("border", STATUS_BADGE_STYLES[tender.status])} variant="outline">
               {t(`tenders.status.${tender.status}`)}
             </Badge>
           </div>
@@ -263,9 +263,8 @@ interface ChecklistTabProps {
 }
 
 const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isTerminal }: ChecklistTabProps) => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const disabled = !canManage || isTerminal;
-  const uploadingRef = useRef<Record<number, boolean>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
   const [fileInputTarget, setFileInputTarget] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -286,7 +285,10 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
       if (!iso) {
         await onPatch(item.id, { clearInternalDeadline: true });
       } else {
-        await onPatch(item.id, { internalDeadline: new Date(iso + "T00:00:00").toISOString() });
+        // Parse the date-input value as UTC midnight so the value
+        // round-trips through .slice(0, 10) without a timezone-driven
+        // off-by-one on positive UTC offsets (e.g. Asia/Ho_Chi_Minh).
+        await onPatch(item.id, { internalDeadline: `${iso}T00:00:00.000Z` });
       }
     } finally {
       setSavingId(null);
@@ -303,12 +305,10 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
     const target = fileInputTarget;
     e.target.value = "";
     if (!file || target == null) return;
-    uploadingRef.current[target] = true;
     setSavingId(target);
     try {
       await onUpload(target, file);
     } finally {
-      uploadingRef.current[target] = false;
       setSavingId(null);
       setFileInputTarget(null);
     }
@@ -745,6 +745,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t("tenders.detail.result.markWonTitle")}</DialogTitle>
+          <DialogDescription>{t("tenders.detail.result.pickOpportunity")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
@@ -860,6 +861,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t("tenders.detail.result.markLostTitle")}</DialogTitle>
+          <DialogDescription>{t("tenders.detail.result.reason")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div>
@@ -954,7 +956,9 @@ const ResultTab = ({
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs text-emerald-700">{t("tenders.detail.result.opportunity")}</dt>
-                <dd className="font-medium text-emerald-900">#{tender.wonOpportunityId}</dd>
+                <dd className="break-words font-medium text-emerald-900">
+                  {tender.wonOpportunityName ?? (tender.wonOpportunityId != null ? `#${tender.wonOpportunityId}` : "—")}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs text-emerald-700">{t("tenders.detail.result.closedAt")}</dt>
@@ -977,7 +981,9 @@ const ResultTab = ({
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs text-rose-700">{t("tenders.detail.result.reason")}</dt>
-                <dd className="font-medium text-rose-900">{tender.lostReasonCode ?? "—"}</dd>
+                <dd className="font-medium text-rose-900">
+                  {tender.lostReasonLabel ?? tender.lostReasonCode ?? "—"}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs text-rose-700">{t("tenders.detail.result.closedAt")}</dt>

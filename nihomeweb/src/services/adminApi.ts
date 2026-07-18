@@ -1257,7 +1257,9 @@ export interface TenderResponse {
   status: TenderStatus;
   note?: string | null;
   wonOpportunityId?: number | null;
+  wonOpportunityName?: string | null;
   lostReasonCode?: string | null;
+  lostReasonLabel?: string | null;
   lostNote?: string | null;
   closedAt?: string | null;
   createdAt: string;
