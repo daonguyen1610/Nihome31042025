@@ -334,7 +334,9 @@ public class ContractsControllerTests : IntegrationTestBase
         var contractId = await CreateContractAsync(customerId, status: "Signed");
         var create = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/appendices", new
         {
-            title = "VO", reason = "R", valueDelta = 1_000m,
+            title = "VO",
+            reason = "R",
+            valueDelta = 1_000m,
         });
         var voId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
         await Client.PostAsync($"/api/contracts/{contractId}/appendices/{voId}/submit", null);
