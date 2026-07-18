@@ -53,5 +53,13 @@
   { "key": "surveys.filter.dateTo", "category": "surveys", "vi": "Đến ngày", "en": "To", "zh": "结束", "ja": "終了" },
 
   { "key": "surveys.detail.back", "category": "surveys", "vi": "Quay lại danh sách khảo sát", "en": "Back to surveys", "zh": "返回勘察列表", "ja": "調査一覧へ戻る" },
+  { "key": "surveys.detail.tab.info", "category": "surveys", "vi": "Thông tin", "en": "Info", "zh": "信息", "ja": "情報" },
+  { "key": "surveys.detail.tab.media", "category": "surveys", "vi": "Media", "en": "Media", "zh": "媒体", "ja": "メディア" },
+  { "key": "surveys.detail.tab.timeline", "category": "surveys", "vi": "Nhật ký", "en": "Timeline", "zh": "日志", "ja": "履歴" },
+  { "key": "surveys.detail.mediaComingSoon", "category": "surveys", "vi": "Chức năng upload ảnh + đồng bộ Drive sẽ có ở slice tiếp theo (NIH-101 mở rộng).", "en": "Photo upload + Drive sync ships in a follow-up slice.", "zh": "上传图片与 Drive 同步功能将在后续切片中提供。", "ja": "写真アップロードと Drive 同期は次のスライスで提供予定です。" },
+  { "key": "surveys.detail.timelineEmpty", "category": "surveys", "vi": "Chưa có sự kiện nào.", "en": "No events yet.", "zh": "暂无事件。", "ja": "イベントがありません。" },
+  { "key": "surveys.detail.info.updatedAt", "category": "surveys", "vi": "Cập nhật lần cuối", "en": "Last updated", "zh": "最后更新", "ja": "最終更新" },
+  { "key": "surveys.detail.info.createdAt", "category": "surveys", "vi": "Ngày tạo", "en": "Created at", "zh": "创建时间", "ja": "作成日" },
+  { "key": "surveys.detail.info.lastSyncedAt", "category": "surveys", "vi": "Đồng bộ Drive gần nhất", "en": "Last Drive sync", "zh": "最近 Drive 同步", "ja": "最終 Drive 同期" },
   { "key": "surveys.detail.comingSoon", "category": "surveys", "vi": "Trang chi tiết đang được phát triển (NIH-101). Danh sách đầy đủ đã có sẵn.", "en": "Detail page is under development (NIH-101). The full list is already available.", "zh": "详情页正在开发（NIH-101），列表已可用。", "ja": "詳細ページは開発中です（NIH-101）。一覧はすでに利用可能です。" }
 ]

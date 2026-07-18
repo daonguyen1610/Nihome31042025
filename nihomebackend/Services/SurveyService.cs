@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -282,6 +283,46 @@ public class SurveyService(
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Survey {Id} deleted", id);
         return true;
+    }
+
+    // ------------------------------ Timeline (NIH-101) ----------------------
+
+    public async Task<List<SurveyTimelineEvent>?> GetTimelineAsync(int id, int limit, CancellationToken ct = default)
+    {
+        var exists = await db.Surveys.AsNoTracking().AnyAsync(s => s.Id == id, ct);
+        if (!exists) return null;
+
+        if (limit < 1) limit = 1;
+        if (limit > 500) limit = 500;
+
+        var idText = id.ToString();
+        var rows = await db.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.ResourceType == EntityTypes.Survey && a.ResourceId == idText)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(limit)
+            .Select(a => new
+            {
+                a.Id,
+                a.CreatedAt,
+                a.Action,
+                a.Message,
+                a.ActorUserId,
+                UserName = a.ActorUserId != null
+                    ? db.Users.Where(u => u.Id == a.ActorUserId).Select(u => u.FullName).FirstOrDefault()
+                    : null,
+            })
+            .ToListAsync(ct);
+
+        return rows.Select(a => new SurveyTimelineEvent
+        {
+            Id = a.Id,
+            OccurredAt = a.CreatedAt,
+            Action = a.Action,
+            Message = a.Message,
+            UserId = a.ActorUserId,
+            UserName = a.UserName,
+        }).ToList();
     }
 
     // ------------------------------ Helpers ---------------------------------
