@@ -304,6 +304,14 @@
     "ja": "30-30-30-10 プリセットを適用"
   },
   {
+    "key": "contracts.milestonePresetConfirm",
+    "category": "contracts",
+    "vi": "Áp dụng preset sẽ ghi đè các đợt hiện có. Tiếp tục?",
+    "en": "Applying the preset will overwrite the current schedule. Continue?",
+    "zh": "应用预设将覆盖当前的付款计划。是否继续？",
+    "ja": "プリセットを適用すると現在のスケジュールが上書きされます。続行しますか？"
+  },
+  {
     "key": "contracts.milestonesEmpty",
     "category": "contracts",
     "vi": "Chưa có đợt thanh toán nào. Nhấn \"Thêm đợt\" hoặc áp dụng preset.",

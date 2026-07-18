@@ -9,7 +9,6 @@ import {
   PAYMENT_MILESTONE_STATUSES,
   type ContractListParams,
   type ContractPaymentMilestoneRequest,
-  type ContractPaymentMilestoneResponse,
   type ContractResponse,
   type ContractStatus,
   type CustomerResponse,
@@ -358,6 +357,10 @@ const Contracts = () => {
     });
   };
   const applyPreset30_30_30_10 = () => {
+    // Guard against accidental overwrite — users who already spent time
+    // filling in the schedule should be asked before wiping it.
+    const hasWork = form.milestones.some((m) => m.name.trim() !== "" || m.percentValue > 0);
+    if (hasWork && !window.confirm(t("contracts.milestonePresetConfirm"))) return;
     setForm((prev) => ({ ...prev, milestones: PRESET_30_30_30_10.map((m) => ({ ...m })) }));
   };
 
