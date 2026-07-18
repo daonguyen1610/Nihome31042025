@@ -42,6 +42,8 @@ export const ADMIN_PERMS = {
   tenders: "crm.tenders.view",
   tendersManage: "crm.tenders.manage",
   tendersMarkResult: "crm.tenders.mark-result",
+  surveys: "crm.surveys.view",
+  surveysManage: "crm.surveys.manage",
   contracts: "crm.contracts.view",
   contractsManage: "crm.contracts.manage",
   contractsViewAll: "crm.contracts.view.all",

@@ -1365,6 +1365,87 @@ export interface TenderTimelineEvent {
   userName?: string | null;
 }
 
+// ─── Surveys (NIH-86 / NIH-99) ────────────────────────
+
+export type SurveyDriveSyncStatus = "NotSynced" | "Syncing" | "Synced" | "Failed";
+
+export const SURVEY_DRIVE_STATUSES: SurveyDriveSyncStatus[] = [
+  "NotSynced",
+  "Syncing",
+  "Synced",
+  "Failed",
+];
+
+export interface SurveyResponse {
+  id: number;
+  code: string;
+  location: string;
+  constructionTypeCode?: string | null;
+  constructionTypeLabel?: string | null;
+  surveyDate: string;
+  surveyorUserId?: number | null;
+  surveyorName?: string | null;
+  linkedProjectId?: number | null;
+  linkedProjectName?: string | null;
+  linkedOpportunityId?: number | null;
+  linkedOpportunityName?: string | null;
+  note?: string | null;
+  driveSyncStatus: SurveyDriveSyncStatus;
+  driveSyncError?: string | null;
+  lastSyncedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SurveyListItemResponse {
+  id: number;
+  code: string;
+  location: string;
+  constructionTypeCode?: string | null;
+  constructionTypeLabel?: string | null;
+  surveyDate: string;
+  surveyorUserId?: number | null;
+  surveyorName?: string | null;
+  linkedProjectId?: number | null;
+  linkedProjectName?: string | null;
+  linkedOpportunityId?: number | null;
+  linkedOpportunityName?: string | null;
+  driveSyncStatus: SurveyDriveSyncStatus;
+  driveSyncError?: string | null;
+  lastSyncedAt?: string | null;
+  updatedAt: string;
+}
+
+export interface SurveyListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: SurveyListItemResponse[];
+}
+
+export interface SurveyListParams {
+  constructionTypeCode?: string;
+  surveyorUserId?: number;
+  linkedProjectId?: number;
+  /** Comma-separated `SurveyDriveSyncStatus` values, e.g. "Synced,Failed". */
+  driveSyncStatus?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateSurveyRequest {
+  location: string;
+  constructionTypeCode?: string | null;
+  surveyDate: string;
+  surveyorUserId?: number | null;
+  linkedProjectId?: number | null;
+  linkedOpportunityId?: number | null;
+  note?: string | null;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -1912,6 +1993,24 @@ export const adminApi = {
     api.post<TenderResponse>(`/tenders/${tenderId}/mark-lost`, body),
   getTenderTimeline: (tenderId: number, limit = 100) =>
     api.get<TenderTimelineEvent[]>(`/tenders/${tenderId}/timeline`, { params: { limit } }),
+
+  // Surveys (NIH-99)
+  listSurveys: (params: SurveyListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.constructionTypeCode) q.append("constructionTypeCode", params.constructionTypeCode);
+    if (params.surveyorUserId != null) q.append("surveyorUserId", String(params.surveyorUserId));
+    if (params.linkedProjectId != null) q.append("linkedProjectId", String(params.linkedProjectId));
+    if (params.driveSyncStatus) q.append("driveSyncStatus", params.driveSyncStatus);
+    if (params.dateFrom) q.append("dateFrom", params.dateFrom);
+    if (params.dateTo) q.append("dateTo", params.dateTo);
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<SurveyListResponse>(`/surveys${qs ? `?${qs}` : ""}`);
+  },
+  getSurvey: (id: number) => api.get<SurveyResponse>(`/surveys/${id}`),
+  createSurvey: (body: CreateSurveyRequest) => api.post<SurveyResponse>("/surveys", body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
