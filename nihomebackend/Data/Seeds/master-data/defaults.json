@@ -117,6 +117,19 @@
     },
 
     {
+      "category": "construction_type",
+      "options": [
+        { "code": "residential",     "name": "Nhà ở dân dụng",     "sortOrder": 1 },
+        { "code": "commercial",      "name": "Thương mại",         "sortOrder": 2 },
+        { "code": "industrial",      "name": "Công nghiệp",        "sortOrder": 3 },
+        { "code": "mixed-use",       "name": "Hỗn hợp",            "sortOrder": 4 },
+        { "code": "renovation",      "name": "Cải tạo / Nâng cấp", "sortOrder": 5 },
+        { "code": "interior",        "name": "Nội thất",           "sortOrder": 6 },
+        { "code": "infrastructure",  "name": "Hạ tầng",            "sortOrder": 7 }
+      ]
+    },
+
+    {
       "category": "contract_status",
       "options": [
         { "code": "draft",       "name": "Bản nháp", "sortOrder": 1 },
