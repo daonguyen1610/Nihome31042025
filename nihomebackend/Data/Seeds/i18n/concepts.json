@@ -1,0 +1,47 @@
+[
+  { "key": "concepts.title", "category": "concepts", "vi": "Phương án Concept", "en": "Concept options", "zh": "方案设计选项", "ja": "コンセプト案" },
+  { "key": "concepts.empty", "category": "concepts", "vi": "Chưa có phương án Concept nào cho dự án này.", "en": "No concept options yet for this project.", "zh": "该项目尚无方案设计选项。", "ja": "この案件のコンセプト案はまだありません。" },
+  { "key": "concepts.locked", "category": "concepts", "vi": "Dự án đã qua giai đoạn Concept — chỉ hiển thị lịch sử.", "en": "Project has moved past the Concept stage — history view only.", "zh": "项目已越过 Concept 阶段——仅可查看历史。", "ja": "案件はコンセプト段階を超えました — 履歴のみ表示できます。" },
+  { "key": "concepts.new", "category": "concepts", "vi": "Tạo phương án", "en": "New option", "zh": "新建选项", "ja": "新規案" },
+  { "key": "concepts.edit", "category": "concepts", "vi": "Chỉnh sửa phương án", "en": "Edit option", "zh": "编辑选项", "ja": "案を編集" },
+  { "key": "concepts.created", "category": "concepts", "vi": "Đã tạo phương án", "en": "Option created", "zh": "已创建选项", "ja": "案を作成しました" },
+  { "key": "concepts.updated", "category": "concepts", "vi": "Đã cập nhật phương án", "en": "Option updated", "zh": "已更新选项", "ja": "案を更新しました" },
+  { "key": "concepts.deleted", "category": "concepts", "vi": "Đã xoá phương án", "en": "Option deleted", "zh": "已删除选项", "ja": "案を削除しました" },
+  { "key": "concepts.transitioned", "category": "concepts", "vi": "Đã chuyển trạng thái phương án", "en": "Option status updated", "zh": "已更新选项状态", "ja": "案の状態を更新しました" },
+  { "key": "concepts.finalized", "category": "concepts", "vi": "Đã chốt phương án. Dự án chuyển sang giai đoạn Basic Design.", "en": "Option finalized. Project moved to Basic Design stage.", "zh": "选项已确认。项目进入基本设计阶段。", "ja": "案を確定しました。案件は基本設計段階に移行しました。" },
+
+  { "key": "concepts.field.name", "category": "concepts", "vi": "Tên phương án", "en": "Option name", "zh": "选项名称", "ja": "案名" },
+  { "key": "concepts.field.description", "category": "concepts", "vi": "Mô tả", "en": "Description", "zh": "描述", "ja": "説明" },
+  { "key": "concepts.field.internalNote", "category": "concepts", "vi": "Ghi chú nội bộ", "en": "Internal note", "zh": "内部备注", "ja": "内部メモ" },
+  { "key": "concepts.field.owner", "category": "concepts", "vi": "Người phụ trách", "en": "Owner", "zh": "负责人", "ja": "担当者" },
+  { "key": "concepts.field.presentedAt", "category": "concepts", "vi": "Ngày trình khách", "en": "Presented on", "zh": "呈递日期", "ja": "提示日" },
+  { "key": "concepts.field.status", "category": "concepts", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "状態" },
+  { "key": "concepts.field.updatedAt", "category": "concepts", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+
+  { "key": "concepts.status.Drafting", "category": "concepts", "vi": "Đang thiết kế", "en": "Drafting", "zh": "设计中", "ja": "作成中" },
+  { "key": "concepts.status.PendingInternalReview", "category": "concepts", "vi": "Chờ duyệt nội bộ", "en": "Pending internal review", "zh": "等待内部审核", "ja": "社内レビュー待ち" },
+  { "key": "concepts.status.PresentedToClient", "category": "concepts", "vi": "Đã trình khách", "en": "Presented to client", "zh": "已呈递客户", "ja": "顧客に提示済み" },
+  { "key": "concepts.status.ClientRequestedChanges", "category": "concepts", "vi": "Khách yêu cầu sửa", "en": "Client requested changes", "zh": "客户要求修改", "ja": "顧客修正依頼" },
+  { "key": "concepts.status.Finalized", "category": "concepts", "vi": "Đã chốt", "en": "Finalized", "zh": "已确认", "ja": "確定" },
+  { "key": "concepts.status.Discarded", "category": "concepts", "vi": "Loại bỏ", "en": "Discarded", "zh": "已弃用", "ja": "破棄" },
+
+  { "key": "concepts.action.markPresented", "category": "concepts", "vi": "Trình khách", "en": "Present to client", "zh": "呈递客户", "ja": "顧客に提示" },
+  { "key": "concepts.action.sendReview", "category": "concepts", "vi": "Gửi duyệt nội bộ", "en": "Send for internal review", "zh": "提交内部审核", "ja": "社内レビューへ" },
+  { "key": "concepts.action.finalize", "category": "concepts", "vi": "Chốt phương án", "en": "Finalize option", "zh": "确认选项", "ja": "案を確定" },
+  { "key": "concepts.action.discard", "category": "concepts", "vi": "Loại bỏ", "en": "Discard", "zh": "弃用", "ja": "破棄" },
+  { "key": "concepts.action.markRevision", "category": "concepts", "vi": "Cần sửa", "en": "Client requested changes", "zh": "客户要求修改", "ja": "修正依頼" },
+  { "key": "concepts.action.backToDraft", "category": "concepts", "vi": "Về Đang thiết kế", "en": "Back to Drafting", "zh": "回到设计中", "ja": "作成中に戻す" },
+  { "key": "concepts.action.delete", "category": "concepts", "vi": "Xoá phương án", "en": "Delete option", "zh": "删除选项", "ja": "案を削除" },
+
+  { "key": "concepts.form.hint", "category": "concepts", "vi": "Điền tên phương án và mô tả để trình bày với khách. Ghi chú nội bộ chỉ đội thiết kế nhìn thấy.", "en": "Fill in the option name + description shown to the client. The internal note is only visible to the design team.", "zh": "填写呈递客户的方案名称和描述。内部备注仅设计团队可见。", "ja": "顧客に提示する案名と説明を入力します。内部メモは設計チームのみが確認できます。" },
+  { "key": "concepts.form.ownerNone", "category": "concepts", "vi": "Chưa gán người phụ trách", "en": "Unassigned", "zh": "未指派", "ja": "未割当" },
+  { "key": "concepts.form.nameRequired", "category": "concepts", "vi": "Tên phương án là bắt buộc.", "en": "Option name is required.", "zh": "选项名称为必填项。", "ja": "案名は必須です。" },
+
+  { "key": "concepts.finalize.confirmTitle", "category": "concepts", "vi": "Chốt phương án Concept?", "en": "Finalize this concept option?", "zh": "确认此方案设计选项？", "ja": "このコンセプト案を確定しますか？" },
+  { "key": "concepts.finalize.confirmBody", "category": "concepts", "vi": "Chốt \"{name}\" sẽ loại bỏ các phương án còn lại và mở khoá giai đoạn Basic Design. Không thể hoàn tác.", "en": "Finalizing \"{name}\" will discard all remaining options and unlock the Basic Design stage. This cannot be undone.", "zh": "确认“{name}”将弃用其余选项并解锁基本设计阶段。此操作无法撤销。", "ja": "「{name}」を確定すると他の案は破棄され、基本設計段階が解放されます。取り消せません。" },
+  { "key": "concepts.finalize.confirm", "category": "concepts", "vi": "Chốt phương án", "en": "Finalize", "zh": "确认", "ja": "確定" },
+
+  { "key": "concepts.delete.confirmTitle", "category": "concepts", "vi": "Xoá phương án Concept?", "en": "Delete concept option?", "zh": "删除方案设计选项？", "ja": "コンセプト案を削除しますか？" },
+  { "key": "concepts.delete.confirmBody", "category": "concepts", "vi": "Chỉ xoá được \"{name}\" khi còn ở trạng thái Đang thiết kế. Không thể hoàn tác.", "en": "\"{name}\" can only be deleted while still in Drafting. This cannot be undone.", "zh": "仅在设计中状态可删除“{name}”。此操作无法撤销。", "ja": "「{name}」は作成中の状態のみ削除できます。取り消せません。" },
+  { "key": "concepts.delete.confirm", "category": "concepts", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
+]

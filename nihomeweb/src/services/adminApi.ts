@@ -1647,6 +1647,75 @@ export interface UpdatePermitChecklistItemRequest {
   clearNote?: boolean;
 }
 
+// ─── Concept options (NIH-114) ────────────────────────
+
+export type ConceptOptionStatus =
+  | "Drafting"
+  | "PendingInternalReview"
+  | "PresentedToClient"
+  | "ClientRequestedChanges"
+  | "Finalized"
+  | "Discarded";
+
+export const CONCEPT_OPTION_STATUSES: ConceptOptionStatus[] = [
+  "Drafting",
+  "PendingInternalReview",
+  "PresentedToClient",
+  "ClientRequestedChanges",
+  "Finalized",
+  "Discarded",
+];
+
+export interface ConceptOptionResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  name: string;
+  description?: string | null;
+  internalNote?: string | null;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  presentedAt?: string | null;
+  status: ConceptOptionStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConceptOptionListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ConceptOptionResponse[];
+}
+
+export interface ConceptOptionListParams {
+  designProjectId?: number;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateConceptOptionRequest {
+  designProjectId: number;
+  name: string;
+  description?: string | null;
+  internalNote?: string | null;
+  ownerUserId?: number | null;
+  presentedAt?: string | null;
+}
+
+export interface UpdateConceptOptionRequest {
+  name: string;
+  description?: string | null;
+  internalNote?: string | null;
+  ownerUserId?: number | null;
+  presentedAt?: string | null;
+}
+
+export interface TransitionConceptOptionStatusRequest {
+  status: ConceptOptionStatus;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2268,6 +2337,27 @@ export const adminApi = {
     api.patch<PermitChecklistItemResponse>(`/permits/${id}`, body),
   ensurePermitsForProject: (designProjectId: number) =>
     api.post<PermitChecklistListResponse>(`/permits/design-project/${designProjectId}/ensure`),
+
+  // Concept options (NIH-114)
+  listConceptOptions: (params: ConceptOptionListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.status) q.append("status", params.status);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<ConceptOptionListResponse>(`/concept-options${qs ? `?${qs}` : ""}`);
+  },
+  getConceptOption: (id: number) =>
+    api.get<ConceptOptionResponse>(`/concept-options/${id}`),
+  createConceptOption: (body: CreateConceptOptionRequest) =>
+    api.post<ConceptOptionResponse>("/concept-options", body),
+  updateConceptOption: (id: number, body: UpdateConceptOptionRequest) =>
+    api.put<ConceptOptionResponse>(`/concept-options/${id}`, body),
+  deleteConceptOption: (id: number) =>
+    api.delete(`/concept-options/${id}`),
+  transitionConceptOption: (id: number, body: TransitionConceptOptionStatusRequest) =>
+    api.post<ConceptOptionResponse>(`/concept-options/${id}/status`, body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
