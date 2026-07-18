@@ -199,4 +199,178 @@ public class ContractsControllerTests : IntegrationTestBase
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    // ---------- NIH-104: state transitions, milestone status, VO workflow ----------
+
+    private async Task<int> CreateContractAsync(int customerId, string status = "Draft", decimal value = 100_000_000m)
+    {
+        var res = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId, status, value));
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    [Fact]
+    public async Task Transition_DraftToSigned_Succeeds()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+
+        var res = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(res)).GetProperty("status").GetString().Should().Be("Signed");
+    }
+
+    [Fact]
+    public async Task Transition_SignedToInProgress_WithoutScan_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId, status: "Signed");
+
+        var res = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "InProgress" });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Transition_IllegalPath_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+
+        var res = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Completed" });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Milestone_StatusUpdate_UpdatesStatus()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+
+        var body = new
+        {
+            customerId,
+            status = "Signed",
+            value = 100_000_000,
+            paymentMilestones = new object[]
+            {
+                new { order = 1, name = "M1", percentValue = 100m, status = "Pending" },
+            },
+        };
+        var created = await Client.PostAsJsonAsync("/api/contracts", body);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdJson = await ReadJsonAsync(created);
+        var contractId = createdJson.GetProperty("id").GetInt32();
+        var milestoneId = createdJson.GetProperty("paymentMilestones")[0].GetProperty("id").GetInt32();
+
+        var res = await Client.PatchAsJsonAsync(
+            $"/api/contracts/{contractId}/milestones/{milestoneId}/status",
+            new { status = "Paid" });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(res)).GetProperty("paymentMilestones")[0].GetProperty("status").GetString()
+            .Should().Be("Paid");
+    }
+
+    [Fact]
+    public async Task VoWorkflow_CreateSubmitApprove_UpdatesCurrentValue()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId, status: "Signed", value: 500_000_000m);
+
+        var create = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/appendices", new
+        {
+            title = "VO test",
+            reason = "test reason",
+            valueDelta = 50_000_000m,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var voId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var submit = await Client.PostAsync($"/api/contracts/{contractId}/appendices/{voId}/submit", null);
+        submit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var approve = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/appendices/{voId}/approve",
+            new { note = "OK" });
+        approve.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(approve)).GetProperty("status").GetString().Should().Be("Approved");
+
+        var refreshed = await Client.GetAsync($"/api/contracts/{contractId}");
+        var body = await ReadJsonAsync(refreshed);
+        body.GetProperty("approvedVoTotal").GetDecimal().Should().Be(50_000_000m);
+        body.GetProperty("currentValue").GetDecimal().Should().Be(550_000_000m);
+    }
+
+    [Fact]
+    public async Task VoReject_WithoutNote_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId, status: "Signed");
+
+        var create = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/appendices", new
+        {
+            title = "VO test",
+            reason = "reason",
+            valueDelta = 10_000_000m,
+        });
+        var voId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+        await Client.PostAsync($"/api/contracts/{contractId}/appendices/{voId}/submit", null);
+
+        var rej = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/appendices/{voId}/reject",
+            new { note = (string?)null });
+        rej.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Approve_AsSaleWithoutViewAll_Returns403()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId, status: "Signed");
+        var create = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/appendices", new
+        {
+            title = "VO", reason = "R", valueDelta = 1_000m,
+        });
+        var voId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+        await Client.PostAsync($"/api/contracts/{contractId}/appendices/{voId}/submit", null);
+
+        var approve = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/appendices/{voId}/approve",
+            new { note = "" });
+        approve.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Get_ReturnsCurrentValueAndCounts()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+
+        var res = await Client.GetAsync($"/api/contracts/{contractId}");
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("approvedVoTotal").GetDecimal().Should().Be(0);
+        body.GetProperty("currentValue").GetDecimal().Should().Be(100_000_000m);
+        body.GetProperty("hasSignedScan").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Timeline_ReturnsAuditEvents()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        // Trigger a couple of audited actions so the timeline has content.
+        await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" });
+
+        var res = await Client.GetAsync($"/api/contracts/{contractId}/timeline");
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(res)).ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+    }
 }

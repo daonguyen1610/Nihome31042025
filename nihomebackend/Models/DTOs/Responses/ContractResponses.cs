@@ -27,6 +27,24 @@ public class ContractResponse
 
     public decimal Value { get; set; }
 
+    /// <summary>Sum of <see cref="ContractAppendixStatus.Approved"/> VO
+    /// deltas. Computed by the service — never persisted.</summary>
+    public decimal ApprovedVoTotal { get; set; }
+
+    /// <summary><c>Value + ApprovedVoTotal</c>. Displayed in the detail
+    /// header and used everywhere "current" contract value is needed.</summary>
+    public decimal CurrentValue { get; set; }
+
+    /// <summary>Convenience flag for the FE gate:
+    /// Signed → InProgress requires at least one SignedScan attachment.</summary>
+    public bool HasSignedScan { get; set; }
+
+    /// <summary>Total number of attachments (scan + supporting).</summary>
+    public int AttachmentCount { get; set; }
+
+    /// <summary>Total number of appendices regardless of status.</summary>
+    public int AppendixCount { get; set; }
+
     public string? ScopeOfWork { get; set; }
     public string? Note { get; set; }
 

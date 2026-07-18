@@ -98,6 +98,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOpportunityService, OpportunityService>();
         services.AddScoped<IQuoteService, QuoteService>();
         services.AddScoped<IContractService, ContractService>();
+        services.AddScoped<IContractAppendixService, ContractAppendixService>();
+        services.AddScoped<IContractAttachmentService, ContractAttachmentService>();
         services.AddScoped<ICapabilityDocumentService, CapabilityDocumentService>();
         services.AddScoped<ITenderService, TenderService>();
         services.AddScoped<HostedImageService>();

@@ -614,6 +614,8 @@ public static class SampleCrmDataSeeder
             SeedContractHeaders(db, owner, now);
         }
         SeedContractMilestones(db, now);
+        SeedContractAppendices(db, owner, now);
+        SeedContractAttachments(db, owner, now);
     }
 
     private static void SeedContractHeaders(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -708,6 +710,102 @@ public static class SampleCrmDataSeeder
                 new ContractPaymentMilestone { ContractId = c.Id, Order = 2, Name = "Đợt 2 - Nghiệm thu 50%", PercentValue = 30m, DueDate = mid, Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Requested, CreatedAt = now, UpdatedAt = now },
                 new ContractPaymentMilestone { ContractId = c.Id, Order = 3, Name = "Đợt 3 - Bàn giao", PercentValue = 30m, DueDate = end, Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Pending, CreatedAt = now, UpdatedAt = now },
                 new ContractPaymentMilestone { ContractId = c.Id, Order = 4, Name = "Đợt 4 - Quyết toán bảo hành", PercentValue = 10m, DueDate = end.AddDays(30), Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Pending, CreatedAt = now, UpdatedAt = now });
+        }
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Seed 1 Variation Order per InProgress/Completed sample contract:
+    /// an Approved delta so the header's CurrentValue immediately differs
+    /// from the base Value and reviewers see a realistic amendment row.
+    /// Draft/OnHold contracts get a Submitted VO waiting for approval,
+    /// so the reviewer flow has content on first boot too. Idempotent
+    /// via the VO count check.
+    /// </summary>
+    private static void SeedContractAppendices(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var contracts = db.Contracts
+            .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker)
+                     && c.Status != ContractStatus.Draft)
+            .ToList();
+        foreach (var c in contracts)
+        {
+            if (db.ContractAppendices.Any(v => v.ContractId == c.Id)) continue;
+            switch (c.Status)
+            {
+                case ContractStatus.InProgress:
+                case ContractStatus.Completed:
+                    db.ContractAppendices.Add(new ContractAppendix
+                    {
+                        ContractId = c.Id,
+                        VoNumber = 1,
+                        Title = "Bổ sung hạng mục vách kính",
+                        Reason = "Khách hàng yêu cầu thêm 2 vách kính cường lực + phụ kiện.",
+                        ValueDelta = 45_000_000m,
+                        Status = ContractAppendixStatus.Approved,
+                        SubmittedAt = now.AddDays(-14),
+                        SubmittedByUserId = owner.Id,
+                        DecidedAt = now.AddDays(-12),
+                        DecidedByUserId = owner.Id,
+                        DecisionNote = "Đã đối chiếu bảng chi phí — chấp thuận.",
+                        CreatedByUserId = owner.Id,
+                        UpdatedByUserId = owner.Id,
+                        CreatedAt = now.AddDays(-16),
+                        UpdatedAt = now.AddDays(-12),
+                    });
+                    break;
+                case ContractStatus.Signed:
+                case ContractStatus.OnHold:
+                    db.ContractAppendices.Add(new ContractAppendix
+                    {
+                        ContractId = c.Id,
+                        VoNumber = 1,
+                        Title = "Điều chỉnh vật liệu ốp lát",
+                        Reason = "Chuyển đá nhân tạo sang đá tự nhiên theo đề xuất khách.",
+                        ValueDelta = 28_000_000m,
+                        Status = ContractAppendixStatus.Submitted,
+                        SubmittedAt = now.AddDays(-3),
+                        SubmittedByUserId = owner.Id,
+                        CreatedByUserId = owner.Id,
+                        UpdatedByUserId = owner.Id,
+                        CreatedAt = now.AddDays(-5),
+                        UpdatedAt = now.AddDays(-3),
+                    });
+                    break;
+            }
+        }
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Seed a signed-scan placeholder for every sample contract that has
+    /// moved past Draft. The physical file is NOT created — the seeder
+    /// just registers the metadata pointing at a canonical placeholder
+    /// path (/files/contracts/sample-scan.pdf). This is enough for the FE
+    /// to render the "Bản scan hợp đồng" chip and for the state machine
+    /// (Signed → InProgress) to see the row and allow the transition.
+    /// </summary>
+    private static void SeedContractAttachments(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var contracts = db.Contracts
+            .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker)
+                     && c.Status != ContractStatus.Draft)
+            .ToList();
+        foreach (var c in contracts)
+        {
+            if (db.ContractAttachments.Any(a => a.ContractId == c.Id)) continue;
+            db.ContractAttachments.Add(new ContractAttachment
+            {
+                ContractId = c.Id,
+                Kind = ContractAttachmentKind.SignedScan,
+                FilePath = "/files/contracts/sample-scan.pdf",
+                OriginalFileName = $"{c.ContractNumber}-scan.pdf",
+                FileSize = 128_000,
+                ContentType = "application/pdf",
+                Label = "Bản scan hợp đồng đã ký",
+                CreatedAt = now.AddDays(-1),
+                UploadedByUserId = owner.Id,
+            });
         }
         db.SaveChanges();
     }
