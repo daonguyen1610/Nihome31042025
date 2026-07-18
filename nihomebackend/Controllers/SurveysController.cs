@@ -73,6 +73,73 @@ public class SurveysController(
         }
     }
 
+    [HttpPut("{id:int}")]
+    [RequirePermission("crm.surveys", "manage")]
+    public async Task<ActionResult<SurveyResponse>> Update(int id, [FromBody] UpdateSurveyRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var response = await svc.UpdateAsync(id, request, userId.Value, ct);
+            if (response is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "survey.update",
+                ResourceType = EntityTypes.Survey,
+                ResourceId = id.ToString(),
+                Message = $"Survey #{id} updated.",
+                NewValue = response,
+            });
+            return Ok(response);
+        }
+        catch (SurveyOperationException ex)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "survey.update",
+                ResourceType = EntityTypes.Survey,
+                ResourceId = id.ToString(),
+                Message = ex.Message,
+                Status = AuditStatus.Failure,
+                FailureReason = ex.Message,
+            });
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    [RequirePermission("crm.surveys", "manage")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        try
+        {
+            var removed = await svc.DeleteAsync(id, ct);
+            if (!removed) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "survey.delete",
+                ResourceType = EntityTypes.Survey,
+                ResourceId = id.ToString(),
+                Message = $"Survey #{id} deleted.",
+            });
+            return NoContent();
+        }
+        catch (SurveyOperationException ex)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "survey.delete",
+                ResourceType = EntityTypes.Survey,
+                ResourceId = id.ToString(),
+                Message = ex.Message,
+                Status = AuditStatus.Failure,
+                FailureReason = ex.Message,
+            });
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     private int? GetUserId()
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");

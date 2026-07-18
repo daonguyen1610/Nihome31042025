@@ -178,4 +178,98 @@ public class SurveyServiceTests : IDisposable
         Assert.Single(syncedOnly.Items);
         Assert.Equal(a.Id, syncedOnly.Items[0].Id);
     }
+
+    // ---------------- NIH-100 Update / Delete ----------------
+
+    private UpdateSurveyRequest ValidUpdate(int _1, string? location = null,
+        string? typeCode = "commercial", DateTime? date = null,
+        int? surveyorId = null, string? note = null) => new()
+        {
+            Location = location ?? "Địa điểm cập nhật",
+            ConstructionTypeCode = typeCode,
+            SurveyDate = date ?? DateTime.UtcNow.AddDays(-1),
+            SurveyorUserId = surveyorId ?? _userId,
+            Note = note,
+        };
+
+    [Fact]
+    public async Task UpdateAsync_HappyPath_AppliesEveryEditableField()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var newDate = DateTime.UtcNow.AddDays(-3);
+        var updated = await _sut.UpdateAsync(created.Id, ValidUpdate(
+            created.Id,
+            location: "Địa điểm mới",
+            typeCode: "commercial",
+            date: newDate,
+            note: "Ghi chú"), _userId);
+
+        Assert.NotNull(updated);
+        Assert.Equal("Địa điểm mới", updated!.Location);
+        Assert.Equal("commercial", updated.ConstructionTypeCode);
+        Assert.Equal("Thương mại", updated.ConstructionTypeLabel);
+        Assert.Equal(newDate, updated.SurveyDate, TimeSpan.FromSeconds(1));
+        Assert.Equal("Ghi chú", updated.Note);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownId_ReturnsNull()
+    {
+        var res = await _sut.UpdateAsync(99999, ValidUpdate(0), _userId);
+        Assert.Null(res);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_MissingLocation_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(created.Id, ValidUpdate(created.Id, location: "  "), _userId));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownConstructionType_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(created.Id, ValidUpdate(created.Id, typeCode: "no-such-type"), _userId));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownSurveyor_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(created.Id, ValidUpdate(created.Id, surveyorId: 99999), _userId));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_NotSynced_Succeeds()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.False(await _db.Surveys.AnyAsync(s => s.Id == created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    {
+        Assert.False(await _sut.DeleteAsync(99999));
+    }
+
+    [Theory]
+    [InlineData(SurveyDriveSyncStatus.Syncing)]
+    [InlineData(SurveyDriveSyncStatus.Synced)]
+    [InlineData(SurveyDriveSyncStatus.Failed)]
+    public async Task DeleteAsync_AfterDriveTouched_Throws(SurveyDriveSyncStatus status)
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var raw = await _db.Surveys.FirstAsync(s => s.Id == created.Id);
+        raw.DriveSyncStatus = status;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<SurveyOperationException>(() => _sut.DeleteAsync(created.Id));
+        // Row must still exist so the audit trail is preserved.
+        Assert.True(await _db.Surveys.AnyAsync(s => s.Id == created.Id));
+    }
 }

@@ -202,6 +202,90 @@ public class SurveyService(
         return (await GetAsync(entity.Id, ct))!;
     }
 
+    // ------------------------------ Update ----------------------------------
+
+    public async Task<SurveyResponse?> UpdateAsync(int id, UpdateSurveyRequest request,
+        int callerUserId, CancellationToken ct = default)
+    {
+        var entity = await db.Surveys.FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (entity is null) return null;
+
+        var location = (request.Location ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(location))
+        {
+            throw new SurveyOperationException("Địa điểm khảo sát là bắt buộc.");
+        }
+        if (request.SurveyDate == default)
+        {
+            throw new SurveyOperationException("Ngày khảo sát là bắt buộc.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ConstructionTypeCode))
+        {
+            var typeCode = request.ConstructionTypeCode.Trim();
+            var exists = await db.MasterDataOptions
+                .AnyAsync(m => m.Category == ConstructionTypeCategory && m.Code == typeCode && m.IsActive, ct);
+            if (!exists)
+            {
+                throw new SurveyOperationException($"Loại công trình '{typeCode}' không hợp lệ.");
+            }
+        }
+
+        if (request.SurveyorUserId.HasValue &&
+            !await db.Users.AnyAsync(u => u.Id == request.SurveyorUserId.Value, ct))
+        {
+            throw new SurveyOperationException($"Người khảo sát #{request.SurveyorUserId} không tồn tại.");
+        }
+        if (request.LinkedProjectId.HasValue &&
+            !await db.Projects.AnyAsync(p => p.Id == request.LinkedProjectId.Value, ct))
+        {
+            throw new SurveyOperationException($"Dự án #{request.LinkedProjectId} không tồn tại.");
+        }
+        if (request.LinkedOpportunityId.HasValue &&
+            !await db.Opportunities.AnyAsync(o => o.Id == request.LinkedOpportunityId.Value, ct))
+        {
+            throw new SurveyOperationException($"Cơ hội #{request.LinkedOpportunityId} không tồn tại.");
+        }
+
+        entity.Location = location;
+        entity.ConstructionTypeCode = TrimOrNull(request.ConstructionTypeCode);
+        entity.SurveyDate = request.SurveyDate;
+        entity.SurveyorUserId = request.SurveyorUserId;
+        entity.LinkedProjectId = request.LinkedProjectId;
+        entity.LinkedOpportunityId = request.LinkedOpportunityId;
+        entity.Note = TrimOrNull(request.Note);
+        entity.UpdatedByUserId = callerUserId;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Survey {Id} updated by user {UserId}", id, callerUserId);
+        return await GetAsync(id, ct);
+    }
+
+    // ------------------------------ Delete ----------------------------------
+
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        var entity = await db.Surveys.FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (entity is null) return false;
+
+        // Guard once the row has hit Drive so the audit trail is preserved.
+        // NIH-100 AC #7 spells this out for media ("chỉ được thêm, không xoá
+        // sau khi đã đồng bộ Drive"); we apply the same discipline to the
+        // parent survey so a synced record cannot silently disappear.
+        if (entity.DriveSyncStatus != SurveyDriveSyncStatus.NotSynced)
+        {
+            throw new SurveyOperationException("Chỉ có thể xoá phiếu khảo sát khi chưa đồng bộ Drive.");
+        }
+
+        db.Surveys.Remove(entity);
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Survey {Id} deleted", id);
+        return true;
+    }
+
+    // ------------------------------ Helpers ---------------------------------
+
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private static SurveyResponse Map(Survey s, string? constructionTypeLabel) => new()
