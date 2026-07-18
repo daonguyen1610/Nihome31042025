@@ -106,6 +106,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDesignProjectService, DesignProjectService>();
         services.AddScoped<IPermitChecklistService, PermitChecklistService>();
         services.AddScoped<IConceptOptionService, ConceptOptionService>();
+        services.AddScoped<IBasicDesignDocService, BasicDesignDocService>();
         services.AddScoped<HostedImageService>();
 
         // Content services

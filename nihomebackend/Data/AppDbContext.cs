@@ -78,6 +78,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<ConceptOption> ConceptOptions => Set<ConceptOption>();
 
+    public DbSet<BasicDesignDoc> BasicDesignDocs => Set<BasicDesignDoc>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -851,6 +853,32 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.HasIndex(c => c.DesignProjectId);
             b.HasIndex(c => c.Status);
+        });
+
+        modelBuilder.Entity<BasicDesignDoc>(b =>
+        {
+            b.ToTable("basic_design_docs");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.DisciplineCode).HasMaxLength(60).IsRequired();
+            b.Property(d => d.DocumentCode).HasMaxLength(60).IsRequired();
+            b.Property(d => d.Title).HasMaxLength(300).IsRequired();
+            b.Property(d => d.Description).HasMaxLength(4000);
+            b.Property(d => d.Note).HasMaxLength(4000);
+            b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(d => d.DesignProject)
+                .WithMany()
+                .HasForeignKey(d => d.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(d => d.Owner)
+                .WithMany()
+                .HasForeignKey(d => d.OwnerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(d => d.DesignProjectId);
+            b.HasIndex(d => new { d.DesignProjectId, d.DocumentCode }).IsUnique();
+            b.HasIndex(d => d.DisciplineCode);
+            b.HasIndex(d => d.Status);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

@@ -1,0 +1,58 @@
+[
+  { "key": "basicDesign.title", "category": "basicDesign", "vi": "Hồ sơ Basic Design", "en": "Basic Design documents", "zh": "基本设计文档", "ja": "基本設計ドキュメント" },
+  { "key": "basicDesign.empty", "category": "basicDesign", "vi": "Chưa có hồ sơ Basic Design nào cho dự án này.", "en": "No Basic Design documents yet.", "zh": "该项目尚无基本设计文档。", "ja": "基本設計ドキュメントはまだありません。" },
+  { "key": "basicDesign.locked", "category": "basicDesign", "vi": "Dự án chưa ở giai đoạn Basic Design. Hãy chốt phương án Concept trước.", "en": "Project is not at the Basic Design stage yet. Finalize a Concept option first.", "zh": "项目尚未进入基本设计阶段。请先确认方案设计选项。", "ja": "案件は基本設計段階に達していません。先にコンセプト案を確定してください。" },
+  { "key": "basicDesign.lockedShop", "category": "basicDesign", "vi": "Dự án đã chuyển sang Shop Drawing — hồ sơ Basic Design chỉ đọc.", "en": "Project has moved to Shop Drawing — Basic Design documents are read-only.", "zh": "项目已进入施工图阶段——基本设计文档只读。", "ja": "案件は施工図段階に移行しました — 基本設計ドキュメントは読み取り専用です。" },
+
+  { "key": "basicDesign.new", "category": "basicDesign", "vi": "Tạo bản vẽ", "en": "New document", "zh": "新建文档", "ja": "新規ドキュメント" },
+  { "key": "basicDesign.edit", "category": "basicDesign", "vi": "Chỉnh sửa bản vẽ", "en": "Edit document", "zh": "编辑文档", "ja": "ドキュメントを編集" },
+  { "key": "basicDesign.created", "category": "basicDesign", "vi": "Đã tạo bản vẽ", "en": "Document created", "zh": "已创建文档", "ja": "ドキュメントを作成しました" },
+  { "key": "basicDesign.updated", "category": "basicDesign", "vi": "Đã cập nhật bản vẽ", "en": "Document updated", "zh": "已更新文档", "ja": "ドキュメントを更新しました" },
+  { "key": "basicDesign.deleted", "category": "basicDesign", "vi": "Đã xoá bản vẽ", "en": "Document deleted", "zh": "已删除文档", "ja": "ドキュメントを削除しました" },
+  { "key": "basicDesign.transitioned", "category": "basicDesign", "vi": "Đã cập nhật trạng thái bản vẽ", "en": "Document status updated", "zh": "已更新文档状态", "ja": "ドキュメントの状態を更新しました" },
+
+  { "key": "basicDesign.field.discipline", "category": "basicDesign", "vi": "Bộ môn", "en": "Discipline", "zh": "专业", "ja": "分野" },
+  { "key": "basicDesign.field.documentCode", "category": "basicDesign", "vi": "Mã bản vẽ", "en": "Document code", "zh": "文档编号", "ja": "ドキュメント番号" },
+  { "key": "basicDesign.field.title", "category": "basicDesign", "vi": "Tên bản vẽ", "en": "Title", "zh": "标题", "ja": "タイトル" },
+  { "key": "basicDesign.field.description", "category": "basicDesign", "vi": "Mô tả", "en": "Description", "zh": "描述", "ja": "説明" },
+  { "key": "basicDesign.field.owner", "category": "basicDesign", "vi": "Người phụ trách", "en": "Owner", "zh": "负责人", "ja": "担当者" },
+  { "key": "basicDesign.field.status", "category": "basicDesign", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "状態" },
+  { "key": "basicDesign.field.note", "category": "basicDesign", "vi": "Ghi chú", "en": "Note", "zh": "备注", "ja": "備考" },
+  { "key": "basicDesign.field.updatedAt", "category": "basicDesign", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+
+  { "key": "basicDesign.status.InProgress", "category": "basicDesign", "vi": "Đang thiết kế", "en": "In progress", "zh": "设计中", "ja": "作成中" },
+  { "key": "basicDesign.status.SubmittedForReview", "category": "basicDesign", "vi": "Đã submit review", "en": "Submitted for review", "zh": "提交审核", "ja": "レビュー中" },
+  { "key": "basicDesign.status.InternallyApproved", "category": "basicDesign", "vi": "Đã duyệt nội bộ", "en": "Internally approved", "zh": "内部已批准", "ja": "社内承認済み" },
+  { "key": "basicDesign.status.SubmittedForPermit", "category": "basicDesign", "vi": "Đã submit xin phép", "en": "Submitted for permit", "zh": "已申报许可", "ja": "許可申請済み" },
+  { "key": "basicDesign.status.PermitApproved", "category": "basicDesign", "vi": "Đã cấp phép", "en": "Permit approved", "zh": "许可已批准", "ja": "許可取得済み" },
+  { "key": "basicDesign.status.Rejected", "category": "basicDesign", "vi": "Từ chối", "en": "Rejected", "zh": "已拒绝", "ja": "却下" },
+
+  { "key": "basicDesign.action.sendReview", "category": "basicDesign", "vi": "Gửi duyệt nội bộ", "en": "Send for review", "zh": "提交审核", "ja": "レビュー依頼" },
+  { "key": "basicDesign.action.approve", "category": "basicDesign", "vi": "Duyệt nội bộ", "en": "Approve", "zh": "批准", "ja": "承認" },
+  { "key": "basicDesign.action.submitPermit", "category": "basicDesign", "vi": "Nộp xin phép", "en": "Submit for permit", "zh": "申报许可", "ja": "許可申請" },
+  { "key": "basicDesign.action.markPermitApproved", "category": "basicDesign", "vi": "Đánh dấu đã cấp phép", "en": "Mark permit approved", "zh": "标记为许可通过", "ja": "許可取得済みに変更" },
+  { "key": "basicDesign.action.reject", "category": "basicDesign", "vi": "Từ chối", "en": "Reject", "zh": "拒绝", "ja": "却下" },
+  { "key": "basicDesign.action.backToDraft", "category": "basicDesign", "vi": "Về Đang thiết kế", "en": "Back to In progress", "zh": "返回设计中", "ja": "作成中に戻す" },
+  { "key": "basicDesign.action.delete", "category": "basicDesign", "vi": "Xoá bản vẽ", "en": "Delete", "zh": "删除", "ja": "削除" },
+
+  { "key": "basicDesign.form.hint", "category": "basicDesign", "vi": "Điền tên bản vẽ + chọn bộ môn. Mã bản vẽ (VD KT-BD-001) sinh tự động theo bộ môn.", "en": "Fill in the title + pick the discipline. The drawing code (e.g. KT-BD-001) is generated automatically per discipline.", "zh": "填写标题并选择专业。文档编号（例如 KT-BD-001）按专业自动生成。", "ja": "タイトルを入力し分野を選択します。ドキュメント番号（例：KT-BD-001）は分野ごとに自動採番されます。" },
+  { "key": "basicDesign.form.disciplinePlaceholder", "category": "basicDesign", "vi": "Chọn bộ môn", "en": "Pick a discipline", "zh": "选择专业", "ja": "分野を選択" },
+  { "key": "basicDesign.form.ownerNone", "category": "basicDesign", "vi": "Chưa gán người phụ trách", "en": "Unassigned", "zh": "未指派", "ja": "未割当" },
+  { "key": "basicDesign.form.titleRequired", "category": "basicDesign", "vi": "Tên bản vẽ là bắt buộc.", "en": "Title is required.", "zh": "标题为必填项。", "ja": "タイトルは必須です。" },
+  { "key": "basicDesign.form.disciplineRequired", "category": "basicDesign", "vi": "Vui lòng chọn bộ môn.", "en": "Please pick a discipline.", "zh": "请选择专业。", "ja": "分野を選択してください。" },
+
+  { "key": "basicDesign.filter.allDisciplines", "category": "basicDesign", "vi": "Tất cả bộ môn", "en": "All disciplines", "zh": "全部专业", "ja": "すべての分野" },
+  { "key": "basicDesign.filter.allStatuses", "category": "basicDesign", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべての状態" },
+  { "key": "basicDesign.filter.search", "category": "basicDesign", "vi": "Tìm mã hoặc tên bản vẽ...", "en": "Search by code or title...", "zh": "按编号或标题搜索...", "ja": "番号またはタイトルで検索..." },
+
+  { "key": "basicDesign.readiness.title", "category": "basicDesign", "vi": "Sẵn sàng chuyển Shop Drawing", "en": "Ready for Shop Drawing", "zh": "准备转施工图", "ja": "施工図移行の準備" },
+  { "key": "basicDesign.readiness.hint", "category": "basicDesign", "vi": "Cần ≥1 hồ sơ Đã duyệt nội bộ cho mỗi bộ môn: Kiến trúc · Kết cấu · MEP.", "en": "Requires ≥1 Internally Approved document per discipline: Architecture · Structure · MEP.", "zh": "每个专业需 ≥1 份内部已批准文档：建筑·结构·机电。", "ja": "分野ごと（建築・構造・MEP）に社内承認済みドキュメントが 1 件以上必要です。" },
+  { "key": "basicDesign.readiness.approved", "category": "basicDesign", "vi": "Đã duyệt", "en": "Approved", "zh": "已批准", "ja": "承認済" },
+  { "key": "basicDesign.readiness.missing", "category": "basicDesign", "vi": "Chưa duyệt", "en": "Missing", "zh": "未批准", "ja": "未承認" },
+  { "key": "basicDesign.readiness.unlock", "category": "basicDesign", "vi": "Mở khoá Shop Drawing", "en": "Unlock Shop Drawing", "zh": "解锁施工图", "ja": "施工図を解放" },
+  { "key": "basicDesign.readiness.unlocked", "category": "basicDesign", "vi": "Đã mở khoá Shop Drawing. Dự án đã chuyển giai đoạn.", "en": "Shop Drawing unlocked. Project stage advanced.", "zh": "已解锁施工图，项目阶段已更新。", "ja": "施工図が解放され、案件段階が進みました。" },
+
+  { "key": "basicDesign.delete.confirmTitle", "category": "basicDesign", "vi": "Xoá bản vẽ?", "en": "Delete document?", "zh": "删除文档？", "ja": "ドキュメントを削除しますか？" },
+  { "key": "basicDesign.delete.confirmBody", "category": "basicDesign", "vi": "Chỉ xoá được \"{code}\" khi còn ở trạng thái Đang thiết kế. Không thể hoàn tác.", "en": "\"{code}\" can only be deleted while still In Progress. This cannot be undone.", "zh": "仅在设计中状态可删除“{code}”。此操作无法撤销。", "ja": "「{code}」は作成中の状態のみ削除できます。取り消せません。" },
+  { "key": "basicDesign.delete.confirm", "category": "basicDesign", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
+]

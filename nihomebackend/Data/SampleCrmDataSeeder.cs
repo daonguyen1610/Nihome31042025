@@ -38,6 +38,7 @@ public static class SampleCrmDataSeeder
         SeedDesignProjects(db, owner, now);
         SeedPermitChecklists(db, owner, now);
         SeedConceptOptions(db, owner, now);
+        SeedBasicDesignDocs(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1497,6 +1498,59 @@ public static class SampleCrmDataSeeder
                 OwnerUserId = owner.Id,
                 PresentedAt = presented ? now.AddDays(-daysAgo) : null,
                 Status = status,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-daysAgo - 3),
+                UpdatedAt = now.AddDays(-daysAgo),
+            });
+        }
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Seed a handful of Basic Design documents on the first design
+    /// project that is at the BasicDesign stage so the NIH-115 tab has
+    /// data on a fresh DB. Two disciplines already reach
+    /// <c>InternallyApproved</c>; the third stays In Progress so the
+    /// readiness gate is a partial-not-yet-ready state (exercises both
+    /// UI paths). Idempotent — guarded on the "Sample" marker in Title.
+    /// </summary>
+    private static void SeedBasicDesignDocs(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_BD]";
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.BasicDesign)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+        if (db.BasicDesignDocs.Any(d => d.DesignProjectId == project.Id
+                                     && d.Note != null
+                                     && d.Note.StartsWith(SampleMarker))) return;
+
+        var seeds = new (string Discipline, string Prefix, string Title, BasicDesignDocStatus Status, int DaysAgo)[]
+        {
+            ("architecture", "KT-BD",  "Mặt bằng tầng 1 — Phương án chính thức",  BasicDesignDocStatus.InternallyApproved, 4),
+            ("architecture", "KT-BD",  "Mặt đứng chính — Trục A-M",                BasicDesignDocStatus.SubmittedForReview, 2),
+            ("structure",    "KC-BD",  "Kết cấu móng cọc — Bản vẽ tổng thể",       BasicDesignDocStatus.InternallyApproved, 6),
+            ("mep",          "MEP-BD", "Hệ thống điện — Sơ đồ nguyên lý",          BasicDesignDocStatus.InProgress,         3),
+        };
+
+        var perDisciplineSeq = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (discipline, prefix, title, status, daysAgo) in seeds)
+        {
+            perDisciplineSeq.TryGetValue(discipline, out var current);
+            perDisciplineSeq[discipline] = current + 1;
+            var seq = perDisciplineSeq[discipline];
+            db.BasicDesignDocs.Add(new BasicDesignDoc
+            {
+                DesignProjectId = project.Id,
+                DisciplineCode = discipline,
+                DocumentCode = $"{prefix}-{seq:D3}",
+                Title = title,
+                OwnerUserId = owner.Id,
+                Status = status,
+                Note = $"{SampleMarker} Sample basic design document.",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-daysAgo - 3),

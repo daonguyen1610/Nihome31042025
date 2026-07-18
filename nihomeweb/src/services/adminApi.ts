@@ -1716,6 +1716,86 @@ export interface TransitionConceptOptionStatusRequest {
   status: ConceptOptionStatus;
 }
 
+// ─── Basic Design docs (NIH-115) ────────────────────────
+
+export type BasicDesignDocStatus =
+  | "InProgress"
+  | "SubmittedForReview"
+  | "InternallyApproved"
+  | "SubmittedForPermit"
+  | "PermitApproved"
+  | "Rejected";
+
+export const BASIC_DESIGN_DOC_STATUSES: BasicDesignDocStatus[] = [
+  "InProgress",
+  "SubmittedForReview",
+  "InternallyApproved",
+  "SubmittedForPermit",
+  "PermitApproved",
+  "Rejected",
+];
+
+export interface BasicDesignDocResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  disciplineCode: string;
+  disciplineLabel?: string | null;
+  documentCode: string;
+  title: string;
+  description?: string | null;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  status: BasicDesignDocStatus;
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BasicDesignReadiness {
+  requiredDisciplineCodes: string[];
+  internallyApprovedDisciplineCodes: string[];
+  readyForShopDrawing: boolean;
+}
+
+export interface BasicDesignDocListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: BasicDesignDocResponse[];
+  readiness: BasicDesignReadiness;
+}
+
+export interface BasicDesignDocListParams {
+  designProjectId?: number;
+  disciplineCode?: string;
+  status?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateBasicDesignDocRequest {
+  designProjectId: number;
+  disciplineCode: string;
+  title: string;
+  description?: string | null;
+  ownerUserId?: number | null;
+  note?: string | null;
+}
+
+export interface UpdateBasicDesignDocRequest {
+  disciplineCode: string;
+  title: string;
+  description?: string | null;
+  ownerUserId?: number | null;
+  note?: string | null;
+}
+
+export interface TransitionBasicDesignDocStatusRequest {
+  status: BasicDesignDocStatus;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2358,6 +2438,31 @@ export const adminApi = {
     api.delete(`/concept-options/${id}`),
   transitionConceptOption: (id: number, body: TransitionConceptOptionStatusRequest) =>
     api.post<ConceptOptionResponse>(`/concept-options/${id}/status`, body),
+
+  // Basic Design docs (NIH-115)
+  listBasicDesignDocs: (params: BasicDesignDocListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.disciplineCode) q.append("disciplineCode", params.disciplineCode);
+    if (params.status) q.append("status", params.status);
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<BasicDesignDocListResponse>(`/basic-design-docs${qs ? `?${qs}` : ""}`);
+  },
+  getBasicDesignDoc: (id: number) =>
+    api.get<BasicDesignDocResponse>(`/basic-design-docs/${id}`),
+  createBasicDesignDoc: (body: CreateBasicDesignDocRequest) =>
+    api.post<BasicDesignDocResponse>("/basic-design-docs", body),
+  updateBasicDesignDoc: (id: number, body: UpdateBasicDesignDocRequest) =>
+    api.put<BasicDesignDocResponse>(`/basic-design-docs/${id}`, body),
+  deleteBasicDesignDoc: (id: number) =>
+    api.delete(`/basic-design-docs/${id}`),
+  transitionBasicDesignDoc: (id: number, body: TransitionBasicDesignDocStatusRequest) =>
+    api.post<BasicDesignDocResponse>(`/basic-design-docs/${id}/status`, body),
+  unlockShopDrawing: (designProjectId: number) =>
+    api.post<DesignProjectResponse>(`/basic-design-docs/design-project/${designProjectId}/unlock-shop-drawing`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
