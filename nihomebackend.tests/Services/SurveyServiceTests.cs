@@ -244,6 +244,52 @@ public class SurveyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateAsync_UnknownLinkedProject_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var req = ValidUpdate(created.Id);
+        req.LinkedProjectId = 99999;
+        await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(created.Id, req, _userId));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownLinkedOpportunity_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var req = ValidUpdate(created.Id);
+        req.LinkedOpportunityId = 99999;
+        await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(created.Id, req, _userId));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ClearsOptionalFields_WhenNullPassed()
+    {
+        // Seed with a construction type + note so we can prove they are
+        // cleared by a subsequent update that omits both.
+        var initial = ValidCreate();
+        initial.Note = "some note";
+        var created = await _sut.CreateAsync(initial, _userId);
+        Assert.Equal("residential", created.ConstructionTypeCode);
+        Assert.Equal("some note", created.Note);
+
+        var updated = await _sut.UpdateAsync(created.Id, new UpdateSurveyRequest
+        {
+            Location = created.Location,
+            SurveyDate = created.SurveyDate,
+            ConstructionTypeCode = null,
+            SurveyorUserId = null,
+            Note = null,
+        }, _userId);
+
+        Assert.NotNull(updated);
+        Assert.Null(updated!.ConstructionTypeCode);
+        Assert.Null(updated.SurveyorUserId);
+        Assert.Null(updated.Note);
+    }
+
+    [Fact]
     public async Task DeleteAsync_NotSynced_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
