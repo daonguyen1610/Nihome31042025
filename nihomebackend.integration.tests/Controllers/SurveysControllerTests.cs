@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -108,6 +109,97 @@ public class SurveysControllerTests : IntegrationTestBase
         {
             arr[i].GetProperty("constructionTypeCode").GetString().Should().Be("commercial");
         }
+    }
+
+    // ---------- NIH-100 update / delete ----------
+
+    [Fact]
+    public async Task Update_HappyPath_ReturnsOk()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateSurveyAsync("Old location " + Guid.NewGuid().ToString("N")[..4], "residential");
+
+        var res = await Client.PutAsJsonAsync($"/api/surveys/{id}", new
+        {
+            location = "Updated location",
+            constructionTypeCode = "commercial",
+            surveyDate = DateTime.UtcNow.AddDays(-2),
+            note = "Ghi chú",
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("location").GetString().Should().Be("Updated location");
+        body.GetProperty("constructionTypeCode").GetString().Should().Be("commercial");
+        body.GetProperty("note").GetString().Should().Be("Ghi chú");
+    }
+
+    [Fact]
+    public async Task Update_UnknownId_Is404()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var res = await Client.PutAsJsonAsync("/api/surveys/9999999", new
+        {
+            location = "x",
+            constructionTypeCode = "residential",
+            surveyDate = DateTime.UtcNow,
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Update_InvalidConstructionType_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateSurveyAsync("Bad update", "residential");
+        var res = await Client.PutAsJsonAsync($"/api/surveys/{id}", new
+        {
+            location = "Bad update",
+            constructionTypeCode = "definitely-not-real",
+            surveyDate = DateTime.UtcNow,
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Warehouse_CannotUpdate()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateSurveyAsync("SM created", "residential");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var res = await Client.PutAsJsonAsync($"/api/surveys/{id}", new
+        {
+            location = "should be blocked",
+            constructionTypeCode = "residential",
+            surveyDate = DateTime.UtcNow,
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_NotSynced_Succeeds()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateSurveyAsync("Delete me", "residential");
+        (await Client.DeleteAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_AfterSynced_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateSurveyAsync("Cannot delete", "residential");
+        // Simulate a synced row by touching the DB directly — the write side
+        // to flip DriveSyncStatus ships with NIH-101, so we shortcut here.
+        await WithDbAsync(async db =>
+        {
+            var row = await db.Surveys.FirstAsync(s => s.Id == id);
+            row.DriveSyncStatus = NihomeBackend.Models.SurveyDriveSyncStatus.Synced;
+            await db.SaveChangesAsync();
+        });
+
+        (await Client.DeleteAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     private async Task<int> CreateSurveyAsync(string location, string type)

@@ -12,9 +12,9 @@ public class SurveyOperationException(string message) : Exception(message)
 }
 
 /// <summary>
-/// Survey (Phiếu khảo sát) service. NIH-99 ships the list + get slice —
-/// create / update / delete land with NIH-100, detail-page workflow with
-/// NIH-101.
+/// Survey (Phiếu khảo sát) service. NIH-99 ships the list + get slice;
+/// NIH-100 layers full CRUD (this file) on top. Detail-page workflow
+/// (media, drive-sync polling) lands with NIH-101.
 /// </summary>
 public interface ISurveyService
 {
@@ -23,4 +23,21 @@ public interface ISurveyService
     Task<SurveyResponse?> GetAsync(int id, CancellationToken ct = default);
 
     Task<SurveyResponse> CreateAsync(CreateSurveyRequest request, int callerUserId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Update a survey. Every text field on the request is applied; the
+    /// caller is expected to send the full projection. Media / drive-sync
+    /// fields are managed by NIH-101 endpoints, not by this write path.
+    /// Returns <c>null</c> when the row does not exist.
+    /// </summary>
+    Task<SurveyResponse?> UpdateAsync(int id, UpdateSurveyRequest request, int callerUserId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Delete a survey. Guarded once the row has hit Drive so the audit
+    /// trail is preserved — the service throws
+    /// <see cref="SurveyOperationException"/> when
+    /// <c>DriveSyncStatus != NotSynced</c>. Returns <c>false</c> when the
+    /// row does not exist.
+    /// </summary>
+    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
 }
