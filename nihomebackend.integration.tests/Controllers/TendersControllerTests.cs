@@ -1,14 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Net.Http.Headers;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
 /// <summary>
-/// End-to-end coverage for <c>TendersController</c> (NIH-95 / NIH-96):
-/// RBAC gating, create → auto-checklist, deadline validation, per-status
-/// edit rules, delete guard for submitted tenders. Result transition
-/// workflow (NIH-97) is not covered here — that ships in a follow-up
-/// slice.
+/// End-to-end coverage for <c>TendersController</c> — CRUD (NIH-95/96) plus
+/// the NIH-97 detail-page workflow (checklist inline-edit, library attach,
+/// mark won / mark lost, timeline).
 /// </summary>
 public class TendersControllerTests : IntegrationTestBase
 {
@@ -168,4 +169,256 @@ public class TendersControllerTests : IntegrationTestBase
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
+
+    // ---------- NIH-97 checklist inline-edit ----------
+
+    [Fact]
+    public async Task PatchChecklist_ChangesStatusAndBumpsPercent()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(id);
+
+        var res = await Client.PatchAsJsonAsync($"/api/tenders/{id}/checklist/{itemId}", new
+        {
+            status = "Done",
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("checklistCompletionPercent").GetInt32().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task PatchChecklist_InvalidStatus_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(id);
+
+        var res = await Client.PatchAsJsonAsync($"/api/tenders/{id}/checklist/{itemId}", new
+        {
+            status = "Not-A-Status",
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task PatchChecklist_UnknownItem_Is404()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateTenderAsync();
+        var res = await Client.PatchAsJsonAsync($"/api/tenders/{id}/checklist/9999", new { status = "Done" });
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // ---------- NIH-97 library attach ----------
+
+    [Fact]
+    public async Task AttachFromLibrary_HappyPath_CopiesFileMetadata()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var docId = await CreateCapabilityDocumentAsync();
+
+        var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/checklist/attach-from-library", new
+        {
+            items = new[]
+            {
+                new { checklistItemId = itemId, capabilityDocumentId = docId },
+            },
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        var items = body.GetProperty("checklistItems");
+        var enumerator = items.EnumerateArray();
+        var target = enumerator.First(i => i.GetProperty("id").GetInt32() == itemId);
+        target.GetProperty("originalFileName").GetString().Should().NotBeNullOrEmpty();
+        target.GetProperty("status").GetString().Should().Be("Done");
+    }
+
+    [Fact]
+    public async Task AttachFromLibrary_UnknownDocument_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId);
+
+        var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/checklist/attach-from-library", new
+        {
+            items = new[] { new { checklistItemId = itemId, capabilityDocumentId = 9_999_999 } },
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ---------- NIH-97 mark-won / mark-lost ----------
+
+    [Fact]
+    public async Task MarkWon_AsSalesManager_SetsWonAndOpportunity()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var oppId = await CreateOpportunityAsync();
+
+        var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new
+        {
+            opportunityId = oppId,
+            note = "Ký hôm nay",
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("status").GetString().Should().Be("Won");
+        body.GetProperty("wonOpportunityId").GetInt32().Should().Be(oppId);
+    }
+
+    [Fact]
+    public async Task MarkWon_AsSale_IsForbidden()
+    {
+        // Regular SALE role should not carry crm.tenders.mark-result.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var tenderId = await CreateTenderAsync();
+        var oppId = await CreateOpportunityAsync();
+
+        var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new
+        {
+            opportunityId = oppId,
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task MarkLost_HappyPath_SetsLostAndReason()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var reasonCode = await FirstOpportunityLostReasonAsync();
+
+        var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-lost", new
+        {
+            reasonCode,
+            note = "Cạnh tranh giá",
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("status").GetString().Should().Be("Lost");
+        body.GetProperty("lostReasonCode").GetString().Should().Be(reasonCode);
+    }
+
+    [Fact]
+    public async Task MarkLost_UnknownReason_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-lost", new
+        {
+            reasonCode = "definitely-not-a-real-reason",
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task MarkWon_AfterAlreadyWon_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var oppId = await CreateOpportunityAsync();
+        (await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new { opportunityId = oppId }))
+            .EnsureSuccessStatusCode();
+
+        var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new { opportunityId = oppId });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    // ---------- NIH-97 timeline ----------
+
+    [Fact]
+    public async Task Timeline_ReturnsAuditRowsForTender()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        // Trigger at least one auditable action.
+        await Client.PutAsJsonAsync($"/api/tenders/{tenderId}", new
+        {
+            name = "Renamed",
+            submissionDeadline = DateTime.UtcNow.AddDays(20),
+            note = "note",
+        });
+
+        var res = await Client.GetAsync($"/api/tenders/{tenderId}/timeline");
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Audit log flush is queued so the array may be empty in-test —
+        // shape verification is what we assert here (matches contracts).
+        (await ReadJsonAsync(res)).ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+    }
+
+    [Fact]
+    public async Task Timeline_UnknownTender_Is404()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.GetAsync("/api/tenders/9999999/timeline")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // ---------- helpers ----------
+
+    private async Task<int> FirstChecklistItemIdAsync(int tenderId)
+    {
+        var res = await Client.GetAsync($"/api/tenders/{tenderId}");
+        res.EnsureSuccessStatusCode();
+        var body = await ReadJsonAsync(res);
+        var items = body.GetProperty("checklistItems");
+        items.GetArrayLength().Should().BeGreaterThan(0);
+        return items[0].GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateOpportunityAsync()
+    {
+        var customerId = await CreateCustomerAsync();
+        var res = await Client.PostAsJsonAsync("/api/opportunities", new
+        {
+            name = "Opp " + Guid.NewGuid().ToString("N")[..6],
+            customerId,
+            estimatedValue = 1_000_000m,
+            winProbability = 40,
+        });
+        res.EnsureSuccessStatusCode();
+        return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateCapabilityDocumentAsync()
+    {
+        // The controller create path requires a pre-uploaded file. For
+        // this test we just care that the tender attach can copy metadata
+        // from an existing row, so we seed the DB directly and skip the
+        // physical file upload.
+        return await WithDbAsync(async db =>
+        {
+            var tag = await db.MasterDataOptions
+                .Where(o => o.Category == "capability_document_tag" && o.IsActive)
+                .OrderBy(o => o.SortOrder)
+                .FirstAsync();
+            var doc = new CapabilityDocument
+            {
+                Name = "Test doc " + Guid.NewGuid().ToString("N")[..6],
+                TagCode = tag.Code,
+                FilePath = "/files/capability/test-" + Guid.NewGuid().ToString("N") + ".pdf",
+                OriginalFileName = "seeded.pdf",
+                FileSize = 1024,
+                ContentType = "application/pdf",
+                CurrentVersion = 1,
+            };
+            db.CapabilityDocuments.Add(doc);
+            await db.SaveChangesAsync();
+            return doc.Id;
+        });
+    }
+
+    private async Task<string> FirstOpportunityLostReasonAsync() =>
+        await WithDbAsync(async db =>
+        {
+            var opt = await db.MasterDataOptions
+                .Where(o => o.Category == "opportunity_lost_reason" && o.IsActive)
+                .OrderBy(o => o.SortOrder)
+                .FirstAsync();
+            return opt.Code;
+        });
 }

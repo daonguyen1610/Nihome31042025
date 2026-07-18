@@ -253,6 +253,259 @@ public class TenderService(
         return true;
     }
 
+    // ------------------------------ NIH-97 Detail-page workflow ------------------------------
+
+    public async Task<TenderResponse?> UpdateChecklistItemAsync(int tenderId, int itemId,
+        UpdateTenderChecklistItemRequest request, int callerUserId, CancellationToken ct = default)
+    {
+        var item = await db.TenderChecklistItems
+            .FirstOrDefaultAsync(i => i.Id == itemId && i.TenderId == tenderId, ct);
+        if (item is null) return null;
+
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            if (!Enum.TryParse<TenderChecklistItemStatus>(request.Status, ignoreCase: true, out var next))
+            {
+                throw new TenderOperationException($"Trạng thái checklist '{request.Status}' không hợp lệ.");
+            }
+            item.Status = next;
+        }
+
+        if (request.ClearOwner)
+        {
+            item.OwnerUserId = null;
+        }
+        else if (request.OwnerUserId.HasValue)
+        {
+            if (!await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            {
+                throw new TenderOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+            }
+            item.OwnerUserId = request.OwnerUserId.Value;
+        }
+
+        if (request.ClearInternalDeadline)
+        {
+            item.InternalDeadline = null;
+        }
+        else if (request.InternalDeadline.HasValue)
+        {
+            item.InternalDeadline = request.InternalDeadline.Value;
+        }
+
+        var now = DateTime.UtcNow;
+        item.UpdatedAt = now;
+
+        // Bump parent tender's UpdatedAt so list views + optimistic-UI
+        // detect the change without a targeted reload.
+        var tender = await db.Tenders.FirstAsync(t => t.Id == tenderId, ct);
+        tender.UpdatedAt = now;
+        tender.UpdatedByUserId = callerUserId;
+
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Tender {TenderId} checklist item {ItemId} updated by user {UserId}",
+            tenderId, itemId, callerUserId);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,
+        string filePath, string originalFileName, int callerUserId, CancellationToken ct = default)
+    {
+        var item = await db.TenderChecklistItems
+            .FirstOrDefaultAsync(i => i.Id == itemId && i.TenderId == tenderId, ct);
+        if (item is null) return null;
+
+        item.FilePath = filePath;
+        item.OriginalFileName = originalFileName;
+        AutoAdvanceIfUnfinished(item);
+        var now = DateTime.UtcNow;
+        item.UpdatedAt = now;
+
+        var tender = await db.Tenders.FirstAsync(t => t.Id == tenderId, ct);
+        tender.UpdatedAt = now;
+        tender.UpdatedByUserId = callerUserId;
+
+        await db.SaveChangesAsync(ct);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> AttachChecklistFromLibraryAsync(int tenderId,
+        AttachTenderChecklistFromLibraryRequest request, int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        if (tender is null) return null;
+
+        if (request.Items is null || request.Items.Count == 0)
+        {
+            throw new TenderOperationException("Danh sách file cần gán rỗng.");
+        }
+
+        var itemIds = request.Items.Select(i => i.ChecklistItemId).Distinct().ToList();
+        var docIds = request.Items.Select(i => i.CapabilityDocumentId).Distinct().ToList();
+
+        var items = await db.TenderChecklistItems
+            .Where(i => itemIds.Contains(i.Id) && i.TenderId == tenderId)
+            .ToListAsync(ct);
+        if (items.Count != itemIds.Count)
+        {
+            throw new TenderOperationException("Có checklist item không thuộc gói thầu này.");
+        }
+
+        var docs = await db.CapabilityDocuments
+            .Where(d => docIds.Contains(d.Id))
+            .ToDictionaryAsync(d => d.Id, ct);
+        var missingDoc = docIds.FirstOrDefault(id => !docs.ContainsKey(id));
+        if (missingDoc != 0)
+        {
+            throw new TenderOperationException($"Hồ sơ năng lực #{missingDoc} không tồn tại.");
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var pair in request.Items)
+        {
+            var item = items.First(i => i.Id == pair.ChecklistItemId);
+            var doc = docs[pair.CapabilityDocumentId];
+            item.FilePath = doc.FilePath;
+            item.OriginalFileName = doc.OriginalFileName;
+            AutoAdvanceIfUnfinished(item);
+            item.UpdatedAt = now;
+        }
+        tender.UpdatedAt = now;
+        tender.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("Tender {TenderId} attached {Count} library docs by user {UserId}",
+            tenderId, request.Items.Count, callerUserId);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> MarkWonAsync(int tenderId, MarkTenderWonRequest request,
+        int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        if (tender is null) return null;
+
+        GuardNotTerminal(tender);
+
+        if (!await db.Opportunities.AnyAsync(o => o.Id == request.OpportunityId, ct))
+        {
+            throw new TenderOperationException($"Cơ hội #{request.OpportunityId} không tồn tại.");
+        }
+
+        tender.Status = TenderStatus.Won;
+        tender.WonOpportunityId = request.OpportunityId;
+        tender.LostReasonCode = null;
+        tender.LostNote = null;
+        if (!string.IsNullOrWhiteSpace(request.Note))
+        {
+            tender.Note = request.Note.Trim();
+        }
+        var now = DateTime.UtcNow;
+        tender.ClosedAt = now;
+        tender.UpdatedAt = now;
+        tender.UpdatedByUserId = callerUserId;
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Tender {TenderId} marked WON by user {UserId} (opportunity {OppId})",
+            tenderId, callerUserId, request.OpportunityId);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> MarkLostAsync(int tenderId, MarkTenderLostRequest request,
+        int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        if (tender is null) return null;
+
+        GuardNotTerminal(tender);
+
+        var reasonCode = (request.ReasonCode ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(reasonCode))
+        {
+            throw new TenderOperationException("Vui lòng chọn lý do trượt thầu.");
+        }
+
+        // Reasons come from the shared opportunity_lost_reason master data
+        // category so wording stays consistent with the CRM funnel.
+        var reasonExists = await db.MasterDataOptions.AnyAsync(m =>
+            m.Category == "opportunity_lost_reason" && m.Code == reasonCode && m.IsActive, ct);
+        if (!reasonExists)
+        {
+            throw new TenderOperationException($"Lý do '{reasonCode}' không hợp lệ.");
+        }
+
+        tender.Status = TenderStatus.Lost;
+        tender.LostReasonCode = reasonCode;
+        tender.LostNote = TrimOrNull(request.Note);
+        tender.WonOpportunityId = null;
+        var now = DateTime.UtcNow;
+        tender.ClosedAt = now;
+        tender.UpdatedAt = now;
+        tender.UpdatedByUserId = callerUserId;
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Tender {TenderId} marked LOST by user {UserId} (reason={Reason})",
+            tenderId, callerUserId, reasonCode);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<List<TenderTimelineEvent>?> GetTimelineAsync(int tenderId, int limit, CancellationToken ct = default)
+    {
+        var exists = await db.Tenders.AsNoTracking().AnyAsync(t => t.Id == tenderId, ct);
+        if (!exists) return null;
+
+        if (limit < 1) limit = 1;
+        if (limit > 500) limit = 500;
+
+        var idText = tenderId.ToString();
+        var rows = await db.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.ResourceType == "Tender" && a.ResourceId == idText)
+            .OrderByDescending(a => a.CreatedAt)
+            .Take(limit)
+            .Select(a => new
+            {
+                a.Id,
+                a.CreatedAt,
+                a.Action,
+                a.Message,
+                a.ActorUserId,
+                UserName = a.ActorUserId != null
+                    ? db.Users.Where(u => u.Id == a.ActorUserId).Select(u => u.FullName).FirstOrDefault()
+                    : null,
+            })
+            .ToListAsync(ct);
+
+        return rows.Select(a => new TenderTimelineEvent
+        {
+            Id = a.Id,
+            OccurredAt = a.CreatedAt,
+            Action = a.Action,
+            Message = a.Message,
+            UserId = a.ActorUserId,
+            UserName = a.UserName,
+        }).ToList();
+    }
+
+    private static void AutoAdvanceIfUnfinished(TenderChecklistItem item)
+    {
+        // Attaching a file also completes the row when it's still in an
+        // unfinished state — matches the AC "upload file → % checklist tăng".
+        if (item.Status is TenderChecklistItemStatus.NotStarted or TenderChecklistItemStatus.Preparing)
+        {
+            item.Status = TenderChecklistItemStatus.Done;
+        }
+    }
+
+    private static void GuardNotTerminal(Tender tender)
+    {
+        if (tender.Status is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled)
+        {
+            throw new TenderOperationException("Gói thầu đã ở trạng thái kết thúc, không thể đánh dấu lại.");
+        }
+    }
+
     // ------------------------------ Helpers ---------------------------------
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
