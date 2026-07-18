@@ -122,20 +122,19 @@ public class ConceptOptionsController(
     /// server discards sibling options + unlocks the design project's Basic
     /// Design stage; permission-gated on the dedicated
     /// <c>design.concepts.finalize</c> code to match the RBAC catalogue.
+    /// Baseline <c>manage</c> gate keeps the route out of read-only roles.
     /// </summary>
     [HttpPost("{id:int}/status")]
+    [RequirePermission("design.concepts", "manage")]
     public async Task<ActionResult<ConceptOptionResponse>> Transition(
         int id, [FromBody] TransitionConceptOptionStatusRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        // Finalize is a stricter permission; every other transition just
-        // needs manage.
-        var requiredCode = string.Equals(request.Status, "Finalized", StringComparison.OrdinalIgnoreCase)
-            ? "design.concepts.finalize"
-            : "design.concepts.manage";
-        if (!await permissions.HasAsync(userId.Value, requiredCode, ct))
+        // Finalize is a stricter permission on top of manage.
+        if (string.Equals(request.Status, "Finalized", StringComparison.OrdinalIgnoreCase)
+            && !await permissions.HasAsync(userId.Value, "design.concepts.finalize", ct))
         {
             return Forbid();
         }

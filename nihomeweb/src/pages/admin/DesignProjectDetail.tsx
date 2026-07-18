@@ -68,7 +68,10 @@ const AdminDesignProjectDetail = () => {
 
   const fetchProject = useCallback(async () => {
     if (!isValidId) return;
-    setLoading(true);
+    // Only show the full-page spinner on the first load. Later refetches
+    // (e.g. after finalizing a concept option) must keep the current
+    // content on screen so the Tabs component doesn't remount and reset
+    // the selected tab back to Overview.
     setError(null);
     try {
       const { data } = await adminApi.getDesignProject(numericId);

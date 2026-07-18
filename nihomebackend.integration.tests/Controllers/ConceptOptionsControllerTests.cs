@@ -111,6 +111,25 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Transition_Design_CanMoveButNotFinalize()
+    {
+        // DESIGN has design.concepts.{view|manage} but NOT
+        // design.concepts.finalize (per rbac-defaults). Non-Finalize
+        // transitions must pass; Finalize must be blocked with 403.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateDesignProjectAsync();
+        var id = await CreateOptionAsync(projectId);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
+        var toReview = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "PendingInternalReview" });
+        toReview.StatusCode.Should().Be(HttpStatusCode.OK);
+        var toPresented = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "PresentedToClient" });
+        toPresented.StatusCode.Should().Be(HttpStatusCode.OK);
+        var toFinal = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "Finalized" });
+        toFinal.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Delete_PresentedRow_IsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
