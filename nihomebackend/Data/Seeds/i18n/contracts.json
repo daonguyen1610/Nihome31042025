@@ -410,10 +410,10 @@
   {
     "key": "contracts.detail.back",
     "category": "contracts",
-    "vi": "← Quay lại danh sách",
-    "en": "← Back to list",
-    "zh": "← 返回列表",
-    "ja": "← 一覧に戻る"
+    "vi": "Quay lại danh sách",
+    "en": "Back to list",
+    "zh": "返回列表",
+    "ja": "一覧に戻る"
   },
   {
     "key": "contracts.detail.notFound",
