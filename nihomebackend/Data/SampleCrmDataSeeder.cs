@@ -31,7 +31,7 @@ public static class SampleCrmDataSeeder
         SeedCustomers(db, owner, now);
         SeedOpportunities(db, owner, now);
         SeedQuotes(db, owner, now);
-        SeedContracts(db, owner, now);
+        SeedContracts(db, owner, now, webRootPath);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
         SeedTenders(db, owner, now);
     }
@@ -606,7 +606,7 @@ public static class SampleCrmDataSeeder
     /// Uses existing sample customers so the FK is always valid.
     /// Idempotent via the note-marker guard used elsewhere in this file.
     /// </summary>
-    private static void SeedContracts(AppDbContext db, ApplicationUser owner, DateTime now)
+    private static void SeedContracts(AppDbContext db, ApplicationUser owner, DateTime now, string? webRootPath = null)
     {
         var alreadySeeded = db.Contracts.Any(c => c.Note != null && c.Note.StartsWith(SampleContractMarker));
         if (!alreadySeeded)
@@ -615,7 +615,7 @@ public static class SampleCrmDataSeeder
         }
         SeedContractMilestones(db, now);
         SeedContractAppendices(db, owner, now);
-        SeedContractAttachments(db, owner, now);
+        SeedContractAttachments(db, owner, now, webRootPath);
     }
 
     private static void SeedContractHeaders(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -715,18 +715,17 @@ public static class SampleCrmDataSeeder
     }
 
     /// <summary>
-    /// Seed 1 Variation Order per InProgress/Completed sample contract:
-    /// an Approved delta so the header's CurrentValue immediately differs
-    /// from the base Value and reviewers see a realistic amendment row.
-    /// Draft/OnHold contracts get a Submitted VO waiting for approval,
-    /// so the reviewer flow has content on first boot too. Idempotent
-    /// via the VO count check.
+    /// Seed a variety of Variation Orders so every VO status (Draft,
+    /// Submitted, Approved, Rejected) appears on at least one sample
+    /// contract and reviewers land on a realistic mix of pending / decided
+    /// rows. Idempotent — skips a contract that already has any VOs.
     /// </summary>
     private static void SeedContractAppendices(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         var contracts = db.Contracts
             .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker)
                      && c.Status != ContractStatus.Draft)
+            .OrderBy(c => c.Id)
             .ToList();
         foreach (var c in contracts)
         {
@@ -734,27 +733,84 @@ public static class SampleCrmDataSeeder
             switch (c.Status)
             {
                 case ContractStatus.InProgress:
+                    // Two VOs so header currentValue reflects a realistic
+                    // stack, plus a rejected one so reviewers see the
+                    // "Rejected" style out of the box.
+                    db.ContractAppendices.AddRange(
+                        new ContractAppendix
+                        {
+                            ContractId = c.Id,
+                            VoNumber = 1,
+                            Title = "Bổ sung hạng mục vách kính",
+                            Reason = "Khách hàng yêu cầu thêm 2 vách kính cường lực + phụ kiện.",
+                            ValueDelta = 45_000_000m,
+                            Status = ContractAppendixStatus.Approved,
+                            SubmittedAt = now.AddDays(-14),
+                            SubmittedByUserId = owner.Id,
+                            DecidedAt = now.AddDays(-12),
+                            DecidedByUserId = owner.Id,
+                            DecisionNote = "Đã đối chiếu bảng chi phí — chấp thuận.",
+                            CreatedByUserId = owner.Id,
+                            UpdatedByUserId = owner.Id,
+                            CreatedAt = now.AddDays(-16),
+                            UpdatedAt = now.AddDays(-12),
+                        },
+                        new ContractAppendix
+                        {
+                            ContractId = c.Id,
+                            VoNumber = 2,
+                            Title = "Thay đổi màu sơn ngoại thất",
+                            Reason = "Đội thiết kế đề xuất bảng màu mới; chờ Sales Manager duyệt.",
+                            ValueDelta = -8_500_000m,
+                            Status = ContractAppendixStatus.Rejected,
+                            SubmittedAt = now.AddDays(-4),
+                            SubmittedByUserId = owner.Id,
+                            DecidedAt = now.AddDays(-2),
+                            DecidedByUserId = owner.Id,
+                            DecisionNote = "Cần bổ sung mẫu vật liệu trước khi trình lại.",
+                            CreatedByUserId = owner.Id,
+                            UpdatedByUserId = owner.Id,
+                            CreatedAt = now.AddDays(-6),
+                            UpdatedAt = now.AddDays(-2),
+                        });
+                    break;
                 case ContractStatus.Completed:
                     db.ContractAppendices.Add(new ContractAppendix
                     {
                         ContractId = c.Id,
                         VoNumber = 1,
-                        Title = "Bổ sung hạng mục vách kính",
-                        Reason = "Khách hàng yêu cầu thêm 2 vách kính cường lực + phụ kiện.",
-                        ValueDelta = 45_000_000m,
+                        Title = "Nâng cấp hệ thống chiếu sáng",
+                        Reason = "Bổ sung 12 đèn downlight LED theo yêu cầu KH.",
+                        ValueDelta = 18_000_000m,
                         Status = ContractAppendixStatus.Approved,
-                        SubmittedAt = now.AddDays(-14),
+                        SubmittedAt = now.AddDays(-200),
                         SubmittedByUserId = owner.Id,
-                        DecidedAt = now.AddDays(-12),
+                        DecidedAt = now.AddDays(-195),
                         DecidedByUserId = owner.Id,
-                        DecisionNote = "Đã đối chiếu bảng chi phí — chấp thuận.",
+                        DecisionNote = "Đã bàn giao — quyết toán.",
                         CreatedByUserId = owner.Id,
                         UpdatedByUserId = owner.Id,
-                        CreatedAt = now.AddDays(-16),
-                        UpdatedAt = now.AddDays(-12),
+                        CreatedAt = now.AddDays(-205),
+                        UpdatedAt = now.AddDays(-195),
                     });
                     break;
                 case ContractStatus.Signed:
+                    // Signed contracts have a Draft VO so Sales can see
+                    // the editable state on first login.
+                    db.ContractAppendices.Add(new ContractAppendix
+                    {
+                        ContractId = c.Id,
+                        VoNumber = 1,
+                        Title = "Đề xuất bổ sung sàn gỗ tự nhiên",
+                        Reason = "Nháp — đang lấy báo giá vật liệu.",
+                        ValueDelta = 32_000_000m,
+                        Status = ContractAppendixStatus.Draft,
+                        CreatedByUserId = owner.Id,
+                        UpdatedByUserId = owner.Id,
+                        CreatedAt = now.AddDays(-2),
+                        UpdatedAt = now.AddDays(-1),
+                    });
+                    break;
                 case ContractStatus.OnHold:
                     db.ContractAppendices.Add(new ContractAppendix
                     {
@@ -778,15 +834,38 @@ public static class SampleCrmDataSeeder
     }
 
     /// <summary>
-    /// Seed a signed-scan placeholder for every sample contract that has
-    /// moved past Draft. The physical file is NOT created — the seeder
-    /// just registers the metadata pointing at a canonical placeholder
-    /// path (/files/contracts/sample-scan.pdf). This is enough for the FE
-    /// to render the "Bản scan hợp đồng" chip and for the state machine
-    /// (Signed → InProgress) to see the row and allow the transition.
+    /// Seed contract attachments — one signed-scan placeholder for every
+    /// non-Draft sample contract (needed to unlock the Signed→InProgress
+    /// transition), plus a supporting document on InProgress rows so the
+    /// Documents tab shows a realistic mixed list.
+    ///
+    /// When <paramref name="webRootPath"/> is supplied the seeder also
+    /// self-heals a physical placeholder PDF at
+    /// <c>wwwroot/files/contracts/sample-scan.pdf</c> so the download link
+    /// on every seeded scan row actually resolves on a fresh install.
     /// </summary>
-    private static void SeedContractAttachments(AppDbContext db, ApplicationUser owner, DateTime now)
+    private static void SeedContractAttachments(
+        AppDbContext db, ApplicationUser owner, DateTime now, string? webRootPath = null)
     {
+        const string SamplePlaceholderPath = "/files/contracts/sample-scan.pdf";
+        const string SamplePlaceholderName = "sample-scan.pdf";
+        long placeholderSize = 128_000;
+
+        // Phase 1 — self-heal physical placeholder file whenever webRoot is
+        // known. Runs on every boot so wiping the file store rehydrates
+        // without a DB reset.
+        if (!string.IsNullOrEmpty(webRootPath))
+        {
+            var storageDir = Path.Combine(webRootPath, "files", "contracts");
+            Directory.CreateDirectory(storageDir);
+            var fullPath = Path.Combine(storageDir, SamplePlaceholderName);
+            if (!File.Exists(fullPath))
+            {
+                File.WriteAllBytes(fullPath, BuildPlaceholderPdf("Sample signed contract scan"));
+            }
+            placeholderSize = new FileInfo(fullPath).Length;
+        }
+
         var contracts = db.Contracts
             .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker)
                      && c.Status != ContractStatus.Draft)
@@ -794,19 +873,52 @@ public static class SampleCrmDataSeeder
         foreach (var c in contracts)
         {
             if (db.ContractAttachments.Any(a => a.ContractId == c.Id)) continue;
+
             db.ContractAttachments.Add(new ContractAttachment
             {
                 ContractId = c.Id,
                 Kind = ContractAttachmentKind.SignedScan,
-                FilePath = "/files/contracts/sample-scan.pdf",
+                FilePath = SamplePlaceholderPath,
                 OriginalFileName = $"{c.ContractNumber}-scan.pdf",
-                FileSize = 128_000,
+                FileSize = placeholderSize,
                 ContentType = "application/pdf",
                 Label = "Bản scan hợp đồng đã ký",
                 CreatedAt = now.AddDays(-1),
                 UploadedByUserId = owner.Id,
             });
+
+            // Supporting document on InProgress rows so the Documents tab
+            // demonstrates a mixed list + delete flow out of the box.
+            if (c.Status == ContractStatus.InProgress)
+            {
+                db.ContractAttachments.Add(new ContractAttachment
+                {
+                    ContractId = c.Id,
+                    Kind = ContractAttachmentKind.Supporting,
+                    FilePath = SamplePlaceholderPath,
+                    OriginalFileName = $"{c.ContractNumber}-boq.pdf",
+                    FileSize = placeholderSize,
+                    ContentType = "application/pdf",
+                    Label = "Bảng khối lượng chi tiết",
+                    CreatedAt = now.AddHours(-4),
+                    UploadedByUserId = owner.Id,
+                });
+            }
         }
+
+        // Phase 2 — patch FileSize for existing sample rows so they match
+        // the actual placeholder file size (regenerated at boot).
+        if (!string.IsNullOrEmpty(webRootPath))
+        {
+            var existing = db.ContractAttachments
+                .Where(a => a.FilePath == SamplePlaceholderPath && a.FileSize != placeholderSize)
+                .ToList();
+            foreach (var row in existing)
+            {
+                row.FileSize = placeholderSize;
+            }
+        }
+
         db.SaveChanges();
     }
 
