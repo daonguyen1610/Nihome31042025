@@ -102,6 +102,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IContractAttachmentService, ContractAttachmentService>();
         services.AddScoped<ICapabilityDocumentService, CapabilityDocumentService>();
         services.AddScoped<ITenderService, TenderService>();
+        services.AddScoped<ISurveyService, SurveyService>();
         services.AddScoped<HostedImageService>();
 
         // Content services

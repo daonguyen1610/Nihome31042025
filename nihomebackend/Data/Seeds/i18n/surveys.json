@@ -1,0 +1,36 @@
+[
+  { "key": "nav.surveys", "category": "nav", "vi": "Khảo sát", "en": "Surveys", "zh": "勘察", "ja": "調査" },
+
+  { "key": "surveys.title", "category": "surveys", "vi": "Quản lý Phiếu khảo sát", "en": "Survey management", "zh": "勘察记录管理", "ja": "調査記録の管理" },
+  { "key": "surveys.subtitle", "category": "surveys", "vi": "Tra cứu phiếu khảo sát theo dự án, khách hàng và trạng thái đồng bộ Drive.", "en": "Look up surveys by project, customer and Drive sync state.", "zh": "按项目、客户和 Drive 同步状态查询勘察记录。", "ja": "案件・顧客・Drive 同期状態で調査記録を検索します。" },
+  { "key": "surveys.empty", "category": "surveys", "vi": "Chưa có phiếu khảo sát nào.", "en": "No surveys yet.", "zh": "暂无勘察记录。", "ja": "調査記録がまだありません。" },
+  { "key": "surveys.total", "category": "surveys", "vi": "{count} phiếu", "en": "{count} surveys", "zh": "{count} 条", "ja": "{count} 件" },
+  { "key": "surveys.paginationLabel", "category": "surveys", "vi": "Trang {page} / {totalPages}", "en": "Page {page} of {totalPages}", "zh": "第 {page} / {totalPages} 页", "ja": "{page} / {totalPages} ページ" },
+
+  { "key": "surveys.field.code", "category": "surveys", "vi": "Mã phiếu", "en": "Code", "zh": "编号", "ja": "番号" },
+  { "key": "surveys.field.location", "category": "surveys", "vi": "Địa điểm", "en": "Location", "zh": "地点", "ja": "所在地" },
+  { "key": "surveys.field.constructionType", "category": "surveys", "vi": "Loại công trình", "en": "Construction type", "zh": "工程类型", "ja": "工事種別" },
+  { "key": "surveys.field.surveyDate", "category": "surveys", "vi": "Ngày khảo sát", "en": "Survey date", "zh": "勘察日期", "ja": "調査日" },
+  { "key": "surveys.field.surveyor", "category": "surveys", "vi": "Người khảo sát", "en": "Surveyor", "zh": "勘察员", "ja": "調査担当者" },
+  { "key": "surveys.field.linkedProject", "category": "surveys", "vi": "Dự án liên kết", "en": "Linked project", "zh": "关联项目", "ja": "紐付け案件" },
+  { "key": "surveys.field.linkedOpportunity", "category": "surveys", "vi": "Cơ hội liên kết", "en": "Linked opportunity", "zh": "关联机会", "ja": "紐付け商機" },
+  { "key": "surveys.field.projectOrOpportunity", "category": "surveys", "vi": "Dự án / Cơ hội", "en": "Project / Opportunity", "zh": "项目 / 机会", "ja": "案件 / 商機" },
+  { "key": "surveys.field.driveStatus", "category": "surveys", "vi": "Trạng thái Drive", "en": "Drive status", "zh": "Drive 状态", "ja": "Drive 状態" },
+  { "key": "surveys.field.updatedAt", "category": "surveys", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+
+  { "key": "surveys.driveStatus.NotSynced", "category": "surveys", "vi": "Chưa đồng bộ", "en": "Not synced", "zh": "未同步", "ja": "未同期" },
+  { "key": "surveys.driveStatus.Syncing", "category": "surveys", "vi": "Đang đồng bộ", "en": "Syncing", "zh": "同步中", "ja": "同期中" },
+  { "key": "surveys.driveStatus.Synced", "category": "surveys", "vi": "Đã đồng bộ", "en": "Synced", "zh": "已同步", "ja": "同期済み" },
+  { "key": "surveys.driveStatus.Failed", "category": "surveys", "vi": "Lỗi đồng bộ", "en": "Sync failed", "zh": "同步失败", "ja": "同期失敗" },
+
+  { "key": "surveys.filter.search", "category": "surveys", "vi": "Tìm mã phiếu, địa điểm...", "en": "Search by code / location...", "zh": "按编号/地点搜索...", "ja": "番号・所在地で検索..." },
+  { "key": "surveys.filter.allConstructionTypes", "category": "surveys", "vi": "Tất cả loại công trình", "en": "All construction types", "zh": "全部工程类型", "ja": "すべての工事種別" },
+  { "key": "surveys.filter.allSurveyors", "category": "surveys", "vi": "Tất cả người khảo sát", "en": "All surveyors", "zh": "全部勘察员", "ja": "すべての担当者" },
+  { "key": "surveys.filter.allProjects", "category": "surveys", "vi": "Tất cả dự án", "en": "All projects", "zh": "全部项目", "ja": "すべての案件" },
+  { "key": "surveys.filter.allDriveStatuses", "category": "surveys", "vi": "Tất cả trạng thái Drive", "en": "All Drive states", "zh": "全部同步状态", "ja": "すべての Drive 状態" },
+  { "key": "surveys.filter.dateFrom", "category": "surveys", "vi": "Từ ngày", "en": "From", "zh": "起始", "ja": "開始" },
+  { "key": "surveys.filter.dateTo", "category": "surveys", "vi": "Đến ngày", "en": "To", "zh": "结束", "ja": "終了" },
+
+  { "key": "surveys.detail.back", "category": "surveys", "vi": "Quay lại danh sách khảo sát", "en": "Back to surveys", "zh": "返回勘察列表", "ja": "調査一覧へ戻る" },
+  { "key": "surveys.detail.comingSoon", "category": "surveys", "vi": "Trang chi tiết đang được phát triển (NIH-101). Danh sách đầy đủ đã có sẵn.", "en": "Detail page is under development (NIH-101). The full list is already available.", "zh": "详情页正在开发（NIH-101），列表已可用。", "ja": "詳細ページは開発中です（NIH-101）。一覧はすでに利用可能です。" }
+]

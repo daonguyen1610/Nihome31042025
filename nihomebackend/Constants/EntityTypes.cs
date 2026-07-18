@@ -25,4 +25,5 @@ public static class EntityTypes
     public const string Contract = "Contract";
     public const string CapabilityDocument = "CapabilityDocument";
     public const string Tender = "Tender";
+    public const string Survey = "Survey";
 }

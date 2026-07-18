@@ -70,6 +70,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Tender> Tenders => Set<Tender>();
     public DbSet<TenderChecklistItem> TenderChecklistItems => Set<TenderChecklistItem>();
 
+    public DbSet<Survey> Surveys => Set<Survey>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -728,6 +730,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(i => i.TenderId);
             b.HasIndex(i => new { i.TenderId, i.SortOrder });
+        });
+
+        modelBuilder.Entity<Survey>(b =>
+        {
+            b.ToTable("surveys");
+            b.HasKey(s => s.Id);
+            b.Property(s => s.Code).HasMaxLength(40).IsRequired();
+            b.HasIndex(s => s.Code).IsUnique();
+            b.Property(s => s.Location).HasMaxLength(300).IsRequired();
+            b.Property(s => s.ConstructionTypeCode).HasMaxLength(80);
+            b.Property(s => s.Note).HasMaxLength(4000);
+            b.Property(s => s.DriveSyncStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(s => s.DriveSyncError).HasMaxLength(1000);
+            b.HasOne(s => s.Surveyor)
+                .WithMany()
+                .HasForeignKey(s => s.SurveyorUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(s => s.LinkedProject)
+                .WithMany()
+                .HasForeignKey(s => s.LinkedProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(s => s.LinkedOpportunity)
+                .WithMany()
+                .HasForeignKey(s => s.LinkedOpportunityId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(s => s.SurveyorUserId);
+            b.HasIndex(s => s.LinkedProjectId);
+            b.HasIndex(s => s.LinkedOpportunityId);
+            b.HasIndex(s => s.SurveyDate);
+            b.HasIndex(s => s.DriveSyncStatus);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

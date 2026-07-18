@@ -34,6 +34,7 @@ public static class SampleCrmDataSeeder
         SeedContracts(db, owner, now, webRootPath);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
         SeedTenders(db, owner, now);
+        SeedSurveys(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1236,5 +1237,75 @@ public static class SampleCrmDataSeeder
             db.SaveChanges();
             i++;
         }
+    }
+
+    private const string SampleSurveyMarker = "[SAMPLE_SURVEY]";
+
+    /// <summary>
+    /// Seed a curated set of survey rows so the NIH-99 list view has
+    /// something to render on a fresh DB: every Drive sync state, a
+    /// project-linked row, an opportunity-linked row, and one recent
+    /// visit + one older row so the default DESC sort is visible.
+    /// Idempotent — skipped when any sample survey already exists.
+    /// </summary>
+    private static void SeedSurveys(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        if (db.Surveys.Any(s => s.Note != null && s.Note.StartsWith(SampleSurveyMarker))) return;
+
+        var sampleOpportunities = db.Opportunities
+            .Where(o => o.Name.StartsWith(SampleTag))
+            .OrderBy(o => o.Id)
+            .ToList();
+
+        // Projects are content-side and not always available on a bare seed
+        // — pick the first row if present, else leave the link empty.
+        var sampleProject = db.Projects.OrderBy(p => p.Id).FirstOrDefault();
+
+        var year = now.Year;
+        var nextSeq = 1 + db.Surveys.Count(s => s.Code.StartsWith($"SV-{year}-"));
+
+        // (Location, ConstructionTypeCode, DaysAgo, DriveSync, DriveError, LinkProject, LinkOpportunity)
+        var seeds = new (string Location, string ConstructionCode, int DaysAgo,
+            SurveyDriveSyncStatus DriveSync, string? DriveError, bool LinkProject, int? LinkOppIdx)[]
+        {
+            ("Lô A5, KCN Bắc Ninh",           "industrial",     2,   SurveyDriveSyncStatus.Synced,    null,                                           true,  0),
+            ("Số 12 Nguyễn Trãi, Q. Thanh Xuân, Hà Nội",   "residential",    5,   SurveyDriveSyncStatus.Syncing,   null,                                           false, 1),
+            ("Toà nhà văn phòng Green Tower, Q.1, TP.HCM", "commercial",     8,   SurveyDriveSyncStatus.Failed,    "Quota Drive vượt hạn mức, cần cấp quyền lại.", false, null),
+            ("Khu đô thị Sunbay, Nha Trang",  "mixed-use",      14,  SurveyDriveSyncStatus.NotSynced, null,                                           false, null),
+            ("Showroom nội thất Đông Anh, Hà Nội",         "interior",       30,  SurveyDriveSyncStatus.Synced,    null,                                           false, null),
+        };
+
+        var i = 0;
+        foreach (var (location, code, daysAgo, driveSync, driveError, linkProject, oppIdx) in seeds)
+        {
+            var seq = nextSeq++;
+            int? linkedOppId = null;
+            if (oppIdx.HasValue && oppIdx.Value < sampleOpportunities.Count)
+            {
+                linkedOppId = sampleOpportunities[oppIdx.Value].Id;
+            }
+
+            var survey = new Survey
+            {
+                Code = $"SV-{year}-{seq:D4}",
+                Location = location,
+                ConstructionTypeCode = code,
+                SurveyDate = now.AddDays(-daysAgo),
+                SurveyorUserId = owner.Id,
+                LinkedProjectId = linkProject ? sampleProject?.Id : null,
+                LinkedOpportunityId = linkedOppId,
+                Note = $"{SampleSurveyMarker} Sample survey for demo.",
+                DriveSyncStatus = driveSync,
+                DriveSyncError = driveError,
+                LastSyncedAt = driveSync == SurveyDriveSyncStatus.NotSynced ? null : now.AddDays(-daysAgo + 1),
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-daysAgo),
+                UpdatedAt = now.AddDays(-daysAgo + 1),
+            };
+            db.Surveys.Add(survey);
+            i++;
+        }
+        db.SaveChanges();
     }
 }
