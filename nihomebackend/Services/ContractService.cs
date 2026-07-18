@@ -84,6 +84,13 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
+                ApprovedVoTotal = db.ContractAppendices
+                    .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
+                    .Sum(v => (decimal?)v.ValueDelta) ?? 0m,
+                HasSignedScan = db.ContractAttachments
+                    .Any(a => a.ContractId == c.Id && a.Kind == ContractAttachmentKind.SignedScan),
+                AttachmentCount = db.ContractAttachments.Count(a => a.ContractId == c.Id),
+                AppendixCount = db.ContractAppendices.Count(v => v.ContractId == c.Id),
             })
             .ToListAsync(ct);
 
@@ -93,7 +100,12 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
             Page = page,
             PageSize = pageSize,
             Items = rows.Select(r => MapToResponse(
-                r.Contract, r.CustomerName, r.OpportunityTitle, r.QuoteCode, r.OwnerName)).ToList(),
+                r.Contract, r.CustomerName, r.OpportunityTitle, r.QuoteCode, r.OwnerName,
+                milestones: null,
+                approvedVoTotal: r.ApprovedVoTotal,
+                hasSignedScan: r.HasSignedScan,
+                attachmentCount: r.AttachmentCount,
+                appendixCount: r.AppendixCount)).ToList(),
         };
     }
 
@@ -121,7 +133,26 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
             .OrderBy(m => m.Order)
             .ToListAsync(ct);
 
-        return MapToResponse(row.Contract, row.CustomerName, row.OpportunityTitle, row.QuoteCode, row.OwnerName, milestones);
+        var approvedVoTotal = await db.ContractAppendices
+            .AsNoTracking()
+            .Where(v => v.ContractId == id && v.Status == ContractAppendixStatus.Approved)
+            .SumAsync(v => (decimal?)v.ValueDelta, ct) ?? 0m;
+
+        var attachmentCount = await db.ContractAttachments
+            .AsNoTracking()
+            .CountAsync(a => a.ContractId == id, ct);
+
+        var hasSignedScan = await db.ContractAttachments
+            .AsNoTracking()
+            .AnyAsync(a => a.ContractId == id && a.Kind == ContractAttachmentKind.SignedScan, ct);
+
+        var appendixCount = await db.ContractAppendices
+            .AsNoTracking()
+            .CountAsync(v => v.ContractId == id, ct);
+
+        return MapToResponse(
+            row.Contract, row.CustomerName, row.OpportunityTitle, row.QuoteCode, row.OwnerName,
+            milestones, approvedVoTotal, hasSignedScan, attachmentCount, appendixCount);
     }
 
     public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
@@ -237,6 +268,132 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Deleted contract {Id} ({Number})", entity.Id, entity.ContractNumber);
         return true;
+    }
+
+    public async Task<ContractResponse?> TransitionStatusAsync(
+        int id, ContractStatus newStatus, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    {
+        var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
+        if (entity == null) return null;
+        if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
+
+        if (entity.Status == newStatus)
+        {
+            // No-op — return the current state so the caller doesn't need
+            // to special-case a double click on the same action button.
+            return await GetAsync(id, callerUserId, canSeeAll, ct);
+        }
+
+        EnsureTransitionAllowed(entity.Status, newStatus);
+        await EnsureTransitionPreconditionsAsync(entity, newStatus, ct);
+
+        // Signed → InProgress: stamp SignedDate if the caller forgot.
+        if (newStatus == ContractStatus.Signed && entity.SignedDate is null)
+        {
+            entity.SignedDate = DateTime.UtcNow;
+        }
+
+        entity.Status = newStatus;
+        entity.UpdatedAt = DateTime.UtcNow;
+        entity.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Transitioned contract {Id} to {Status}", entity.Id, newStatus);
+
+        return await GetAsync(entity.Id, callerUserId, canSeeAll: true, ct);
+    }
+
+    public async Task<ContractResponse?> UpdateMilestoneStatusAsync(
+        int contractId, int milestoneId, PaymentMilestoneStatus newStatus,
+        int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    {
+        var contract = await db.Contracts.FindAsync(new object?[] { contractId }, ct);
+        if (contract == null) return null;
+        if (!canSeeAll && contract.OwnerUserId != callerUserId) return null;
+
+        var milestone = await db.ContractPaymentMilestones
+            .FirstOrDefaultAsync(m => m.Id == milestoneId && m.ContractId == contractId, ct);
+        if (milestone == null) return null;
+
+        milestone.Status = newStatus;
+        milestone.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation(
+            "Milestone {Milestone} of contract {Contract} → {Status}",
+            milestoneId, contractId, newStatus);
+
+        return await GetAsync(contractId, callerUserId, canSeeAll: true, ct);
+    }
+
+    /// <summary>
+    /// Contract state machine. Only these transitions are allowed:
+    /// <list type="bullet">
+    ///   <item>Draft → Signed | Cancelled</item>
+    ///   <item>Signed → InProgress | Cancelled</item>
+    ///   <item>InProgress → OnHold | Completed | Cancelled</item>
+    ///   <item>OnHold → InProgress | Cancelled</item>
+    /// </list>
+    /// Completed and Cancelled are terminal states.
+    /// </summary>
+    private static void EnsureTransitionAllowed(ContractStatus from, ContractStatus to)
+    {
+        bool ok = (from, to) switch
+        {
+            (ContractStatus.Draft, ContractStatus.Signed) => true,
+            (ContractStatus.Draft, ContractStatus.Cancelled) => true,
+            (ContractStatus.Signed, ContractStatus.InProgress) => true,
+            (ContractStatus.Signed, ContractStatus.Cancelled) => true,
+            (ContractStatus.InProgress, ContractStatus.OnHold) => true,
+            (ContractStatus.InProgress, ContractStatus.Completed) => true,
+            (ContractStatus.InProgress, ContractStatus.Cancelled) => true,
+            (ContractStatus.OnHold, ContractStatus.InProgress) => true,
+            (ContractStatus.OnHold, ContractStatus.Cancelled) => true,
+            _ => false,
+        };
+        if (!ok)
+        {
+            throw new ContractValidationException(
+                $"Illegal contract transition {from} → {to}.");
+        }
+    }
+
+    private async Task EnsureTransitionPreconditionsAsync(Contract entity, ContractStatus newStatus, CancellationToken ct)
+    {
+        switch (newStatus)
+        {
+            case ContractStatus.InProgress when entity.Status == ContractStatus.Signed:
+                {
+                    var hasScan = await db.ContractAttachments
+                        .AsNoTracking()
+                        .AnyAsync(a => a.ContractId == entity.Id && a.Kind == ContractAttachmentKind.SignedScan, ct);
+                    if (!hasScan)
+                    {
+                        throw new ContractValidationException(
+                            "Cần đính kèm bản scan hợp đồng đã ký trước khi chuyển sang Đang thực hiện.");
+                    }
+                    break;
+                }
+
+            case ContractStatus.Completed:
+                {
+                    var anyMilestone = await db.ContractPaymentMilestones
+                        .AsNoTracking()
+                        .AnyAsync(m => m.ContractId == entity.Id, ct);
+                    if (!anyMilestone)
+                    {
+                        throw new ContractValidationException(
+                            "Chưa có lịch thanh toán để hoàn thành hợp đồng.");
+                    }
+                    var anyUnpaid = await db.ContractPaymentMilestones
+                        .AsNoTracking()
+                        .AnyAsync(m => m.ContractId == entity.Id && m.Status != PaymentMilestoneStatus.Paid, ct);
+                    if (anyUnpaid)
+                    {
+                        throw new ContractValidationException(
+                            "Chỉ hoàn thành hợp đồng sau khi tất cả các đợt thanh toán đã Đã thanh toán.");
+                    }
+                    break;
+                }
+        }
     }
 
     // -------- helpers --------
@@ -366,7 +523,18 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         string? opportunityTitle,
         string? quoteCode,
         string? ownerName,
-        IReadOnlyList<ContractPaymentMilestone>? milestones = null) => new()
+        IReadOnlyList<ContractPaymentMilestone>? milestones = null,
+        decimal approvedVoTotal = 0m,
+        bool hasSignedScan = false,
+        int attachmentCount = 0,
+        int appendixCount = 0)
+    {
+        // CurrentValue = base value + approved VO deltas. Milestone Amount
+        // still divides the base <c>entity.Value</c> — % refer to the
+        // signed contract before amendments; VO settlements happen out of
+        // band per the ops flow.
+        var currentValue = entity.Value + approvedVoTotal;
+        return new ContractResponse
         {
             Id = entity.Id,
             ContractNumber = entity.ContractNumber,
@@ -383,6 +551,11 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
             StartDate = entity.StartDate,
             EndDate = entity.EndDate,
             Value = entity.Value,
+            ApprovedVoTotal = approvedVoTotal,
+            CurrentValue = currentValue,
+            HasSignedScan = hasSignedScan,
+            AttachmentCount = attachmentCount,
+            AppendixCount = appendixCount,
             ScopeOfWork = entity.ScopeOfWork,
             Note = entity.Note,
             CreatedAt = entity.CreatedAt,
@@ -404,4 +577,5 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
                 })
                 .ToList(),
         };
+    }
 }

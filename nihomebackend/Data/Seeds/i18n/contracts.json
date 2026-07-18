@@ -398,5 +398,453 @@
     "en": "Paid",
     "zh": "已付款",
     "ja": "支払済"
+  },
+  {
+    "key": "contracts.detail.title",
+    "category": "contracts",
+    "vi": "Chi tiết hợp đồng",
+    "en": "Contract detail",
+    "zh": "合同详情",
+    "ja": "契約詳細"
+  },
+  {
+    "key": "contracts.detail.back",
+    "category": "contracts",
+    "vi": "← Quay lại danh sách",
+    "en": "← Back to list",
+    "zh": "← 返回列表",
+    "ja": "← 一覧に戻る"
+  },
+  {
+    "key": "contracts.detail.notFound",
+    "category": "contracts",
+    "vi": "Không tìm thấy hợp đồng.",
+    "en": "Contract not found.",
+    "zh": "未找到合同。",
+    "ja": "契約が見つかりません。"
+  },
+  {
+    "key": "contracts.detail.header.baseValue",
+    "category": "contracts",
+    "vi": "Giá trị gốc",
+    "en": "Base value",
+    "zh": "原始金额",
+    "ja": "基本金額"
+  },
+  {
+    "key": "contracts.detail.header.voTotal",
+    "category": "contracts",
+    "vi": "Σ VO đã duyệt",
+    "en": "Σ approved VO",
+    "zh": "已批准变更累计",
+    "ja": "承認済VO合計"
+  },
+  {
+    "key": "contracts.detail.header.currentValue",
+    "category": "contracts",
+    "vi": "Giá trị hiện tại",
+    "en": "Current value",
+    "zh": "当前金额",
+    "ja": "現行金額"
+  },
+  {
+    "key": "contracts.detail.tab.info",
+    "category": "contracts",
+    "vi": "Thông tin",
+    "en": "Information",
+    "zh": "基本信息",
+    "ja": "情報"
+  },
+  {
+    "key": "contracts.detail.tab.schedule",
+    "category": "contracts",
+    "vi": "Lịch thanh toán",
+    "en": "Payment schedule",
+    "zh": "付款计划",
+    "ja": "支払スケジュール"
+  },
+  {
+    "key": "contracts.detail.tab.appendices",
+    "category": "contracts",
+    "vi": "Phụ lục (VO)",
+    "en": "Variation orders",
+    "zh": "变更附录",
+    "ja": "変更契約 (VO)"
+  },
+  {
+    "key": "contracts.detail.tab.documents",
+    "category": "contracts",
+    "vi": "Tài liệu",
+    "en": "Documents",
+    "zh": "文件",
+    "ja": "資料"
+  },
+  {
+    "key": "contracts.detail.tab.timeline",
+    "category": "contracts",
+    "vi": "Timeline",
+    "en": "Timeline",
+    "zh": "时间线",
+    "ja": "タイムライン"
+  },
+  {
+    "key": "contracts.detail.editInfo",
+    "category": "contracts",
+    "vi": "Chỉnh sửa thông tin",
+    "en": "Edit information",
+    "zh": "编辑信息",
+    "ja": "情報を編集"
+  },
+  {
+    "key": "contracts.detail.transition.markSigned",
+    "category": "contracts",
+    "vi": "Đánh dấu Đã ký",
+    "en": "Mark as Signed",
+    "zh": "标记为已签署",
+    "ja": "署名済にする"
+  },
+  {
+    "key": "contracts.detail.transition.markInProgress",
+    "category": "contracts",
+    "vi": "Chuyển Đang thực hiện",
+    "en": "Move to In progress",
+    "zh": "转为执行中",
+    "ja": "実行中に移行"
+  },
+  {
+    "key": "contracts.detail.transition.markOnHold",
+    "category": "contracts",
+    "vi": "Tạm dừng",
+    "en": "Put on hold",
+    "zh": "暂停",
+    "ja": "一時停止"
+  },
+  {
+    "key": "contracts.detail.transition.markCompleted",
+    "category": "contracts",
+    "vi": "Hoàn thành",
+    "en": "Complete",
+    "zh": "完成",
+    "ja": "完了"
+  },
+  {
+    "key": "contracts.detail.transition.markResume",
+    "category": "contracts",
+    "vi": "Tiếp tục thực hiện",
+    "en": "Resume",
+    "zh": "恢复执行",
+    "ja": "再開"
+  },
+  {
+    "key": "contracts.detail.transition.markCancelled",
+    "category": "contracts",
+    "vi": "Huỷ hợp đồng",
+    "en": "Cancel contract",
+    "zh": "取消合同",
+    "ja": "契約をキャンセル"
+  },
+  {
+    "key": "contracts.detail.transition.needScan",
+    "category": "contracts",
+    "vi": "Cần đính kèm bản scan hợp đồng đã ký ở tab Tài liệu trước khi chuyển.",
+    "en": "Attach the signed contract scan under the Documents tab before moving.",
+    "zh": "在移动前，请先在“文件”标签上传已签署合同扫描件。",
+    "ja": "移行前に、資料タブで署名済契約書のスキャンを添付してください。"
+  },
+  {
+    "key": "contracts.detail.transition.needAllPaid",
+    "category": "contracts",
+    "vi": "Chỉ hoàn thành khi tất cả các đợt thanh toán ở trạng thái Đã thanh toán.",
+    "en": "Complete only after every milestone is Paid.",
+    "zh": "所有付款阶段均需为“已付款”后才能完成。",
+    "ja": "全ての支払段階が「支払済」になってから完了できます。"
+  },
+  {
+    "key": "contracts.schedule.overdue",
+    "category": "contracts",
+    "vi": "Quá hạn",
+    "en": "Overdue",
+    "zh": "已逾期",
+    "ja": "期限超過"
+  },
+  {
+    "key": "contracts.schedule.markRequested",
+    "category": "contracts",
+    "vi": "Đánh dấu Đã yêu cầu",
+    "en": "Mark as Requested",
+    "zh": "标记为已请求",
+    "ja": "請求済にする"
+  },
+  {
+    "key": "contracts.schedule.markPaid",
+    "category": "contracts",
+    "vi": "Đánh dấu Đã thanh toán",
+    "en": "Mark as Paid",
+    "zh": "标记为已付款",
+    "ja": "支払済にする"
+  },
+  {
+    "key": "contracts.schedule.revertPending",
+    "category": "contracts",
+    "vi": "Trả về Chưa yêu cầu",
+    "en": "Revert to Pending",
+    "zh": "退回为待处理",
+    "ja": "未請求に戻す"
+  },
+  {
+    "key": "contracts.appendix.empty",
+    "category": "contracts",
+    "vi": "Chưa có phụ lục nào.",
+    "en": "No variation orders yet.",
+    "zh": "暂无变更附录。",
+    "ja": "変更契約はまだありません。"
+  },
+  {
+    "key": "contracts.appendix.new",
+    "category": "contracts",
+    "vi": "Tạo VO mới",
+    "en": "New VO",
+    "zh": "新增变更",
+    "ja": "新規VO"
+  },
+  {
+    "key": "contracts.appendix.number",
+    "category": "contracts",
+    "vi": "Số VO",
+    "en": "VO #",
+    "zh": "变更编号",
+    "ja": "VO番号"
+  },
+  {
+    "key": "contracts.appendix.title",
+    "category": "contracts",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "件名"
+  },
+  {
+    "key": "contracts.appendix.reason",
+    "category": "contracts",
+    "vi": "Lý do",
+    "en": "Reason",
+    "zh": "原因",
+    "ja": "理由"
+  },
+  {
+    "key": "contracts.appendix.valueDelta",
+    "category": "contracts",
+    "vi": "Giá trị điều chỉnh",
+    "en": "Value delta",
+    "zh": "调整金额",
+    "ja": "調整金額"
+  },
+  {
+    "key": "contracts.appendix.file",
+    "category": "contracts",
+    "vi": "Tài liệu đính kèm",
+    "en": "Attached file",
+    "zh": "附件",
+    "ja": "添付ファイル"
+  },
+  {
+    "key": "contracts.appendix.status.Draft",
+    "category": "contracts",
+    "vi": "Nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "contracts.appendix.status.Submitted",
+    "category": "contracts",
+    "vi": "Chờ duyệt",
+    "en": "Submitted",
+    "zh": "待审批",
+    "ja": "審査待ち"
+  },
+  {
+    "key": "contracts.appendix.status.Approved",
+    "category": "contracts",
+    "vi": "Đã duyệt",
+    "en": "Approved",
+    "zh": "已批准",
+    "ja": "承認済"
+  },
+  {
+    "key": "contracts.appendix.status.Rejected",
+    "category": "contracts",
+    "vi": "Từ chối",
+    "en": "Rejected",
+    "zh": "已拒绝",
+    "ja": "却下"
+  },
+  {
+    "key": "contracts.appendix.submit",
+    "category": "contracts",
+    "vi": "Gửi duyệt",
+    "en": "Submit",
+    "zh": "提交审批",
+    "ja": "審査に送る"
+  },
+  {
+    "key": "contracts.appendix.approve",
+    "category": "contracts",
+    "vi": "Duyệt",
+    "en": "Approve",
+    "zh": "批准",
+    "ja": "承認"
+  },
+  {
+    "key": "contracts.appendix.reject",
+    "category": "contracts",
+    "vi": "Từ chối",
+    "en": "Reject",
+    "zh": "拒绝",
+    "ja": "却下"
+  },
+  {
+    "key": "contracts.appendix.rejectReasonRequired",
+    "category": "contracts",
+    "vi": "Vui lòng nhập lý do từ chối.",
+    "en": "Please enter a rejection reason.",
+    "zh": "请填写拒绝原因。",
+    "ja": "却下理由を入力してください。"
+  },
+  {
+    "key": "contracts.appendix.decisionNote",
+    "category": "contracts",
+    "vi": "Ghi chú của người duyệt",
+    "en": "Reviewer note",
+    "zh": "审批备注",
+    "ja": "審査者メモ"
+  },
+  {
+    "key": "contracts.appendix.submittedBy",
+    "category": "contracts",
+    "vi": "Người gửi",
+    "en": "Submitted by",
+    "zh": "提交人",
+    "ja": "提出者"
+  },
+  {
+    "key": "contracts.appendix.decidedBy",
+    "category": "contracts",
+    "vi": "Người duyệt",
+    "en": "Reviewer",
+    "zh": "审批人",
+    "ja": "審査者"
+  },
+  {
+    "key": "contracts.appendix.deltaPositive",
+    "category": "contracts",
+    "vi": "Tăng",
+    "en": "Increase",
+    "zh": "增加",
+    "ja": "増額"
+  },
+  {
+    "key": "contracts.appendix.deltaNegative",
+    "category": "contracts",
+    "vi": "Giảm",
+    "en": "Discount",
+    "zh": "减少",
+    "ja": "減額"
+  },
+  {
+    "key": "contracts.appendix.mustBeNonZero",
+    "category": "contracts",
+    "vi": "Giá trị điều chỉnh phải khác 0.",
+    "en": "Value delta must not be zero.",
+    "zh": "调整金额不能为 0。",
+    "ja": "調整金額は 0 以外を入力してください。"
+  },
+  {
+    "key": "contracts.appendix.confirmDelete",
+    "category": "contracts",
+    "vi": "Xoá phụ lục này?",
+    "en": "Delete this variation order?",
+    "zh": "确定删除此变更附录？",
+    "ja": "この変更契約を削除しますか？"
+  },
+  {
+    "key": "contracts.documents.empty",
+    "category": "contracts",
+    "vi": "Chưa có tài liệu nào.",
+    "en": "No documents yet.",
+    "zh": "暂无文件。",
+    "ja": "資料がありません。"
+  },
+  {
+    "key": "contracts.documents.upload",
+    "category": "contracts",
+    "vi": "Tải lên tài liệu",
+    "en": "Upload file",
+    "zh": "上传文件",
+    "ja": "ファイルをアップロード"
+  },
+  {
+    "key": "contracts.documents.kind.SignedScan",
+    "category": "contracts",
+    "vi": "Bản scan hợp đồng đã ký",
+    "en": "Signed contract scan",
+    "zh": "已签署合同扫描件",
+    "ja": "署名済契約スキャン"
+  },
+  {
+    "key": "contracts.documents.kind.Supporting",
+    "category": "contracts",
+    "vi": "Tài liệu bổ sung",
+    "en": "Supporting document",
+    "zh": "附加文件",
+    "ja": "補足資料"
+  },
+  {
+    "key": "contracts.documents.label",
+    "category": "contracts",
+    "vi": "Ghi chú",
+    "en": "Label",
+    "zh": "备注",
+    "ja": "ラベル"
+  },
+  {
+    "key": "contracts.documents.uploadedBy",
+    "category": "contracts",
+    "vi": "Người tải",
+    "en": "Uploaded by",
+    "zh": "上传人",
+    "ja": "アップロード者"
+  },
+  {
+    "key": "contracts.documents.download",
+    "category": "contracts",
+    "vi": "Tải xuống",
+    "en": "Download",
+    "zh": "下载",
+    "ja": "ダウンロード"
+  },
+  {
+    "key": "contracts.documents.confirmDelete",
+    "category": "contracts",
+    "vi": "Xoá tài liệu này?",
+    "en": "Delete this document?",
+    "zh": "确定删除此文件？",
+    "ja": "この資料を削除しますか？"
+  },
+  {
+    "key": "contracts.timeline.empty",
+    "category": "contracts",
+    "vi": "Chưa có hoạt động nào.",
+    "en": "No activity yet.",
+    "zh": "暂无操作记录。",
+    "ja": "操作履歴がありません。"
+  },
+  {
+    "key": "contracts.timeline.by",
+    "category": "contracts",
+    "vi": "Bởi",
+    "en": "by",
+    "zh": "由",
+    "ja": "実行者"
   }
 ]

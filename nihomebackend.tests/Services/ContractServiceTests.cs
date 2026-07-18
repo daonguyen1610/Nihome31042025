@@ -359,4 +359,183 @@ public class ContractServiceTests : IDisposable
         Assert.True(await _sut.DeleteAsync(contract.Id, 1, canSeeAll: true));
         Assert.Empty(_db.ContractPaymentMilestones);
     }
+
+    // ---------------- State transitions (NIH-104) ----------------
+
+    [Fact]
+    public async Task Transition_DraftToSigned_StampsSignedDateWhenMissing()
+    {
+        var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        Assert.Null(contract.SignedDate);
+
+        var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
+        Assert.NotNull(updated);
+        Assert.Equal(ContractStatus.Signed, updated!.Status);
+        Assert.NotNull(updated.SignedDate);
+    }
+
+    [Fact]
+    public async Task Transition_DraftToInProgress_IsRejected()
+    {
+        var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        var ex = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true));
+        Assert.Contains("Illegal", ex.Message);
+    }
+
+    [Fact]
+    public async Task Transition_SignedToInProgress_RequiresSignedScan()
+    {
+        var contract = await _sut.CreateAsync(Req(status: ContractStatus.Signed), 1, canReassignOwner: true);
+        var ex = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true));
+        Assert.Contains("scan", ex.Message);
+
+        _db.ContractAttachments.Add(new ContractAttachment
+        {
+            ContractId = contract.Id,
+            Kind = ContractAttachmentKind.SignedScan,
+            FilePath = "/files/contracts/scan.pdf",
+            OriginalFileName = "scan.pdf",
+            FileSize = 1,
+            ContentType = "application/pdf",
+        });
+        _db.SaveChanges();
+
+        var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.InProgress, 1, canSeeAll: true);
+        Assert.Equal(ContractStatus.InProgress, updated!.Status);
+    }
+
+    [Fact]
+    public async Task Transition_InProgressToCompleted_RequiresAllMilestonesPaid()
+    {
+        var initial = Req(status: ContractStatus.InProgress, value: 100m);
+        initial.PaymentMilestones = new()
+        {
+            Milestone(1, 50m, "A"),
+            Milestone(2, 50m, "B"),
+        };
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+
+        // Not all paid yet
+        var ex = await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.TransitionStatusAsync(contract.Id, ContractStatus.Completed, 1, canSeeAll: true));
+        Assert.Contains("Đã thanh toán", ex.Message);
+
+        foreach (var m in _db.ContractPaymentMilestones)
+        {
+            m.Status = PaymentMilestoneStatus.Paid;
+        }
+        _db.SaveChanges();
+
+        var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Completed, 1, canSeeAll: true);
+        Assert.Equal(ContractStatus.Completed, updated!.Status);
+    }
+
+    [Fact]
+    public async Task Transition_NoOp_ReturnsCurrentState()
+    {
+        var contract = await _sut.CreateAsync(Req(status: ContractStatus.Signed, signed: DateTime.UtcNow), 1, canReassignOwner: true);
+        var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
+        Assert.NotNull(updated);
+        Assert.Equal(ContractStatus.Signed, updated!.Status);
+    }
+
+    [Fact]
+    public async Task UpdateMilestoneStatus_MutatesTheSpecifiedRow()
+    {
+        var initial = Req(value: 100m);
+        initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        var milestoneId = contract.PaymentMilestones[0].Id;
+
+        var updated = await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Paid, 1, canSeeAll: true);
+        Assert.NotNull(updated);
+        Assert.Equal(PaymentMilestoneStatus.Paid, updated!.PaymentMilestones.Single().Status);
+    }
+
+    [Fact]
+    public async Task UpdateMilestoneStatus_ReturnsNullWhenSalesDoesNotOwn()
+    {
+        var contract = await _sut.CreateAsync(Req(owner: 100), callerUserId: 100, canReassignOwner: true);
+        var milestone = new ContractPaymentMilestone
+        {
+            ContractId = contract.Id,
+            Order = 1,
+            Name = "x",
+            PercentValue = 100m,
+        };
+        _db.ContractPaymentMilestones.Add(milestone);
+        _db.SaveChanges();
+
+        var result = await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestone.Id, PaymentMilestoneStatus.Paid,
+            callerUserId: 999, canSeeAll: false);
+        Assert.Null(result);
+    }
+
+    // ---------------- CurrentValue derivation ----------------
+
+    [Fact]
+    public async Task Get_CurrentValue_IncludesApprovedVoTotal()
+    {
+        var contract = await _sut.CreateAsync(Req(value: 1_000_000m), 1, canReassignOwner: true);
+
+        _db.ContractAppendices.AddRange(
+            new ContractAppendix
+            {
+                ContractId = contract.Id,
+                VoNumber = 1,
+                Title = "Approved +100k",
+                Reason = "test",
+                ValueDelta = 100_000m,
+                Status = ContractAppendixStatus.Approved,
+            },
+            new ContractAppendix
+            {
+                ContractId = contract.Id,
+                VoNumber = 2,
+                Title = "Submitted +200k",
+                Reason = "test",
+                ValueDelta = 200_000m,
+                Status = ContractAppendixStatus.Submitted,
+            });
+        _db.SaveChanges();
+
+        var refreshed = await _sut.GetAsync(contract.Id, 1, canSeeAll: true);
+        Assert.NotNull(refreshed);
+        Assert.Equal(100_000m, refreshed!.ApprovedVoTotal);
+        Assert.Equal(1_100_000m, refreshed.CurrentValue);
+        Assert.Equal(2, refreshed.AppendixCount);
+    }
+
+    [Fact]
+    public async Task Get_HasSignedScan_ReflectsAttachmentKind()
+    {
+        var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        Assert.False((await _sut.GetAsync(contract.Id, 1, canSeeAll: true))!.HasSignedScan);
+
+        _db.ContractAttachments.Add(new ContractAttachment
+        {
+            ContractId = contract.Id,
+            Kind = ContractAttachmentKind.Supporting,
+            FilePath = "/x",
+            OriginalFileName = "x.pdf",
+            ContentType = "application/pdf",
+        });
+        _db.SaveChanges();
+        Assert.False((await _sut.GetAsync(contract.Id, 1, canSeeAll: true))!.HasSignedScan);
+
+        _db.ContractAttachments.Add(new ContractAttachment
+        {
+            ContractId = contract.Id,
+            Kind = ContractAttachmentKind.SignedScan,
+            FilePath = "/y",
+            OriginalFileName = "y.pdf",
+            ContentType = "application/pdf",
+        });
+        _db.SaveChanges();
+        Assert.True((await _sut.GetAsync(contract.Id, 1, canSeeAll: true))!.HasSignedScan);
+    }
 }

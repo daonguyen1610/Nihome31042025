@@ -30,6 +30,20 @@ public interface IContractService
         int id, UpsertContractRequest req, int callerUserId, bool canSeeAll, bool canReassignOwner, CancellationToken ct = default);
 
     Task<bool> DeleteAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+
+    /// <summary>Transition the contract to <paramref name="newStatus"/>.
+    /// Rejects illegal transitions and pre-conditions (e.g. missing signed
+    /// scan when moving Signed → InProgress, unpaid milestones when
+    /// closing to Completed).</summary>
+    Task<ContractResponse?> TransitionStatusAsync(
+        int id, ContractStatus newStatus, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+
+    /// <summary>Update a single milestone's status (Pending / Requested /
+    /// Paid). Returns the refreshed contract response, or <c>null</c> if
+    /// the contract or milestone is not found / not owned.</summary>
+    Task<ContractResponse?> UpdateMilestoneStatusAsync(
+        int contractId, int milestoneId, PaymentMilestoneStatus newStatus,
+        int callerUserId, bool canSeeAll, CancellationToken ct = default);
 }
 
 /// <summary>Thrown when the caller submits a contract number that already

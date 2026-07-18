@@ -63,6 +63,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractPaymentMilestone> ContractPaymentMilestones => Set<ContractPaymentMilestone>();
+    public DbSet<ContractAppendix> ContractAppendices => Set<ContractAppendix>();
+    public DbSet<ContractAttachment> ContractAttachments => Set<ContractAttachment>();
     public DbSet<CapabilityDocument> CapabilityDocuments => Set<CapabilityDocument>();
     public DbSet<CapabilityDocumentVersion> CapabilityDocumentVersions => Set<CapabilityDocumentVersion>();
     public DbSet<Tender> Tenders => Set<Tender>();
@@ -590,6 +592,56 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(m => m.ContractId);
             b.HasIndex(m => new { m.ContractId, m.Order }).IsUnique();
+        });
+
+        modelBuilder.Entity<ContractAppendix>(b =>
+        {
+            b.ToTable("contract_appendices");
+            b.HasKey(v => v.Id);
+            b.Property(v => v.Title).HasMaxLength(300).IsRequired();
+            b.Property(v => v.Reason).HasMaxLength(4000).IsRequired();
+            b.Property(v => v.ValueDelta).HasColumnType("decimal(18,2)");
+            b.Property(v => v.FilePath).HasMaxLength(500);
+            b.Property(v => v.OriginalFileName).HasMaxLength(300);
+            b.Property(v => v.ContentType).HasMaxLength(150);
+            b.Property(v => v.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(v => v.DecisionNote).HasMaxLength(1000);
+            b.HasOne(v => v.Contract)
+                .WithMany()
+                .HasForeignKey(v => v.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(v => v.SubmittedBy)
+                .WithMany()
+                .HasForeignKey(v => v.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(v => v.DecidedBy)
+                .WithMany()
+                .HasForeignKey(v => v.DecidedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(v => v.ContractId);
+            b.HasIndex(v => new { v.ContractId, v.VoNumber }).IsUnique();
+            b.HasIndex(v => v.Status);
+        });
+
+        modelBuilder.Entity<ContractAttachment>(b =>
+        {
+            b.ToTable("contract_attachments");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.Kind).HasConversion<string>().HasMaxLength(30);
+            b.Property(a => a.FilePath).HasMaxLength(500).IsRequired();
+            b.Property(a => a.OriginalFileName).HasMaxLength(300).IsRequired();
+            b.Property(a => a.ContentType).HasMaxLength(150).IsRequired();
+            b.Property(a => a.Label).HasMaxLength(300);
+            b.HasOne(a => a.Contract)
+                .WithMany()
+                .HasForeignKey(a => a.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(a => a.UploadedBy)
+                .WithMany()
+                .HasForeignKey(a => a.UploadedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(a => a.ContractId);
+            b.HasIndex(a => a.Kind);
         });
 
         modelBuilder.Entity<CapabilityDocument>(b =>
