@@ -24,10 +24,10 @@ public interface IContractService
     Task<ContractResponse?> GetAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 
     Task<ContractResponse> CreateAsync(
-        UpsertContractRequest req, int callerUserId, CancellationToken ct = default);
+        UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default);
 
     Task<ContractResponse?> UpdateAsync(
-        int id, UpsertContractRequest req, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+        int id, UpsertContractRequest req, int callerUserId, bool canSeeAll, bool canReassignOwner, CancellationToken ct = default);
 
     Task<bool> DeleteAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 }

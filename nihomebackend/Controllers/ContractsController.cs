@@ -73,9 +73,13 @@ public class ContractsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        // Only manager-tier callers (crm.contracts.view.all) can pin the
+        // owner to a different user on create; sales users always own what
+        // they create so they can still see it.
+        var canReassignOwner = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
         try
         {
-            var created = await svc.CreateAsync(req, userId.Value, ct);
+            var created = await svc.CreateAsync(req, userId.Value, canReassignOwner, ct);
             audit.Log(new AuditEvent
             {
                 Action = "contract.create",
@@ -105,9 +109,11 @@ public class ContractsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        // Sales cannot reassign owner — only manager-tier callers can.
+        var canReassignOwner = canSeeAll;
         try
         {
-            var updated = await svc.UpdateAsync(id, req, userId.Value, canSeeAll, ct);
+            var updated = await svc.UpdateAsync(id, req, userId.Value, canSeeAll, canReassignOwner, ct);
             if (updated == null) return NotFound();
 
             audit.Log(new AuditEvent

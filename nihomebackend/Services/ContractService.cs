@@ -50,7 +50,14 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         if (status.HasValue) query = query.Where(c => c.Status == status.Value);
         if (customerId.HasValue) query = query.Where(c => c.CustomerId == customerId.Value);
         if (signedFrom.HasValue) query = query.Where(c => c.SignedDate != null && c.SignedDate >= signedFrom.Value);
-        if (signedTo.HasValue) query = query.Where(c => c.SignedDate != null && c.SignedDate <= signedTo.Value);
+        if (signedTo.HasValue)
+        {
+            // Treat signedTo as end-of-day inclusive. Frontend supplies the
+            // caller's chosen day at 00:00 UTC; a naive <= comparison would
+            // drop every row signed later that same day.
+            var upperBound = signedTo.Value.Date.AddDays(1);
+            query = query.Where(c => c.SignedDate != null && c.SignedDate < upperBound);
+        }
         if (valueMin.HasValue) query = query.Where(c => c.Value >= valueMin.Value);
         if (valueMax.HasValue) query = query.Where(c => c.Value <= valueMax.Value);
 
@@ -111,7 +118,7 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         return MapToResponse(row.Contract, row.CustomerName, row.OpportunityTitle, row.QuoteCode, row.OwnerName);
     }
 
-    public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, CancellationToken ct = default)
+    public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
     {
         await ValidateReferencesAsync(req, ct);
 
@@ -124,13 +131,18 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
             throw new ContractDuplicateNumberException(number);
         }
 
+        // Sales users without view.all cannot reassign a new record to a
+        // different owner: force ownership to the caller so the row stays
+        // visible to them under the ownership scope.
+        var ownerUserId = canReassignOwner ? (req.OwnerUserId ?? callerUserId) : callerUserId;
+
         var entity = new Contract
         {
             ContractNumber = number,
             CustomerId = req.CustomerId,
             OpportunityId = req.OpportunityId,
             QuoteId = req.QuoteId,
-            OwnerUserId = req.OwnerUserId ?? callerUserId,
+            OwnerUserId = ownerUserId,
             Status = req.Status,
             SignedDate = req.SignedDate,
             StartDate = req.StartDate,
@@ -150,7 +162,7 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
     }
 
     public async Task<ContractResponse?> UpdateAsync(
-        int id, UpsertContractRequest req, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+        int id, UpsertContractRequest req, int callerUserId, bool canSeeAll, bool canReassignOwner, CancellationToken ct = default)
     {
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return null;
@@ -171,7 +183,13 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         entity.CustomerId = req.CustomerId;
         entity.OpportunityId = req.OpportunityId;
         entity.QuoteId = req.QuoteId;
-        entity.OwnerUserId = req.OwnerUserId ?? entity.OwnerUserId;
+        // Same safeguard as CreateAsync: only manager-tier callers can
+        // reassign ownership. Sales users have their attempt silently
+        // ignored so they cannot lose their own record via the API.
+        if (canReassignOwner && req.OwnerUserId.HasValue)
+        {
+            entity.OwnerUserId = req.OwnerUserId.Value;
+        }
         entity.Status = req.Status;
         entity.SignedDate = req.SignedDate;
         entity.StartDate = req.StartDate;

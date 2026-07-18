@@ -55,7 +55,7 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task Create_AutoGeneratesContractNumber()
     {
-        var result = await _sut.CreateAsync(Req(), callerUserId: 42);
+        var result = await _sut.CreateAsync(Req(), callerUserId: 42, canReassignOwner: true);
         Assert.StartsWith("HD-", result.ContractNumber);
         Assert.EndsWith("-0001", result.ContractNumber);
         Assert.Equal(42, result.OwnerUserId);
@@ -64,31 +64,31 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task Create_IncrementsNumberSequenceInSameYear()
     {
-        await _sut.CreateAsync(Req(), 1);
-        var second = await _sut.CreateAsync(Req(customerId: _customerB), 1);
+        await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        var second = await _sut.CreateAsync(Req(customerId: _customerB), 1, canReassignOwner: true);
         Assert.EndsWith("-0002", second.ContractNumber);
     }
 
     [Fact]
     public async Task Create_WithExplicitNumberIsHonoured()
     {
-        var result = await _sut.CreateAsync(Req(number: "HD-CUSTOM-001"), 1);
+        var result = await _sut.CreateAsync(Req(number: "HD-CUSTOM-001"), 1, canReassignOwner: true);
         Assert.Equal("HD-CUSTOM-001", result.ContractNumber);
     }
 
     [Fact]
     public async Task Create_DuplicateExplicitNumberThrows()
     {
-        await _sut.CreateAsync(Req(number: "HD-DUP"), 1);
+        await _sut.CreateAsync(Req(number: "HD-DUP"), 1, canReassignOwner: true);
         await Assert.ThrowsAsync<ContractDuplicateNumberException>(
-            () => _sut.CreateAsync(Req(customerId: _customerB, number: "HD-DUP"), 1));
+            () => _sut.CreateAsync(Req(customerId: _customerB, number: "HD-DUP"), 1, canReassignOwner: true));
     }
 
     [Fact]
     public async Task Create_UnknownCustomerThrowsValidation()
     {
         await Assert.ThrowsAsync<ContractValidationException>(
-            () => _sut.CreateAsync(Req(customerId: 9999), 1));
+            () => _sut.CreateAsync(Req(customerId: 9999), 1, canReassignOwner: true));
     }
 
     [Fact]
@@ -96,7 +96,24 @@ public class ContractServiceTests : IDisposable
     {
         var req = Req(start: new DateTime(2026, 3, 1), end: new DateTime(2026, 2, 1));
         await Assert.ThrowsAsync<ContractValidationException>(
-            () => _sut.CreateAsync(req, 1));
+            () => _sut.CreateAsync(req, 1, canReassignOwner: true));
+    }
+
+    [Fact]
+    public async Task Create_SalesCallerCannotReassignOwner()
+    {
+        // Sales user (canReassignOwner=false) tries to pin the contract to
+        // a different owner. The service must force ownership to the caller
+        // so the record stays inside their own scope.
+        var result = await _sut.CreateAsync(Req(owner: 999), callerUserId: 100, canReassignOwner: false);
+        Assert.Equal(100, result.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Create_ManagerCallerCanReassignOwner()
+    {
+        var result = await _sut.CreateAsync(Req(owner: 999), callerUserId: 1, canReassignOwner: true);
+        Assert.Equal(999, result.OwnerUserId);
     }
 
     // ---------------- List / RBAC scoping ----------------
@@ -104,8 +121,8 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task List_SalesOnlySeesOwnRows_UnlessCanSeeAll()
     {
-        await _sut.CreateAsync(Req(owner: 100), 100);
-        await _sut.CreateAsync(Req(customerId: _customerB, owner: 200), 200);
+        await _sut.CreateAsync(Req(owner: 100), 100, canReassignOwner: true);
+        await _sut.CreateAsync(Req(customerId: _customerB, owner: 200), 200, canReassignOwner: true);
 
         var salesView = await _sut.ListAsync(callerUserId: 100, canSeeAll: false);
         Assert.Equal(1, salesView.Total);
@@ -118,9 +135,9 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task List_SortsBySignedDateDesc_ThenCreatedAtDesc()
     {
-        var older = await _sut.CreateAsync(Req(signed: new DateTime(2026, 1, 1)), 1);
-        var newer = await _sut.CreateAsync(Req(customerId: _customerB, signed: new DateTime(2026, 6, 1)), 1);
-        var unsigned = await _sut.CreateAsync(Req(customerId: _customerA, number: "HD-DRAFT"), 1);
+        var older = await _sut.CreateAsync(Req(signed: new DateTime(2026, 1, 1)), 1, canReassignOwner: true);
+        var newer = await _sut.CreateAsync(Req(customerId: _customerB, signed: new DateTime(2026, 6, 1)), 1, canReassignOwner: true);
+        var unsigned = await _sut.CreateAsync(Req(customerId: _customerA, number: "HD-DRAFT"), 1, canReassignOwner: true);
 
         var view = await _sut.ListAsync(callerUserId: 1, canSeeAll: true);
 
@@ -133,8 +150,8 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task List_AppliesStatusAndValueFilters()
     {
-        await _sut.CreateAsync(Req(status: ContractStatus.Draft, value: 100), 1);
-        await _sut.CreateAsync(Req(customerId: _customerB, status: ContractStatus.Signed, value: 1000), 1);
+        await _sut.CreateAsync(Req(status: ContractStatus.Draft, value: 100), 1, canReassignOwner: true);
+        await _sut.CreateAsync(Req(customerId: _customerB, status: ContractStatus.Signed, value: 1000), 1, canReassignOwner: true);
 
         var draft = await _sut.ListAsync(1, true, status: ContractStatus.Draft);
         Assert.Single(draft.Items);
@@ -145,10 +162,23 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_SignedToFilter_IsEndOfDayInclusive()
+    {
+        // Row signed later on the same UTC day the caller filtered up to.
+        await _sut.CreateAsync(Req(signed: new DateTime(2026, 6, 15, 22, 30, 0, DateTimeKind.Utc)), 1, canReassignOwner: true);
+        // Row signed the next day — should be excluded.
+        await _sut.CreateAsync(Req(customerId: _customerB, signed: new DateTime(2026, 6, 16, 0, 0, 0, DateTimeKind.Utc)), 1, canReassignOwner: true);
+
+        var upToJune15 = await _sut.ListAsync(1, true, signedTo: new DateTime(2026, 6, 15));
+        Assert.Single(upToJune15.Items);
+        Assert.Equal(new DateTime(2026, 6, 15, 22, 30, 0, DateTimeKind.Utc), upToJune15.Items[0].SignedDate!.Value);
+    }
+
+    [Fact]
     public async Task List_SearchMatchesContractNumberOrCustomerName()
     {
-        await _sut.CreateAsync(Req(number: "HD-FIND-001"), 1);
-        await _sut.CreateAsync(Req(customerId: _customerB, number: "HD-OTHER"), 1);
+        await _sut.CreateAsync(Req(number: "HD-FIND-001"), 1, canReassignOwner: true);
+        await _sut.CreateAsync(Req(customerId: _customerB, number: "HD-OTHER"), 1, canReassignOwner: true);
 
         var byNumber = await _sut.ListAsync(1, true, search: "FIND");
         Assert.Single(byNumber.Items);
@@ -163,8 +193,8 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task Update_SalesCannotEditOtherOwnersRow()
     {
-        var owned = await _sut.CreateAsync(Req(owner: 100), 100);
-        var result = await _sut.UpdateAsync(owned.Id, Req(owner: 100, status: ContractStatus.Signed), callerUserId: 200, canSeeAll: false);
+        var owned = await _sut.CreateAsync(Req(owner: 100), 100, canReassignOwner: true);
+        var result = await _sut.UpdateAsync(owned.Id, Req(owner: 100, status: ContractStatus.Signed), callerUserId: 200, canSeeAll: false, canReassignOwner: false);
         Assert.Null(result);
 
         var forbidden = await _sut.GetAsync(owned.Id, callerUserId: 200, canSeeAll: false);
@@ -172,20 +202,41 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_SalesCannotReassignOwner()
+    {
+        var owned = await _sut.CreateAsync(Req(owner: 100), 100, canReassignOwner: true);
+        var req = Req(owner: 999);
+        var result = await _sut.UpdateAsync(owned.Id, req, callerUserId: 100, canSeeAll: false, canReassignOwner: false);
+        Assert.NotNull(result);
+        // Owner unchanged — the request-supplied owner is ignored for sales.
+        Assert.Equal(100, result!.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Update_ManagerCanReassignOwner()
+    {
+        var owned = await _sut.CreateAsync(Req(owner: 100), 100, canReassignOwner: true);
+        var req = Req(owner: 999);
+        var result = await _sut.UpdateAsync(owned.Id, req, callerUserId: 1, canSeeAll: true, canReassignOwner: true);
+        Assert.NotNull(result);
+        Assert.Equal(999, result!.OwnerUserId);
+    }
+
+    [Fact]
     public async Task Update_DuplicateNumberThrows()
     {
-        await _sut.CreateAsync(Req(number: "HD-A"), 1);
-        var b = await _sut.CreateAsync(Req(customerId: _customerB, number: "HD-B"), 1);
+        await _sut.CreateAsync(Req(number: "HD-A"), 1, canReassignOwner: true);
+        var b = await _sut.CreateAsync(Req(customerId: _customerB, number: "HD-B"), 1, canReassignOwner: true);
 
         var req = Req(customerId: _customerB, number: "HD-A");
         await Assert.ThrowsAsync<ContractDuplicateNumberException>(
-            () => _sut.UpdateAsync(b.Id, req, 1, canSeeAll: true));
+            () => _sut.UpdateAsync(b.Id, req, 1, canSeeAll: true, canReassignOwner: true));
     }
 
     [Fact]
     public async Task Delete_SalesCanOnlyDeleteOwnRows()
     {
-        var owned = await _sut.CreateAsync(Req(owner: 100), 100);
+        var owned = await _sut.CreateAsync(Req(owner: 100), 100, canReassignOwner: true);
         Assert.False(await _sut.DeleteAsync(owned.Id, callerUserId: 200, canSeeAll: false));
         Assert.True(await _sut.DeleteAsync(owned.Id, callerUserId: 100, canSeeAll: false));
     }
