@@ -224,6 +224,15 @@ const AdminSurveys = () => {
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  const hasActiveFilter =
+    search.trim().length > 0 ||
+    constructionType !== "" ||
+    surveyorUserId != null ||
+    linkedProjectId != null ||
+    driveStatus !== "" ||
+    dateFrom !== "" ||
+    dateTo !== "";
+
   const surveyorOptions = useMemo(
     () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
     [users],
@@ -394,7 +403,12 @@ const AdminSurveys = () => {
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
           <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
-            {t("surveys.empty")}
+            <p>{hasActiveFilter ? t("surveys.emptyFiltered") : t("surveys.empty")}</p>
+            {hasActiveFilter ? (
+              <Button variant="outline" size="sm" className="mt-3" onClick={resetFilters}>
+                {t("common.reset")}
+              </Button>
+            ) : null}
           </div>
         ) : (
           <>

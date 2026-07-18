@@ -18,13 +18,14 @@ import { extractApiError } from "@/lib/apiError";
 const AdminSurveyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const surveyId = Number(id);
+  const isValidId = Number.isFinite(surveyId) && surveyId > 0;
   const { t, lang } = useI18n();
   const [survey, setSurvey] = useState<SurveyResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(isValidId);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!Number.isFinite(surveyId)) return;
+    if (!isValidId) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -33,7 +34,14 @@ const AdminSurveyDetail = () => {
         const { data } = await adminApi.getSurvey(surveyId);
         if (!cancelled) setSurvey(data);
       } catch (err) {
-        if (!cancelled) setError(extractApiError(err));
+        if (cancelled) return;
+        // 404 is a normal "row is gone" — let the !survey branch render
+        // the localised not-found message instead of leaking an Axios
+        // string. Other errors still surface through PageError.
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status !== 404) {
+          setError(extractApiError(err));
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -41,7 +49,7 @@ const AdminSurveyDetail = () => {
     return () => {
       cancelled = true;
     };
-  }, [surveyId]);
+  }, [isValidId, surveyId]);
 
   const formatDate = (iso?: string | null) => {
     if (!iso) return "—";
