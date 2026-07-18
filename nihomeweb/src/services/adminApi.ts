@@ -620,6 +620,82 @@ export const OPPORTUNITY_STAGES: OpportunityStage[] = [
   "Lost",
 ];
 
+// -------- CRM Contract (NIH-102) --------
+
+export type ContractStatus =
+  | "Draft"
+  | "Signed"
+  | "InProgress"
+  | "OnHold"
+  | "Completed"
+  | "Cancelled";
+
+export const CONTRACT_STATUSES: ContractStatus[] = [
+  "Draft",
+  "Signed",
+  "InProgress",
+  "OnHold",
+  "Completed",
+  "Cancelled",
+];
+
+export interface ContractResponse {
+  id: number;
+  contractNumber: string;
+  customerId: number;
+  customerName?: string;
+  opportunityId?: number | null;
+  opportunityTitle?: string | null;
+  quoteId?: number | null;
+  quoteCode?: string | null;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  status: ContractStatus;
+  signedDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  value: number;
+  scopeOfWork?: string | null;
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContractListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ContractResponse[];
+}
+
+export interface ContractListParams {
+  status?: ContractStatus;
+  ownerUserId?: number;
+  customerId?: number;
+  search?: string;
+  signedFrom?: string;
+  signedTo?: string;
+  valueMin?: number;
+  valueMax?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface UpsertContractRequest {
+  contractNumber?: string | null;
+  customerId: number;
+  opportunityId?: number | null;
+  quoteId?: number | null;
+  ownerUserId?: number | null;
+  status: ContractStatus;
+  signedDate?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  value: number;
+  scopeOfWork?: string | null;
+  note?: string | null;
+}
+
 export type OpportunityActivityType =
   | "Call"
   | "Email"
@@ -1665,6 +1741,18 @@ export const adminApi = {
     api.put<WorkflowConfig>(`/workflows/${id}`, body),
   deleteWorkflow: (id: number) =>
     api.delete(`/workflows/${id}`),
+
+  // Contracts (NIH-102)
+  listContracts: (params?: ContractListParams) =>
+    api.get<ContractListResponse>("/contracts", { params }),
+  getContract: (id: number) =>
+    api.get<ContractResponse>(`/contracts/${id}`),
+  createContract: (body: UpsertContractRequest) =>
+    api.post<ContractResponse>("/contracts", body),
+  updateContract: (id: number, body: UpsertContractRequest) =>
+    api.put<ContractResponse>(`/contracts/${id}`, body),
+  deleteContract: (id: number) =>
+    api.delete(`/contracts/${id}`),
 
   // Users / RBAC
   getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>

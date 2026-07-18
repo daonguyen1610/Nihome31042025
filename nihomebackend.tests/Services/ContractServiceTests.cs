@@ -1,0 +1,192 @@
+using Microsoft.Extensions.Logging.Abstractions;
+using NihomeBackend.Data;
+using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Services;
+using nihomebackend.tests.Helpers;
+
+namespace nihomebackend.tests.Services;
+
+public class ContractServiceTests : IDisposable
+{
+    private readonly AppDbContext _db;
+    private readonly ContractService _sut;
+    private int _customerA;
+    private int _customerB;
+
+    public ContractServiceTests()
+    {
+        _db = DbContextFactory.Create();
+        _sut = new ContractService(_db, NullLogger<ContractService>.Instance);
+
+        _db.Customers.AddRange(
+            new Customer { Name = "Customer A", Type = CustomerType.Company },
+            new Customer { Name = "Customer B", Type = CustomerType.Individual });
+        _db.SaveChanges();
+        _customerA = _db.Customers.Single(c => c.Name == "Customer A").Id;
+        _customerB = _db.Customers.Single(c => c.Name == "Customer B").Id;
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    private UpsertContractRequest Req(
+        int? customerId = null,
+        string? number = null,
+        ContractStatus status = ContractStatus.Draft,
+        decimal value = 1_000_000m,
+        DateTime? signed = null,
+        DateTime? start = null,
+        DateTime? end = null,
+        int? owner = null) =>
+        new()
+        {
+            ContractNumber = number,
+            CustomerId = customerId ?? _customerA,
+            Status = status,
+            Value = value,
+            SignedDate = signed,
+            StartDate = start,
+            EndDate = end,
+            OwnerUserId = owner,
+        };
+
+    // ---------------- Create ----------------
+
+    [Fact]
+    public async Task Create_AutoGeneratesContractNumber()
+    {
+        var result = await _sut.CreateAsync(Req(), callerUserId: 42);
+        Assert.StartsWith("HD-", result.ContractNumber);
+        Assert.EndsWith("-0001", result.ContractNumber);
+        Assert.Equal(42, result.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Create_IncrementsNumberSequenceInSameYear()
+    {
+        await _sut.CreateAsync(Req(), 1);
+        var second = await _sut.CreateAsync(Req(customerId: _customerB), 1);
+        Assert.EndsWith("-0002", second.ContractNumber);
+    }
+
+    [Fact]
+    public async Task Create_WithExplicitNumberIsHonoured()
+    {
+        var result = await _sut.CreateAsync(Req(number: "HD-CUSTOM-001"), 1);
+        Assert.Equal("HD-CUSTOM-001", result.ContractNumber);
+    }
+
+    [Fact]
+    public async Task Create_DuplicateExplicitNumberThrows()
+    {
+        await _sut.CreateAsync(Req(number: "HD-DUP"), 1);
+        await Assert.ThrowsAsync<ContractDuplicateNumberException>(
+            () => _sut.CreateAsync(Req(customerId: _customerB, number: "HD-DUP"), 1));
+    }
+
+    [Fact]
+    public async Task Create_UnknownCustomerThrowsValidation()
+    {
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(Req(customerId: 9999), 1));
+    }
+
+    [Fact]
+    public async Task Create_EndDateBeforeStartDateThrows()
+    {
+        var req = Req(start: new DateTime(2026, 3, 1), end: new DateTime(2026, 2, 1));
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(req, 1));
+    }
+
+    // ---------------- List / RBAC scoping ----------------
+
+    [Fact]
+    public async Task List_SalesOnlySeesOwnRows_UnlessCanSeeAll()
+    {
+        await _sut.CreateAsync(Req(owner: 100), 100);
+        await _sut.CreateAsync(Req(customerId: _customerB, owner: 200), 200);
+
+        var salesView = await _sut.ListAsync(callerUserId: 100, canSeeAll: false);
+        Assert.Equal(1, salesView.Total);
+        Assert.All(salesView.Items, i => Assert.Equal(100, i.OwnerUserId));
+
+        var managerView = await _sut.ListAsync(callerUserId: 100, canSeeAll: true);
+        Assert.Equal(2, managerView.Total);
+    }
+
+    [Fact]
+    public async Task List_SortsBySignedDateDesc_ThenCreatedAtDesc()
+    {
+        var older = await _sut.CreateAsync(Req(signed: new DateTime(2026, 1, 1)), 1);
+        var newer = await _sut.CreateAsync(Req(customerId: _customerB, signed: new DateTime(2026, 6, 1)), 1);
+        var unsigned = await _sut.CreateAsync(Req(customerId: _customerA, number: "HD-DRAFT"), 1);
+
+        var view = await _sut.ListAsync(callerUserId: 1, canSeeAll: true);
+
+        // Signed rows first (desc by signed date), unsigned trails.
+        Assert.Equal(newer.Id, view.Items[0].Id);
+        Assert.Equal(older.Id, view.Items[1].Id);
+        Assert.Equal(unsigned.Id, view.Items[2].Id);
+    }
+
+    [Fact]
+    public async Task List_AppliesStatusAndValueFilters()
+    {
+        await _sut.CreateAsync(Req(status: ContractStatus.Draft, value: 100), 1);
+        await _sut.CreateAsync(Req(customerId: _customerB, status: ContractStatus.Signed, value: 1000), 1);
+
+        var draft = await _sut.ListAsync(1, true, status: ContractStatus.Draft);
+        Assert.Single(draft.Items);
+
+        var expensive = await _sut.ListAsync(1, true, valueMin: 500);
+        Assert.Single(expensive.Items);
+        Assert.Equal(1000m, expensive.Items[0].Value);
+    }
+
+    [Fact]
+    public async Task List_SearchMatchesContractNumberOrCustomerName()
+    {
+        await _sut.CreateAsync(Req(number: "HD-FIND-001"), 1);
+        await _sut.CreateAsync(Req(customerId: _customerB, number: "HD-OTHER"), 1);
+
+        var byNumber = await _sut.ListAsync(1, true, search: "FIND");
+        Assert.Single(byNumber.Items);
+
+        var byCustomer = await _sut.ListAsync(1, true, search: "Customer B");
+        Assert.Single(byCustomer.Items);
+        Assert.Equal("Customer B", byCustomer.Items[0].CustomerName);
+    }
+
+    // ---------------- Update / Delete ----------------
+
+    [Fact]
+    public async Task Update_SalesCannotEditOtherOwnersRow()
+    {
+        var owned = await _sut.CreateAsync(Req(owner: 100), 100);
+        var result = await _sut.UpdateAsync(owned.Id, Req(owner: 100, status: ContractStatus.Signed), callerUserId: 200, canSeeAll: false);
+        Assert.Null(result);
+
+        var forbidden = await _sut.GetAsync(owned.Id, callerUserId: 200, canSeeAll: false);
+        Assert.Null(forbidden);
+    }
+
+    [Fact]
+    public async Task Update_DuplicateNumberThrows()
+    {
+        await _sut.CreateAsync(Req(number: "HD-A"), 1);
+        var b = await _sut.CreateAsync(Req(customerId: _customerB, number: "HD-B"), 1);
+
+        var req = Req(customerId: _customerB, number: "HD-A");
+        await Assert.ThrowsAsync<ContractDuplicateNumberException>(
+            () => _sut.UpdateAsync(b.Id, req, 1, canSeeAll: true));
+    }
+
+    [Fact]
+    public async Task Delete_SalesCanOnlyDeleteOwnRows()
+    {
+        var owned = await _sut.CreateAsync(Req(owner: 100), 100);
+        Assert.False(await _sut.DeleteAsync(owned.Id, callerUserId: 200, canSeeAll: false));
+        Assert.True(await _sut.DeleteAsync(owned.Id, callerUserId: 100, canSeeAll: false));
+    }
+}
