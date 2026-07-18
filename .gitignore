@@ -27,3 +27,8 @@ nihomebackend/wwwroot/assets/
 # Capability-document placeholders are regenerated at boot by
 # SampleCrmDataSeeder — never commit the generated PDFs.
 nihomebackend/wwwroot/files/capability/
+
+# Contract attachments / VO uploads are user uploads at runtime — never
+# commit them into the repo. The dev seeder points at a placeholder path
+# but doesn't drop physical files.
+nihomebackend/wwwroot/files/contracts/
