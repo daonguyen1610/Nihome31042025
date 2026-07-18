@@ -1,0 +1,66 @@
+[
+  { "key": "shopDrawing.title", "category": "shopDrawing", "vi": "Bản vẽ Shop Drawing", "en": "Shop Drawings", "zh": "施工图", "ja": "施工図" },
+  { "key": "shopDrawing.empty", "category": "shopDrawing", "vi": "Chưa có bản vẽ Shop Drawing nào cho dự án này.", "en": "No shop drawings yet.", "zh": "该项目尚无施工图。", "ja": "施工図はまだありません。" },
+  { "key": "shopDrawing.lockedBefore", "category": "shopDrawing", "vi": "Dự án chưa ở giai đoạn Shop Drawing. Hãy mở khoá từ tab Basic Design trước.", "en": "Project is not at the Shop Drawing stage yet. Unlock it from the Basic Design tab first.", "zh": "项目尚未进入施工图阶段。请先在基本设计选项卡中解锁。", "ja": "案件は施工図段階に達していません。まず基本設計タブから解放してください。" },
+  { "key": "shopDrawing.lockedAfter", "category": "shopDrawing", "vi": "Dự án đã hoàn thành — bản vẽ Shop Drawing chỉ đọc.", "en": "Project is completed — shop drawings are read-only.", "zh": "项目已完成——施工图为只读。", "ja": "案件は完了しました — 施工図は読み取り専用です。" },
+
+  { "key": "shopDrawing.new", "category": "shopDrawing", "vi": "Tạo bản vẽ", "en": "New drawing", "zh": "新建施工图", "ja": "新規施工図" },
+  { "key": "shopDrawing.edit", "category": "shopDrawing", "vi": "Chỉnh sửa bản vẽ", "en": "Edit drawing", "zh": "编辑施工图", "ja": "施工図を編集" },
+  { "key": "shopDrawing.created", "category": "shopDrawing", "vi": "Đã tạo bản vẽ", "en": "Drawing created", "zh": "已创建施工图", "ja": "施工図を作成しました" },
+  { "key": "shopDrawing.updated", "category": "shopDrawing", "vi": "Đã cập nhật bản vẽ", "en": "Drawing updated", "zh": "已更新施工图", "ja": "施工図を更新しました" },
+  { "key": "shopDrawing.deleted", "category": "shopDrawing", "vi": "Đã xoá bản vẽ", "en": "Drawing deleted", "zh": "已删除施工图", "ja": "施工図を削除しました" },
+  { "key": "shopDrawing.transitioned", "category": "shopDrawing", "vi": "Đã cập nhật trạng thái bản vẽ", "en": "Drawing status updated", "zh": "已更新施工图状态", "ja": "施工図の状態を更新しました" },
+
+  { "key": "shopDrawing.field.discipline", "category": "shopDrawing", "vi": "Bộ môn", "en": "Discipline", "zh": "专业", "ja": "分野" },
+  { "key": "shopDrawing.field.constructionItem", "category": "shopDrawing", "vi": "Hạng mục thi công", "en": "Construction item", "zh": "施工项目", "ja": "施工項目" },
+  { "key": "shopDrawing.field.drawingCode", "category": "shopDrawing", "vi": "Mã bản vẽ", "en": "Drawing code", "zh": "图纸编号", "ja": "図面番号" },
+  { "key": "shopDrawing.field.title", "category": "shopDrawing", "vi": "Tên bản vẽ", "en": "Title", "zh": "标题", "ja": "タイトル" },
+  { "key": "shopDrawing.field.description", "category": "shopDrawing", "vi": "Mô tả", "en": "Description", "zh": "描述", "ja": "説明" },
+  { "key": "shopDrawing.field.owner", "category": "shopDrawing", "vi": "Người phụ trách", "en": "Owner", "zh": "负责人", "ja": "担当者" },
+  { "key": "shopDrawing.field.status", "category": "shopDrawing", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "状態" },
+  { "key": "shopDrawing.field.note", "category": "shopDrawing", "vi": "Ghi chú", "en": "Note", "zh": "备注", "ja": "備考" },
+  { "key": "shopDrawing.field.updatedAt", "category": "shopDrawing", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+
+  { "key": "shopDrawing.status.Drafting", "category": "shopDrawing", "vi": "Đang vẽ", "en": "Drafting", "zh": "绘制中", "ja": "作成中" },
+  { "key": "shopDrawing.status.InReview", "category": "shopDrawing", "vi": "Đang review", "en": "In review", "zh": "审核中", "ja": "レビュー中" },
+  { "key": "shopDrawing.status.Approved", "category": "shopDrawing", "vi": "Đã duyệt", "en": "Approved", "zh": "已批准", "ja": "承認済み" },
+  { "key": "shopDrawing.status.PendingIfc", "category": "shopDrawing", "vi": "Chờ phát hành IFC", "en": "Pending IFC release", "zh": "待发布IFC", "ja": "IFC発行待ち" },
+  { "key": "shopDrawing.status.Released", "category": "shopDrawing", "vi": "Đã phát hành IFC", "en": "Released (IFC)", "zh": "已发布 (IFC)", "ja": "IFC発行済み" },
+  { "key": "shopDrawing.status.Rejected", "category": "shopDrawing", "vi": "Từ chối", "en": "Rejected", "zh": "已拒绝", "ja": "却下" },
+
+  { "key": "shopDrawing.action.sendReview", "category": "shopDrawing", "vi": "Gửi review", "en": "Send for review", "zh": "提交审核", "ja": "レビュー依頼" },
+  { "key": "shopDrawing.action.approve", "category": "shopDrawing", "vi": "Duyệt", "en": "Approve", "zh": "批准", "ja": "承認" },
+  { "key": "shopDrawing.action.queueIfc", "category": "shopDrawing", "vi": "Xếp hàng IFC", "en": "Queue for IFC", "zh": "加入IFC队列", "ja": "IFCキューに追加" },
+  { "key": "shopDrawing.action.unqueueIfc", "category": "shopDrawing", "vi": "Rút khỏi hàng IFC", "en": "Remove from IFC queue", "zh": "从IFC队列移除", "ja": "IFCキューから削除" },
+  { "key": "shopDrawing.action.reject", "category": "shopDrawing", "vi": "Từ chối", "en": "Reject", "zh": "拒绝", "ja": "却下" },
+  { "key": "shopDrawing.action.backToDraft", "category": "shopDrawing", "vi": "Về Đang vẽ", "en": "Back to Drafting", "zh": "返回绘制中", "ja": "作成中に戻す" },
+  { "key": "shopDrawing.action.delete", "category": "shopDrawing", "vi": "Xoá bản vẽ", "en": "Delete", "zh": "删除", "ja": "削除" },
+
+  { "key": "shopDrawing.form.hint", "category": "shopDrawing", "vi": "Điền tên bản vẽ + chọn bộ môn + hạng mục thi công. Mã bản vẽ (VD KT-SD-001) sinh tự động theo bộ môn.", "en": "Fill in the title, pick a discipline and construction item. The drawing code (e.g. KT-SD-001) is generated automatically per discipline.", "zh": "填写标题、选择专业和施工项目。图纸编号（例如 KT-SD-001）按专业自动生成。", "ja": "タイトルを入力し、分野と施工項目を選択します。図面番号（例：KT-SD-001）は分野ごとに自動採番されます。" },
+  { "key": "shopDrawing.form.disciplinePlaceholder", "category": "shopDrawing", "vi": "Chọn bộ môn", "en": "Pick a discipline", "zh": "选择专业", "ja": "分野を選択" },
+  { "key": "shopDrawing.form.constructionItemPlaceholder", "category": "shopDrawing", "vi": "VD: Móng cọc, Trần thạch cao tầng 3", "en": "e.g. Foundation piles, Level 3 gypsum ceiling", "zh": "例如：桩基础、三层石膏板天花", "ja": "例：杭基礎、3階石膏ボード天井" },
+  { "key": "shopDrawing.form.ownerNone", "category": "shopDrawing", "vi": "Chưa gán người phụ trách", "en": "Unassigned", "zh": "未指派", "ja": "未割当" },
+  { "key": "shopDrawing.form.titleRequired", "category": "shopDrawing", "vi": "Tên bản vẽ là bắt buộc.", "en": "Title is required.", "zh": "标题为必填项。", "ja": "タイトルは必須です。" },
+  { "key": "shopDrawing.form.disciplineRequired", "category": "shopDrawing", "vi": "Vui lòng chọn bộ môn.", "en": "Please pick a discipline.", "zh": "请选择专业。", "ja": "分野を選択してください。" },
+  { "key": "shopDrawing.form.constructionItemRequired", "category": "shopDrawing", "vi": "Vui lòng nhập hạng mục thi công.", "en": "Please enter a construction item.", "zh": "请输入施工项目。", "ja": "施工項目を入力してください。" },
+
+  { "key": "shopDrawing.filter.allDisciplines", "category": "shopDrawing", "vi": "Tất cả bộ môn", "en": "All disciplines", "zh": "全部专业", "ja": "すべての分野" },
+  { "key": "shopDrawing.filter.allStatuses", "category": "shopDrawing", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべての状態" },
+  { "key": "shopDrawing.filter.search", "category": "shopDrawing", "vi": "Tìm mã, tên bản vẽ hoặc hạng mục...", "en": "Search by code, title or item...", "zh": "按编号、标题或项目搜索...", "ja": "番号・タイトル・項目で検索..." },
+
+  { "key": "shopDrawing.stats.total", "category": "shopDrawing", "vi": "Tổng bản vẽ", "en": "Total drawings", "zh": "图纸总数", "ja": "図面総数" },
+  { "key": "shopDrawing.stats.drafting", "category": "shopDrawing", "vi": "Đang vẽ", "en": "Drafting", "zh": "绘制中", "ja": "作成中" },
+  { "key": "shopDrawing.stats.inReview", "category": "shopDrawing", "vi": "Đang review", "en": "In review", "zh": "审核中", "ja": "レビュー中" },
+  { "key": "shopDrawing.stats.approved", "category": "shopDrawing", "vi": "Đã duyệt", "en": "Approved", "zh": "已批准", "ja": "承認済み" },
+  { "key": "shopDrawing.stats.pendingIfc", "category": "shopDrawing", "vi": "Chờ IFC", "en": "Pending IFC", "zh": "待IFC", "ja": "IFC待ち" },
+  { "key": "shopDrawing.stats.released", "category": "shopDrawing", "vi": "Đã phát hành", "en": "Released", "zh": "已发布", "ja": "発行済み" },
+
+  { "key": "shopDrawing.bulk.delete", "category": "shopDrawing", "vi": "Xoá đã chọn", "en": "Delete selected", "zh": "删除所选", "ja": "選択を削除" },
+  { "key": "shopDrawing.bulk.deleteHint", "category": "shopDrawing", "vi": "Chỉ áp dụng với bản vẽ ở trạng thái Đang vẽ.", "en": "Only applies to drawings still in Drafting.", "zh": "仅适用于绘制中的图纸。", "ja": "作成中の図面にのみ適用されます。" },
+  { "key": "shopDrawing.bulk.confirmTitle", "category": "shopDrawing", "vi": "Xoá {count} bản vẽ đã chọn?", "en": "Delete {count} selected drawings?", "zh": "删除 {count} 张所选图纸？", "ja": "選択した {count} 件の図面を削除しますか？" },
+  { "key": "shopDrawing.bulk.result", "category": "shopDrawing", "vi": "Đã xoá {success}, thất bại {failed} bản vẽ.", "en": "{success} deleted, {failed} failed.", "zh": "已删除 {success} 张，失败 {failed} 张。", "ja": "{success} 件を削除、{failed} 件失敗。" },
+
+  { "key": "shopDrawing.delete.confirmTitle", "category": "shopDrawing", "vi": "Xoá bản vẽ?", "en": "Delete drawing?", "zh": "删除图纸？", "ja": "図面を削除しますか？" },
+  { "key": "shopDrawing.delete.confirmBody", "category": "shopDrawing", "vi": "Chỉ xoá được \"{code}\" khi còn ở trạng thái Đang vẽ. Không thể hoàn tác.", "en": "\"{code}\" can only be deleted while still in Drafting. This cannot be undone.", "zh": "仅在绘制中状态可删除“{code}”。此操作无法撤销。", "ja": "「{code}」は作成中の状態のみ削除できます。取り消せません。" },
+  { "key": "shopDrawing.delete.confirm", "category": "shopDrawing", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
+]

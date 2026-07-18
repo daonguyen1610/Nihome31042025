@@ -1796,6 +1796,100 @@ export interface TransitionBasicDesignDocStatusRequest {
   status: BasicDesignDocStatus;
 }
 
+// ─── Shop Drawings (NIH-116) ────────────────────────
+
+export type ShopDrawingStatus =
+  | "Drafting"
+  | "InReview"
+  | "Approved"
+  | "PendingIfc"
+  | "Released"
+  | "Rejected";
+
+export const SHOP_DRAWING_STATUSES: ShopDrawingStatus[] = [
+  "Drafting",
+  "InReview",
+  "Approved",
+  "PendingIfc",
+  "Released",
+  "Rejected",
+];
+
+export interface ShopDrawingResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  disciplineCode: string;
+  disciplineLabel?: string | null;
+  constructionItem: string;
+  drawingCode: string;
+  title: string;
+  description?: string | null;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  status: ShopDrawingStatus;
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShopDrawingListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ShopDrawingResponse[];
+  /** Per-status counts, keyed by `ShopDrawingStatus`. */
+  statusCounts: Partial<Record<ShopDrawingStatus, number>>;
+}
+
+export interface ShopDrawingListParams {
+  designProjectId?: number;
+  disciplineCode?: string;
+  constructionItem?: string;
+  status?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateShopDrawingRequest {
+  designProjectId: number;
+  disciplineCode: string;
+  constructionItem: string;
+  title: string;
+  description?: string | null;
+  ownerUserId?: number | null;
+  note?: string | null;
+}
+
+export interface UpdateShopDrawingRequest {
+  disciplineCode: string;
+  constructionItem: string;
+  title: string;
+  description?: string | null;
+  ownerUserId?: number | null;
+  note?: string | null;
+}
+
+export interface TransitionShopDrawingStatusRequest {
+  status: ShopDrawingStatus;
+}
+
+export interface BulkDeleteShopDrawingsRequest {
+  ids: number[];
+}
+
+export interface ShopDrawingBulkDeleteFailure {
+  id: number;
+  message: string;
+}
+
+export interface ShopDrawingBulkDeleteResponse {
+  requested: number;
+  deleted: number;
+  failures: ShopDrawingBulkDeleteFailure[];
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2463,6 +2557,32 @@ export const adminApi = {
     api.post<BasicDesignDocResponse>(`/basic-design-docs/${id}/status`, body),
   unlockShopDrawing: (designProjectId: number) =>
     api.post<DesignProjectResponse>(`/basic-design-docs/design-project/${designProjectId}/unlock-shop-drawing`),
+
+  // Shop Drawings (NIH-116)
+  listShopDrawings: (params: ShopDrawingListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.disciplineCode) q.append("disciplineCode", params.disciplineCode);
+    if (params.constructionItem) q.append("constructionItem", params.constructionItem);
+    if (params.status) q.append("status", params.status);
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<ShopDrawingListResponse>(`/shop-drawings${qs ? `?${qs}` : ""}`);
+  },
+  getShopDrawing: (id: number) =>
+    api.get<ShopDrawingResponse>(`/shop-drawings/${id}`),
+  createShopDrawing: (body: CreateShopDrawingRequest) =>
+    api.post<ShopDrawingResponse>("/shop-drawings", body),
+  updateShopDrawing: (id: number, body: UpdateShopDrawingRequest) =>
+    api.put<ShopDrawingResponse>(`/shop-drawings/${id}`, body),
+  deleteShopDrawing: (id: number) =>
+    api.delete(`/shop-drawings/${id}`),
+  bulkDeleteShopDrawings: (body: BulkDeleteShopDrawingsRequest) =>
+    api.post<ShopDrawingBulkDeleteResponse>("/shop-drawings/bulk-delete", body),
+  transitionShopDrawing: (id: number, body: TransitionShopDrawingStatusRequest) =>
+    api.post<ShopDrawingResponse>(`/shop-drawings/${id}/status`, body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>

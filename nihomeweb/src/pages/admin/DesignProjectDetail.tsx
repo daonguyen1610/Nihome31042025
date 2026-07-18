@@ -21,6 +21,7 @@ import {
 } from "@/services/adminApi";
 import { ConceptOptionsTab } from "./design/ConceptOptionsTab";
 import { BasicDesignTab } from "./design/BasicDesignTab";
+import { ShopDrawingTab } from "./design/ShopDrawingTab";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-sky-200 bg-sky-50 text-sky-700",
@@ -249,6 +250,8 @@ const AdminDesignProjectDetail = () => {
                 <ConceptOptionsTab project={project} onProjectMayHaveChanged={fetchProject} />
               ) : tab === "basic" ? (
                 <BasicDesignTab project={project} onProjectMayHaveChanged={fetchProject} />
+              ) : tab === "shop" ? (
+                <ShopDrawingTab project={project} onProjectMayHaveChanged={fetchProject} />
               ) : (
                 <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
                   {t("designProjects.detail.stageComingSoon")}
