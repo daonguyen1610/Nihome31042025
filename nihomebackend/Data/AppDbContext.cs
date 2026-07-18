@@ -76,6 +76,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<PermitChecklistItem> PermitChecklistItems => Set<PermitChecklistItem>();
 
+    public DbSet<ConceptOption> ConceptOptions => Set<ConceptOption>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -827,6 +829,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.TargetDeadline);
             b.HasIndex(p => p.ExpiresAt);
+        });
+
+        modelBuilder.Entity<ConceptOption>(b =>
+        {
+            b.ToTable("concept_options");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            b.Property(c => c.Description).HasMaxLength(4000);
+            b.Property(c => c.InternalNote).HasMaxLength(4000);
+            b.Property(c => c.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(c => c.DesignProject)
+                .WithMany()
+                .HasForeignKey(c => c.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(c => c.Owner)
+                .WithMany()
+                .HasForeignKey(c => c.OwnerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(c => c.DesignProjectId);
+            b.HasIndex(c => c.Status);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

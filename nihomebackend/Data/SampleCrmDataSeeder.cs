@@ -37,6 +37,7 @@ public static class SampleCrmDataSeeder
         SeedSurveys(db, owner, now);
         SeedDesignProjects(db, owner, now);
         SeedPermitChecklists(db, owner, now);
+        SeedConceptOptions(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1459,5 +1460,49 @@ public static class SampleCrmDataSeeder
             }
         }
         if (seq > 0) db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Seed 3 concept options for the first sample design project so the
+    /// NIH-114 UI has variety on a fresh DB (one Drafting, one
+    /// PresentedToClient, one Discarded). Idempotent — guarded on the
+    /// (design_project_id, name) uniqueness of the sample rows.
+    /// </summary>
+    private static void SeedConceptOptions(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.Concept)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+        if (db.ConceptOptions.Any(c => c.DesignProjectId == project.Id
+                                     && c.Description != null
+                                     && c.Description.StartsWith(SampleTag))) return;
+
+        var seeds = new (string Name, string Description, ConceptOptionStatus Status, int DaysAgo, bool Presented)[]
+        {
+            ("Phương án A - Hiện đại",  $"{SampleTag} Concept option A — tone hiện đại, tối giản.", ConceptOptionStatus.PresentedToClient,     3,  true),
+            ("Phương án B - Truyền thống", $"{SampleTag} Concept option B — mái ngói, sân trong.",    ConceptOptionStatus.Drafting,               1,  false),
+            ("Phương án C - Cổ điển",   $"{SampleTag} Concept option C — bỏ ngang do khách không thích tone màu.", ConceptOptionStatus.Discarded, 5, true),
+        };
+
+        foreach (var (name, description, status, daysAgo, presented) in seeds)
+        {
+            db.ConceptOptions.Add(new ConceptOption
+            {
+                DesignProjectId = project.Id,
+                Name = name,
+                Description = description,
+                InternalNote = "Sample option — theo dõi demo.",
+                OwnerUserId = owner.Id,
+                PresentedAt = presented ? now.AddDays(-daysAgo) : null,
+                Status = status,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-daysAgo - 3),
+                UpdatedAt = now.AddDays(-daysAgo),
+            });
+        }
+        db.SaveChanges();
     }
 }

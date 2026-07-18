@@ -19,6 +19,7 @@ import {
   type DesignProjectStage,
   type DesignProjectStatus,
 } from "@/services/adminApi";
+import { ConceptOptionsTab } from "./design/ConceptOptionsTab";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-sky-200 bg-sky-50 text-sky-700",
@@ -240,9 +241,13 @@ const AdminDesignProjectDetail = () => {
 
           {(["concept", "basic", "shop", "team", "docs"] as const).map((tab) => (
             <TabsContent key={tab} value={tab}>
-              <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-                {t("designProjects.detail.stageComingSoon")}
-              </div>
+              {tab === "concept" ? (
+                <ConceptOptionsTab project={project} onProjectMayHaveChanged={fetchProject} />
+              ) : (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+                  {t("designProjects.detail.stageComingSoon")}
+                </div>
+              )}
             </TabsContent>
           ))}
         </Tabs>

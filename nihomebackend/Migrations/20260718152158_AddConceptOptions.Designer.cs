@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NihomeBackend.Data;
 
@@ -11,9 +12,11 @@ using NihomeBackend.Data;
 namespace nihomebackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260718152158_AddConceptOptions")]
+    partial class AddConceptOptions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1902,88 +1905,6 @@ namespace nihomebackend.Migrations
                     b.ToTable("opportunity_activities", (string)null);
                 });
 
-            modelBuilder.Entity("NihomeBackend.Models.PermitChecklistItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("DesignProjectId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("IssuedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("IssuedFilePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("IssuingAgency")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<int?>("OwnerUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("PermitTypeCode")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("SubmittedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("SubmittedFilePath")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("TargetDeadline")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UpdatedByUserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DesignProjectId");
-
-                    b.HasIndex("ExpiresAt");
-
-                    b.HasIndex("OwnerUserId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("TargetDeadline");
-
-                    b.HasIndex("DesignProjectId", "PermitTypeCode")
-                        .IsUnique();
-
-                    b.ToTable("permit_checklist_items", (string)null);
-                });
-
             modelBuilder.Entity("NihomeBackend.Models.ProcessDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -3502,24 +3423,6 @@ namespace nihomebackend.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Opportunity");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.PermitChecklistItem", b =>
-                {
-                    b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
-                        .WithMany()
-                        .HasForeignKey("DesignProjectId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", "Owner")
-                        .WithMany()
-                        .HasForeignKey("OwnerUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("DesignProject");
-
-                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Project", b =>
