@@ -82,10 +82,21 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
+/** Today as YYYY-MM-DD in the caller's local timezone. Used to seed the
+ * create-form date picker so a user in UTC+7 opening the dialog at 06:00
+ * doesn't see the previous day's date. */
+const todayLocalIso = (): string => {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 const emptyForm = (): CreateSurveyRequest => ({
   location: "",
   constructionTypeCode: null,
-  surveyDate: new Date().toISOString(),
+  surveyDate: `${todayLocalIso()}T00:00:00.000Z`,
   surveyorUserId: null,
   linkedProjectId: null,
   linkedOpportunityId: null,
