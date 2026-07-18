@@ -42,6 +42,7 @@ import AdminQuotes from "./pages/admin/Quotes.tsx";
 import AdminQuoteDetail from "./pages/admin/QuoteDetail.tsx";
 import AdminCapabilityDocuments from "./pages/admin/CapabilityDocuments.tsx";
 import AdminTenders from "./pages/admin/Tenders.tsx";
+import AdminTenderDetail from "./pages/admin/TenderDetail.tsx";
 import AdminRecruitment from "./pages/admin/Recruitment.tsx";
 import EmploymentTypes from "./pages/admin/EmploymentTypes.tsx";
 import SettingsCenter from "./pages/admin/SettingsCenter.tsx";
@@ -160,6 +161,7 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.tenders} />}>
                 <Route path="/admin/tenders" element={<AdminTenders />} />
+                <Route path="/admin/tenders/:id" element={<AdminTenderDetail />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.contracts} />}>
                 <Route path="/admin/contracts" element={<ContractsPage />} />

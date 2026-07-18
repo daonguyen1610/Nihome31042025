@@ -1320,6 +1320,49 @@ export interface TenderListParams {
   pageSize?: number;
 }
 
+// ─── NIH-97 tender detail-page workflow ────────────────────────
+
+/**
+ * Inline-edit for a single checklist row. `clearOwner` / `clearInternalDeadline`
+ * flip explicit nulls (so a plain absent field == "no change"). Send one
+ * field at a time when the FE mutates via optimistic-UI.
+ */
+export interface UpdateTenderChecklistItemRequest {
+  status?: TenderChecklistItemStatus;
+  ownerUserId?: number | null;
+  clearOwner?: boolean;
+  internalDeadline?: string | null;
+  clearInternalDeadline?: boolean;
+}
+
+export interface AttachTenderChecklistFromLibraryItem {
+  checklistItemId: number;
+  capabilityDocumentId: number;
+}
+
+export interface AttachTenderChecklistFromLibraryRequest {
+  items: AttachTenderChecklistFromLibraryItem[];
+}
+
+export interface MarkTenderWonRequest {
+  opportunityId: number;
+  note?: string | null;
+}
+
+export interface MarkTenderLostRequest {
+  reasonCode: string;
+  note?: string | null;
+}
+
+export interface TenderTimelineEvent {
+  id: number;
+  occurredAt: string;
+  action: string;
+  message?: string | null;
+  userId?: number | null;
+  userName?: string | null;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -1841,6 +1884,32 @@ export const adminApi = {
   createTender: (body: CreateTenderRequest) => api.post<TenderResponse>("/tenders", body),
   updateTender: (id: number, body: UpdateTenderRequest) => api.put<TenderResponse>(`/tenders/${id}`, body),
   deleteTender: (id: number) => api.delete(`/tenders/${id}`),
+
+  // Tender detail-page workflow (NIH-97)
+  updateTenderChecklistItem: (
+    tenderId: number,
+    itemId: number,
+    body: UpdateTenderChecklistItemRequest,
+  ) => api.patch<TenderResponse>(`/tenders/${tenderId}/checklist/${itemId}`, body),
+  uploadTenderChecklistFile: (tenderId: number, itemId: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post<TenderResponse>(
+      `/tenders/${tenderId}/checklist/${itemId}/upload`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+  },
+  attachTenderChecklistFromLibrary: (
+    tenderId: number,
+    body: AttachTenderChecklistFromLibraryRequest,
+  ) => api.post<TenderResponse>(`/tenders/${tenderId}/checklist/attach-from-library`, body),
+  markTenderWon: (tenderId: number, body: MarkTenderWonRequest) =>
+    api.post<TenderResponse>(`/tenders/${tenderId}/mark-won`, body),
+  markTenderLost: (tenderId: number, body: MarkTenderLostRequest) =>
+    api.post<TenderResponse>(`/tenders/${tenderId}/mark-lost`, body),
+  getTenderTimeline: (tenderId: number, limit = 100) =>
+    api.get<TenderTimelineEvent[]>(`/tenders/${tenderId}/timeline`, { params: { limit } }),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
