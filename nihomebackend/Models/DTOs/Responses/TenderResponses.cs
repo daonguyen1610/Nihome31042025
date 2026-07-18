@@ -79,3 +79,18 @@ public class TenderListResponse
     public int PageSize { get; set; }
     public List<TenderListItemResponse> Items { get; set; } = new();
 }
+
+/// <summary>
+/// Timeline event for the Tender detail page (NIH-97 History tab). Sourced
+/// from the audit log stream filtered by <c>resourceType == "Tender"</c> and
+/// the row id.
+/// </summary>
+public class TenderTimelineEvent
+{
+    public long Id { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string? Message { get; set; }
+    public int? UserId { get; set; }
+    public string? UserName { get; set; }
+}

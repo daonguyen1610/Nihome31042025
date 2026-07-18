@@ -289,4 +289,293 @@ public class TenderServiceTests : IDisposable
         var submitted = await _sut.ListAsync(new TenderListParams { Status = "Submitted" });
         Assert.Equal(0, submitted.Total);
     }
+
+    // ---------------- NIH-97 Checklist inline-edit ----------------
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_ChangesStatus()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+
+        var updated = await _sut.UpdateChecklistItemAsync(created.Id, itemId, new UpdateTenderChecklistItemRequest
+        {
+            Status = "Done",
+        }, _userId);
+
+        Assert.NotNull(updated);
+        var it = updated!.ChecklistItems.First(i => i.Id == itemId);
+        Assert.Equal("Done", it.Status);
+        // 1 of 3 done → 33%
+        Assert.Equal(33, updated.ChecklistCompletionPercent);
+    }
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_ClearsOwnerOnDemand()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+
+        await _sut.UpdateChecklistItemAsync(created.Id, itemId, new UpdateTenderChecklistItemRequest
+        {
+            OwnerUserId = _userId,
+        }, _userId);
+
+        var afterClear = await _sut.UpdateChecklistItemAsync(created.Id, itemId, new UpdateTenderChecklistItemRequest
+        {
+            ClearOwner = true,
+        }, _userId);
+        Assert.Null(afterClear!.ChecklistItems.First(i => i.Id == itemId).OwnerUserId);
+    }
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_UnknownItem_ReturnsNull()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var res = await _sut.UpdateChecklistItemAsync(created.Id, 999_999,
+            new UpdateTenderChecklistItemRequest { Status = "Done" }, _userId);
+        Assert.Null(res);
+    }
+
+    [Fact]
+    public async Task UpdateChecklistItemAsync_InvalidStatus_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.UpdateChecklistItemAsync(created.Id, itemId,
+                new UpdateTenderChecklistItemRequest { Status = "Whatever" }, _userId));
+    }
+
+    [Fact]
+    public async Task AttachChecklistFileAsync_AutoCompletesUnfinishedRow()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+
+        var updated = await _sut.AttachChecklistFileAsync(created.Id, itemId,
+            "/files/tenders/cl-abc.pdf", "hs-nang-luc.pdf", _userId);
+
+        Assert.NotNull(updated);
+        var it = updated!.ChecklistItems.First(i => i.Id == itemId);
+        Assert.Equal("/files/tenders/cl-abc.pdf", it.FilePath);
+        Assert.Equal("hs-nang-luc.pdf", it.OriginalFileName);
+        Assert.Equal("Done", it.Status);
+    }
+
+    [Fact]
+    public async Task AttachChecklistFromLibraryAsync_HappyPath()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var doc = new CapabilityDocument
+        {
+            Name = "ISO 9001",
+            TagCode = "capability",
+            FilePath = "/files/capability/abc.pdf",
+            OriginalFileName = "iso-9001.pdf",
+            FileSize = 1000,
+            ContentType = "application/pdf",
+            CurrentVersion = 1,
+        };
+        _db.CapabilityDocuments.Add(doc);
+        _db.SaveChanges();
+
+        var updated = await _sut.AttachChecklistFromLibraryAsync(created.Id,
+            new AttachTenderChecklistFromLibraryRequest
+            {
+                Items =
+                [
+                    new AttachTenderChecklistFromLibraryItem
+                    {
+                        ChecklistItemId = created.ChecklistItems[0].Id,
+                        CapabilityDocumentId = doc.Id,
+                    }
+                ],
+            }, _userId);
+
+        Assert.NotNull(updated);
+        var it = updated!.ChecklistItems.First(i => i.Id == created.ChecklistItems[0].Id);
+        Assert.Equal("/files/capability/abc.pdf", it.FilePath);
+        Assert.Equal("iso-9001.pdf", it.OriginalFileName);
+        Assert.Equal("Done", it.Status);
+    }
+
+    [Fact]
+    public async Task AttachChecklistFromLibraryAsync_UnknownDoc_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.AttachChecklistFromLibraryAsync(created.Id, new AttachTenderChecklistFromLibraryRequest
+            {
+                Items =
+                [
+                    new AttachTenderChecklistFromLibraryItem
+                    {
+                        ChecklistItemId = created.ChecklistItems[0].Id,
+                        CapabilityDocumentId = 9999,
+                    }
+                ],
+            }, _userId));
+    }
+
+    [Fact]
+    public async Task AttachChecklistFromLibraryAsync_ItemFromOtherTender_Throws()
+    {
+        var a = await _sut.CreateAsync(ValidCreate(), _userId);
+        var b = await _sut.CreateAsync(ValidCreate(), _userId);
+        var doc = new CapabilityDocument
+        {
+            Name = "X",
+            TagCode = "capability",
+            FilePath = "/files/capability/x.pdf",
+            OriginalFileName = "x.pdf",
+            FileSize = 1,
+            ContentType = "application/pdf",
+        };
+        _db.CapabilityDocuments.Add(doc);
+        _db.SaveChanges();
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.AttachChecklistFromLibraryAsync(a.Id, new AttachTenderChecklistFromLibraryRequest
+            {
+                Items =
+                [
+                    new AttachTenderChecklistFromLibraryItem
+                    {
+                        ChecklistItemId = b.ChecklistItems[0].Id, // wrong tender
+                        CapabilityDocumentId = doc.Id,
+                    }
+                ],
+            }, _userId));
+    }
+
+    // ---------------- NIH-97 Mark Won / Lost ----------------
+
+    private int SeedOpportunity()
+    {
+        var opp = new Opportunity
+        {
+            CustomerId = _customerId,
+            Name = "Opp",
+            EstimatedValue = 0,
+            WinProbability = 10,
+            Stage = OpportunityStage.Prospecting,
+        };
+        _db.Opportunities.Add(opp);
+        _db.SaveChanges();
+        return opp.Id;
+    }
+
+    [Fact]
+    public async Task MarkWonAsync_HappyPath_SetsStatusAndOpportunity()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var oppId = SeedOpportunity();
+
+        var updated = await _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest
+        {
+            OpportunityId = oppId,
+            Note = "Trúng chính thức",
+        }, _userId);
+
+        Assert.NotNull(updated);
+        Assert.Equal("Won", updated!.Status);
+        Assert.Equal(oppId, updated.WonOpportunityId);
+        Assert.NotNull(updated.ClosedAt);
+        Assert.Equal("Trúng chính thức", updated.Note);
+    }
+
+    [Fact]
+    public async Task MarkWonAsync_UnknownOpportunity_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { OpportunityId = 9999 }, _userId));
+    }
+
+    [Fact]
+    public async Task MarkWonAsync_AlreadyClosed_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var oppId = SeedOpportunity();
+        await _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { OpportunityId = oppId }, _userId);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { OpportunityId = oppId }, _userId));
+    }
+
+    [Fact]
+    public async Task MarkLostAsync_HappyPath()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        _db.MasterDataOptions.Add(new MasterDataOption
+        {
+            Category = "opportunity_lost_reason",
+            Code = "price",
+            Name = "Giá quá cao",
+            IsActive = true,
+        });
+        _db.SaveChanges();
+
+        var updated = await _sut.MarkLostAsync(created.Id, new MarkTenderLostRequest
+        {
+            ReasonCode = "price",
+            Note = "Cạnh tranh giá",
+        }, _userId);
+
+        Assert.NotNull(updated);
+        Assert.Equal("Lost", updated!.Status);
+        Assert.Equal("price", updated.LostReasonCode);
+        Assert.Equal("Cạnh tranh giá", updated.LostNote);
+        Assert.NotNull(updated.ClosedAt);
+    }
+
+    [Fact]
+    public async Task MarkLostAsync_UnknownReason_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.MarkLostAsync(created.Id, new MarkTenderLostRequest { ReasonCode = "no-such-reason" }, _userId));
+    }
+
+    // ---------------- Timeline ----------------
+
+    [Fact]
+    public async Task GetTimelineAsync_ReturnsNullWhenTenderMissing()
+    {
+        var events = await _sut.GetTimelineAsync(9999, 50);
+        Assert.Null(events);
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_ReturnsSeededAuditRowsNewestFirst()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        _db.AuditLogs.AddRange(
+            new AuditLog
+            {
+                AuditId = Guid.NewGuid().ToString("N"),
+                CreatedAt = DateTime.UtcNow.AddMinutes(-10),
+                Action = "tender.checklist.update",
+                ResourceType = "Tender",
+                ResourceId = created.Id.ToString(),
+                Message = "older",
+            },
+            new AuditLog
+            {
+                AuditId = Guid.NewGuid().ToString("N"),
+                CreatedAt = DateTime.UtcNow,
+                Action = "tender.checklist.upload",
+                ResourceType = "Tender",
+                ResourceId = created.Id.ToString(),
+                Message = "newer",
+            });
+        _db.SaveChanges();
+
+        var events = await _sut.GetTimelineAsync(created.Id, 50);
+        Assert.NotNull(events);
+        Assert.Equal(2, events!.Count);
+        Assert.Equal("newer", events[0].Message);
+        Assert.Equal("older", events[1].Message);
+    }
 }
