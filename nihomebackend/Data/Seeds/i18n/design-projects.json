@@ -56,6 +56,8 @@
   { "key": "designProjects.delete.confirmTitle", "category": "designProjects", "vi": "Xoá dự án thiết kế?", "en": "Delete design project?", "zh": "删除设计项目？", "ja": "設計プロジェクトを削除しますか？" },
   { "key": "designProjects.delete.confirmBody", "category": "designProjects", "vi": "Chỉ xoá được dự án \"{name}\" khi còn ở giai đoạn Concept. Hành động này không thể hoàn tác.", "en": "\"{name}\" can only be deleted while still in the Concept stage. This cannot be undone.", "zh": "仅在 Concept 阶段可删除“{name}”。此操作无法撤销。", "ja": "「{name}」はコンセプト段階のみ削除できます。取り消せません。" },
   { "key": "designProjects.delete.confirm", "category": "designProjects", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" },
+  { "key": "designProjects.delete.notConceptTitle", "category": "designProjects", "vi": "Không thể xoá dự án ngoài giai đoạn Concept", "en": "Cannot delete beyond Concept stage", "zh": "无法删除超出 Concept 阶段的项目", "ja": "コンセプト段階を超えた案件は削除できません" },
+  { "key": "designProjects.form.stageHint", "category": "designProjects", "vi": "Cập nhật giai đoạn / trạng thái để đồng bộ tiến độ và mở khoá các tab tiếp theo.", "en": "Change stage / status to move the project forward and unlock later tabs.", "zh": "更新阶段/状态以推进项目并解锁后续标签。", "ja": "段階 / 状態を更新して次のタブを解放できます。" },
 
   { "key": "designProjects.detail.back", "category": "designProjects", "vi": "Quay lại danh sách dự án thiết kế", "en": "Back to design projects", "zh": "返回设计项目列表", "ja": "設計プロジェクト一覧へ戻る" },
   { "key": "designProjects.detail.progress", "category": "designProjects", "vi": "Tiến độ 3 giai đoạn", "en": "3-stage progress", "zh": "三阶段进度", "ja": "3 段階進捗" },

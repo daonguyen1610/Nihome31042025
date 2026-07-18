@@ -202,12 +202,11 @@ public class DesignProjectService(
         var entity = new DesignProject
         {
             ProjectCode = await NextCodeAsync(ct),
-            // Fall back to the contract number when the contract has no
-            // subject line — the FE renders this in the list header so a
-            // blank name would look broken.
-            Name = string.IsNullOrWhiteSpace(contract.ScopeOfWork)
-                ? $"Dự án hợp đồng {contract.ContractNumber}"
-                : contract.ContractNumber,
+            // Auto-created rows get a predictable, human-friendly name
+            // derived from the contract number so the operator can find
+            // it in the list without opening the contract. They can
+            // rename it later via the edit form.
+            Name = $"Dự án hợp đồng {contract.ContractNumber}",
             CustomerId = contract.CustomerId,
             ContractId = contract.Id,
             ProjectManagerUserId = null,
