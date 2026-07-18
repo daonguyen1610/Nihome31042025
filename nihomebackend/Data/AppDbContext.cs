@@ -74,6 +74,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<DesignProject> DesignProjects => Set<DesignProject>();
 
+    public DbSet<PermitChecklistItem> PermitChecklistItems => Set<PermitChecklistItem>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -798,6 +800,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(dp => dp.DesignLeadUserId);
             b.HasIndex(dp => dp.Status);
             b.HasIndex(dp => dp.CurrentStage);
+        });
+
+        modelBuilder.Entity<PermitChecklistItem>(b =>
+        {
+            b.ToTable("permit_checklist_items");
+            b.HasKey(p => p.Id);
+            b.Property(p => p.PermitTypeCode).HasMaxLength(60).IsRequired();
+            b.Property(p => p.IssuingAgency).HasMaxLength(200);
+            b.Property(p => p.SubmittedFilePath).HasMaxLength(500);
+            b.Property(p => p.IssuedFilePath).HasMaxLength(500);
+            b.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(p => p.Note).HasMaxLength(4000);
+
+            b.HasOne(p => p.DesignProject)
+                .WithMany()
+                .HasForeignKey(p => p.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(p => p.Owner)
+                .WithMany()
+                .HasForeignKey(p => p.OwnerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(p => p.DesignProjectId);
+            b.HasIndex(p => new { p.DesignProjectId, p.PermitTypeCode }).IsUnique();
+            b.HasIndex(p => p.Status);
+            b.HasIndex(p => p.TargetDeadline);
+            b.HasIndex(p => p.ExpiresAt);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

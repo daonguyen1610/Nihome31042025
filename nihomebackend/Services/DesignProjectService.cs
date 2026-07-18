@@ -11,6 +11,7 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class DesignProjectService(
     AppDbContext db,
+    IPermitChecklistService permitChecklistService,
     ILogger<DesignProjectService> logger) : IDesignProjectService
 {
     private const int MaxPageSize = 100;
@@ -117,6 +118,8 @@ public class DesignProjectService(
 
         logger.LogInformation("DesignProject {Id} ({Code}) created by user {UserId}",
             entity.Id, entity.ProjectCode, callerUserId);
+
+        await SeedPermitChecklistAsync(entity.Id, callerUserId, ct);
 
         return (await GetAsync(entity.Id, ct))!;
     }
@@ -226,10 +229,32 @@ public class DesignProjectService(
         logger.LogInformation(
             "DesignProject {Id} ({Code}) auto-created for contract {ContractId} ({ContractNumber})",
             entity.Id, entity.ProjectCode, contract.Id, contract.ContractNumber);
+
+        await SeedPermitChecklistAsync(entity.Id, callerUserId, ct);
+
         return (await GetAsync(entity.Id, ct))!;
     }
 
     // ------------------------------ Helpers ---------------------------------
+
+    /// <summary>
+    /// Auto-generate the M3 permit checklist for a freshly created design
+    /// project. Best-effort: a downstream failure never blocks the design
+    /// project create path (the operator can retry via the "Regenerate"
+    /// button on the permits page).
+    /// </summary>
+    private async Task SeedPermitChecklistAsync(int designProjectId, int? callerUserId, CancellationToken ct)
+    {
+        try
+        {
+            await permitChecklistService.EnsureForProjectAsync(designProjectId, callerUserId, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Failed to seed permit checklist for design project {ProjectId}", designProjectId);
+        }
+    }
 
     private async Task EnsureRelationsAsync(CreateDesignProjectRequest request, CancellationToken ct)
     {
