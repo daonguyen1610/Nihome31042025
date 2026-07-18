@@ -3,10 +3,29 @@
 
   { "key": "surveys.title", "category": "surveys", "vi": "Quản lý Phiếu khảo sát", "en": "Survey management", "zh": "勘察记录管理", "ja": "調査記録の管理" },
   { "key": "surveys.subtitle", "category": "surveys", "vi": "Tra cứu phiếu khảo sát theo dự án, khách hàng và trạng thái đồng bộ Drive.", "en": "Look up surveys by project, customer and Drive sync state.", "zh": "按项目、客户和 Drive 同步状态查询勘察记录。", "ja": "案件・顧客・Drive 同期状態で調査記録を検索します。" },
+  { "key": "surveys.new", "category": "surveys", "vi": "Tạo phiếu khảo sát", "en": "New survey", "zh": "新建勘察", "ja": "新規調査" },
+  { "key": "surveys.edit", "category": "surveys", "vi": "Chỉnh sửa phiếu khảo sát", "en": "Edit survey", "zh": "编辑勘察", "ja": "調査を編集" },
+  { "key": "surveys.created", "category": "surveys", "vi": "Đã tạo phiếu khảo sát", "en": "Survey created", "zh": "已创建勘察记录", "ja": "調査記録を作成しました" },
+  { "key": "surveys.updated", "category": "surveys", "vi": "Đã cập nhật phiếu khảo sát", "en": "Survey updated", "zh": "已更新勘察记录", "ja": "調査記録を更新しました" },
+  { "key": "surveys.deleted", "category": "surveys", "vi": "Đã xoá phiếu khảo sát", "en": "Survey deleted", "zh": "已删除勘察记录", "ja": "調査記録を削除しました" },
   { "key": "surveys.empty", "category": "surveys", "vi": "Chưa có phiếu khảo sát nào.", "en": "No surveys yet.", "zh": "暂无勘察记录。", "ja": "調査記録がまだありません。" },
   { "key": "surveys.emptyFiltered", "category": "surveys", "vi": "Không có phiếu nào khớp bộ lọc hiện tại.", "en": "No surveys match the current filters.", "zh": "没有符合当前筛选条件的记录。", "ja": "現在の条件に一致する調査はありません。" },
   { "key": "surveys.total", "category": "surveys", "vi": "{count} phiếu", "en": "{count} surveys", "zh": "{count} 条", "ja": "{count} 件" },
   { "key": "surveys.paginationLabel", "category": "surveys", "vi": "Trang {page} / {totalPages}", "en": "Page {page} of {totalPages}", "zh": "第 {page} / {totalPages} 页", "ja": "{page} / {totalPages} ページ" },
+
+  { "key": "surveys.form.createHint", "category": "surveys", "vi": "Điền địa điểm khảo sát và ngày thực hiện, gán người phụ trách + dự án/cơ hội liên kết (tuỳ chọn) rồi bấm Lưu.", "en": "Fill in the site location and survey date, optionally link a project or opportunity, then click Save.", "zh": "填写勘察地点与日期，可关联项目或机会，然后保存。", "ja": "所在地と調査日を入力し、必要に応じて案件・商機を紐付けて保存します。" },
+  { "key": "surveys.form.locationPlaceholder", "category": "surveys", "vi": "VD: Lô A5, KCN Bắc Ninh", "en": "e.g. Plot A5, Bac Ninh Industrial Park", "zh": "例如：北宁工业园 A5 号地", "ja": "例：バクニン工業団地 A5 区画" },
+  { "key": "surveys.form.locationRequired", "category": "surveys", "vi": "Địa điểm khảo sát là bắt buộc.", "en": "Location is required.", "zh": "地点为必填项。", "ja": "所在地は必須です。" },
+  { "key": "surveys.form.surveyDateRequired", "category": "surveys", "vi": "Vui lòng chọn ngày khảo sát.", "en": "Please pick a survey date.", "zh": "请选择勘察日期。", "ja": "調査日を選択してください。" },
+  { "key": "surveys.form.constructionTypePlaceholder", "category": "surveys", "vi": "Chọn loại công trình", "en": "Pick a construction type", "zh": "选择工程类型", "ja": "工事種別を選択" },
+  { "key": "surveys.form.constructionTypeNone", "category": "surveys", "vi": "Chưa xác định", "en": "Not set", "zh": "未选择", "ja": "未指定" },
+  { "key": "surveys.form.surveyorNone", "category": "surveys", "vi": "Chưa gán người khảo sát", "en": "Unassigned", "zh": "未指派", "ja": "未割当" },
+  { "key": "surveys.form.linkedProjectNone", "category": "surveys", "vi": "Không gắn dự án", "en": "No linked project", "zh": "不关联项目", "ja": "案件と紐付けない" },
+  { "key": "surveys.form.linkedOpportunityNone", "category": "surveys", "vi": "Không gắn cơ hội", "en": "No linked opportunity", "zh": "不关联机会", "ja": "商機と紐付けない" },
+
+  { "key": "surveys.delete.confirmTitle", "category": "surveys", "vi": "Xoá phiếu khảo sát?", "en": "Delete survey?", "zh": "删除勘察记录？", "ja": "調査記録を削除しますか？" },
+  { "key": "surveys.delete.confirmBody", "category": "surveys", "vi": "Chỉ có thể xoá phiếu \"{location}\" khi chưa đồng bộ Drive. Hành động này không thể hoàn tác.", "en": "\"{location}\" can only be deleted while it has not synced to Drive. This cannot be undone.", "zh": "仅在未同步 Drive 时可删除“{location}”。此操作无法撤销。", "ja": "「{location}」は Drive 未同期のみ削除できます。取り消せません。" },
+  { "key": "surveys.delete.confirm", "category": "surveys", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" },
 
   { "key": "surveys.field.code", "category": "surveys", "vi": "Mã phiếu", "en": "Code", "zh": "编号", "ja": "番号" },
   { "key": "surveys.field.location", "category": "surveys", "vi": "Địa điểm", "en": "Location", "zh": "地点", "ja": "所在地" },
@@ -18,6 +37,7 @@
   { "key": "surveys.field.projectOrOpportunity", "category": "surveys", "vi": "Dự án / Cơ hội", "en": "Project / Opportunity", "zh": "项目 / 机会", "ja": "案件 / 商機" },
   { "key": "surveys.field.driveStatus", "category": "surveys", "vi": "Trạng thái Drive", "en": "Drive status", "zh": "Drive 状态", "ja": "Drive 状態" },
   { "key": "surveys.field.updatedAt", "category": "surveys", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },
+  { "key": "surveys.field.note", "category": "surveys", "vi": "Ghi chú", "en": "Note", "zh": "备注", "ja": "備考" },
 
   { "key": "surveys.driveStatus.NotSynced", "category": "surveys", "vi": "Chưa đồng bộ", "en": "Not synced", "zh": "未同步", "ja": "未同期" },
   { "key": "surveys.driveStatus.Syncing", "category": "surveys", "vi": "Đang đồng bộ", "en": "Syncing", "zh": "同步中", "ja": "同期中" },
