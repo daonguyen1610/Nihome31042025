@@ -28,6 +28,7 @@ public class UpsertContractRequest
     [Range(0, double.MaxValue)]
     public decimal Value { get; set; }
 
+    [StringLength(20000)]
     public string? ScopeOfWork { get; set; }
 
     [StringLength(4000)]

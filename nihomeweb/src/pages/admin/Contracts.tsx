@@ -97,11 +97,14 @@ const formatCurrency = (value: number, lang: string): string => {
 
 const formatDate = (value?: string | null): string => {
   if (!value) return "—";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
+  // Backend returns bare `YYYY-MM-DDTHH:mm:ss` (no Z). Constructing a JS Date
+  // then reading `.getUTCDate()` would fold the local-timezone conversion in
+  // and shift the day by ±1 for callers east/west of UTC. The API is a
+  // date-only field so parse only the leading date substring.
+  const iso = value.slice(0, 10);
+  const parts = iso.split("-");
+  if (parts.length !== 3) return iso;
+  const [yyyy, mm, dd] = parts;
   return `${dd}/${mm}/${yyyy}`;
 };
 

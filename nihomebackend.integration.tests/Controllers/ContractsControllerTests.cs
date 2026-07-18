@@ -124,4 +124,32 @@ public class ContractsControllerTests : IntegrationTestBase
         var res = await Client.PostAsJsonAsync("/api/contracts", ContractBody(9_999_999));
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task Create_AsSales_IgnoresRequestedOwner_AndPinsToCaller()
+    {
+        // SALE has crm.contracts.manage but NOT crm.contracts.view.all —
+        // the service must ignore the caller-supplied ownerUserId and pin
+        // the row to the SALE user so they can still see it. If the row
+        // ended up owned by a different user, GET /api/contracts (scoped to
+        // owner) would return zero.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var customerId = await CreateCustomerAsync();
+
+        var res = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            ownerUserId = 9_999_999,
+            status = "Draft",
+            value = 100,
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        // The caller can list it back — proof that the owner stayed with
+        // the SALE caller, not the caller-supplied id.
+        var list = await Client.GetAsync($"/api/contracts?customerId={customerId}");
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(list);
+        body.GetProperty("total").GetInt32().Should().BeGreaterThan(0);
+    }
 }
