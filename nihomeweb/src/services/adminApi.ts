@@ -2011,6 +2011,9 @@ export const adminApi = {
   },
   getSurvey: (id: number) => api.get<SurveyResponse>(`/surveys/${id}`),
   createSurvey: (body: CreateSurveyRequest) => api.post<SurveyResponse>("/surveys", body),
+  updateSurvey: (id: number, body: CreateSurveyRequest) =>
+    api.put<SurveyResponse>(`/surveys/${id}`, body),
+  deleteSurvey: (id: number) => api.delete(`/surveys/${id}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
