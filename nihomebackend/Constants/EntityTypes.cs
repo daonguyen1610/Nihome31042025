@@ -30,4 +30,5 @@ public static class EntityTypes
     public const string PermitChecklistItem = "PermitChecklistItem";
     public const string ConceptOption = "ConceptOption";
     public const string BasicDesignDoc = "BasicDesignDoc";
+    public const string ShopDrawing = "ShopDrawing";
 }

@@ -39,6 +39,7 @@ public static class SampleCrmDataSeeder
         SeedPermitChecklists(db, owner, now);
         SeedConceptOptions(db, owner, now);
         SeedBasicDesignDocs(db, owner, now);
+        SeedShopDrawings(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1551,6 +1552,61 @@ public static class SampleCrmDataSeeder
                 OwnerUserId = owner.Id,
                 Status = status,
                 Note = $"{SampleMarker} Sample basic design document.",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-daysAgo - 3),
+                UpdatedAt = now.AddDays(-daysAgo),
+            });
+        }
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// NIH-116 Shop Drawing showcase. Attaches to the first sample design
+    /// project already at ShopDrawing stage (currently "Showroom nội thất
+    /// Đông Anh") so the tab lights up with drawings across every
+    /// discipline + every state in the slice-1 state machine. Idempotent —
+    /// guarded on the "[SAMPLE_SD]" marker in Note.
+    /// </summary>
+    private static void SeedShopDrawings(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_SD]";
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+        if (db.ShopDrawings.Any(d => d.DesignProjectId == project.Id
+                                  && d.Note != null
+                                  && d.Note.StartsWith(SampleMarker))) return;
+
+        var seeds = new (string Discipline, string Prefix, string Item, string Title, ShopDrawingStatus Status, int DaysAgo)[]
+        {
+            ("architecture", "KT-SD",  "Mặt bằng bố trí showroom tầng 1", "Bản vẽ bố trí cửa hàng — trục A-D", ShopDrawingStatus.Approved,   3),
+            ("architecture", "KT-SD",  "Mặt bằng bố trí showroom tầng 1", "Chi tiết vách kính lễ tân",         ShopDrawingStatus.InReview,   1),
+            ("structure",    "KC-SD",  "Móng cột chính",                  "Bố trí cốt thép móng M1",           ShopDrawingStatus.Drafting,   0),
+            ("mep",          "MEP-SD", "Cấp thoát nước tầng 1",           "Sơ đồ nguyên lý cấp nước",          ShopDrawingStatus.Approved,   4),
+            ("mep",          "MEP-SD", "Hệ điện chiếu sáng tầng 1",       "Sơ đồ nguyên lý chiếu sáng",        ShopDrawingStatus.PendingIfc, 2),
+            ("interior",     "NT-SD",  "Trần thạch cao khu trưng bày",    "Chi tiết trần dán gỗ óc chó",       ShopDrawingStatus.Rejected,   5),
+        };
+
+        var perDisciplineSeq = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (discipline, prefix, item, title, status, daysAgo) in seeds)
+        {
+            perDisciplineSeq.TryGetValue(discipline, out var current);
+            perDisciplineSeq[discipline] = current + 1;
+            var seq = perDisciplineSeq[discipline];
+            db.ShopDrawings.Add(new ShopDrawing
+            {
+                DesignProjectId = project.Id,
+                DisciplineCode = discipline,
+                ConstructionItem = item,
+                DrawingCode = $"{prefix}-{seq:D3}",
+                Title = title,
+                OwnerUserId = owner.Id,
+                Status = status,
+                Note = $"{SampleMarker} Sample shop drawing.",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-daysAgo - 3),
