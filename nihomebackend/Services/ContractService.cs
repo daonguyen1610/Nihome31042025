@@ -281,7 +281,9 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         {
             // No-op — return the current state so the caller doesn't need
             // to special-case a double click on the same action button.
-            return await GetAsync(id, callerUserId, canSeeAll, ct);
+            // Ownership was already validated above so re-read with the
+            // manager-scope to avoid a redundant permission check.
+            return await GetAsync(id, callerUserId, canSeeAll: true, ct);
         }
 
         EnsureTransitionAllowed(entity.Status, newStatus);

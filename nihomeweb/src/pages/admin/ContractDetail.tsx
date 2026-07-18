@@ -28,6 +28,7 @@ import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +48,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   adminApi,
   type ContractAppendixResponse,
@@ -437,6 +440,21 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
   const [rejectNote, setRejectNote] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Only Draft / Submitted / Rejected VOs may be bulk-deleted. Approved
+  // rows are frozen server-side (they already changed the contract's
+  // effective value) — we filter them out of the visible selection set so
+  // the header checkbox and "N selected" counter never include a row the
+  // user cannot actually delete.
+  const deletableIds = useMemo(
+    () => rows.filter((v) => v.status !== "Approved").map((v) => v.id),
+    [rows],
+  );
+  const bulk = useBulkSelection<number>({
+    visibleIds: deletableIds,
+    deleteOne: (id) => adminApi.deleteContractAppendix(contract.id, id),
+    onAfter: () => refresh(),
+  });
+
   const openCreate = () => setDraft(blankVoDraft());
   const openEdit = (vo: ContractAppendixResponse) =>
     setDraft({
@@ -554,12 +572,31 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {deletableIds.length > 0 ? (
+          <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+            <Checkbox
+              checked={bulk.allVisibleSelected ? true : bulk.someVisibleSelected ? "indeterminate" : false}
+              onCheckedChange={(v) => bulk.toggleAllVisible(v === true)}
+              aria-label={t("common.selectAll")}
+            />
+            {t("common.selectAll")}
+          </label>
+        ) : (
+          <span />
+        )}
         <Button size="sm" onClick={openCreate}>
           <Plus className="mr-1 h-4 w-4" />
           {t("contracts.appendix.new")}
         </Button>
       </div>
+
+      <BulkActionBar
+        selectedCount={bulk.selectedIds.size}
+        bulkDeleting={bulk.bulkDeleting}
+        onClear={bulk.clearSelection}
+        onBulkDelete={bulk.handleBulkDelete}
+      />
 
       {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
@@ -575,7 +612,17 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
             return (
               <div key={vo.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
+                  <div className="flex min-w-0 gap-3">
+                    {canDelete ? (
+                      <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={bulk.selectedIds.has(vo.id)}
+                          onCheckedChange={(v) => bulk.toggleOne(vo.id, v === true)}
+                          aria-label={`${t("common.selectAll")} · VO#${vo.voNumber}`}
+                        />
+                      </div>
+                    ) : null}
+                    <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-slate-500">
                         {t("contracts.appendix.number")} #{vo.voNumber}
@@ -625,6 +672,7 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
                         {vo.originalFileName ?? "file"}
                       </a>
                     ) : null}
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {editable ? (
@@ -818,6 +866,13 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const visibleIds = useMemo(() => rows.map((a) => a.id), [rows]);
+  const bulk = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteContractAttachment(contract.id, id),
+    onAfter: () => refresh(),
+  });
+
   const handleFile = async (file: File) => {
     setUploading(true);
     try {
@@ -892,10 +947,35 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
           {t("contracts.documents.empty")}
         </div>
       ) : (
-        <div className="space-y-2">
-          {rows.map((att) => (
-            <div key={att.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-              <div className="min-w-0">
+        <>
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+              <Checkbox
+                checked={bulk.allVisibleSelected ? true : bulk.someVisibleSelected ? "indeterminate" : false}
+                onCheckedChange={(v) => bulk.toggleAllVisible(v === true)}
+                aria-label={t("common.selectAll")}
+              />
+              {t("common.selectAll")}
+            </label>
+          </div>
+          <BulkActionBar
+            selectedCount={bulk.selectedIds.size}
+            bulkDeleting={bulk.bulkDeleting}
+            onClear={bulk.clearSelection}
+            onBulkDelete={bulk.handleBulkDelete}
+          />
+          <div className="space-y-2">
+            {rows.map((att) => (
+              <div key={att.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="flex min-w-0 gap-3">
+                  <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={bulk.selectedIds.has(att.id)}
+                      onCheckedChange={(v) => bulk.toggleOne(att.id, v === true)}
+                      aria-label={`${t("common.selectAll")} · ${att.originalFileName}`}
+                    />
+                  </div>
+                  <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
                     className={cn(
@@ -915,7 +995,8 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
                   {att.uploadedByName ? <span>{t("contracts.documents.uploadedBy")}: {att.uploadedByName}</span> : null}
                   {att.label ? <span>“{att.label}”</span> : null}
                 </div>
-              </div>
+                  </div>
+                </div>
               <div className="flex gap-2">
                 <a
                   href={resolveFileUrl(att.filePath) ?? "#"}
@@ -938,7 +1019,8 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

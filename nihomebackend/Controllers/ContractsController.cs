@@ -476,6 +476,11 @@ public class ContractsController(
             ContentType = stored.Payload.contentType,
             Label = label,
         }, userId.Value, canSeeAll, ct);
+        // ContractExistsForCallerAsync above already verified the caller
+        // may write to this contract, so CreateAsync should never return
+        // null here — but be defensive so a race between the ownership
+        // check and the row disappearing doesn't 500.
+        if (created == null) return NotFound();
 
         audit.Log(new AuditEvent
         {
