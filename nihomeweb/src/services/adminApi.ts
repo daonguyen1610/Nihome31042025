@@ -1446,6 +1446,15 @@ export interface CreateSurveyRequest {
   note?: string | null;
 }
 
+export interface SurveyTimelineEvent {
+  id: number;
+  occurredAt: string;
+  action: string;
+  message?: string | null;
+  userId?: number | null;
+  userName?: string | null;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2014,6 +2023,8 @@ export const adminApi = {
   updateSurvey: (id: number, body: CreateSurveyRequest) =>
     api.put<SurveyResponse>(`/surveys/${id}`, body),
   deleteSurvey: (id: number) => api.delete(`/surveys/${id}`),
+  getSurveyTimeline: (id: number, limit = 100) =>
+    api.get<SurveyTimelineEvent[]>(`/surveys/${id}/timeline`, { params: { limit } }),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>

@@ -40,4 +40,11 @@ public interface ISurveyService
     /// row does not exist.
     /// </summary>
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+
+    /// <summary>
+    /// Ordered (newest-first) audit-log slice for the NIH-101 History tab.
+    /// Returns <c>null</c> when the survey does not exist so the controller
+    /// can 404 without leaking existence.
+    /// </summary>
+    Task<List<SurveyTimelineEvent>?> GetTimelineAsync(int id, int limit, CancellationToken ct = default);
 }

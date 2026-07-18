@@ -140,6 +140,15 @@ public class SurveysController(
         }
     }
 
+    [HttpGet("{id:int}/timeline")]
+    [RequirePermission("crm.surveys", "view")]
+    public async Task<ActionResult<List<SurveyTimelineEvent>>> Timeline(
+        int id, [FromQuery] int limit = 100, CancellationToken ct = default)
+    {
+        var events = await svc.GetTimelineAsync(id, limit, ct);
+        return events is null ? NotFound() : Ok(events);
+    }
+
     private int? GetUserId()
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");

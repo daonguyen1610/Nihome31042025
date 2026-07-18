@@ -318,4 +318,44 @@ public class SurveyServiceTests : IDisposable
         // Row must still exist so the audit trail is preserved.
         Assert.True(await _db.Surveys.AnyAsync(s => s.Id == created.Id));
     }
+
+    // ---------------- NIH-101 Timeline ----------------
+
+    [Fact]
+    public async Task GetTimelineAsync_ReturnsNullWhenMissing()
+    {
+        Assert.Null(await _sut.GetTimelineAsync(99999, 50));
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_ReturnsSeededAuditRowsNewestFirst()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        _db.AuditLogs.AddRange(
+            new AuditLog
+            {
+                AuditId = Guid.NewGuid().ToString("N"),
+                CreatedAt = DateTime.UtcNow.AddMinutes(-10),
+                Action = "survey.update",
+                ResourceType = "Survey",
+                ResourceId = created.Id.ToString(),
+                Message = "older",
+            },
+            new AuditLog
+            {
+                AuditId = Guid.NewGuid().ToString("N"),
+                CreatedAt = DateTime.UtcNow,
+                Action = "survey.create",
+                ResourceType = "Survey",
+                ResourceId = created.Id.ToString(),
+                Message = "newer",
+            });
+        _db.SaveChanges();
+
+        var events = await _sut.GetTimelineAsync(created.Id, 50);
+        Assert.NotNull(events);
+        Assert.Equal(2, events!.Count);
+        Assert.Equal("newer", events[0].Message);
+        Assert.Equal("older", events[1].Message);
+    }
 }

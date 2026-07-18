@@ -66,3 +66,18 @@ public class SurveyListResponse
     public int PageSize { get; set; }
     public List<SurveyListItemResponse> Items { get; set; } = new();
 }
+
+/// <summary>
+/// One row of the NIH-101 detail-page History tab. Sourced from the audit
+/// log stream filtered by <c>ResourceType == EntityTypes.Survey</c> and the
+/// row id.
+/// </summary>
+public class SurveyTimelineEvent
+{
+    public long Id { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public string Action { get; set; } = string.Empty;
+    public string? Message { get; set; }
+    public int? UserId { get; set; }
+    public string? UserName { get; set; }
+}

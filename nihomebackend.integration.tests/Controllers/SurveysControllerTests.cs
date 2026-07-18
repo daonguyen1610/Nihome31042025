@@ -202,6 +202,35 @@ public class SurveysControllerTests : IntegrationTestBase
         (await Client.DeleteAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    // ---------- NIH-101 timeline ----------
+
+    [Fact]
+    public async Task Timeline_ReturnsArrayForKnownSurvey()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateSurveyAsync("Timeline probe", "residential");
+        // Fire an auditable action so the timeline has content queued.
+        await Client.PutAsJsonAsync($"/api/surveys/{id}", new
+        {
+            location = "Timeline probe (updated)",
+            surveyDate = DateTime.UtcNow.AddDays(-1),
+        });
+
+        var res = await Client.GetAsync($"/api/surveys/{id}/timeline");
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        // Audit log flush is queued in the background so the array may be
+        // empty in-test — shape verification is what we assert here,
+        // matching the tenders / contracts timeline pattern.
+        (await ReadJsonAsync(res)).ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+    }
+
+    [Fact]
+    public async Task Timeline_UnknownSurvey_Is404()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.GetAsync("/api/surveys/9999999/timeline")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     private async Task<int> CreateSurveyAsync(string location, string type)
     {
         var res = await Client.PostAsJsonAsync("/api/surveys", new
