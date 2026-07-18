@@ -36,6 +36,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/quotes",
   "/admin/capability-documents",
   "/admin/tenders",
+  "/admin/surveys",
   "/admin/contracts",
   "/admin/activities",
   "/admin/news",
@@ -90,7 +91,7 @@ const matrix: RoleExpectation[] = [
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contracts", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
     // SALES_MANAGER: crm.** (full — includes quotes.approve on top of manage)
@@ -98,7 +99,7 @@ const matrix: RoleExpectation[] = [
     // as SALE plus view.all across CRM entities; routes rendered are
     // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/contracts", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view (manage-only routes
@@ -125,7 +126,8 @@ const matrix: RoleExpectation[] = [
     ],
   },
   {
-    // PM: content.projects.* + processes.* + recruitment.applications.view
+    // PM: content.projects.* + processes.* + recruitment.applications.view.
+    // Also gains crm.surveys.view + crm.contracts.view for project handoff.
     user: TEST_USERS.pm,
     allowed: [
       "/admin",
@@ -136,6 +138,7 @@ const matrix: RoleExpectation[] = [
       "/admin/master-data",
       "/admin/workflows",
       "/admin/contracts",
+      "/admin/surveys",
     ],
   },
   {
