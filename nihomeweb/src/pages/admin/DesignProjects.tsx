@@ -2,15 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pencil, PenTool, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +54,7 @@ import {
   type DesignProjectResponse,
   type DesignProjectStage,
   type DesignProjectStatus,
+  type UpdateDesignProjectRequest,
   type ContractResponse,
 } from "@/services/adminApi";
 
@@ -86,7 +90,7 @@ const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 const toUtcMidnight = (yyyyMmDd: string): string =>
   yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "";
 
-const emptyForm = (): CreateDesignProjectRequest => ({
+const emptyForm = (): UpdateDesignProjectRequest => ({
   name: "",
   customerId: 0,
   contractId: null,
@@ -95,6 +99,8 @@ const emptyForm = (): CreateDesignProjectRequest => ({
   startDate: null,
   deadline: null,
   note: "",
+  currentStage: "Concept",
+  status: "Active",
 });
 
 interface UserOption {
@@ -244,7 +250,7 @@ const AdminDesignProjects = () => {
   // -------- create / edit dialog --------
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDetail, setEditingDetail] = useState<DesignProjectResponse | null>(null);
-  const [form, setForm] = useState<CreateDesignProjectRequest>(emptyForm());
+  const [form, setForm] = useState<UpdateDesignProjectRequest>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = !!editingDetail;
@@ -270,6 +276,8 @@ const AdminDesignProjects = () => {
         startDate: data.startDate ?? null,
         deadline: data.deadline ?? null,
         note: data.note ?? "",
+        currentStage: data.currentStage,
+        status: data.status,
       });
       setFormError(null);
       setDialogOpen(true);
@@ -300,20 +308,32 @@ const AdminDesignProjects = () => {
     }
     setSaving(true);
     try {
-      const payload: CreateDesignProjectRequest = {
-        name: form.name.trim(),
-        customerId: form.customerId,
-        contractId: form.contractId ?? null,
-        projectManagerUserId: form.projectManagerUserId ?? null,
-        designLeadUserId: form.designLeadUserId ?? null,
-        startDate: form.startDate || null,
-        deadline: form.deadline || null,
-        note: form.note?.trim() || null,
-      };
       if (isEdit) {
+        const payload: UpdateDesignProjectRequest = {
+          name: form.name.trim(),
+          customerId: form.customerId,
+          contractId: form.contractId ?? null,
+          projectManagerUserId: form.projectManagerUserId ?? null,
+          designLeadUserId: form.designLeadUserId ?? null,
+          startDate: form.startDate || null,
+          deadline: form.deadline || null,
+          note: form.note?.trim() || null,
+          currentStage: form.currentStage,
+          status: form.status,
+        };
         await adminApi.updateDesignProject(editingDetail!.id, payload);
         toast({ title: t("designProjects.updated") });
       } else {
+        const payload: CreateDesignProjectRequest = {
+          name: form.name.trim(),
+          customerId: form.customerId,
+          contractId: form.contractId ?? null,
+          projectManagerUserId: form.projectManagerUserId ?? null,
+          designLeadUserId: form.designLeadUserId ?? null,
+          startDate: form.startDate || null,
+          deadline: form.deadline || null,
+          note: form.note?.trim() || null,
+        };
         await adminApi.createDesignProject(payload);
         toast({ title: t("designProjects.created") });
       }
@@ -349,6 +369,32 @@ const AdminDesignProjects = () => {
       setBusyDelete(false);
     }
   };
+
+  // -------- bulk selection --------
+  // Server refuses to delete rows past the Concept stage (audit / cascade
+  // safety), so we mirror that constraint in the checkbox availability —
+  // only Concept-stage rows can be bulk-deleted.
+  const deletableIds = useMemo(
+    () =>
+      canManage
+        ? rows.filter((r) => r.currentStage === "Concept").map((r) => r.id)
+        : [],
+    [rows, canManage],
+  );
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds: deletableIds,
+    deleteOne: (id) => adminApi.deleteDesignProject(id),
+    onAfter: fetchList,
+  });
 
   // ----------------------------- render -----------------------------
 
@@ -506,70 +552,94 @@ const AdminDesignProjects = () => {
           </div>
         ) : (
           <>
+            {canManage ? (
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={clearSelection}
+                onBulkDelete={() => void handleBulkDelete()}
+              />
+            ) : null}
+
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
-              {rows.map((r) => (
-                <article
-                  key={r.id}
-                  className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
-                  onClick={() => openDetail(r.id)}
-                >
-                  <header className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {r.projectCode}
-                        {r.customerName ? ` · ${r.customerName}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}>
-                        {t(`designProjects.stage.${r.currentStage}`)}
-                      </Badge>
-                      <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
-                        {t(`designProjects.status.${r.status}`)}
-                      </Badge>
-                    </div>
-                  </header>
-                  <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <dt className="text-muted-foreground">{t("designProjects.field.pm")}</dt>
-                      <dd className="font-medium">{r.projectManagerName ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("designProjects.field.designLead")}</dt>
-                      <dd className="font-medium">{r.designLeadName ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("designProjects.field.startDate")}</dt>
-                      <dd className="font-medium">{formatDate(r.startDate, lang)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("designProjects.field.deadline")}</dt>
-                      <dd className="font-medium">{formatDate(r.deadline, lang)}</dd>
-                    </div>
-                  </dl>
-                  {canManage ? (
-                    <div className="mt-2 flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
-                        <Pencil className="mr-1 h-3.5 w-3.5" />
-                        {t("common.edit")}
-                      </Button>
-                      {r.currentStage === "Concept" ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                          onClick={() => setDeleting(r)}
-                        >
-                          <Trash2 className="mr-1 h-3.5 w-3.5" />
-                          {t("common.delete")}
+              {rows.map((r) => {
+                const canDelete = canManage && r.currentStage === "Concept";
+                return (
+                  <article
+                    key={r.id}
+                    className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
+                    onClick={() => openDetail(r.id)}
+                  >
+                    <header className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-start gap-2">
+                        {canManage ? (
+                          <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                            <Checkbox
+                              aria-label={`${t("common.selectAll")} · ${r.name}`}
+                              disabled={!canDelete}
+                              checked={selectedIds.has(r.id)}
+                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
+                            />
+                          </span>
+                        ) : null}
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {r.projectCode}
+                            {r.customerName ? ` · ${r.customerName}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="outline" className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}>
+                          {t(`designProjects.stage.${r.currentStage}`)}
+                        </Badge>
+                        <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
+                          {t(`designProjects.status.${r.status}`)}
+                        </Badge>
+                      </div>
+                    </header>
+                    <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <dt className="text-muted-foreground">{t("designProjects.field.pm")}</dt>
+                        <dd className="font-medium">{r.projectManagerName ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("designProjects.field.designLead")}</dt>
+                        <dd className="font-medium">{r.designLeadName ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("designProjects.field.startDate")}</dt>
+                        <dd className="font-medium">{formatDate(r.startDate, lang)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("designProjects.field.deadline")}</dt>
+                        <dd className="font-medium">{formatDate(r.deadline, lang)}</dd>
+                      </div>
+                    </dl>
+                    {canManage ? (
+                      <div className="mt-2 flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
+                          <Pencil className="mr-1 h-3.5 w-3.5" />
+                          {t("common.edit")}
                         </Button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </article>
-              ))}
+                        {canDelete ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            onClick={() => setDeleting(r)}
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />
+                            {t("common.delete")}
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
             </div>
 
             {/* Desktop table */}
@@ -577,6 +647,21 @@ const AdminDesignProjects = () => {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <tr>
+                    {canManage ? (
+                      <th className="w-10 px-3 py-2">
+                        <Checkbox
+                          aria-label={t("common.selectAll")}
+                          checked={
+                            allVisibleSelected
+                              ? true
+                              : someVisibleSelected
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(v) => toggleAllVisible(v === true)}
+                        />
+                      </th>
+                    ) : null}
                     <th className="px-3 py-2">{t("designProjects.field.code")}</th>
                     <th className="px-3 py-2">{t("designProjects.field.name")}</th>
                     <th className="px-3 py-2">{t("designProjects.field.customer")}</th>
@@ -588,55 +673,68 @@ const AdminDesignProjects = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="cursor-pointer transition-colors hover:bg-slate-50/70"
-                      onClick={() => openDetail(r.id)}
-                    >
-                      <td className="px-3 py-2 font-mono text-xs text-slate-600">{r.projectCode}</td>
-                      <td className="px-3 py-2 font-medium text-slate-900">
-                        <div className="flex items-center gap-2">
-                          <PenTool className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="break-words">{r.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-slate-700">{r.customerName ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-700">{r.projectManagerName ?? "—"}</td>
-                      <td className="px-3 py-2">
-                        <Badge variant="outline" className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}>
-                          {t(`designProjects.stage.${r.currentStage}`)}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
-                          {t(`designProjects.status.${r.status}`)}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-slate-700">
-                        {formatDate(r.deadline, lang)}
-                      </td>
-                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  {rows.map((r) => {
+                    const canDelete = canManage && r.currentStage === "Concept";
+                    return (
+                      <tr
+                        key={r.id}
+                        className="cursor-pointer transition-colors hover:bg-slate-50/70"
+                        onClick={() => openDetail(r.id)}
+                      >
                         {canManage ? (
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {r.currentStage === "Concept" ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                                onClick={() => setDeleting(r)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            ) : null}
-                          </div>
+                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              aria-label={`${t("common.selectAll")} · ${r.name}`}
+                              disabled={!canDelete}
+                              checked={selectedIds.has(r.id)}
+                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
+                            />
+                          </td>
                         ) : null}
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">{r.projectCode}</td>
+                        <td className="px-3 py-2 font-medium text-slate-900">
+                          <div className="flex items-center gap-2">
+                            <PenTool className="h-3.5 w-3.5 text-slate-400" />
+                            <span className="break-words">{r.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-slate-700">{r.customerName ?? "—"}</td>
+                        <td className="px-3 py-2 text-slate-700">{r.projectManagerName ?? "—"}</td>
+                        <td className="px-3 py-2">
+                          <Badge variant="outline" className={cn("whitespace-nowrap", STAGE_BADGE[r.currentStage])}>
+                            {t(`designProjects.stage.${r.currentStage}`)}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge variant="outline" className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}>
+                            {t(`designProjects.status.${r.status}`)}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                          {formatDate(r.deadline, lang)}
+                        </td>
+                        <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          {canManage ? (
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              {canDelete ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                  onClick={() => setDeleting(r)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -756,6 +854,49 @@ const AdminDesignProjects = () => {
                 }
               />
             </div>
+            {isEdit ? (
+              <>
+                <div>
+                  <Label>{t("designProjects.field.stage")}</Label>
+                  <Select
+                    value={form.currentStage ?? "Concept"}
+                    onValueChange={(v) => setForm((f) => ({ ...f, currentStage: v as DesignProjectStage }))}
+                  >
+                    <SelectTrigger className="mt-1 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DESIGN_PROJECT_STAGES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {t(`designProjects.stage.${s}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>{t("designProjects.field.status")}</Label>
+                  <Select
+                    value={form.status ?? "Active"}
+                    onValueChange={(v) => setForm((f) => ({ ...f, status: v as DesignProjectStatus }))}
+                  >
+                    <SelectTrigger className="mt-1 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DESIGN_PROJECT_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {t(`designProjects.status.${s}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-slate-500 md:col-span-2">
+                  {t("designProjects.form.stageHint")}
+                </p>
+              </>
+            ) : null}
             <div className="md:col-span-2">
               <Label>{t("designProjects.field.note")}</Label>
               <Textarea
