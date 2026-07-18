@@ -13,7 +13,10 @@ namespace NihomeBackend.Services;
 /// Sales users see only rows they own; roles with
 /// <c>crm.contracts.view.all</c> (or the wildcard set) see everything.
 /// </summary>
-public class ContractService(AppDbContext db, ILogger<ContractService> logger) : IContractService
+public class ContractService(
+    AppDbContext db,
+    IDesignProjectService designProjectService,
+    ILogger<ContractService> logger) : IContractService
 {
     private const int MaxPageSize = 100;
 
@@ -300,6 +303,24 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         entity.UpdatedByUserId = callerUserId;
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Transitioned contract {Id} to {Status}", entity.Id, newStatus);
+
+        // NIH-113 AC #1: opening execution of a contract seeds a design
+        // project. The helper is idempotent so double-clicks or manual
+        // pre-creation don't spawn duplicates.
+        if (newStatus == ContractStatus.InProgress)
+        {
+            try
+            {
+                await designProjectService.EnsureForContractAsync(entity, callerUserId, ct);
+            }
+            catch (Exception ex)
+            {
+                // Auto-create is best-effort — a downstream failure must
+                // not block the contract transition itself.
+                logger.LogWarning(ex,
+                    "Failed to auto-create DesignProject for contract {Id}", entity.Id);
+            }
+        }
 
         return await GetAsync(entity.Id, callerUserId, canSeeAll: true, ct);
     }

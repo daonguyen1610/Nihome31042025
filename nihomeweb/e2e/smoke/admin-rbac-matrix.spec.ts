@@ -38,6 +38,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/tenders",
   "/admin/surveys",
   "/admin/contracts",
+  "/admin/design-projects",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -102,8 +103,9 @@ const matrix: RoleExpectation[] = [
     allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
-    // DESIGN: content.** + processes.view + dashboard.view (manage-only routes
-    // like /admin/email-templates stay denied because they require *.manage).
+    // DESIGN: content.** + processes.view + dashboard.view + design.projects.view
+    // (manage-only routes like /admin/email-templates stay denied because
+    // they require *.manage).
     user: TEST_USERS.design,
     allowed: [
       "/admin",
@@ -123,11 +125,13 @@ const matrix: RoleExpectation[] = [
       "/admin/master-data",
       "/admin/workflows",
       "/admin/processes/general",
+      "/admin/design-projects",
     ],
   },
   {
     // PM: content.projects.* + processes.* + recruitment.applications.view.
-    // Also gains crm.surveys.view + crm.contracts.view for project handoff.
+    // Also gains crm.surveys.view + crm.contracts.view + design.projects.view
+    // for project handoff.
     user: TEST_USERS.pm,
     allowed: [
       "/admin",
@@ -139,6 +143,7 @@ const matrix: RoleExpectation[] = [
       "/admin/workflows",
       "/admin/contracts",
       "/admin/surveys",
+      "/admin/design-projects",
     ],
   },
   {

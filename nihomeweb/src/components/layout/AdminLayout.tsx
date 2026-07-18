@@ -41,6 +41,7 @@ import {
   FileSpreadsheet,
   KeyRound,
   ClipboardList,
+  PenTool,
   User as UserIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -148,6 +149,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/tenders", label: t("nav.tenders"), icon: Briefcase, permission: ADMIN_PERMS.tenders },
           { to: "/admin/surveys", label: t("nav.surveys"), icon: ClipboardList, permission: ADMIN_PERMS.surveys },
           { to: "/admin/capability-documents", label: t("nav.capabilityDocs"), icon: FolderTree, permission: ADMIN_PERMS.capabilityDocs },
+        ],
+      },
+      {
+        id: "design",
+        label: t("nav.design"),
+        icon: PenTool,
+        items: [
+          { to: "/admin/design-projects", label: t("nav.designProjects"), icon: PenTool, permission: ADMIN_PERMS.designProjects },
         ],
       },
       {

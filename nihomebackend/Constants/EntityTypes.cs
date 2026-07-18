@@ -26,4 +26,5 @@ public static class EntityTypes
     public const string CapabilityDocument = "CapabilityDocument";
     public const string Tender = "Tender";
     public const string Survey = "Survey";
+    public const string DesignProject = "DesignProject";
 }
