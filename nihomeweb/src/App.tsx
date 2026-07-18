@@ -64,6 +64,7 @@ import TranslationsPage from "./pages/admin/settings/Translations.tsx";
 import MasterDataPage from "./pages/admin/MasterData.tsx";
 import WorkflowsPage from "./pages/admin/Workflows.tsx";
 import ContractsPage from "./pages/admin/Contracts.tsx";
+import ContractDetailPage from "./pages/admin/ContractDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -162,6 +163,7 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.contracts} />}>
                 <Route path="/admin/contracts" element={<ContractsPage />} />
+                <Route path="/admin/contracts/:id" element={<ContractDetailPage />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                 <Route path="/admin/recruitment" element={<AdminRecruitment />} />

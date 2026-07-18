@@ -655,6 +655,14 @@ export interface ContractResponse {
   startDate?: string | null;
   endDate?: string | null;
   value: number;
+  /** Σ of Approved VO deltas. Server-computed. */
+  approvedVoTotal: number;
+  /** value + approvedVoTotal. Server-computed. */
+  currentValue: number;
+  /** At least one attachment of kind SignedScan exists. */
+  hasSignedScan: boolean;
+  attachmentCount: number;
+  appendixCount: number;
   scopeOfWork?: string | null;
   note?: string | null;
   createdAt: string;
@@ -731,6 +739,91 @@ export interface UpsertContractRequest {
    * must sum to 100.
    */
   paymentMilestones?: ContractPaymentMilestoneRequest[] | null;
+}
+
+// -------- NIH-104: appendices (VO), attachments, timeline --------
+
+export type ContractAppendixStatus =
+  | "Draft"
+  | "Submitted"
+  | "Approved"
+  | "Rejected";
+
+export const CONTRACT_APPENDIX_STATUSES: ContractAppendixStatus[] = [
+  "Draft",
+  "Submitted",
+  "Approved",
+  "Rejected",
+];
+
+export interface ContractAppendixResponse {
+  id: number;
+  contractId: number;
+  voNumber: number;
+  title: string;
+  reason: string;
+  valueDelta: number;
+  filePath?: string | null;
+  originalFileName?: string | null;
+  fileSize?: number | null;
+  contentType?: string | null;
+  status: ContractAppendixStatus;
+  submittedAt?: string | null;
+  submittedByUserId?: number | null;
+  submittedByName?: string | null;
+  decidedAt?: string | null;
+  decidedByUserId?: number | null;
+  decidedByName?: string | null;
+  decisionNote?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertContractAppendixRequest {
+  title: string;
+  reason: string;
+  valueDelta: number;
+  filePath?: string | null;
+  originalFileName?: string | null;
+  fileSize?: number | null;
+  contentType?: string | null;
+}
+
+export type ContractAttachmentKind = "SignedScan" | "Supporting";
+
+export const CONTRACT_ATTACHMENT_KINDS: ContractAttachmentKind[] = [
+  "SignedScan",
+  "Supporting",
+];
+
+export interface ContractAttachmentResponse {
+  id: number;
+  contractId: number;
+  kind: ContractAttachmentKind;
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+  label?: string | null;
+  createdAt: string;
+  uploadedByUserId?: number | null;
+  uploadedByName?: string | null;
+}
+
+export interface ContractTimelineEvent {
+  id: number;
+  occurredAt: string;
+  action: string;
+  message?: string | null;
+  userId?: number | null;
+  userName?: string | null;
+}
+
+export interface AppendixUploadResponse {
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
 }
 
 export type OpportunityActivityType =
@@ -1790,6 +1883,76 @@ export const adminApi = {
     api.put<ContractResponse>(`/contracts/${id}`, body),
   deleteContract: (id: number) =>
     api.delete(`/contracts/${id}`),
+
+  // Contract state / milestones / VO / attachments / timeline (NIH-104)
+  transitionContract: (id: number, newStatus: ContractStatus) =>
+    api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus }),
+  updateMilestoneStatus: (
+    contractId: number,
+    milestoneId: number,
+    status: PaymentMilestoneStatus,
+  ) =>
+    api.patch<ContractResponse>(
+      `/contracts/${contractId}/milestones/${milestoneId}/status`,
+      { status },
+    ),
+  listContractAppendices: (contractId: number) =>
+    api.get<ContractAppendixResponse[]>(`/contracts/${contractId}/appendices`),
+  createContractAppendix: (contractId: number, body: UpsertContractAppendixRequest) =>
+    api.post<ContractAppendixResponse>(`/contracts/${contractId}/appendices`, body),
+  updateContractAppendix: (
+    contractId: number,
+    voId: number,
+    body: UpsertContractAppendixRequest,
+  ) =>
+    api.put<ContractAppendixResponse>(`/contracts/${contractId}/appendices/${voId}`, body),
+  submitContractAppendix: (contractId: number, voId: number) =>
+    api.post<ContractAppendixResponse>(`/contracts/${contractId}/appendices/${voId}/submit`),
+  approveContractAppendix: (contractId: number, voId: number, note?: string) =>
+    api.post<ContractAppendixResponse>(
+      `/contracts/${contractId}/appendices/${voId}/approve`,
+      { note },
+    ),
+  rejectContractAppendix: (contractId: number, voId: number, note: string) =>
+    api.post<ContractAppendixResponse>(
+      `/contracts/${contractId}/appendices/${voId}/reject`,
+      { note },
+    ),
+  deleteContractAppendix: (contractId: number, voId: number) =>
+    api.delete(`/contracts/${contractId}/appendices/${voId}`),
+  uploadContractAppendixFile: (contractId: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post<AppendixUploadResponse>(
+      `/contracts/${contractId}/appendices/files`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+  },
+  listContractAttachments: (contractId: number) =>
+    api.get<ContractAttachmentResponse[]>(`/contracts/${contractId}/attachments`),
+  uploadContractAttachment: (
+    contractId: number,
+    file: File,
+    kind: ContractAttachmentKind,
+    label?: string,
+  ) => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("kind", kind);
+    if (label) form.append("label", label);
+    return api.post<ContractAttachmentResponse>(
+      `/contracts/${contractId}/attachments`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+  },
+  deleteContractAttachment: (contractId: number, attachmentId: number) =>
+    api.delete(`/contracts/${contractId}/attachments/${attachmentId}`),
+  getContractTimeline: (contractId: number, limit = 100) =>
+    api.get<ContractTimelineEvent[]>(`/contracts/${contractId}/timeline`, {
+      params: { limit },
+    }),
 
   // Users / RBAC
   getUsers: (params: { skip?: number; take?: number; search?: string; role?: string }) =>
