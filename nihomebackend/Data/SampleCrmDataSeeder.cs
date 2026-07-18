@@ -31,6 +31,7 @@ public static class SampleCrmDataSeeder
         SeedCustomers(db, owner, now);
         SeedOpportunities(db, owner, now);
         SeedQuotes(db, owner, now);
+        SeedContracts(db, owner, now);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
         SeedTenders(db, owner, now);
     }
@@ -594,6 +595,79 @@ public static class SampleCrmDataSeeder
             Note = note,
             CreatedAt = at,
         });
+    }
+
+    private const string SampleContractMarker = "[SAMPLE_CONTRACT]";
+
+    /// <summary>
+    /// Seeds a curated set of sample contracts spanning every
+    /// <see cref="ContractStatus"/> so filters, badges and the
+    /// "deadline within 30 days" warning have real rows to render.
+    /// Uses existing sample customers so the FK is always valid.
+    /// Idempotent via the note-marker guard used elsewhere in this file.
+    /// </summary>
+    private static void SeedContracts(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        if (db.Contracts.Any(c => c.Note != null && c.Note.StartsWith(SampleContractMarker))) return;
+
+        var sampleCustomers = db.Customers
+            .Where(c => c.Name.StartsWith(SampleTag))
+            .OrderBy(c => c.Id)
+            .Take(6)
+            .ToList();
+        if (sampleCustomers.Count == 0) return;
+
+        var year = now.Year;
+        var nextSeq = 1 + (db.Contracts.AsNoTracking()
+            .Where(c => c.ContractNumber.StartsWith($"HD-{year}-"))
+            .Select(c => c.ContractNumber)
+            .AsEnumerable()
+            .Select(n => int.TryParse(n.AsSpan($"HD-{year}-".Length), out var s) ? s : 0)
+            .DefaultIfEmpty(0)
+            .Max());
+
+        // (custIdx, status, signedOffsetDays, durationDays, value, label)
+        // The InProgress row uses a short remaining window on purpose so
+        // the FE red badge (endDate - now ≤ 30 days) has a live example.
+        var seeds = new (int CustIdx, ContractStatus Status, int SignedOffset, int DurationDays, decimal Value, string Label)[]
+        {
+            (0, ContractStatus.Draft,       0,   180, 250_000_000m, "Bản nháp — chờ 2 bên chốt"),
+            (1, ContractStatus.Signed,     -20, 200,  850_000_000m, "Đã ký — chuẩn bị khởi công"),
+            (2, ContractStatus.InProgress, -90, 100, 1_500_000_000m, "Đang thi công — sắp kết thúc"),
+            (3, ContractStatus.InProgress, -30, 240,  620_000_000m, "Đang thi công — mới bắt đầu"),
+            (4, ContractStatus.OnHold,     -60, 180,  480_000_000m, "Tạm dừng theo yêu cầu KH"),
+            (5, ContractStatus.Completed, -240, 180,  980_000_000m, "Hoàn thành, đã bàn giao"),
+        };
+
+        foreach (var (custIdx, status, signedOffset, durationDays, value, label) in seeds)
+        {
+            if (custIdx >= sampleCustomers.Count) continue;
+            var customer = sampleCustomers[custIdx];
+            var signedDate = status == ContractStatus.Draft ? (DateTime?)null : now.AddDays(signedOffset);
+            var startDate = signedDate?.AddDays(7);
+            var endDate = startDate?.AddDays(durationDays);
+            var number = $"HD-{year}-{nextSeq++:D4}";
+
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = number,
+                CustomerId = customer.Id,
+                OwnerUserId = owner.Id,
+                Status = status,
+                SignedDate = signedDate,
+                StartDate = startDate,
+                EndDate = endDate,
+                Value = value,
+                ScopeOfWork = "Phạm vi thi công phần thô và hoàn thiện theo hồ sơ thiết kế kèm theo.",
+                Note = $"{SampleContractMarker} {label}",
+                CreatedAt = now.AddDays(signedOffset).AddDays(-3),
+                UpdatedAt = now.AddHours(-1),
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+            });
+        }
+
+        db.SaveChanges();
     }
 
     private const string SampleCapabilityMarker = "[SAMPLE_CAP]";

@@ -89,6 +89,7 @@
     { "module": "crm.surveys", "action": "view" },
     { "module": "crm.surveys", "action": "manage" },
     { "module": "crm.contracts", "action": "view" },
+    { "module": "crm.contracts", "action": "view.all" },
     { "module": "crm.contracts", "action": "manage" },
     { "module": "crm.contracts", "action": "activate" },
     { "module": "crm.contracts", "action": "appendix-manage" },

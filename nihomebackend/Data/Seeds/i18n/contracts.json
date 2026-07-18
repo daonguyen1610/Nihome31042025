@@ -1,0 +1,282 @@
+[
+  {
+    "key": "nav.contracts",
+    "category": "nav",
+    "vi": "Hợp đồng",
+    "en": "Contracts",
+    "zh": "合同",
+    "ja": "契約"
+  },
+  {
+    "key": "contracts.title",
+    "category": "contracts",
+    "vi": "Hợp đồng",
+    "en": "Contracts",
+    "zh": "销售合同",
+    "ja": "販売契約"
+  },
+  {
+    "key": "contracts.subtitle",
+    "category": "contracts",
+    "vi": "Danh sách hợp đồng bán ra theo Sales, khách hàng và tiến độ thực hiện.",
+    "en": "Sales contracts filtered by owner, customer and execution timeline.",
+    "zh": "按负责人、客户和执行时间线过滤的销售合同列表。",
+    "ja": "担当者・顧客・進行状況で絞り込む販売契約一覧。"
+  },
+  {
+    "key": "contracts.newContract",
+    "category": "contracts",
+    "vi": "Thêm hợp đồng",
+    "en": "New contract",
+    "zh": "新增合同",
+    "ja": "新規契約"
+  },
+  {
+    "key": "contracts.searchPlaceholder",
+    "category": "contracts",
+    "vi": "Tìm theo Số HĐ hoặc tên khách hàng…",
+    "en": "Search by number or customer name…",
+    "zh": "按合同编号或客户名称搜索…",
+    "ja": "契約番号または顧客名で検索…"
+  },
+  {
+    "key": "contracts.empty",
+    "category": "contracts",
+    "vi": "Chưa có hợp đồng nào.",
+    "en": "No contracts yet.",
+    "zh": "暂无合同。",
+    "ja": "契約がありません。"
+  },
+  {
+    "key": "contracts.noMatch",
+    "category": "contracts",
+    "vi": "Không có hợp đồng nào khớp bộ lọc.",
+    "en": "No contracts match your filters.",
+    "zh": "没有符合筛选条件的合同。",
+    "ja": "フィルタに一致する契約はありません。"
+  },
+  {
+    "key": "contracts.createModalTitle",
+    "category": "contracts",
+    "vi": "Thêm hợp đồng mới",
+    "en": "New contract",
+    "zh": "新增合同",
+    "ja": "新規契約"
+  },
+  {
+    "key": "contracts.editModalTitle",
+    "category": "contracts",
+    "vi": "Chỉnh sửa hợp đồng",
+    "en": "Edit contract",
+    "zh": "编辑合同",
+    "ja": "契約を編集"
+  },
+  {
+    "key": "contracts.numberHint",
+    "category": "contracts",
+    "vi": "Để trống để hệ thống tự sinh theo mẫu HD-YYYY-NNNN.",
+    "en": "Leave blank to auto-generate HD-YYYY-NNNN.",
+    "zh": "留空时系统自动按 HD-YYYY-NNNN 生成。",
+    "ja": "空欄の場合、システムが HD-YYYY-NNNN 形式で自動採番します。"
+  },
+  {
+    "key": "contracts.deadlineBadge",
+    "category": "contracts",
+    "vi": "Sắp hết hạn",
+    "en": "Ending soon",
+    "zh": "即将到期",
+    "ja": "終了間近"
+  },
+  {
+    "key": "contracts.deadlineBadgeTitle",
+    "category": "contracts",
+    "vi": "Còn ≤ 30 ngày trước ngày kết thúc dự kiến",
+    "en": "Less than 30 days until planned end date",
+    "zh": "距离计划结束日期不足 30 天",
+    "ja": "予定終了日まで 30 日以内"
+  },
+  {
+    "key": "contracts.exportCsv",
+    "category": "contracts",
+    "vi": "Xuất CSV",
+    "en": "Export CSV",
+    "zh": "导出 CSV",
+    "ja": "CSV エクスポート"
+  },
+  {
+    "key": "contracts.filter.status",
+    "category": "contracts",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "contracts.filter.allStatuses",
+    "category": "contracts",
+    "vi": "Tất cả trạng thái",
+    "en": "All statuses",
+    "zh": "全部状态",
+    "ja": "全ステータス"
+  },
+  {
+    "key": "contracts.filter.allCustomers",
+    "category": "contracts",
+    "vi": "Tất cả khách hàng",
+    "en": "All customers",
+    "zh": "全部客户",
+    "ja": "全ての顧客"
+  },
+  {
+    "key": "contracts.filter.signedRange",
+    "category": "contracts",
+    "vi": "Ngày ký (từ - đến)",
+    "en": "Signed date (from - to)",
+    "zh": "签约日期（从 - 到）",
+    "ja": "契約日（開始 - 終了）"
+  },
+  {
+    "key": "contracts.filter.valueRange",
+    "category": "contracts",
+    "vi": "Giá trị (min - max)",
+    "en": "Value (min - max)",
+    "zh": "金额（最小 - 最大）",
+    "ja": "金額（最小 - 最大）"
+  },
+  {
+    "key": "contracts.field.number",
+    "category": "contracts",
+    "vi": "Số HĐ",
+    "en": "Contract #",
+    "zh": "合同编号",
+    "ja": "契約番号"
+  },
+  {
+    "key": "contracts.field.customer",
+    "category": "contracts",
+    "vi": "Khách hàng",
+    "en": "Customer",
+    "zh": "客户",
+    "ja": "顧客"
+  },
+  {
+    "key": "contracts.field.owner",
+    "category": "contracts",
+    "vi": "Sales phụ trách",
+    "en": "Sales owner",
+    "zh": "负责销售",
+    "ja": "担当セールス"
+  },
+  {
+    "key": "contracts.field.status",
+    "category": "contracts",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "contracts.field.signedDate",
+    "category": "contracts",
+    "vi": "Ngày ký",
+    "en": "Signed date",
+    "zh": "签约日期",
+    "ja": "契約日"
+  },
+  {
+    "key": "contracts.field.startDate",
+    "category": "contracts",
+    "vi": "Ngày bắt đầu",
+    "en": "Start date",
+    "zh": "开始日期",
+    "ja": "開始日"
+  },
+  {
+    "key": "contracts.field.endDate",
+    "category": "contracts",
+    "vi": "Ngày kết thúc dự kiến",
+    "en": "Planned end date",
+    "zh": "计划结束日期",
+    "ja": "予定終了日"
+  },
+  {
+    "key": "contracts.field.value",
+    "category": "contracts",
+    "vi": "Giá trị",
+    "en": "Value",
+    "zh": "金额",
+    "ja": "金額"
+  },
+  {
+    "key": "contracts.field.scope",
+    "category": "contracts",
+    "vi": "Phạm vi công việc",
+    "en": "Scope of work",
+    "zh": "工作范围",
+    "ja": "業務範囲"
+  },
+  {
+    "key": "contracts.field.note",
+    "category": "contracts",
+    "vi": "Ghi chú",
+    "en": "Notes",
+    "zh": "备注",
+    "ja": "備考"
+  },
+  {
+    "key": "contracts.status.Draft",
+    "category": "contracts",
+    "vi": "Bản nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "contracts.status.Signed",
+    "category": "contracts",
+    "vi": "Đã ký",
+    "en": "Signed",
+    "zh": "已签约",
+    "ja": "契約済み"
+  },
+  {
+    "key": "contracts.status.InProgress",
+    "category": "contracts",
+    "vi": "Đang thực hiện",
+    "en": "In progress",
+    "zh": "执行中",
+    "ja": "進行中"
+  },
+  {
+    "key": "contracts.status.OnHold",
+    "category": "contracts",
+    "vi": "Tạm dừng",
+    "en": "On hold",
+    "zh": "暂停",
+    "ja": "一時停止"
+  },
+  {
+    "key": "contracts.status.Completed",
+    "category": "contracts",
+    "vi": "Hoàn thành",
+    "en": "Completed",
+    "zh": "已完成",
+    "ja": "完了"
+  },
+  {
+    "key": "contracts.status.Cancelled",
+    "category": "contracts",
+    "vi": "Đã huỷ",
+    "en": "Cancelled",
+    "zh": "已取消",
+    "ja": "キャンセル"
+  },
+  {
+    "key": "form.invalidDateRange",
+    "category": "form",
+    "vi": "Khoảng ngày không hợp lệ.",
+    "en": "Invalid date range.",
+    "zh": "日期范围无效。",
+    "ja": "日付の範囲が無効です。"
+  }
+]

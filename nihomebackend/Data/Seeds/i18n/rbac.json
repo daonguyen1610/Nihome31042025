@@ -1536,6 +1536,22 @@
     "ja": "販売契約・支払スケジュール・付属書の閲覧を許可します。"
   },
   {
+    "key": "rbac.perm.crm.contracts.view.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ hợp đồng",
+    "en": "View all contracts",
+    "zh": "查看全部合同",
+    "ja": "全ての契約を表示"
+  },
+  {
+    "key": "rbac.perm.crm.contracts.view.all.description",
+    "category": "rbac",
+    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / Kế toán / BGĐ / Admin thấy hợp đồng của mọi Sales.",
+    "en": "Bypasses owner filtering — Sales Manager / Accountant / BOD / Admin can see contracts owned by any user.",
+    "zh": "忽略负责人过滤 — 销售经理 / 会计 / 董事会 / 管理员可查看所有销售的合同。",
+    "ja": "担当者フィルタを無視 — セールスマネージャー・経理・役員・管理者は全担当者の契約を閲覧可能。"
+  },
+  {
     "key": "rbac.perm.crm.contracts.manage.label",
     "category": "rbac",
     "vi": "Quản lý hợp đồng",

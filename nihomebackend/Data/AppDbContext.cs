@@ -61,6 +61,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
+    public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<CapabilityDocument> CapabilityDocuments => Set<CapabilityDocument>();
     public DbSet<CapabilityDocumentVersion> CapabilityDocumentVersions => Set<CapabilityDocumentVersion>();
     public DbSet<Tender> Tenders => Set<Tender>();
@@ -539,6 +540,39 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(s => s.QuoteId);
             b.HasIndex(s => new { s.QuoteId, s.VersionNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<Contract>(b =>
+        {
+            b.ToTable("contracts");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.ContractNumber).HasMaxLength(40).IsRequired();
+            b.HasIndex(c => c.ContractNumber).IsUnique();
+            b.Property(c => c.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(c => c.Value).HasColumnType("decimal(18,2)");
+            b.Property(c => c.ScopeOfWork).HasColumnType("nvarchar(max)");
+            b.Property(c => c.Note).HasMaxLength(4000);
+            b.HasOne(c => c.Customer)
+                .WithMany()
+                .HasForeignKey(c => c.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(c => c.Opportunity)
+                .WithMany()
+                .HasForeignKey(c => c.OpportunityId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(c => c.Quote)
+                .WithMany()
+                .HasForeignKey(c => c.QuoteId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(c => c.Owner)
+                .WithMany()
+                .HasForeignKey(c => c.OwnerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(c => c.CustomerId);
+            b.HasIndex(c => c.OwnerUserId);
+            b.HasIndex(c => c.Status);
+            b.HasIndex(c => c.SignedDate);
+            b.HasIndex(c => c.EndDate);
         });
 
         modelBuilder.Entity<CapabilityDocument>(b =>
