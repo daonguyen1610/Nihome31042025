@@ -308,18 +308,24 @@ const Contracts = () => {
     void (async () => {
       try {
         const { data } = await adminApi.getContract(row.id);
-        setForm((prev) => ({
-          ...prev,
-          milestones: data.paymentMilestones.map((m) => ({
-            order: m.order,
-            name: m.name,
-            percentValue: m.percentValue,
-            dueDate: toIsoDate(m.dueDate),
-            status: m.status,
-            note: m.note ?? "",
-          })),
-        }));
-        setMilestonesLoaded(true);
+        // Guard against a race: if the user already touched the schedule
+        // (preset / add / edit) before the fetch completed, do not clobber
+        // their input with the freshly-loaded server value.
+        setMilestonesLoaded((alreadyLoaded) => {
+          if (alreadyLoaded) return true;
+          setForm((prev) => ({
+            ...prev,
+            milestones: data.paymentMilestones.map((m) => ({
+              order: m.order,
+              name: m.name,
+              percentValue: m.percentValue,
+              dueDate: toIsoDate(m.dueDate),
+              status: m.status,
+              note: m.note ?? "",
+            })),
+          }));
+          return true;
+        });
       } catch {
         // Detail fetch failed — leave milestonesLoaded=false so submit sends
         // null (preserve) instead of the empty array (which would wipe).
@@ -328,18 +334,21 @@ const Contracts = () => {
   };
 
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
+    setMilestonesLoaded(true);
     setForm((prev) => ({
       ...prev,
       milestones: prev.milestones.map((m, i) => (i === index ? { ...m, ...patch } : m)),
     }));
   };
   const addMilestone = () => {
+    setMilestonesLoaded(true);
     setForm((prev) => ({
       ...prev,
       milestones: [...prev.milestones, blankMilestone(prev.milestones.length + 1)],
     }));
   };
   const removeMilestone = (index: number) => {
+    setMilestonesLoaded(true);
     setForm((prev) => ({
       ...prev,
       milestones: prev.milestones
@@ -348,6 +357,7 @@ const Contracts = () => {
     }));
   };
   const moveMilestone = (index: number, direction: -1 | 1) => {
+    setMilestonesLoaded(true);
     setForm((prev) => {
       const next = [...prev.milestones];
       const target = index + direction;
@@ -361,6 +371,7 @@ const Contracts = () => {
     // filling in the schedule should be asked before wiping it.
     const hasWork = form.milestones.some((m) => m.name.trim() !== "" || m.percentValue > 0);
     if (hasWork && !window.confirm(t("contracts.milestonePresetConfirm"))) return;
+    setMilestonesLoaded(true);
     setForm((prev) => ({ ...prev, milestones: PRESET_30_30_30_10.map((m) => ({ ...m })) }));
   };
 
@@ -368,7 +379,11 @@ const Contracts = () => {
     () => form.milestones.reduce((acc, m) => acc + (Number.isFinite(m.percentValue) ? m.percentValue : 0), 0),
     [form.milestones],
   );
-  const milestoneSumOk = form.milestones.length === 0 || Math.abs(milestoneSum - 100) < 0.01;
+  // Server tolerance is `Math.Abs(sum - 100) > 0.01` — mirror it here with
+  // `<= 0.01` so the client acceptance window is not a strict subset of the
+  // server's. Without this, a schedule that sums to exactly 100.01 would be
+  // rejected by the client badge but accepted by the server, and vice versa.
+  const milestoneSumOk = form.milestones.length === 0 || Math.abs(milestoneSum - 100) <= 0.01;
 
   const submit = async () => {
     setFormError(null);
