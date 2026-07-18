@@ -72,6 +72,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Survey> Surveys => Set<Survey>();
 
+    public DbSet<DesignProject> DesignProjects => Set<DesignProject>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -760,6 +762,42 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(s => s.LinkedOpportunityId);
             b.HasIndex(s => s.SurveyDate);
             b.HasIndex(s => s.DriveSyncStatus);
+        });
+
+        modelBuilder.Entity<DesignProject>(b =>
+        {
+            b.ToTable("design_projects");
+            b.HasKey(dp => dp.Id);
+            b.Property(dp => dp.ProjectCode).HasMaxLength(40).IsRequired();
+            b.HasIndex(dp => dp.ProjectCode).IsUnique();
+            b.Property(dp => dp.Name).HasMaxLength(300).IsRequired();
+            b.Property(dp => dp.Note).HasMaxLength(4000);
+            b.Property(dp => dp.CurrentStage).HasConversion<string>().HasMaxLength(20);
+            b.Property(dp => dp.Status).HasConversion<string>().HasMaxLength(20);
+
+            b.HasOne(dp => dp.Customer)
+                .WithMany()
+                .HasForeignKey(dp => dp.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(dp => dp.Contract)
+                .WithMany()
+                .HasForeignKey(dp => dp.ContractId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(dp => dp.ProjectManager)
+                .WithMany()
+                .HasForeignKey(dp => dp.ProjectManagerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(dp => dp.DesignLead)
+                .WithMany()
+                .HasForeignKey(dp => dp.DesignLeadUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(dp => dp.CustomerId);
+            b.HasIndex(dp => dp.ContractId).IsUnique().HasFilter("[ContractId] IS NOT NULL");
+            b.HasIndex(dp => dp.ProjectManagerUserId);
+            b.HasIndex(dp => dp.DesignLeadUserId);
+            b.HasIndex(dp => dp.Status);
+            b.HasIndex(dp => dp.CurrentStage);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

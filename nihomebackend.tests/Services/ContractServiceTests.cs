@@ -17,7 +17,7 @@ public class ContractServiceTests : IDisposable
     public ContractServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new ContractService(_db, NullLogger<ContractService>.Instance);
+        _sut = new ContractService(_db, new NoopDesignProjectService(), NullLogger<ContractService>.Instance);
 
         _db.Customers.AddRange(
             new Customer { Name = "Customer A", Type = CustomerType.Company },
@@ -537,5 +537,35 @@ public class ContractServiceTests : IDisposable
         });
         _db.SaveChanges();
         Assert.True((await _sut.GetAsync(contract.Id, 1, canSeeAll: true))!.HasSignedScan);
+    }
+
+    /// <summary>
+    /// Stub for tests that don't care about the NIH-113 auto-create hook.
+    /// The real service is exercised in <c>DesignProjectServiceTests</c>
+    /// + integration; here we just want ContractService to not blow up
+    /// when it transitions a contract to InProgress.
+    /// </summary>
+    private sealed class NoopDesignProjectService : IDesignProjectService
+    {
+        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectListResponse> ListAsync(
+            NihomeBackend.Models.DTOs.Requests.DesignProjectListParams parameters, CancellationToken ct = default)
+            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectListResponse());
+
+        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?> GetAsync(int id, CancellationToken ct = default)
+            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?>(null);
+
+        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse> CreateAsync(
+            NihomeBackend.Models.DTOs.Requests.CreateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
+            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse());
+
+        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?> UpdateAsync(
+            int id, NihomeBackend.Models.DTOs.Requests.UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
+            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?>(null);
+
+        public Task<bool> DeleteAsync(int id, CancellationToken ct = default) => Task.FromResult(false);
+
+        public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse> EnsureForContractAsync(
+            NihomeBackend.Models.Contract contract, int? callerUserId, CancellationToken ct = default)
+            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectResponse());
     }
 }

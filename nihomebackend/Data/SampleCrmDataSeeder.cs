@@ -35,6 +35,7 @@ public static class SampleCrmDataSeeder
         SeedCapabilityDocuments(db, owner, now, webRootPath);
         SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
+        SeedDesignProjects(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1305,6 +1306,75 @@ public static class SampleCrmDataSeeder
             };
             db.Surveys.Add(survey);
             i++;
+        }
+        db.SaveChanges();
+    }
+
+    private const string SampleDesignProjectMarker = "[SAMPLE_DP]";
+
+    /// <summary>
+    /// Seed a small demo set of design projects so the NIH-113 overview
+    /// list has variety on a fresh DB (one per stage, plus one On-hold to
+    /// exercise the status badge). Idempotent — guarded on the marker
+    /// suffix on <c>Note</c>.
+    /// </summary>
+    private static void SeedDesignProjects(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        if (db.DesignProjects.Any(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker))) return;
+
+        // We need at least one customer to satisfy the FK. Sample customers
+        // are created upstream in SeedCustomers; fall back to the first
+        // real customer if none exist yet.
+        var sampleCustomer = db.Customers
+            .Where(c => c.Name.StartsWith(SampleTag))
+            .OrderBy(c => c.Id)
+            .FirstOrDefault()
+            ?? db.Customers.OrderBy(c => c.Id).FirstOrDefault();
+        if (sampleCustomer is null) return;
+
+        // Prefer the sample contract that has already been pushed to
+        // InProgress by the contracts seed so the auto-created project
+        // matches production behaviour.
+        var sampleContract = db.Contracts
+            .Where(c => c.CustomerId == sampleCustomer.Id && c.Status == ContractStatus.InProgress)
+            .OrderBy(c => c.Id)
+            .FirstOrDefault();
+
+        var year = now.Year;
+        var nextSeq = 1 + db.DesignProjects.Count(dp => dp.ProjectCode.StartsWith($"DP-{year}-"));
+
+        // (Name, Stage, Status, StartDaysAgo, DeadlineDaysAhead, LinkContract)
+        var seeds = new (string Name, DesignProjectStage Stage, DesignProjectStatus Status,
+            int StartDaysAgo, int DeadlineDaysAhead, bool LinkContract)[]
+        {
+            ("Nhà máy Alpha - Giai đoạn 1",   DesignProjectStage.Concept,     DesignProjectStatus.Active, 3,  90, true),
+            ("Villa Bãi Dài - Nha Trang",     DesignProjectStage.BasicDesign, DesignProjectStatus.Active, 30, 120, false),
+            ("Showroom nội thất Đông Anh",    DesignProjectStage.ShopDrawing, DesignProjectStatus.Active, 60, 30,  false),
+            ("Nhà kho lạnh KCN Bắc Ninh",     DesignProjectStage.BasicDesign, DesignProjectStatus.OnHold, 45, -5,  false),
+        };
+
+        foreach (var (name, stage, status, startDaysAgo, deadlineDaysAhead, linkContract) in seeds)
+        {
+            var seq = nextSeq++;
+            var dp = new DesignProject
+            {
+                ProjectCode = $"DP-{year}-{seq:D4}",
+                Name = $"{SampleTag} {name}",
+                CustomerId = sampleCustomer.Id,
+                ContractId = linkContract ? sampleContract?.Id : null,
+                ProjectManagerUserId = owner.Id,
+                DesignLeadUserId = owner.Id,
+                StartDate = now.AddDays(-startDaysAgo),
+                Deadline = now.AddDays(deadlineDaysAhead),
+                CurrentStage = stage,
+                Status = status,
+                Note = $"{SampleDesignProjectMarker} Sample design project for demo.",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-startDaysAgo),
+                UpdatedAt = now.AddDays(-1),
+            };
+            db.DesignProjects.Add(dp);
         }
         db.SaveChanges();
     }

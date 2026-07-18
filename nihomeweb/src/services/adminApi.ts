@@ -1455,6 +1455,104 @@ export interface SurveyTimelineEvent {
   userName?: string | null;
 }
 
+// ─── Design Projects (NIH-113 M2 overview) ────────────────────────
+
+export type DesignProjectStage = "Concept" | "BasicDesign" | "ShopDrawing" | "Completed";
+export type DesignProjectStatus = "Active" | "OnHold" | "Completed" | "Cancelled";
+
+export const DESIGN_PROJECT_STAGES: DesignProjectStage[] = [
+  "Concept",
+  "BasicDesign",
+  "ShopDrawing",
+  "Completed",
+];
+
+export const DESIGN_PROJECT_STATUSES: DesignProjectStatus[] = [
+  "Active",
+  "OnHold",
+  "Completed",
+  "Cancelled",
+];
+
+export interface DesignProjectResponse {
+  id: number;
+  projectCode: string;
+  name: string;
+  customerId: number;
+  customerName?: string | null;
+  contractId?: number | null;
+  contractNumber?: string | null;
+  projectManagerUserId?: number | null;
+  projectManagerName?: string | null;
+  designLeadUserId?: number | null;
+  designLeadName?: string | null;
+  startDate?: string | null;
+  deadline?: string | null;
+  currentStage: DesignProjectStage;
+  status: DesignProjectStatus;
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DesignProjectListItemResponse {
+  id: number;
+  projectCode: string;
+  name: string;
+  customerId: number;
+  customerName?: string | null;
+  contractId?: number | null;
+  contractNumber?: string | null;
+  projectManagerUserId?: number | null;
+  projectManagerName?: string | null;
+  designLeadUserId?: number | null;
+  designLeadName?: string | null;
+  startDate?: string | null;
+  deadline?: string | null;
+  currentStage: DesignProjectStage;
+  status: DesignProjectStatus;
+  updatedAt: string;
+}
+
+export interface DesignProjectListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: DesignProjectListItemResponse[];
+}
+
+export interface DesignProjectListParams {
+  customerId?: number;
+  contractId?: number;
+  projectManagerUserId?: number;
+  designLeadUserId?: number;
+  /** Comma-separated `DesignProjectStage` values. */
+  stage?: string;
+  /** Comma-separated `DesignProjectStatus` values. */
+  status?: string;
+  deadlineFrom?: string;
+  deadlineTo?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateDesignProjectRequest {
+  name: string;
+  customerId: number;
+  contractId?: number | null;
+  projectManagerUserId?: number | null;
+  designLeadUserId?: number | null;
+  startDate?: string | null;
+  deadline?: string | null;
+  note?: string | null;
+}
+
+export interface UpdateDesignProjectRequest extends CreateDesignProjectRequest {
+  currentStage?: DesignProjectStage;
+  status?: DesignProjectStatus;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2025,6 +2123,34 @@ export const adminApi = {
   deleteSurvey: (id: number) => api.delete(`/surveys/${id}`),
   getSurveyTimeline: (id: number, limit = 100) =>
     api.get<SurveyTimelineEvent[]>(`/surveys/${id}/timeline`, { params: { limit } }),
+
+  // Design projects (NIH-113)
+  listDesignProjects: (params: DesignProjectListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.customerId != null) q.append("customerId", String(params.customerId));
+    if (params.contractId != null) q.append("contractId", String(params.contractId));
+    if (params.projectManagerUserId != null)
+      q.append("projectManagerUserId", String(params.projectManagerUserId));
+    if (params.designLeadUserId != null)
+      q.append("designLeadUserId", String(params.designLeadUserId));
+    if (params.stage) q.append("stage", params.stage);
+    if (params.status) q.append("status", params.status);
+    if (params.deadlineFrom) q.append("deadlineFrom", params.deadlineFrom);
+    if (params.deadlineTo) q.append("deadlineTo", params.deadlineTo);
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<DesignProjectListResponse>(`/design-projects${qs ? `?${qs}` : ""}`);
+  },
+  getDesignProject: (id: number) =>
+    api.get<DesignProjectResponse>(`/design-projects/${id}`),
+  createDesignProject: (body: CreateDesignProjectRequest) =>
+    api.post<DesignProjectResponse>("/design-projects", body),
+  updateDesignProject: (id: number, body: UpdateDesignProjectRequest) =>
+    api.put<DesignProjectResponse>(`/design-projects/${id}`, body),
+  deleteDesignProject: (id: number) =>
+    api.delete(`/design-projects/${id}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
