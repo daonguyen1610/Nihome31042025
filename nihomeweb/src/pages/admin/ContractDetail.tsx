@@ -1211,28 +1211,34 @@ const ContractDetail = () => {
         />
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
-          <TabsList className="w-full flex-wrap">
-            <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
-            <TabsTrigger value="schedule">
-              {t("contracts.detail.tab.schedule")}
-              {contract.paymentMilestones.length > 0 ? (
-                <span className="ml-1 text-xs text-slate-400">({contract.paymentMilestones.length})</span>
-              ) : null}
-            </TabsTrigger>
-            <TabsTrigger value="appendices">
-              {t("contracts.detail.tab.appendices")}
-              {appendices.length > 0 ? (
-                <span className="ml-1 text-xs text-slate-400">({appendices.length})</span>
-              ) : null}
-            </TabsTrigger>
-            <TabsTrigger value="documents">
-              {t("contracts.detail.tab.documents")}
-              {attachments.length > 0 ? (
-                <span className="ml-1 text-xs text-slate-400">({attachments.length})</span>
-              ) : null}
-            </TabsTrigger>
-            <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
-          </TabsList>
+          {/* Horizontal scroll on narrow viewports keeps the 5 tabs in one
+              readable row instead of wrapping onto two rows with awkward
+              orphan groups. The container hides the scrollbar visually but
+              stays swipeable on touch devices. */}
+          <div className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <TabsList className="inline-flex w-max min-w-full justify-start">
+              <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
+              <TabsTrigger value="schedule">
+                {t("contracts.detail.tab.schedule")}
+                {contract.paymentMilestones.length > 0 ? (
+                  <span className="ml-1 text-xs text-slate-400">({contract.paymentMilestones.length})</span>
+                ) : null}
+              </TabsTrigger>
+              <TabsTrigger value="appendices">
+                {t("contracts.detail.tab.appendices")}
+                {appendices.length > 0 ? (
+                  <span className="ml-1 text-xs text-slate-400">({appendices.length})</span>
+                ) : null}
+              </TabsTrigger>
+              <TabsTrigger value="documents">
+                {t("contracts.detail.tab.documents")}
+                {attachments.length > 0 ? (
+                  <span className="ml-1 text-xs text-slate-400">({attachments.length})</span>
+                ) : null}
+              </TabsTrigger>
+              <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="info" className="mt-4">
             <InfoTab contract={contract} />
