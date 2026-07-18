@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -222,6 +223,31 @@ const Contracts = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Auto-open the edit dialog when the caller navigates in with
+  // /admin/contracts?edit={id} (e.g. the "Edit info" button on the
+  // detail page). We wait until the list is loaded so we can find the
+  // row and hydrate the form via openEdit(). The flag is consumed once
+  // by clearing the search param so a back-navigation doesn't loop.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editParam = searchParams.get("edit");
+  const consumedEditRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!editParam || loading) return;
+    if (consumedEditRef.current === editParam) return;
+    const id = Number(editParam);
+    if (!Number.isFinite(id)) return;
+    const row = contracts.find((c) => c.id === id);
+    if (!row) return;
+    consumedEditRef.current = editParam;
+    openEdit(row);
+    // Strip the query param so refreshing the page doesn't re-open.
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+  // openEdit is stable (component-local closure); linting off exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editParam, loading]);
 
   const resetFilters = () => {
     setStatusFilter("all");
@@ -648,7 +674,13 @@ const Contracts = () => {
                         )}
                         <div className="min-w-0">
                           <h3 className="break-words text-sm font-semibold leading-tight">{row.customerName ?? "—"}</h3>
-                          <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">{row.contractNumber}</p>
+                          <Link
+                            to={`/admin/contracts/${row.id}`}
+                            className="mt-0.5 inline-flex items-center gap-1 break-all font-mono text-xs text-primary hover:underline"
+                          >
+                            {row.contractNumber}
+                            <ExternalLink className="h-3 w-3 opacity-70" />
+                          </Link>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -742,7 +774,12 @@ const Contracts = () => {
                             />
                           </td>
                         )}
-                        <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{row.contractNumber}</td>
+                        <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">
+                          <Link to={`/admin/contracts/${row.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
+                            {row.contractNumber}
+                            <ExternalLink className="h-3 w-3 opacity-70" />
+                          </Link>
+                        </td>
                         <td className="min-w-[220px] px-3 py-3 font-medium">{row.customerName ?? "—"}</td>
                         <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate)}</td>
                         <td className="whitespace-nowrap px-3 py-3">

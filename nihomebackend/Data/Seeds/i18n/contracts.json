@@ -784,6 +784,22 @@
     "ja": "ファイルをアップロード"
   },
   {
+    "key": "contracts.documents.typeLabel",
+    "category": "contracts",
+    "vi": "Loại tài liệu",
+    "en": "Document type",
+    "zh": "文件类型",
+    "ja": "資料種別"
+  },
+  {
+    "key": "contracts.documents.missingFields",
+    "category": "contracts",
+    "vi": "Vui lòng nhập đầy đủ Tiêu đề và Lý do.",
+    "en": "Please fill in both Title and Reason.",
+    "zh": "请填写标题和原因。",
+    "ja": "件名と理由を入力してください。"
+  },
+  {
     "key": "contracts.documents.kind.SignedScan",
     "category": "contracts",
     "vi": "Bản scan hợp đồng đã ký",
