@@ -278,5 +278,117 @@
     "en": "Invalid date range.",
     "zh": "日期范围无效。",
     "ja": "日付の範囲が無効です。"
+  },
+  {
+    "key": "contracts.milestonesTitle",
+    "category": "contracts",
+    "vi": "Lịch thanh toán",
+    "en": "Payment schedule",
+    "zh": "付款计划",
+    "ja": "支払スケジュール"
+  },
+  {
+    "key": "contracts.addMilestone",
+    "category": "contracts",
+    "vi": "Thêm đợt",
+    "en": "Add milestone",
+    "zh": "添加里程碑",
+    "ja": "マイルストーンを追加"
+  },
+  {
+    "key": "contracts.milestonePreset",
+    "category": "contracts",
+    "vi": "Áp dụng preset 30-30-30-10",
+    "en": "Apply 30-30-30-10 preset",
+    "zh": "应用 30-30-30-10 预设",
+    "ja": "30-30-30-10 プリセットを適用"
+  },
+  {
+    "key": "contracts.milestonesEmpty",
+    "category": "contracts",
+    "vi": "Chưa có đợt thanh toán nào. Nhấn \"Thêm đợt\" hoặc áp dụng preset.",
+    "en": "No payment milestones yet. Add one or apply the preset.",
+    "zh": "尚未添加付款里程碑。请添加或应用预设。",
+    "ja": "支払マイルストーンがありません。追加するかプリセットを適用してください。"
+  },
+  {
+    "key": "contracts.milestonesSum",
+    "category": "contracts",
+    "vi": "Tổng %",
+    "en": "Total %",
+    "zh": "合计 %",
+    "ja": "合計 %"
+  },
+  {
+    "key": "contracts.milestoneSumInvalid",
+    "category": "contracts",
+    "vi": "Tổng % các đợt thanh toán phải bằng 100.",
+    "en": "Milestone percentages must sum to 100.",
+    "zh": "所有里程碑百分比之和必须为 100。",
+    "ja": "マイルストーンの合計は 100% でなければなりません。"
+  },
+  {
+    "key": "contracts.milestoneNameRequired",
+    "category": "contracts",
+    "vi": "Mỗi đợt thanh toán cần có tên.",
+    "en": "Each milestone must have a name.",
+    "zh": "每个里程碑都必须有名称。",
+    "ja": "各マイルストーンに名称が必要です。"
+  },
+  {
+    "key": "contracts.milestone.name",
+    "category": "contracts",
+    "vi": "Tên đợt",
+    "en": "Name",
+    "zh": "名称",
+    "ja": "名称"
+  },
+  {
+    "key": "contracts.milestone.percent",
+    "category": "contracts",
+    "vi": "%",
+    "en": "%",
+    "zh": "%",
+    "ja": "%"
+  },
+  {
+    "key": "contracts.milestone.dueDate",
+    "category": "contracts",
+    "vi": "Ngày dự kiến",
+    "en": "Due date",
+    "zh": "预计日期",
+    "ja": "予定日"
+  },
+  {
+    "key": "contracts.milestone.status",
+    "category": "contracts",
+    "vi": "Trạng thái",
+    "en": "Status",
+    "zh": "状态",
+    "ja": "ステータス"
+  },
+  {
+    "key": "contracts.milestoneStatus.Pending",
+    "category": "contracts",
+    "vi": "Chưa yêu cầu",
+    "en": "Pending",
+    "zh": "待处理",
+    "ja": "未請求"
+  },
+  {
+    "key": "contracts.milestoneStatus.Requested",
+    "category": "contracts",
+    "vi": "Đã yêu cầu",
+    "en": "Requested",
+    "zh": "已请求",
+    "ja": "請求済"
+  },
+  {
+    "key": "contracts.milestoneStatus.Paid",
+    "category": "contracts",
+    "vi": "Đã thanh toán",
+    "en": "Paid",
+    "zh": "已付款",
+    "ja": "支払済"
   }
 ]

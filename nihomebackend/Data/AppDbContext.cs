@@ -62,6 +62,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
     public DbSet<Contract> Contracts => Set<Contract>();
+    public DbSet<ContractPaymentMilestone> ContractPaymentMilestones => Set<ContractPaymentMilestone>();
     public DbSet<CapabilityDocument> CapabilityDocuments => Set<CapabilityDocument>();
     public DbSet<CapabilityDocumentVersion> CapabilityDocumentVersions => Set<CapabilityDocumentVersion>();
     public DbSet<Tender> Tenders => Set<Tender>();
@@ -573,6 +574,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(c => c.Status);
             b.HasIndex(c => c.SignedDate);
             b.HasIndex(c => c.EndDate);
+        });
+
+        modelBuilder.Entity<ContractPaymentMilestone>(b =>
+        {
+            b.ToTable("contract_payment_milestones");
+            b.HasKey(m => m.Id);
+            b.Property(m => m.Name).HasMaxLength(200).IsRequired();
+            b.Property(m => m.PercentValue).HasColumnType("decimal(5,2)");
+            b.Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(m => m.Note).HasMaxLength(500);
+            b.HasOne(m => m.Contract)
+                .WithMany()
+                .HasForeignKey(m => m.ContractId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(m => m.ContractId);
+            b.HasIndex(m => new { m.ContractId, m.Order }).IsUnique();
         });
 
         modelBuilder.Entity<CapabilityDocument>(b =>
