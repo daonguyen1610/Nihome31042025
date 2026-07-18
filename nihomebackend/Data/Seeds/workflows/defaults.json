@@ -1,0 +1,65 @@
+{
+  "_comment": "Default approval workflow definitions for GD2 modules. Loaded once at startup by WorkflowConfigSeeder. Adding entries here is idempotent — existing DB rows are never overwritten so admin edits made through /admin/workflows are preserved on reboot. Runtime routing of real records through these chains is out of NIH-225 scope.",
+  "workflows": [
+    {
+      "module": "quotes",
+      "action": "approve",
+      "name": "Duyệt báo giá",
+      "description": "Chuỗi duyệt báo giá tiêu chuẩn: Sales Manager rồi Ban Giám đốc.",
+      "sortOrder": 10,
+      "isActive": true,
+      "steps": [
+        { "order": 1, "name": "Trưởng phòng Kinh doanh duyệt", "approverRoleCode": "SALES_MANAGER", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 2, "name": "Ban Giám đốc phê duyệt", "approverRoleCode": "BGD", "slaHours": 48, "requireAllApprovers": true }
+      ]
+    },
+    {
+      "module": "contracts",
+      "action": "sign",
+      "name": "Ký hợp đồng",
+      "description": "Chuỗi ký hợp đồng chính thức: Pháp chế, Sales Manager, Giám đốc.",
+      "sortOrder": 20,
+      "isActive": true,
+      "steps": [
+        { "order": 1, "name": "Pháp chế soát xét", "approverRoleCode": "LEGAL_OFFICER", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 2, "name": "Trưởng phòng Kinh doanh xác nhận", "approverRoleCode": "SALES_MANAGER", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 3, "name": "Ban Giám đốc ký", "approverRoleCode": "BGD", "slaHours": 48, "requireAllApprovers": true }
+      ]
+    },
+    {
+      "module": "tenders",
+      "action": "submit",
+      "name": "Nộp hồ sơ dự thầu",
+      "description": "Kiểm tra checklist trước khi nộp hồ sơ thầu.",
+      "sortOrder": 30,
+      "isActive": true,
+      "steps": [
+        { "order": 1, "name": "QS soát chi phí", "approverRoleCode": "QS", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 2, "name": "Trưởng phòng Kinh doanh duyệt cuối", "approverRoleCode": "SALES_MANAGER", "slaHours": 24, "requireAllApprovers": false }
+      ]
+    },
+    {
+      "module": "design.concepts",
+      "action": "approve",
+      "name": "Duyệt thiết kế Concept",
+      "description": "Duyệt phương án thiết kế sơ bộ theo Design Lead.",
+      "sortOrder": 40,
+      "isActive": true,
+      "steps": [
+        { "order": 1, "name": "Kiến trúc trưởng xét duyệt", "approverRoleCode": "DESIGN_LEAD", "slaHours": 48, "requireAllApprovers": false }
+      ]
+    },
+    {
+      "module": "design.shop",
+      "action": "issue-for-construction",
+      "name": "Phát hành bản vẽ thi công (IFC)",
+      "description": "Xác nhận phát hành bản vẽ shop chuyển thi công.",
+      "sortOrder": 50,
+      "isActive": true,
+      "steps": [
+        { "order": 1, "name": "Design Lead soát xét", "approverRoleCode": "DESIGN_LEAD", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 2, "name": "PM xác nhận phát hành", "approverRoleCode": "PM", "slaHours": 24, "requireAllApprovers": false }
+      ]
+    }
+  ]
+}
