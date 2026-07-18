@@ -34,7 +34,11 @@ public class TenderResponse
     public string? Note { get; set; }
 
     public int? WonOpportunityId { get; set; }
+    /// <summary>Resolved name of the linked opportunity, so the FE Result tab can render "Cơ hội đã gán" without an extra lookup.</summary>
+    public string? WonOpportunityName { get; set; }
     public string? LostReasonCode { get; set; }
+    /// <summary>Localised label for <see cref="LostReasonCode"/> from master-data category <c>opportunity_lost_reason</c>.</summary>
+    public string? LostReasonLabel { get; set; }
     public string? LostNote { get; set; }
     public DateTime? ClosedAt { get; set; }
 

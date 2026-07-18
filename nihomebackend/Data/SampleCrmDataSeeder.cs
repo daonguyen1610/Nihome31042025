@@ -1070,16 +1070,17 @@ public static class SampleCrmDataSeeder
 
     /// <summary>
     /// Seed a curated set of tender rows tied to existing sample
-    /// customers so the FE list, deadline badge and status filter all
-    /// have populated data on a fresh DB. Idempotent — skipped when
-    /// any sample tender already exists.
+    /// customers so the FE list, deadline badge, status filter and the
+    /// NIH-97 detail page (checklist / result tabs) all have populated
+    /// data on a fresh DB. Idempotent — skipped when any sample tender
+    /// already exists.
     /// </summary>
     private static void SeedTenders(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         if (db.Tenders.Any(t => t.Note != null && t.Note.StartsWith(SampleTenderMarker))) return;
 
         var customers = db.Customers.Where(c => c.Name.StartsWith(SampleTag))
-            .OrderBy(c => c.Id).Take(3).ToList();
+            .OrderBy(c => c.Id).Take(5).ToList();
         if (customers.Count == 0) return;
 
         var templates = db.MasterDataOptions
@@ -1087,23 +1088,58 @@ public static class SampleCrmDataSeeder
             .OrderBy(o => o.SortOrder)
             .ToList();
 
+        // Pick one capability doc to attach to the "richly populated"
+        // checklist rows so the detail page has a downloadable file to
+        // demonstrate the library-attach flow.
+        var libraryDoc = db.CapabilityDocuments
+            .Where(d => d.Description != null && d.Description.StartsWith(SampleCapabilityMarker))
+            .OrderBy(d => d.Id)
+            .FirstOrDefault();
+
+        var sampleOpportunities = db.Opportunities
+            .Where(o => o.Name.StartsWith(SampleTag))
+            .OrderBy(o => o.Id)
+            .ToList();
+
         var year = now.Year;
         var nextSeq = 1 + db.Tenders.Count(t => t.Code.StartsWith($"TD-{year}-"));
 
-        var seeds = new (string Name, int CustomerIdx, int DaysToDeadline, TenderStatus Status)[]
+        // Curated scenarios so every state (Preparing / imminent / Submitted /
+        // Won / Lost) has at least one row on the list, and the detail-page
+        // checklist has ownership + internal deadlines + attached files.
+        var seeds = new (string Name, int CustomerIdx, int DaysToDeadline, TenderStatus Status,
+            bool RichChecklist, string? LostReason, string? LostNote)[]
         {
-            ("Gói thầu xây dựng Nhà máy Alpha",       0, 21,  TenderStatus.Preparing),
-            ("Gói thầu MEP Nhà xưởng Beta",           1, 2,   TenderStatus.Preparing),   // deadline imminent
-            ("Gói thầu hoàn thiện nội thất Gamma",    2, -5,  TenderStatus.Submitted),   // past deadline, already submitted
+            ("Gói thầu xây dựng Nhà máy Alpha",         0, 21,  TenderStatus.Preparing, true,  null,       null),
+            ("Gói thầu MEP Nhà xưởng Beta",             1, 2,   TenderStatus.Preparing, true,  null,       null),
+            ("Gói thầu hoàn thiện nội thất Gamma",      2, -5,  TenderStatus.Submitted, false, null,       null),
+            ("Gói thầu mở rộng kho Alpha",              0, -20, TenderStatus.Won,       false, null,       null),
+            ("Gói thầu nội thất căn hộ mẫu Beta",       1, -30, TenderStatus.Lost,      false, "price",    "Khách chốt với đối thủ vì giá thấp hơn 8%."),
         };
 
         var i = 0;
-        foreach (var (name, custIdx, daysToDeadline, status) in seeds)
+        foreach (var (name, custIdx, daysToDeadline, status, richChecklist, lostReason, lostNote) in seeds)
         {
             if (custIdx >= customers.Count) continue;
             var customer = customers[custIdx];
             var code = $"TD-{year}-{nextSeq++:D4}";
             var deadline = now.AddDays(daysToDeadline);
+
+            // Won tenders need a linked opportunity so the detail-page
+            // Result tab renders the "Cơ hội đã gán" row. Pick the first
+            // seeded opportunity for the same customer, else fall back to
+            // any sample opportunity so the demo isn't empty.
+            int? wonOppId = null;
+            if (status == TenderStatus.Won)
+            {
+                wonOppId = sampleOpportunities.FirstOrDefault(o => o.CustomerId == customer.Id)?.Id
+                    ?? sampleOpportunities.FirstOrDefault()?.Id;
+            }
+
+            var closedAt = status is TenderStatus.Won or TenderStatus.Lost
+                ? now.AddDays(daysToDeadline + 3)
+                : (DateTime?)null;
+
             var tender = new Tender
             {
                 Code = code,
@@ -1112,9 +1148,13 @@ public static class SampleCrmDataSeeder
                 OpeningDate = now.AddDays(daysToDeadline - 14),
                 SubmissionDeadline = deadline,
                 PreparerUserId = owner.Id,
-                InfoSource = "Referral",
+                InfoSource = i % 2 == 0 ? "Referral" : "Website",
                 Status = status,
                 Note = $"{SampleTenderMarker} Sample tender for demo.",
+                WonOpportunityId = wonOppId,
+                LostReasonCode = lostReason,
+                LostNote = lostNote,
+                ClosedAt = closedAt,
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-7 + i),
@@ -1123,21 +1163,75 @@ public static class SampleCrmDataSeeder
             db.Tenders.Add(tender);
             db.SaveChanges();
 
-            // Attach default checklist derived from master data.
-            var itemsToAdd = templates.Select((tpl, idx) => new TenderChecklistItem
+            // Build the checklist. Rich rows carry ownership, an internal
+            // deadline, and an attached file (path borrowed from a sample
+            // capability document so the download link works). Everyone
+            // else gets a mix of Done / NotStarted so % != 0 and != 100.
+            var itemsToAdd = new List<TenderChecklistItem>();
+            for (var idx = 0; idx < templates.Count; idx++)
             {
-                TenderId = tender.Id,
-                TemplateCode = tpl.Code,
-                Title = tpl.Name,
-                // Roughly half of items done on the "Preparing" tenders so the
-                // % completion badge has something interesting to render.
-                Status = status == TenderStatus.Submitted
-                    ? TenderChecklistItemStatus.Submitted
-                    : (idx < 3 ? TenderChecklistItemStatus.Done : TenderChecklistItemStatus.NotStarted),
-                SortOrder = tpl.SortOrder != 0 ? tpl.SortOrder : idx + 1,
-                CreatedAt = now.AddDays(-3),
-                UpdatedAt = now.AddDays(-1),
-            }).ToList();
+                var tpl = templates[idx];
+                TenderChecklistItemStatus itemStatus;
+                if (status == TenderStatus.Submitted || status == TenderStatus.Won)
+                {
+                    itemStatus = TenderChecklistItemStatus.Submitted;
+                }
+                else if (status == TenderStatus.Lost)
+                {
+                    // Lost tenders keep whatever they had — mostly done but
+                    // not all submitted (bid never made it out).
+                    itemStatus = idx < 4 ? TenderChecklistItemStatus.Done : TenderChecklistItemStatus.NotStarted;
+                }
+                else if (richChecklist)
+                {
+                    // Preparing — spread across every status so the
+                    // detail-page dropdown shows variety.
+                    itemStatus = idx switch
+                    {
+                        0 => TenderChecklistItemStatus.Done,
+                        1 => TenderChecklistItemStatus.Done,
+                        2 => TenderChecklistItemStatus.Preparing,
+                        3 => TenderChecklistItemStatus.Preparing,
+                        _ => TenderChecklistItemStatus.NotStarted,
+                    };
+                }
+                else
+                {
+                    itemStatus = idx < 3
+                        ? TenderChecklistItemStatus.Done
+                        : TenderChecklistItemStatus.NotStarted;
+                }
+
+                var item = new TenderChecklistItem
+                {
+                    TenderId = tender.Id,
+                    TemplateCode = tpl.Code,
+                    Title = tpl.Name,
+                    Status = itemStatus,
+                    SortOrder = tpl.SortOrder != 0 ? tpl.SortOrder : idx + 1,
+                    CreatedAt = now.AddDays(-3),
+                    UpdatedAt = now.AddDays(-1),
+                };
+
+                if (richChecklist)
+                {
+                    // First two rows show ownership so the "Người phụ trách"
+                    // column has data on the detail page. Falls back
+                    // silently when the sample DB has no second user.
+                    if (idx <= 1) item.OwnerUserId = owner.Id;
+                    // Give one row an internal deadline in the near future.
+                    if (idx == 1) item.InternalDeadline = now.AddDays(3);
+                    // Attach a real file to the first "Done" row so the
+                    // Download link works.
+                    if (idx == 0 && libraryDoc is not null)
+                    {
+                        item.FilePath = libraryDoc.FilePath;
+                        item.OriginalFileName = libraryDoc.OriginalFileName;
+                    }
+                }
+
+                itemsToAdd.Add(item);
+            }
             db.TenderChecklistItems.AddRange(itemsToAdd);
             db.SaveChanges();
             i++;

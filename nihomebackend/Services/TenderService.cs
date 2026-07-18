@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -120,7 +121,26 @@ public class TenderService(
             .Include(t => t.Preparer)
             .Include(t => t.ChecklistItems).ThenInclude(i => i.Owner)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
-        return entity is null ? null : MapDetail(entity);
+        if (entity is null) return null;
+
+        // Resolve linked opportunity name + lost-reason label so the FE
+        // Result tab renders full names without extra roundtrips. Cheap:
+        // one row from each table when a terminal transition has been
+        // recorded, no query at all otherwise.
+        var wonOpportunityName = entity.WonOpportunityId.HasValue
+            ? await db.Opportunities.AsNoTracking()
+                .Where(o => o.Id == entity.WonOpportunityId.Value)
+                .Select(o => o.Name)
+                .FirstOrDefaultAsync(ct)
+            : null;
+        var lostReasonLabel = string.IsNullOrWhiteSpace(entity.LostReasonCode)
+            ? null
+            : await db.MasterDataOptions.AsNoTracking()
+                .Where(m => m.Category == "opportunity_lost_reason" && m.Code == entity.LostReasonCode)
+                .Select(m => m.Name)
+                .FirstOrDefaultAsync(ct);
+
+        return MapDetail(entity, wonOpportunityName, lostReasonLabel);
     }
 
     // ------------------------------ Create ----------------------------------
@@ -461,7 +481,7 @@ public class TenderService(
         var idText = tenderId.ToString();
         var rows = await db.AuditLogs
             .AsNoTracking()
-            .Where(a => a.ResourceType == "Tender" && a.ResourceId == idText)
+            .Where(a => a.ResourceType == EntityTypes.Tender && a.ResourceId == idText)
             .OrderByDescending(a => a.CreatedAt)
             .Take(limit)
             .Select(a => new
@@ -570,7 +590,9 @@ public class TenderService(
         }
     }
 
-    private static TenderResponse MapDetail(Tender t)
+    private static TenderResponse MapDetail(Tender t,
+        string? wonOpportunityName = null,
+        string? lostReasonLabel = null)
     {
         var now = DateTime.UtcNow;
         var doneCount = t.ChecklistItems.Count(i =>
@@ -593,7 +615,9 @@ public class TenderService(
             Status = t.Status.ToString(),
             Note = t.Note,
             WonOpportunityId = t.WonOpportunityId,
+            WonOpportunityName = wonOpportunityName,
             LostReasonCode = t.LostReasonCode,
+            LostReasonLabel = lostReasonLabel,
             LostNote = t.LostNote,
             ClosedAt = t.ClosedAt,
             CreatedAt = t.CreatedAt,
