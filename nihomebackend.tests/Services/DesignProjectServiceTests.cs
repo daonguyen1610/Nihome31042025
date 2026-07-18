@@ -24,7 +24,7 @@ public class DesignProjectServiceTests : IDisposable
     public DesignProjectServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new DesignProjectService(_db, NullLogger<DesignProjectService>.Instance);
+        _sut = new DesignProjectService(_db, new NoopPermitChecklistService(), NullLogger<DesignProjectService>.Instance);
 
         var user = new ApplicationUser
         {
@@ -236,5 +236,27 @@ public class DesignProjectServiceTests : IDisposable
         var second = await _sut.EnsureForContractAsync(contract, _userId);
         Assert.Equal(first.Id, second.Id);
         Assert.Equal(1, await _db.DesignProjects.CountAsync(dp => dp.ContractId == _contractId));
+    }
+
+    /// <summary>
+    /// Stub for the NIH-137 permit checklist hook. Real coverage lives in
+    /// <c>PermitChecklistServiceTests</c>; here we only need the create /
+    /// auto-create paths to not blow up.
+    /// </summary>
+    private sealed class NoopPermitChecklistService : IPermitChecklistService
+    {
+        public Task EnsureForProjectAsync(int designProjectId, int? callerUserId, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistListResponse> ListAsync(
+            NihomeBackend.Models.DTOs.Requests.PermitChecklistListParams parameters, CancellationToken ct = default)
+            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.PermitChecklistListResponse());
+
+        public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default)
+            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
+
+        public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> UpdateAsync(
+            int id, NihomeBackend.Models.DTOs.Requests.UpdatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default)
+            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
     }
 }

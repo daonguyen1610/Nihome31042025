@@ -49,6 +49,8 @@ export const ADMIN_PERMS = {
   contractsViewAll: "crm.contracts.view.all",
   designProjects: "design.projects.view",
   designProjectsManage: "design.projects.manage",
+  permits: "permit.checklists.view",
+  permitsManage: "permit.checklists.manage",
   recruitment: "recruitment.applications.view",
   recruitmentPositions: "recruitment.positions.view",
   recruitmentOptions: "recruitment.options.view",

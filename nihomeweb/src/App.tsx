@@ -70,6 +70,7 @@ import ContractsPage from "./pages/admin/Contracts.tsx";
 import ContractDetailPage from "./pages/admin/ContractDetail.tsx";
 import AdminDesignProjects from "./pages/admin/DesignProjects.tsx";
 import AdminDesignProjectDetail from "./pages/admin/DesignProjectDetail.tsx";
+import AdminPermits from "./pages/admin/Permits.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -178,6 +179,9 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.designProjects} />}>
                 <Route path="/admin/design-projects" element={<AdminDesignProjects />} />
                 <Route path="/admin/design-projects/:id" element={<AdminDesignProjectDetail />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.permits} />}>
+                <Route path="/admin/permits" element={<AdminPermits />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                 <Route path="/admin/recruitment" element={<AdminRecruitment />} />

@@ -39,6 +39,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/surveys",
   "/admin/contracts",
   "/admin/design-projects",
+  "/admin/permits",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -131,7 +132,7 @@ const matrix: RoleExpectation[] = [
   {
     // PM: content.projects.* + processes.* + recruitment.applications.view.
     // Also gains crm.surveys.view + crm.contracts.view + design.projects.view
-    // for project handoff.
+    // + permit.checklists.** for project handoff.
     user: TEST_USERS.pm,
     allowed: [
       "/admin",
@@ -144,6 +145,7 @@ const matrix: RoleExpectation[] = [
       "/admin/contracts",
       "/admin/surveys",
       "/admin/design-projects",
+      "/admin/permits",
     ],
   },
   {

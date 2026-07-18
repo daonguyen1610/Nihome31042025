@@ -36,6 +36,7 @@ public static class SampleCrmDataSeeder
         SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
         SeedDesignProjects(db, owner, now);
+        SeedPermitChecklists(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1377,5 +1378,86 @@ public static class SampleCrmDataSeeder
             db.DesignProjects.Add(dp);
         }
         db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Seed the M3 permit checklist for every design project on a fresh
+    /// DB. Idempotent — the (DesignProjectId, PermitTypeCode) unique index
+    /// keeps re-runs a no-op. Populates a handful of dates + status
+    /// transitions on the first project so the risk badges have data.
+    /// </summary>
+    private static void SeedPermitChecklists(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var templateCodes = db.MasterDataOptions
+            .Where(m => m.Category == "permit_type" && m.IsActive)
+            .OrderBy(m => m.SortOrder)
+            .Select(m => m.Code)
+            .ToList();
+        if (templateCodes.Count == 0) return;
+
+        var designProjects = db.DesignProjects
+            .OrderBy(dp => dp.Id)
+            .ToList();
+        if (designProjects.Count == 0) return;
+
+        // Existing (project, permit) pairs so re-runs are a no-op.
+        var existing = db.PermitChecklistItems
+            .Select(p => new { p.DesignProjectId, p.PermitTypeCode })
+            .ToHashSet();
+
+        int seq = 0;
+        foreach (var dp in designProjects)
+        {
+            foreach (var code in templateCodes)
+            {
+                if (existing.Contains(new { DesignProjectId = dp.Id, PermitTypeCode = code })) continue;
+
+                var item = new PermitChecklistItem
+                {
+                    DesignProjectId = dp.Id,
+                    PermitTypeCode = code,
+                    Status = PermitStatus.NotStarted,
+                    CreatedByUserId = owner.Id,
+                    UpdatedByUserId = owner.Id,
+                    CreatedAt = now.AddDays(-30),
+                    UpdatedAt = now.AddDays(-1),
+                };
+
+                // Sprinkle status + dates on the first project so the risk
+                // register + badges have visible data on a fresh DB.
+                if (dp == designProjects.First())
+                {
+                    switch (code)
+                    {
+                        case "gpxd":
+                            item.Status = PermitStatus.Submitted;
+                            item.IssuingAgency = "Sở Xây dựng";
+                            item.OwnerUserId = owner.Id;
+                            item.TargetDeadline = now.AddDays(3);   // due soon
+                            item.SubmittedAt = now.AddDays(-5);
+                            break;
+                        case "pccc":
+                            item.Status = PermitStatus.Issued;
+                            item.IssuingAgency = "Cảnh sát PCCC";
+                            item.OwnerUserId = owner.Id;
+                            item.TargetDeadline = now.AddDays(-40);
+                            item.SubmittedAt = now.AddDays(-30);
+                            item.IssuedAt = now.AddDays(-20);
+                            item.ExpiresAt = now.AddDays(20);       // expiring soon
+                            break;
+                        case "electricity":
+                            item.Status = PermitStatus.Preparing;
+                            item.IssuingAgency = "Điện lực địa phương";
+                            item.OwnerUserId = owner.Id;
+                            item.TargetDeadline = now.AddDays(-2);  // overdue
+                            break;
+                    }
+                }
+
+                db.PermitChecklistItems.Add(item);
+                seq++;
+            }
+        }
+        if (seq > 0) db.SaveChanges();
     }
 }

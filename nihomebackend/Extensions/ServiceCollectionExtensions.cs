@@ -104,6 +104,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITenderService, TenderService>();
         services.AddScoped<ISurveyService, SurveyService>();
         services.AddScoped<IDesignProjectService, DesignProjectService>();
+        services.AddScoped<IPermitChecklistService, PermitChecklistService>();
         services.AddScoped<HostedImageService>();
 
         // Content services

@@ -27,4 +27,5 @@ public static class EntityTypes
     public const string Tender = "Tender";
     public const string Survey = "Survey";
     public const string DesignProject = "DesignProject";
+    public const string PermitChecklistItem = "PermitChecklistItem";
 }

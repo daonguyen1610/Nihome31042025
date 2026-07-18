@@ -42,6 +42,7 @@ import {
   KeyRound,
   ClipboardList,
   PenTool,
+  Scale,
   User as UserIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -157,6 +158,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         icon: PenTool,
         items: [
           { to: "/admin/design-projects", label: t("nav.designProjects"), icon: PenTool, permission: ADMIN_PERMS.designProjects },
+        ],
+      },
+      {
+        id: "permits",
+        label: t("nav.permits"),
+        icon: Scale,
+        items: [
+          { to: "/admin/permits", label: t("nav.permits"), icon: Scale, permission: ADMIN_PERMS.permits },
         ],
       },
       {

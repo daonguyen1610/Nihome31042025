@@ -1553,6 +1553,100 @@ export interface UpdateDesignProjectRequest extends CreateDesignProjectRequest {
   status?: DesignProjectStatus;
 }
 
+// ─── Permits (NIH-137 M3 checklist) ────────────────────────
+
+export type PermitStatus =
+  | "NotStarted"
+  | "Preparing"
+  | "Submitted"
+  | "UnderReview"
+  | "NeedMoreDocs"
+  | "Issued"
+  | "Rejected"
+  | "Expired";
+
+export const PERMIT_STATUSES: PermitStatus[] = [
+  "NotStarted",
+  "Preparing",
+  "Submitted",
+  "UnderReview",
+  "NeedMoreDocs",
+  "Issued",
+  "Rejected",
+  "Expired",
+];
+
+export interface PermitChecklistItemResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  designProjectName?: string | null;
+  permitTypeCode: string;
+  permitTypeLabel?: string | null;
+  issuingAgency?: string | null;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  targetDeadline?: string | null;
+  submittedAt?: string | null;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  submittedFilePath?: string | null;
+  issuedFilePath?: string | null;
+  status: PermitStatus;
+  note?: string | null;
+  isOverdue: boolean;
+  isDueSoon: boolean;
+  isExpiringSoon: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PermitChecklistRiskSummary {
+  overdue: number;
+  dueSoon: number;
+  expiringSoon: number;
+  totalOpen: number;
+}
+
+export interface PermitChecklistListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: PermitChecklistItemResponse[];
+  risk: PermitChecklistRiskSummary;
+}
+
+export interface PermitChecklistListParams {
+  designProjectId?: number;
+  ownerUserId?: number;
+  status?: string;
+  permitTypeCode?: string;
+  dueSoon?: boolean;
+  expiringSoon?: boolean;
+  overdue?: boolean;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface UpdatePermitChecklistItemRequest {
+  status?: PermitStatus;
+  issuingAgency?: string | null;
+  clearIssuingAgency?: boolean;
+  ownerUserId?: number | null;
+  clearOwner?: boolean;
+  targetDeadline?: string | null;
+  clearTargetDeadline?: boolean;
+  submittedAt?: string | null;
+  clearSubmittedAt?: boolean;
+  issuedAt?: string | null;
+  clearIssuedAt?: boolean;
+  expiresAt?: string | null;
+  clearExpiresAt?: boolean;
+  note?: string | null;
+  clearNote?: boolean;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2151,6 +2245,29 @@ export const adminApi = {
     api.put<DesignProjectResponse>(`/design-projects/${id}`, body),
   deleteDesignProject: (id: number) =>
     api.delete(`/design-projects/${id}`),
+
+  // Permits (NIH-137)
+  listPermits: (params: PermitChecklistListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
+    if (params.status) q.append("status", params.status);
+    if (params.permitTypeCode) q.append("permitTypeCode", params.permitTypeCode);
+    if (params.overdue) q.append("overdue", "true");
+    if (params.dueSoon) q.append("dueSoon", "true");
+    if (params.expiringSoon) q.append("expiringSoon", "true");
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<PermitChecklistListResponse>(`/permits${qs ? `?${qs}` : ""}`);
+  },
+  getPermit: (id: number) =>
+    api.get<PermitChecklistItemResponse>(`/permits/${id}`),
+  updatePermit: (id: number, body: UpdatePermitChecklistItemRequest) =>
+    api.patch<PermitChecklistItemResponse>(`/permits/${id}`, body),
+  ensurePermitsForProject: (designProjectId: number) =>
+    api.post<PermitChecklistListResponse>(`/permits/design-project/${designProjectId}/ensure`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
