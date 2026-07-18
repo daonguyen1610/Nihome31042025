@@ -32,6 +32,23 @@ public class ContractResponse
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    public List<ContractPaymentMilestoneResponse> PaymentMilestones { get; set; } = new();
+}
+
+public class ContractPaymentMilestoneResponse
+{
+    public int Id { get; set; }
+    public int Order { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal PercentValue { get; set; }
+    /// <summary>Server-derived: Contract.Value × PercentValue / 100.</summary>
+    public decimal Amount { get; set; }
+    public DateTime? DueDate { get; set; }
+    public PaymentMilestoneStatus Status { get; set; }
+    public string? Note { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 
 public class ContractListResponse

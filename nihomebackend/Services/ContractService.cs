@@ -115,7 +115,13 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         if (row == null) return null;
         if (!canSeeAll && row.Contract.OwnerUserId != callerUserId) return null;
 
-        return MapToResponse(row.Contract, row.CustomerName, row.OpportunityTitle, row.QuoteCode, row.OwnerName);
+        var milestones = await db.ContractPaymentMilestones
+            .AsNoTracking()
+            .Where(m => m.ContractId == id)
+            .OrderBy(m => m.Order)
+            .ToListAsync(ct);
+
+        return MapToResponse(row.Contract, row.CustomerName, row.OpportunityTitle, row.QuoteCode, row.OwnerName, milestones);
     }
 
     public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
@@ -155,6 +161,13 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         };
         db.Contracts.Add(entity);
         await db.SaveChangesAsync(ct);
+
+        if (req.PaymentMilestones != null)
+        {
+            ValidatePaymentMilestones(req.PaymentMilestones);
+            await ReplaceMilestonesAsync(entity.Id, req.PaymentMilestones, ct);
+        }
+
         logger.LogInformation("Created contract {Id} ({Number})", entity.Id, entity.ContractNumber);
 
         var read = await GetAsync(entity.Id, callerUserId, canSeeAll: true, ct);
@@ -201,6 +214,15 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         entity.UpdatedByUserId = callerUserId;
 
         await db.SaveChangesAsync(ct);
+
+        // Milestone list is only replaced when the caller sent a value.
+        // Null == leave alone, empty == wipe the schedule.
+        if (req.PaymentMilestones != null)
+        {
+            ValidatePaymentMilestones(req.PaymentMilestones);
+            await ReplaceMilestonesAsync(entity.Id, req.PaymentMilestones, ct);
+        }
+
         logger.LogInformation("Updated contract {Id} ({Number})", entity.Id, entity.ContractNumber);
         return await GetAsync(entity.Id, callerUserId, canSeeAll: true, ct);
     }
@@ -277,12 +299,74 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
         return $"{prefix}{nextSeq:0000}";
     }
 
+    private static void ValidatePaymentMilestones(List<ContractPaymentMilestoneRequest> milestones)
+    {
+        if (milestones.Count == 0) return;
+
+        var orderSet = new HashSet<int>();
+        foreach (var m in milestones)
+        {
+            if (!orderSet.Add(m.Order))
+            {
+                throw new ContractValidationException(
+                    $"Duplicate payment milestone order '{m.Order}'.");
+            }
+        }
+
+        var sum = milestones.Sum(m => m.PercentValue);
+        // Guard against float-drift when the caller composed decimals from
+        // JavaScript number arithmetic. Anything outside a 0.01 window is a
+        // real business error.
+        if (Math.Abs(sum - 100m) > 0.01m)
+        {
+            throw new ContractValidationException(
+                $"Payment milestones must sum to 100% (got {sum}).");
+        }
+    }
+
+    private async Task ReplaceMilestonesAsync(
+        int contractId, List<ContractPaymentMilestoneRequest> milestones, CancellationToken ct)
+    {
+        // Drop existing rows and re-insert. The write set is expected to be
+        // small (typically ≤ 8 milestones), so avoiding a diff-and-patch keeps
+        // the code simpler than trying to preserve ids across a re-order.
+        var existing = await db.ContractPaymentMilestones
+            .Where(m => m.ContractId == contractId)
+            .ToListAsync(ct);
+        if (existing.Count > 0)
+        {
+            db.ContractPaymentMilestones.RemoveRange(existing);
+        }
+
+        // Normalise the input: strip empties and re-number Order to be
+        // contiguous 1..N based on the caller's supplied ordering.
+        var normalised = milestones
+            .OrderBy(m => m.Order)
+            .Select((m, idx) => new ContractPaymentMilestone
+            {
+                ContractId = contractId,
+                Order = idx + 1,
+                Name = m.Name.Trim(),
+                PercentValue = m.PercentValue,
+                DueDate = m.DueDate,
+                Status = m.Status,
+                Note = string.IsNullOrWhiteSpace(m.Note) ? null : m.Note.Trim(),
+            })
+            .ToList();
+        if (normalised.Count > 0)
+        {
+            db.ContractPaymentMilestones.AddRange(normalised);
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
     private static ContractResponse MapToResponse(
         Contract entity,
         string? customerName,
         string? opportunityTitle,
         string? quoteCode,
-        string? ownerName) => new()
+        string? ownerName,
+        IReadOnlyList<ContractPaymentMilestone>? milestones = null) => new()
         {
             Id = entity.Id,
             ContractNumber = entity.ContractNumber,
@@ -303,5 +387,21 @@ public class ContractService(AppDbContext db, ILogger<ContractService> logger) :
             Note = entity.Note,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
+            PaymentMilestones = (milestones ?? Array.Empty<ContractPaymentMilestone>())
+                .OrderBy(m => m.Order)
+                .Select(m => new ContractPaymentMilestoneResponse
+                {
+                    Id = m.Id,
+                    Order = m.Order,
+                    Name = m.Name,
+                    PercentValue = m.PercentValue,
+                    Amount = Math.Round(entity.Value * m.PercentValue / 100m, 2),
+                    DueDate = m.DueDate,
+                    Status = m.Status,
+                    Note = m.Note,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt,
+                })
+                .ToList(),
         };
 }

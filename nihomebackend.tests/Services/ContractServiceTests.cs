@@ -240,4 +240,123 @@ public class ContractServiceTests : IDisposable
         Assert.False(await _sut.DeleteAsync(owned.Id, callerUserId: 200, canSeeAll: false));
         Assert.True(await _sut.DeleteAsync(owned.Id, callerUserId: 100, canSeeAll: false));
     }
+
+    // ---------------- Payment milestones (NIH-103) ----------------
+
+    private static ContractPaymentMilestoneRequest Milestone(int order, decimal percent, string? name = null) =>
+        new()
+        {
+            Order = order,
+            Name = name ?? $"Đợt {order}",
+            PercentValue = percent,
+            Status = PaymentMilestoneStatus.Pending,
+        };
+
+    [Fact]
+    public async Task Create_WithMilestonesSumming100_PersistsAndComputesAmount()
+    {
+        var req = Req(value: 1_000_000_000m);
+        req.PaymentMilestones = new()
+        {
+            Milestone(1, 30m, "Tạm ứng"),
+            Milestone(2, 60m, "Nghiệm thu giai đoạn"),
+            Milestone(3, 10m, "Quyết toán"),
+        };
+
+        var result = await _sut.CreateAsync(req, 1, canReassignOwner: true);
+
+        Assert.Equal(3, result.PaymentMilestones.Count);
+        Assert.Equal(300_000_000m, result.PaymentMilestones[0].Amount);
+        Assert.Equal(600_000_000m, result.PaymentMilestones[1].Amount);
+        Assert.Equal(100_000_000m, result.PaymentMilestones[2].Amount);
+        Assert.Equal(new[] { 1, 2, 3 }, result.PaymentMilestones.Select(m => m.Order));
+    }
+
+    [Fact]
+    public async Task Create_MilestonePercentsMustSumTo100()
+    {
+        var req = Req();
+        req.PaymentMilestones = new() { Milestone(1, 40m), Milestone(2, 40m) };
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(req, 1, canReassignOwner: true));
+    }
+
+    [Fact]
+    public async Task Create_MilestoneDuplicateOrderThrows()
+    {
+        var req = Req();
+        req.PaymentMilestones = new() { Milestone(1, 50m), Milestone(1, 50m) };
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(req, 1, canReassignOwner: true));
+    }
+
+    [Fact]
+    public async Task Create_EmptyMilestonesListIsAllowed_AndPersistsNothing()
+    {
+        var req = Req();
+        req.PaymentMilestones = new List<ContractPaymentMilestoneRequest>();
+        var result = await _sut.CreateAsync(req, 1, canReassignOwner: true);
+        Assert.Empty(result.PaymentMilestones);
+    }
+
+    [Fact]
+    public async Task Update_NullMilestonesLeavesExistingScheduleUntouched()
+    {
+        var initial = Req(value: 100m);
+        initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        Assert.Single(contract.PaymentMilestones);
+
+        var update = Req(value: 100m);
+        update.PaymentMilestones = null; // null → preserve
+        var refreshed = await _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true);
+        Assert.NotNull(refreshed);
+        Assert.Single(refreshed!.PaymentMilestones);
+    }
+
+    [Fact]
+    public async Task Update_EmptyMilestonesListWipesTheSchedule()
+    {
+        var initial = Req();
+        initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+
+        var update = Req();
+        update.PaymentMilestones = new List<ContractPaymentMilestoneRequest>();
+        var refreshed = await _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true);
+        Assert.NotNull(refreshed);
+        Assert.Empty(refreshed!.PaymentMilestones);
+    }
+
+    [Fact]
+    public async Task Update_ReplacementMilestoneListSwapsRows()
+    {
+        var initial = Req();
+        initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+
+        var update = Req();
+        update.PaymentMilestones = new()
+        {
+            Milestone(1, 50m, "First"),
+            Milestone(2, 50m, "Second"),
+        };
+        var refreshed = await _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true);
+        Assert.NotNull(refreshed);
+        Assert.Equal(2, refreshed!.PaymentMilestones.Count);
+        Assert.Equal("First", refreshed.PaymentMilestones[0].Name);
+        Assert.Equal("Second", refreshed.PaymentMilestones[1].Name);
+    }
+
+    [Fact]
+    public async Task Delete_ContractCascadesToMilestones()
+    {
+        var req = Req();
+        req.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
+        var contract = await _sut.CreateAsync(req, 1, canReassignOwner: true);
+        Assert.Single(_db.ContractPaymentMilestones);
+
+        Assert.True(await _sut.DeleteAsync(contract.Id, 1, canSeeAll: true));
+        Assert.Empty(_db.ContractPaymentMilestones);
+    }
 }

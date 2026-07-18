@@ -608,8 +608,16 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedContracts(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        if (db.Contracts.Any(c => c.Note != null && c.Note.StartsWith(SampleContractMarker))) return;
+        var alreadySeeded = db.Contracts.Any(c => c.Note != null && c.Note.StartsWith(SampleContractMarker));
+        if (!alreadySeeded)
+        {
+            SeedContractHeaders(db, owner, now);
+        }
+        SeedContractMilestones(db, now);
+    }
 
+    private static void SeedContractHeaders(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
         var sampleCustomers = db.Customers
             .Where(c => c.Name.StartsWith(SampleTag))
             .OrderBy(c => c.Id)
@@ -667,6 +675,40 @@ public static class SampleCrmDataSeeder
             });
         }
 
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// Attach a canonical 30-30-30-10 payment schedule to every non-draft
+    /// sample contract that does not already have milestones so the payment
+    /// schedule (NIH-103) has real data out of the box. Drafts intentionally
+    /// have none — they mirror the "in progress" state of a real drafting
+    /// session.
+    ///
+    /// Runs independently of the header seeder so upgrading an install that
+    /// already had contracts (but no milestones) still back-fills them.
+    /// </summary>
+    private static void SeedContractMilestones(AppDbContext db, DateTime now)
+    {
+        var contractsMissingSchedule = db.Contracts
+            .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker)
+                     && c.Status != ContractStatus.Draft
+                     && c.SignedDate != null
+                     && !db.ContractPaymentMilestones.Any(m => m.ContractId == c.Id))
+            .ToList();
+        if (contractsMissingSchedule.Count == 0) return;
+
+        foreach (var c in contractsMissingSchedule)
+        {
+            var start = c.StartDate ?? c.SignedDate!.Value;
+            var end = c.EndDate ?? start.AddDays(180);
+            var mid = start.AddTicks((end - start).Ticks / 2);
+            db.ContractPaymentMilestones.AddRange(
+                new ContractPaymentMilestone { ContractId = c.Id, Order = 1, Name = "Đợt 1 - Tạm ứng khi ký HĐ", PercentValue = 30m, DueDate = c.SignedDate!.Value.AddDays(7), Status = PaymentMilestoneStatus.Paid, CreatedAt = now, UpdatedAt = now },
+                new ContractPaymentMilestone { ContractId = c.Id, Order = 2, Name = "Đợt 2 - Nghiệm thu 50%", PercentValue = 30m, DueDate = mid, Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Requested, CreatedAt = now, UpdatedAt = now },
+                new ContractPaymentMilestone { ContractId = c.Id, Order = 3, Name = "Đợt 3 - Bàn giao", PercentValue = 30m, DueDate = end, Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Pending, CreatedAt = now, UpdatedAt = now },
+                new ContractPaymentMilestone { ContractId = c.Id, Order = 4, Name = "Đợt 4 - Quyết toán bảo hành", PercentValue = 10m, DueDate = end.AddDays(30), Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Pending, CreatedAt = now, UpdatedAt = now });
+        }
         db.SaveChanges();
     }
 

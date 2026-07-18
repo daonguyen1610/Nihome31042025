@@ -659,6 +659,37 @@ export interface ContractResponse {
   note?: string | null;
   createdAt: string;
   updatedAt: string;
+  paymentMilestones: ContractPaymentMilestoneResponse[];
+}
+
+export type PaymentMilestoneStatus = "Pending" | "Requested" | "Paid";
+
+export const PAYMENT_MILESTONE_STATUSES: PaymentMilestoneStatus[] = [
+  "Pending",
+  "Requested",
+  "Paid",
+];
+
+export interface ContractPaymentMilestoneResponse {
+  id: number;
+  order: number;
+  name: string;
+  percentValue: number;
+  amount: number;
+  dueDate?: string | null;
+  status: PaymentMilestoneStatus;
+  note?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContractPaymentMilestoneRequest {
+  order: number;
+  name: string;
+  percentValue: number;
+  dueDate?: string | null;
+  status: PaymentMilestoneStatus;
+  note?: string | null;
 }
 
 export interface ContractListResponse {
@@ -694,6 +725,12 @@ export interface UpsertContractRequest {
   value: number;
   scopeOfWork?: string | null;
   note?: string | null;
+  /**
+   * null = leave the existing schedule untouched (useful for status-only
+   * patches); empty array = wipe; non-empty array = replace. Percentages
+   * must sum to 100.
+   */
+  paymentMilestones?: ContractPaymentMilestoneRequest[] | null;
 }
 
 export type OpportunityActivityType =

@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
   CONTRACT_STATUSES,
+  PAYMENT_MILESTONE_STATUSES,
   type ContractListParams,
+  type ContractPaymentMilestoneRequest,
+  type ContractPaymentMilestoneResponse,
   type ContractResponse,
   type ContractStatus,
   type CustomerResponse,
+  type PaymentMilestoneStatus,
   type UpsertContractRequest,
 } from "@/services/adminApi";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -52,6 +56,15 @@ const STATUS_VARIANT: Record<ContractStatus, string> = {
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
+type MilestoneDraft = {
+  order: number;
+  name: string;
+  percentValue: number;
+  dueDate: string;
+  status: PaymentMilestoneStatus;
+  note: string;
+};
+
 type FormData = {
   contractNumber: string;
   customerId: number | null;
@@ -62,6 +75,7 @@ type FormData = {
   value: number;
   scopeOfWork: string;
   note: string;
+  milestones: MilestoneDraft[];
 };
 
 const emptyForm: FormData = {
@@ -74,7 +88,25 @@ const emptyForm: FormData = {
   value: 0,
   scopeOfWork: "",
   note: "",
+  milestones: [],
 };
+
+const blankMilestone = (order: number): MilestoneDraft => ({
+  order,
+  name: "",
+  percentValue: 0,
+  dueDate: "",
+  status: "Pending",
+  note: "",
+});
+
+// Canonical preset used by NIH-103 spec.
+const PRESET_30_30_30_10: MilestoneDraft[] = [
+  { order: 1, name: "Đợt 1 - Tạm ứng khi ký HĐ", percentValue: 30, dueDate: "", status: "Pending", note: "" },
+  { order: 2, name: "Đợt 2 - Nghiệm thu 50%", percentValue: 30, dueDate: "", status: "Pending", note: "" },
+  { order: 3, name: "Đợt 3 - Bàn giao", percentValue: 30, dueDate: "", status: "Pending", note: "" },
+  { order: 4, name: "Đợt 4 - Quyết toán bảo hành", percentValue: 10, dueDate: "", status: "Pending", note: "" },
+];
 
 const toIsoDate = (value?: string | null): string => {
   if (!value) return "";
@@ -241,15 +273,25 @@ const Contracts = () => {
   const [form, setForm] = useState<FormData>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // True when the current form's milestone list reflects the server truth
+  // (either freshly authored on create, or loaded via GET on edit). When
+  // false, submit sends `paymentMilestones: null` so the server leaves any
+  // existing schedule alone — preventing an in-flight fetch failure from
+  // silently wiping the schedule.
+  const [milestonesLoaded, setMilestonesLoaded] = useState(true);
 
   const openCreate = () => {
     setEditingId(null);
     setForm({ ...emptyForm });
     setFormError(null);
+    setMilestonesLoaded(true);
     setDialogOpen(true);
   };
   const openEdit = (row: ContractResponse) => {
     setEditingId(row.id);
+    // The list response omits payment milestones to keep the payload lean —
+    // fetch the full detail so the edit dialog reflects the true schedule.
+    setMilestonesLoaded(false);
     setForm({
       contractNumber: row.contractNumber,
       customerId: row.customerId,
@@ -260,10 +302,70 @@ const Contracts = () => {
       value: row.value,
       scopeOfWork: row.scopeOfWork ?? "",
       note: row.note ?? "",
+      milestones: [],
     });
     setFormError(null);
     setDialogOpen(true);
+    void (async () => {
+      try {
+        const { data } = await adminApi.getContract(row.id);
+        setForm((prev) => ({
+          ...prev,
+          milestones: data.paymentMilestones.map((m) => ({
+            order: m.order,
+            name: m.name,
+            percentValue: m.percentValue,
+            dueDate: toIsoDate(m.dueDate),
+            status: m.status,
+            note: m.note ?? "",
+          })),
+        }));
+        setMilestonesLoaded(true);
+      } catch {
+        // Detail fetch failed — leave milestonesLoaded=false so submit sends
+        // null (preserve) instead of the empty array (which would wipe).
+      }
+    })();
   };
+
+  const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
+    setForm((prev) => ({
+      ...prev,
+      milestones: prev.milestones.map((m, i) => (i === index ? { ...m, ...patch } : m)),
+    }));
+  };
+  const addMilestone = () => {
+    setForm((prev) => ({
+      ...prev,
+      milestones: [...prev.milestones, blankMilestone(prev.milestones.length + 1)],
+    }));
+  };
+  const removeMilestone = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      milestones: prev.milestones
+        .filter((_, i) => i !== index)
+        .map((m, i) => ({ ...m, order: i + 1 })),
+    }));
+  };
+  const moveMilestone = (index: number, direction: -1 | 1) => {
+    setForm((prev) => {
+      const next = [...prev.milestones];
+      const target = index + direction;
+      if (target < 0 || target >= next.length) return prev;
+      [next[index], next[target]] = [next[target], next[index]];
+      return { ...prev, milestones: next.map((m, i) => ({ ...m, order: i + 1 })) };
+    });
+  };
+  const applyPreset30_30_30_10 = () => {
+    setForm((prev) => ({ ...prev, milestones: PRESET_30_30_30_10.map((m) => ({ ...m })) }));
+  };
+
+  const milestoneSum = useMemo(
+    () => form.milestones.reduce((acc, m) => acc + (Number.isFinite(m.percentValue) ? m.percentValue : 0), 0),
+    [form.milestones],
+  );
+  const milestoneSumOk = form.milestones.length === 0 || Math.abs(milestoneSum - 100) < 0.01;
 
   const submit = async () => {
     setFormError(null);
@@ -280,6 +382,28 @@ const Contracts = () => {
       setFormError(t("form.invalidDateRange"));
       return;
     }
+    if (form.milestones.length > 0) {
+      if (!milestoneSumOk) {
+        setFormError(t("contracts.milestoneSumInvalid"));
+        return;
+      }
+      for (const m of form.milestones) {
+        if (!m.name.trim()) {
+          setFormError(t("contracts.milestoneNameRequired"));
+          return;
+        }
+      }
+    }
+    const milestonesPayload: ContractPaymentMilestoneRequest[] | null = milestonesLoaded
+      ? form.milestones.map((m, i) => ({
+        order: i + 1,
+        name: m.name.trim(),
+        percentValue: Number.isFinite(m.percentValue) ? m.percentValue : 0,
+        dueDate: toIsoTimestamp(m.dueDate),
+        status: m.status,
+        note: m.note.trim() || null,
+      }))
+      : null;
     const payload: UpsertContractRequest = {
       contractNumber: form.contractNumber.trim() || null,
       customerId: form.customerId,
@@ -290,6 +414,10 @@ const Contracts = () => {
       value: Number.isFinite(form.value) ? Math.max(0, form.value) : 0,
       scopeOfWork: form.scopeOfWork.trim() || null,
       note: form.note.trim() || null,
+      // Always send the current milestone list — the server treats null as
+      // "leave alone" and array as replace-in-full. An empty array wipes
+      // the schedule, which is what the user sees on-screen.
+      paymentMilestones: milestonesPayload,
     };
     setSaving(true);
     try {
@@ -750,6 +878,125 @@ const Contracts = () => {
                 id="c-note" rows={2} value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
               />
+            </div>
+
+            {/* Payment schedule (NIH-103) */}
+            <div className="space-y-2 rounded-md border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold">{t("contracts.milestonesTitle")}</h4>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={applyPreset30_30_30_10}>
+                    {t("contracts.milestonePreset")}
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={addMilestone}>
+                    <Plus className="mr-1 h-3.5 w-3.5" /> {t("contracts.addMilestone")}
+                  </Button>
+                </div>
+              </div>
+              {form.milestones.length === 0 ? (
+                <p className="rounded border border-dashed p-3 text-center text-xs text-muted-foreground">
+                  {t("contracts.milestonesEmpty")}
+                </p>
+              ) : (
+                <>
+                  {form.milestones.map((m, idx) => {
+                    const amount = Math.round(form.value * (m.percentValue || 0) / 100 * 100) / 100;
+                    return (
+                      <div
+                        key={idx}
+                        className="space-y-2 rounded border bg-card/50 p-2"
+                        data-testid={`c-milestone-${idx}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold uppercase text-muted-foreground">#{idx + 1}</span>
+                          <div className="inline-flex items-center gap-1">
+                            <Button
+                              type="button" size="icon" variant="ghost"
+                              onClick={() => moveMilestone(idx, -1)}
+                              disabled={idx === 0}
+                              aria-label={t("workflow.moveUp")}
+                              className="h-7 w-7"
+                            >
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button" size="icon" variant="ghost"
+                              onClick={() => moveMilestone(idx, 1)}
+                              disabled={idx === form.milestones.length - 1}
+                              aria-label={t("workflow.moveDown")}
+                              className="h-7 w-7"
+                            >
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              type="button" size="icon" variant="ghost"
+                              onClick={() => removeMilestone(idx)}
+                              aria-label={t("common.delete")}
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-xs">{t("contracts.milestone.name")} *</Label>
+                            <Input
+                              value={m.name}
+                              onChange={(e) => patchMilestone(idx, { name: e.target.value })}
+                              className="h-8"
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-xs">{t("contracts.milestone.percent")} *</Label>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number" min={0} max={100} step="0.01"
+                                value={m.percentValue}
+                                onChange={(e) => patchMilestone(idx, { percentValue: Number(e.target.value) || 0 })}
+                                className="h-8"
+                              />
+                              <span className="whitespace-nowrap text-xs text-muted-foreground">
+                                ≈ {formatCurrency(amount, lang)} ₫
+                              </span>
+                            </div>
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-xs">{t("contracts.milestone.dueDate")}</Label>
+                            <Input
+                              type="date" value={m.dueDate}
+                              onChange={(e) => patchMilestone(idx, { dueDate: e.target.value })}
+                              className="h-8"
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-xs">{t("contracts.milestone.status")}</Label>
+                            <Select
+                              value={m.status}
+                              onValueChange={(v) => patchMilestone(idx, { status: v as PaymentMilestoneStatus })}
+                            >
+                              <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {PAYMENT_MILESTONE_STATUSES.map((s) => (
+                                  <SelectItem key={s} value={s}>{t(`contracts.milestoneStatus.${s}`)}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div
+                    className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
+                      milestoneSumOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                    }`}
+                  >
+                    <span>{t("contracts.milestonesSum")}</span>
+                    <span className="font-semibold">{milestoneSum.toFixed(2)}% / 100%</span>
+                  </div>
+                </>
+              )}
             </div>
 
             {formError && <p className="text-sm text-destructive">{formError}</p>}

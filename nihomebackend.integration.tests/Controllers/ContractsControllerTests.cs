@@ -152,4 +152,51 @@ public class ContractsControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(list);
         body.GetProperty("total").GetInt32().Should().BeGreaterThan(0);
     }
+
+    [Fact]
+    public async Task Create_WithMilestonesSumming100_PersistsSchedule()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+
+        var res = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            status = "Signed",
+            value = 1_000_000_000,
+            signedDate = "2026-06-01T00:00:00Z",
+            paymentMilestones = new object[]
+            {
+                new { order = 1, name = "Tạm ứng", percentValue = 30m, status = "Pending" },
+                new { order = 2, name = "Nghiệm thu", percentValue = 60m, status = "Pending" },
+                new { order = 3, name = "Quyết toán", percentValue = 10m, status = "Pending" },
+            },
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await ReadJsonAsync(res);
+        var milestones = body.GetProperty("paymentMilestones");
+        milestones.GetArrayLength().Should().Be(3);
+        milestones[0].GetProperty("amount").GetDecimal().Should().Be(300_000_000m);
+        milestones[1].GetProperty("amount").GetDecimal().Should().Be(600_000_000m);
+        milestones[2].GetProperty("amount").GetDecimal().Should().Be(100_000_000m);
+    }
+
+    [Fact]
+    public async Task Create_WithMilestonesNotSumming100_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+
+        var res = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            status = "Draft",
+            value = 100_000_000,
+            paymentMilestones = new object[]
+            {
+                new { order = 1, name = "Only", percentValue = 40m, status = "Pending" },
+            },
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }
