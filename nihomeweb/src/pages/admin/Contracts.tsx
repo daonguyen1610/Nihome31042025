@@ -14,8 +14,11 @@ import {
 } from "@/services/adminApi";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -205,11 +208,29 @@ const Contracts = () => {
     valueMax !== "" ||
     search !== "";
 
-  const customerLookup = useMemo(() => {
-    const map = new Map<number, string>();
-    for (const c of customers) map.set(c.id, c.name);
-    return map;
-  }, [customers]);
+  // -------- bulk selection --------
+  const visibleIds = useMemo(() => contracts.map((c) => c.id), [contracts]);
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection<number>({
+    visibleIds,
+    deleteOne: (id) => adminApi.deleteContract(id),
+    onAfter: async () => {
+      await load();
+    },
+  });
+  useEffect(() => {
+    clearSelection();
+    // Clear the bulk selection whenever the filter set changes so a stale
+    // selection cannot silently outlive its visible row.
+  }, [statusFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, search, clearSelection]);
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -449,7 +470,16 @@ const Contracts = () => {
             )}
           </div>
         ) : (
-          <>
+          <div className="space-y-2">
+            {canManage && (
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={clearSelection}
+                onBulkDelete={() => void handleBulkDelete()}
+              />
+            )}
+
             {/* Mobile / tablet cards (<lg) */}
             <ul className="grid gap-3 lg:hidden">
               {contracts.map((row) => {
@@ -457,9 +487,20 @@ const Contracts = () => {
                 return (
                   <li key={row.id} className="rounded-lg border bg-card p-3 shadow-sm">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="break-words text-sm font-semibold leading-tight">{row.customerName ?? "—"}</h3>
-                        <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">{row.contractNumber}</p>
+                      <div className="flex min-w-0 items-start gap-2">
+                        {canManage && (
+                          <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                            <Checkbox
+                              checked={selectedIds.has(row.id)}
+                              onCheckedChange={(v) => toggleOne(row.id, v === true)}
+                              aria-label={`${t("common.selectAll")} · ${row.contractNumber}`}
+                            />
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-semibold leading-tight">{row.customerName ?? "—"}</h3>
+                          <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">{row.contractNumber}</p>
+                        </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
                         <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
@@ -511,6 +552,21 @@ const Contracts = () => {
               <table className="w-full min-w-[1000px] divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
+                    {canManage && (
+                      <th className="w-10 px-3 py-3 text-left">
+                        <Checkbox
+                          checked={
+                            allVisibleSelected
+                              ? true
+                              : someVisibleSelected
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(v) => toggleAllVisible(v === true)}
+                          aria-label={t("common.selectAll")}
+                        />
+                      </th>
+                    )}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.number")}</th>
                     <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("contracts.field.customer")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.signedDate")}</th>
@@ -528,6 +584,15 @@ const Contracts = () => {
                     const endingSoon = isEndingSoon(row);
                     return (
                       <tr key={row.id} className="hover:bg-muted/40 transition">
+                        {canManage && (
+                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.has(row.id)}
+                              onCheckedChange={(v) => toggleOne(row.id, v === true)}
+                              aria-label={`${t("common.selectAll")} · ${row.contractNumber}`}
+                            />
+                          </td>
+                        )}
                         <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{row.contractNumber}</td>
                         <td className="min-w-[220px] px-3 py-3 font-medium">{row.customerName ?? "—"}</td>
                         <td className="whitespace-nowrap px-3 py-3">{formatDate(row.signedDate)}</td>
@@ -577,7 +642,7 @@ const Contracts = () => {
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
       </div>
 
