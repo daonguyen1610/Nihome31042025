@@ -568,6 +568,46 @@
     "ja": "その他"
   },
   {
+    "key": "masterData.category.ifc_recipient_type.title",
+    "category": "masterData",
+    "vi": "Loại nơi nhận IFC",
+    "en": "IFC recipient type",
+    "zh": "IFC接收方类型",
+    "ja": "IFC受取先種別"
+  },
+  {
+    "key": "masterData.ifc_recipient_type.main-contractor.label",
+    "category": "masterData",
+    "vi": "Nhà thầu chính",
+    "en": "Main contractor",
+    "zh": "总承包商",
+    "ja": "元請業者"
+  },
+  {
+    "key": "masterData.ifc_recipient_type.supervisor.label",
+    "category": "masterData",
+    "vi": "Giám sát",
+    "en": "Site supervisor",
+    "zh": "现场监理",
+    "ja": "現場監督"
+  },
+  {
+    "key": "masterData.ifc_recipient_type.client.label",
+    "category": "masterData",
+    "vi": "Chủ đầu tư",
+    "en": "Client",
+    "zh": "业主",
+    "ja": "施主"
+  },
+  {
+    "key": "masterData.ifc_recipient_type.other.label",
+    "category": "masterData",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
+  },
+  {
     "key": "masterData.permit_type.gpxd.label",
     "category": "masterData",
     "vi": "Giấy phép xây dựng (GPXD)",

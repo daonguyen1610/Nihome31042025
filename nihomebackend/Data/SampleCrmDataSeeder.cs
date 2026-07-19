@@ -41,6 +41,7 @@ public static class SampleCrmDataSeeder
         SeedBasicDesignDocs(db, owner, now);
         SeedShopDrawings(db, owner, now);
         SeedDrawingRevisions(db, owner, now);
+        SeedIfcReleases(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1680,6 +1681,60 @@ public static class SampleCrmDataSeeder
             });
         }
 
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// NIH-118 IFC Release showcase. Attaches one Draft phi\u1ebfu to the
+    /// sample ShopDrawing-stage project so the FE has a working row to
+    /// walk through. Idempotent — guarded on the "[SAMPLE_IFC]" marker.
+    /// </summary>
+    private static void SeedIfcReleases(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_IFC]";
+        if (db.IfcReleases.Any(r => r.Note != null && r.Note.StartsWith(SampleMarker))) return;
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        // Pick the seeded approved shop drawings on this project so the
+        // Draft phi\u1ebfu can walk through the release action without
+        // manual data setup.
+        var approvedDrawings = db.ShopDrawings
+            .Where(s => s.DesignProjectId == project.Id
+                     && (s.Status == ShopDrawingStatus.Approved
+                      || s.Status == ShopDrawingStatus.PendingIfc))
+            .OrderBy(s => s.Id)
+            .Take(3)
+            .ToList();
+        if (approvedDrawings.Count == 0) return;
+
+        var release = new IfcRelease
+        {
+            DesignProjectId = project.Id,
+            ReleaseNumber = $"IFC-{now.Year}-001",
+            Title = "B\u00e0n giao t\u1ea7ng 1 — s\u1ea3n showroom",
+            Status = IfcReleaseStatus.Draft,
+            Note = $"{SampleMarker} Sample IFC packet — bundled the first approved shop drawings.",
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-1),
+            UpdatedAt = now.AddDays(-1),
+            Items = approvedDrawings.Select(d => new IfcReleaseItem
+            {
+                ShopDrawingId = d.Id,
+            }).ToList(),
+            Recipients = new List<IfcReleaseRecipient>
+            {
+                new() { Name = "C\u00f4ng ty CP x\u00e2y d\u1ef1ng ABC", RecipientTypeCode = "main-contractor" },
+                new() { Name = "T\u01b0 v\u1ea5n gi\u00e1m s\u00e1t XYZ", RecipientTypeCode = "supervisor" },
+                new() { Name = "Ch\u1ee7 \u0111\u1ea7u t\u01b0 [SAMPLE] Nguy\u1ec5n V\u0103n An", RecipientTypeCode = "client" },
+            },
+        };
+        db.IfcReleases.Add(release);
         db.SaveChanges();
     }
 }

@@ -163,6 +163,16 @@
     },
 
     {
+      "category": "ifc_recipient_type",
+      "options": [
+        { "code": "main-contractor", "name": "Nhà thầu chính", "sortOrder": 1 },
+        { "code": "supervisor",      "name": "Giám sát",       "sortOrder": 2 },
+        { "code": "client",          "name": "Chủ đầu tư",     "sortOrder": 3 },
+        { "code": "other",           "name": "Khác",           "sortOrder": 4 }
+      ]
+    },
+
+    {
       "category": "permit_type",
       "options": [
         { "code": "gpxd",         "name": "Giấy phép xây dựng (GPXD)", "sortOrder": 1 },

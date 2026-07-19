@@ -84,6 +84,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<DrawingRevision> DrawingRevisions => Set<DrawingRevision>();
 
+    public DbSet<IfcRelease> IfcReleases => Set<IfcRelease>();
+    public DbSet<IfcReleaseItem> IfcReleaseItems => Set<IfcReleaseItem>();
+    public DbSet<IfcReleaseRecipient> IfcReleaseRecipients => Set<IfcReleaseRecipient>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -927,6 +931,62 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.HasIndex(d => new { d.TargetType, d.TargetId });
             b.HasIndex(d => new { d.TargetType, d.TargetId, d.RevisionNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<IfcRelease>(b =>
+        {
+            b.ToTable("ifc_releases");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.ReleaseNumber).HasMaxLength(60).IsRequired();
+            b.Property(r => r.Title).HasMaxLength(300).IsRequired();
+            b.Property(r => r.Note).HasMaxLength(4000);
+            b.Property(r => r.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(r => r.DesignProject)
+                .WithMany()
+                .HasForeignKey(r => r.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(r => r.IssuedBy)
+                .WithMany()
+                .HasForeignKey(r => r.IssuedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(r => r.DesignProjectId);
+            b.HasIndex(r => new { r.DesignProjectId, r.ReleaseNumber }).IsUnique();
+            b.HasIndex(r => r.Status);
+        });
+
+        modelBuilder.Entity<IfcReleaseItem>(b =>
+        {
+            b.ToTable("ifc_release_items");
+            b.HasKey(i => i.Id);
+
+            b.HasOne(i => i.IfcRelease)
+                .WithMany(r => r.Items)
+                .HasForeignKey(i => i.IfcReleaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(i => i.ShopDrawing)
+                .WithMany()
+                .HasForeignKey(i => i.ShopDrawingId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(i => new { i.IfcReleaseId, i.ShopDrawingId }).IsUnique();
+        });
+
+        modelBuilder.Entity<IfcReleaseRecipient>(b =>
+        {
+            b.ToTable("ifc_release_recipients");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.Name).HasMaxLength(300).IsRequired();
+            b.Property(x => x.RecipientTypeCode).HasMaxLength(60).IsRequired();
+            b.Property(x => x.AcknowledgementNote).HasMaxLength(1000);
+
+            b.HasOne(x => x.IfcRelease)
+                .WithMany(r => r.Recipients)
+                .HasForeignKey(x => x.IfcReleaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(x => x.IfcReleaseId);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

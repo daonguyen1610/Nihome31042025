@@ -1939,6 +1939,89 @@ export interface DrawingRevisionDiffResponse {
   changes: string[];
 }
 
+// ─── IFC Releases (NIH-118) ────────────────────────
+
+export type IfcReleaseStatus = "Draft" | "Released" | "Cancelled";
+
+export interface IfcReleaseItemResponse {
+  id: number;
+  shopDrawingId: number;
+  drawingCode?: string | null;
+  title?: string | null;
+  disciplineCode?: string | null;
+  disciplineLabel?: string | null;
+  status?: string | null;
+}
+
+export interface IfcReleaseRecipientResponse {
+  id: number;
+  name: string;
+  recipientTypeCode: string;
+  recipientTypeLabel?: string | null;
+  acknowledgedAt?: string | null;
+  isAcknowledged: boolean;
+  acknowledgementNote?: string | null;
+}
+
+export interface IfcReleaseResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  releaseNumber: string;
+  title: string;
+  releaseDate?: string | null;
+  issuedByUserId?: number | null;
+  issuedByName?: string | null;
+  status: IfcReleaseStatus;
+  note?: string | null;
+  items: IfcReleaseItemResponse[];
+  recipients: IfcReleaseRecipientResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IfcReleaseListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: IfcReleaseResponse[];
+  statusCounts: Partial<Record<IfcReleaseStatus, number>>;
+}
+
+export interface IfcReleaseListParams {
+  designProjectId?: number;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateIfcReleaseRequest {
+  designProjectId: number;
+  title: string;
+  note?: string | null;
+}
+
+export interface UpdateIfcReleaseRequest {
+  title: string;
+  note?: string | null;
+}
+
+export interface AddIfcReleaseItemsRequest {
+  shopDrawingIds: number[];
+}
+
+export interface AddIfcReleaseRecipientRequest {
+  name: string;
+  recipientTypeCode: string;
+}
+
+export interface AcknowledgeIfcReleaseRecipientRequest {
+  acknowledgementNote?: string | null;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2649,6 +2732,42 @@ export const adminApi = {
     api.post<DrawingRevisionResponse>("/drawing-revisions", body),
   diffDrawingRevisions: (fromId: number, toId: number) =>
     api.get<DrawingRevisionDiffResponse>(`/drawing-revisions/diff?fromId=${fromId}&toId=${toId}`),
+
+  // IFC Releases (NIH-118)
+  listIfcReleases: (params: IfcReleaseListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.status) q.append("status", params.status);
+    if (params.dateFrom) q.append("dateFrom", params.dateFrom);
+    if (params.dateTo) q.append("dateTo", params.dateTo);
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<IfcReleaseListResponse>(`/ifc-releases${qs ? `?${qs}` : ""}`);
+  },
+  getIfcRelease: (id: number) =>
+    api.get<IfcReleaseResponse>(`/ifc-releases/${id}`),
+  createIfcRelease: (body: CreateIfcReleaseRequest) =>
+    api.post<IfcReleaseResponse>("/ifc-releases", body),
+  updateIfcRelease: (id: number, body: UpdateIfcReleaseRequest) =>
+    api.put<IfcReleaseResponse>(`/ifc-releases/${id}`, body),
+  deleteIfcRelease: (id: number) =>
+    api.delete(`/ifc-releases/${id}`),
+  addIfcReleaseItems: (id: number, body: AddIfcReleaseItemsRequest) =>
+    api.post<IfcReleaseResponse>(`/ifc-releases/${id}/items`, body),
+  removeIfcReleaseItem: (id: number, itemId: number) =>
+    api.delete<IfcReleaseResponse>(`/ifc-releases/${id}/items/${itemId}`),
+  addIfcReleaseRecipient: (id: number, body: AddIfcReleaseRecipientRequest) =>
+    api.post<IfcReleaseResponse>(`/ifc-releases/${id}/recipients`, body),
+  removeIfcReleaseRecipient: (id: number, recipientId: number) =>
+    api.delete<IfcReleaseResponse>(`/ifc-releases/${id}/recipients/${recipientId}`),
+  acknowledgeIfcReleaseRecipient: (id: number, recipientId: number, body: AcknowledgeIfcReleaseRecipientRequest) =>
+    api.post<IfcReleaseResponse>(`/ifc-releases/${id}/recipients/${recipientId}/acknowledge`, body),
+  releaseIfcRelease: (id: number) =>
+    api.post<IfcReleaseResponse>(`/ifc-releases/${id}/release`),
+  cancelIfcRelease: (id: number) =>
+    api.post<IfcReleaseResponse>(`/ifc-releases/${id}/cancel`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
