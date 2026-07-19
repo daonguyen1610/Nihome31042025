@@ -1,0 +1,25 @@
+[
+  { "key": "drawingRevision.title", "category": "drawingRevision", "vi": "Lịch sử revision", "en": "Revision history", "zh": "修订历史", "ja": "リビジョン履歴" },
+  { "key": "drawingRevision.button", "category": "drawingRevision", "vi": "Xem revision", "en": "Revisions", "zh": "修订", "ja": "リビジョン" },
+  { "key": "drawingRevision.empty", "category": "drawingRevision", "vi": "Bản vẽ này chưa có revision nào — vẫn ở phiên bản gốc R0.", "en": "This drawing has no revisions yet — still at original R0.", "zh": "该图纸尚无修订——仍为初始版本 R0。", "ja": "この図面にはまだリビジョンがありません — 原本 R0 のままです。" },
+
+  { "key": "drawingRevision.new", "category": "drawingRevision", "vi": "Tạo revision mới", "en": "New revision", "zh": "新建修订", "ja": "新規リビジョン" },
+  { "key": "drawingRevision.created", "category": "drawingRevision", "vi": "Đã tạo revision", "en": "Revision created", "zh": "已创建修订", "ja": "リビジョンを作成しました" },
+
+  { "key": "drawingRevision.field.number", "category": "drawingRevision", "vi": "Phiên bản", "en": "Revision", "zh": "版本", "ja": "リビジョン" },
+  { "key": "drawingRevision.field.reason", "category": "drawingRevision", "vi": "Lý do thay đổi", "en": "Reason", "zh": "变更原因", "ja": "変更理由" },
+  { "key": "drawingRevision.field.note", "category": "drawingRevision", "vi": "Ghi chú thay đổi", "en": "Change note", "zh": "变更说明", "ja": "変更メモ" },
+  { "key": "drawingRevision.field.createdAt", "category": "drawingRevision", "vi": "Ngày tạo", "en": "Created", "zh": "创建时间", "ja": "作成日" },
+  { "key": "drawingRevision.field.createdBy", "category": "drawingRevision", "vi": "Người tạo", "en": "Created by", "zh": "创建人", "ja": "作成者" },
+
+  { "key": "drawingRevision.badge.current", "category": "drawingRevision", "vi": "Đang sử dụng", "en": "Current", "zh": "使用中", "ja": "使用中" },
+  { "key": "drawingRevision.badge.superseded", "category": "drawingRevision", "vi": "Đã thu hồi", "en": "Superseded", "zh": "已作废", "ja": "廃止" },
+
+  { "key": "drawingRevision.form.reasonPlaceholder", "category": "drawingRevision", "vi": "Chọn lý do thay đổi", "en": "Pick a reason", "zh": "选择变更原因", "ja": "変更理由を選択" },
+  { "key": "drawingRevision.form.notePlaceholder", "category": "drawingRevision", "vi": "Mô tả chi tiết thay đổi so với revision trước…", "en": "Describe what changed compared to the previous revision…", "zh": "详细描述与上一版本的变更…", "ja": "前バージョンからの変更内容を記述…" },
+  { "key": "drawingRevision.form.reasonRequired", "category": "drawingRevision", "vi": "Vui lòng chọn lý do thay đổi.", "en": "Please pick a reason.", "zh": "请选择变更原因。", "ja": "変更理由を選択してください。" },
+  { "key": "drawingRevision.form.noteRequired", "category": "drawingRevision", "vi": "Ghi chú thay đổi là bắt buộc.", "en": "Change note is required.", "zh": "变更说明为必填项。", "ja": "変更メモは必須です。" },
+  { "key": "drawingRevision.form.hint", "category": "drawingRevision", "vi": "Revision mới sẽ tự động lên số kế tiếp và các revision cũ sẽ chuyển sang trạng thái Đã thu hồi.", "en": "The new revision is auto-numbered and prior revisions flip to Superseded.", "zh": "新修订将自动编号，之前的修订将标记为已作废。", "ja": "新しいリビジョンは自動採番され、以前のリビジョンは廃止扱いになります。" },
+
+  { "key": "drawingRevision.warn.supersededOpen", "category": "drawingRevision", "vi": "Bạn đang xem revision đã bị thu hồi. Hãy dùng revision hiện tại thay thế.", "en": "You are viewing a superseded revision — use the current one instead.", "zh": "您正在查看已作废的修订，请使用当前修订。", "ja": "廃止済みリビジョンを表示中です — 現行リビジョンを使用してください。" }
+]

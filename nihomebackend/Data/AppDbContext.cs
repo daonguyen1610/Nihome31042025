@@ -82,6 +82,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<ShopDrawing> ShopDrawings => Set<ShopDrawing>();
 
+    public DbSet<DrawingRevision> DrawingRevisions => Set<DrawingRevision>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -908,6 +910,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(d => new { d.DesignProjectId, d.DrawingCode }).IsUnique();
             b.HasIndex(d => d.DisciplineCode);
             b.HasIndex(d => d.Status);
+        });
+
+        modelBuilder.Entity<DrawingRevision>(b =>
+        {
+            b.ToTable("drawing_revisions");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.TargetType).HasConversion<string>().HasMaxLength(30);
+            b.Property(d => d.ReasonCode).HasMaxLength(60).IsRequired();
+            b.Property(d => d.Note).HasMaxLength(4000).IsRequired();
+
+            b.HasOne(d => d.CreatedBy)
+                .WithMany()
+                .HasForeignKey(d => d.CreatedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(d => new { d.TargetType, d.TargetId });
+            b.HasIndex(d => new { d.TargetType, d.TargetId, d.RevisionNumber }).IsUnique();
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

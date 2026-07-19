@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronsRight, Circle, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronsRight, Circle, History, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ import {
   type DesignProjectResponse,
   type MasterDataOption,
 } from "@/services/adminApi";
+import { RevisionsPanel } from "./RevisionsPanel";
 
 const STATUS_BADGE: Record<BasicDesignDocStatus, string> = {
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
@@ -103,6 +104,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
   const canManage = has(ADMIN_PERMS.designBasicManage);
   const canApprove = has(ADMIN_PERMS.designBasicApprove);
   const canUnlock = has(ADMIN_PERMS.designProjectsManage);
+  const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = has(ADMIN_PERMS.users);
 
   const isConceptStage = project.currentStage === "Concept";
@@ -195,6 +197,9 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
     }
     return groups;
   }, [rows]);
+
+  // -------- revisions panel --------
+  const [revisionsFor, setRevisionsFor] = useState<BasicDesignDocResponse | null>(null);
 
   // -------- create / edit dialog --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -460,6 +465,18 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                         <span className="text-[10px] text-muted-foreground">
                           {formatDate(row.updatedAt, lang)}
                         </span>
+                        {canViewRevisions ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1 px-1.5 text-[11px] text-slate-600 hover:text-slate-900"
+                            onClick={() => setRevisionsFor(row)}
+                            data-testid={`basic-design-revisions-${row.id}`}
+                          >
+                            <History className="h-3 w-3" />
+                            {t("drawingRevision.button")}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                     {canManage && isBasicStage ? (
@@ -585,6 +602,17 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {revisionsFor ? (
+        <RevisionsPanel
+          open={!!revisionsFor}
+          onOpenChange={(v) => (!v ? setRevisionsFor(null) : undefined)}
+          targetType="BasicDesignDoc"
+          targetId={revisionsFor.id}
+          targetCode={revisionsFor.documentCode}
+          targetTitle={revisionsFor.title}
+        />
+      ) : null}
     </div>
   );
 };

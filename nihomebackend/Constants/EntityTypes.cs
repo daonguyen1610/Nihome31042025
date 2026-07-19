@@ -31,4 +31,5 @@ public static class EntityTypes
     public const string ConceptOption = "ConceptOption";
     public const string BasicDesignDoc = "BasicDesignDoc";
     public const string ShopDrawing = "ShopDrawing";
+    public const string DrawingRevision = "DrawingRevision";
 }

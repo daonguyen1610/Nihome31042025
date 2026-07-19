@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,6 +47,7 @@ import {
   type ShopDrawingResponse,
   type ShopDrawingStatus,
 } from "@/services/adminApi";
+import { RevisionsPanel } from "./RevisionsPanel";
 
 const STATUS_BADGE: Record<ShopDrawingStatus, string> = {
   Drafting: "border-sky-200 bg-sky-50 text-sky-700",
@@ -115,6 +116,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.designShopManage);
   const canApprove = has(ADMIN_PERMS.designShopApprove);
+  const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = has(ADMIN_PERMS.users);
 
   const isShopStage = project.currentStage === "ShopDrawing";
@@ -244,6 +246,9 @@ export const ShopDrawingTab = ({ project }: Props) => {
       return mutated ? next : prev;
     });
   }, [draftableIds]);
+
+  // -------- revisions panel --------
+  const [revisionsFor, setRevisionsFor] = useState<ShopDrawingResponse | null>(null);
 
   // -------- create / edit dialog --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -523,10 +528,23 @@ export const ShopDrawingTab = ({ project }: Props) => {
               onEdit={openEdit}
               onDelete={setDeleting}
               onTransition={(row, next) => void transition(row, next)}
+              canViewRevisions={canViewRevisions}
+              onOpenRevisions={setRevisionsFor}
             />
           ))}
         </div>
       )}
+
+      {revisionsFor ? (
+        <RevisionsPanel
+          open={!!revisionsFor}
+          onOpenChange={(v) => (!v ? setRevisionsFor(null) : undefined)}
+          targetType="ShopDrawing"
+          targetId={revisionsFor.id}
+          targetCode={revisionsFor.drawingCode}
+          targetTitle={revisionsFor.title}
+        />
+      ) : null}
 
       {/* create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -711,6 +729,7 @@ const DisciplineSection = ({
   lang,
   canManage,
   canApprove,
+  canViewRevisions,
   isShopStage,
   selectedIds,
   draftableIds,
@@ -719,6 +738,7 @@ const DisciplineSection = ({
   onEdit,
   onDelete,
   onTransition,
+  onOpenRevisions,
 }: {
   disciplineCode: string;
   disciplineLabel: string;
@@ -727,6 +747,7 @@ const DisciplineSection = ({
   lang: string;
   canManage: boolean;
   canApprove: boolean;
+  canViewRevisions: boolean;
   isShopStage: boolean;
   selectedIds: Set<number>;
   draftableIds: Set<number>;
@@ -735,6 +756,7 @@ const DisciplineSection = ({
   onEdit: (row: ShopDrawingResponse) => void;
   onDelete: (row: ShopDrawingResponse) => void;
   onTransition: (row: ShopDrawingResponse, next: ShopDrawingStatus) => void;
+  onOpenRevisions: (row: ShopDrawingResponse) => void;
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const total = Array.from(itemMap.values()).reduce((n, arr) => n + arr.length, 0);
@@ -791,6 +813,18 @@ const DisciplineSection = ({
                           {t(`shopDrawing.status.${row.status}`)}
                         </Badge>
                         <span className="text-[10px] text-muted-foreground">{formatDate(row.updatedAt, lang)}</span>
+                        {canViewRevisions ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 gap-1 px-1.5 text-[11px] text-slate-600 hover:text-slate-900"
+                            onClick={() => onOpenRevisions(row)}
+                            data-testid={`shop-drawing-revisions-${row.id}`}
+                          >
+                            <History className="h-3 w-3" />
+                            {t("drawingRevision.button")}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                     {canManage && isShopStage ? (

@@ -520,6 +520,54 @@
     "ja": "内装"
   },
   {
+    "key": "masterData.category.drawing_revision_reason.title",
+    "category": "masterData",
+    "vi": "Lý do revision bản vẽ",
+    "en": "Drawing revision reason",
+    "zh": "图纸修订原因",
+    "ja": "図面リビジョン理由"
+  },
+  {
+    "key": "masterData.drawing_revision_reason.client-request.label",
+    "category": "masterData",
+    "vi": "Yêu cầu khách hàng",
+    "en": "Client request",
+    "zh": "客户要求",
+    "ja": "顧客要望"
+  },
+  {
+    "key": "masterData.drawing_revision_reason.technical-fix.label",
+    "category": "masterData",
+    "vi": "Sai kỹ thuật",
+    "en": "Technical fix",
+    "zh": "技术修正",
+    "ja": "技術修正"
+  },
+  {
+    "key": "masterData.drawing_revision_reason.mep-sync.label",
+    "category": "masterData",
+    "vi": "Đồng bộ MEP",
+    "en": "MEP coordination",
+    "zh": "机电同步",
+    "ja": "MEP調整"
+  },
+  {
+    "key": "masterData.drawing_revision_reason.material-adjustment.label",
+    "category": "masterData",
+    "vi": "Điều chỉnh vật liệu",
+    "en": "Material adjustment",
+    "zh": "材料调整",
+    "ja": "材料調整"
+  },
+  {
+    "key": "masterData.drawing_revision_reason.other.label",
+    "category": "masterData",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
+  },
+  {
     "key": "masterData.permit_type.gpxd.label",
     "category": "masterData",
     "vi": "Giấy phép xây dựng (GPXD)",
