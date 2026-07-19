@@ -152,6 +152,17 @@
     },
 
     {
+      "category": "drawing_revision_reason",
+      "options": [
+        { "code": "client-request",      "name": "Yêu cầu khách hàng", "sortOrder": 1 },
+        { "code": "technical-fix",       "name": "Sai kỹ thuật",       "sortOrder": 2 },
+        { "code": "mep-sync",            "name": "Đồng bộ MEP",        "sortOrder": 3 },
+        { "code": "material-adjustment", "name": "Điều chỉnh vật liệu","sortOrder": 4 },
+        { "code": "other",               "name": "Khác",                "sortOrder": 5 }
+      ]
+    },
+
+    {
       "category": "permit_type",
       "options": [
         { "code": "gpxd",         "name": "Giấy phép xây dựng (GPXD)", "sortOrder": 1 },

@@ -60,6 +60,8 @@ export const ADMIN_PERMS = {
   designShop: "design.shop.view",
   designShopManage: "design.shop.manage",
   designShopApprove: "design.shop.approve",
+  designRevisions: "design.revisions.view",
+  designRevisionsManage: "design.revisions.manage",
   recruitment: "recruitment.applications.view",
   recruitmentPositions: "recruitment.positions.view",
   recruitmentOptions: "recruitment.options.view",

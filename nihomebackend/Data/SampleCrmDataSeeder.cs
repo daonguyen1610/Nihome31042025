@@ -40,6 +40,7 @@ public static class SampleCrmDataSeeder
         SeedConceptOptions(db, owner, now);
         SeedBasicDesignDocs(db, owner, now);
         SeedShopDrawings(db, owner, now);
+        SeedDrawingRevisions(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1613,6 +1614,72 @@ public static class SampleCrmDataSeeder
                 UpdatedAt = now.AddDays(-daysAgo),
             });
         }
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// NIH-117 Drawing Revision showcase. Attaches R1 revisions to the
+    /// first sample shop drawing and the first sample basic design doc
+    /// so the revision tab lights up on a fresh DB. Idempotent — guarded
+    /// on the "[SAMPLE_REV]" marker in Note.
+    /// </summary>
+    private static void SeedDrawingRevisions(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_REV]";
+        if (db.DrawingRevisions.Any(r => r.Note.StartsWith(SampleMarker))) return;
+
+        // First seeded ShopDrawing — bump it with a client-request R1 +
+        // a follow-up MEP-coordination R2 so the FE has real diff data
+        // to show.
+        var firstShop = db.ShopDrawings
+            .OrderBy(s => s.Id)
+            .FirstOrDefault();
+        if (firstShop is not null)
+        {
+            db.DrawingRevisions.Add(new DrawingRevision
+            {
+                TargetType = DrawingRevisionTargetType.ShopDrawing,
+                TargetId = firstShop.Id,
+                RevisionNumber = 1,
+                ReasonCode = "client-request",
+                Note = $"{SampleMarker} Khách yêu cầu đổi vị trí cửa chính sang trục B để mở view.",
+                IsCurrent = false,
+                CreatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-2),
+            });
+            db.DrawingRevisions.Add(new DrawingRevision
+            {
+                TargetType = DrawingRevisionTargetType.ShopDrawing,
+                TargetId = firstShop.Id,
+                RevisionNumber = 2,
+                ReasonCode = "mep-sync",
+                Note = $"{SampleMarker} Đồng bộ hộp kỹ thuật MEP với bản vẽ điều hoà.",
+                IsCurrent = true,
+                CreatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-1),
+            });
+        }
+
+        // First seeded BasicDesignDoc — one revision showing the reason
+        // matrix flows across both drawing families.
+        var firstBasic = db.BasicDesignDocs
+            .OrderBy(b => b.Id)
+            .FirstOrDefault();
+        if (firstBasic is not null)
+        {
+            db.DrawingRevisions.Add(new DrawingRevision
+            {
+                TargetType = DrawingRevisionTargetType.BasicDesignDoc,
+                TargetId = firstBasic.Id,
+                RevisionNumber = 1,
+                ReasonCode = "technical-fix",
+                Note = $"{SampleMarker} Cập nhật cao độ tim cột theo khảo sát thực địa.",
+                IsCurrent = true,
+                CreatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-3),
+            });
+        }
+
         db.SaveChanges();
     }
 }

@@ -1890,6 +1890,55 @@ export interface ShopDrawingBulkDeleteResponse {
   failures: ShopDrawingBulkDeleteFailure[];
 }
 
+// ─── Drawing Revisions (NIH-117) ────────────────────────
+
+export type DrawingRevisionTargetType = "BasicDesignDoc" | "ShopDrawing";
+
+export interface DrawingRevisionResponse {
+  id: number;
+  targetType: DrawingRevisionTargetType;
+  targetId: number;
+  targetCode?: string | null;
+  targetTitle?: string | null;
+  revisionNumber: number;
+  revisionLabel: string;
+  reasonCode: string;
+  reasonLabel?: string | null;
+  note: string;
+  isCurrent: boolean;
+  isSuperseded: boolean;
+  createdAt: string;
+  createdByUserId: number;
+  createdByName?: string | null;
+}
+
+export interface DrawingRevisionListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: DrawingRevisionResponse[];
+}
+
+export interface DrawingRevisionListParams {
+  targetType?: DrawingRevisionTargetType;
+  targetId?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateDrawingRevisionRequest {
+  targetType: DrawingRevisionTargetType;
+  targetId: number;
+  reasonCode: string;
+  note: string;
+}
+
+export interface DrawingRevisionDiffResponse {
+  from: DrawingRevisionResponse;
+  to: DrawingRevisionResponse;
+  changes: string[];
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2583,6 +2632,23 @@ export const adminApi = {
     api.post<ShopDrawingBulkDeleteResponse>("/shop-drawings/bulk-delete", body),
   transitionShopDrawing: (id: number, body: TransitionShopDrawingStatusRequest) =>
     api.post<ShopDrawingResponse>(`/shop-drawings/${id}/status`, body),
+
+  // Drawing Revisions (NIH-117)
+  listDrawingRevisions: (params: DrawingRevisionListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.targetType) q.append("targetType", params.targetType);
+    if (params.targetId != null) q.append("targetId", String(params.targetId));
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<DrawingRevisionListResponse>(`/drawing-revisions${qs ? `?${qs}` : ""}`);
+  },
+  getDrawingRevision: (id: number) =>
+    api.get<DrawingRevisionResponse>(`/drawing-revisions/${id}`),
+  createDrawingRevision: (body: CreateDrawingRevisionRequest) =>
+    api.post<DrawingRevisionResponse>("/drawing-revisions", body),
+  diffDrawingRevisions: (fromId: number, toId: number) =>
+    api.get<DrawingRevisionDiffResponse>(`/drawing-revisions/diff?fromId=${fromId}&toId=${toId}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
