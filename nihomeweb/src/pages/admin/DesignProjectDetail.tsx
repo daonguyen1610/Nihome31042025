@@ -22,6 +22,7 @@ import {
 import { ConceptOptionsTab } from "./design/ConceptOptionsTab";
 import { BasicDesignTab } from "./design/BasicDesignTab";
 import { ShopDrawingTab } from "./design/ShopDrawingTab";
+import { IfcReleasesTab } from "./design/IfcReleasesTab";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-sky-200 bg-sky-50 text-sky-700",
@@ -219,6 +220,7 @@ const AdminDesignProjectDetail = () => {
             <TabsTrigger value="concept">{t("designProjects.detail.tab.concept")}</TabsTrigger>
             <TabsTrigger value="basic">{t("designProjects.detail.tab.basic")}</TabsTrigger>
             <TabsTrigger value="shop">{t("designProjects.detail.tab.shop")}</TabsTrigger>
+            <TabsTrigger value="ifc">{t("designProjects.detail.tab.ifc")}</TabsTrigger>
             <TabsTrigger value="team">{t("designProjects.detail.tab.team")}</TabsTrigger>
             <TabsTrigger value="docs">{t("designProjects.detail.tab.docs")}</TabsTrigger>
           </TabsList>
@@ -244,7 +246,7 @@ const AdminDesignProjectDetail = () => {
             </div>
           </TabsContent>
 
-          {(["concept", "basic", "shop", "team", "docs"] as const).map((tab) => (
+          {(["concept", "basic", "shop", "ifc", "team", "docs"] as const).map((tab) => (
             <TabsContent key={tab} value={tab}>
               {tab === "concept" ? (
                 <ConceptOptionsTab project={project} onProjectMayHaveChanged={fetchProject} />
@@ -252,6 +254,8 @@ const AdminDesignProjectDetail = () => {
                 <BasicDesignTab project={project} onProjectMayHaveChanged={fetchProject} />
               ) : tab === "shop" ? (
                 <ShopDrawingTab project={project} onProjectMayHaveChanged={fetchProject} />
+              ) : tab === "ifc" ? (
+                <IfcReleasesTab project={project} />
               ) : (
                 <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
                   {t("designProjects.detail.stageComingSoon")}

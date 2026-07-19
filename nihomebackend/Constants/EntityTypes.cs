@@ -32,4 +32,5 @@ public static class EntityTypes
     public const string BasicDesignDoc = "BasicDesignDoc";
     public const string ShopDrawing = "ShopDrawing";
     public const string DrawingRevision = "DrawingRevision";
+    public const string IfcRelease = "IfcRelease";
 }

@@ -65,6 +65,7 @@
   { "key": "designProjects.detail.tab.concept", "category": "designProjects", "vi": "Concept", "en": "Concept", "zh": "方案设计", "ja": "コンセプト" },
   { "key": "designProjects.detail.tab.basic", "category": "designProjects", "vi": "Basic Design", "en": "Basic design", "zh": "基本设计", "ja": "基本設計" },
   { "key": "designProjects.detail.tab.shop", "category": "designProjects", "vi": "Shop Drawing", "en": "Shop drawing", "zh": "施工图", "ja": "施工図" },
+  { "key": "designProjects.detail.tab.ifc", "category": "designProjects", "vi": "Phát hành IFC", "en": "IFC releases", "zh": "IFC发布", "ja": "IFC発行" },
   { "key": "designProjects.detail.tab.team", "category": "designProjects", "vi": "Team", "en": "Team", "zh": "团队", "ja": "チーム" },
   { "key": "designProjects.detail.tab.docs", "category": "designProjects", "vi": "Tài liệu", "en": "Documents", "zh": "文档", "ja": "ドキュメント" },
   { "key": "designProjects.detail.stageComingSoon", "category": "designProjects", "vi": "Tab này sẽ được hoàn thiện ở các story tiếp theo (NIH-114..118).", "en": "This tab will land in follow-up stories (NIH-114..118).", "zh": "该标签将于后续故事（NIH-114..118）中实现。", "ja": "このタブは今後のストーリー（NIH-114..118）で実装されます。" }
