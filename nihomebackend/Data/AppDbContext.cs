@@ -88,6 +88,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<IfcReleaseItem> IfcReleaseItems => Set<IfcReleaseItem>();
     public DbSet<IfcReleaseRecipient> IfcReleaseRecipients => Set<IfcReleaseRecipient>();
 
+    public DbSet<ConstructionTask> ConstructionTasks => Set<ConstructionTask>();
+    public DbSet<ConstructionTaskDependency> ConstructionTaskDependencies => Set<ConstructionTaskDependency>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -987,6 +990,51 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             b.HasIndex(x => x.IfcReleaseId);
+        });
+
+        modelBuilder.Entity<ConstructionTask>(b =>
+        {
+            b.ToTable("construction_tasks");
+            b.HasKey(t => t.Id);
+            b.Property(t => t.TaskCode).HasMaxLength(60).IsRequired();
+            b.Property(t => t.Wbs).HasMaxLength(60);
+            b.Property(t => t.Name).HasMaxLength(300).IsRequired();
+            b.Property(t => t.Description).HasMaxLength(4000);
+            b.Property(t => t.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(t => t.DesignProject)
+                .WithMany()
+                .HasForeignKey(t => t.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(t => t.Owner)
+                .WithMany()
+                .HasForeignKey(t => t.OwnerUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(t => t.DesignProjectId);
+            b.HasIndex(t => new { t.DesignProjectId, t.TaskCode }).IsUnique();
+            b.HasIndex(t => t.Status);
+        });
+
+        modelBuilder.Entity<ConstructionTaskDependency>(b =>
+        {
+            b.ToTable("construction_task_dependencies");
+            b.HasKey(x => x.Id);
+
+            b.HasOne(x => x.Task)
+                .WithMany(t => t.Predecessors)
+                .HasForeignKey(x => x.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // Predecessor side: keep the edge unless the predecessor is
+            // explicitly cleared — no cascade, which would otherwise create
+            // multiple-cascade-path errors on SQL Server.
+            b.HasOne(x => x.PredecessorTask)
+                .WithMany()
+                .HasForeignKey(x => x.PredecessorTaskId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasIndex(x => new { x.TaskId, x.PredecessorTaskId }).IsUnique();
+            b.HasIndex(x => x.PredecessorTaskId);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

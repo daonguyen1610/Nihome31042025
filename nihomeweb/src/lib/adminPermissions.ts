@@ -65,6 +65,8 @@ export const ADMIN_PERMS = {
   designIfc: "design.ifc.view",
   designIfcManage: "design.ifc.manage",
   designIfcRelease: "design.ifc.release",
+  constructionTasks: "construction.tasks.view",
+  constructionTasksManage: "construction.tasks.manage",
   recruitment: "recruitment.applications.view",
   recruitmentPositions: "recruitment.positions.view",
   recruitmentOptions: "recruitment.options.view",

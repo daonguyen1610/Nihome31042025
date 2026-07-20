@@ -1856,6 +1856,38 @@
     "ja": "電子印を押印しロックした上で施工チームにIFC図面パッケージを発行します。"
   },
   {
+    "key": "rbac.perm.construction.tasks.view.label",
+    "category": "rbac",
+    "vi": "Xem tiến độ thi công",
+    "en": "View construction schedule",
+    "zh": "查看施工进度",
+    "ja": "施工スケジュールを表示"
+  },
+  {
+    "key": "rbac.perm.construction.tasks.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách công việc, chi tiết và biểu đồ Gantt của tiến độ thi công.",
+    "en": "Allows viewing the task list, task detail and the Gantt chart of the construction schedule.",
+    "zh": "允许查看施工进度的任务清单、详情和甘特图。",
+    "ja": "施工スケジュールのタスク一覧・詳細・ガントチャートの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.construction.tasks.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý tiến độ thi công",
+    "en": "Manage construction schedule",
+    "zh": "管理施工进度",
+    "ja": "施工スケジュールを管理"
+  },
+  {
+    "key": "rbac.perm.construction.tasks.manage.description",
+    "category": "rbac",
+    "vi": "Tạo/chỉnh sửa/xoá công việc, cập nhật tiến độ và cấu hình phụ thuộc tiền nhiệm.",
+    "en": "Create/update/delete tasks, update progress and wire predecessor dependencies.",
+    "zh": "创建/编辑/删除任务，更新进度并配置前置依赖关系。",
+    "ja": "タスクの作成・編集・削除、進捗更新および先行タスク依存関係の設定を行います。"
+  },
+  {
     "key": "rbac.perm.permit.checklists.view.label",
     "category": "rbac",
     "vi": "Xem checklist pháp lý",

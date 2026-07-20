@@ -42,6 +42,7 @@ public static class SampleCrmDataSeeder
         SeedShopDrawings(db, owner, now);
         SeedDrawingRevisions(db, owner, now);
         SeedIfcReleases(db, owner, now);
+        SeedConstructionTasks(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1735,6 +1736,117 @@ public static class SampleCrmDataSeeder
             },
         };
         db.IfcReleases.Add(release);
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// M4 sample tasks (NIH-141) — seed a small dependent chain on the
+    /// first ShopDrawing-stage project so the Gantt page has something
+    /// to draw (planned/actual/overdue/progress mixed) without hand-crafted
+    /// API calls. Idempotent: guarded by a marker in Description.
+    /// </summary>
+    private static void SeedConstructionTasks(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_CONSTR]";
+        if (db.ConstructionTasks.Any(t => t.Description != null && t.Description.StartsWith(SampleMarker))) return;
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        var today = DateOnly.FromDateTime(now);
+
+        // Task 1 — Completed on time.
+        var mobilization = new ConstructionTask
+        {
+            DesignProjectId = project.Id,
+            TaskCode = "T-001",
+            Wbs = "1.1",
+            Name = "Huy \u0111\u1ed9ng nh\u00e2n l\u1ef1c & thi\u1ebft b\u1ecb",
+            Description = $"{SampleMarker} Mobilise crew, cranes and lay down area.",
+            PlannedStart = today.AddDays(-40),
+            PlannedEnd = today.AddDays(-30),
+            ActualStart = today.AddDays(-40),
+            ActualEnd = today.AddDays(-31),
+            ProgressPercent = 100,
+            OwnerUserId = owner.Id,
+            Status = ConstructionTaskStatus.Completed,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-45),
+            UpdatedAt = now.AddDays(-31),
+        };
+
+        // Task 2 — In progress, on track.
+        var foundation = new ConstructionTask
+        {
+            DesignProjectId = project.Id,
+            TaskCode = "T-002",
+            Wbs = "1.2",
+            Name = "\u0110\u00e0o m\u00f3ng & \u0111\u1ed5 b\u00ea t\u00f4ng l\u00f3t",
+            Description = $"{SampleMarker} Excavate footings and pour blinding concrete.",
+            PlannedStart = today.AddDays(-29),
+            PlannedEnd = today.AddDays(-5),
+            ActualStart = today.AddDays(-28),
+            ActualEnd = null,
+            ProgressPercent = 65,
+            OwnerUserId = owner.Id,
+            Status = ConstructionTaskStatus.InProgress,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-45),
+            UpdatedAt = now.AddDays(-1),
+        };
+
+        // Task 3 — Planned, would start after T-002 completes.
+        var superstructure = new ConstructionTask
+        {
+            DesignProjectId = project.Id,
+            TaskCode = "T-003",
+            Wbs = "1.3",
+            Name = "K\u1ebft c\u1ea5u b\u00ea t\u00f4ng c\u1ed9t & d\u1ea7m",
+            Description = $"{SampleMarker} Columns and beams once footings cured.",
+            PlannedStart = today.AddDays(-4),
+            PlannedEnd = today.AddDays(20),
+            ProgressPercent = 0,
+            OwnerUserId = owner.Id,
+            Status = ConstructionTaskStatus.Planned,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-45),
+            UpdatedAt = now.AddDays(-45),
+        };
+
+        // Task 4 — Overdue (was due yesterday, still InProgress).
+        var mepRoughIn = new ConstructionTask
+        {
+            DesignProjectId = project.Id,
+            TaskCode = "T-004",
+            Wbs = "2.1",
+            Name = "MEP rough-in t\u1ea7ng 1",
+            Description = $"{SampleMarker} MEP first fix — behind schedule for demo.",
+            PlannedStart = today.AddDays(-10),
+            PlannedEnd = today.AddDays(-1),
+            ActualStart = today.AddDays(-10),
+            ActualEnd = null,
+            ProgressPercent = 80,
+            OwnerUserId = owner.Id,
+            Status = ConstructionTaskStatus.InProgress,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-45),
+            UpdatedAt = now.AddDays(-1),
+        };
+
+        db.ConstructionTasks.AddRange(mobilization, foundation, superstructure, mepRoughIn);
+        db.SaveChanges();
+
+        // Dependencies: T-002 depends on T-001, T-003 depends on T-002.
+        db.ConstructionTaskDependencies.AddRange(
+            new ConstructionTaskDependency { TaskId = foundation.Id, PredecessorTaskId = mobilization.Id },
+            new ConstructionTaskDependency { TaskId = superstructure.Id, PredecessorTaskId = foundation.Id });
         db.SaveChanges();
     }
 }
