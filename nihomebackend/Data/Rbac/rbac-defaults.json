@@ -111,6 +111,9 @@
     { "module": "design.ifc", "action": "manage" },
     { "module": "design.ifc", "action": "release" },
 
+    { "module": "construction.tasks", "action": "view" },
+    { "module": "construction.tasks", "action": "manage" },
+
     { "module": "permit.checklists", "action": "view" },
     { "module": "permit.checklists", "action": "manage" },
     { "module": "permit.checklists", "action": "mark-issued" }
@@ -182,6 +185,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.**",
         "design.ifc.view",
+        "construction.tasks.view",
         "profile.me.*"
       ]
     },
@@ -193,6 +197,7 @@
         "master-data.view",
         "workflow.view",
         "design.**",
+        "construction.tasks.**",
         "profile.me.*"
       ]
     },
@@ -207,6 +212,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
+        "construction.tasks.view",
         "profile.me.*"
       ]
     },
@@ -220,6 +226,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
+        "construction.tasks.view",
         "profile.me.*"
       ]
     },
@@ -233,6 +240,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
+        "construction.tasks.view",
         "profile.me.*"
       ]
     },
@@ -252,6 +260,7 @@
         "design.shop.view",
         "design.revisions.view",
         "design.ifc.**",
+        "construction.tasks.**",
         "permit.checklists.**",
         "profile.me.*"
       ]

@@ -43,6 +43,7 @@ import {
   ClipboardList,
   PenTool,
   Scale,
+  HardHat,
   User as UserIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -166,6 +167,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         icon: Scale,
         items: [
           { to: "/admin/permits", label: t("nav.permits"), icon: Scale, permission: ADMIN_PERMS.permits },
+        ],
+      },
+      {
+        id: "construction",
+        label: t("nav.construction"),
+        icon: HardHat,
+        items: [
+          { to: "/admin/construction/tasks", label: t("nav.constructionTasks"), icon: HardHat, permission: ADMIN_PERMS.constructionTasks },
         ],
       },
       {

@@ -2022,6 +2022,111 @@ export interface AcknowledgeIfcReleaseRecipientRequest {
   acknowledgementNote?: string | null;
 }
 
+// --- Construction schedule (NIH-141) -----------------------------------
+
+export type ConstructionTaskStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
+
+export interface ConstructionTaskDependencyResponse {
+  id: number;
+  predecessorTaskId: number;
+  predecessorTaskCode?: string | null;
+  predecessorTaskName?: string | null;
+  predecessorStatus?: ConstructionTaskStatus | null;
+}
+
+export interface ConstructionTaskResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  designProjectName?: string | null;
+  taskCode: string;
+  wbs?: string | null;
+  name: string;
+  description?: string | null;
+  plannedStart: string; // ISO date (yyyy-MM-dd)
+  plannedEnd: string;
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  progressPercent: number;
+  ownerUserId?: number | null;
+  ownerName?: string | null;
+  status: ConstructionTaskStatus;
+  isOverdue: boolean;
+  predecessors: ConstructionTaskDependencyResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConstructionTaskListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: ConstructionTaskResponse[];
+  statusCounts: Partial<Record<ConstructionTaskStatus, number>>;
+  overdueCount: number;
+}
+
+export interface ConstructionTaskListParams {
+  designProjectId?: number;
+  ownerUserId?: number;
+  status?: string;
+  search?: string;
+  overdueOnly?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateConstructionTaskRequest {
+  designProjectId: number;
+  taskCode?: string | null;
+  wbs?: string | null;
+  name: string;
+  description?: string | null;
+  plannedStart: string;
+  plannedEnd: string;
+  ownerUserId?: number | null;
+  predecessorTaskIds?: number[];
+}
+
+export interface UpdateConstructionTaskRequest {
+  wbs?: string | null;
+  name: string;
+  description?: string | null;
+  plannedStart: string;
+  plannedEnd: string;
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  progressPercent: number;
+  ownerUserId?: number | null;
+  status: ConstructionTaskStatus;
+}
+
+export interface UpdateConstructionTaskProgressRequest {
+  progressPercent: number;
+  actualStart?: string | null;
+  actualEnd?: string | null;
+  status?: ConstructionTaskStatus | null;
+}
+
+export interface SetConstructionTaskPredecessorsRequest {
+  predecessorTaskIds: number[];
+}
+
+export interface BulkDeleteConstructionTasksRequest {
+  ids: number[];
+}
+
+export interface ConstructionTaskBulkDeleteFailure {
+  id: number;
+  message: string;
+}
+
+export interface ConstructionTaskBulkDeleteResponse {
+  requested: number;
+  deleted: number;
+  failures: ConstructionTaskBulkDeleteFailure[];
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2768,6 +2873,34 @@ export const adminApi = {
     api.post<IfcReleaseResponse>(`/ifc-releases/${id}/release`),
   cancelIfcRelease: (id: number) =>
     api.post<IfcReleaseResponse>(`/ifc-releases/${id}/cancel`),
+
+  // Construction schedule (NIH-141)
+  listConstructionTasks: (params: ConstructionTaskListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
+    if (params.status) q.append("status", params.status);
+    if (params.search) q.append("search", params.search);
+    if (params.overdueOnly) q.append("overdueOnly", "true");
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<ConstructionTaskListResponse>(`/construction-tasks${qs ? `?${qs}` : ""}`);
+  },
+  getConstructionTask: (id: number) =>
+    api.get<ConstructionTaskResponse>(`/construction-tasks/${id}`),
+  createConstructionTask: (body: CreateConstructionTaskRequest) =>
+    api.post<ConstructionTaskResponse>("/construction-tasks", body),
+  updateConstructionTask: (id: number, body: UpdateConstructionTaskRequest) =>
+    api.put<ConstructionTaskResponse>(`/construction-tasks/${id}`, body),
+  updateConstructionTaskProgress: (id: number, body: UpdateConstructionTaskProgressRequest) =>
+    api.patch<ConstructionTaskResponse>(`/construction-tasks/${id}/progress`, body),
+  setConstructionTaskPredecessors: (id: number, body: SetConstructionTaskPredecessorsRequest) =>
+    api.put<ConstructionTaskResponse>(`/construction-tasks/${id}/predecessors`, body),
+  deleteConstructionTask: (id: number) =>
+    api.delete(`/construction-tasks/${id}`),
+  bulkDeleteConstructionTasks: (body: BulkDeleteConstructionTasksRequest) =>
+    api.post<ConstructionTaskBulkDeleteResponse>("/construction-tasks/bulk-delete", body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
