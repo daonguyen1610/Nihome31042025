@@ -2226,6 +2226,100 @@ export interface SiteDiaryBulkDeleteResponse {
   failures: SiteDiaryBulkDeleteFailure[];
 }
 
+// --- Punch list (NIH-146) ---------------------------------------------
+
+export type PunchStatus = "Open" | "InProgress" | "Fixed" | "Verified" | "Cancelled";
+export type PunchSeverity = "Low" | "Medium" | "High" | "Critical";
+
+export interface PunchItemResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  designProjectName?: string | null;
+  punchCode: string;
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  severity: PunchSeverity;
+  status: PunchStatus;
+  assigneeUserId?: number | null;
+  assigneeName?: string | null;
+  deadline?: string | null;
+  resolutionNote?: string | null;
+  reopenCount: number;
+  verifiedAt?: string | null;
+  verifiedByUserId?: number | null;
+  verifiedByName?: string | null;
+  note?: string | null;
+  isOverdue: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PunchItemListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: PunchItemResponse[];
+  statusCounts: Partial<Record<PunchStatus, number>>;
+  overdueCount: number;
+}
+
+export interface PunchItemListParams {
+  designProjectId?: number;
+  assigneeUserId?: number;
+  status?: string;
+  severity?: string;
+  openOnly?: boolean;
+  overdueOnly?: boolean;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreatePunchItemRequest {
+  designProjectId: number;
+  punchCode?: string | null;
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  severity: PunchSeverity;
+  assigneeUserId?: number | null;
+  deadline?: string | null;
+  note?: string | null;
+}
+
+export interface UpdatePunchItemRequest {
+  title: string;
+  description?: string | null;
+  location?: string | null;
+  severity: PunchSeverity;
+  assigneeUserId?: number | null;
+  deadline?: string | null;
+  resolutionNote?: string | null;
+  note?: string | null;
+}
+
+export interface TransitionPunchStatusRequest {
+  status: PunchStatus;
+  resolutionNote?: string | null;
+}
+
+export interface BulkDeletePunchItemsRequest {
+  ids: number[];
+}
+
+export interface PunchItemBulkDeleteFailure {
+  id: number;
+  message: string;
+}
+
+export interface PunchItemBulkDeleteResponse {
+  requested: number;
+  deleted: number;
+  failures: PunchItemBulkDeleteFailure[];
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -3031,6 +3125,36 @@ export const adminApi = {
     api.delete(`/site-diaries/${id}`),
   bulkDeleteSiteDiaries: (body: BulkDeleteSiteDiariesRequest) =>
     api.post<SiteDiaryBulkDeleteResponse>("/site-diaries/bulk-delete", body),
+
+  // Punch list (NIH-146)
+  listPunchItems: (params: PunchItemListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.assigneeUserId != null) q.append("assigneeUserId", String(params.assigneeUserId));
+    if (params.status) q.append("status", params.status);
+    if (params.severity) q.append("severity", params.severity);
+    if (params.openOnly) q.append("openOnly", "true");
+    if (params.overdueOnly) q.append("overdueOnly", "true");
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<PunchItemListResponse>(`/punch-items${qs ? `?${qs}` : ""}`);
+  },
+  getPunchItem: (id: number) =>
+    api.get<PunchItemResponse>(`/punch-items/${id}`),
+  createPunchItem: (body: CreatePunchItemRequest) =>
+    api.post<PunchItemResponse>("/punch-items", body),
+  updatePunchItem: (id: number, body: UpdatePunchItemRequest) =>
+    api.put<PunchItemResponse>(`/punch-items/${id}`, body),
+  transitionPunchStatus: (id: number, body: TransitionPunchStatusRequest) =>
+    api.post<PunchItemResponse>(`/punch-items/${id}/status`, body),
+  verifyPunchItem: (id: number, body?: Partial<TransitionPunchStatusRequest>) =>
+    api.post<PunchItemResponse>(`/punch-items/${id}/verify`, body ?? {}),
+  deletePunchItem: (id: number) =>
+    api.delete(`/punch-items/${id}`),
+  bulkDeletePunchItems: (body: BulkDeletePunchItemsRequest) =>
+    api.post<PunchItemBulkDeleteResponse>("/punch-items/bulk-delete", body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>

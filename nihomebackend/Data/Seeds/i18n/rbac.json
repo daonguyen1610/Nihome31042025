@@ -1936,6 +1936,54 @@
     "ja": "提出済み日誌を週次・月次レポートの根拠として確認するか、編集のため下書きに戻します。"
   },
   {
+    "key": "rbac.perm.construction.punch.view.label",
+    "category": "rbac",
+    "vi": "Xem danh mục lỗi",
+    "en": "View punch list",
+    "zh": "查看缺陷清单",
+    "ja": "パンチリストを表示"
+  },
+  {
+    "key": "rbac.perm.construction.punch.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh mục lỗi tồn đọng và trạng thái xử lý.",
+    "en": "Allows viewing the punch list and each item's resolution progress.",
+    "zh": "允许查看缺陷清单及每项处理进度。",
+    "ja": "パンチリストおよび各項目の対応状況を閲覧できます。"
+  },
+  {
+    "key": "rbac.perm.construction.punch.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý danh mục lỗi",
+    "en": "Manage punch list",
+    "zh": "管理缺陷清单",
+    "ja": "パンチリストを管理"
+  },
+  {
+    "key": "rbac.perm.construction.punch.manage.description",
+    "category": "rbac",
+    "vi": "Tạo/chỉnh sửa/xoá lỗi, gán người xử lý, chuyển sang In Progress / Fixed / Cancelled hoặc mở lại lỗi.",
+    "en": "Create / edit / delete items, assign owners, transition to InProgress / Fixed / Cancelled or reopen.",
+    "zh": "创建/编辑/删除缺陷、分配负责人、切换至处理中/已修复/取消，或重新打开。",
+    "ja": "項目の作成・編集・削除、担当者割当、対応中/修正済/取消への遷移および再オープンを行います。"
+  },
+  {
+    "key": "rbac.perm.construction.punch.verify.label",
+    "category": "rbac",
+    "vi": "Xác nhận đóng lỗi",
+    "en": "Verify punch close-out",
+    "zh": "确认缺陷关闭",
+    "ja": "パンチ完了を検証"
+  },
+  {
+    "key": "rbac.perm.construction.punch.verify.description",
+    "category": "rbac",
+    "vi": "Xác nhận lỗi đã được xử lý đúng và chuyển sang trạng thái Đã xác nhận — quyền dành cho PM / bên giám sát chất lượng.",
+    "en": "Sign off a resolved item and move it to Verified — reserved for PM / QA / handover.",
+    "zh": "确认缺陷已妥善解决并转入已验证状态 — 权限保留给项目经理/QA/交付方。",
+    "ja": "修正結果を確認して検証済に遷移させます — PM/QA/引渡担当向けの権限です。"
+  },
+  {
     "key": "rbac.perm.permit.checklists.view.label",
     "category": "rbac",
     "vi": "Xem checklist pháp lý",

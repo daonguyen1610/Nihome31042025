@@ -44,6 +44,7 @@ public static class SampleCrmDataSeeder
         SeedIfcReleases(db, owner, now);
         SeedConstructionTasks(db, owner, now);
         SeedSiteDiaries(db, owner, now);
+        SeedPunchItems(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1947,6 +1948,112 @@ public static class SampleCrmDataSeeder
         };
 
         db.SiteDiaries.AddRange(confirmed, submitted, draft);
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// M4 sample punch items (NIH-146) — 5 items across every status
+    /// so the punch-list page always has a hit on each stat pill and
+    /// one overdue row on a fresh boot. Idempotent via <c>Note</c>
+    /// marker.
+    /// </summary>
+    private static void SeedPunchItems(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_PUNCH]";
+        if (db.PunchItems.Any(p => p.Note != null && p.Note.StartsWith(SampleMarker))) return;
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        var today = DateOnly.FromDateTime(now);
+        var items = new[]
+        {
+            new PunchItem
+            {
+                DesignProjectId = project.Id,
+                PunchCode = "P-001",
+                Title = "T\u01b0\u1eddng khu WC t\u1ea7ng 1 b\u1ecb r\u1ea1n ch\u00e2n chim",
+                Description = "Xu\u1ea5t hi\u1ec7n v\u1ebft n\u1ee9t nh\u1ecf tr\u1ea3i d\u1ecdc theo m\u1ea3ng t\u01b0\u1eddng ph\u00eda \u0111\u00f4ng.",
+                Location = "T\u1ea7ng 1 - khu WC nam",
+                Severity = PunchSeverity.Medium,
+                AssigneeUserId = owner.Id,
+                Deadline = today.AddDays(-2), // overdue
+                Status = PunchStatus.Open,
+                Note = $"{SampleMarker} m\u1eabu - m\u1edf, tr\u1ec5",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-8),
+                UpdatedAt = now.AddDays(-8),
+            },
+            new PunchItem
+            {
+                DesignProjectId = project.Id,
+                PunchCode = "P-002",
+                Title = "\u1ed4 c\u1eafm \u0111i\u1ec7n ph\u00f2ng 302 kh\u00f4ng ho\u1ea1t \u0111\u1ed9ng",
+                Location = "T\u1ea7ng 3 - ph\u00f2ng 302",
+                Severity = PunchSeverity.High,
+                AssigneeUserId = owner.Id,
+                Deadline = today.AddDays(3),
+                Status = PunchStatus.InProgress,
+                Note = $"{SampleMarker} m\u1eabu - \u0111ang x\u1eed l\u00fd",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-5),
+                UpdatedAt = now.AddDays(-1),
+            },
+            new PunchItem
+            {
+                DesignProjectId = project.Id,
+                PunchCode = "P-003",
+                Title = "K\u00ednh c\u1eeda s\u1ed5 x\u01b0\u1edbng b\u1ecb x\u01b0\u1edbc nh\u1eb9",
+                Location = "T\u1ea7ng 2 - x\u01b0\u1edbng may",
+                Severity = PunchSeverity.Low,
+                AssigneeUserId = owner.Id,
+                Status = PunchStatus.Fixed,
+                ResolutionNote = "\u0110\u00e3 \u0111\u00e1nh b\u00f3ng b\u1ec1 m\u1eb7t k\u00ednh, \u0111ang ch\u1edd nghi\u1ec7m thu.",
+                Note = $"{SampleMarker} m\u1eabu - ch\u1edd nghi\u1ec7m thu",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-6),
+                UpdatedAt = now.AddDays(-1),
+            },
+            new PunchItem
+            {
+                DesignProjectId = project.Id,
+                PunchCode = "P-004",
+                Title = "S\u00e0n \u0111\u00e1 hoa c\u01b0\u01a1ng sanh chi\u1ebfu ngh\u1ec9 kh\u00f4ng b\u1eb1ng ph\u1eb3ng",
+                Location = "Chi\u1ebfu ngh\u1ec9 t\u1ea7ng 2-3",
+                Severity = PunchSeverity.Critical,
+                AssigneeUserId = owner.Id,
+                Status = PunchStatus.Verified,
+                ResolutionNote = "\u0110\u00e3 c\u1eaft l\u1ea1i mi\u1ebfng \u0111\u00e1 v\u00e0 c\u00e2n b\u1eb1ng th\u1ee7 c\u00f4ng.",
+                VerifiedAt = now.AddDays(-2),
+                VerifiedByUserId = owner.Id,
+                Note = $"{SampleMarker} m\u1eabu - \u0111\u00e3 \u0111\u00f3ng",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-10),
+                UpdatedAt = now.AddDays(-2),
+            },
+            new PunchItem
+            {
+                DesignProjectId = project.Id,
+                PunchCode = "P-005",
+                Title = "\u0110\u1ec1 ngh\u1ecb thay quy c\u00e1ch tay v\u1ecbn",
+                Location = "C\u1ea7u thang b\u1ed9",
+                Severity = PunchSeverity.Low,
+                Status = PunchStatus.Cancelled,
+                Note = $"{SampleMarker} m\u1eabu - hu\u1ef7 do CDT \u0111\u1ed3ng \u00fd gi\u1eef quy c\u00e1ch c\u0169",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-15),
+                UpdatedAt = now.AddDays(-12),
+            },
+        };
+        db.PunchItems.AddRange(items);
         db.SaveChanges();
     }
 }
