@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NihomeBackend.Data;
 
@@ -11,9 +12,11 @@ using NihomeBackend.Data;
 namespace nihomebackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723171752_AddAsBuiltDocuments")]
+    partial class AddAsBuiltDocuments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -79,115 +82,6 @@ namespace nihomebackend.Migrations
                         .IsUnique();
 
                     b.ToTable("about_section_contents", (string)null);
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.AcceptanceRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("AcceptanceCode")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("nvarchar(60)");
-
-                    b.Property<DateOnly>("AcceptanceDate")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ApprovedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ConstructionTaskId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<int>("DesignProjectId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Documents")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("Findings")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)");
-
-                    b.Property<string>("Location")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Participants")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime?>("RejectedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("RejectedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ResolutionNote")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<int>("RevisionCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<DateTime?>("SubmittedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("SubmittedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("UpdatedByUserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ApprovedByUserId");
-
-                    b.HasIndex("ConstructionTaskId");
-
-                    b.HasIndex("DesignProjectId");
-
-                    b.HasIndex("RejectedByUserId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("SubmittedByUserId");
-
-                    b.HasIndex("DesignProjectId", "AcceptanceCode")
-                        .IsUnique();
-
-                    b.ToTable("acceptance_records", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Activity", b =>
@@ -3988,45 +3882,6 @@ namespace nihomebackend.Migrations
                         .IsUnique();
 
                     b.ToTable("workflow_configs", (string)null);
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.AcceptanceRecord", b =>
-                {
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovedBy")
-                        .WithMany()
-                        .HasForeignKey("ApprovedByUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("NihomeBackend.Models.ConstructionTask", "ConstructionTask")
-                        .WithMany()
-                        .HasForeignKey("ConstructionTaskId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
-                        .WithMany()
-                        .HasForeignKey("DesignProjectId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", "RejectedBy")
-                        .WithMany()
-                        .HasForeignKey("RejectedByUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", "SubmittedBy")
-                        .WithMany()
-                        .HasForeignKey("SubmittedByUserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("ApprovedBy");
-
-                    b.Navigation("ConstructionTask");
-
-                    b.Navigation("DesignProject");
-
-                    b.Navigation("RejectedBy");
-
-                    b.Navigation("SubmittedBy");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Activity", b =>
