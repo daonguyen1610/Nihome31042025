@@ -46,6 +46,8 @@
   { "key": "constructionTasks.tab.list", "category": "constructionTasks", "vi": "Danh sách", "en": "List", "zh": "列表", "ja": "リスト" },
   { "key": "constructionTasks.tab.gantt", "category": "constructionTasks", "vi": "Gantt", "en": "Gantt", "zh": "甘特图", "ja": "ガント" },
 
+  { "key": "constructionTasks.gantt.timeline", "category": "constructionTasks", "vi": "Đường thời gian", "en": "Timeline", "zh": "时间轴", "ja": "タイムライン" },
+
   { "key": "constructionTasks.action.selectAll", "category": "constructionTasks", "vi": "Chọn tất cả", "en": "Select all", "zh": "全选", "ja": "すべて選択" },
   { "key": "constructionTasks.action.bulkDelete", "category": "constructionTasks", "vi": "Xoá đã chọn", "en": "Delete selected", "zh": "删除所选", "ja": "選択項目を削除" },
   { "key": "constructionTasks.action.editPredecessors", "category": "constructionTasks", "vi": "Sửa phụ thuộc", "en": "Edit predecessors", "zh": "编辑依赖", "ja": "先行タスクを編集" },

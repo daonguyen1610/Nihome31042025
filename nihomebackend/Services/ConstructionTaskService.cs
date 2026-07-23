@@ -205,10 +205,13 @@ public class ConstructionTaskService(
         entity.PlannedStart = request.PlannedStart;
         entity.PlannedEnd = request.PlannedEnd;
         entity.ActualStart = request.ActualStart;
-        entity.ActualEnd = request.ActualEnd;
         entity.ProgressPercent = request.ProgressPercent;
         entity.OwnerUserId = request.OwnerUserId;
-        entity.Status = ApplyStatusRules(nextStatus, entity, request.ActualStart, request.ActualEnd, request.ProgressPercent);
+        var (resolvedStatus, resolvedActualEnd) = ApplyStatusRules(
+            nextStatus, request.ActualStart, request.ActualEnd, request.ProgressPercent,
+            DateOnly.FromDateTime(DateTime.UtcNow));
+        entity.Status = resolvedStatus;
+        entity.ActualEnd = resolvedActualEnd;
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -230,15 +233,20 @@ public class ConstructionTaskService(
         if (request.ActualStart.HasValue) entity.ActualStart = request.ActualStart;
         if (request.ActualEnd.HasValue) entity.ActualEnd = request.ActualEnd;
 
+        var requestedStatus = entity.Status;
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
             if (!Enum.TryParse<ConstructionTaskStatus>(request.Status, true, out var st))
             {
                 throw new ConstructionTaskOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
             }
-            entity.Status = st;
+            requestedStatus = st;
         }
-        entity.Status = ApplyStatusRules(entity.Status, entity, entity.ActualStart, entity.ActualEnd, entity.ProgressPercent);
+        var (resolvedStatus, resolvedActualEnd) = ApplyStatusRules(
+            requestedStatus, entity.ActualStart, entity.ActualEnd, entity.ProgressPercent,
+            DateOnly.FromDateTime(DateTime.UtcNow));
+        entity.Status = resolvedStatus;
+        entity.ActualEnd = resolvedActualEnd;
 
         if (entity.ActualStart.HasValue && entity.ActualEnd.HasValue
             && entity.ActualEnd.Value < entity.ActualStart.Value)
@@ -314,8 +322,14 @@ public class ConstructionTaskService(
         var rows = await db.ConstructionTasks
             .Where(t => distinctIds.Contains(t.Id))
             .ToListAsync(ct);
+        // Count only *external* dependents — edges pointing from a task
+        // that is itself in the delete set will be cleaned up before the
+        // row is removed, so they must not block the operation. Without
+        // this exclusion, bulk-deleting a whole dependency chain would
+        // always fail on the earlier links.
         var dependencyCounts = await db.ConstructionTaskDependencies
-            .Where(d => distinctIds.Contains(d.PredecessorTaskId))
+            .Where(d => distinctIds.Contains(d.PredecessorTaskId)
+                     && !distinctIds.Contains(d.TaskId))
             .GroupBy(d => d.PredecessorTaskId)
             .Select(g => new { Id = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Id, x => x.Count, ct);
@@ -388,25 +402,34 @@ public class ConstructionTaskService(
     }
 
     /// <summary>
-    /// Slice-1 status rules — kept intentionally permissive so the owner
-    /// can correct a mistake, but auto-derives a couple of obvious edges
-    /// from the numeric fields so the Gantt chart never contradicts them.
+    /// Slice-1 status/date rules — kept intentionally permissive so the
+    /// owner can correct a mistake, but auto-derives obvious edges from
+    /// the numeric fields so the Gantt chart never contradicts them.
+    /// Returns the resolved <c>(status, actualEnd)</c> pair so the
+    /// caller can persist both without duplicating the branching.
     /// </summary>
-    private static ConstructionTaskStatus ApplyStatusRules(
+    private static (ConstructionTaskStatus Status, DateOnly? ActualEnd) ApplyStatusRules(
         ConstructionTaskStatus requested,
-        ConstructionTask entity,
         DateOnly? actualStart,
         DateOnly? actualEnd,
-        int progress)
+        int progress,
+        DateOnly today)
     {
-        // 100% progress + actual end => Completed regardless of the enum.
-        if (progress >= 100 && actualEnd.HasValue) return ConstructionTaskStatus.Completed;
-        // Actual start set + not yet Completed/Cancelled => at least InProgress.
+        // 100% progress => Completed, and auto-fill actualEnd to today
+        // if the user didn't supply one. Without this, we'd be left with
+        // an ambiguous "100% but still InProgress" state that the Gantt
+        // header would silently misclassify.
+        if (progress >= 100)
+        {
+            return (ConstructionTaskStatus.Completed, actualEnd ?? today);
+        }
+        // Actual start set + not yet Completed/Cancelled => at least
+        // InProgress. Preserve an already-InProgress request.
         if (actualStart.HasValue && requested == ConstructionTaskStatus.Planned)
         {
-            return ConstructionTaskStatus.InProgress;
+            return (ConstructionTaskStatus.InProgress, actualEnd);
         }
-        return requested;
+        return (requested, actualEnd);
     }
 
     private async Task ReplacePredecessorsAsync(ConstructionTask task, List<int> predecessorIds, CancellationToken ct)
@@ -440,11 +463,23 @@ public class ConstructionTaskService(
             await EnsureNoCycleAsync(task.Id, cleanIds, ct);
         }
 
+        // Diff against the existing edges instead of blindly delete+insert.
+        // Keeps the audit trail readable ("no-op saves" no longer flip
+        // dependency rows) and cuts a round-trip when nothing changed.
         var existing = await db.ConstructionTaskDependencies
             .Where(d => d.TaskId == task.Id)
             .ToListAsync(ct);
-        db.ConstructionTaskDependencies.RemoveRange(existing);
-        foreach (var pid in cleanIds)
+        var wantedSet = cleanIds.ToHashSet();
+        var existingSet = existing.Select(e => e.PredecessorTaskId).ToHashSet();
+
+        var toRemove = existing.Where(e => !wantedSet.Contains(e.PredecessorTaskId)).ToList();
+        var toAdd = cleanIds.Where(id => !existingSet.Contains(id)).ToList();
+
+        if (toRemove.Count > 0)
+        {
+            db.ConstructionTaskDependencies.RemoveRange(toRemove);
+        }
+        foreach (var pid in toAdd)
         {
             db.ConstructionTaskDependencies.Add(new ConstructionTaskDependency
             {
@@ -452,7 +487,10 @@ public class ConstructionTaskService(
                 PredecessorTaskId = pid,
             });
         }
-        await db.SaveChangesAsync(ct);
+        if (toRemove.Count > 0 || toAdd.Count > 0)
+        {
+            await db.SaveChangesAsync(ct);
+        }
     }
 
     private async Task EnsureNoCycleAsync(int taskId, List<int> newPredecessorIds, CancellationToken ct)
