@@ -34,4 +34,5 @@ public static class EntityTypes
     public const string DrawingRevision = "DrawingRevision";
     public const string IfcRelease = "IfcRelease";
     public const string ConstructionTask = "ConstructionTask";
+    public const string SiteDiary = "SiteDiary";
 }

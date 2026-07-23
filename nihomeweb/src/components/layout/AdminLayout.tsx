@@ -175,6 +175,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         icon: HardHat,
         items: [
           { to: "/admin/construction/tasks", label: t("nav.constructionTasks"), icon: HardHat, permission: ADMIN_PERMS.constructionTasks },
+          { to: "/admin/construction/diary", label: t("nav.constructionDiary"), icon: ClipboardList, permission: ADMIN_PERMS.constructionDiary },
         ],
       },
       {

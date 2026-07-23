@@ -2127,6 +2127,105 @@ export interface ConstructionTaskBulkDeleteResponse {
   failures: ConstructionTaskBulkDeleteFailure[];
 }
 
+// --- Site diary (NIH-142) ---------------------------------------------
+
+export type SiteDiaryStatus = "Draft" | "Submitted" | "Confirmed";
+
+export interface SiteDiaryResponse {
+  id: number;
+  designProjectId: number;
+  designProjectCode?: string | null;
+  designProjectName?: string | null;
+  diaryDate: string;
+  weatherCode: string;
+  weatherLabel?: string | null;
+  weatherNote?: string | null;
+  headcountLabor: number;
+  headcountEngineers: number;
+  headcountSupervisors: number;
+  headcountSubcontractors: number;
+  headcountTotal: number;
+  machinesSummary?: string | null;
+  materialsReceived?: string | null;
+  workPerformed: string;
+  incidents?: string | null;
+  note?: string | null;
+  status: SiteDiaryStatus;
+  submittedAt?: string | null;
+  submittedByUserId?: number | null;
+  submittedByName?: string | null;
+  confirmedAt?: string | null;
+  confirmedByUserId?: number | null;
+  confirmedByName?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SiteDiaryListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: SiteDiaryResponse[];
+  statusCounts: Partial<Record<SiteDiaryStatus, number>>;
+}
+
+export interface SiteDiaryListParams {
+  designProjectId?: number;
+  weatherCode?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateSiteDiaryRequest {
+  designProjectId: number;
+  diaryDate: string;
+  weatherCode: string;
+  weatherNote?: string | null;
+  headcountLabor: number;
+  headcountEngineers: number;
+  headcountSupervisors: number;
+  headcountSubcontractors: number;
+  machinesSummary?: string | null;
+  materialsReceived?: string | null;
+  workPerformed: string;
+  incidents?: string | null;
+  note?: string | null;
+}
+
+export interface UpdateSiteDiaryRequest {
+  diaryDate: string;
+  weatherCode: string;
+  weatherNote?: string | null;
+  headcountLabor: number;
+  headcountEngineers: number;
+  headcountSupervisors: number;
+  headcountSubcontractors: number;
+  machinesSummary?: string | null;
+  materialsReceived?: string | null;
+  workPerformed: string;
+  incidents?: string | null;
+  note?: string | null;
+}
+
+export interface BulkDeleteSiteDiariesRequest {
+  ids: number[];
+}
+
+export interface SiteDiaryBulkDeleteFailure {
+  id: number;
+  message: string;
+}
+
+export interface SiteDiaryBulkDeleteResponse {
+  requested: number;
+  deleted: number;
+  failures: SiteDiaryBulkDeleteFailure[];
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -2901,6 +3000,37 @@ export const adminApi = {
     api.delete(`/construction-tasks/${id}`),
   bulkDeleteConstructionTasks: (body: BulkDeleteConstructionTasksRequest) =>
     api.post<ConstructionTaskBulkDeleteResponse>("/construction-tasks/bulk-delete", body),
+
+  // Site diary (NIH-142)
+  listSiteDiaries: (params: SiteDiaryListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.weatherCode) q.append("weatherCode", params.weatherCode);
+    if (params.status) q.append("status", params.status);
+    if (params.dateFrom) q.append("dateFrom", params.dateFrom);
+    if (params.dateTo) q.append("dateTo", params.dateTo);
+    if (params.search) q.append("search", params.search);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<SiteDiaryListResponse>(`/site-diaries${qs ? `?${qs}` : ""}`);
+  },
+  getSiteDiary: (id: number) =>
+    api.get<SiteDiaryResponse>(`/site-diaries/${id}`),
+  createSiteDiary: (body: CreateSiteDiaryRequest) =>
+    api.post<SiteDiaryResponse>("/site-diaries", body),
+  updateSiteDiary: (id: number, body: UpdateSiteDiaryRequest) =>
+    api.put<SiteDiaryResponse>(`/site-diaries/${id}`, body),
+  submitSiteDiary: (id: number) =>
+    api.post<SiteDiaryResponse>(`/site-diaries/${id}/submit`),
+  confirmSiteDiary: (id: number) =>
+    api.post<SiteDiaryResponse>(`/site-diaries/${id}/confirm`),
+  reopenSiteDiary: (id: number) =>
+    api.post<SiteDiaryResponse>(`/site-diaries/${id}/reopen`),
+  deleteSiteDiary: (id: number) =>
+    api.delete(`/site-diaries/${id}`),
+  bulkDeleteSiteDiaries: (body: BulkDeleteSiteDiariesRequest) =>
+    api.post<SiteDiaryBulkDeleteResponse>("/site-diaries/bulk-delete", body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
