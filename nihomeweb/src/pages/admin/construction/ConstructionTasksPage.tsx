@@ -620,7 +620,10 @@ const AdminConstructionTasks = () => {
 
         {/* filters */}
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* `min-w-0` on every grid item so long option labels (project
+              codes + names) truncate via SearchableSelect's own `truncate`
+              instead of blowing past the viewport on narrow screens. */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
             <div>
               <Label className="text-xs text-slate-500">
                 {t("constructionTasks.field.project")}
@@ -744,15 +747,26 @@ const AdminConstructionTasks = () => {
           <>
             {/* Mobile cards (< md) — desktop table drops the important
                 columns, so this stacks the same fields in a card layout
-                that stays tap-friendly. Testids are scoped to the desktop
-                table below so the E2E suite (desktop viewport) has a
-                single, unambiguous target. */}
+                that stays tap-friendly. The whole card is clickable to
+                open the detail sheet — the checkbox + delete button
+                stop propagation so they don't also trigger it. Testids
+                are scoped to the desktop table below so the E2E suite
+                (desktop viewport) has a single, unambiguous target. */}
             <div className="space-y-3 md:hidden">
               {rows.map((row) => (
                 <div
                   key={`m-${row.id}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => void openDetail(row)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      void openDetail(row);
+                    }
+                  }}
                   className={cn(
-                    "relative rounded-xl border border-slate-200 bg-white p-4 shadow-sm",
+                    "relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300",
                     row.isOverdue && "border-amber-300 bg-amber-50/40",
                   )}
                 >
@@ -768,21 +782,22 @@ const AdminConstructionTasks = () => {
                           </span>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        className="mt-1 line-clamp-2 text-left text-base font-semibold text-slate-900 hover:text-blue-600"
-                        onClick={() => void openDetail(row)}
-                      >
+                      <div className="mt-1 line-clamp-2 text-base font-semibold text-slate-900">
                         {row.name}
-                      </button>
+                      </div>
                     </div>
                     {canManage && (
-                      <Checkbox
-                        checked={selected.has(row.id)}
-                        onCheckedChange={(v) => toggleSelect(row.id, !!v)}
-                        aria-label={`m-select-${row.taskCode}`}
-                        className="mt-1"
-                      />
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        role="presentation"
+                      >
+                        <Checkbox
+                          checked={selected.has(row.id)}
+                          onCheckedChange={(v) => toggleSelect(row.id, !!v)}
+                          aria-label={`m-select-${row.taskCode}`}
+                          className="mt-1"
+                        />
+                      </div>
                     )}
                   </div>
                   <div className="mt-2">{renderStatusBadge(row)}</div>
@@ -817,25 +832,22 @@ const AdminConstructionTasks = () => {
                       <div>{row.ownerName ?? "—"}</div>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-end gap-1 border-t border-slate-100 pt-3">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => void openDetail(row)}
-                    >
-                      {t("constructionTasks.action.detail")}
-                    </Button>
-                    {canManage && (
+                  {canManage && (
+                    <div className="mt-3 flex items-center justify-end border-t border-slate-100 pt-3">
                       <Button
                         size="sm"
                         variant="ghost"
                         className="text-rose-600 hover:text-rose-700"
-                        onClick={() => setDeleting(row)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleting(row);
+                        }}
+                        aria-label={`m-delete-${row.taskCode}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
               <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
@@ -897,11 +909,18 @@ const AdminConstructionTasks = () => {
                     {rows.map((row) => (
                       <tr
                         key={row.id}
-                        className={cn("hover:bg-slate-50", row.isOverdue && "bg-amber-50/40")}
+                        className={cn(
+                          "cursor-pointer hover:bg-slate-50",
+                          row.isOverdue && "bg-amber-50/40",
+                        )}
+                        onClick={() => void openDetail(row)}
                         data-testid={`construction-row-${row.id}`}
                       >
                         {canManage && (
-                          <td className="px-3 py-2">
+                          <td
+                            className="px-3 py-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Checkbox
                               checked={selected.has(row.id)}
                               onCheckedChange={(v) => toggleSelect(row.id, !!v)}
@@ -916,13 +935,12 @@ const AdminConstructionTasks = () => {
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          <button
-                            type="button"
-                            className="text-left font-medium text-slate-900 hover:text-blue-600"
-                            onClick={() => void openDetail(row)}
+                          <span
+                            className="font-medium text-slate-900"
+                            data-testid={`construction-detail-${row.id}`}
                           >
                             {row.name}
-                          </button>
+                          </span>
                           {row.predecessors.length > 0 && (
                             <div className="mt-0.5 text-[11px] text-slate-400">
                               ← {row.predecessors.map((p) => p.predecessorTaskCode).join(", ")}
@@ -947,15 +965,10 @@ const AdminConstructionTasks = () => {
                         <td className="px-3 py-2 text-xs text-slate-600">
                           {row.ownerName ?? "—"}
                         </td>
-                        <td className="px-3 py-2 text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => void openDetail(row)}
-                            data-testid={`construction-detail-${row.id}`}
-                          >
-                            {t("constructionTasks.action.detail")}
-                          </Button>
+                        <td
+                          className="px-3 py-2 text-right"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           {canManage && (
                             <Button
                               size="sm"
@@ -963,6 +976,7 @@ const AdminConstructionTasks = () => {
                               className="text-rose-600 hover:text-rose-700"
                               onClick={() => setDeleting(row)}
                               data-testid={`construction-delete-${row.id}`}
+                              aria-label={`delete-${row.taskCode}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
