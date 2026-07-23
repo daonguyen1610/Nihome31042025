@@ -46,6 +46,7 @@ public static class SampleCrmDataSeeder
         SeedSiteDiaries(db, owner, now);
         SeedPunchItems(db, owner, now);
         SeedAcceptanceRecords(db, owner, now);
+        SeedAsBuiltDocuments(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -2178,6 +2179,134 @@ public static class SampleCrmDataSeeder
         };
 
         db.AcceptanceRecords.AddRange(draft, submitted, overdue, approved, rejected);
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// M4 sample as-built dossier (NIH-145) — 6 documents covering
+    /// every category across Draft/Submitted/Approved/Archived so the
+    /// completeness roll-up on the list page has real numbers on a
+    /// fresh boot. Idempotent via <c>Note</c> marker.
+    /// </summary>
+    private static void SeedAsBuiltDocuments(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_ASBUILT]";
+        if (db.AsBuiltDocuments.Any(a => a.Note != null && a.Note.StartsWith(SampleMarker))) return;
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        var docs = new[]
+        {
+            // Approved drawing — counts toward completeness.
+            new AsBuiltDocument
+            {
+                DesignProjectId = project.Id,
+                DocumentCode = "AB-001",
+                Title = "B\u1ea3n v\u1ebd ho\u00e0n c\u00f4ng ki\u1ebfn tr\u00fac t\u1ea7ng 1",
+                Category = AsBuiltCategory.Drawing,
+                Status = AsBuiltStatus.Approved,
+                FileUrl = "/files/asbuilt/sample-arch-l1.pdf",
+                Note = $"{SampleMarker} \u0110\u00e3 duy\u1ec7t - m\u1eabu",
+                SubmittedAt = now.AddDays(-6),
+                SubmittedByUserId = owner.Id,
+                ApprovedAt = now.AddDays(-4),
+                ApprovedByUserId = owner.Id,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-10),
+                UpdatedAt = now.AddDays(-4),
+            },
+            // Archived acceptance minute — final.
+            new AsBuiltDocument
+            {
+                DesignProjectId = project.Id,
+                DocumentCode = "AB-002",
+                Title = "Bi\u00ean b\u1ea3n nghi\u1ec7m thu m\u00f3ng",
+                Category = AsBuiltCategory.AcceptanceMinute,
+                Status = AsBuiltStatus.Archived,
+                FileUrl = "/files/asbuilt/sample-minute-foundation.pdf",
+                Note = $"{SampleMarker} \u0110\u00e3 l\u01b0u tr\u1eef - m\u1eabu",
+                SubmittedAt = now.AddDays(-14),
+                SubmittedByUserId = owner.Id,
+                ApprovedAt = now.AddDays(-12),
+                ApprovedByUserId = owner.Id,
+                ArchivedAt = now.AddDays(-1),
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-20),
+                UpdatedAt = now.AddDays(-1),
+            },
+            // Approved test report.
+            new AsBuiltDocument
+            {
+                DesignProjectId = project.Id,
+                DocumentCode = "AB-003",
+                Title = "B\u00e1o c\u00e1o th\u00ed nghi\u1ec7m b\u00ea t\u00f4ng C30",
+                Category = AsBuiltCategory.TestReport,
+                Status = AsBuiltStatus.Approved,
+                FileUrl = "/files/asbuilt/sample-test-c30.pdf",
+                Note = $"{SampleMarker} \u0110\u00e3 duy\u1ec7t - m\u1eabu",
+                SubmittedAt = now.AddDays(-8),
+                SubmittedByUserId = owner.Id,
+                ApprovedAt = now.AddDays(-7),
+                ApprovedByUserId = owner.Id,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-12),
+                UpdatedAt = now.AddDays(-7),
+            },
+            // Submitted warranty — waiting on PM approval, keeps
+            // completeness at 3/4 so the header pill shows a gap.
+            new AsBuiltDocument
+            {
+                DesignProjectId = project.Id,
+                DocumentCode = "AB-004",
+                Title = "Ch\u1ee9ng ch\u1ec9 b\u1ea3o h\u00e0nh th\u1ea7u ph\u1ee5 MEP",
+                Category = AsBuiltCategory.WarrantyCertificate,
+                Status = AsBuiltStatus.Submitted,
+                FileUrl = "/files/asbuilt/sample-warranty-mep.pdf",
+                Note = $"{SampleMarker} Ch\u1edd duy\u1ec7t - m\u1eabu",
+                SubmittedAt = now.AddDays(-1),
+                SubmittedByUserId = owner.Id,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-3),
+                UpdatedAt = now.AddDays(-1),
+            },
+            // Draft — editable, useful for demo edit/submit flow.
+            new AsBuiltDocument
+            {
+                DesignProjectId = project.Id,
+                DocumentCode = "AB-005",
+                Title = "T\u1eadp \u1ea3nh ho\u00e0n c\u00f4ng ph\u1ea7n ngo\u1ea1i th\u1ea5t",
+                Category = AsBuiltCategory.Other,
+                Status = AsBuiltStatus.Draft,
+                Note = $"{SampleMarker} Nh\u00e1p - m\u1eabu",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddHours(-6),
+                UpdatedAt = now.AddHours(-6),
+            },
+            // Cancelled — showcase soft-remove path.
+            new AsBuiltDocument
+            {
+                DesignProjectId = project.Id,
+                DocumentCode = "AB-006",
+                Title = "B\u1ea3n v\u1ebd sai phi\u00ean b\u1ea3n - c\u1ea7n hu\u1ef7",
+                Category = AsBuiltCategory.Drawing,
+                Status = AsBuiltStatus.Cancelled,
+                Note = $"{SampleMarker} \u0110\u00e3 hu\u1ef7 - m\u1eabu",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-15),
+                UpdatedAt = now.AddDays(-14),
+            },
+        };
+        db.AsBuiltDocuments.AddRange(docs);
         db.SaveChanges();
     }
 }

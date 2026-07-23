@@ -2032,6 +2032,54 @@
     "ja": "検収記録を承認してフローを完了し、承認者の署名を記録します。"
   },
   {
+    "key": "rbac.perm.construction.asbuilt.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ hoàn công",
+    "en": "View as-built dossier",
+    "zh": "查看竣工资料",
+    "ja": "竣工ドシエを表示"
+  },
+  {
+    "key": "rbac.perm.construction.asbuilt.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh mục hồ sơ hoàn công và tình trạng đầy đủ theo hạng mục.",
+    "en": "Allows viewing the as-built dossier list and category completeness.",
+    "zh": "允许查看竣工资料清单及按类别的完成情况。",
+    "ja": "竣工ドシエの一覧とカテゴリ別の完了状況を閲覧できます。"
+  },
+  {
+    "key": "rbac.perm.construction.asbuilt.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hồ sơ hoàn công",
+    "en": "Manage as-built dossier",
+    "zh": "管理竣工资料",
+    "ja": "竣工ドシエを管理"
+  },
+  {
+    "key": "rbac.perm.construction.asbuilt.manage.description",
+    "category": "rbac",
+    "vi": "Tạo/chỉnh sửa/xoá tài liệu, gán danh mục, nộp duyệt, sửa lại và huỷ.",
+    "en": "Create / edit / delete documents, assign category, submit for approval, revise and cancel.",
+    "zh": "创建/编辑/删除文件、分配类别、提交审批、修订及取消。",
+    "ja": "資料の作成・編集・削除、カテゴリ設定、承認提出、修正、取消を行います。"
+  },
+  {
+    "key": "rbac.perm.construction.asbuilt.approve.label",
+    "category": "rbac",
+    "vi": "Duyệt hồ sơ hoàn công",
+    "en": "Approve as-built dossier",
+    "zh": "审批竣工资料",
+    "ja": "竣工ドシエを承認"
+  },
+  {
+    "key": "rbac.perm.construction.asbuilt.approve.description",
+    "category": "rbac",
+    "vi": "Ký duyệt và lưu trữ tài liệu hoàn công — quyền dành cho PM / DESIGN_LEAD.",
+    "en": "Sign off and archive an as-built document — reserved for PM / DESIGN_LEAD.",
+    "zh": "签署并归档竣工资料 — 权限保留给项目经理/DESIGN_LEAD。",
+    "ja": "竣工資料を承認・保管します — PM/DESIGN_LEAD 向けの権限です。"
+  },
+  {
     "key": "rbac.perm.permit.checklists.view.label",
     "category": "rbac",
     "vi": "Xem checklist pháp lý",

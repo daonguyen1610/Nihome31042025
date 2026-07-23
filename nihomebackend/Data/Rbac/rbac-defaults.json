@@ -121,9 +121,14 @@
     { "module": "construction.punch", "action": "view" },
     { "module": "construction.punch", "action": "manage" },
     { "module": "construction.punch", "action": "verify" },
+
     { "module": "construction.acceptance", "action": "view" },
     { "module": "construction.acceptance", "action": "manage" },
     { "module": "construction.acceptance", "action": "approve" },
+
+    { "module": "construction.asbuilt", "action": "view" },
+    { "module": "construction.asbuilt", "action": "manage" },
+    { "module": "construction.asbuilt", "action": "approve" },
 
     { "module": "permit.checklists", "action": "view" },
     { "module": "permit.checklists", "action": "manage" },
@@ -200,6 +205,7 @@
         "construction.diary.view",
         "construction.punch.view",
         "construction.acceptance.view", "construction.acceptance.manage",
+        "construction.asbuilt.view", "construction.asbuilt.manage",
         "profile.me.*"
       ]
     },
@@ -215,6 +221,7 @@
         "construction.diary.**",
         "construction.punch.**",
         "construction.acceptance.**",
+        "construction.asbuilt.**",
         "profile.me.*"
       ]
     },
@@ -233,6 +240,7 @@
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
         "construction.acceptance.view", "construction.acceptance.manage",
+        "construction.asbuilt.view", "construction.asbuilt.manage",
         "profile.me.*"
       ]
     },
@@ -250,6 +258,7 @@
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
         "construction.acceptance.view", "construction.acceptance.manage",
+        "construction.asbuilt.view", "construction.asbuilt.manage",
         "profile.me.*"
       ]
     },
@@ -267,6 +276,7 @@
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
         "construction.acceptance.view", "construction.acceptance.manage",
+        "construction.asbuilt.view", "construction.asbuilt.manage",
         "profile.me.*"
       ]
     },
@@ -290,6 +300,7 @@
         "construction.diary.**",
         "construction.punch.**",
         "construction.acceptance.**",
+        "construction.asbuilt.**",
         "permit.checklists.**",
         "profile.me.*"
       ]

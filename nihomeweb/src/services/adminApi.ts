@@ -2413,6 +2413,91 @@ export interface AcceptanceRecordBulkDeleteResponse {
   skippedIds: number[];
 }
 
+// --- As-built dossier (NIH-145) ---------------------------------------
+export type AsBuiltStatus = "Draft" | "Submitted" | "Approved" | "Archived" | "Cancelled";
+export type AsBuiltCategory =
+  | "Drawing"
+  | "AcceptanceMinute"
+  | "TestReport"
+  | "WarrantyCertificate"
+  | "Other";
+
+export interface AsBuiltDocumentResponse {
+  id: number;
+  designProjectId: number;
+  designProjectName: string;
+  documentCode: string;
+  title: string;
+  category: AsBuiltCategory;
+  description?: string | null;
+  fileUrl?: string | null;
+  status: AsBuiltStatus;
+  note?: string | null;
+  submittedAt?: string | null;
+  submittedByUserId?: number | null;
+  submittedByName?: string | null;
+  approvedAt?: string | null;
+  approvedByUserId?: number | null;
+  approvedByName?: string | null;
+  archivedAt?: string | null;
+  createdAt: string;
+  createdByUserId?: number | null;
+  updatedAt: string;
+  updatedByUserId?: number | null;
+}
+
+export interface AsBuiltDocumentListResponse {
+  items: AsBuiltDocumentResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  statusCounts: Partial<Record<AsBuiltStatus, number>>;
+  categoryCounts: Partial<Record<AsBuiltCategory, number>>;
+  completedRequiredCategories: number;
+  totalRequiredCategories: number;
+}
+
+export interface AsBuiltDocumentListParams {
+  designProjectId?: number;
+  category?: string;
+  status?: string;
+  search?: string;
+  openOnly?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateAsBuiltDocumentRequest {
+  designProjectId: number;
+  title: string;
+  category: AsBuiltCategory;
+  description?: string | null;
+  fileUrl?: string | null;
+  note?: string | null;
+}
+
+export interface UpdateAsBuiltDocumentRequest {
+  title: string;
+  category: AsBuiltCategory;
+  description?: string | null;
+  fileUrl?: string | null;
+  note?: string | null;
+}
+
+export interface TransitionAsBuiltStatusRequest {
+  status: AsBuiltStatus;
+  note?: string | null;
+}
+
+export interface BulkDeleteAsBuiltDocumentsRequest {
+  ids: number[];
+}
+
+export interface AsBuiltDocumentBulkDeleteResponse {
+  deletedIds: number[];
+  skippedIds: number[];
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -3277,6 +3362,34 @@ export const adminApi = {
     api.delete(`/acceptance-records/${id}`),
   bulkDeleteAcceptanceRecords: (body: BulkDeleteAcceptanceRecordsRequest) =>
     api.post<AcceptanceRecordBulkDeleteResponse>("/acceptance-records/bulk-delete", body),
+
+  // As-built dossier (NIH-145)
+  listAsBuiltDocuments: (params: AsBuiltDocumentListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.category) q.append("category", params.category);
+    if (params.status) q.append("status", params.status);
+    if (params.search) q.append("search", params.search);
+    if (params.openOnly) q.append("openOnly", "true");
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<AsBuiltDocumentListResponse>(`/as-built-documents${qs ? `?${qs}` : ""}`);
+  },
+  getAsBuiltDocument: (id: number) =>
+    api.get<AsBuiltDocumentResponse>(`/as-built-documents/${id}`),
+  createAsBuiltDocument: (body: CreateAsBuiltDocumentRequest) =>
+    api.post<AsBuiltDocumentResponse>("/as-built-documents", body),
+  updateAsBuiltDocument: (id: number, body: UpdateAsBuiltDocumentRequest) =>
+    api.put<AsBuiltDocumentResponse>(`/as-built-documents/${id}`, body),
+  transitionAsBuiltStatus: (id: number, body: TransitionAsBuiltStatusRequest) =>
+    api.post<AsBuiltDocumentResponse>(`/as-built-documents/${id}/status`, body),
+  approveAsBuiltDocument: (id: number, body: TransitionAsBuiltStatusRequest) =>
+    api.post<AsBuiltDocumentResponse>(`/as-built-documents/${id}/approve`, body),
+  deleteAsBuiltDocument: (id: number) =>
+    api.delete(`/as-built-documents/${id}`),
+  bulkDeleteAsBuiltDocuments: (body: BulkDeleteAsBuiltDocumentsRequest) =>
+    api.post<AsBuiltDocumentBulkDeleteResponse>("/as-built-documents/bulk-delete", body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>
