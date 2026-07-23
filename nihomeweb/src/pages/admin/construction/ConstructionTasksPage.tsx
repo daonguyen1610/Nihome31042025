@@ -223,6 +223,13 @@ const AdminConstructionTasks = () => {
   const [detail, setDetail] = useState<ConstructionTaskResponse | null>(null);
   const [detailForm, setDetailForm] = useState<EditForm | null>(null);
   const [detailPreds, setDetailPreds] = useState<number[]>([]);
+  /**
+   * Full sibling pool for the predecessor picker — fetched fresh every
+   * time a detail sheet opens so the options include tasks living on
+   * pages other than the currently visible one, and don’t drop when
+   * the user has an active status/search filter.
+   */
+  const [detailSiblings, setDetailSiblings] = useState<ConstructionTaskResponse[]>([]);
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -384,13 +391,36 @@ const AdminConstructionTasks = () => {
     setDetailForm(editFormFrom(row));
     setDetailPreds(row.predecessors.map((p) => p.predecessorTaskId));
     setDetailError(null);
+    // Pull the whole project’s task set for the predecessor picker
+    // (independent of the current filter/pagination). Fire-and-forget
+    // — the picker falls back to the visible rows while it loads.
+    try {
+      const { data } = await adminApi.listConstructionTasks({
+        designProjectId: row.designProjectId,
+        pageSize: 200,
+      });
+      setDetailSiblings(data.items ?? []);
+    } catch {
+      setDetailSiblings([]);
+    }
   };
   const closeDetail = () => {
     setDetail(null);
     setDetailForm(null);
     setDetailPreds([]);
+    setDetailSiblings([]);
     setDetailError(null);
   };
+
+  // Safety net: if a rapid click changes `detail` before we set the form
+  // and pred set in `openDetail`, this resyncs on the id change so the
+  // sheet never renders stale data.
+  useEffect(() => {
+    if (!detail) return;
+    setDetailForm(editFormFrom(detail));
+    setDetailPreds(detail.predecessors.map((p) => p.predecessorTaskId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail?.id]);
 
   const submitDetail = async () => {
     if (!detail || !detailForm) return;
@@ -490,9 +520,17 @@ const AdminConstructionTasks = () => {
           .replace("{requested}", String(data.requested)),
       });
       if (data.failures.length > 0) {
+        // Cap the toast body so a 100-row bulk-delete doesn’t drown the
+        // corner — keep the first 3 messages + a count of the rest.
+        const MAX_SHOWN = 3;
+        const shown = data.failures
+          .slice(0, MAX_SHOWN)
+          .map((f) => `#${f.id}: ${f.message}`)
+          .join(" · ");
+        const rest = data.failures.length - MAX_SHOWN;
         toast({
           title: t("common.warning"),
-          description: data.failures.map((f) => `#${f.id}: ${f.message}`).join(" · "),
+          description: rest > 0 ? `${shown} … (+${rest})` : shown,
           variant: "destructive",
         });
       }
@@ -523,12 +561,14 @@ const AdminConstructionTasks = () => {
 
   const predecessorOptions = useMemo(() => {
     if (!detail) return [] as { value: string; label: string }[];
-    // Sibling tasks in the same project — exclude the current task itself
-    // to keep the picker honest, cycles are still caught server-side.
-    return rows
+    // Prefer the freshly-loaded sibling pool so we include tasks that
+    // are outside the current filter/page. Fall back to `rows` while
+    // the sibling fetch is in flight.
+    const pool = detailSiblings.length > 0 ? detailSiblings : rows;
+    return pool
       .filter((r) => r.designProjectId === detail.designProjectId && r.id !== detail.id)
       .map((r) => ({ value: String(r.id), label: `${r.taskCode} — ${r.name}` }));
-  }, [detail, rows]);
+  }, [detail, detailSiblings, rows]);
 
   const ganttData = useMemo(() => buildGantt(rows), [rows]);
 
@@ -636,7 +676,6 @@ const AdminConstructionTasks = () => {
                 }}
                 options={projectOptions}
                 placeholder={t("constructionTasks.filter.allProjects")}
-                data-testid="construction-project-filter"
               />
             </div>
             <div>
@@ -1263,7 +1302,7 @@ const AdminConstructionTasks = () => {
                       type="range"
                       min={0}
                       max={100}
-                      step={5}
+                      step={1}
                       value={detailForm.progressPercent}
                       onChange={(e) =>
                         setDetailForm(
@@ -1500,7 +1539,7 @@ const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
               {t("constructionTasks.field.name")}
             </div>
             <div className="border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase text-slate-500">
-              Timeline
+              {t("constructionTasks.gantt.timeline")}
             </div>
             {data.rows.map(({ task, offsetDays, spanDays }) => (
               <Fragment key={task.id}>

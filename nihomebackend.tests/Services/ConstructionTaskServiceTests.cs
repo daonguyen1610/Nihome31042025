@@ -179,6 +179,36 @@ public class ConstructionTaskServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SetPredecessorsAsync_no_op_when_set_is_identical()
+    {
+        // Re-submitting the same predecessor set must NOT delete + re-add
+        // the join rows — otherwise every "Save" click on the detail sheet
+        // would churn the audit log even when nothing changed.
+        var a = await _sut.CreateAsync(Req("A"), _userId);
+        var b = await _sut.CreateAsync(new CreateConstructionTaskRequest
+        {
+            DesignProjectId = _projectId,
+            Name = "B",
+            PlannedStart = new DateOnly(2026, 6, 11),
+            PlannedEnd = new DateOnly(2026, 6, 15),
+            PredecessorTaskIds = new List<int> { a.Id },
+        }, _userId);
+        var edgeIdBefore = (await _db.ConstructionTaskDependencies
+            .FirstAsync(d => d.TaskId == b.Id && d.PredecessorTaskId == a.Id)).Id;
+
+        await _sut.SetPredecessorsAsync(b.Id, new SetConstructionTaskPredecessorsRequest
+        {
+            PredecessorTaskIds = new List<int> { a.Id },
+        }, _userId);
+
+        // Same primary key => the row was not re-created.
+        var edgeIdAfter = (await _db.ConstructionTaskDependencies
+            .FirstAsync(d => d.TaskId == b.Id && d.PredecessorTaskId == a.Id)).Id;
+        Assert.Equal(edgeIdBefore, edgeIdAfter);
+        Assert.Equal(1, await _db.ConstructionTaskDependencies.CountAsync(d => d.TaskId == b.Id));
+    }
+
+    [Fact]
     public async Task UpdateAsync_rejects_progress_out_of_range()
     {
         var a = await _sut.CreateAsync(Req(), _userId);
@@ -211,6 +241,28 @@ public class ConstructionTaskServiceTests : IDisposable
         var updated = await _sut.UpdateAsync(a.Id, body, _userId);
         Assert.NotNull(updated);
         Assert.Equal("Completed", updated!.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_auto_completes_and_backfills_actual_end_when_missing()
+    {
+        // 100% progress with no explicit actualEnd => service fills
+        // actualEnd = today so the Gantt/status can never disagree.
+        var a = await _sut.CreateAsync(Req(), _userId);
+        var body = new UpdateConstructionTaskRequest
+        {
+            Name = "A",
+            PlannedStart = a.PlannedStart,
+            PlannedEnd = a.PlannedEnd,
+            ActualStart = new DateOnly(2026, 6, 1),
+            ActualEnd = null,
+            ProgressPercent = 100,
+            Status = "InProgress",
+        };
+        var updated = await _sut.UpdateAsync(a.Id, body, _userId);
+        Assert.NotNull(updated);
+        Assert.Equal("Completed", updated!.Status);
+        Assert.NotNull(updated.ActualEnd);
     }
 
     [Fact]
@@ -327,8 +379,12 @@ public class ConstructionTaskServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task BulkDeleteAsync_deletes_free_rows_and_reports_failures_for_predecessors()
+    public async Task BulkDeleteAsync_deletes_whole_dependency_chain_when_all_selected()
     {
+        // Chain A -> B -> C plus isolated D and a missing id. The service
+        // should collapse the internal edges and drop the three chained
+        // rows, while still surfacing the missing-id failure so the caller
+        // knows part of their input never existed.
         var a = await _sut.CreateAsync(Req("A"), _userId);
         var b = await _sut.CreateAsync(new CreateConstructionTaskRequest
         {
@@ -338,15 +394,46 @@ public class ConstructionTaskServiceTests : IDisposable
             PlannedEnd = new DateOnly(2026, 6, 15),
             PredecessorTaskIds = new List<int> { a.Id },
         }, _userId);
-        var c = await _sut.CreateAsync(Req("C"), _userId);
+        var c = await _sut.CreateAsync(new CreateConstructionTaskRequest
+        {
+            DesignProjectId = _projectId,
+            Name = "C",
+            PlannedStart = new DateOnly(2026, 6, 16),
+            PlannedEnd = new DateOnly(2026, 6, 20),
+            PredecessorTaskIds = new List<int> { b.Id },
+        }, _userId);
+        var d = await _sut.CreateAsync(Req("D"), _userId);
 
-        var response = await _sut.BulkDeleteAsync(new[] { a.Id, b.Id, c.Id, 999 });
-        Assert.Equal(4, response.Requested);
-        Assert.Equal(2, response.Deleted); // b + c
-        Assert.Equal(2, response.Failures.Count);
-        Assert.Contains(response.Failures, f => f.Id == a.Id);
+        var response = await _sut.BulkDeleteAsync(new[] { a.Id, b.Id, c.Id, d.Id, 999 });
+        Assert.Equal(5, response.Requested);
+        Assert.Equal(4, response.Deleted);
+        Assert.Single(response.Failures);
         Assert.Contains(response.Failures, f => f.Id == 999);
-        Assert.False(await _db.ConstructionTasks.AnyAsync(t => t.Id == b.Id));
+        Assert.False(await _db.ConstructionTasks.AnyAsync(t => t.Id == a.Id));
+        Assert.False(await _db.ConstructionTaskDependencies.AnyAsync());
+    }
+
+    [Fact]
+    public async Task BulkDeleteAsync_blocks_when_external_dependent_survives()
+    {
+        // A -> B. Deleting just A must still fail because B (not in the
+        // delete set) still depends on it.
+        var a = await _sut.CreateAsync(Req("A"), _userId);
+        var b = await _sut.CreateAsync(new CreateConstructionTaskRequest
+        {
+            DesignProjectId = _projectId,
+            Name = "B",
+            PlannedStart = new DateOnly(2026, 6, 11),
+            PlannedEnd = new DateOnly(2026, 6, 15),
+            PredecessorTaskIds = new List<int> { a.Id },
+        }, _userId);
+
+        var response = await _sut.BulkDeleteAsync(new[] { a.Id });
+        Assert.Equal(1, response.Requested);
+        Assert.Equal(0, response.Deleted);
+        Assert.Single(response.Failures);
+        Assert.Equal(a.Id, response.Failures[0].Id);
+        Assert.True(await _db.ConstructionTasks.AnyAsync(t => t.Id == b.Id));
         Assert.True(await _db.ConstructionTasks.AnyAsync(t => t.Id == a.Id));
     }
 

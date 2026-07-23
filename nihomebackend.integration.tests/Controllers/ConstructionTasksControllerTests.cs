@@ -166,8 +166,11 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BulkDelete_ReportsFailuresAndDeletesRest()
+    public async Task BulkDelete_CollapsesInternalEdges_ReportsMissingId()
     {
+        // A -> B, plus isolated C. When all three are selected the whole
+        // dependency chain must go — the service must not block A just
+        // because B (also being deleted) still depends on it.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
         var a = await CreateTaskAsync(projectId, "2026-06-01", "2026-06-05");
@@ -185,8 +188,34 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("requested").GetInt32().Should().Be(4);
-        body.GetProperty("deleted").GetInt32().Should().Be(2); // b + c
-        body.GetProperty("failures").GetArrayLength().Should().Be(2); // a blocked, 999999 missing
+        body.GetProperty("deleted").GetInt32().Should().Be(3); // a + b + c collapse together
+        var failures = body.GetProperty("failures");
+        failures.GetArrayLength().Should().Be(1);
+        failures[0].GetProperty("id").GetInt32().Should().Be(999_999);
+    }
+
+    [Fact]
+    public async Task BulkDelete_BlocksWhenExternalDependentSurvives()
+    {
+        // A -> B. Deleting only A must still fail because B (not in the
+        // set) still depends on it — no accidental cascade.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var a = await CreateTaskAsync(projectId, "2026-06-01", "2026-06-05");
+        var b = await CreateTaskAsync(projectId, "2026-06-06", "2026-06-10");
+        (await Client.PutAsJsonAsync($"/api/construction-tasks/{b}/predecessors", new
+        {
+            predecessorTaskIds = new[] { a },
+        })).EnsureSuccessStatusCode();
+
+        var res = await Client.PostAsJsonAsync("/api/construction-tasks/bulk-delete", new
+        {
+            ids = new[] { a },
+        });
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("deleted").GetInt32().Should().Be(0);
+        body.GetProperty("failures").GetArrayLength().Should().Be(1);
     }
 
     [Fact]
