@@ -107,10 +107,15 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
         r.url().includes("/api/construction-tasks?") &&
         r.request().method() === "GET",
     );
-    await expect(page.getByRole("button", { name: taskName })).toBeVisible();
+    // The row itself is clickable now (no dedicated "Xem chi tiết"
+    // button), so we assert the row exists by scoping to its testid.
+    const createdRow = page.locator('[data-testid^="construction-row-"]').filter({
+      hasText: taskName,
+    });
+    await expect(createdRow).toBeVisible();
 
     // ---------- 4. Open detail sheet + push progress to 100 (auto-completes) ----------
-    await page.locator('[data-testid^="construction-detail-"]').first().click();
+    await createdRow.click();
     await expect(page.getByTestId("construction-detail-save")).toBeVisible();
     // Set actual end date so the auto-complete rule fires.
     await page.locator('input[type="date"]').nth(2).fill(today); // actualStart
@@ -153,7 +158,9 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
 
     // ---------- 5. Bulk-delete the task we just created ----------
     // Select the single row via its select checkbox.
-    const row = page.locator('[data-testid^="construction-row-"]').first();
+    const row = page.locator('[data-testid^="construction-row-"]').filter({
+      hasText: taskName,
+    });
     await row.locator('button[role="checkbox"]').click();
     await page.getByTestId("construction-bulk-delete").click();
     await Promise.all([
@@ -169,7 +176,9 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
     );
 
     // The row is gone, empty state is back.
-    await expect(page.getByRole("button", { name: taskName })).toHaveCount(0);
+    await expect(
+      page.locator('[data-testid^="construction-row-"]').filter({ hasText: taskName }),
+    ).toHaveCount(0);
   });
 
   test("SALE role is blocked from Construction Tasks endpoints", async ({ api, loginAs }) => {
