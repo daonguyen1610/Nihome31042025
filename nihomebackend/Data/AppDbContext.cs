@@ -90,6 +90,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<ConstructionTask> ConstructionTasks => Set<ConstructionTask>();
     public DbSet<ConstructionTaskDependency> ConstructionTaskDependencies => Set<ConstructionTaskDependency>();
+    public DbSet<AcceptanceRecord> AcceptanceRecords => Set<AcceptanceRecord>();
 
     public DbSet<SiteDiary> SiteDiaries => Set<SiteDiary>();
 
@@ -1102,6 +1103,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(p => new { p.DesignProjectId, p.PunchCode }).IsUnique();
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.Severity);
+        });
+
+        modelBuilder.Entity<AcceptanceRecord>(b =>
+        {
+            b.ToTable("acceptance_records");
+            b.HasKey(a => a.Id);
+            b.Property(a => a.AcceptanceCode).HasMaxLength(60).IsRequired();
+            b.Property(a => a.Title).HasMaxLength(300).IsRequired();
+            b.Property(a => a.Description).HasMaxLength(4000);
+            b.Property(a => a.Location).HasMaxLength(200);
+            b.Property(a => a.Participants).HasMaxLength(1000);
+            b.Property(a => a.Findings).HasMaxLength(4000);
+            b.Property(a => a.ResolutionNote).HasMaxLength(2000);
+            b.Property(a => a.Documents).HasMaxLength(4000);
+            b.Property(a => a.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(a => a.DesignProject)
+                .WithMany()
+                .HasForeignKey(a => a.DesignProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(a => a.ConstructionTask)
+                .WithMany()
+                .HasForeignKey(a => a.ConstructionTaskId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(a => a.SubmittedBy)
+                .WithMany()
+                .HasForeignKey(a => a.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(a => a.ApprovedBy)
+                .WithMany()
+                .HasForeignKey(a => a.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(a => a.RejectedBy)
+                .WithMany()
+                .HasForeignKey(a => a.RejectedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(a => a.DesignProjectId);
+            b.HasIndex(a => new { a.DesignProjectId, a.AcceptanceCode }).IsUnique();
+            b.HasIndex(a => a.Status);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

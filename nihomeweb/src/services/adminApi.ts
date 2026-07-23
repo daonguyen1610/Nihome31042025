@@ -2320,6 +2320,99 @@ export interface PunchItemBulkDeleteResponse {
   failures: PunchItemBulkDeleteFailure[];
 }
 
+// Partial acceptance (Nghiệm thu từng phần / NIH-143)
+export type AcceptanceStatus = "Draft" | "Submitted" | "Approved" | "Rejected" | "Cancelled";
+
+export interface AcceptanceRecordResponse {
+  id: number;
+  designProjectId: number;
+  designProjectName: string;
+  acceptanceCode: string;
+  title: string;
+  description?: string | null;
+  constructionTaskId?: number | null;
+  constructionTaskName?: string | null;
+  acceptanceDate: string;
+  location?: string | null;
+  participants?: string | null;
+  findings?: string | null;
+  resolutionNote?: string | null;
+  documents?: string | null;
+  status: AcceptanceStatus;
+  isOverdue: boolean;
+  revisionCount: number;
+  submittedAt?: string | null;
+  submittedByUserId?: number | null;
+  submittedByName?: string | null;
+  approvedAt?: string | null;
+  approvedByUserId?: number | null;
+  approvedByName?: string | null;
+  rejectedAt?: string | null;
+  rejectedByUserId?: number | null;
+  rejectedByName?: string | null;
+  createdAt: string;
+  createdByUserId?: number | null;
+  updatedAt: string;
+  updatedByUserId?: number | null;
+}
+
+export interface AcceptanceRecordListResponse {
+  items: AcceptanceRecordResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  statusCounts: Partial<Record<AcceptanceStatus, number>>;
+  overdueCount: number;
+}
+
+export interface AcceptanceRecordListParams {
+  designProjectId?: number;
+  status?: string;
+  constructionTaskId?: number;
+  search?: string;
+  overdueOnly?: boolean;
+  openOnly?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateAcceptanceRecordRequest {
+  designProjectId: number;
+  title: string;
+  description?: string | null;
+  constructionTaskId?: number | null;
+  acceptanceDate: string;
+  location?: string | null;
+  participants?: string | null;
+  findings?: string | null;
+  documents?: string | null;
+}
+
+export interface UpdateAcceptanceRecordRequest {
+  title: string;
+  description?: string | null;
+  constructionTaskId?: number | null;
+  acceptanceDate: string;
+  location?: string | null;
+  participants?: string | null;
+  findings?: string | null;
+  documents?: string | null;
+}
+
+export interface TransitionAcceptanceStatusRequest {
+  status: AcceptanceStatus;
+  resolutionNote?: string | null;
+}
+
+export interface BulkDeleteAcceptanceRecordsRequest {
+  ids: number[];
+}
+
+export interface AcceptanceRecordBulkDeleteResponse {
+  deletedIds: number[];
+  skippedIds: number[];
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -3155,6 +3248,35 @@ export const adminApi = {
     api.delete(`/punch-items/${id}`),
   bulkDeletePunchItems: (body: BulkDeletePunchItemsRequest) =>
     api.post<PunchItemBulkDeleteResponse>("/punch-items/bulk-delete", body),
+
+  // Partial acceptance (NIH-143)
+  listAcceptanceRecords: (params: AcceptanceRecordListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.constructionTaskId != null) q.append("constructionTaskId", String(params.constructionTaskId));
+    if (params.status) q.append("status", params.status);
+    if (params.search) q.append("search", params.search);
+    if (params.openOnly) q.append("openOnly", "true");
+    if (params.overdueOnly) q.append("overdueOnly", "true");
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<AcceptanceRecordListResponse>(`/acceptance-records${qs ? `?${qs}` : ""}`);
+  },
+  getAcceptanceRecord: (id: number) =>
+    api.get<AcceptanceRecordResponse>(`/acceptance-records/${id}`),
+  createAcceptanceRecord: (body: CreateAcceptanceRecordRequest) =>
+    api.post<AcceptanceRecordResponse>("/acceptance-records", body),
+  updateAcceptanceRecord: (id: number, body: UpdateAcceptanceRecordRequest) =>
+    api.put<AcceptanceRecordResponse>(`/acceptance-records/${id}`, body),
+  transitionAcceptanceStatus: (id: number, body: TransitionAcceptanceStatusRequest) =>
+    api.post<AcceptanceRecordResponse>(`/acceptance-records/${id}/status`, body),
+  approveAcceptanceRecord: (id: number, body: TransitionAcceptanceStatusRequest) =>
+    api.post<AcceptanceRecordResponse>(`/acceptance-records/${id}/approve`, body),
+  deleteAcceptanceRecord: (id: number) =>
+    api.delete(`/acceptance-records/${id}`),
+  bulkDeleteAcceptanceRecords: (body: BulkDeleteAcceptanceRecordsRequest) =>
+    api.post<AcceptanceRecordBulkDeleteResponse>("/acceptance-records/bulk-delete", body),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>

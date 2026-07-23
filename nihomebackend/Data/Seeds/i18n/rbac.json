@@ -1984,6 +1984,54 @@
     "ja": "修正結果を確認して検証済に遷移させます — PM/QA/引渡担当向けの権限です。"
   },
   {
+    "key": "rbac.perm.construction.acceptance.view.label",
+    "category": "rbac",
+    "vi": "Xem nghiệm thu từng phần",
+    "en": "View partial acceptance",
+    "zh": "查看分部验收",
+    "ja": "部分検収を表示"
+  },
+  {
+    "key": "rbac.perm.construction.acceptance.view.description",
+    "category": "rbac",
+    "vi": "Cho phép xem danh sách biên bản nghiệm thu bộ phận/giai đoạn và chi tiết.",
+    "en": "Allows viewing the partial acceptance list and record detail.",
+    "zh": "允许查看分部/阶段验收记录清单和详情。",
+    "ja": "部分・段階検収記録の一覧と詳細の閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.construction.acceptance.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý nghiệm thu từng phần",
+    "en": "Manage partial acceptance",
+    "zh": "管理分部验收",
+    "ja": "部分検収を管理"
+  },
+  {
+    "key": "rbac.perm.construction.acceptance.manage.description",
+    "category": "rbac",
+    "vi": "Tạo/chỉnh sửa/xoá biên bản, nộp duyệt, từ chối, chỉnh sửa lại và huỷ.",
+    "en": "Create/update/delete records, submit for approval, reject, revise and cancel.",
+    "zh": "创建/编辑/删除记录，提交审批、驳回、修订及取消。",
+    "ja": "検収記録の作成・編集・削除、承認提出・却下・修正・取消を行います。"
+  },
+  {
+    "key": "rbac.perm.construction.acceptance.approve.label",
+    "category": "rbac",
+    "vi": "Duyệt nghiệm thu từng phần",
+    "en": "Approve partial acceptance",
+    "zh": "审批分部验收",
+    "ja": "部分検収を承認"
+  },
+  {
+    "key": "rbac.perm.construction.acceptance.approve.description",
+    "category": "rbac",
+    "vi": "Ký duyệt biên bản nghiệm thu để đóng luồng và ghi nhận chữ ký người duyệt.",
+    "en": "Approve the acceptance record to close the flow and record the approver signature.",
+    "zh": "签署审批验收记录以关闭流程并记录审批人签字。",
+    "ja": "検収記録を承認してフローを完了し、承認者の署名を記録します。"
+  },
+  {
     "key": "rbac.perm.permit.checklists.view.label",
     "category": "rbac",
     "vi": "Xem checklist pháp lý",

@@ -43,6 +43,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/construction/tasks",
   "/admin/construction/diary",
   "/admin/construction/punchlist",
+  "/admin/construction/acceptance",
   "/admin/activities",
   "/admin/news",
   "/admin/projects",
@@ -133,6 +134,7 @@ const matrix: RoleExpectation[] = [
       "/admin/construction/tasks",
       "/admin/construction/diary",
       "/admin/construction/punchlist",
+      "/admin/construction/acceptance",
     ],
   },
   {
@@ -155,6 +157,7 @@ const matrix: RoleExpectation[] = [
       "/admin/construction/tasks",
       "/admin/construction/diary",
       "/admin/construction/punchlist",
+      "/admin/construction/acceptance",
     ],
   },
   {

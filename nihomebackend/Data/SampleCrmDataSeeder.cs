@@ -45,6 +45,7 @@ public static class SampleCrmDataSeeder
         SeedConstructionTasks(db, owner, now);
         SeedSiteDiaries(db, owner, now);
         SeedPunchItems(db, owner, now);
+        SeedAcceptanceRecords(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -2054,6 +2055,129 @@ public static class SampleCrmDataSeeder
             },
         };
         db.PunchItems.AddRange(items);
+        db.SaveChanges();
+    }
+
+    private static void SeedAcceptanceRecords(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_ACCEPT]";
+        if (db.AcceptanceRecords.Any(a => a.Description != null && a.Description.StartsWith(SampleMarker))) return;
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        var task = db.ConstructionTasks
+            .Where(t => t.DesignProjectId == project.Id)
+            .OrderBy(t => t.TaskCode)
+            .FirstOrDefault();
+
+        var today = DateOnly.FromDateTime(now);
+
+        var draft = new AcceptanceRecord
+        {
+            DesignProjectId = project.Id,
+            ConstructionTaskId = task?.Id,
+            AcceptanceCode = "A-001",
+            Title = "Nghiệm thu móng phần cột trục A",
+            Description = $"{SampleMarker} Draft record — waiting for site walk-through.",
+            AcceptanceDate = today.AddDays(3),
+            Location = "Trục A – Tầng hầm",
+            Participants = "CĐT, TVGS, Nhà thầu chính",
+            Findings = "Kiểm tra cường độ bê tông theo lô đúc 28 ngày.",
+            Status = AcceptanceStatus.Draft,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-2),
+            UpdatedAt = now.AddDays(-1),
+        };
+
+        var submitted = new AcceptanceRecord
+        {
+            DesignProjectId = project.Id,
+            ConstructionTaskId = task?.Id,
+            AcceptanceCode = "A-002",
+            Title = "Nghiệm thu thép cột trục B (đợt 1)",
+            Description = $"{SampleMarker} Submitted — awaiting client approval.",
+            AcceptanceDate = today.AddDays(1),
+            Location = "Trục B – Tầng 1",
+            Participants = "CĐT, TVGS, Nhà thầu chính, Nhà thầu phụ MEP",
+            Findings = "Đã kiểm tra chủng loại thép và vị trí lắp đặt.",
+            Status = AcceptanceStatus.Submitted,
+            SubmittedAt = now.AddHours(-6),
+            SubmittedByUserId = owner.Id,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-3),
+            UpdatedAt = now.AddHours(-6),
+        };
+
+        var overdue = new AcceptanceRecord
+        {
+            DesignProjectId = project.Id,
+            AcceptanceCode = "A-003",
+            Title = "Nghiệm thu chống thấm hầm — quá hạn",
+            Description = $"{SampleMarker} Overdue submission for waterproofing acceptance.",
+            AcceptanceDate = today.AddDays(-4),
+            Location = "Tầng hầm B1",
+            Participants = "CĐT, TVGS, Nhà thầu chống thấm",
+            Findings = "Đợi khắc phục 2 điểm rò rỉ đã ghi nhận.",
+            Status = AcceptanceStatus.Draft,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-10),
+            UpdatedAt = now.AddDays(-4),
+        };
+
+        var approved = new AcceptanceRecord
+        {
+            DesignProjectId = project.Id,
+            ConstructionTaskId = task?.Id,
+            AcceptanceCode = "A-004",
+            Title = "Nghiệm thu cốt nền phần móng đơn",
+            Description = $"{SampleMarker} Approved by client, signed minutes archived.",
+            AcceptanceDate = today.AddDays(-8),
+            Location = "Toàn bộ móng đơn",
+            Participants = "CĐT, TVGS, Nhà thầu chính",
+            Findings = "Đạt yêu cầu theo hồ sơ thiết kế.",
+            ResolutionNote = "Đã ký biên bản, chuyển bước.",
+            Status = AcceptanceStatus.Approved,
+            SubmittedAt = now.AddDays(-9),
+            SubmittedByUserId = owner.Id,
+            ApprovedAt = now.AddDays(-8),
+            ApprovedByUserId = owner.Id,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-15),
+            UpdatedAt = now.AddDays(-8),
+        };
+
+        var rejected = new AcceptanceRecord
+        {
+            DesignProjectId = project.Id,
+            AcceptanceCode = "A-005",
+            Title = "Nghiệm thu bê tông cột — cần khắc phục",
+            Description = $"{SampleMarker} Rejected due to concrete finish issues.",
+            AcceptanceDate = today.AddDays(-2),
+            Location = "Trục C – Cột C1",
+            Participants = "CĐT, TVGS",
+            Findings = "Bề mặt bê tông có rỗ tại 3 vị trí, cần trát bù.",
+            ResolutionNote = "Yêu cầu nhà thầu khắc phục và tái nộp trong tuần.",
+            Status = AcceptanceStatus.Rejected,
+            SubmittedAt = now.AddDays(-3),
+            SubmittedByUserId = owner.Id,
+            RejectedAt = now.AddDays(-2),
+            RejectedByUserId = owner.Id,
+            RevisionCount = 0,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-5),
+            UpdatedAt = now.AddDays(-2),
+        };
+
+        db.AcceptanceRecords.AddRange(draft, submitted, overdue, approved, rejected);
         db.SaveChanges();
     }
 }
