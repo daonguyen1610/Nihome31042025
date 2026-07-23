@@ -173,6 +173,18 @@
     },
 
     {
+      "category": "diary_weather",
+      "options": [
+        { "code": "sunny",         "name": "Nắng",           "sortOrder": 1 },
+        { "code": "partly-cloudy", "name": "Nắng nhẹ / có mây", "sortOrder": 2 },
+        { "code": "cloudy",        "name": "Nhiều mây",       "sortOrder": 3 },
+        { "code": "rain",          "name": "Mưa",             "sortOrder": 4 },
+        { "code": "heavy-rain",    "name": "Mưa lớn",         "sortOrder": 5 },
+        { "code": "storm",         "name": "Giông bão",       "sortOrder": 6 }
+      ]
+    },
+
+    {
       "category": "permit_type",
       "options": [
         { "code": "gpxd",         "name": "Giấy phép xây dựng (GPXD)", "sortOrder": 1 },

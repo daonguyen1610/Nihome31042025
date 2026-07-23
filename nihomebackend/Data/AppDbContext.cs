@@ -91,6 +91,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ConstructionTask> ConstructionTasks => Set<ConstructionTask>();
     public DbSet<ConstructionTaskDependency> ConstructionTaskDependencies => Set<ConstructionTaskDependency>();
 
+    public DbSet<SiteDiary> SiteDiaries => Set<SiteDiary>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -1035,6 +1037,37 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.HasIndex(x => new { x.TaskId, x.PredecessorTaskId }).IsUnique();
             b.HasIndex(x => x.PredecessorTaskId);
+        });
+
+        modelBuilder.Entity<SiteDiary>(b =>
+        {
+            b.ToTable("site_diaries");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.WeatherCode).HasMaxLength(60).IsRequired();
+            b.Property(d => d.WeatherNote).HasMaxLength(300);
+            b.Property(d => d.MachinesSummary).HasMaxLength(2000);
+            b.Property(d => d.MaterialsReceived).HasMaxLength(2000);
+            b.Property(d => d.WorkPerformed).HasMaxLength(4000).IsRequired();
+            b.Property(d => d.Incidents).HasMaxLength(2000);
+            b.Property(d => d.Note).HasMaxLength(2000);
+            b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(d => d.DesignProject)
+                .WithMany()
+                .HasForeignKey(d => d.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(d => d.SubmittedBy)
+                .WithMany()
+                .HasForeignKey(d => d.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(d => d.ConfirmedBy)
+                .WithMany()
+                .HasForeignKey(d => d.ConfirmedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(d => d.DesignProjectId);
+            b.HasIndex(d => new { d.DesignProjectId, d.DiaryDate }).IsUnique();
+            b.HasIndex(d => d.Status);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

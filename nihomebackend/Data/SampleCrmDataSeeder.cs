@@ -43,6 +43,7 @@ public static class SampleCrmDataSeeder
         SeedDrawingRevisions(db, owner, now);
         SeedIfcReleases(db, owner, now);
         SeedConstructionTasks(db, owner, now);
+        SeedSiteDiaries(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -1847,6 +1848,105 @@ public static class SampleCrmDataSeeder
         db.ConstructionTaskDependencies.AddRange(
             new ConstructionTaskDependency { TaskId = foundation.Id, PredecessorTaskId = mobilization.Id },
             new ConstructionTaskDependency { TaskId = superstructure.Id, PredecessorTaskId = foundation.Id });
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// M4 sample site diaries (NIH-142) — three entries on the first
+    /// ShopDrawing-stage project spanning the whole Draft → Submitted →
+    /// Confirmed workflow so the daily-log page always has something to
+    /// showcase (each status pill is exercised). Idempotent via a
+    /// marker in <c>Note</c>.
+    /// </summary>
+    private static void SeedSiteDiaries(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleMarker = "[SAMPLE_DIARY]";
+        if (db.SiteDiaries.Any(d => d.Note != null && d.Note.StartsWith(SampleMarker))) return;
+
+        var project = db.DesignProjects
+            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(dp => dp.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        // Only seed weather + diary if the master data seeded first (it
+        // will have, but be defensive so a partial seed doesn't crash).
+        if (!db.MasterDataOptions.Any(m => m.Category == "diary_weather" && m.Code == "sunny")) return;
+
+        var today = DateOnly.FromDateTime(now);
+        var confirmed = new SiteDiary
+        {
+            DesignProjectId = project.Id,
+            DiaryDate = today.AddDays(-2),
+            WeatherCode = "sunny",
+            WeatherNote = "N\u1eafng nh\u1eb9, 29\u00b0C",
+            HeadcountLabor = 42,
+            HeadcountEngineers = 3,
+            HeadcountSupervisors = 2,
+            HeadcountSubcontractors = 8,
+            MachinesSummary = "1 c\u1ea9u th\u00e1p, 2 m\u00e1y \u0111\u00e0o, 1 xe b\u00ea t\u00f4ng",
+            MaterialsReceived = "18 T th\u00e9p \u0111\u00f4i #16, 45 m\u00b3 b\u00ea t\u00f4ng th\u01b0\u01a1ng ph\u1ea9m C30",
+            WorkPerformed = "\u0110\u1ed5 b\u00ea t\u00f4ng m\u00f3ng b\u0103ng tr\u1ee5c A-D. Ho\u00e0n th\u00e0nh 60% l\u01b0\u1ee3ng \u0111\u1ed5 c\u1ee7a ng\u00e0y.",
+            Incidents = "Kh\u00f4ng c\u00f3 s\u1ef1 c\u1ed1.",
+            Note = $"{SampleMarker} \u0110\u00e3 x\u00e1c nh\u1eadn - m\u1eabu",
+            Status = SiteDiaryStatus.Confirmed,
+            SubmittedAt = now.AddDays(-2).AddHours(17),
+            SubmittedByUserId = owner.Id,
+            ConfirmedAt = now.AddDays(-1).AddHours(9),
+            ConfirmedByUserId = owner.Id,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-2),
+            UpdatedAt = now.AddDays(-1).AddHours(9),
+        };
+
+        var submitted = new SiteDiary
+        {
+            DesignProjectId = project.Id,
+            DiaryDate = today.AddDays(-1),
+            WeatherCode = "cloudy",
+            WeatherNote = "Nhi\u1ec1u m\u00e2y, gi\u00f3 nh\u1eb9",
+            HeadcountLabor = 38,
+            HeadcountEngineers = 3,
+            HeadcountSupervisors = 2,
+            HeadcountSubcontractors = 5,
+            MachinesSummary = "1 c\u1ea9u th\u00e1p, 2 m\u00e1y \u0111\u00e0o",
+            MaterialsReceived = "Kh\u00f4ng nh\u1eadn v\u1eadt t\u01b0 m\u1edbi.",
+            WorkPerformed = "L\u1eafp c\u1ed1t th\u00e9p m\u00f3ng tr\u1ee5c E-G, chu\u1ea9n b\u1ecb v\u00e1n khu\u00f4n.",
+            Incidents = "1 c\u00f4ng nh\u00e2n c\u1eaft tay nh\u1eb9 khi c\u1eaft th\u00e9p, \u0111\u00e3 s\u01a1 c\u1ee9u.",
+            Note = $"{SampleMarker} \u0110\u00e3 g\u1eedi ch\u1edd x\u00e1c nh\u1eadn - m\u1eabu",
+            Status = SiteDiaryStatus.Submitted,
+            SubmittedAt = now.AddDays(-1).AddHours(18),
+            SubmittedByUserId = owner.Id,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-1),
+            UpdatedAt = now.AddDays(-1).AddHours(18),
+        };
+
+        var draft = new SiteDiary
+        {
+            DesignProjectId = project.Id,
+            DiaryDate = today,
+            WeatherCode = "rain",
+            WeatherNote = "M\u01b0a nh\u1eb9 t\u1eeb 14h, t\u1ea1m d\u1eebng \u0111\u1ed5 b\u00ea t\u00f4ng",
+            HeadcountLabor = 20,
+            HeadcountEngineers = 2,
+            HeadcountSupervisors = 1,
+            HeadcountSubcontractors = 0,
+            MachinesSummary = "1 c\u1ea9u th\u00e1p (\u0111\u1ec3 y\u00ean, gi\u00f3 kh\u00f4ng \u0111\u1ea1t ng\u01b0\u1ee1ng)",
+            MaterialsReceived = null,
+            WorkPerformed = "Bu\u1ed5i s\u00e1ng: gia c\u00f4ng c\u1ed1t th\u00e9p trong l\u00e1n. Chi\u1ec1u: t\u1ea1m d\u1eebng do m\u01b0a.",
+            Incidents = null,
+            Note = $"{SampleMarker} Nh\u00e1p - m\u1eabu",
+            Status = SiteDiaryStatus.Draft,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        db.SiteDiaries.AddRange(confirmed, submitted, draft);
         db.SaveChanges();
     }
 }

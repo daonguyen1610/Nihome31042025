@@ -114,6 +114,10 @@
     { "module": "construction.tasks", "action": "view" },
     { "module": "construction.tasks", "action": "manage" },
 
+    { "module": "construction.diary", "action": "view" },
+    { "module": "construction.diary", "action": "manage" },
+    { "module": "construction.diary", "action": "confirm" },
+
     { "module": "permit.checklists", "action": "view" },
     { "module": "permit.checklists", "action": "manage" },
     { "module": "permit.checklists", "action": "mark-issued" }
@@ -186,6 +190,7 @@
         "design.revisions.**",
         "design.ifc.view",
         "construction.tasks.view",
+        "construction.diary.view",
         "profile.me.*"
       ]
     },
@@ -198,6 +203,7 @@
         "workflow.view",
         "design.**",
         "construction.tasks.**",
+        "construction.diary.**",
         "profile.me.*"
       ]
     },
@@ -213,6 +219,7 @@
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
         "construction.tasks.view",
+        "construction.diary.view", "construction.diary.manage",
         "profile.me.*"
       ]
     },
@@ -227,6 +234,7 @@
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
         "construction.tasks.view",
+        "construction.diary.view", "construction.diary.manage",
         "profile.me.*"
       ]
     },
@@ -241,6 +249,7 @@
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
         "construction.tasks.view",
+        "construction.diary.view", "construction.diary.manage",
         "profile.me.*"
       ]
     },
@@ -261,6 +270,7 @@
         "design.revisions.view",
         "design.ifc.**",
         "construction.tasks.**",
+        "construction.diary.**",
         "permit.checklists.**",
         "profile.me.*"
       ]

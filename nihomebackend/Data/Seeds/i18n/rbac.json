@@ -1888,6 +1888,54 @@
     "ja": "タスクの作成・編集・削除、進捗更新および先行タスク依存関係の設定を行います。"
   },
   {
+    "key": "rbac.perm.construction.diary.view.label",
+    "category": "rbac",
+    "vi": "Xem nhật ký công trường",
+    "en": "View site diary",
+    "zh": "查看施工日志",
+    "ja": "現場日誌を表示"
+  },
+  {
+    "key": "rbac.perm.construction.diary.view.description",
+    "category": "rbac",
+    "vi": "Cho phép đọc nhật ký công trường và tra cứu lịch sử theo ngày.",
+    "en": "Allows reading the site diary and browsing daily history.",
+    "zh": "允许查看施工日志并按日期浏览历史记录。",
+    "ja": "現場日誌の閲覧と日別履歴の参照を許可します。"
+  },
+  {
+    "key": "rbac.perm.construction.diary.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý nhật ký công trường",
+    "en": "Manage site diary",
+    "zh": "管理施工日志",
+    "ja": "現場日誌を管理"
+  },
+  {
+    "key": "rbac.perm.construction.diary.manage.description",
+    "category": "rbac",
+    "vi": "Tạo/chỉnh sửa nhật ký, gửi duyệt và xoá bản ghi ở trạng thái Nháp.",
+    "en": "Create / edit diaries, submit them for confirmation and delete Draft rows.",
+    "zh": "创建/编辑日志、提交确认并删除草稿条目。",
+    "ja": "日誌の作成・編集、確認提出、下書きの削除を行います。"
+  },
+  {
+    "key": "rbac.perm.construction.diary.confirm.label",
+    "category": "rbac",
+    "vi": "Xác nhận nhật ký công trường",
+    "en": "Confirm site diary",
+    "zh": "确认施工日志",
+    "ja": "現場日誌を確認"
+  },
+  {
+    "key": "rbac.perm.construction.diary.confirm.description",
+    "category": "rbac",
+    "vi": "Xác nhận nhật ký đã nộp làm căn cứ cho báo cáo tuần / tháng, hoặc mở lại về Nháp khi cần chỉnh sửa.",
+    "en": "Confirm a submitted diary as the source of truth for weekly / monthly reports, or reopen it to Draft for further edits.",
+    "zh": "确认已提交的日志作为周/月报的基础，或将其重新打开为草稿以便编辑。",
+    "ja": "提出済み日誌を週次・月次レポートの根拠として確認するか、編集のため下書きに戻します。"
+  },
+  {
     "key": "rbac.perm.permit.checklists.view.label",
     "category": "rbac",
     "vi": "Xem checklist pháp lý",
