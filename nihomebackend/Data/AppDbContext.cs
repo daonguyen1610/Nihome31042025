@@ -93,6 +93,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<SiteDiary> SiteDiaries => Set<SiteDiary>();
 
+    public DbSet<PunchItem> PunchItems => Set<PunchItem>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -1068,6 +1070,38 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(d => d.DesignProjectId);
             b.HasIndex(d => new { d.DesignProjectId, d.DiaryDate }).IsUnique();
             b.HasIndex(d => d.Status);
+        });
+
+        modelBuilder.Entity<PunchItem>(b =>
+        {
+            b.ToTable("punch_items");
+            b.HasKey(p => p.Id);
+            b.Property(p => p.PunchCode).HasMaxLength(60).IsRequired();
+            b.Property(p => p.Title).HasMaxLength(300).IsRequired();
+            b.Property(p => p.Description).HasMaxLength(4000);
+            b.Property(p => p.Location).HasMaxLength(300);
+            b.Property(p => p.ResolutionNote).HasMaxLength(2000);
+            b.Property(p => p.Note).HasMaxLength(2000);
+            b.Property(p => p.Severity).HasConversion<string>().HasMaxLength(30);
+            b.Property(p => p.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(p => p.DesignProject)
+                .WithMany()
+                .HasForeignKey(p => p.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(p => p.Assignee)
+                .WithMany()
+                .HasForeignKey(p => p.AssigneeUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(p => p.VerifiedBy)
+                .WithMany()
+                .HasForeignKey(p => p.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(p => p.DesignProjectId);
+            b.HasIndex(p => new { p.DesignProjectId, p.PunchCode }).IsUnique();
+            b.HasIndex(p => p.Status);
+            b.HasIndex(p => p.Severity);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

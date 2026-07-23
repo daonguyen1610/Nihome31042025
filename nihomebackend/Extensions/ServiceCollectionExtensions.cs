@@ -112,6 +112,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IIfcReleaseService, IfcReleaseService>();
         services.AddScoped<IConstructionTaskService, ConstructionTaskService>();
         services.AddScoped<ISiteDiaryService, SiteDiaryService>();
+        services.AddScoped<IPunchItemService, PunchItemService>();
         services.AddScoped<HostedImageService>();
 
         // Content services
