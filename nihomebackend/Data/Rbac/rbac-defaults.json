@@ -121,6 +121,9 @@
     { "module": "construction.punch", "action": "view" },
     { "module": "construction.punch", "action": "manage" },
     { "module": "construction.punch", "action": "verify" },
+    { "module": "construction.acceptance", "action": "view" },
+    { "module": "construction.acceptance", "action": "manage" },
+    { "module": "construction.acceptance", "action": "approve" },
 
     { "module": "permit.checklists", "action": "view" },
     { "module": "permit.checklists", "action": "manage" },
@@ -196,6 +199,7 @@
         "construction.tasks.view",
         "construction.diary.view",
         "construction.punch.view",
+        "construction.acceptance.view", "construction.acceptance.manage",
         "profile.me.*"
       ]
     },
@@ -210,6 +214,7 @@
         "construction.tasks.**",
         "construction.diary.**",
         "construction.punch.**",
+        "construction.acceptance.**",
         "profile.me.*"
       ]
     },
@@ -227,6 +232,7 @@
         "construction.tasks.view",
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
+        "construction.acceptance.view", "construction.acceptance.manage",
         "profile.me.*"
       ]
     },
@@ -243,6 +249,7 @@
         "construction.tasks.view",
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
+        "construction.acceptance.view", "construction.acceptance.manage",
         "profile.me.*"
       ]
     },
@@ -259,6 +266,7 @@
         "construction.tasks.view",
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
+        "construction.acceptance.view", "construction.acceptance.manage",
         "profile.me.*"
       ]
     },
@@ -281,6 +289,7 @@
         "construction.tasks.**",
         "construction.diary.**",
         "construction.punch.**",
+        "construction.acceptance.**",
         "permit.checklists.**",
         "profile.me.*"
       ]

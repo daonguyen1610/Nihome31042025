@@ -74,6 +74,7 @@ import AdminPermits from "./pages/admin/Permits.tsx";
 import AdminConstructionTasks from "./pages/admin/construction/ConstructionTasksPage.tsx";
 import AdminSiteDiary from "./pages/admin/construction/SiteDiaryPage.tsx";
 import AdminPunchList from "./pages/admin/construction/PunchListPage.tsx";
+import AdminAcceptanceRecords from "./pages/admin/construction/AcceptanceRecordsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -194,6 +195,9 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.constructionPunch} />}>
                 <Route path="/admin/construction/punchlist" element={<AdminPunchList />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.constructionAcceptance} />}>
+                <Route path="/admin/construction/acceptance" element={<AdminAcceptanceRecords />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                 <Route path="/admin/recruitment" element={<AdminRecruitment />} />

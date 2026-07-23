@@ -113,6 +113,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IConstructionTaskService, ConstructionTaskService>();
         services.AddScoped<ISiteDiaryService, SiteDiaryService>();
         services.AddScoped<IPunchItemService, PunchItemService>();
+        services.AddScoped<IAcceptanceRecordService, AcceptanceRecordService>();
         services.AddScoped<HostedImageService>();
 
         // Content services
