@@ -37,4 +37,5 @@ public static class EntityTypes
     public const string SiteDiary = "SiteDiary";
     public const string PunchItem = "PunchItem";
     public const string AcceptanceRecord = "AcceptanceRecord";
+    public const string AsBuiltDocument = "AsBuiltDocument";
 }

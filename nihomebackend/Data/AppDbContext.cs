@@ -96,6 +96,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<PunchItem> PunchItems => Set<PunchItem>();
 
+    public DbSet<AsBuiltDocument> AsBuiltDocuments => Set<AsBuiltDocument>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -1143,6 +1145,37 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(a => a.DesignProjectId);
             b.HasIndex(a => new { a.DesignProjectId, a.AcceptanceCode }).IsUnique();
             b.HasIndex(a => a.Status);
+        });
+
+        modelBuilder.Entity<AsBuiltDocument>(b =>
+        {
+            b.ToTable("as_built_documents");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.DocumentCode).HasMaxLength(60).IsRequired();
+            b.Property(d => d.Title).HasMaxLength(300).IsRequired();
+            b.Property(d => d.Description).HasMaxLength(4000);
+            b.Property(d => d.FileUrl).HasMaxLength(500);
+            b.Property(d => d.Note).HasMaxLength(2000);
+            b.Property(d => d.Category).HasConversion<string>().HasMaxLength(40);
+            b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(d => d.DesignProject)
+                .WithMany()
+                .HasForeignKey(d => d.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(d => d.SubmittedBy)
+                .WithMany()
+                .HasForeignKey(d => d.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(d => d.ApprovedBy)
+                .WithMany()
+                .HasForeignKey(d => d.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            b.HasIndex(d => d.DesignProjectId);
+            b.HasIndex(d => new { d.DesignProjectId, d.DocumentCode }).IsUnique();
+            b.HasIndex(d => d.Status);
+            b.HasIndex(d => d.Category);
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");
