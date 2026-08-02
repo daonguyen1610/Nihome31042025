@@ -273,6 +273,35 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
         return true;
     }
 
+    public async Task<bool> HardDeleteAsync(int id, int currentUserId)
+    {
+        var user = await db.Users
+            .Include(u => u.RoleEntity)
+            .Include(u => u.RefreshTokens)
+            .Include(u => u.Notifications)
+            .Include(u => u.Documents)
+            .FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+        {
+            return false;
+        }
+
+        await EnsureRoleAndStatusChangeAllowedAsync(
+            user, currentUserId, user.RoleEntityId, user.Role, nextIsActive: false);
+
+        // Remove user-specific data (cascade delete)
+        db.RefreshTokens.RemoveRange(user.RefreshTokens);
+        db.Notifications.RemoveRange(user.Notifications);
+        db.UserDocuments.RemoveRange(user.Documents);
+
+        // Remove the user
+        db.Users.Remove(user);
+
+        await db.SaveChangesAsync();
+
+        return true;
+    }
+
     public async Task<RoleCatalogResponse> GetRoleCatalogAsync()
     {
         var counts = await db.Users

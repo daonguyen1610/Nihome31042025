@@ -3516,6 +3516,8 @@ export const adminApi = {
     api.patch<UserDetailResponse>(`/users/${id}/toggle-active`),
   deleteUser: (id: number) =>
     api.delete(`/users/${id}`),
+  hardDeleteUser: (id: number) =>
+    api.delete(`/users/${id}/hard`),
   getUserRoles: () =>
     api.get<RoleCatalogResponse>("/users/roles"),
 

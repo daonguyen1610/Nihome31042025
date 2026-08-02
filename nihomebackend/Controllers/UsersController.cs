@@ -81,6 +81,11 @@ public class UsersController(
     public async Task<IActionResult> Delete(int id)
         => await svc.DeleteAsync(id, GetCurrentUserId()) ? NoContent() : NotFound();
 
+    [HttpDelete("{id:int}/hard")]
+    [RequirePermission("users", "manage")]
+    public async Task<IActionResult> HardDelete(int id)
+        => await svc.HardDeleteAsync(id, GetCurrentUserId()) ? NoContent() : NotFound();
+
     [HttpGet("roles")]
     public async Task<ActionResult<RoleCatalogResponse>> GetRoles()
         => Ok(await svc.GetRoleCatalogAsync());

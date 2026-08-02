@@ -11,6 +11,7 @@ nihomebackend.tests/obj/**
 .agents
 skills-lock.json
 # Deployment config
+deployment-config/output
 deployment-config/output/publish-release/
 deployment-config/output/publish-release.zip
 nihomebackend.integration.tests/bin/
@@ -32,3 +33,6 @@ nihomebackend/wwwroot/files/capability/
 # commit them into the repo. The dev seeder points at a placeholder path
 # but doesn't drop physical files.
 nihomebackend/wwwroot/files/contracts/
+.DS_Store
+deployment-config/.DS_Store
+test-results

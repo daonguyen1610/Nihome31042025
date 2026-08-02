@@ -36,6 +36,7 @@ The backend additionally prevents a super admin from changing their own role, de
 - `PUT /api/users/{id}` — `users.manage`
 - `PATCH /api/users/{id}/toggle-active` — `users.manage`
 - `DELETE /api/users/{id}` — `users.manage` (soft delete; sets `IsActive = false`)
+- `DELETE /api/users/{id}/hard` — `users.manage` (hard delete; permanently removes user and related data)
 - `GET /api/users/roles` — `users.view`
 
 ## Frontend Surface

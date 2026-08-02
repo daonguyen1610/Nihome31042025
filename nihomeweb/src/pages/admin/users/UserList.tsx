@@ -172,11 +172,11 @@ export default function UserList() {
   };
 
   const deleteUser = async (user: UserListItemResponse) => {
-    if (!window.confirm(t("adminUsers.confirmDelete"))) return;
+    if (!window.confirm(t("adminUsers.confirmHardDelete"))) return;
 
     setBusyUserId(user.id);
     try {
-      await adminApi.deleteUser(user.id);
+      await adminApi.hardDeleteUser(user.id);
       toast({ title: t("form.deleted") });
       await loadData();
     } catch (err) {
@@ -198,7 +198,7 @@ export default function UserList() {
     handleBulkDelete,
   } = useBulkSelection<number>({
     visibleIds,
-    deleteOne: (id) => adminApi.deleteUser(id),
+    deleteOne: (id) => adminApi.hardDeleteUser(id),
     onAfter: async () => {
       await loadData();
     },

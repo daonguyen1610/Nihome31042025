@@ -305,6 +305,81 @@ public class UserServiceTests : IDisposable
         Assert.True(ok);
     }
 
+    // -------------------- Hard Delete --------------------
+
+    [Fact]
+    public async Task HardDeleteAsync_RemovesUserFromDatabase()
+    {
+        var actor = await SeedUser("0900002001", "Actor", UserRole.SUPER_ADMIN);
+        var target = await SeedUser("0900002002", "Target", UserRole.USER);
+
+        var deleted = await _sut.HardDeleteAsync(target.Id, actor.Id);
+
+        Assert.True(deleted);
+        Assert.Null(_db.Users.Find(target.Id));
+    }
+
+    [Fact]
+    public async Task HardDeleteAsync_RemovesRelatedDataIncludingRefreshTokensAndNotifications()
+    {
+        var actor = await SeedUser("0900002003", "Actor", UserRole.SUPER_ADMIN);
+        var target = await SeedUser("0900002004", "Target", UserRole.USER);
+
+        // Add related data
+        _db.RefreshTokens.Add(new RefreshToken
+        {
+            Token = "test-token",
+            UserId = target.Id,
+            Expires = DateTime.UtcNow.AddDays(7),
+            Created = DateTime.UtcNow,
+        });
+        _db.Notifications.Add(new Notification
+        {
+            UserId = target.Id,
+            EntityType = "Test",
+            Title = "Test notification",
+            Body = "Test body",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        var deleted = await _sut.HardDeleteAsync(target.Id, actor.Id);
+
+        Assert.True(deleted);
+        Assert.Null(_db.Users.Find(target.Id));
+        Assert.Empty(_db.RefreshTokens.Where(t => t.UserId == target.Id));
+        Assert.Empty(_db.Notifications.Where(n => n.UserId == target.Id));
+    }
+
+    [Fact]
+    public async Task HardDeleteAsync_ReturnsFalseForNonexistentUser()
+    {
+        var deleted = await _sut.HardDeleteAsync(999999, currentUserId: 1);
+        Assert.False(deleted);
+    }
+
+    [Fact]
+    public async Task HardDeleteAsync_PreventsDeletingLastActiveSuperAdmin()
+    {
+        var superAdmin = await SeedUser("0900002005", "Only Super Admin", UserRole.SUPER_ADMIN);
+
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() =>
+            _sut.HardDeleteAsync(superAdmin.Id, currentUserId: 999));
+
+        Assert.Equal(UserServiceError.LastSuperAdmin, ex.Error);
+    }
+
+    [Fact]
+    public async Task HardDeleteAsync_PreventsSelfDeletion()
+    {
+        var user = await SeedUser("0900002006", "Self", UserRole.ADMIN);
+
+        var ex = await Assert.ThrowsAsync<UserServiceException>(() =>
+            _sut.HardDeleteAsync(user.Id, currentUserId: user.Id));
+
+        Assert.Equal(UserServiceError.SelfActionNotAllowed, ex.Error);
+    }
+
     private async Task<Role> SeedRole(string code, string name, bool isSystem = true, bool isActive = true)
     {
         var role = new Role

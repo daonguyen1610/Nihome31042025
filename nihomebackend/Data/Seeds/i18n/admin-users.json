@@ -344,6 +344,38 @@
     "ja": "ロールを選択してください。"
   },
   {
+    "key": "adminUsers.deactivate",
+    "category": "admin-users",
+    "vi": "Vô hiệu hóa",
+    "en": "Deactivate",
+    "zh": "停用",
+    "ja": "無効化"
+  },
+  {
+    "key": "adminUsers.hardDelete",
+    "category": "admin-users",
+    "vi": "Xóa vĩnh viễn",
+    "en": "Delete permanently",
+    "zh": "永久删除",
+    "ja": "完全に削除"
+  },
+  {
+    "key": "adminUsers.confirmHardDelete",
+    "category": "admin-users",
+    "vi": "Bạn có chắc chắn muốn xóa vĩnh viễn người dùng này? Hành động này không thể hoàn tác.",
+    "en": "Are you sure you want to permanently delete this user? This action cannot be undone.",
+    "zh": "确定要永久删除此用户吗？此操作无法撤销。",
+    "ja": "このユーザーを完全に削除してもよろしいですか？この操作は取り消せません。"
+  },
+  {
+    "key": "adminUsers.hardDeleted",
+    "category": "admin-users",
+    "vi": "Đã xóa vĩnh viễn người dùng",
+    "en": "User permanently deleted",
+    "zh": "用户已永久删除",
+    "ja": "ユーザーを完全に削除しました"
+  },
+  {
     "key": "cat.add",
     "category": "cat",
     "vi": "Thêm danh mục",
