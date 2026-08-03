@@ -21,7 +21,7 @@ public class UserServiceException(UserServiceError error, string message) : Inva
     public UserServiceError Error { get; } = error;
 }
 
-public class UserService(AppDbContext db, PasswordService passwordService, INotificationService notifications)
+public class UserService(AppDbContext db, PasswordService passwordService, INotificationService notifications, RefreshTokenService refreshTokenService)
 {
     private const int DefaultTake = 20;
     private const int MaxTake = 100;
@@ -214,12 +214,24 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
             user.Email = email;
         }
 
+        // Detect if role changed to revoke tokens after save
+        var roleChanged = user.Role != nextMirrorEnum || user.RoleEntityId != nextRoleEntityId;
+        var wasActive = user.IsActive;
+
         user.Role = nextMirrorEnum;
         user.RoleEntityId = nextRoleEntityId;
         user.RoleEntity = nextRoleEntity;
         user.IsActive = nextIsActive;
 
         await db.SaveChangesAsync();
+
+        // Revoke all refresh tokens so user must re-login with updated role
+        // Also revoke if user was deactivated
+        if (roleChanged || (wasActive && !nextIsActive))
+        {
+            await refreshTokenService.RevokeAllForUserAsync(user.Id);
+        }
+
         return MapDetail(user);
     }
 
@@ -240,6 +252,12 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
 
         user.IsActive = nextIsActive;
         await db.SaveChangesAsync();
+
+        // Revoke all refresh tokens when deactivating user
+        if (!nextIsActive)
+        {
+            await refreshTokenService.RevokeAllForUserAsync(user.Id);
+        }
 
         try
         {

@@ -23,13 +23,17 @@ const EMPTY = new Set<string>();
  *
  * The server already expands wildcards (SUPER_ADMIN -> every catalog code),
  * so the FE only needs straight set membership.
+ *
+ * The accessToken is included in the queryKey so that when the user logs out
+ * and logs back in (or when the token is refreshed), the cache is invalidated
+ * and fresh permissions are fetched.
  */
 export function usePermissions(): UsePermissionsResult {
   const accessToken = useAppSelector((s) => s.auth.accessToken);
   const userId = useAppSelector((s) => s.auth.user?.userId ?? null);
 
   const query = useQuery<MePermissionsResponse>({
-    queryKey: ["me", "permissions", userId],
+    queryKey: ["me", "permissions", userId, accessToken],
     queryFn: async () => (await rbacApi.getMyPermissions()).data,
     enabled: Boolean(accessToken && userId),
     staleTime: 60_000,

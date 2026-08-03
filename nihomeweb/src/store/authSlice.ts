@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import { authApi, type AuthResponse } from "@/services/authApi";
 import { newIdempotencyKey } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 import { isAxiosError } from "axios";
 
 // --- State types ---
@@ -247,6 +248,8 @@ export const logoutThunk = createAsyncThunk("auth/logout", async (_, { getState 
     }
   }
   clearTokens();
+  // Clear all cached queries to ensure fresh data on next login
+  queryClient.clear();
 });
 
 // --- Initial state ---

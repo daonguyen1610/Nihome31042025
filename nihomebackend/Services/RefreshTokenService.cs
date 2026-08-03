@@ -48,4 +48,25 @@ public class RefreshTokenService
         refreshToken.IsRevoked = true;
         await _db.SaveChangesAsync();
     }
+
+    /// <summary>
+    /// Revokes all active refresh tokens for a user.
+    /// Call this when user's role or active status changes to force re-login.
+    /// </summary>
+    public async Task RevokeAllForUserAsync(int userId)
+    {
+        var tokens = await _db.RefreshTokens
+            .Where(r => r.UserId == userId && !r.IsRevoked && r.ExpiresAt > DateTime.UtcNow)
+            .ToListAsync();
+
+        foreach (var token in tokens)
+        {
+            token.IsRevoked = true;
+        }
+
+        if (tokens.Count > 0)
+        {
+            await _db.SaveChangesAsync();
+        }
+    }
 }
