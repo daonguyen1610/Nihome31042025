@@ -97,6 +97,37 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     const row = page.locator('[data-testid^="asbuilt-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
 
+    // API validation feedback keeps the user's input in the open form.
+    await page.getByTestId("asbuilt-new").click();
+    await page.getByTestId("asbuilt-form-title").fill(titleText);
+    await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().endsWith("/api/as-built-documents") &&
+          r.request().method() === "POST" &&
+          r.status() === 400,
+      ),
+      page.getByTestId("asbuilt-form-save").click(),
+    ]);
+    await expect(page.getByTestId("asbuilt-form-title")).toHaveValue(titleText);
+    await expect(page.getByText(/đã tồn tại|already exists/i)).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Edit the draft and verify the list reflects the saved value.
+    await row.click();
+    await page.getByTestId("asbuilt-edit").click();
+    const updatedTitle = `${titleText} updated`;
+    await page.getByTestId("asbuilt-form-title").fill(updatedTitle);
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/as-built-documents\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+      ),
+      page.getByTestId("asbuilt-form-save").click(),
+    ]);
+    const updatedRow = page.locator('[data-testid^="asbuilt-row-"]').filter({ hasText: updatedTitle });
+    await expect(updatedRow).toBeVisible();
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+
     await page.getByTestId("asbuilt-sort").click();
     await page.getByRole("option", { name: /Recently updated|Mới cập nhật/i }).click();
     await expect(page.getByTestId("asbuilt-sort")).toContainText(/Recently updated|Mới cập nhật/i);
@@ -106,7 +137,7 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/^as-built-documents-\d{4}-\d{2}-\d{2}\.csv$/);
 
-    await row.click();
+    await updatedRow.click();
 
     // Draft → Submitted
     await page.getByTestId("asbuilt-submit").click();
@@ -140,7 +171,7 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
           );
           if (!list.ok()) return { status: "err", completedRequiredCategories: 0 };
           const body = await list.json();
-          const match = (body.items as Array<{ title: string; status: string }>).find((i) => i.title === titleText);
+          const match = (body.items as Array<{ title: string; status: string }>).find((i) => i.title === updatedTitle);
           return {
             status: match?.status ?? "missing",
             completedRequiredCategories: body.completedRequiredCategories,
