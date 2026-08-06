@@ -110,21 +110,25 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
 
     // Draft → Submitted
     await page.getByTestId("asbuilt-submit").click();
+    const submitConfirm = page.getByRole("alertdialog").getByTestId("asbuilt-action-confirm");
+    await expect(submitConfirm).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/as-built-documents\/\d+\/status$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("asbuilt-action-confirm").click({ force: true }),
+      submitConfirm.click(),
     ]);
     await expect(page.getByTestId("asbuilt-approve")).toBeVisible();
 
     // Submitted → Approved via /approve
     await page.getByTestId("asbuilt-approve").click();
+    const approveConfirm = page.getByRole("alertdialog").getByTestId("asbuilt-action-confirm");
+    await expect(approveConfirm).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/as-built-documents\/\d+\/approve$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("asbuilt-action-confirm").click({ force: true }),
+      approveConfirm.click(),
     ]);
 
     await expect

@@ -442,7 +442,7 @@ export default function AsBuiltDocumentsPage() {
             <h1 className="text-2xl font-bold">{t("asbuilt.title")}</h1>
             <p className="text-sm text-muted-foreground">{t("asbuilt.subtitle")}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -749,9 +749,9 @@ export default function AsBuiltDocumentsPage() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
               <div>{t("common.pagination.total").replace("{total}", String(total))}</div>
-              <div className="flex gap-1">
+              <div className="flex justify-end gap-1">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
                   {t("common.pagination.prev")}
                 </Button>
