@@ -674,7 +674,30 @@ cd nihomeweb
 npm run test:watch
 ```
 
-### 9.3 Linting
+### 9.3 Manual As-Built Smoke Test
+
+With the Docker Compose stack running, open `http://localhost:5043/login` and sign in as the development `SUPER_ADMIN` account (`0335240370` / `Admin@123`). Then open **Admin > Construction > As-Built Records**, or navigate directly to `http://localhost:5043/admin/construction/asbuilt`.
+
+1. Select an existing design project and confirm the summary cards and document list load without an error.
+2. Create a uniquely titled **Drawing** document and confirm it appears with **Draft** status.
+3. Search for the title, change the category/status filters, and select **Recently updated** sorting. Confirm the displayed rows match each selection.
+4. Export the filtered list and confirm a file named `as-built-documents-YYYY-MM-DD.csv` downloads and contains the created document.
+5. Open the document, submit it, and approve it. Confirm the lifecycle history shows each transition and the approved-category completeness count increases.
+6. Confirm the approved document is read-only, then archive it and verify its final status.
+7. Repeat the page check at mobile and tablet widths; filters and records must remain readable without horizontal page overflow.
+
+For the authorization check, sign in as the seeded `SALE` account (`0911000003` / `Admin@123`) and confirm the page is forbidden. If this account can access the page, inspect its assigned role before reporting a product defect: a long-lived local database may contain customized user-role assignments. Do not change the expected deny behavior or reset persistent data without reviewing those assignments.
+
+The focused automated equivalent is:
+
+```bash
+cd nihomeweb
+BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-asbuilt.spec.ts --grep "SUPER_ADMIN" --output=/tmp/nihome-playwright-asbuilt
+```
+
+Writing Playwright artifacts to `/tmp` prevents the backend file watcher from restarting when the frontend directory is mounted into the development container.
+
+### 9.4 Linting
 
 Backend:
 
@@ -690,7 +713,7 @@ cd nihomeweb
 npm run lint
 ```
 
-### 9.4 Quality Check Summary
+### 9.5 Quality Check Summary
 
 | Check              | Command                              |
 |--------------------|--------------------------------------|
