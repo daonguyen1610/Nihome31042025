@@ -625,7 +625,7 @@ API calls are organized into three service modules:
 
 Admin list exports are implemented on the frontend with `src/lib/exportCsv.ts` and `src/components/admin/AdminExportButton.tsx`. The helper writes UTF-8 BOM CSV output so Excel opens Vietnamese, Chinese, and Japanese text correctly without adding an `.xlsx` dependency.
 
-Export buttons should use the current list state after filters are applied and must be disabled when there are no rows. Backend APIs are unchanged; large server-side export endpoints can be added later if data volume outgrows client-side export.
+Export buttons must preserve the current filters and sort order and remain disabled when there are no rows. Small, unpaginated lists can export the loaded rows on the frontend. Paginated operational lists must use an authorized backend export endpoint so the file contains the complete filtered result rather than only the visible page. The as-built dossier follows this pattern through `GET /api/as-built-documents/export` and records the export in the audit log.
 
 ---
 

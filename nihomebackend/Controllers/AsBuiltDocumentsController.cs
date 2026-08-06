@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
@@ -23,7 +24,8 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class AsBuiltDocumentsController(
     IAsBuiltDocumentService svc,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    INotificationService notifications) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("construction.asbuilt", "view")]
@@ -39,6 +41,25 @@ public class AsBuiltDocumentsController(
     {
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("export")]
+    [RequirePermission("construction.asbuilt", "view")]
+    public async Task<IActionResult> Export(
+        [FromQuery] AsBuiltDocumentListParams parameters,
+        CancellationToken ct)
+    {
+        var rows = await svc.ExportAsync(parameters, ct);
+        audit.Log(new AuditEvent
+        {
+            Action = "as-built-document.export",
+            ResourceType = EntityTypes.AsBuiltDocument,
+            Message = $"Exported {rows.Count} as-built documents.",
+        });
+
+        var csv = BuildCsv(rows);
+        var content = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv)).ToArray();
+        return File(content, "text/csv; charset=utf-8", $"as-built-documents-{DateTime.UtcNow:yyyy-MM-dd}.csv");
     }
 
     [HttpPost]
@@ -59,6 +80,9 @@ public class AsBuiltDocumentsController(
                 Message = $"As-built document #{response.Id} ({response.DocumentCode}) created on project {response.DesignProjectId}.",
                 NewValue = response,
             });
+            await NotifyAdminsBestEffortAsync(
+                $"Hồ sơ hoàn công mới: {response.DocumentCode}",
+                response.Title);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (AsBuiltDocumentOperationException ex)
@@ -86,6 +110,13 @@ public class AsBuiltDocumentsController(
                 Message = $"As-built document #{id} updated.",
                 NewValue = response,
             });
+            if (response.CreatedByUserId.HasValue && response.CreatedByUserId.Value != userId.Value)
+            {
+                await NotifyUserBestEffortAsync(
+                    response.CreatedByUserId.Value,
+                    $"Hồ sơ hoàn công đã được cập nhật: {response.DocumentCode}",
+                    response.Title);
+            }
             return Ok(response);
         }
         catch (AsBuiltDocumentOperationException ex)
@@ -113,6 +144,19 @@ public class AsBuiltDocumentsController(
                 Message = $"As-built document #{id} -> {response.Status}.",
                 NewValue = response,
             });
+            if (response.Status == "Submitted")
+            {
+                await NotifyAdminsBestEffortAsync(
+                    $"Hồ sơ hoàn công chờ duyệt: {response.DocumentCode}",
+                    response.Title);
+            }
+            else if (response.CreatedByUserId.HasValue && response.CreatedByUserId.Value != userId.Value)
+            {
+                await NotifyUserBestEffortAsync(
+                    response.CreatedByUserId.Value,
+                    $"Hồ sơ hoàn công đã chuyển sang {response.Status}: {response.DocumentCode}",
+                    response.Title);
+            }
             return Ok(response);
         }
         catch (AsBuiltDocumentOperationException ex)
@@ -140,6 +184,14 @@ public class AsBuiltDocumentsController(
                 Message = $"As-built document #{id} approved.",
                 NewValue = response,
             });
+            var recipientId = response.SubmittedByUserId ?? response.CreatedByUserId;
+            if (recipientId.HasValue && recipientId.Value != userId.Value)
+            {
+                await NotifyUserBestEffortAsync(
+                    recipientId.Value,
+                    $"Hồ sơ hoàn công đã được duyệt: {response.DocumentCode}",
+                    response.Title);
+            }
             return Ok(response);
         }
         catch (AsBuiltDocumentOperationException ex)
@@ -198,5 +250,60 @@ public class AsBuiltDocumentsController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private async Task NotifyAdminsBestEffortAsync(string title, string body)
+    {
+        try
+        {
+            await notifications.CreateForAdminsAsync(
+                "AsBuiltDocument", title, body, "/admin/construction/asbuilt");
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task NotifyUserBestEffortAsync(int userId, string title, string body)
+    {
+        try
+        {
+            await notifications.CreateAsync(
+                userId, "AsBuiltDocument", title, body, "/admin/construction/asbuilt");
+        }
+        catch
+        {
+        }
+    }
+
+    private static string BuildCsv(IEnumerable<AsBuiltDocumentResponse> rows)
+    {
+        var csv = new StringBuilder();
+        csv.AppendLine("Code,Title,Category,Project,Status,Submitted By,Submitted At,Approved By,Approved At,Updated At,File URL");
+        foreach (var row in rows)
+        {
+            csv.AppendLine(string.Join(',', new[]
+            {
+                CsvCell(row.DocumentCode),
+                CsvCell(row.Title),
+                CsvCell(row.Category),
+                CsvCell(row.DesignProjectName),
+                CsvCell(row.Status),
+                CsvCell(row.SubmittedByName),
+                CsvCell(row.SubmittedAt?.ToString("O")),
+                CsvCell(row.ApprovedByName),
+                CsvCell(row.ApprovedAt?.ToString("O")),
+                CsvCell(row.UpdatedAt.ToString("O")),
+                CsvCell(row.FileUrl),
+            }));
+        }
+        return csv.ToString();
+    }
+
+    private static string CsvCell(string? value)
+    {
+        var safeValue = value ?? string.Empty;
+        if (safeValue.Length > 0 && "=+-@".Contains(safeValue[0])) safeValue = $"'{safeValue}";
+        return $"\"{safeValue.Replace("\"", "\"\"")}\"";
     }
 }

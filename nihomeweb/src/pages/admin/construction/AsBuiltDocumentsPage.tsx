@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  Download,
   FileCheck,
   FolderArchive,
   FolderOpen,
@@ -82,12 +83,6 @@ const STATUS_BADGE: Record<AsBuiltStatus, string> = {
 
 const CATEGORY_BADGE = "border-violet-200 bg-violet-50 text-violet-700";
 
-const formatDate = (iso: string | null | undefined) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString();
-};
-
 const formatDateTime = (iso: string | null | undefined) => {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -107,6 +102,7 @@ export default function AsBuiltDocumentsPage() {
   const [status, setStatus] = useState<AsBuiltStatus | "">("");
   const [openOnly, setOpenOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState("category-asc");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
 
@@ -116,6 +112,7 @@ export default function AsBuiltDocumentsPage() {
   const [completedRequired, setCompletedRequired] = useState(0);
   const [totalRequired, setTotalRequired] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
@@ -167,6 +164,8 @@ export default function AsBuiltDocumentsPage() {
         status: status || undefined,
         search: search.trim() || undefined,
         openOnly: openOnly || undefined,
+        sortBy: sort.split("-")[0] as AsBuiltDocumentListParams["sortBy"],
+        sortDirection: sort.split("-")[1] as AsBuiltDocumentListParams["sortDirection"],
         page,
         pageSize,
       };
@@ -178,11 +177,11 @@ export default function AsBuiltDocumentsPage() {
       setTotalRequired(res.data.totalRequiredCategories ?? 0);
       setSelected(new Set());
     } catch (e) {
-      setError(extractApiError(e, t("asbuilt.error")));
+      setError(extractApiError(e) || t("asbuilt.error"));
     } finally {
       setLoading(false);
     }
-  }, [projectId, category, status, search, openOnly, page, pageSize, t]);
+  }, [projectId, category, status, search, openOnly, sort, page, pageSize, t]);
 
   useEffect(() => {
     load();
@@ -251,7 +250,7 @@ export default function AsBuiltDocumentsPage() {
       setFormOpen(false);
       await load();
     } catch (e) {
-      setFormError(extractApiError(e, t("asbuilt.error")));
+      setFormError(extractApiError(e) || t("asbuilt.error"));
     } finally {
       setSaving(false);
     }
@@ -269,7 +268,7 @@ export default function AsBuiltDocumentsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e, t("asbuilt.error")),
+        title: extractApiError(e) || t("asbuilt.error"),
       });
     }
   };
@@ -298,7 +297,7 @@ export default function AsBuiltDocumentsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e, t("asbuilt.error")),
+        title: extractApiError(e) || t("asbuilt.error"),
       });
     }
   };
@@ -321,8 +320,40 @@ export default function AsBuiltDocumentsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e, t("asbuilt.error")),
+        title: extractApiError(e) || t("asbuilt.error"),
       });
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const [sortBy, sortDirection] = sort.split("-");
+      const response = await adminApi.exportAsBuiltDocuments({
+        designProjectId: projectId,
+        category: category || undefined,
+        status: status || undefined,
+        search: search.trim() || undefined,
+        openOnly: openOnly || undefined,
+        sortBy: sortBy as AsBuiltDocumentListParams["sortBy"],
+        sortDirection: sortDirection as AsBuiltDocumentListParams["sortDirection"],
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `as-built-documents-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: t("asbuilt.toast.exported") });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: extractApiError(e) || t("asbuilt.error"),
+      });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -412,6 +443,16 @@ export default function AsBuiltDocumentsPage() {
             <p className="text-sm text-muted-foreground">{t("asbuilt.subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={exporting || total === 0}
+              data-testid="asbuilt-export"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {exporting ? t("asbuilt.action.exporting") : t("asbuilt.action.export")}
+            </Button>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               {t("common.refresh")}
@@ -459,7 +500,7 @@ export default function AsBuiltDocumentsPage() {
         </div>
 
         <div className="rounded-lg border bg-card p-3 md:p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4 [&>div]:min-w-0">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-5 [&>div]:min-w-0">
             <div>
               <Label>{t("asbuilt.field.project")}</Label>
               <SearchableSelect
@@ -535,6 +576,31 @@ export default function AsBuiltDocumentsPage() {
                 />
               </div>
             </div>
+            <div>
+              <Label>{t("asbuilt.filter.sort")}</Label>
+              <Select
+                value={sort}
+                onValueChange={(value) => {
+                  setSort(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger data-testid="asbuilt-sort">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="category-asc">{t("asbuilt.sort.categoryAsc")}</SelectItem>
+                  <SelectItem value="code-asc">{t("asbuilt.sort.codeAsc")}</SelectItem>
+                  <SelectItem value="code-desc">{t("asbuilt.sort.codeDesc")}</SelectItem>
+                  <SelectItem value="title-asc">{t("asbuilt.sort.titleAsc")}</SelectItem>
+                  <SelectItem value="title-desc">{t("asbuilt.sort.titleDesc")}</SelectItem>
+                  <SelectItem value="project-asc">{t("asbuilt.sort.projectAsc")}</SelectItem>
+                  <SelectItem value="status-asc">{t("asbuilt.sort.statusAsc")}</SelectItem>
+                  <SelectItem value="updatedAt-desc">{t("asbuilt.sort.updatedDesc")}</SelectItem>
+                  <SelectItem value="updatedAt-asc">{t("asbuilt.sort.updatedAsc")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="mt-2 flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm">
@@ -568,7 +634,7 @@ export default function AsBuiltDocumentsPage() {
         )}
 
         {loading ? (
-          <PageLoading label={t("asbuilt.loading")} />
+          <PageLoading />
         ) : error ? (
           <PageError message={error} onRetry={load} />
         ) : rows.length === 0 ? (
@@ -775,9 +841,39 @@ export default function AsBuiltDocumentsPage() {
                       <dd>{formatDateTime(detail.archivedAt)}</dd>
                     </>
                   )}
-                  <dt className="text-muted-foreground">Created</dt>
-                  <dd>{formatDate(detail.createdAt)}</dd>
+                  <dt className="text-muted-foreground">{t("asbuilt.field.createdAt")}</dt>
+                  <dd>{formatDateTime(detail.createdAt)}</dd>
+                  <dt className="text-muted-foreground">{t("asbuilt.field.updatedAt")}</dt>
+                  <dd>{formatDateTime(detail.updatedAt)}</dd>
                 </dl>
+
+                <div className="border-t pt-3">
+                  <h3 className="mb-2 text-sm font-semibold">{t("asbuilt.detail.lifecycle")}</h3>
+                  <ol className="space-y-2 text-xs">
+                    <li className="flex items-start justify-between gap-3">
+                      <span>{t("asbuilt.lifecycle.created")}</span>
+                      <span className="text-muted-foreground">{formatDateTime(detail.createdAt)}</span>
+                    </li>
+                    {detail.submittedAt && (
+                      <li className="flex items-start justify-between gap-3">
+                        <span>{t("asbuilt.lifecycle.submitted").replace("{user}", detail.submittedByName ?? "—")}</span>
+                        <span className="text-muted-foreground">{formatDateTime(detail.submittedAt)}</span>
+                      </li>
+                    )}
+                    {detail.approvedAt && (
+                      <li className="flex items-start justify-between gap-3">
+                        <span>{t("asbuilt.lifecycle.approved").replace("{user}", detail.approvedByName ?? "—")}</span>
+                        <span className="text-muted-foreground">{formatDateTime(detail.approvedAt)}</span>
+                      </li>
+                    )}
+                    {detail.archivedAt && (
+                      <li className="flex items-start justify-between gap-3">
+                        <span>{t("asbuilt.lifecycle.archived")}</span>
+                        <span className="text-muted-foreground">{formatDateTime(detail.archivedAt)}</span>
+                      </li>
+                    )}
+                  </ol>
+                </div>
 
                 {(canManage || canApprove) && (
                   <div className="flex flex-wrap gap-2 border-t pt-3">

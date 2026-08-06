@@ -341,6 +341,8 @@ Establish comprehensive building inspection checklists. Manage commissioning (tr
 
 Automatically compile as-built drawings. Consolidate acceptance records for all work items. Upload and store as-built drawings. Manage as-built document catalog by project. Export as-built document packages. Manage document versions.
 
+Open **Admin > Construction > As-Built Records** to search, filter, sort, and paginate documents by project, category, and workflow status. Authorized users can create and edit draft/submitted records, move them through Draft, Submitted, Approved, Archived, or Cancelled states, inspect the lifecycle history, and export the complete filtered list to CSV. Approved and archived records are locked; duplicate document titles within the same project are rejected. The summary cards show required-category completeness for the selected project.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | As-Built List | Document packages by project | 1 day |

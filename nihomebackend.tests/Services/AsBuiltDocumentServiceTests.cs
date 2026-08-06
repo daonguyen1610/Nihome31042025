@@ -97,6 +97,33 @@ public class AsBuiltDocumentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_rejects_duplicate_title_in_same_project()
+    {
+        await _sut.CreateAsync(Req("Bản vẽ tầng một"), _userId);
+
+        var error = await Assert.ThrowsAsync<AsBuiltDocumentOperationException>(
+            () => _sut.CreateAsync(Req("  bản VẼ tầng MỘT  "), _userId));
+
+        Assert.Contains("đã tồn tại", error.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_rejects_duplicate_title_in_same_project()
+    {
+        await _sut.CreateAsync(Req("Hồ sơ A"), _userId);
+        var second = await _sut.CreateAsync(Req("Hồ sơ B"), _userId);
+
+        var error = await Assert.ThrowsAsync<AsBuiltDocumentOperationException>(
+            () => _sut.UpdateAsync(second.Id, new UpdateAsBuiltDocumentRequest
+            {
+                Title = "HỒ SƠ A",
+                Category = "Drawing",
+            }, _userId));
+
+        Assert.Contains("đã tồn tại", error.Message);
+    }
+
+    [Fact]
     public async Task Transition_walks_draft_submitted_approved_archived()
     {
         var a = await _sut.CreateAsync(Req("Full flow"), _userId);
@@ -240,6 +267,41 @@ public class AsBuiltDocumentServiceTests : IDisposable
 
         var byCode = await _sut.ListAsync(new AsBuiltDocumentListParams { DesignProjectId = _projectId, Search = "AB-002" });
         Assert.Single(byCode.Items);
+    }
+
+    [Fact]
+    public async Task ListAsync_applies_requested_sort()
+    {
+        await _sut.CreateAsync(Req("Zulu"), _userId);
+        await _sut.CreateAsync(Req("Alpha"), _userId);
+
+        var list = await _sut.ListAsync(new AsBuiltDocumentListParams
+        {
+            DesignProjectId = _projectId,
+            SortBy = "title",
+            SortDirection = "asc",
+        });
+
+        Assert.Equal(new[] { "Alpha", "Zulu" }, list.Items.Select(item => item.Title));
+    }
+
+    [Fact]
+    public async Task ExportAsync_returns_all_filtered_rows_without_paging()
+    {
+        await _sut.CreateAsync(Req("Drawing one"), _userId);
+        await _sut.CreateAsync(Req("Drawing two"), _userId);
+        await _sut.CreateAsync(Req("Report", "TestReport"), _userId);
+
+        var rows = await _sut.ExportAsync(new AsBuiltDocumentListParams
+        {
+            DesignProjectId = _projectId,
+            Category = "Drawing",
+            Page = 2,
+            PageSize = 1,
+        });
+
+        Assert.Equal(2, rows.Count);
+        Assert.All(rows, row => Assert.Equal("Drawing", row.Category));
     }
 
     public void Dispose() => _db.Dispose();
