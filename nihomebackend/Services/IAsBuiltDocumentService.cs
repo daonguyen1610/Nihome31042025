@@ -23,6 +23,8 @@ public interface IAsBuiltDocumentService
 {
     Task<AsBuiltDocumentListResponse> ListAsync(AsBuiltDocumentListParams parameters, CancellationToken ct = default);
 
+    Task<List<AsBuiltDocumentResponse>> ExportAsync(AsBuiltDocumentListParams parameters, CancellationToken ct = default);
+
     Task<AsBuiltDocumentResponse?> GetAsync(int id, CancellationToken ct = default);
 
     Task<AsBuiltDocumentResponse> CreateAsync(CreateAsBuiltDocumentRequest request, int callerUserId, CancellationToken ct = default);

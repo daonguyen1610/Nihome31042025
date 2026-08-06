@@ -25,53 +25,11 @@ public class AsBuiltDocumentService(
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 20 : p.PageSize, 1, MaxPageSize);
-
-        var q = db.AsBuiltDocuments
-            .AsNoTracking()
-            .Include(a => a.DesignProject)
-            .Include(a => a.SubmittedBy)
-            .Include(a => a.ApprovedBy)
-            .AsQueryable();
-
-        if (p.DesignProjectId.HasValue) q = q.Where(a => a.DesignProjectId == p.DesignProjectId.Value);
-
-        if (!string.IsNullOrWhiteSpace(p.Category))
-        {
-            var cats = p.Category.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => Enum.TryParse<AsBuiltCategory>(s, true, out var v) ? (AsBuiltCategory?)v : null)
-                .Where(v => v.HasValue)
-                .Select(v => v!.Value)
-                .ToList();
-            if (cats.Count > 0) q = q.Where(a => cats.Contains(a.Category));
-        }
-
-        if (!string.IsNullOrWhiteSpace(p.Status))
-        {
-            var statuses = p.Status.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(s => Enum.TryParse<AsBuiltStatus>(s, true, out var v) ? (AsBuiltStatus?)v : null)
-                .Where(v => v.HasValue)
-                .Select(v => v!.Value)
-                .ToList();
-            if (statuses.Count > 0) q = q.Where(a => statuses.Contains(a.Status));
-        }
-
-        if (!string.IsNullOrWhiteSpace(p.Search))
-        {
-            var term = p.Search.Trim();
-            q = q.Where(a => EF.Functions.Like(a.Title, $"%{term}%")
-                          || EF.Functions.Like(a.DocumentCode, $"%{term}%"));
-        }
-
-        if (p.OpenOnly)
-        {
-            q = q.Where(a => a.Status == AsBuiltStatus.Draft || a.Status == AsBuiltStatus.Submitted);
-        }
+        var q = BuildFilteredQuery(p);
 
         var total = await q.CountAsync(ct);
 
-        var rows = await q
-            .OrderBy(a => a.Category)
-            .ThenBy(a => a.DocumentCode)
+        var rows = await ApplySort(q, p)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
@@ -115,6 +73,14 @@ public class AsBuiltDocumentService(
         };
     }
 
+    public async Task<List<AsBuiltDocumentResponse>> ExportAsync(
+        AsBuiltDocumentListParams p,
+        CancellationToken ct = default)
+    {
+        var rows = await ApplySort(BuildFilteredQuery(p), p).ToListAsync(ct);
+        return rows.Select(Map).ToList();
+    }
+
     public async Task<AsBuiltDocumentResponse?> GetAsync(int id, CancellationToken ct = default)
     {
         var entity = await db.AsBuiltDocuments
@@ -147,6 +113,7 @@ public class AsBuiltDocumentService(
         {
             throw new AsBuiltDocumentOperationException($"Dự án #{request.DesignProjectId} không tồn tại.");
         }
+        await EnsureUniqueTitleAsync(request.DesignProjectId, title, null, ct);
 
         var code = await AllocateCodeAsync(request.DesignProjectId, ct);
 
@@ -190,6 +157,7 @@ public class AsBuiltDocumentService(
         {
             throw new AsBuiltDocumentOperationException($"Danh mục '{request.Category}' không hợp lệ.");
         }
+        await EnsureUniqueTitleAsync(entity.DesignProjectId, title, entity.Id, ct);
 
         entity.Title = title;
         entity.Category = category;
@@ -285,6 +253,102 @@ public class AsBuiltDocumentService(
     // --------------------------------------------------------------------
     //  Helpers
     // --------------------------------------------------------------------
+
+    private IQueryable<AsBuiltDocument> BuildFilteredQuery(AsBuiltDocumentListParams p)
+    {
+        var query = db.AsBuiltDocuments
+            .AsNoTracking()
+            .Include(a => a.DesignProject)
+            .Include(a => a.SubmittedBy)
+            .Include(a => a.ApprovedBy)
+            .AsQueryable();
+
+        if (p.DesignProjectId.HasValue)
+        {
+            query = query.Where(a => a.DesignProjectId == p.DesignProjectId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.Category))
+        {
+            var categories = p.Category
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(value => Enum.TryParse<AsBuiltCategory>(value, true, out var parsed)
+                    ? (AsBuiltCategory?)parsed
+                    : null)
+                .Where(value => value.HasValue)
+                .Select(value => value!.Value)
+                .ToList();
+            if (categories.Count > 0) query = query.Where(a => categories.Contains(a.Category));
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.Status))
+        {
+            var statuses = p.Status
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(value => Enum.TryParse<AsBuiltStatus>(value, true, out var parsed)
+                    ? (AsBuiltStatus?)parsed
+                    : null)
+                .Where(value => value.HasValue)
+                .Select(value => value!.Value)
+                .ToList();
+            if (statuses.Count > 0) query = query.Where(a => statuses.Contains(a.Status));
+        }
+
+        if (!string.IsNullOrWhiteSpace(p.Search))
+        {
+            var term = p.Search.Trim();
+            query = query.Where(a => EF.Functions.Like(a.Title, $"%{term}%")
+                                  || EF.Functions.Like(a.DocumentCode, $"%{term}%"));
+        }
+
+        if (p.OpenOnly)
+        {
+            query = query.Where(a => a.Status == AsBuiltStatus.Draft || a.Status == AsBuiltStatus.Submitted);
+        }
+
+        return query;
+    }
+
+    private static IOrderedQueryable<AsBuiltDocument> ApplySort(
+        IQueryable<AsBuiltDocument> query,
+        AsBuiltDocumentListParams p)
+    {
+        var descending = string.Equals(p.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        return (p.SortBy?.Trim().ToLowerInvariant(), descending) switch
+        {
+            ("code", true) => query.OrderByDescending(a => a.DocumentCode).ThenByDescending(a => a.Id),
+            ("code", false) => query.OrderBy(a => a.DocumentCode).ThenBy(a => a.Id),
+            ("title", true) => query.OrderByDescending(a => a.Title).ThenByDescending(a => a.Id),
+            ("title", false) => query.OrderBy(a => a.Title).ThenBy(a => a.Id),
+            ("project", true) => query.OrderByDescending(a => a.DesignProject.Name).ThenByDescending(a => a.Id),
+            ("project", false) => query.OrderBy(a => a.DesignProject.Name).ThenBy(a => a.Id),
+            ("status", true) => query.OrderByDescending(a => a.Status).ThenByDescending(a => a.Id),
+            ("status", false) => query.OrderBy(a => a.Status).ThenBy(a => a.Id),
+            ("updatedat", true) => query.OrderByDescending(a => a.UpdatedAt).ThenByDescending(a => a.Id),
+            ("updatedat", false) => query.OrderBy(a => a.UpdatedAt).ThenBy(a => a.Id),
+            (_, true) => query.OrderByDescending(a => a.Category).ThenByDescending(a => a.DocumentCode),
+            _ => query.OrderBy(a => a.Category).ThenBy(a => a.DocumentCode),
+        };
+    }
+
+    private async Task EnsureUniqueTitleAsync(
+        int projectId,
+        string title,
+        int? excludedId,
+        CancellationToken ct)
+    {
+        var normalizedTitle = title.ToLower();
+        var duplicateExists = await db.AsBuiltDocuments.AnyAsync(
+            document => document.DesignProjectId == projectId
+                && document.Title.ToLower() == normalizedTitle
+                && (!excludedId.HasValue || document.Id != excludedId.Value),
+            ct);
+        if (duplicateExists)
+        {
+            throw new AsBuiltDocumentOperationException(
+                $"Tiêu đề tài liệu '{title}' đã tồn tại trong dự án.");
+        }
+    }
 
     private async Task<string> AllocateCodeAsync(int projectId, CancellationToken ct)
     {

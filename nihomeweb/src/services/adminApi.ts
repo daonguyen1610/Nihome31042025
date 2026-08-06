@@ -2463,6 +2463,8 @@ export interface AsBuiltDocumentListParams {
   status?: string;
   search?: string;
   openOnly?: boolean;
+  sortBy?: "category" | "code" | "title" | "project" | "status" | "updatedAt";
+  sortDirection?: "asc" | "desc";
   page?: number;
   pageSize?: number;
 }
@@ -3371,10 +3373,24 @@ export const adminApi = {
     if (params.status) q.append("status", params.status);
     if (params.search) q.append("search", params.search);
     if (params.openOnly) q.append("openOnly", "true");
+    if (params.sortBy) q.append("sortBy", params.sortBy);
+    if (params.sortDirection) q.append("sortDirection", params.sortDirection);
     if (params.page) q.append("page", String(params.page));
     if (params.pageSize) q.append("pageSize", String(params.pageSize));
     const qs = q.toString();
     return api.get<AsBuiltDocumentListResponse>(`/as-built-documents${qs ? `?${qs}` : ""}`);
+  },
+  exportAsBuiltDocuments: (params: AsBuiltDocumentListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.category) q.append("category", params.category);
+    if (params.status) q.append("status", params.status);
+    if (params.search) q.append("search", params.search);
+    if (params.openOnly) q.append("openOnly", "true");
+    if (params.sortBy) q.append("sortBy", params.sortBy);
+    if (params.sortDirection) q.append("sortDirection", params.sortDirection);
+    const qs = q.toString();
+    return api.get<Blob>(`/as-built-documents/export${qs ? `?${qs}` : ""}`, { responseType: "blob" });
   },
   getAsBuiltDocument: (id: number) =>
     api.get<AsBuiltDocumentResponse>(`/as-built-documents/${id}`),

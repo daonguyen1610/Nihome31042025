@@ -197,6 +197,43 @@ public class AsBuiltDocumentsControllerTests : IntegrationTestBase
         (await Client.GetAsync("/api/as-built-documents/999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Export_preserves_filters_and_returns_csv()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        await CreateAsync(projectId, "Drawing");
+        await CreateAsync(projectId, "TestReport");
+
+        var response = await Client.GetAsync(
+            $"/api/as-built-documents/export?designProjectId={projectId}&category=Drawing&sortBy=code&sortDirection=desc");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/csv");
+        var csv = await response.Content.ReadAsStringAsync();
+        csv.Should().Contain("Drawing");
+        csv.Should().NotContain("TestReport");
+    }
+
+    [Fact]
+    public async Task Submit_creates_admin_notification()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var id = await CreateAsync(projectId);
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/as-built-documents/{id}/status",
+            new { status = "Submitted" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var notificationExists = await WithDbAsync(async db =>
+            await db.Notifications.AnyAsync(notification =>
+                notification.Module == "AsBuiltDocument"
+                && notification.LinkUrl == "/admin/construction/asbuilt"));
+        notificationExists.Should().BeTrue();
+    }
+
     // -------- helpers --------
 
     private async Task<(int projectId, int id)> CreateSubmittedAsync(int? projectId = null)

@@ -96,6 +96,16 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
 
     const row = page.locator('[data-testid^="asbuilt-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
+
+    await page.getByTestId("asbuilt-sort").click();
+    await page.getByRole("option", { name: /Recently updated|Mới cập nhật/i }).click();
+    await expect(page.getByTestId("asbuilt-sort")).toContainText(/Recently updated|Mới cập nhật/i);
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByTestId("asbuilt-export").click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^as-built-documents-\d{4}-\d{2}-\d{2}\.csv$/);
+
     await row.click();
 
     // Draft → Submitted

@@ -34,12 +34,24 @@
   { "key": "asbuilt.field.submittedBy", "category": "construction", "vi": "Người nộp", "en": "Submitted by", "zh": "提交人", "ja": "提出者" },
   { "key": "asbuilt.field.approvedBy", "category": "construction", "vi": "Người duyệt", "en": "Approved by", "zh": "审批人", "ja": "承認者" },
   { "key": "asbuilt.field.archivedAt", "category": "construction", "vi": "Lưu trữ lúc", "en": "Archived at", "zh": "归档时间", "ja": "アーカイブ日時" },
+  { "key": "asbuilt.field.createdAt", "category": "construction", "vi": "Tạo lúc", "en": "Created at", "zh": "创建时间", "ja": "作成日時" },
+  { "key": "asbuilt.field.updatedAt", "category": "construction", "vi": "Cập nhật lúc", "en": "Updated at", "zh": "更新时间", "ja": "更新日時" },
 
   { "key": "asbuilt.filter.project.all", "category": "construction", "vi": "Tất cả dự án", "en": "All projects", "zh": "所有项目", "ja": "全プロジェクト" },
   { "key": "asbuilt.filter.category.all", "category": "construction", "vi": "Tất cả danh mục", "en": "All categories", "zh": "所有类别", "ja": "全カテゴリ" },
   { "key": "asbuilt.filter.status.all", "category": "construction", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "所有状态", "ja": "全ステータス" },
   { "key": "asbuilt.filter.openOnly", "category": "construction", "vi": "Chỉ chưa duyệt", "en": "Open only", "zh": "仅未批准", "ja": "未承認のみ" },
   { "key": "asbuilt.filter.search", "category": "construction", "vi": "Tìm theo mã, tiêu đề", "en": "Search by code, title", "zh": "按编号或标题搜索", "ja": "コード・タイトルで検索" },
+  { "key": "asbuilt.filter.sort", "category": "construction", "vi": "Sắp xếp", "en": "Sort", "zh": "排序", "ja": "並び順" },
+  { "key": "asbuilt.sort.categoryAsc", "category": "construction", "vi": "Danh mục, mã", "en": "Category, code", "zh": "类别、编号", "ja": "カテゴリ、コード" },
+  { "key": "asbuilt.sort.codeAsc", "category": "construction", "vi": "Mã tăng dần", "en": "Code ascending", "zh": "编号升序", "ja": "コード昇順" },
+  { "key": "asbuilt.sort.codeDesc", "category": "construction", "vi": "Mã giảm dần", "en": "Code descending", "zh": "编号降序", "ja": "コード降順" },
+  { "key": "asbuilt.sort.titleAsc", "category": "construction", "vi": "Tiêu đề A–Z", "en": "Title A–Z", "zh": "标题 A–Z", "ja": "タイトル A–Z" },
+  { "key": "asbuilt.sort.titleDesc", "category": "construction", "vi": "Tiêu đề Z–A", "en": "Title Z–A", "zh": "标题 Z–A", "ja": "タイトル Z–A" },
+  { "key": "asbuilt.sort.projectAsc", "category": "construction", "vi": "Dự án A–Z", "en": "Project A–Z", "zh": "项目 A–Z", "ja": "プロジェクト A–Z" },
+  { "key": "asbuilt.sort.statusAsc", "category": "construction", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "ステータス" },
+  { "key": "asbuilt.sort.updatedDesc", "category": "construction", "vi": "Mới cập nhật", "en": "Recently updated", "zh": "最近更新", "ja": "更新が新しい順" },
+  { "key": "asbuilt.sort.updatedAsc", "category": "construction", "vi": "Cũ cập nhật", "en": "Oldest updated", "zh": "最早更新", "ja": "更新が古い順" },
 
   { "key": "asbuilt.action.new", "category": "construction", "vi": "Tạo tài liệu", "en": "New document", "zh": "新建资料", "ja": "新規作成" },
   { "key": "asbuilt.action.edit", "category": "construction", "vi": "Chỉnh sửa", "en": "Edit", "zh": "编辑", "ja": "編集" },
@@ -53,6 +65,14 @@
   { "key": "asbuilt.action.bulkDelete", "category": "construction", "vi": "Xoá {count} tài liệu", "en": "Delete {count} documents", "zh": "删除 {count} 份资料", "ja": "{count}件を削除" },
   { "key": "asbuilt.action.selectAll", "category": "construction", "vi": "Chọn tất cả trên trang", "en": "Select all on page", "zh": "全选本页", "ja": "ページ内すべて選択" },
   { "key": "asbuilt.action.close", "category": "construction", "vi": "Đóng", "en": "Close", "zh": "关闭", "ja": "閉じる" },
+  { "key": "asbuilt.action.export", "category": "construction", "vi": "Xuất CSV", "en": "Export CSV", "zh": "导出 CSV", "ja": "CSV出力" },
+  { "key": "asbuilt.action.exporting", "category": "construction", "vi": "Đang xuất…", "en": "Exporting…", "zh": "正在导出…", "ja": "出力中…" },
+
+  { "key": "asbuilt.detail.lifecycle", "category": "construction", "vi": "Lịch sử vòng đời", "en": "Lifecycle history", "zh": "生命周期记录", "ja": "ライフサイクル履歴" },
+  { "key": "asbuilt.lifecycle.created", "category": "construction", "vi": "Tạo tài liệu", "en": "Document created", "zh": "资料已创建", "ja": "資料を作成" },
+  { "key": "asbuilt.lifecycle.submitted", "category": "construction", "vi": "{user} đã nộp duyệt", "en": "Submitted by {user}", "zh": "由 {user} 提交", "ja": "{user} が承認申請" },
+  { "key": "asbuilt.lifecycle.approved", "category": "construction", "vi": "{user} đã duyệt", "en": "Approved by {user}", "zh": "由 {user} 批准", "ja": "{user} が承認" },
+  { "key": "asbuilt.lifecycle.archived", "category": "construction", "vi": "Đã lưu trữ", "en": "Archived", "zh": "已归档", "ja": "アーカイブ済" },
 
   { "key": "asbuilt.form.newTitle", "category": "construction", "vi": "Tạo tài liệu hoàn công", "en": "Create as-built document", "zh": "创建竣工资料", "ja": "竣工資料を作成" },
   { "key": "asbuilt.form.editTitle", "category": "construction", "vi": "Cập nhật tài liệu hoàn công", "en": "Update as-built document", "zh": "更新竣工资料", "ja": "竣工資料を更新" },
@@ -78,5 +98,6 @@
   { "key": "asbuilt.toast.deleted", "category": "construction", "vi": "Đã xoá tài liệu.", "en": "Document deleted.", "zh": "已删除资料。", "ja": "資料を削除しました。" },
   { "key": "asbuilt.toast.bulkDeleted", "category": "construction", "vi": "Đã xoá {count} tài liệu.", "en": "Deleted {count} documents.", "zh": "已删除 {count} 份资料。", "ja": "{count}件の資料を削除しました。" },
   { "key": "asbuilt.toast.bulkSkipped", "category": "construction", "vi": "Bỏ qua {count} tài liệu đã duyệt/lưu trữ.", "en": "Skipped {count} approved/archived documents.", "zh": "已跳过 {count} 份已批准/已归档资料。", "ja": "{count}件の承認済み・アーカイブ済み資料をスキップしました。" },
-  { "key": "asbuilt.toast.transition.success", "category": "construction", "vi": "Cập nhật trạng thái thành công.", "en": "Status updated.", "zh": "状态已更新。", "ja": "ステータスを更新しました。" }
+  { "key": "asbuilt.toast.transition.success", "category": "construction", "vi": "Cập nhật trạng thái thành công.", "en": "Status updated.", "zh": "状态已更新。", "ja": "ステータスを更新しました。" },
+  { "key": "asbuilt.toast.exported", "category": "construction", "vi": "Đã xuất danh sách hồ sơ hoàn công.", "en": "As-built documents exported.", "zh": "竣工资料已导出。", "ja": "竣工資料を出力しました。" }
 ]
