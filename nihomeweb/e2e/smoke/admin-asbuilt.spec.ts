@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createDesignProject } from "../fixtures/designProjects";
 
 /**
  * NIH-145 M4 As-built dossier end-to-end. Real path through the
@@ -46,12 +47,11 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     }
 
     const projSuffix = uid();
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: `E2E-AB ${projSuffix}`, customerId },
+      name: `E2E-AB ${projSuffix}`,
+      customerId,
     });
-    expect(projCreate.ok(), await projCreate.text()).toBeTruthy();
-    const projectId = (await projCreate.json()).id as number;
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/construction/asbuilt`, { waitUntil: "networkidle" });

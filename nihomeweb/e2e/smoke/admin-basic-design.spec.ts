@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createDesignProject } from "../fixtures/designProjects";
 
 /**
  * NIH-115 M2 Basic Design end-to-end flow. Real-user path through the
@@ -58,12 +59,11 @@ test.describe("NIH-115 — Basic Design + Shop Drawing unlock (real-user flow)",
 
     // Create the design project.
     const projectName = `E2E-BD ${uid()}`;
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: projectName, customerId },
+      name: projectName,
+      customerId,
     });
-    expect(projCreate.ok(), await projCreate.text()).toBeTruthy();
-    const projectId = (await projCreate.json()).id as number;
 
     // Push a concept option all the way to Finalized so the project
     // moves to BasicDesign — this is what the Design Lead would do

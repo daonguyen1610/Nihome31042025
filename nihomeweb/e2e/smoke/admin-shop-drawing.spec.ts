@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createDesignProject } from "../fixtures/designProjects";
 
 /**
  * NIH-116 M2 Shop Drawing end-to-end flow. Real-user path through the
@@ -55,12 +56,11 @@ test.describe("NIH-116 — Shop Drawing (real-user flow)", () => {
     }
 
     const projectName = `E2E-SD ${uid()}`;
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: projectName, customerId },
+      name: projectName,
+      customerId,
     });
-    expect(projCreate.ok(), await projCreate.text()).toBeTruthy();
-    const projectId = (await projCreate.json()).id as number;
 
     // Concept → BasicDesign
     const optCreate = await api.post("/api/concept-options", {

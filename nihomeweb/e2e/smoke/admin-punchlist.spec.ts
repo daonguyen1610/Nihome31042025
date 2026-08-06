@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createDesignProject } from "../fixtures/designProjects";
 
 /**
  * NIH-146 M4 Punch list end-to-end. Real-user path through the running
@@ -48,12 +49,11 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     }
 
     const projSuffix = uid();
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: `E2E-PUNCH ${projSuffix}`, customerId },
+      name: `E2E-PUNCH ${projSuffix}`,
+      customerId,
     });
-    expect(projCreate.ok(), await projCreate.text()).toBeTruthy();
-    const projectId = (await projCreate.json()).id as number;
 
     // Open the page + filter to this project
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
