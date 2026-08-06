@@ -55,6 +55,33 @@ public class AsBuiltDocumentsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_DuplicateTitleInSameProject_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var title = $"Duplicate {Guid.NewGuid():N}";
+
+        var first = await Client.PostAsJsonAsync("/api/as-built-documents", new
+        {
+            designProjectId = projectId,
+            title,
+            category = "Drawing",
+        });
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var duplicate = await Client.PostAsJsonAsync("/api/as-built-documents", new
+        {
+            designProjectId = projectId,
+            title = $"  {title.ToUpperInvariant()}  ",
+            category = "Drawing",
+        });
+
+        duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await ReadJsonAsync(duplicate);
+        body.GetProperty("message").GetString().Should().Contain("đã tồn tại");
+    }
+
+    [Fact]
     public async Task Create_AsSale_IsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
