@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createDesignProject } from "../fixtures/designProjects";
 
 /**
  * NIH-142 M4 Site Diary end-to-end. Real-user path through the
@@ -48,12 +49,11 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
     }
 
     const projSuffix = uid();
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: `E2E-DIARY ${projSuffix}`, customerId },
+      name: `E2E-DIARY ${projSuffix}`,
+      customerId,
     });
-    expect(projCreate.ok(), await projCreate.text()).toBeTruthy();
-    const projectId = (await projCreate.json()).id as number;
 
     // ---------- 2. Open the diary page + filter to this project ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);

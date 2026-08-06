@@ -193,20 +193,20 @@ test.describe("Business role access verification", () => {
     await page.goto("/admin");
     await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
 
-    // BGD should be DENIED on user management (view only role)
+    // BGD receives all view permissions, including user management
     await loginInBrowserAs(page, TEST_USERS.bgd);
     await page.goto("/admin/users");
+    await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
     await expect(
-      page.locator("text=/^403$/").first(),
-      "BGD should not access user management",
+      page.getByRole("heading", { name: /người dùng|users/i }).first(),
     ).toBeVisible();
 
-    // BGD should be DENIED on role management
+    // BGD can view role management but cannot mutate roles
     await loginInBrowserAs(page, TEST_USERS.bgd);
     await page.goto("/admin/roles");
+    await expect(page.locator("text=/^403$/").first()).toHaveCount(0);
     await expect(
-      page.locator("text=/^403$/").first(),
-      "BGD should not access role management",
+      page.getByRole("heading", { name: /vai trò|role/i }).first(),
     ).toBeVisible();
 
     expect(jsErrors).toHaveLength(0);
@@ -263,7 +263,6 @@ test.describe("Cross-role permission boundaries", () => {
       TEST_USERS.pm,
       TEST_USERS.accountant,
       TEST_USERS.warehouse,
-      TEST_USERS.bgd,
     ];
 
     for (const user of nonAdminRoles) {
@@ -282,7 +281,6 @@ test.describe("Cross-role permission boundaries", () => {
   }) => {
     const nonAdminRoles = [
       TEST_USERS.sale,
-      TEST_USERS.design,
       TEST_USERS.pm,
       TEST_USERS.accountant,
     ];

@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createDesignProject } from "../fixtures/designProjects";
 
 /**
  * NIH-143 M4 Partial Acceptance — real-user path through the running
@@ -46,12 +47,11 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     }
 
     const projSuffix = uid();
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: `E2E-ACC ${projSuffix}`, customerId },
+      name: `E2E-ACC ${projSuffix}`,
+      customerId,
     });
-    expect(projCreate.ok(), await projCreate.text()).toBeTruthy();
-    const projectId = (await projCreate.json()).id as number;
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/construction/acceptance`, { waitUntil: "networkidle" });
@@ -87,11 +87,11 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
           r.request().method() === "POST" &&
           r.status() === 201,
       ),
+      page.waitForResponse(
+        (r) => r.url().includes("/api/acceptance-records?") && r.request().method() === "GET",
+      ),
       page.getByTestId("acceptance-form-save").click({ force: true }),
     ]);
-    await page.waitForResponse(
-      (r) => r.url().includes("/api/acceptance-records?") && r.request().method() === "GET",
-    );
 
     const row = page.locator('[data-testid^="acceptance-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
@@ -147,11 +147,11 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       : 0;
     expect(customerId).toBeGreaterThan(0);
 
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: `E2E-ACC-REV ${uid()}`, customerId },
+      name: `E2E-ACC-REV ${uid()}`,
+      customerId,
     });
-    const projectId = (await projCreate.json()).id as number;
 
     const create = await api.post("/api/acceptance-records", {
       headers: authHeader,

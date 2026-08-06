@@ -96,7 +96,9 @@ test.describe("CRM workflow navigation", () => {
     await expect(page.locator("table tbody tr").first()).toBeVisible();
 
     // Export button should be present
-    await expect(page.getByRole("button", { name: /xuất|export|csv|excel/i })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^(?:xuất|export)(?: csv| excel)?$/i }),
+    ).toBeVisible();
 
     expect(jsErrors).toHaveLength(0);
   });

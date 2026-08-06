@@ -30,6 +30,7 @@ const ADDITIONAL_PERMISSIONS = [
   "dashboard.view",
   "content.projects.view",
   "content.projects.manage",
+  "crm.customers.view",
   "crm.contracts.view",
 ];
 
@@ -148,7 +149,7 @@ test("Step 2: Grant additional permissions to the role via API", async ({ api })
   expect(updateRes.status(), "Update role permissions").toBe(200);
 
   // Verify permissions were updated
-  const roleRes = await api.get(`/api/admin/rbac/roles/${createdRoleId}`, {
+  const roleRes = await api.get(`/api/admin/rbac/roles/${createdRoleId}/permissions`, {
     headers: { Authorization: `Bearer ${saToken}` },
   });
   expect(roleRes.status()).toBe(200);

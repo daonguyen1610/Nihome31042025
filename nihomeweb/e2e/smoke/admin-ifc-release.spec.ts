@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { createDesignProject } from "../fixtures/designProjects";
 
 /**
  * NIH-118 M2 IFC Release end-to-end flow. Real-user path through the
@@ -50,12 +51,11 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
       customerId = (await created.json()).id;
     }
 
-    const projCreate = await api.post("/api/design-projects", {
+    const projectId = await createDesignProject(api, {
       headers: authHeader,
-      data: { name: `E2E-IFC ${uid()}`, customerId },
+      name: `E2E-IFC ${uid()}`,
+      customerId,
     });
-    expect(projCreate.ok(), await projCreate.text()).toBeTruthy();
-    const projectId = (await projCreate.json()).id as number;
 
     // Concept → BasicDesign → ShopDrawing
     const optCreate = await api.post("/api/concept-options", {
