@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -12,11 +13,22 @@ public class UserServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly UserService _sut;
+    private readonly RefreshTokenService _refreshTokenService;
 
     public UserServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new UserService(_db, new PasswordService(), new NoOpNotificationService());
+        var jwtOptions = new JwtOptions
+        {
+            RefreshTokenDays = 7,
+            AccessTokenMinutes = 30,
+            Issuer = "test",
+            Audience = "test",
+            ActiveKeyId = "key1",
+            Keys = new Dictionary<string, string> { { "key1", "test-secret-key-32-chars-minimum!" } }
+        };
+        _refreshTokenService = new RefreshTokenService(_db, Options.Create(jwtOptions));
+        _sut = new UserService(_db, new PasswordService(), new NoOpNotificationService(), _refreshTokenService);
     }
 
     public void Dispose() => _db.Dispose();
@@ -330,13 +342,13 @@ public class UserServiceTests : IDisposable
         {
             Token = "test-token",
             UserId = target.Id,
-            Expires = DateTime.UtcNow.AddDays(7),
-            Created = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            CreatedAt = DateTime.UtcNow,
         });
         _db.Notifications.Add(new Notification
         {
             UserId = target.Id,
-            EntityType = "Test",
+            RefEntityType = "Test",
             Title = "Test notification",
             Body = "Test body",
             CreatedAt = DateTime.UtcNow,

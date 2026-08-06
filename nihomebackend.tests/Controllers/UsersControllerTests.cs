@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
@@ -18,12 +19,23 @@ public class UsersControllerTests : IDisposable
     private readonly AppDbContext _db;
     private readonly UsersController _sut;
     private readonly NotificationService _notificationSvc;
+    private readonly RefreshTokenService _refreshTokenService;
 
     public UsersControllerTests()
     {
         _db = DbContextFactory.Create();
         _notificationSvc = NotificationServiceTestFactory.Create(_db);
-        var service = new UserService(_db, new PasswordService(), _notificationSvc);
+        var jwtOptions = new JwtOptions
+        {
+            RefreshTokenDays = 7,
+            AccessTokenMinutes = 30,
+            Issuer = "test",
+            Audience = "test",
+            ActiveKeyId = "key1",
+            Keys = new Dictionary<string, string> { { "key1", "test-secret-key-32-chars-minimum!" } }
+        };
+        _refreshTokenService = new RefreshTokenService(_db, Options.Create(jwtOptions));
+        var service = new UserService(_db, new PasswordService(), _notificationSvc, _refreshTokenService);
         var idempotency = new IdempotencyService(_db, Mock.Of<ILogger<IdempotencyService>>());
         var fingerprint = new FingerprintService();
         _sut = new UsersController(service, idempotency, fingerprint)
