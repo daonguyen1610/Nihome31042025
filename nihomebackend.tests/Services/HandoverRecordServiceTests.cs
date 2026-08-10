@@ -98,6 +98,54 @@ public class HandoverRecordServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_normalizes_null_collections()
+    {
+        var request = Request();
+        request.ChecklistItems = null!;
+        request.Documents = null!;
+        request.Signatories = null!;
+
+        var created = await _sut.CreateAsync(request, _userId, false);
+
+        Assert.Empty(created.ChecklistItems);
+        Assert.Empty(created.Documents);
+        Assert.Empty(created.Signatories);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_rejects_oversized_note()
+    {
+        var created = await _sut.CreateAsync(Request(), _userId, false);
+
+        await Assert.ThrowsAsync<HandoverRecordOperationException>(() => _sut.TransitionAsync(
+            created.Id,
+            new TransitionHandoverStatusRequest { Status = "Cancelled", Note = new string('x', 2001) },
+            _userId,
+            false));
+    }
+
+    [Fact]
+    public async Task Responsible_user_cannot_reassign_record_without_project_leadership()
+    {
+        var responsible = AddUser("0900000147", "responsible.handover@example.com");
+        var replacement = AddUser("0900000148", "replacement.handover@example.com");
+        var request = Request();
+        request.ResponsibleUserId = responsible.Id;
+        var created = await _sut.CreateAsync(request, _userId, false);
+
+        var update = new UpdateHandoverRecordRequest
+        {
+            Title = created.Title,
+            PlannedHandoverDate = created.PlannedHandoverDate,
+            ResponsibleUserId = replacement.Id,
+        };
+        var exception = await Assert.ThrowsAsync<HandoverRecordOperationException>(
+            () => _sut.UpdateAsync(created.Id, update, responsible.Id, false));
+
+        Assert.Contains("thay đổi người phụ trách", exception.Message);
+    }
+
+    [Fact]
     public async Task Ready_transition_requires_all_upstream_conditions()
     {
         var created = await _sut.CreateAsync(Request(complete: true), _userId, false);

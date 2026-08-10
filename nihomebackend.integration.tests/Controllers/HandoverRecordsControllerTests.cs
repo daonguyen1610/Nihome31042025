@@ -134,7 +134,7 @@ public class HandoverRecordsControllerTests : IntegrationTestBase
     {
         var responsibleUserId = await UserIdForRoleAsync("PM");
         var projectId = await CreateProjectAsync();
-        var uniqueTerm = $"Nghiệm thu bàn giao {Guid.NewGuid():N}";
+        var uniqueTerm = $"=1+1 Handover {Guid.NewGuid():N}";
         await AuthenticateAsAsync("SUPER_ADMIN");
         var created = await CreateHandoverAsync(projectId, responsibleUserId, uniqueTerm);
 
@@ -151,7 +151,7 @@ public class HandoverRecordsControllerTests : IntegrationTestBase
         var csv = Encoding.UTF8.GetString(bytes[Encoding.UTF8.GetPreamble().Length..]);
         csv.Should().StartWith("Code,Project,Title,Planned date,Actual date,Responsible,Status,Ready,Open punch items");
         csv.Should().Contain(created.GetProperty("handoverCode").GetString());
-        csv.Should().Contain(uniqueTerm);
+        csv.Should().Contain($"'{uniqueTerm}");
     }
 
     private Task AuthenticateAsAsync(string roleCode) =>

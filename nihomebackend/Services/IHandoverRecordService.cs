@@ -7,6 +7,10 @@ public class HandoverRecordOperationException(string message) : Exception(messag
 {
 }
 
+public class HandoverRecordConflictException(string message) : Exception(message)
+{
+}
+
 public interface IHandoverRecordService
 {
     Task<HandoverRecordListResponse> ListAsync(HandoverRecordListParams parameters, int callerUserId, bool canSeeAll, CancellationToken ct = default);

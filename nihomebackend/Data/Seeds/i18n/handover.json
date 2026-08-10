@@ -66,6 +66,7 @@
   { "key": "handover.action.delete", "category": "construction", "vi": "Xoá", "en": "Delete", "zh": "删除", "ja": "削除" },
   { "key": "handover.action.remove", "category": "construction", "vi": "Xoá dòng", "en": "Remove row", "zh": "删除行", "ja": "行を削除" },
   { "key": "handover.action.notReady", "category": "construction", "vi": "Hồ sơ chưa đáp ứng đầy đủ điều kiện bàn giao.", "en": "The record does not meet all handover conditions.", "zh": "该记录尚未满足所有交付条件。", "ja": "引渡条件をすべて満たしていません。" },
+  { "key": "handover.action.signatoryRequired", "category": "construction", "vi": "Cần ít nhất một bên ký trước khi hoàn tất bàn giao.", "en": "Add at least one signatory before completing handover.", "zh": "完成交付前至少需要一名签署方。", "ja": "引渡完了前に少なくとも1名の署名者を追加してください。" },
   { "key": "handover.action.export", "category": "construction", "vi": "Xuất CSV", "en": "Export CSV", "zh": "导出 CSV", "ja": "CSV出力" },
   { "key": "handover.action.exporting", "category": "construction", "vi": "Đang xuất...", "en": "Exporting...", "zh": "正在导出...", "ja": "出力中..." },
   { "key": "handover.action.processing", "category": "construction", "vi": "Đang xử lý...", "en": "Processing...", "zh": "处理中...", "ja": "処理中..." },

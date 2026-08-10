@@ -2302,5 +2302,21 @@
     "en": "Confirm readiness and signatures, then complete the full project handover.",
     "zh": "确认准备条件和签署信息，并完成整个项目交付。",
     "ja": "準備条件と署名を確認し、プロジェクト全体の引渡を完了します。"
+  },
+  {
+    "key": "rbac.perm.construction.handover.manage.all.label",
+    "category": "rbac",
+    "vi": "Quản lý toàn bộ hồ sơ bàn giao",
+    "en": "Manage all handover records",
+    "zh": "管理所有交付记录",
+    "ja": "すべての引渡記録を管理"
+  },
+  {
+    "key": "rbac.perm.construction.handover.manage.all.description",
+    "category": "rbac",
+    "vi": "Quản lý hồ sơ bàn giao thuộc mọi dự án, không giới hạn theo phân công.",
+    "en": "Manage handover records across all projects regardless of assignment.",
+    "zh": "管理所有项目的交付记录，不受分配范围限制。",
+    "ja": "担当範囲に関係なく全プロジェクトの引渡記録を管理します。"
   }
 ]

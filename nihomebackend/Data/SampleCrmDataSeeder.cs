@@ -2342,7 +2342,7 @@ public static class SampleCrmDataSeeder
             CommissioningNotes = "Đã chạy thử các hệ thống chính; tiếp tục theo dõi tải vận hành.",
             ChecklistItems = System.Text.Json.JsonSerializer.Serialize(checklist),
             ChecklistCompleted = false,
-            Documents = System.Text.Json.JsonSerializer.Serialize(new[] { "/files/handover/sample-handover-plan.pdf" }),
+            Documents = "[]",
             Signatories = System.Text.Json.JsonSerializer.Serialize(new[] { "Đại diện nhà thầu" }),
             Status = HandoverStatus.Draft,
             CreatedByUserId = owner.Id,

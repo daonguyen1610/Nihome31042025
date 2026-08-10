@@ -376,7 +376,12 @@ export default function HandoverRecordsPage() {
       actions.push({ next: "Cancelled", label: t("handover.action.cancel") });
     }
     if (record.status === "ReadyForHandover") {
-      if (canComplete) actions.push({ next: "HandedOver", complete: true, label: t("handover.action.complete") });
+      if (canComplete) actions.push({
+        next: "HandedOver",
+        complete: true,
+        label: t("handover.action.complete"),
+        disabled: record.signatories.length === 0,
+      });
       if (canManage) {
         actions.push({ next: "Draft", label: t("handover.action.revise") });
         actions.push({ next: "Cancelled", label: t("handover.action.cancel") });
@@ -472,7 +477,11 @@ export default function HandoverRecordsPage() {
           size="sm"
           variant={action.complete ? "default" : "outline"}
           disabled={action.disabled}
-          title={action.disabled ? t("handover.action.notReady") : undefined}
+          title={action.disabled
+            ? action.complete
+              ? t("handover.action.signatoryRequired")
+              : t("handover.action.notReady")
+            : undefined}
           onClick={() => {
             setTransitionNote("");
             setPendingTransition({ record, next: action.next, complete: Boolean(action.complete) });

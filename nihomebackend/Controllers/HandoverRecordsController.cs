@@ -69,7 +69,7 @@ public class HandoverRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var response = await service.CreateAsync(request, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
+            var response = await service.CreateAsync(request, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
             LogChange("handover-record.create", response.Id, "Handover record created.", null, response);
             await NotifyAdminsBestEffortAsync($"Hồ sơ bàn giao mới: {response.HandoverCode}", response.Title);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
@@ -77,6 +77,10 @@ public class HandoverRecordsController(
         catch (HandoverRecordOperationException exception)
         {
             return BadRequest(new { message = exception.Message });
+        }
+        catch (HandoverRecordConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
         }
     }
 
@@ -89,9 +93,9 @@ public class HandoverRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
-            var previous = await service.GetAsync(id, userId.Value, canSeeAll, ct);
-            var response = await service.UpdateAsync(id, request, userId.Value, canSeeAll, ct);
+            var canManageAll = await CanManageAllAsync(userId.Value, ct);
+            var previous = await service.GetAsync(id, userId.Value, canManageAll, ct);
+            var response = await service.UpdateAsync(id, request, userId.Value, canManageAll, ct);
             if (response is null) return NotFound();
             LogChange("handover-record.update", id, "Handover record updated.", previous, response);
             return Ok(response);
@@ -99,6 +103,10 @@ public class HandoverRecordsController(
         catch (HandoverRecordOperationException exception)
         {
             return BadRequest(new { message = exception.Message });
+        }
+        catch (HandoverRecordConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
         }
     }
 
@@ -111,9 +119,9 @@ public class HandoverRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
-            var previous = await service.GetAsync(id, userId.Value, canSeeAll, ct);
-            var response = await service.TransitionAsync(id, request, userId.Value, canSeeAll, ct);
+            var canManageAll = await CanManageAllAsync(userId.Value, ct);
+            var previous = await service.GetAsync(id, userId.Value, canManageAll, ct);
+            var response = await service.TransitionAsync(id, request, userId.Value, canManageAll, ct);
             if (response is null) return NotFound();
             LogChange($"handover-record.status.{response.Status.ToLowerInvariant()}", id,
                 $"Handover record -> {response.Status}.", previous, response);
@@ -127,6 +135,10 @@ public class HandoverRecordsController(
         {
             return BadRequest(new { message = exception.Message });
         }
+        catch (HandoverRecordConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
     }
 
     [HttpPost("{id:int}/complete")]
@@ -138,9 +150,9 @@ public class HandoverRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
-            var previous = await service.GetAsync(id, userId.Value, canSeeAll, ct);
-            var response = await service.CompleteAsync(id, request, userId.Value, canSeeAll, ct);
+            var canManageAll = await CanManageAllAsync(userId.Value, ct);
+            var previous = await service.GetAsync(id, userId.Value, canManageAll, ct);
+            var response = await service.CompleteAsync(id, request, userId.Value, canManageAll, ct);
             if (response is null) return NotFound();
             LogChange("handover-record.complete", id, "Project handover completed.", previous, response);
             await NotifyResponsibleBestEffortAsync(response, userId.Value);
@@ -149,6 +161,10 @@ public class HandoverRecordsController(
         catch (HandoverRecordOperationException exception)
         {
             return BadRequest(new { message = exception.Message });
+        }
+        catch (HandoverRecordConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
         }
     }
 
@@ -160,15 +176,19 @@ public class HandoverRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
-            var previous = await service.GetAsync(id, userId.Value, canSeeAll, ct);
-            if (!await service.DeleteAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
+            var canManageAll = await CanManageAllAsync(userId.Value, ct);
+            var previous = await service.GetAsync(id, userId.Value, canManageAll, ct);
+            if (!await service.DeleteAsync(id, userId.Value, canManageAll, ct)) return NotFound();
             LogChange("handover-record.delete", id, "Handover record deleted.", previous, null);
             return NoContent();
         }
         catch (HandoverRecordOperationException exception)
         {
             return BadRequest(new { message = exception.Message });
+        }
+        catch (HandoverRecordConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
         }
     }
 
@@ -180,6 +200,9 @@ public class HandoverRecordsController(
 
     private Task<bool> CanSeeAllAsync(int userId, CancellationToken ct) =>
         permissions.HasAsync(userId, "construction.handover.view.all", ct);
+
+    private Task<bool> CanManageAllAsync(int userId, CancellationToken ct) =>
+        permissions.HasAsync(userId, "construction.handover.manage.all", ct);
 
     private void LogChange(string action, int id, string message, object? oldValue, object? newValue) =>
         audit.Log(new AuditEvent
@@ -219,7 +242,12 @@ public class HandoverRecordsController(
 
     private static string BuildCsv(IEnumerable<HandoverRecordResponse> rows)
     {
-        static string Escape(string? value) => $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
+        static string Escape(string? value)
+        {
+            var safe = value ?? string.Empty;
+            if (safe.Length > 0 && (safe[0] is '=' or '+' or '-' or '@' or '\t' or '\r')) safe = $"'{safe}";
+            return $"\"{safe.Replace("\"", "\"\"")}\"";
+        }
         var builder = new StringBuilder();
         builder.AppendLine("Code,Project,Title,Planned date,Actual date,Responsible,Status,Ready,Open punch items");
         foreach (var row in rows)
