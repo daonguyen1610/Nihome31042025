@@ -338,6 +338,37 @@ public class AcceptanceRecordServiceTests : IDisposable
             () => _sut.CreateAsync(invalidDocuments, _userId));
     }
 
+    [Theory]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("data:text/html,<script>alert(1)</script>")]
+    [InlineData("ftp://example.com/document.pdf")]
+    [InlineData("//example.com/document.pdf")]
+    [InlineData("document.pdf")]
+    public async Task CreateAsync_rejects_unsafe_document_urls(string documentUrl)
+    {
+        var request = Req("Unsafe document URL");
+        request.Documents = JsonSerializer.Serialize(new[] { documentUrl });
+
+        var exception = await Assert.ThrowsAsync<AcceptanceRecordOperationException>(
+            () => _sut.CreateAsync(request, _userId));
+
+        Assert.Contains("HTTP(S)", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("/files/acceptance/minutes.pdf")]
+    [InlineData("http://example.com/minutes.pdf")]
+    [InlineData("https://example.com/minutes.pdf")]
+    public async Task CreateAsync_accepts_safe_document_urls(string documentUrl)
+    {
+        var request = Req("Safe document URL");
+        request.Documents = JsonSerializer.Serialize(new[] { documentUrl });
+
+        var created = await _sut.CreateAsync(request, _userId);
+
+        Assert.Equal(request.Documents, created.Documents);
+    }
+
     [Fact]
     public async Task UpdateAsync_preserves_documents_when_field_is_omitted()
     {

@@ -41,3 +41,20 @@ export function resolveAssetUrl(value: string) {
   const apiOrigin = getApiOrigin();
   return apiOrigin ? `${apiOrigin}${normalized}` : normalized;
 }
+
+export function resolveSafeLinkUrl(value: string) {
+  const trimmed = value.trim();
+  const normalized = toHostRelativeUrl(trimmed);
+  if (!normalized) return undefined;
+
+  if (normalized.startsWith("/") && !normalized.startsWith("//") && !normalized.startsWith("/\\")) {
+    return resolveAssetUrl(normalized);
+  }
+
+  try {
+    const url = new URL(normalized);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
