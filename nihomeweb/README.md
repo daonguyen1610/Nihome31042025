@@ -1,10 +1,10 @@
 # Nihomeweb
 
-Active frontend for the NICON / Nihome web experience.
+Active frontend for the NICON / Nihome design-and-build platform. It is a production API-backed single-page application served with the ASP.NET Core backend in the Docker Compose stack.
 
 This project has been refactored away from the prior Next.js / Materialize starter-kit baseline. The active app is now a Vite + React single-page app using React Router, Tailwind CSS, shadcn/ui, Radix UI, TanStack Query, and Vitest.
 
-The older Next.js and Materialize code is retained only under `legacy/` as reference material. New feature work should build on the current source tree under `src/`.
+The prior Next.js and Materialize starter sources are no longer present. New feature work must build on the current source tree under `src/`.
 
 ## Current Stack
 
@@ -26,7 +26,8 @@ The older Next.js and Materialize code is retained only under `legacy/` as refer
 - `src/components/ui/`: shadcn/ui primitives
 - `src/components/admin/`: admin-specific reusable controls
 - `src/data/`: static seed data
-- `src/lib/`: localStorage-backed demo auth, admin, settings, i18n, and utilities
+- `src/lib/`: permissions, URL/media resolution, i18n, and shared utilities
+- `src/services/`: typed public, authentication, and administration API clients
 - `src/index.css`: global Tailwind layers, tokens, and utilities
 - `tailwind.config.ts`: Tailwind theme extension
 
@@ -52,11 +53,23 @@ npm run lint
 npm run test
 ```
 
-The Vite dev server is configured in `vite.config.ts` and defaults to port `8080`.
+The Vite dev server is configured in `vite.config.ts` and defaults to port `8080`. The integrated Docker application is available at `http://localhost:5043`.
 
-## Current Constraints
+## Project Handover
 
-- Auth is demo-only and localStorage-backed.
-- Admin CRUD and settings persistence are localStorage-backed demo behavior.
-- No production API client or backend session model has been committed yet.
-- `legacy/materialize-starter-kit/` and `legacy/next16-shell/` are not active frontend architecture.
+- Route: `/admin/construction/handover`
+- Permission gate: `construction.handover.view`
+- API client: handover types and operations are exposed by `src/services/adminApi.ts`.
+- UI: responsive list/card presentation, filters, sorting, pagination, summary cards, CSV export, create/edit form, readiness details, and lifecycle actions.
+- Security: document links use the shared URL resolver; unsafe or malformed values are rendered without clickable navigation.
+- Completion: the action requires a ready record, `construction.handover.complete`, and at least one signatory.
+
+## Current Product Areas
+
+- Public content, recruitment, contact, authentication, and own-profile flows
+- Users, dynamic RBAC, notifications, audit, translations, settings, workflows, and content administration
+- CRM leads, customers, opportunities, quotes, capability documents, tenders, surveys, contracts, and variation orders
+- Design projects, concepts, basic design, shop drawings, revisions, and IFC tracking
+- Permit checklists and construction tasks/Gantt, site diaries, punch lists, partial acceptance, as-built records, and handover
+
+Authentication, RBAC, translations, and production modules use backend APIs. The known exception is `/admin/master-data`, whose editable language list is still stored in localStorage; treat it as migration debt rather than a production persistence pattern.

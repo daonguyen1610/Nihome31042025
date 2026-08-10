@@ -1,57 +1,50 @@
 # End-to-end tests (Playwright)
 
-Two suites:
+The repository currently has one Playwright project named `e2e`. It runs Chromium desktop tests matching `e2e/smoke/**/*.spec.ts` against the integrated Docker application. There is no committed full/nightly suite or sharded Playwright project set.
 
-| Suite | Location | When it runs |
-|---|---|---|
-| **Smoke** | `e2e/smoke/**` | Every PR & push (`ci.yml`). ~8 critical journeys, must stay green. |
-| **Full**  | `e2e/full/**`  | Nightly cron + manual dispatch (`e2e-full.yml`). Exhaustive coverage, sharded across `public`, `admin-auth`, `admin-crud`, `cross` projects. |
+The smoke directory currently covers public rendering, authentication, permission-driven admin routes, CRM, design, permitting, construction workflows, and deployment contracts. Treat file/test counts as snapshots because parameterized role matrices expand at runtime.
 
 ## Running locally
 
 ```bash
-# 1. Bring the full stack up so the API + seeded DB are reachable
+# Start SQL Server plus the ASP.NET application that builds/serves the SPA.
 docker compose up -d --build
 
-# 2. Install Playwright browsers (once)
 cd nihomeweb
-npm install
+npm ci
 npm run test:e2e:install
 
-# 3. Run the smoke suite (default) against http://localhost:5043
-npm run test:e2e:smoke
+# Run all committed Playwright specs.
+BASE_URL=http://localhost:5043 npx playwright test
 
-# Or run the full suite
-npm run test:e2e:full
-
-# Point at a different deployment
-BASE_URL=https://staging.nihome.vn npm run test:e2e:smoke
+# Run one feature.
+BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-handover.spec.ts --workers=1
 ```
+
+The `test:e2e:smoke` and `test:e2e:full` package scripts currently set `PLAYWRIGHT_SUITE`, but `playwright.config.ts` does not consume that variable; both therefore select the same smoke specs. Prefer `npx playwright test` until those scripts/configuration are simplified or a real full suite is added.
 
 ## Layout
 
-```
+```text
 e2e/
-  fixtures/         # shared Playwright fixtures (auth, api client)
-  smoke/            # ~8 critical journeys — gates every PR
-  full/
-    public/         # every public page renders + i18n
-    admin-auth/     # login, logout, role gates
-    admin-crud/    # CRUD per entity (copy projects.spec.ts as a template)
-    cross/          # CORS, rate limiting, security smoke
+  fixtures/         shared browser login and API helpers
+  smoke/            all currently executed specs
 ```
 
-## Adding a new CRUD spec
+Playwright is configured with full parallelism and four CI workers. Specs that mutate shared seeded roles or records must use unique data, isolate cleanup, or run serially to avoid cross-worker interference.
 
-Copy `e2e/full/admin-crud/projects.spec.ts`, change the endpoint and payload. Each CRUD spec must be **self-contained** — create its own data with a unique slug, then delete it at the end.
+## Test layering
+
+- Unit tests prove isolated service rules, validation matrices, and helpers.
+- Backend integration tests prove HTTP contracts, model binding, authorization, and persistence round-trips.
+- Playwright should prove browser rendering, navigation, downloads, responsive interactions, and deployment-only wiring.
+
+Some existing smoke specs still make API-only CRUD or RBAC assertions. That is known layering debt: move assertions that `HttpClient` can prove into `nihomebackend.integration.tests` rather than copying that pattern into new browser specs.
+
+## Project handover smoke
+
+The NIH-144 smoke test signs in through the real browser and verifies that an authorized user can render the localized handover workspace without leaking raw translation keys. The broader role-to-route contract is covered by `admin-rbac-matrix.spec.ts`; handover service and HTTP edge cases remain in backend test projects.
 
 ## Test credentials
 
-The seeded users in `nihomebackend/Data/DbSeeder.cs` are mirrored in `e2e/fixtures/auth.ts`:
-
-| Role | Phone | Password |
-|---|---|---|
-| SUPER_ADMIN | `0335240370` | `Admin@123` |
-| ADMIN | `0911111111` | `Admin@123` |
-
-Update both files together if you change them.
+Seeded role accounts are defined by backend seeders and mirrored in `e2e/fixtures/auth.ts`. Read credentials from those development sources rather than duplicating them in documentation, and never use deterministic test accounts in an exposed production environment.

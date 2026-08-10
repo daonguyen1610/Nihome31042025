@@ -1,6 +1,6 @@
 # Users Section RBAC
 
-Date: 2026-05-16 (updated 2026-06-16 for NIH-366 — permission-based authorization)
+Date: 2026-05-16 (updated 2026-08-10 for current platform RBAC and project handover authorization)
 
 ## Overview
 
@@ -17,6 +17,8 @@ Roles are still seeded from the JSON bundle (`nihomebackend/Data/Rbac/rbac-defau
 | `USER` | Force-synced on every boot via the bundle pattern (`profile.me.*`). | No |
 | Business roles (`SALE`, `DESIGN`, …) | Seeded once via `Role.InitialPermissionsSeeded`; subsequent edits in the admin matrix editor are preserved on restart. | Yes |
 
+The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `LEGAL_OFFICER`, `QS`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Authorized administrators may also create or delete non-system roles and edit their permission matrices.
+
 ## Access Rules
 
 - `SUPER_ADMIN` can list, create, update, deactivate, and soft-delete users; manage role × permission matrix; manage audit retention.
@@ -27,6 +29,20 @@ Roles are still seeded from the JSON bundle (`nihomebackend/Data/Rbac/rbac-defau
 - `USER` has only `profile.me.view` / `profile.me.update` — they can read/update their own profile and nothing else.
 
 The backend additionally prevents a super admin from changing their own role, deactivating their own account, or removing the last active `SUPER_ADMIN`.
+
+### Project handover permissions
+
+The handover workspace uses separate read, write, and completion capabilities. The API remains the authority; frontend route and action gates only improve the user experience.
+
+| Permission | Capability |
+|---|---|
+| `construction.handover.view` | Open the handover list/detail and export records within the caller's project scope. |
+| `construction.handover.view.all` | Read and export records across every project. It does not grant unrestricted mutations. |
+| `construction.handover.manage` | Create, update, delete, and perform non-final lifecycle transitions within the caller's project scope. |
+| `construction.handover.manage.all` | Perform handover mutations across every project. |
+| `construction.handover.complete` | Complete a ready handover; project scope still applies unless `manage.all` is also granted. |
+
+Scoped access includes records created by or assigned to the caller and projects where the caller is project manager or design lead. Reassigning a responsible user requires project leadership or `manage.all`. Wildcard PM, design-lead, admin, and super-admin patterns inherit the broad permissions defined in `rbac-defaults.json`; technical business roles with explicit `view`/`manage` entries remain project-scoped.
 
 ## API Surface
 
@@ -39,31 +55,31 @@ The backend additionally prevents a super admin from changing their own role, de
 - `DELETE /api/users/{id}/hard` — `users.manage` (hard delete; permanently removes user and related data)
 - `GET /api/users/roles` — `users.view`
 
+### Project handover API
+
+- `GET /api/handover-records` and `GET /api/handover-records/{id}` — `construction.handover.view`
+- `GET /api/handover-records/export` — `construction.handover.view`
+- `POST /api/handover-records` — `construction.handover.manage`
+- `PUT /api/handover-records/{id}` — `construction.handover.manage`
+- `POST /api/handover-records/{id}/status` — `construction.handover.manage`
+- `POST /api/handover-records/{id}/complete` — `construction.handover.complete`
+- `DELETE /api/handover-records/{id}` — `construction.handover.manage`
+
+The same endpoints are also exposed below `/api/v1/handover-records`. Unauthorized callers receive `401` or `403`; out-of-scope or missing records return `404`; business validation returns `400`; duplicate or concurrent writes return `409`.
+
 ## Frontend Surface
 
-- `/admin/users` lists users with search, role filter, pagination, create/edit modal, status toggle, and soft delete. **UX gate**: only `SUPER_ADMIN` sees the link and can reach the route (`App.tsx` wraps it in `<ProtectedRoute roles={["SUPER_ADMIN"]}>`). The backend still serves `users.view` to `ADMIN` (so any direct API call is allowed) but blocks mutations with `users.manage`.
-- `/admin/roles` displays the backend role catalog and informational permission matrix; same SUPER_ADMIN-only UX gate.
-- Admin route protection lives in `nihomeweb/src/components/auth/ProtectedRoute.tsx`. Role-name gating is a UX shortcut; the API authority is the permission set returned by `/api/users/me/permissions`.
+- `/admin/users` lists users with search, role filter, pagination, create/edit modal, status toggle, and soft delete. The route requires `users.view`; mutation controls additionally require `users.manage`.
+- `/admin/roles` displays the backend role catalog and supports creating/deleting non-system roles plus editing their permission matrices. The route requires `rbac.roles.view`; each operation is gated by its corresponding RBAC permission.
+- Admin route protection lives in `nihomeweb/src/components/auth/ProtectedRoute.tsx`. Frontend permission gates improve navigation and action UX; the API remains authoritative using the permission set returned by `/api/users/me/permissions`.
 
 ## Seeded test users (dev + integration tests)
 
-Every role has a deterministic test account so manual smoke tests, integration tests, and Playwright suites can log in as any role without bespoke setup. All accounts use the same password.
+Development and integration seeders provide deterministic accounts for the system roles and selected business roles used by manual smoke, integration, and Playwright tests. Not every role in the catalog has a seeded login. Account identifiers and development credentials are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and `nihomeweb/e2e/fixtures/auth.ts`; keep those sources aligned rather than duplicating secrets here.
 
-**Password (all users): `Admin@123`**
+The seeded business-role login set currently covers `SALE`, `SALES_MANAGER`, `DESIGN`, `PM`, `QS`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a deterministic `USER` account.
 
-| Role | Phone | Notes |
-|---|---|---|
-| `SUPER_ADMIN` | `0335240370` | Default super admin (DbSeeder). |
-| `ADMIN` | `0911111111` | Ops admin (DbSeeder). |
-| `ADMIN` | `0922222222` | Leasing admin (DbSeeder). |
-| `USER` | `0900000001` | Customer placeholder (integration TestDataSeeder only — dev DB lets you register via OTP). |
-| `SALE` | `0911000003` | dashboard + contacts.* + recruitment.applications.view |
-| `DESIGN` | `0911000004` | dashboard + content.** + processes.view |
-| `PM` | `0911000005` | dashboard + content.projects.* + processes.* + recruitment.applications.view |
-| `QS` | `0911000006` | dashboard + content.projects.view + processes.view |
-| `ACCOUNTANT` | `0911000007` | dashboard + contacts.view + system.audit.view |
-| `WAREHOUSE` | `0911000008` | dashboard + processes.view |
-| `BGD` | `0911000009` | dashboard + **.view + system.audit.view |
+`DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, and `LEGAL_OFFICER` currently have no deterministic development login. Create test users explicitly when a scenario requires those roles.
 
 System roles are stored using the legacy `UserRole` enum; business-role users carry `Role = USER` and the real role link via `RoleEntityId`. `PermissionService` reads `RoleEntityId` first, so the business-role permission matrix from `rbac-defaults.json` applies as-is.
 
@@ -73,7 +89,7 @@ System roles are stored using the legacy `UserRole` enum; business-role users ca
 
 ### Stale business-role permissions on long-lived dev DBs
 
-Business roles are seeded **once** (tracked by `Role.InitialPermissionsSeeded`) so operator edits in the future matrix editor survive restarts. The trade-off: a dev DB created before the catalog grew may show business-role users with fewer permissions than the JSON pattern would currently expand to.
+Business roles are seeded **once** (tracked by `Role.InitialPermissionsSeeded`) so operator edits in the current matrix editor survive restarts. The trade-off: a dev DB created before the catalog grew may show business-role users with fewer permissions than the JSON pattern would currently expand to.
 
 To realign a local dev DB with the current `rbac-defaults.json` patterns, run:
 
@@ -98,6 +114,6 @@ For per-controller happy-path coverage (admin/SA returns 2xx with a valid payloa
 
 ### Browser-level RBAC matrix
 
-`nihomeweb/e2e/smoke/admin-rbac-matrix.spec.ts` drives all 9 seeded accounts through every admin route surface and asserts each role can reach exactly its permitted set and gets the inline `<Forbidden />` screen on the rest. Allow/deny sets are kept in sync with `/api/users/me/permissions` returned by the live stack so a drift between `rbac-defaults.json`, the seeder, and the FE `ADMIN_PERMS` map fails the suite. Run with `BASE_URL=http://localhost:5043 npx playwright test admin-rbac-matrix`.
+`nihomeweb/e2e/smoke/admin-rbac-matrix.spec.ts` drives the seeded role accounts through the admin route surface and asserts that each role can reach its permitted set and gets the inline `<Forbidden />` screen on the rest. Allow/deny sets are kept in sync with `/api/users/me/permissions` returned by the live stack so drift between `rbac-defaults.json`, the seeder, and the frontend permission map fails the suite. Run with `BASE_URL=http://localhost:5043 npx playwright test admin-rbac-matrix`.
 
 

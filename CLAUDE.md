@@ -9,7 +9,7 @@ Read `AGENTS.md` before any non-trivial work in this repository.
 
 ### i18n / Translations
 - **Never hardcode display strings** in React components. All user-visible text must use `t("key")` via `useI18n()`.
-- When adding new UI strings, add the key to the matching seed file in `nihomebackend/Data/Seeds/` (`admin-system.json` for `proc.*`, `common.json` for `common.*`, etc.).
+- When adding new UI strings, add the key to the matching seed file in `nihomebackend/Data/Seeds/i18n/` (`admin-system.json` for `proc.*`, `common.json` for `common.*`, etc.).
 - Provide all four languages: `vi`, `en`, `zh`, `ja`.
 - Restart the backend so `TranslationSeeder` upserts the new keys into the DB.
 
@@ -19,12 +19,13 @@ Read `AGENTS.md` before any non-trivial work in this repository.
 - Handle loading, error, and empty states in every new UI section.
 
 ### EF Core / Migrations
-- All schema changes require a migration. Use `dotnet ef migrations add <Name>` inside the container, or create manually with `[Migration]` + `[DbContext]` attributes.
-- Update `AppDbContextModelSnapshot.cs` when creating migrations manually.
+- All schema changes require an EF Core migration generated in a Docker-based .NET 8 SDK environment. The current running backend image does not include `dotnet-ef`, so do not claim that `docker exec nihome31042025-backend dotnet ef ...` works unless the tooling image has first been provisioned.
+- Review generated migration and snapshot files before applying them; do not hand-author migration metadata.
 - Use `AsNoTracking()` for read-only queries.
 
 ### Testing
-- When building or modifying a backend feature, **write or update test cases** in `nihomebackend.tests`.
+- Put isolated service logic in `nihomebackend.tests`, HTTP/auth/contract behavior in `nihomebackend.integration.tests`, and browser/deployment-only behavior in the Playwright smoke suite.
+- The running backend container mounts only `nihomebackend/`, not the sibling test projects; use the CI-equivalent Docker test environment rather than documenting `docker exec` test commands that cannot resolve those projects.
 - Run `dotnet format` to pass the backend linter before closing a task.
 - Tests must follow the design patterns already used in the test project.
 
@@ -40,14 +41,19 @@ Read `AGENTS.md` before any non-trivial work in this repository.
 ### Quality gates — run before closing any task
 ```bash
 # Frontend
-cd nihomeweb && npm run lint
+cd nihomeweb && npm run lint && npm run test && npm run build
 
 # Backend
-dotnet build          # or: docker exec nihome31042025-backend dotnet build
-dotnet format --verify-no-changes
+docker exec nihome31042025-backend dotnet build
+docker exec nihome31042025-backend dotnet format --verify-no-changes
 
-# Full stack
-docker compose up --build
+# Backend unit and integration tests
+# Run through the repository's CI-equivalent .NET 8 SDK/Docker test environment;
+# the running backend container does not mount the test projects.
+
+# Browser/deployment smoke
+docker compose up -d --build
+cd nihomeweb && BASE_URL=http://localhost:5043 npx playwright test
 ```
 
 ---
@@ -56,16 +62,16 @@ docker compose up --build
 
 Every completed task response must include:
 
-### Summary
+## Summary
 What was done and why.
 
-### Files Changed
+## Files Changed
 List of files modified/created.
 
-### Quality Check
+## Quality Check
 Results of lint / build / test runs.
 
-### Assumptions / Risks
+## Assumptions / Risks
 Any trade-offs made or things to watch out for.
 
 ---

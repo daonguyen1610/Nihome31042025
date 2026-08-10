@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 12 June 2026
+Last Updated: 10 August 2026
 
 ---
 
@@ -24,7 +24,7 @@ Last Updated: 12 June 2026
 
 ## 1. Overview
 
-Nihome is a full-stack content management and recruitment platform. The backend is built with ASP.NET Core 8 and Entity Framework Core 8. The frontend is built with React 18, TypeScript, and Vite. The database is SQL Server 2022. All services are orchestrated through Docker Compose.
+Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, and project handover. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
 
 This guide covers development setup, configuration, database management, build and test procedures, and deployment.
 
@@ -37,7 +37,7 @@ This guide covers development setup, configuration, database management, build a
 | Component        | Technology                        | Version   |
 |------------------|-----------------------------------|-----------|
 | Backend Runtime  | .NET SDK                          | 8.0       |
-| Frontend Runtime | Node.js                           | 18+       |
+| Frontend Runtime | Node.js                           | 20 in CI; 22 in the development image |
 | Database         | Microsoft SQL Server              | 2022      |
 | Containerization | Docker and Docker Compose         | Latest    |
 
@@ -48,8 +48,9 @@ This guide covers development setup, configuration, database management, build a
 | Microsoft.EntityFrameworkCore.SqlServer             | 8.0.4   |
 | Microsoft.EntityFrameworkCore.Design                | 8.0.4   |
 | Microsoft.AspNetCore.Authentication.JwtBearer       | 8.0.0   |
-| AutoMapper.Extensions.Microsoft.DependencyInjection | 12.0.1  |
-| MailKit                                             | 4.15.1  |
+| AutoMapper                                         | 15.1.1  |
+| MailKit                                            | 4.16.0  |
+| Swashbuckle.AspNetCore                             | 6.5.0   |
 
 ### Frontend Packages
 
@@ -150,7 +151,7 @@ Services started:
 | Backend API      | nihome31042025-backend      | 5043  |
 | SQL Server       | nihome31042025-sqlserver    | 1433  |
 
-The backend runs with `dotnet watch` for hot-reload. File changes in `nihomebackend/` are automatically detected and recompiled.
+The backend runs with `dotnet watch` for hot-reload and builds the Vite application through the backend project. There is no separate frontend Compose service: port `5043` serves both the SPA and API. Port `8080` is used only when running Vite separately on the host.
 
 To stop all services:
 
@@ -171,35 +172,19 @@ docker compose down -v
 docker compose up --build -d
 ```
 
-### 4.2 Running the Backend Locally
+### 4.2 Running Backend Commands
 
-Ensure SQL Server is accessible on `localhost:1433`.
-
-```bash
-cd nihomebackend
-dotnet run
-```
-
-For development with automatic recompilation:
+Repository backend and database commands run inside the Docker Compose environment. The backend container starts with file watching enabled, so edits under `nihomebackend/` are rebuilt automatically.
 
 ```bash
-cd nihomebackend
-dotnet watch run
+docker exec nihome31042025-backend dotnet build
 ```
-
-When you run the backend directly from `nihomebackend/`, the API starts on `http://localhost:5043`.
 
 ### 4.2.1 Swagger Access
 
 Swagger is enabled only when the backend runs in the `Development` environment.
 
 For the standard Docker Compose development setup, use:
-
-- Swagger UI: `http://localhost:5043/swagger`
-- OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
-- API base path: `http://localhost:5043/api`
-
-If you run the backend directly with `dotnet run` or `dotnet watch run`, use the same URLs:
 
 - Swagger UI: `http://localhost:5043/swagger`
 - OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
@@ -213,15 +198,14 @@ npm install
 npm run dev
 ```
 
-The development server starts on `http://localhost:3000`.
+The development server starts on `http://localhost:8080`. Set `VITE_API_URL` when it must call a backend on another origin; Vite does not define an API proxy.
 
 ### 4.4 Building for Production
 
 Backend:
 
 ```bash
-cd nihomebackend
-dotnet build -c Release
+docker exec nihome31042025-backend dotnet build -c Release
 ```
 
 Frontend:
@@ -243,30 +227,30 @@ Configuration is managed through `appsettings.json` and `appsettings.Development
 
 #### Database Connection
 
-When running inside Docker:
+From a separate Docker container that is not attached to the Compose network:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=host.docker.internal,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=host.docker.internal,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;"
   }
 }
 ```
 
-When running locally:
+From a tool running directly on the host:
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=localhost,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;"
   }
 }
 ```
 
-When running inside the Docker network (container-to-container):
+From the backend or another service on the Compose network:
 
 ```
-Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;
+Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;
 ```
 
 #### JWT Configuration
@@ -289,11 +273,11 @@ Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;Trus
 
 Access tokens expire after 7 days (10080 minutes). Refresh tokens expire after 30 days. Two signing keys are supported for key rotation; the `ActiveKeyId` field determines which key signs new tokens.
 
-#### Email (SMTP) Configuration
+#### SMTP Configuration
 
 ```json
 {
-  "Email": {
+  "Smtp": {
     "Host": "mail9005.maychuemail.com",
     "Port": 465,
     "UseSsl": true,
@@ -310,8 +294,11 @@ Access tokens expire after 7 days (10080 minutes). Refresh tokens expire after 3
 
 ```json
 {
-  "FrontendCors": {
-    "AllowedOrigin": "http://localhost:3000"
+  "Frontend": {
+    "AllowedOrigins": [
+      "http://localhost:8080",
+      "http://127.0.0.1:8080"
+    ]
   }
 }
 ```
@@ -369,6 +356,8 @@ The platform uses SQL Server 2022 with Entity Framework Core 8 as the ORM. The d
 | `process_documents`    | Internal process documentation entries with optional image/file asset metadata stored as JSON columns |
 | `translations`         | Static UI translation strings (unique key + language) |
 | `entity_translations`  | Dynamic content translations (polymorphic)          |
+| `handover_records`     | One project handover aggregate per design project, including readiness inputs and SQL Server row-version concurrency |
+| `handover_status_history` | Immutable project handover lifecycle history      |
 
 ### 6.3 Key Indexes
 
@@ -380,15 +369,16 @@ The platform uses SQL Server 2022 with Entity Framework Core 8 as the ORM. The d
 - `translations`: Unique composite index on (`Key`, `LanguageCode`)
 - `entity_translations`: Unique composite index on (`EntityType`, `EntityId`, `FieldName`, `LanguageCode`)
 - `process_documents`: Index on `GroupKey`
+- `handover_records`: Unique indexes on `DesignProjectId` and `HandoverCode`; index on (`Status`, `PlannedHandoverDate`)
+- `handover_status_history`: Index on (`HandoverRecordId`, `ChangedAt`)
 
 ### 6.4 Entity Framework Migrations
 
 All schema changes must go through EF Core migrations. Never modify the schema directly.
 
-Create a new migration:
+The current development image does not install `dotnet-ef`, so `docker exec ... dotnet ef` is not a working command until a pinned tool manifest or image installation is added. Generate and review migrations with a .NET 8 SDK environment that has `dotnet-ef` 8.x installed, while keeping database work containerized. The intended commands from the backend project directory are:
 
 ```bash
-cd nihomebackend
 dotnet ef migrations add <MigrationName>
 ```
 
@@ -418,25 +408,15 @@ dotnet ef migrations list
 
 Always review migration files before applying them.
 
-#### Manual Migrations (when dotnet CLI is unavailable)
+Do not hand-author migration metadata or the model snapshot. Generate migrations with EF Core in the provisioned Docker-based .NET 8 SDK tooling environment, review the generated migration and snapshot, and only then apply them.
 
-If `dotnet ef` is not available on the host (e.g., when developing purely inside Docker), create migration files manually in `nihomebackend/Migrations/`. The migration class must carry two attributes so that EF Core discovers it at runtime:
-
-```csharp
-[DbContext(typeof(AppDbContext))]
-[Migration("20260611000001_MigrationName")]
-public partial class MigrationName : Migration { ... }
-```
-
-Also update `AppDbContextModelSnapshot.cs` to add the new properties to the affected entity block so that future `dotnet ef` commands compute diffs correctly.
+The project handover schema is introduced by `AddHandoverRecords` and hardened by `AddHandoverConcurrency`. The latter adds SQL Server `rowversion` to prevent silent lost updates. Both migrations must be applied before deploying the NIH-144 application build.
 
 ### 6.5 Data Seeding
 
-On application startup, the following seeders execute in order:
+Outside the `IntegrationTests` environment, application startup applies pending migrations and then runs the complete seed pipeline. The order is baseline users/settings, content, UI and entity translations, RBAC catalog/roles, master data, workflows, notification templates, deterministic business-role users, and sample CRM/design/construction data.
 
-1. **DbSeeder** -- Creates default users and site settings if they do not exist.
-2. **ContentSeeder** -- Seeds initial activities and other content data.
-3. **TranslationSeeder** -- Loads UI translation strings from embedded JSON resource files in `Data/Seeds/`.
+Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process and logo seeders contain replacement behavior under some drift conditions; treat those manifests as seed-owned and review the seeder before changing manifest counts. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
 
 #### Process Document Seeder Guard
 
@@ -460,17 +440,13 @@ nihomebackend/wwwroot/process-assets/
 
 These files must be present on the server before the URLs in `processes.json` can resolve. They are not tracked in git (binary files); the authoritative source is a backup archive. In development, copy the contents of the backup to `nihomebackend/wwwroot/process-assets/`.
 
-Translation seed files are embedded resources (`*.json` files in `Data/Seeds/`).
+Translation seed files are embedded resources under `Data/Seeds/i18n/`.
 
-#### Default User Accounts (Development Only)
+#### Seeded Accounts
 
-| Role        | Phone       | Email                      | Password    |
-|-------------|-------------|----------------------------|-------------|
-| SUPER_ADMIN | 0335240370  | superadmin@nihome.vn       | Admin@123   |
-| ADMIN       | 0335240371  | ops.admin@nihome.vn        | Admin@123   |
-| ADMIN       | 0335240372  | leasing.admin@nihome.vn    | Admin@123   |
+The backend seeders create deterministic `SUPER_ADMIN`, `ADMIN`, and selected business-role accounts for development and automated tests. Current identifiers are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and Playwright fixtures; do not duplicate credentials in operational documentation.
 
-These credentials are for development and staging only. Change all default passwords before deploying to production.
+The current startup path is not environment-gated and can create deterministic accounts outside Development. Production deployment must rotate or disable them and should gate demo/sample seeding before the application is exposed.
 
 ### 6.6 Verifying the Database
 
@@ -480,7 +456,7 @@ Connect to SQL Server running in Docker:
 docker run --platform linux/amd64 -it --rm \
   --network container:nihome31042025-sqlserver \
   mcr.microsoft.com/mssql-tools \
-  /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Nihome@31042025"
+  /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "<development-password>"
 ```
 
 List all databases:
@@ -559,6 +535,7 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `SiteSettingsService`      | Get and update site settings and email templates         |
 | `TranslationService`       | Manage static UI translations                            |
 | `EntityTranslationService` | Manage dynamic content translations (polymorphic)        |
+| `HandoverRecordService`    | Project handover scoping, validation, readiness derivation, lifecycle, and optimistic concurrency |
 
 ### 7.3 Adding a New Entity
 
@@ -567,19 +544,19 @@ To add a new content entity:
 1. Create the entity model in `Models/`.
 2. Create request and response DTOs in `Models/`.
 3. Add a `DbSet` in `Data/AppDbContext.cs` and configure the table in `OnModelCreating`.
-4. Create a migration: `dotnet ef migrations add Add<EntityName>Table`.
+4. Generate and review a migration using the Docker-based .NET 8 SDK tooling environment described in section 6.4.
 5. Create a service class in `Services/`.
 6. Create a controller in `Controllers/`.
 7. Add AutoMapper mappings in `Mappings/AutoMapperProfile.cs`.
 8. Register the service in `Extensions/ServiceCollectionExtensions.cs`.
-9. Write unit tests in `nihomebackend.tests/`.
+9. Add unit tests for isolated logic and integration tests for HTTP, authorization, and persistence contracts at the appropriate test layer.
 
 ### 7.4 Conventions
 
 - Use `async/await` for all I/O operations.
 - Use `AsNoTracking()` for read-only queries.
 - Return DTOs from controllers, never entity models.
-- Use meaningful HTTP status codes (200, 201, 400, 404, 500).
+- Use meaningful HTTP status codes (200, 201, 204, 400, 401, 403, 404, 409, 500).
 - Validate input at the controller level.
 - Keep controllers under 20 lines per action method where possible.
 - JSON columns use string serialization (e.g., `ContentJson`, `SectionsJson`).
@@ -603,11 +580,7 @@ To add a new content entity:
 
 ### 8.2 API Service Modules
 
-API calls are organized into three service modules:
-
-- `authApi.ts` -- Authentication endpoints (login, register, refresh, logout, forgot password)
-- `contentApi.ts` -- Public content endpoints (activities, news, projects, services, slideshow)
-- `adminApi.ts` -- Admin management endpoints (CRUD operations, settings, translations)
+API calls are organized into typed modules under `src/services/`. `authApi.ts` owns authentication, `contentApi.ts` owns public content, `adminApi.ts` owns shared administration and several operational contracts, and focused modules such as `rbacApi.ts`, `crmApi.ts`, `designApi.ts`, `permitsApi.ts`, and construction service modules own their respective domains. Extend an existing domain module before introducing a parallel client.
 
 ### 8.3 Build Commands
 
@@ -627,6 +600,33 @@ Admin list exports are implemented on the frontend with `src/lib/exportCsv.ts` a
 
 Export buttons must preserve the current filters and sort order and remain disabled when there are no rows. Small, unpaginated lists can export the loaded rows on the frontend. Paginated operational lists must use an authorized backend export endpoint so the file contains the complete filtered result rather than only the visible page. The as-built dossier follows this pattern through `GET /api/as-built-documents/export` and records the export in the audit log.
 
+The project handover list follows the same backend-export pattern through `GET /api/handover-records/export`. Its CSV includes a UTF-8 BOM, preserves active filters and sorting, records an audit event, and prefixes formula-like cell values so spreadsheet applications do not execute them.
+
+### 8.5 Project Handover Frontend
+
+The protected route is `/admin/construction/handover`. `HandoverRecordsPage.tsx` provides responsive list/card views, server-side filtering and pagination, CSV export, create/edit dialogs, readiness details, and lifecycle actions. Permission constants live in `src/lib/adminPermissions.ts`, and typed requests/responses live in `src/services/adminApi.ts`.
+
+Document values are not interpolated directly into anchors. Use the shared URL helper in `src/lib/url.ts`, which accepts host-relative paths beginning with a single `/` and absolute HTTP(S) URLs. Protocol-relative URLs, dangerous schemes, and malformed values remain non-clickable.
+
+### 8.6 Project Handover API Contract
+
+Both `/api/handover-records` and `/api/v1/handover-records` expose the same controller:
+
+| Method | Route | Permission | Purpose |
+|--------|-------|------------|---------|
+| `GET` | `/api/handover-records` | `construction.handover.view` | Filtered, sorted, paginated list and summary counts |
+| `GET` | `/api/handover-records/export` | `construction.handover.view` | Complete filtered CSV export |
+| `GET` | `/api/handover-records/{id}` | `construction.handover.view` | Detail, readiness, and status history |
+| `POST` | `/api/handover-records` | `construction.handover.manage` | Create the project's single handover record |
+| `PUT` | `/api/handover-records/{id}` | `construction.handover.manage` | Update Draft/Reopened data |
+| `POST` | `/api/handover-records/{id}/status` | `construction.handover.manage` | Perform non-final lifecycle transitions |
+| `POST` | `/api/handover-records/{id}/complete` | `construction.handover.complete` | Complete a ready, signed handover |
+| `DELETE` | `/api/handover-records/{id}` | `construction.handover.manage` | Delete Draft/Cancelled records |
+
+`view.all` controls unrestricted reads; `manage.all` independently controls unrestricted writes. A caller with only the base permission is scoped to records they created or own and projects they manage or lead. Business-rule failures return `400`, hidden/missing records return `404`, and duplicate or concurrent writes return `409` so clients can reload instead of overwriting newer data.
+
+Readiness is derived on the server from approved partial acceptance, required approved as-built categories, unresolved punch items, commissioning, and checklist completion. Clients must display this result and must not duplicate it as an authoritative frontend calculation.
+
 ---
 
 ## 9. Testing
@@ -635,11 +635,11 @@ Export buttons must preserve the current filters and sort order and remain disab
 
 Backend unit tests are located in `nihomebackend.tests/`.
 
-Run all tests:
+The Compose backend mounts only `nihomebackend/`, so sibling test projects are not available through `docker exec nihome31042025-backend`. CI runs the test projects in a .NET 8 SDK checkout:
 
 ```bash
-cd nihomebackend.tests
-dotnet test
+dotnet test nihomebackend.tests/nihomebackend.tests.csproj
+dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
 ```
 
 The test project structure:
@@ -652,11 +652,7 @@ nihomebackend.tests/
   Helpers/         -- Test helper utilities
 ```
 
-When adding a new feature, write corresponding tests for:
-
-- Controller action methods (input validation, response codes, service delegation)
-- Service methods (business logic, edge cases, error handling)
-- AutoMapper mappings (entity-to-DTO conversion correctness)
+Unit tests cover isolated service logic, validation, branching, helpers, and mappings. HTTP status codes, model binding, authorization, middleware, and persistence round-trips belong in `nihomebackend.integration.tests`. Current integration tests use EF InMemory, so they do not prove SQL Server relational constraints or SQL Server-specific behavior.
 
 ### 9.2 Frontend Tests
 
@@ -676,7 +672,7 @@ npm run test:watch
 
 ### 9.3 Manual As-Built Smoke Test
 
-With the Docker Compose stack running, open `http://localhost:5043/login` and sign in as the development `SUPER_ADMIN` account (`0335240370` / `Admin@123`). Then open **Admin > Construction > As-Built Records**, or navigate directly to `http://localhost:5043/admin/construction/asbuilt`.
+With the Docker Compose stack running, open `http://localhost:5043/login` and sign in with the development `SUPER_ADMIN` account defined by the current backend seeder or Playwright auth fixture. Then open **Admin > Construction > As-Built Records**, or navigate directly to `http://localhost:5043/admin/construction/asbuilt`.
 
 1. Select an existing design project and confirm the summary cards and document list load without an error.
 2. Create a uniquely titled **Drawing** document and confirm it appears with **Draft** status.
@@ -686,7 +682,7 @@ With the Docker Compose stack running, open `http://localhost:5043/login` and si
 6. Confirm the approved document is read-only, then archive it and verify its final status.
 7. Repeat the page check at mobile and tablet widths; filters and records must remain readable without horizontal page overflow.
 
-For the authorization check, sign in as the seeded `SALE` account (`0911000003` / `Admin@123`) and confirm the page is forbidden. If this account can access the page, inspect its assigned role before reporting a product defect: a long-lived local database may contain customized user-role assignments. Do not change the expected deny behavior or reset persistent data without reviewing those assignments.
+For the authorization check, sign in as the seeded `SALE` account defined by the current business-role seeder or Playwright auth fixture and confirm the page is forbidden. If this account can access the page, inspect its assigned role before reporting a product defect: a long-lived local database may contain customized user-role assignments. Do not change the expected deny behavior or reset persistent data without reviewing those assignments.
 
 The focused automated equivalent is:
 
@@ -697,13 +693,30 @@ BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-asbuilt.spec.
 
 Writing Playwright artifacts to `/tmp` prevents the backend file watcher from restarting when the frontend directory is mounted into the development container.
 
-### 9.4 Linting
+### 9.4 Manual Project Handover Smoke Test
+
+With the stack running, sign in as `SUPER_ADMIN` and open `http://localhost:5043/admin/construction/handover`.
+
+1. Confirm the list, summary, filters, sorting, pagination, and responsive card/table layouts render.
+2. Create a Draft record for a project without an existing handover; add commissioning data, checklist items, a safe document URL, and a signatory.
+3. Confirm readiness reflects approved partial acceptance, required as-built approvals, unresolved punch items, commissioning, and checklist completion.
+4. Mark the record ready and complete it. Confirm completion is unavailable without a signatory and that the detail view records the actual date and status history.
+5. Reopen the record and confirm it becomes editable; verify a stale concurrent update returns HTTP `409` and requires a reload.
+6. Export CSV and confirm the file contains all filtered rows, not only the visible page.
+
+The focused browser check is:
+
+```bash
+cd nihomeweb
+BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-handover.spec.ts --workers=1 --output=/tmp/nihome-playwright-handover
+```
+
+### 9.5 Linting
 
 Backend:
 
 ```bash
-cd nihomebackend
-dotnet format
+docker exec nihome31042025-backend dotnet format --verify-no-changes
 ```
 
 Frontend:
@@ -713,15 +726,16 @@ cd nihomeweb
 npm run lint
 ```
 
-### 9.5 Quality Check Summary
+### 9.6 Quality Check Summary
 
 | Check              | Command                              |
 |--------------------|--------------------------------------|
-| Backend build      | `dotnet build`                       |
+| Backend build      | `docker exec nihome31042025-backend dotnet build` |
 | Frontend build     | `npm run build`                      |
-| Backend tests      | `cd nihomebackend.tests && dotnet test` |
+| Backend tests      | `dotnet test nihomebackend.tests/nihomebackend.tests.csproj` in CI or an SDK test environment |
+| Backend integration tests | `dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj` |
 | Frontend tests     | `cd nihomeweb && npm run test`       |
-| Backend lint       | `cd nihomebackend && dotnet format`  |
+| Backend lint       | `docker exec nihome31042025-backend dotnet format --verify-no-changes` |
 | Frontend lint      | `cd nihomeweb && npm run lint`       |
 | Docker full build  | `docker compose up --build`          |
 
@@ -729,7 +743,7 @@ npm run lint
 
 ## 10. Deployment
 
-### 10.1 Docker Compose (Development and Staging)
+### 10.1 Docker Compose Development
 
 ```bash
 docker compose up --build -d
@@ -756,8 +770,11 @@ Before deploying to production:
 6. Enable HTTPS with a valid TLS certificate.
 7. Review and restrict the SQL Server `sa` account; create a dedicated application user with limited permissions.
 8. Configure log aggregation and monitoring.
-9. Run `dotnet ef database update` against the production database after reviewing the migration script.
-10. Build the frontend with `npm run build` and deploy the `dist/` output.
+9. Review migration scripts and account for the current startup behavior, which automatically runs `Database.Migrate()` and seeding outside `IntegrationTests`.
+10. Build the release with `auto-deployment.sh`; it publishes the backend and compiled SPA into `deployment-config/output/publish-release.zip` for IIS hosting.
+11. Confirm the CI publish job is gated by required build, test, E2E, and security jobs before relying on its release artifact; the current workflow does not declare those dependencies.
+
+The production artifact includes `web.config` for the ASP.NET Core Module and serves the compiled SPA from `wwwroot`. `NIHOMEWEB_DIST_PATH` can override the frontend distribution directory at runtime; startup fails if the configured directory does not exist. Swagger is Development-only and should not be enabled by switching production to the Development environment.
 
 ---
 
@@ -770,8 +787,8 @@ Before deploying to production:
 **Resolution**:
 - Verify SQL Server is running: `docker ps | grep sqlserver`
 - Check the connection string in `appsettings.json` or the Docker Compose environment variable.
-- When running locally, use `localhost,1433`. When running inside Docker, use `sqlserver,1433` or `host.docker.internal,1433`.
-- Ensure the SQL Server health check has passed before starting the backend.
+- From the host use `localhost,1433`; from a Compose service use `sqlserver,1433`; from a separate Docker container use `host.docker.internal,1433` when supported by the platform.
+- The current Compose health check only verifies that the SQL Server process exists; confirm an actual database connection when diagnosing readiness.
 
 ### 11.2 Migration Errors
 
@@ -779,16 +796,17 @@ Before deploying to production:
 
 **Resolution**:
 - Review the migration file for conflicts.
-- Check the current database state: `dotnet ef migrations list`
-- If the last migration is problematic and has not been applied, remove it: `dotnet ef migrations remove`
-- Generate a SQL script for manual review: `dotnet ef migrations script`
+- Use a .NET 8 SDK environment with `dotnet-ef` 8.x; the running development image currently lacks the tool.
+- Check the current database state with `dotnet ef migrations list`.
+- Remove only an unapplied last migration with `dotnet ef migrations remove`.
+- Generate a review script with `dotnet ef migrations script`.
 
 ### 11.3 CORS Errors
 
 **Symptom**: The frontend receives CORS errors when calling the API.
 
 **Resolution**:
-- Verify the `FrontendCors:AllowedOrigin` setting matches the frontend URL exactly (including protocol and port).
+- Verify each entry in `Frontend:AllowedOrigins` matches the frontend origin exactly (including protocol and port).
 - Restart the backend after changing CORS configuration.
 
 ### 11.4 Email Sending Failures

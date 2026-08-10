@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 7 May 2026
+Last Updated: 10 August 2026
 
 ---
 
@@ -114,18 +114,19 @@ The platform is being developed incrementally. The following components are curr
 | File upload (images, CV documents) | Implemented |
 | Site settings and email template configuration | Implemented |
 | In-app admin notifications | Implemented |
-| CRM module (customers, leads, opportunities) | Not yet implemented |
-| Quotation management (direct and tender) | Not yet implemented |
-| Site survey digitization | Not yet implemented |
-| Design management (3-phase) | Not yet implemented |
-| Permitting module | Not yet implemented |
-| Construction management (Gantt, site logs) | Not yet implemented |
+| CRM module (customers, leads, opportunities) | Implemented |
+| Quotations, capability documents, and tenders | Implemented |
+| Site survey digitization | Partially implemented — records and timeline are live; survey media UI remains pending |
+| Customer contracts, appendices, attachments, and variation orders | Implemented |
+| Design management (projects, concept, basic, shop drawing, revisions, IFC) | Implemented |
+| Permitting checklists | Implemented |
+| Construction management (tasks/Gantt and site diaries) | Implemented |
 | Acceptance and handover | Implemented |
 | Punchlist management | Implemented |
 | Procurement module (vendors, BOQ, MR, warehouse) | Not yet implemented |
-| Finance module (contracts, VO, cash flow, P&L) | Not yet implemented |
+| Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
 | Google Drive integration | Not yet implemented |
-| Dashboard and analytics | Not yet implemented |
+| Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
 
 ---
 
@@ -331,9 +332,11 @@ Open **Admin > Construction > Partial Acceptance** to manage phase or work-item 
 
 Open **Admin > Construction > Project Handover** to manage one full-project handover record per design project. The list supports project, responsible user, planned date, status, readiness, text search, sorting, pagination, and CSV export. Users without the view-all permission only see records they created, are responsible for, or whose project they manage or lead.
 
-Create or edit a Draft/Reopened record with the planned date, responsible user, commissioning result, checklist, supporting HTTP(S) or host-relative document links, and signatories. Readiness is calculated from canonical project data: at least one approved partial acceptance record, every required as-built category approved, no unresolved punch items, commissioning complete, and every handover checklist item complete.
+Create or edit a Draft/Reopened record with the planned date, responsible user, commissioning result, checklist, supporting HTTP(S) or host-relative document links, and signatories. Host-relative links must begin with a single `/`; protocol-relative links and non-HTTP(S) schemes are rejected and legacy unsafe values are shown as text rather than clickable links. Readiness is calculated from canonical project data: at least one approved partial acceptance record, every required as-built category approved, no unresolved punch items, commissioning complete, and every handover checklist item complete.
 
-The lifecycle is **Draft → Ready for Handover → Handed Over**. Managers may return a ready record to Draft, cancel it, or reopen a completed handover for controlled correction. Final completion requires the dedicated completion permission and at least one signatory; it records the actual handover date, actor, timestamp, and immutable status history. Completed records are locked until reopened.
+The lifecycle is **Draft → Ready for Handover → Handed Over**. Managers may return a ready record to Draft, cancel it, or reopen a completed handover for controlled correction. Final completion requires the dedicated completion permission and at least one signatory; it records the actual handover date, actor, timestamp, and immutable status history. Completed records are locked until reopened. If another user changes the same record first, the API returns a conflict and the operator must reload before retrying so a newer change is not overwritten.
+
+Handover access is permission-based. `construction.handover.view` opens the workspace, `view.all` removes project-assignment restrictions for reads and CSV export, `manage` enables scoped create/update/delete and preparation-state transitions, `manage.all` removes project-assignment restrictions for mutations, and `complete` authorizes final completion. Read-all access never implies write-all access. A scoped responsible user cannot reassign the record unless they are also the project manager or design lead.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -543,49 +546,29 @@ Progress reports comparing planned vs. actual (S-Curve). Acceptance reports show
 
 ## 4. User Roles and Permissions
 
-The platform defines three user roles with increasing levels of access. As additional modules are implemented, the role structure will expand to include specialized roles such as Sales, Design, Project Manager (PM), Quantity Surveyor (QS), Accounting, Warehouse, and Management (BGD).
+The platform uses permission-based authorization. `SUPER_ADMIN`, `ADMIN`, and `USER` remain system identities, while backend-defined business roles carry a database role ID and an editable permission set. Controllers enforce permission codes; frontend route and action gates mirror them for usability but are not the security boundary.
 
-### Currently Implemented Roles
+### System Roles
 
 | Role        | Access Level                                                                       |
 |-------------|------------------------------------------------------------------------------------|
-| USER        | Default role for registered users. Can access the public website and user profile.  |
-| ADMIN       | Can manage all content, recruitment, contacts, translations, and email templates.    |
-| SUPER_ADMIN | Full system access. Includes all ADMIN permissions plus user management.             |
+| USER        | Default registered account; receives own-profile permissions only.                    |
+| ADMIN       | Broad catalog access except protected user-management and audit-management capabilities. |
+| SUPER_ADMIN | Full permission catalog and lockout-safety protections.                               |
 
-### Permission Matrix
+### Business Roles
 
-| Action                          | USER | ADMIN | SUPER_ADMIN |
-|---------------------------------|------|-------|-------------|
-| View public content             | Yes  | Yes   | Yes         |
-| Register and login              | Yes  | Yes   | Yes         |
-| Manage own profile              | Yes  | Yes   | Yes         |
-| Create/edit/delete content      | No   | Yes   | Yes         |
-| Manage slideshow                | No   | Yes   | Yes         |
-| Manage job positions            | No   | Yes   | Yes         |
-| View/manage job applications    | No   | Yes   | Yes         |
-| View/reply to contact messages  | No   | Yes   | Yes         |
-| Manage translations             | No   | Yes   | Yes         |
-| Configure email templates       | No   | Yes   | Yes         |
-| Manage logos                    | No   | Yes   | Yes         |
-| Manage processes                | No   | Yes   | Yes         |
-| Upload images                   | No   | Yes   | Yes         |
-| System administration           | No   | No    | Yes         |
-
-### Planned Role Expansion
-
-The full NICON system specification defines the following specialized roles for future implementation:
+The seeded role catalog is implemented and can be adjusted through **Admin > Roles**. Business-role permission edits persist in the database.
 
 | Role | Vietnamese | Module Access |
 |------|------------|---------------|
-| Admin | Quan tri | Full system configuration and user management |
-| Sales | Sale | CRM, leads, opportunities, quotations, tenders, customer contracts |
-| Design | Thiet ke | Design documents, revisions, IFC issuance |
-| Project Manager (PM) | Quan ly du an | Construction schedules, site logs, acceptance, punchlist |
-| Quantity Surveyor (QS) | Du toan | BOQ, material requests, cost tracking |
-| Accounting | Ke toan | Contracts, cash flow, payments, P&L reports |
-| Warehouse | Kho | Material receipts, issues, inventory |
-| Management (BGD) | Ban giam doc | Dashboard, reports, executive overview |
+| `SALE`, `SALES_MANAGER` | CRM, quotations, tenders, surveys, and contracts according to assigned permissions |
+| `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER` | Design projects and discipline workflows |
+| `PM`, `LEGAL_OFFICER` | Project, permitting, and construction workflows |
+| `QS`, `ACCOUNTANT`, `WAREHOUSE` | Commercial, finance-adjacent, and operational access currently present in the catalog |
+| `BGD` | Broad read-oriented management access |
+
+Permissions are grouped by module and action, for example `crm.quotes.approve`, `design.ifc.release`, `construction.punch.verify`, and `construction.handover.complete`. Some operational modules also separate assigned-scope access from global access with actions such as `view.all` or `manage.all`. See the dedicated RBAC guide for the complete behavior.
 
 ---
 
@@ -647,7 +630,9 @@ The client sends the refresh token to the logout endpoint. The refresh token is 
 | Login              | `/login`               | User authentication                                              |
 | Register           | `/register`            | New user registration                                            |
 | Forgot Password    | `/forgot-password`     | Password reset                                                   |
-| Profile            | `/profile`             | Authenticated user profile management                            |
+| Company Profile    | `/profile`             | Public company/about information                                 |
+| My Profile         | `/my-profile`          | Authenticated profile, password, and personal document management |
+| Forbidden          | `/forbidden`           | Permission-denied result                                         |
 
 ### 6.2 Language Selection
 
@@ -680,7 +665,7 @@ Applications are submitted publicly without authentication. Administrators revie
 
 ## 7. Administration Panel
 
-The admin panel is accessible at `/admin` and requires ADMIN or SUPER_ADMIN role authentication.
+The admin panel is accessible at `/admin` to authenticated users who hold the required backend permission for a route. Business roles therefore see only the navigation and actions granted by their permission set.
 
 ### 7.1 Dashboard
 
@@ -688,24 +673,19 @@ The main admin page provides an overview of system status and quick access to ma
 
 ### 7.2 Admin Navigation
 
-| Section              | Route                    | Purpose                                |
-|----------------------|--------------------------|----------------------------------------|
-| Posts                | `/admin/posts`           | Manage news articles and activities    |
-| Projects             | `/admin/projects`        | Manage project portfolio               |
-| Recruitment          | `/admin/recruitment`     | Manage job positions and applications  |
-| Contacts             | `/admin/contacts`        | View and reply to contact messages     |
-| Email Templates      | `/admin/email-templates` | Configure automated email content      |
-| Settings             | `/admin/settings`        | General site configuration             |
-| Languages            | `/admin/languages`       | Language settings                      |
-| Translations         | `/admin/translations`    | Manage UI translation strings          |
-| Categories           | `/admin/categories`      | Manage activity categories             |
-| Activity Log         | `/admin/activity-log`    | View system activity history           |
-| Clients              | `/admin/clients`         | Manage client logos                    |
-| Partners             | `/admin/partners`        | Manage partner logos                   |
-| Suppliers            | `/admin/suppliers`       | Manage supplier logos                  |
-| Awards               | `/admin/awards`          | Manage award entries                   |
-| Processes            | `/admin/processes`       | Manage process documents               |
-| System               | `/admin/system/*`        | System maintenance                     |
+| Group | Routes | Purpose |
+|-------|--------|---------|
+| Dashboard | `/admin`, `/admin/notifications` | Operational overview and personal notifications |
+| CRM | `/admin/leads`, `/admin/customers`, `/admin/opportunities`, `/admin/quotes`, `/admin/capability-documents`, `/admin/tenders`, `/admin/surveys`, `/admin/contracts` | Sales and contract lifecycle |
+| Design and permits | `/admin/design-projects`, `/admin/permits` | Concept, basic design, shop drawing, revision, IFC, and permit workflows |
+| Construction | `/admin/construction/tasks`, `/diary`, `/punchlist`, `/acceptance`, `/asbuilt`, `/handover` | Delivery, quality, acceptance, and handover |
+| Content | `/admin/activities`, `/admin/news`, `/admin/projects`, `/admin/services`, `/admin/about`, `/admin/categories` | Public website content and categories |
+| Recruitment and contacts | `/admin/recruitment`, `/admin/recruitment/employment-types`, `/admin/contacts` | Positions, applications, options, and inquiries |
+| Branding and processes | `/admin/clients`, `/admin/partners`, `/admin/suppliers`, `/admin/awards`, `/admin/processes/*` | Logo catalogs and internal process documents |
+| Configuration | `/admin/settings`, `/admin/email-templates`, `/admin/languages`, `/admin/translations`, `/admin/master-data`, `/admin/workflows` | Site, translation, master-data, and workflow configuration |
+| Security and audit | `/admin/users`, `/admin/roles`, `/admin/activity-log` | Users, dynamic role permissions, and audit history |
+
+Legacy `/admin/posts/*` URLs redirect to the activities workspace; `/admin/project-categories` and `/admin/slideshow` redirect to their current tab locations.
 
 ### 7.3 Export Excel
 
@@ -819,7 +799,7 @@ Each logo entry includes a name, image URL, optional hyperlink, kind classificat
 
 Process documents are internal procedure descriptions grouped by category (using a `GroupKey`). Each document has a code, title, sort order, and optional attached assets (images and files).
 
-The process document admin page is read-only. Administrators can search documents and browse their attached assets; editing is not available through the admin interface (data is managed through the seed pipeline).
+Authorized users can search, create, edit, delete, and bulk-delete process documents. The editor supports image and file assets in addition to the seeded baseline. Seed data remains important for initial content, so operators must review seed behavior before changing manifests.
 
 **Viewing images:**
 - Each document that has image assets displays a thumbnail grid below its title.
@@ -1006,7 +986,7 @@ The following settings control email behavior:
 | New Application Email Body           | Body template for application notification emails     |
 | Notification Email                   | Email address that receives application notifications |
 
-Administrators can toggle registration and forgot-password OTP verification from `/admin/settings` in the General settings tab.
+Administrators can toggle registration and forgot-password OTP verification from `/admin/settings` in the Security tab.
 
 ---
 
@@ -1044,6 +1024,19 @@ Protected endpoints require the access token in the `Authorization` header:
 Authorization: Bearer <access-token>
 ```
 
+This chapter contains selected request examples, not a frozen exhaustive contract. The controller families currently implemented are:
+
+| Area | API bases |
+|------|-----------|
+| Authentication and profile | `/api/auth`, `/api/users/me`, `/api/users`, `/api/admin/rbac` |
+| Content and communication | `/api/about-sections`, `/api/activities`, `/api/activity-categories`, `/api/news`, `/api/news-categories`, `/api/projects`, `/api/project-categories`, `/api/services`, `/api/slideshow`, `/api/logos`, `/api/processes`, `/api/contacts`, `/api/translations`, `/api/mail` |
+| Recruitment and system | `/api/job-positions`, `/api/job-applications`, `/api/employment-types`, `/api/recruitment-dropdown-options`, `/api/site-settings`, `/api/notifications`, `/api/audit-logs`, `/api/master-data`, `/api/workflows`, `/api/system` |
+| CRM and contracts | `/api/leads`, `/api/customers`, `/api/opportunities`, `/api/quotes`, `/api/capability-documents`, `/api/tenders`, `/api/surveys`, `/api/contracts` |
+| Design and permitting | `/api/design-projects`, `/api/concept-options`, `/api/basic-design-docs`, `/api/shop-drawings`, `/api/drawing-revisions`, `/api/ifc-releases`, `/api/permits` |
+| Construction | `/api/construction-tasks`, `/api/site-diaries`, `/api/punch-items`, `/api/acceptance-records`, `/api/as-built-documents`, `/api/handover-records` |
+
+Most newer controllers also expose the same contract below `/api/v1`; use the controller attributes or Development Swagger as the authoritative route source. Protected operations are permission-based rather than role-name-based.
+
 ### 14.1 Authentication
 
 | Method | Endpoint                          | Auth     | Description                              |
@@ -1065,8 +1058,8 @@ Authorization: Bearer <access-token>
 
 ```json
 {
-  "phoneNumber": "0335240370",
-  "password": "Admin@123"
+  "phoneNumber": "<registered-phone>",
+  "password": "<account-password>"
 }
 ```
 
@@ -1076,10 +1069,10 @@ Authorization: Bearer <access-token>
 {
   "user": {
     "id": 1,
-    "phone": "0335240370",
-    "fullName": "Super Admin",
-    "email": "superadmin@nihome.vn",
-    "role": "SUPER_ADMIN"
+    "phone": "<registered-phone>",
+    "fullName": "Example User",
+    "email": "user@example.com",
+    "role": "USER"
   },
   "accessToken": "<jwt-token>",
   "refreshToken": "<refresh-token>",
