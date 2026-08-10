@@ -69,7 +69,8 @@
   { "key": "acceptance.form.required.project", "category": "construction", "vi": "Vui lòng chọn dự án.", "en": "Please select a project.", "zh": "请选择项目。", "ja": "プロジェクトを選択してください。" },
   { "key": "acceptance.form.required.date", "category": "construction", "vi": "Vui lòng chọn ngày nghiệm thu.", "en": "Please select an acceptance date.", "zh": "请选择验收日期。", "ja": "検収日を選択してください。" },
   { "key": "acceptance.form.documentsPlaceholder", "category": "construction", "vi": "Mỗi dòng một đường dẫn tài liệu, ví dụ /files/acceptance/minutes.pdf", "en": "One document path per line, e.g. /files/acceptance/minutes.pdf", "zh": "每行一个文档路径，例如 /files/acceptance/minutes.pdf", "ja": "1行に1つの書類パス（例: /files/acceptance/minutes.pdf）" },
-  { "key": "acceptance.form.documentsHelp", "category": "construction", "vi": "Tối đa 20 đường dẫn tương đối hoặc URL hợp lệ.", "en": "Up to 20 relative paths or valid URLs.", "zh": "最多20个相对路径或有效URL。", "ja": "相対パスまたは有効なURLを最大20件指定できます。" },
+  { "key": "acceptance.form.documentsHelp", "category": "construction", "vi": "Tối đa 20 đường dẫn bắt đầu bằng / hoặc URL HTTP(S) đầy đủ, mỗi dòng một đường dẫn.", "en": "Up to 20 paths starting with / or full HTTP(S) URLs, one per line.", "zh": "最多输入20个以 / 开头的路径或完整的 HTTP(S) URL，每行一个。", "ja": "/ で始まるパスまたは完全な HTTP(S) URL を、1行に1件、最大20件入力できます。" },
+  { "key": "acceptance.form.documentsInvalid", "category": "construction", "vi": "Tài liệu phải có tối đa 20 đường dẫn, mỗi đường dẫn không quá 500 ký tự và bắt đầu bằng / hoặc HTTP(S).", "en": "Enter up to 20 document paths; each must be 500 characters or fewer and start with / or HTTP(S).", "zh": "最多输入20个文档路径；每个路径不超过500个字符，并且必须以 / 或 HTTP(S) 开头。", "ja": "書類パスは最大20件、各500文字以内で、/ または HTTP(S) から始めてください。" },
   { "key": "acceptance.form.saved", "category": "construction", "vi": "Đã lưu biên bản nghiệm thu.", "en": "Acceptance record saved.", "zh": "验收记录已保存。", "ja": "検収記録を保存しました。" },
 
   { "key": "acceptance.confirm.transition.title", "category": "construction", "vi": "Xác nhận thao tác", "en": "Confirm action", "zh": "确认操作", "ja": "操作の確認" },
@@ -87,6 +88,7 @@
   { "key": "acceptance.detail.loading", "category": "construction", "vi": "Đang tải chi tiết nghiệm thu…", "en": "Loading acceptance details…", "zh": "正在加载验收详情…", "ja": "検収詳細を読み込み中…" },
   { "key": "acceptance.detail.error", "category": "construction", "vi": "Không thể tải chi tiết. Bản ghi có thể không tồn tại hoặc nằm ngoài phạm vi quyền của bạn.", "en": "Could not load details. The record may not exist or may be outside your access scope.", "zh": "无法加载详情。记录可能不存在或超出您的访问范围。", "ja": "詳細を読み込めません。記録が存在しないか、アクセス範囲外の可能性があります。" },
   { "key": "acceptance.documents.empty", "category": "construction", "vi": "Chưa có tài liệu hoặc hình ảnh liên quan.", "en": "No related documents or photos.", "zh": "暂无相关文档或照片。", "ja": "関連する書類や写真はありません。" },
+  { "key": "acceptance.documents.linkUnavailable", "category": "construction", "vi": "Liên kết không khả dụng", "en": "Link unavailable", "zh": "链接不可用", "ja": "リンクを利用できません" },
 
   { "key": "acceptance.toast.deleted", "category": "construction", "vi": "Đã xoá biên bản.", "en": "Record deleted.", "zh": "已删除记录。", "ja": "記録を削除しました。" },
   { "key": "acceptance.toast.bulkDeleted", "category": "construction", "vi": "Đã xoá {count} biên bản.", "en": "Deleted {count} records.", "zh": "已删除 {count} 条记录。", "ja": "{count}件の記録を削除しました。" },
