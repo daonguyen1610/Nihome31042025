@@ -123,6 +123,7 @@
     { "module": "construction.punch", "action": "verify" },
 
     { "module": "construction.acceptance", "action": "view" },
+    { "module": "construction.acceptance", "action": "view.all" },
     { "module": "construction.acceptance", "action": "manage" },
     { "module": "construction.acceptance", "action": "approve" },
 

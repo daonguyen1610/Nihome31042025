@@ -23,14 +23,19 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class AcceptanceRecordsController(
     IAcceptanceRecordService svc,
-    IAuditLogger audit) : ControllerBase
+    IPermissionService permissions,
+    IAuditLogger audit,
+    INotificationService notifications) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("construction.acceptance", "view")]
     public async Task<ActionResult<AcceptanceRecordListResponse>> List(
         [FromQuery] AcceptanceRecordListParams parameters, CancellationToken ct)
     {
-        var result = await svc.ListAsync(parameters, ct);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
+        var result = await svc.ListAsync(parameters, userId.Value, canSeeAll, ct);
         return Ok(result);
     }
 
@@ -38,7 +43,9 @@ public class AcceptanceRecordsController(
     [RequirePermission("construction.acceptance", "view")]
     public async Task<ActionResult<AcceptanceRecordResponse>> Get(int id, CancellationToken ct)
     {
-        var found = await svc.GetAsync(id, ct);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var found = await svc.GetAsync(id, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
         return found is null ? NotFound() : Ok(found);
     }
 
@@ -51,7 +58,7 @@ public class AcceptanceRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var response = await svc.CreateAsync(request, userId.Value, ct);
+            var response = await svc.CreateAsync(request, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
             audit.Log(new AuditEvent
             {
                 Action = "acceptance-record.create",
@@ -60,6 +67,8 @@ public class AcceptanceRecordsController(
                 Message = $"Acceptance record #{response.Id} ({response.AcceptanceCode}) created on project {response.DesignProjectId}.",
                 NewValue = response,
             });
+            await NotifyAdminsBestEffortAsync(
+                $"Biên bản nghiệm thu mới: {response.AcceptanceCode}", response.Title);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (AcceptanceRecordOperationException ex)
@@ -77,7 +86,9 @@ public class AcceptanceRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var response = await svc.UpdateAsync(id, request, userId.Value, ct);
+            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
+            var previous = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
+            var response = await svc.UpdateAsync(id, request, userId.Value, canSeeAll, ct);
             if (response is null) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -85,8 +96,12 @@ public class AcceptanceRecordsController(
                 ResourceType = EntityTypes.AcceptanceRecord,
                 ResourceId = id.ToString(),
                 Message = $"Acceptance record #{id} updated.",
+                OldValue = previous,
                 NewValue = response,
             });
+            if (response.CreatedByUserId.HasValue && response.CreatedByUserId.Value != userId.Value)
+                await NotifyUserBestEffortAsync(response.CreatedByUserId.Value,
+                    $"Biên bản nghiệm thu đã cập nhật: {response.AcceptanceCode}", response.Title);
             return Ok(response);
         }
         catch (AcceptanceRecordOperationException ex)
@@ -104,7 +119,9 @@ public class AcceptanceRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var response = await svc.TransitionAsync(id, request, userId.Value, ct);
+            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
+            var previous = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
+            var response = await svc.TransitionAsync(id, request, userId.Value, canSeeAll, ct);
             if (response is null) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -112,8 +129,15 @@ public class AcceptanceRecordsController(
                 ResourceType = EntityTypes.AcceptanceRecord,
                 ResourceId = id.ToString(),
                 Message = $"Acceptance record #{id} -> {response.Status}.",
+                OldValue = previous,
                 NewValue = response,
             });
+            if (response.Status == "Submitted")
+                await NotifyAdminsBestEffortAsync(
+                    $"Biên bản nghiệm thu chờ duyệt: {response.AcceptanceCode}", response.Title);
+            else if (response.CreatedByUserId.HasValue && response.CreatedByUserId.Value != userId.Value)
+                await NotifyUserBestEffortAsync(response.CreatedByUserId.Value,
+                    $"Biên bản nghiệm thu chuyển sang {response.Status}: {response.AcceptanceCode}", response.Title);
             return Ok(response);
         }
         catch (AcceptanceRecordOperationException ex)
@@ -131,7 +155,9 @@ public class AcceptanceRecordsController(
         if (userId is null) return Unauthorized();
         try
         {
-            var response = await svc.ApproveAsync(id, request, userId.Value, ct);
+            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
+            var previous = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
+            var response = await svc.ApproveAsync(id, request, userId.Value, canSeeAll, ct);
             if (response is null) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -139,8 +165,13 @@ public class AcceptanceRecordsController(
                 ResourceType = EntityTypes.AcceptanceRecord,
                 ResourceId = id.ToString(),
                 Message = $"Acceptance record #{id} approved.",
+                OldValue = previous,
                 NewValue = response,
             });
+            var recipientId = response.SubmittedByUserId ?? response.CreatedByUserId;
+            if (recipientId.HasValue && recipientId.Value != userId.Value)
+                await NotifyUserBestEffortAsync(recipientId.Value,
+                    $"Biên bản nghiệm thu đã được duyệt: {response.AcceptanceCode}", response.Title);
             return Ok(response);
         }
         catch (AcceptanceRecordOperationException ex)
@@ -153,9 +184,13 @@ public class AcceptanceRecordsController(
     [RequirePermission("construction.acceptance", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
         try
         {
-            var removed = await svc.DeleteAsync(id, ct);
+            var canSeeAll = await CanSeeAllAsync(userId.Value, ct);
+            var previous = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
+            var removed = await svc.DeleteAsync(id, userId.Value, canSeeAll, ct);
             if (!removed) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -163,6 +198,7 @@ public class AcceptanceRecordsController(
                 ResourceType = EntityTypes.AcceptanceRecord,
                 ResourceId = id.ToString(),
                 Message = $"Acceptance record #{id} deleted.",
+                OldValue = previous,
             });
             return NoContent();
         }
@@ -177,9 +213,12 @@ public class AcceptanceRecordsController(
     public async Task<ActionResult<AcceptanceRecordBulkDeleteResponse>> BulkDelete(
         [FromBody] BulkDeleteAcceptanceRecordsRequest request, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
         try
         {
-            var result = await svc.BulkDeleteAsync(request, ct);
+            var result = await svc.BulkDeleteAsync(
+                request, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
             audit.Log(new AuditEvent
             {
                 Action = "acceptance-record.bulk-delete",
@@ -199,5 +238,32 @@ public class AcceptanceRecordsController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private Task<bool> CanSeeAllAsync(int userId, CancellationToken ct) =>
+        permissions.HasAsync(userId, "construction.acceptance.view.all", ct);
+
+    private async Task NotifyAdminsBestEffortAsync(string title, string body)
+    {
+        try
+        {
+            await notifications.CreateForAdminsAsync(
+                "AcceptanceRecord", title, body, "/admin/construction/acceptance");
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task NotifyUserBestEffortAsync(int userId, string title, string body)
+    {
+        try
+        {
+            await notifications.CreateAsync(
+                userId, "AcceptanceRecord", title, body, "/admin/construction/acceptance");
+        }
+        catch
+        {
+        }
     }
 }

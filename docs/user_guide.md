@@ -319,13 +319,13 @@ Record daily construction conditions. Upload site photos and videos. Update weat
 
 #### 3.4.3 Partial Acceptance (Phase/Section Acceptance)
 
-Create acceptance requests for specific work items (piles, foundations, beams/slabs, masonry, etc.). Establish inspection checklists with acceptance criteria. Upload inspection photos. Record acceptance results. Manage status: pending acceptance, passed, failed. Note remediation requirements for failed items. Store acceptance records.
+Open **Admin > Construction > Partial Acceptance** to manage phase or work-item acceptance records. Authorized users can search, filter, sort, and paginate records by project, linked construction task, responsible person, acceptance date, and workflow status. Create or edit records with participants, findings, and related document or photo paths, then move them through Draft, Submitted, Approved, Rejected, or Cancelled states. Rejected records can be revised and resubmitted; approved and cancelled records are locked. Unless granted the view-all permission, users only see records connected to their project assignment, linked task ownership, creation, or workflow participation.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Acceptance List | Requests by project | 1.5 days |
-| Acceptance Create/Edit | Create by work item or phase | 2 days |
-| Acceptance Detail | Checklist, photos, records, remediation tracking | 2.5 days |
+| Acceptance List | Scoped records, operational filters, sorting, pagination, summary counts | 1.5 days |
+| Acceptance Create/Edit | Project/task linkage, participants, findings, documents | 2 days |
+| Acceptance Detail | Workflow history, responsible users, documents, permitted actions | 2.5 days |
 
 #### 3.4.4 Full Acceptance (Handover)
 

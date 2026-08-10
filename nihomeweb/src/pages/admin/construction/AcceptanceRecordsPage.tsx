@@ -4,7 +4,9 @@ import {
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
+  ExternalLink,
   FileCheck,
+  FileText,
   Plus,
   RefreshCcw,
   Search,
@@ -17,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
+import { resolveAssetUrl } from "@/lib/url";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,6 +60,7 @@ import {
   type AcceptanceRecordResponse,
   type AcceptanceStatus,
   type CreateAcceptanceRecordRequest,
+  type ConstructionTaskResponse,
   type DesignProjectListItemResponse,
   type UpdateAcceptanceRecordRequest,
 } from "@/services/adminApi";
@@ -74,6 +78,21 @@ const STATUS_BADGE: Record<AcceptanceStatus, string> = {
 const OVERDUE_BADGE = "border-amber-300 bg-amber-50 text-amber-800";
 
 const OPEN_STATUSES = new Set<AcceptanceStatus>(["Draft", "Submitted", "Rejected"]);
+
+const parseDocuments = (value: string | null | undefined): string[] => {
+  if (!value) return [];
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+};
+
+const serializeDocuments = (value: string) => {
+  const paths = value.split("\n").map((path) => path.trim()).filter(Boolean);
+  return JSON.stringify(paths);
+};
 
 interface StatTile {
   key: string;
@@ -105,11 +124,18 @@ export default function AcceptanceRecordsPage() {
   const canApprove = has(ADMIN_PERMS.constructionAcceptanceApprove);
 
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
+  const [tasks, setTasks] = useState<ConstructionTaskResponse[]>([]);
   const [projectId, setProjectId] = useState<number | undefined>();
+  const [taskId, setTaskId] = useState<number | undefined>();
+  const [responsibleUserId, setResponsibleUserId] = useState<number | undefined>();
+  const [acceptanceFrom, setAcceptanceFrom] = useState("");
+  const [acceptanceTo, setAcceptanceTo] = useState("");
   const [status, setStatus] = useState<AcceptanceStatus | "">("");
   const [openOnly, setOpenOnly] = useState(false);
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<NonNullable<AcceptanceRecordListParams["sortBy"]>>("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [rows, setRows] = useState<AcceptanceRecordResponse[]>([]);
@@ -121,6 +147,10 @@ export default function AcceptanceRecordsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const [detail, setDetail] = useState<AcceptanceRecordResponse | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -143,6 +173,7 @@ export default function AcceptanceRecordsPage() {
     location: string;
     participants: string;
     findings: string;
+    documents: string;
   }>({
     title: "",
     description: "",
@@ -151,6 +182,7 @@ export default function AcceptanceRecordsPage() {
     location: "",
     participants: "",
     findings: "",
+    documents: "",
   });
 
   useEffect(() => {
@@ -168,16 +200,54 @@ export default function AcceptanceRecordsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await adminApi.listConstructionTasks({
+          designProjectId: projectId,
+          pageSize: 200,
+        });
+        if (!cancelled) setTasks(res.data.items ?? []);
+      } catch {
+        if (!cancelled) setTasks([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  const responsibleOptions = useMemo(() => {
+    const options = new Map<number, string>();
+    projects.forEach((project) => {
+      if (project.projectManagerUserId && project.projectManagerName)
+        options.set(project.projectManagerUserId, project.projectManagerName);
+      if (project.designLeadUserId && project.designLeadName)
+        options.set(project.designLeadUserId, project.designLeadName);
+    });
+    tasks.forEach((task) => {
+      if (task.ownerUserId && task.ownerName) options.set(task.ownerUserId, task.ownerName);
+    });
+    return Array.from(options, ([value, label]) => ({ value: String(value), label }));
+  }, [projects, tasks]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const params: AcceptanceRecordListParams = {
         designProjectId: projectId,
+        constructionTaskId: taskId,
+        responsibleUserId,
+        acceptanceFrom: acceptanceFrom || undefined,
+        acceptanceTo: acceptanceTo || undefined,
         status: status || undefined,
         search: search.trim() || undefined,
         openOnly: openOnly || undefined,
         overdueOnly: overdueOnly || undefined,
+        sortBy,
+        sortDirection,
         page,
         pageSize,
       };
@@ -192,7 +262,7 @@ export default function AcceptanceRecordsPage() {
     } finally {
       setLoading(false);
     }
-  }, [projectId, status, search, openOnly, overdueOnly, page, pageSize, t]);
+  }, [projectId, taskId, responsibleUserId, acceptanceFrom, acceptanceTo, status, search, openOnly, overdueOnly, sortBy, sortDirection, page, pageSize, t]);
 
   useEffect(() => {
     load();
@@ -205,6 +275,22 @@ export default function AcceptanceRecordsPage() {
     if (refreshed && refreshed !== detail) setDetail(refreshed);
   }, [rows, detail]);
 
+  const openDetail = useCallback(async (id: number) => {
+    setDetailOpen(true);
+    setDetailId(id);
+    setDetail(null);
+    setDetailError(null);
+    setDetailLoading(true);
+    try {
+      const response = await adminApi.getAcceptanceRecord(id);
+      setDetail(response.data);
+    } catch (error) {
+      setDetailError(extractApiError(error, t("acceptance.detail.error")));
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [t]);
+
   const openCreate = () => {
     setEditingId(null);
     setForm({
@@ -215,6 +301,7 @@ export default function AcceptanceRecordsPage() {
       location: "",
       participants: "",
       findings: "",
+      documents: "",
     });
     setFormError(null);
     setFormOpen(true);
@@ -230,6 +317,7 @@ export default function AcceptanceRecordsPage() {
       location: r.location ?? "",
       participants: r.participants ?? "",
       findings: r.findings ?? "",
+      documents: parseDocuments(r.documents).join("\n"),
     });
     setFormError(null);
     setFormOpen(true);
@@ -264,6 +352,7 @@ export default function AcceptanceRecordsPage() {
         location: form.location.trim() || null,
         participants: form.participants.trim() || null,
         findings: form.findings.trim() || null,
+        documents: serializeDocuments(form.documents),
       };
       if (editingId) {
         await adminApi.updateAcceptanceRecord(editingId, payload as UpdateAcceptanceRecordRequest);
@@ -320,6 +409,7 @@ export default function AcceptanceRecordsPage() {
       await adminApi.deleteAcceptanceRecord(id);
       toast({ title: t("acceptance.toast.deleted") });
       if (detail?.id === id) setDetail(null);
+      if (detail?.id === id) setDetailOpen(false);
       await load();
     } catch (e) {
       toast({
@@ -414,19 +504,24 @@ export default function AcceptanceRecordsPage() {
     },
   ];
 
+  const hasActiveFilters = Boolean(
+    projectId || taskId || responsibleUserId || acceptanceFrom || acceptanceTo
+      || status || search.trim() || openOnly || overdueOnly,
+  );
+
   const rowClickable = useCallback(
     (r: AcceptanceRecordResponse) => ({
       role: "button" as const,
       tabIndex: 0,
-      onClick: () => setDetail(r),
+      onClick: () => void openDetail(r.id),
       onKeyDown: (e: React.KeyboardEvent) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          setDetail(r);
+          void openDetail(r.id);
         }
       },
     }),
-    [],
+    [openDetail],
   );
 
   return (
@@ -487,9 +582,43 @@ export default function AcceptanceRecordsPage() {
                 value={projectId != null ? String(projectId) : ""}
                 onChange={(v) => {
                   setProjectId(v ? Number(v) : undefined);
+                  setTaskId(undefined);
                   setPage(1);
                 }}
                 placeholder={t("acceptance.filter.project.all")}
+              />
+            </div>
+            <div>
+              <Label>{t("acceptance.field.task")}</Label>
+              <SearchableSelect
+                options={[
+                  { value: "", label: t("acceptance.filter.task.all") },
+                  ...tasks.map((task) => ({
+                    value: String(task.id),
+                    label: `${task.taskCode} — ${task.name}`,
+                  })),
+                ]}
+                value={taskId != null ? String(taskId) : ""}
+                onChange={(value) => {
+                  setTaskId(value ? Number(value) : undefined);
+                  setPage(1);
+                }}
+                placeholder={t("acceptance.filter.task.all")}
+              />
+            </div>
+            <div>
+              <Label>{t("acceptance.filter.responsible")}</Label>
+              <SearchableSelect
+                options={[
+                  { value: "", label: t("acceptance.filter.responsible.all") },
+                  ...responsibleOptions,
+                ]}
+                value={responsibleUserId != null ? String(responsibleUserId) : ""}
+                onChange={(value) => {
+                  setResponsibleUserId(value ? Number(value) : undefined);
+                  setPage(1);
+                }}
+                placeholder={t("acceptance.filter.responsible.all")}
               />
             </div>
             <div>
@@ -552,6 +681,52 @@ export default function AcceptanceRecordsPage() {
                 {t("acceptance.filter.overdueOnly")}
               </label>
             </div>
+            <div>
+              <Label>{t("acceptance.filter.from")}</Label>
+              <Input
+                type="date"
+                value={acceptanceFrom}
+                onChange={(event) => {
+                  setAcceptanceFrom(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div>
+              <Label>{t("acceptance.filter.to")}</Label>
+              <Input
+                type="date"
+                value={acceptanceTo}
+                onChange={(event) => {
+                  setAcceptanceTo(event.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+            <div>
+              <Label>{t("acceptance.filter.sort")}</Label>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">{t("acceptance.field.date")}</SelectItem>
+                  <SelectItem value="code">{t("acceptance.field.code")}</SelectItem>
+                  <SelectItem value="title">{t("acceptance.field.title")}</SelectItem>
+                  <SelectItem value="project">{t("acceptance.field.project")}</SelectItem>
+                  <SelectItem value="status">{t("acceptance.field.status")}</SelectItem>
+                  <SelectItem value="updatedAt">{t("acceptance.field.updatedAt")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("acceptance.filter.direction")}</Label>
+              <Select value={sortDirection} onValueChange={(value) => setSortDirection(value as "asc" | "desc")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">{t("acceptance.filter.asc")}</SelectItem>
+                  <SelectItem value="desc">{t("acceptance.filter.desc")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -578,7 +753,7 @@ export default function AcceptanceRecordsPage() {
           <PageError message={error} onRetry={load} />
         ) : rows.length === 0 ? (
           <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-            {t("acceptance.empty")}
+            {t(hasActiveFilters ? "acceptance.noResults" : "acceptance.empty")}
           </div>
         ) : (
           <>
@@ -724,8 +899,21 @@ export default function AcceptanceRecordsPage() {
       </div>
 
       {/* Detail sheet */}
-      <Sheet open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+      <Sheet
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open);
+          if (!open) {
+            setDetail(null);
+            setDetailError(null);
+          }
+        }}
+      >
         <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+          {detailLoading && <PageLoading label={t("acceptance.detail.loading")} />}
+          {!detailLoading && detailError && (
+            <PageError message={detailError} onRetry={() => detailId && void openDetail(detailId)} />
+          )}
           {detail && (
             <>
               <SheetHeader>
@@ -800,6 +988,32 @@ export default function AcceptanceRecordsPage() {
                     </>
                   )}
                 </dl>
+
+                <div className="border-t pt-3">
+                  <h3 className="mb-2 flex items-center gap-2 font-medium">
+                    <FileText className="h-4 w-4" />
+                    {t("acceptance.field.documents")}
+                  </h3>
+                  {parseDocuments(detail.documents).length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{t("acceptance.documents.empty")}</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {parseDocuments(detail.documents).map((path) => (
+                        <li key={path}>
+                          <a
+                            href={resolveAssetUrl(path)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-2 break-all text-sm text-primary hover:underline"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                            {path.split("/").pop() || path}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
 
                 {(canManage || canApprove) && detail.status !== "Cancelled" && (
                   <div className="flex flex-wrap gap-2 border-t pt-3">
@@ -886,6 +1100,21 @@ export default function AcceptanceRecordsPage() {
                 />
               </div>
             </div>
+            <div data-testid="acceptance-form-task">
+              <Label>{t("acceptance.field.task")}</Label>
+              <SearchableSelect
+                options={[
+                  { value: "", label: t("acceptance.filter.task.none") },
+                  ...tasks.map((task) => ({
+                    value: String(task.id),
+                    label: `${task.taskCode} — ${task.name}`,
+                  })),
+                ]}
+                value={form.constructionTaskId}
+                onChange={(value) => setForm({ ...form, constructionTaskId: value })}
+                placeholder={t("acceptance.filter.task.none")}
+              />
+            </div>
             <div>
               <Label>{t("acceptance.field.participants")}</Label>
               <Input
@@ -908,6 +1137,19 @@ export default function AcceptanceRecordsPage() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
+            </div>
+            <div>
+              <Label>{t("acceptance.field.documents")}</Label>
+              <Textarea
+                rows={3}
+                value={form.documents}
+                placeholder={t("acceptance.form.documentsPlaceholder")}
+                onChange={(event) => setForm({ ...form, documents: event.target.value })}
+                data-testid="acceptance-form-documents"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("acceptance.form.documentsHelp")}
+              </p>
             </div>
             {formError && <div className="text-sm text-rose-600">{formError}</div>}
           </div>

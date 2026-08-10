@@ -6,9 +6,14 @@ public class AcceptanceRecordListParams
     public int? DesignProjectId { get; set; }
     public string? Status { get; set; }
     public int? ConstructionTaskId { get; set; }
+    public int? ResponsibleUserId { get; set; }
+    public DateOnly? AcceptanceFrom { get; set; }
+    public DateOnly? AcceptanceTo { get; set; }
     public string? Search { get; set; }
     public bool OverdueOnly { get; set; }
     public bool OpenOnly { get; set; }
+    public string? SortBy { get; set; }
+    public string? SortDirection { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }
