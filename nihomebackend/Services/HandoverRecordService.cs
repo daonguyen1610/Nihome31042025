@@ -105,6 +105,7 @@ public class HandoverRecordService(
         bool canSeeAll,
         CancellationToken ct = default)
     {
+        NormalizeCollections(request);
         ValidateRequest(request.Title, request.PlannedHandoverDate, request.Description,
             request.Location, request.CommissioningNotes, request.ChecklistItems,
             request.Documents, request.Signatories);
@@ -140,7 +141,15 @@ public class HandoverRecordService(
         };
         entity.StatusHistory.Add(NewHistory(null, HandoverStatus.Draft, callerUserId, null));
         db.HandoverRecords.Add(entity);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException exception)
+        {
+            logger.LogWarning(exception, "Concurrent handover creation failed for project {ProjectId}", request.DesignProjectId);
+            throw new HandoverRecordConflictException("Dự án đã có hồ sơ bàn giao hoặc mã bàn giao vừa được sử dụng. Vui lòng tải lại và thử lại.");
+        }
         logger.LogInformation("HandoverRecord {Id} created for project {ProjectId}", entity.Id, entity.DesignProjectId);
         return (await GetAsync(entity.Id, callerUserId, true, ct))!;
     }
@@ -152,15 +161,22 @@ public class HandoverRecordService(
         bool canSeeAll,
         CancellationToken ct = default)
     {
-        var entity = await ApplyScope(db.HandoverRecords, callerUserId, canSeeAll)
+        var entity = await ApplyScope(db.HandoverRecords.Include(row => row.DesignProject), callerUserId, canSeeAll)
             .FirstOrDefaultAsync(row => row.Id == id, ct);
         if (entity is null) return null;
         if (!EditableStatuses.Contains(entity.Status))
             throw new HandoverRecordOperationException($"Không thể chỉnh sửa hồ sơ ở trạng thái '{entity.Status}'.");
+        NormalizeCollections(request);
         ValidateRequest(request.Title, request.PlannedHandoverDate, request.Description,
             request.Location, request.CommissioningNotes, request.ChecklistItems,
             request.Documents, request.Signatories);
         await EnsureUserAsync(request.ResponsibleUserId, ct);
+        if (!canSeeAll && request.ResponsibleUserId != entity.ResponsibleUserId
+            && entity.DesignProject.ProjectManagerUserId != callerUserId
+            && entity.DesignProject.DesignLeadUserId != callerUserId)
+        {
+            throw new HandoverRecordOperationException("Chỉ quản lý dự án hoặc trưởng nhóm thiết kế mới được thay đổi người phụ trách.");
+        }
 
         entity.Title = request.Title.Trim();
         entity.Description = TrimOrNull(request.Description);
@@ -175,7 +191,7 @@ public class HandoverRecordService(
         entity.Signatories = JsonSerializer.Serialize(request.Signatories.Select(item => item.Trim()));
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await SaveWithConcurrencyAsync(ct);
         return await GetAsync(id, callerUserId, true, ct);
     }
 
@@ -193,11 +209,12 @@ public class HandoverRecordService(
             throw new HandoverRecordOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
         if (next == HandoverStatus.HandedOver)
             throw new HandoverRecordOperationException("Sử dụng endpoint /complete để hoàn tất bàn giao.");
+        ValidateTransitionNote(request.Note);
         EnsureTransitionAllowed(entity.Status, next);
         if (next == HandoverStatus.ReadyForHandover)
             await EnsureReadyAsync(entity, ct);
         ApplyTransition(entity, next, callerUserId, request.Note);
-        await db.SaveChangesAsync(ct);
+        await SaveWithConcurrencyAsync(ct);
         return await GetAsync(id, callerUserId, true, ct);
     }
 
@@ -211,12 +228,13 @@ public class HandoverRecordService(
         var entity = await ApplyScope(db.HandoverRecords, callerUserId, canSeeAll)
             .FirstOrDefaultAsync(row => row.Id == id, ct);
         if (entity is null) return null;
+        ValidateTransitionNote(request.Note);
         EnsureTransitionAllowed(entity.Status, HandoverStatus.HandedOver);
         await EnsureReadyAsync(entity, ct);
         if (DeserializeStrings(entity.Signatories).Count == 0)
             throw new HandoverRecordOperationException("Cần ít nhất một bên ký trước khi hoàn tất bàn giao.");
         ApplyTransition(entity, HandoverStatus.HandedOver, callerUserId, request.Note);
-        await db.SaveChangesAsync(ct);
+        await SaveWithConcurrencyAsync(ct);
         return await GetAsync(id, callerUserId, true, ct);
     }
 
@@ -232,7 +250,7 @@ public class HandoverRecordService(
         if (entity.Status is not (HandoverStatus.Draft or HandoverStatus.Cancelled))
             throw new HandoverRecordOperationException("Chỉ có thể xoá hồ sơ nháp hoặc đã huỷ.");
         db.HandoverRecords.Remove(entity);
-        await db.SaveChangesAsync(ct);
+        await SaveWithConcurrencyAsync(ct);
         return true;
     }
 
@@ -453,6 +471,8 @@ public class HandoverRecordService(
             throw new HandoverRecordOperationException("Mục checklist hoặc ghi chú vượt quá độ dài cho phép.");
         if (checklist.GroupBy(item => item.Name.Trim(), StringComparer.OrdinalIgnoreCase).Any(group => group.Count() > 1))
             throw new HandoverRecordOperationException("Checklist không được trùng tên mục.");
+        if (JsonSerializer.Serialize(checklist).Length > 16000)
+            throw new HandoverRecordOperationException("Checklist không được vượt quá 16000 ký tự.");
 
         documents ??= new();
         if (documents.Count > 20 || documents.Any(item => string.IsNullOrWhiteSpace(item)
@@ -464,6 +484,38 @@ public class HandoverRecordService(
         signatories ??= new();
         if (signatories.Count > 20 || signatories.Any(item => string.IsNullOrWhiteSpace(item) || item.Trim().Length > 200))
             throw new HandoverRecordOperationException("Danh sách bên ký gồm tối đa 20 tên, mỗi tên tối đa 200 ký tự.");
+        if (JsonSerializer.Serialize(signatories).Length > 5000)
+            throw new HandoverRecordOperationException("Danh sách bên ký không được vượt quá 5000 ký tự.");
+    }
+
+    private static void NormalizeCollections(CreateHandoverRecordRequest request)
+    {
+        request.ChecklistItems ??= [];
+        request.Documents ??= [];
+        request.Signatories ??= [];
+    }
+
+    private static void NormalizeCollections(UpdateHandoverRecordRequest request)
+    {
+        request.ChecklistItems ??= [];
+        request.Documents ??= [];
+        request.Signatories ??= [];
+    }
+
+    private static void ValidateTransitionNote(string? note) =>
+        EnsureLength(note, 2000, "Ghi chú chuyển trạng thái");
+
+    private async Task SaveWithConcurrencyAsync(CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            logger.LogWarning(exception, "Concurrent handover update rejected");
+            throw new HandoverRecordConflictException("Hồ sơ đã được người khác cập nhật. Vui lòng tải lại trước khi thử lại.");
+        }
     }
 
     private static bool IsSafeDocumentUrl(string value)

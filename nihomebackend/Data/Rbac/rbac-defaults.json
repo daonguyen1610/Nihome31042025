@@ -134,6 +134,7 @@
     { "module": "construction.handover", "action": "view" },
     { "module": "construction.handover", "action": "view.all" },
     { "module": "construction.handover", "action": "manage" },
+    { "module": "construction.handover", "action": "manage.all" },
     { "module": "construction.handover", "action": "complete" },
 
     { "module": "permit.checklists", "action": "view" },

@@ -1194,6 +1194,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(h => h.Signatories).HasMaxLength(5000).IsRequired();
             b.Property(h => h.ResolutionNote).HasMaxLength(2000);
             b.Property(h => h.Status).HasConversion<string>().HasMaxLength(30);
+            b.Property(h => h.RowVersion).IsRowVersion();
 
             b.HasOne(h => h.DesignProject).WithMany().HasForeignKey(h => h.DesignProjectId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(h => h.ResponsibleUser).WithMany().HasForeignKey(h => h.ResponsibleUserId).OnDelete(DeleteBehavior.NoAction);
