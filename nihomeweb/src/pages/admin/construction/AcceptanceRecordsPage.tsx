@@ -89,10 +89,10 @@ const parseDocuments = (value: string | null | undefined): string[] => {
   }
 };
 
-const serializeDocuments = (value: string) => {
-  const paths = value.split("\n").map((path) => path.trim()).filter(Boolean);
-  return JSON.stringify(paths);
-};
+const documentPaths = (value: string) =>
+  value.split("\n").map((path) => path.trim()).filter(Boolean);
+
+const serializeDocuments = (paths: string[]) => JSON.stringify(paths);
 
 interface StatTile {
   key: string;
@@ -338,6 +338,16 @@ export default function AcceptanceRecordsPage() {
       setFormError(t("acceptance.form.required.date"));
       return;
     }
+    const documents = documentPaths(form.documents);
+    const serializedDocuments = serializeDocuments(documents);
+    if (
+      documents.length > 20
+      || documents.some((path) => path.length > 500 || !resolveSafeLinkUrl(path))
+      || serializedDocuments.length > 4000
+    ) {
+      setFormError(t("acceptance.form.documentsInvalid"));
+      return;
+    }
 
     setSaving(true);
     try {
@@ -352,7 +362,7 @@ export default function AcceptanceRecordsPage() {
         location: form.location.trim() || null,
         participants: form.participants.trim() || null,
         findings: form.findings.trim() || null,
-        documents: serializeDocuments(form.documents),
+        documents: serializedDocuments,
       };
       if (editingId) {
         await adminApi.updateAcceptanceRecord(editingId, payload as UpdateAcceptanceRecordRequest);
@@ -1014,9 +1024,17 @@ export default function AcceptanceRecordsPage() {
                                 {label}
                               </a>
                             ) : (
-                              <span className="flex items-center gap-2 break-all text-sm text-muted-foreground">
+                              <span
+                                className="flex items-start gap-2 break-all text-sm text-muted-foreground"
+                                title={t("acceptance.documents.linkUnavailable")}
+                              >
                                 <FileText className="h-3.5 w-3.5 shrink-0" />
-                                {label}
+                                <span>
+                                  {label}
+                                  <span className="ml-2 text-xs">
+                                    ({t("acceptance.documents.linkUnavailable")})
+                                  </span>
+                                </span>
                               </span>
                             )}
                           </li>
@@ -1073,7 +1091,7 @@ export default function AcceptanceRecordsPage() {
 
       {/* Create / edit dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingId ? t("acceptance.form.editTitle") : t("acceptance.form.newTitle")}
@@ -1150,19 +1168,23 @@ export default function AcceptanceRecordsPage() {
               />
             </div>
             <div>
-              <Label>{t("acceptance.field.documents")}</Label>
+              <Label htmlFor="acceptance-form-documents">
+                {t("acceptance.field.documents")}
+              </Label>
               <Textarea
+                id="acceptance-form-documents"
                 rows={3}
                 value={form.documents}
                 placeholder={t("acceptance.form.documentsPlaceholder")}
                 onChange={(event) => setForm({ ...form, documents: event.target.value })}
+                aria-describedby="acceptance-form-documents-help"
                 data-testid="acceptance-form-documents"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p id="acceptance-form-documents-help" className="mt-1 text-xs text-muted-foreground">
                 {t("acceptance.form.documentsHelp")}
               </p>
             </div>
-            {formError && <div className="text-sm text-rose-600">{formError}</div>}
+            {formError && <div role="alert" className="text-sm text-rose-600">{formError}</div>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
