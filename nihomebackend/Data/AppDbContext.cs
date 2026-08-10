@@ -97,6 +97,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PunchItem> PunchItems => Set<PunchItem>();
 
     public DbSet<AsBuiltDocument> AsBuiltDocuments => Set<AsBuiltDocument>();
+    public DbSet<HandoverRecord> HandoverRecords => Set<HandoverRecord>();
+    public DbSet<HandoverStatusHistory> HandoverStatusHistory => Set<HandoverStatusHistory>();
 
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
@@ -1176,6 +1178,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(d => new { d.DesignProjectId, d.DocumentCode }).IsUnique();
             b.HasIndex(d => d.Status);
             b.HasIndex(d => d.Category);
+        });
+
+        modelBuilder.Entity<HandoverRecord>(b =>
+        {
+            b.ToTable("handover_records");
+            b.HasKey(h => h.Id);
+            b.Property(h => h.HandoverCode).HasMaxLength(60).IsRequired();
+            b.Property(h => h.Title).HasMaxLength(300).IsRequired();
+            b.Property(h => h.Description).HasMaxLength(4000);
+            b.Property(h => h.Location).HasMaxLength(300);
+            b.Property(h => h.CommissioningNotes).HasMaxLength(4000);
+            b.Property(h => h.ChecklistItems).HasMaxLength(16000).IsRequired();
+            b.Property(h => h.Documents).HasMaxLength(4000).IsRequired();
+            b.Property(h => h.Signatories).HasMaxLength(5000).IsRequired();
+            b.Property(h => h.ResolutionNote).HasMaxLength(2000);
+            b.Property(h => h.Status).HasConversion<string>().HasMaxLength(30);
+
+            b.HasOne(h => h.DesignProject).WithMany().HasForeignKey(h => h.DesignProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(h => h.ResponsibleUser).WithMany().HasForeignKey(h => h.ResponsibleUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(h => h.SubmittedBy).WithMany().HasForeignKey(h => h.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(h => h.HandedOverBy).WithMany().HasForeignKey(h => h.HandedOverByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasMany(h => h.StatusHistory).WithOne(history => history.HandoverRecord)
+                .HasForeignKey(history => history.HandoverRecordId).OnDelete(DeleteBehavior.Cascade);
+
+            b.HasIndex(h => h.DesignProjectId).IsUnique();
+            b.HasIndex(h => h.HandoverCode).IsUnique();
+            b.HasIndex(h => h.Status);
+            b.HasIndex(h => h.ResponsibleUserId);
+        });
+
+        modelBuilder.Entity<HandoverStatusHistory>(b =>
+        {
+            b.ToTable("handover_status_history");
+            b.HasKey(history => history.Id);
+            b.Property(history => history.FromStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(history => history.ToStatus).HasConversion<string>().HasMaxLength(30);
+            b.Property(history => history.Note).HasMaxLength(2000);
+            b.HasOne(history => history.ChangedByUser).WithMany()
+                .HasForeignKey(history => history.ChangedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(history => new { history.HandoverRecordId, history.ChangedAt });
         });
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");

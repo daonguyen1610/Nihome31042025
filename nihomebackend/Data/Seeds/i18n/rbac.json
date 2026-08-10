@@ -2238,5 +2238,69 @@
     "en": "Manages the project permitting checklist and tracks approval progress.",
     "zh": "管理项目法规文件清单并跟踪审批进度。",
     "ja": "プロジェクトの法的チェックリストを管理し、許可取得の進捗を追跡します。"
+  },
+  {
+    "key": "rbac.perm.construction.handover.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ bàn giao",
+    "en": "View handover records",
+    "zh": "查看交付记录",
+    "ja": "引渡記録を表示"
+  },
+  {
+    "key": "rbac.perm.construction.handover.view.description",
+    "category": "rbac",
+    "vi": "Xem danh sách, mức độ sẵn sàng và chi tiết hồ sơ bàn giao dự án được phân công.",
+    "en": "View the list, readiness and details of assigned project handover records.",
+    "zh": "查看已分配项目的交付清单、准备情况和详情。",
+    "ja": "担当プロジェクトの引渡一覧、準備状況、詳細を表示します。"
+  },
+  {
+    "key": "rbac.perm.construction.handover.view.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ hồ sơ bàn giao",
+    "en": "View all handover records",
+    "zh": "查看所有交付记录",
+    "ja": "すべての引渡記録を表示"
+  },
+  {
+    "key": "rbac.perm.construction.handover.view.all.description",
+    "category": "rbac",
+    "vi": "Xem hồ sơ bàn giao thuộc mọi dự án, không giới hạn theo phân công.",
+    "en": "View handover records across all projects regardless of assignment.",
+    "zh": "查看所有项目的交付记录，不受分配范围限制。",
+    "ja": "担当範囲に関係なく全プロジェクトの引渡記録を表示します。"
+  },
+  {
+    "key": "rbac.perm.construction.handover.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý hồ sơ bàn giao",
+    "en": "Manage handover records",
+    "zh": "管理交付记录",
+    "ja": "引渡記録を管理"
+  },
+  {
+    "key": "rbac.perm.construction.handover.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, chỉnh sửa, xoá và chuyển trạng thái chuẩn bị của hồ sơ bàn giao.",
+    "en": "Create, update, delete and manage preparation states for handover records.",
+    "zh": "创建、编辑、删除交付记录并管理其准备状态。",
+    "ja": "引渡記録の作成、編集、削除、および準備状態の管理を行います。"
+  },
+  {
+    "key": "rbac.perm.construction.handover.complete.label",
+    "category": "rbac",
+    "vi": "Hoàn tất bàn giao dự án",
+    "en": "Complete project handover",
+    "zh": "完成项目交付",
+    "ja": "プロジェクト引渡を完了"
+  },
+  {
+    "key": "rbac.perm.construction.handover.complete.description",
+    "category": "rbac",
+    "vi": "Xác nhận điều kiện sẵn sàng, chữ ký và hoàn tất bàn giao toàn bộ dự án.",
+    "en": "Confirm readiness and signatures, then complete the full project handover.",
+    "zh": "确认准备条件和签署信息，并完成整个项目交付。",
+    "ja": "準備条件と署名を確認し、プロジェクト全体の引渡を完了します。"
   }
 ]

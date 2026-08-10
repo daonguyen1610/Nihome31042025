@@ -47,6 +47,7 @@ public static class SampleCrmDataSeeder
         SeedPunchItems(db, owner, now);
         SeedAcceptanceRecords(db, owner, now);
         SeedAsBuiltDocuments(db, owner, now);
+        SeedHandoverRecords(db, owner, now);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -2307,6 +2308,57 @@ public static class SampleCrmDataSeeder
             },
         };
         db.AsBuiltDocuments.AddRange(docs);
+        db.SaveChanges();
+    }
+
+    private static void SeedHandoverRecords(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string SampleCode = "HO-SAMPLE-001";
+        if (db.HandoverRecords.Any(record => record.HandoverCode == SampleCode)) return;
+
+        var project = db.DesignProjects
+            .Where(item => !db.HandoverRecords.Any(record => record.DesignProjectId == item.Id))
+            .OrderByDescending(item => item.CurrentStage)
+            .ThenBy(item => item.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        var checklist = new[]
+        {
+            new { Name = "Kiểm tra vận hành hệ thống", IsCompleted = true, Note = (string?)"Đã chạy thử" },
+            new { Name = "Đối chiếu hồ sơ hoàn công", IsCompleted = false, Note = (string?)"Chờ chứng chỉ bảo hành" },
+            new { Name = "Xác nhận hiện trạng bàn giao", IsCompleted = false, Note = (string?)null },
+        };
+        var record = new HandoverRecord
+        {
+            DesignProjectId = project.Id,
+            HandoverCode = SampleCode,
+            Title = "Bàn giao tổng thể công trình mẫu",
+            Description = "Hồ sơ mẫu minh hoạ checklist, commissioning, tài liệu và luồng bàn giao.",
+            PlannedHandoverDate = DateOnly.FromDateTime(now.AddDays(14)),
+            Location = "Công trường dự án mẫu",
+            ResponsibleUserId = project.ProjectManagerUserId ?? project.DesignLeadUserId ?? owner.Id,
+            CommissioningCompleted = true,
+            CommissioningNotes = "Đã chạy thử các hệ thống chính; tiếp tục theo dõi tải vận hành.",
+            ChecklistItems = System.Text.Json.JsonSerializer.Serialize(checklist),
+            ChecklistCompleted = false,
+            Documents = System.Text.Json.JsonSerializer.Serialize(new[] { "/files/handover/sample-handover-plan.pdf" }),
+            Signatories = System.Text.Json.JsonSerializer.Serialize(new[] { "Đại diện nhà thầu" }),
+            Status = HandoverStatus.Draft,
+            CreatedByUserId = owner.Id,
+            UpdatedByUserId = owner.Id,
+            CreatedAt = now.AddDays(-2),
+            UpdatedAt = now.AddHours(-4),
+        };
+        record.StatusHistory.Add(new HandoverStatusHistory
+        {
+            FromStatus = null,
+            ToStatus = HandoverStatus.Draft,
+            ChangedByUserId = owner.Id,
+            ChangedAt = record.CreatedAt,
+            Note = "Khởi tạo hồ sơ bàn giao mẫu.",
+        });
+        db.HandoverRecords.Add(record);
         db.SaveChanges();
     }
 }

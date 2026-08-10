@@ -47,6 +47,7 @@ import {
   ShieldAlert,
   ClipboardCheck,
   FolderArchive,
+  PackageCheck,
   User as UserIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -182,6 +183,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/construction/punchlist", label: t("nav.constructionPunch"), icon: ShieldAlert, permission: ADMIN_PERMS.constructionPunch },
           { to: "/admin/construction/acceptance", label: t("nav.constructionAcceptance"), icon: ClipboardCheck, permission: ADMIN_PERMS.constructionAcceptance },
           { to: "/admin/construction/asbuilt", label: t("nav.constructionAsBuilt"), icon: FolderArchive, permission: ADMIN_PERMS.constructionAsBuilt },
+          { to: "/admin/construction/handover", label: t("nav.constructionHandover"), icon: PackageCheck, permission: ADMIN_PERMS.constructionHandover },
         ],
       },
       {

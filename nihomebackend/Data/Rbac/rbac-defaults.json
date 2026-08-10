@@ -131,6 +131,11 @@
     { "module": "construction.asbuilt", "action": "manage" },
     { "module": "construction.asbuilt", "action": "approve" },
 
+    { "module": "construction.handover", "action": "view" },
+    { "module": "construction.handover", "action": "view.all" },
+    { "module": "construction.handover", "action": "manage" },
+    { "module": "construction.handover", "action": "complete" },
+
     { "module": "permit.checklists", "action": "view" },
     { "module": "permit.checklists", "action": "manage" },
     { "module": "permit.checklists", "action": "mark-issued" }
@@ -207,6 +212,7 @@
         "construction.punch.view",
         "construction.acceptance.view", "construction.acceptance.manage",
         "construction.asbuilt.view", "construction.asbuilt.manage",
+        "construction.handover.view", "construction.handover.manage",
         "profile.me.*"
       ]
     },
@@ -223,6 +229,7 @@
         "construction.punch.**",
         "construction.acceptance.**",
         "construction.asbuilt.**",
+        "construction.handover.**",
         "profile.me.*"
       ]
     },
@@ -242,6 +249,7 @@
         "construction.punch.view", "construction.punch.manage",
         "construction.acceptance.view", "construction.acceptance.manage",
         "construction.asbuilt.view", "construction.asbuilt.manage",
+        "construction.handover.view", "construction.handover.manage",
         "profile.me.*"
       ]
     },
@@ -260,6 +268,7 @@
         "construction.punch.view", "construction.punch.manage",
         "construction.acceptance.view", "construction.acceptance.manage",
         "construction.asbuilt.view", "construction.asbuilt.manage",
+        "construction.handover.view", "construction.handover.manage",
         "profile.me.*"
       ]
     },
@@ -278,6 +287,7 @@
         "construction.punch.view", "construction.punch.manage",
         "construction.acceptance.view", "construction.acceptance.manage",
         "construction.asbuilt.view", "construction.asbuilt.manage",
+        "construction.handover.view", "construction.handover.manage",
         "profile.me.*"
       ]
     },
@@ -302,6 +312,7 @@
         "construction.punch.**",
         "construction.acceptance.**",
         "construction.asbuilt.**",
+        "construction.handover.**",
         "permit.checklists.**",
         "profile.me.*"
       ]
