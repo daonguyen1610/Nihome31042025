@@ -1,53 +1,54 @@
 # Nihome31042025
 
-This project is using
-1. ASP.NET Core MVC(.NET 8). Version 8.0.4
-2. Entity Framework Core 8.
-3. SQL Server 2022
+Nihome is a React 18 + ASP.NET Core 8 platform backed by Entity Framework Core 8 and SQL Server 2022. The repository includes public content management, recruitment, CRM-related workflows, and construction operations such as partial acceptance, as-built dossiers, punch lists, and project handover.
 
-## For Docker dev
-If you are using the docker, simply run
+## Docker development
+
+Docker Compose is the supported development environment. Start the complete stack with:
 
 ```bash
-$ docker compose up -d
+docker compose up -d --build
 ```
 
-It will run the SQLServer DB, Web Application, and ASP .NET for you with hot-reload feature.
+The application is available at `http://localhost:5043`. The backend container is named `nihome31042025-backend`, and SQL Server runs in `nihome31042025-sqlserver`.
 
-## Connect to DB with ASP .NET Core
+## Connect ASP.NET Core to SQL Server
 
-To connect to the MySQL database. If you manage to run ASP .NET with docker.
+The Docker Compose environment supplies the application connection string. For an external development configuration that connects to the Docker-hosted SQL Server, use:
 
 We need to declare the `appsettings.json` like
 ```json
 "ConnectionStrings": {
-    "DefaultConnection": "Server=host.docker.internal,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=host.docker.internal,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;"
 }
 ```
 
-Otherwise if you are running thee ASP .NET in local dev.
+For a tool running directly on the host, use:
 
 We need to declare the `appsettings.json` like
 ```json
 "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;"
+    "DefaultConnection": "Server=localhost,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;"
 }
 ```
 
-## How to run dotnet
+## Backend commands
 
 ```bash
-cd nihomebackend
-dotnet run
+docker exec nihome31042025-backend dotnet build
+docker exec nihome31042025-backend dotnet format --verify-no-changes
 ```
 
-Run with hot reload (auto refresh when you edit code).
+The Compose backend mounts only the application project, not the sibling test projects, and the current image does not install `dotnet-ef`. CI runs unit/integration tests in a full .NET 8 SDK checkout. See the developer guide for current test and migration prerequisites.
+
+EF Core syntax from a .NET 8 SDK environment with `dotnet-ef` 8.x is:
 
 ```bash
-dotnet watch run
+dotnet ef migrations add <MigrationName>
+dotnet ef database update
 ```
 
-Best for development because it recompiles automatically when you modify files.
+Keep database work isolated from the host SQL Server and review generated migration files before applying them.
 
 ## Swagger
 
@@ -61,7 +62,7 @@ For the standard development setup in this repository, use:
 Check the SQL Server database is created
 
 ```bash
-docker run --platform linux/amd64 -it --rm --network container:nihome31042025-sqlserver mcr.microsoft.com/mssql-tools /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "Nihome@31042025"
+docker run --platform linux/amd64 -it --rm --network container:nihome31042025-sqlserver mcr.microsoft.com/mssql-tools /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "<development-password>"
 
 1> select name from sys.databases;
 2> go
@@ -107,8 +108,6 @@ EXEC sp_helpindex 'YourTableName';
 GO
 ```
 
-For SQL Server Cheat Sheet Command, please look at: [SQL Server Cheat Sheet](docs/sqlserver_cheatsheet.md).
-
 ## IMPORTANT
 
 When you attempt to add new model in `Models/`
@@ -121,17 +120,24 @@ When you attempt to add new model in `Models/`
 7. Changing relationships (1 - Many, Many - Many).
 8. Renaming a table.
 
-These changes affect how EF Core expects the SQL Database to look. So you must run following commands:
+These changes affect how EF Core expects the SQL database to look. Generate and review a migration in the Docker-based .NET 8 SDK tooling environment described in the developer guide, then apply it only after review:
 
 ```bash
-dotnet ef migrations add <Migration Name>
+dotnet ef migrations add <MigrationName>
 dotnet ef database update
 ```
 
-Migrations/ folder stores schema history. You only delete the folder if intentionally want to recreate the database from scratch.
+The `Migrations/` folder is shared schema history and must not be deleted to reset development data. For a disposable Compose database, use `docker compose down -v` and start the stack again.
 
 ## JIRA ticket
 https://endava-team-nawxok20.atlassian.net/jira/software/projects/NIH/boards/3
+
+## Documentation
+
+- Developer setup, architecture, migrations, testing, and deployment: [`docs/application_developer.md`](docs/application_developer.md)
+- Product workflows and API reference: [`docs/user_guide.md`](docs/user_guide.md)
+- Roles and permission behavior: [`docs/users-rbac.md`](docs/users-rbac.md)
+- Browser test operation: [`nihomeweb/e2e/README.md`](nihomeweb/e2e/README.md)
 
 ## WoW
 1. Create the merge request, write clear commit message before push.
@@ -147,4 +153,4 @@ https://endava-team-nawxok20.atlassian.net/jira/software/projects/NIH/boards/3
 $ ./auto-deployment.sh
 ```
 
-Use the output `publish-release.zip` in deployment-config/ to upload the hosting.
+Use `deployment-config/output/publish-release.zip` as the IIS hosting artifact.

@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-05-16
+Last reviewed: 2026-08-10
 
 ## Decisions
 
@@ -44,9 +44,13 @@ Rationale: The current source tree is a Vite SPA with React Router, Tailwind, sh
 
 Rationale: The team explicitly chose not to continue with starter-kit or full admin template imports. Future admin features should grow from the current `src/` components unless a new decision is recorded.
 
+Status: superseded in filesystem terms. The old sources have since been removed; no `legacy/` directory remains.
+
 ### 2026-04-25 - localStorage auth/admin stores are demo scaffolding
 
 Rationale: They make the UI usable during frontend development but do not define production auth, authorization, persistence, or API contracts.
+
+Status: superseded. Authentication now uses Redux with cookie-persisted JWT/refresh tokens, and production modules are API-backed. Only the editable language list on `/admin/master-data` remains localStorage-backed.
 
 ### 2026-05-05 - About/Profile content must be sourced from backend seed and API, not frontend fallbacks
 
@@ -66,7 +70,9 @@ Rationale: To reduce backend load without widening scope to SignalR, the admin s
 
 ### 2026-05-16 - Users/RBAC admin management is backend-backed
 
-Rationale: User and role management now uses the ASP.NET Core `/api/users` contract, existing `UserRole` enum values, and Redux-backed auth route guards. Roles remain fixed system roles in this phase; no dynamic role table is introduced.
+Rationale: User and role management now uses the ASP.NET Core APIs and Redux-backed permission route guards.
+
+Status: the original fixed-role limitation is superseded. `SUPER_ADMIN`, `ADMIN`, and `USER` remain protected system roles, while authorized users can create/delete business roles and edit their permission matrices through the dynamic role tables and RBAC API.
 
 ### 2026-07-11 - Backend-served media URLs are host-relative
 
@@ -82,28 +88,32 @@ Known consequence: because `ContentSeeder` is backfill-only by design (never del
 
 Rationale: found while resetting a dev database to verify the project-import work above — on a genuinely fresh database the backend failed to start at all. `TranslationSeeder.Seed()` snapshotted existing DB rows once before looping over every `i18n/*.json` seed file; two files (`profile.json` and `user-profile.json`) both define the key `profilePage.about.eyebrow`/`vi`, so both got queued as new inserts in the same pass and hit the unique `(Key, LanguageCode)` index. This had been dormant on every long-lived dev database (whichever file seeded first "won," masking the duplicate) and would have broken every fresh clone or CI run. Fixed by registering each newly-queued row immediately so a same-pass duplicate updates in place instead of double-inserting. Unrelated to the project-import work but blocking its verification, so fixed in the same branch as a separate, clearly-labeled commit.
 
+### 2026-08-10 - API-backed modules are the active frontend baseline
+
+Rationale: authentication, permissions, content/settings, Users/RBAC, CRM, design, permitting, and construction modules use the ASP.NET Core API through centralized TypeScript services. The editable language list on `/admin/master-data` is the single known localStorage-backed domain exception and does not define the application architecture.
+
+### 2026-08-10 - Project handover uses server-derived readiness and split scope permissions
+
+Rationale: NIH-144 makes the backend authoritative for readiness across acceptance, as-built, punch-list, commissioning, and checklist data. `construction.handover.view.all` broadens reads only, while `construction.handover.manage.all` independently broadens mutations. The frontend displays the server result, uses the shared safe URL resolver, requires a signatory before completion, and reloads after HTTP `409` conflicts instead of overwriting concurrent changes.
+
 ## Open Questions
 
-### Should the `legacy/` reference folders remain long term?
+### Which authentication hardening should NICON / Nihome adopt next?
 
-Why it matters: they are useful during transition but can confuse future agents if treated as active architecture.
-
-### Which auth strategy should NICON / Nihome use after the demo baseline?
-
-Why it matters: basic JWT/refresh auth and admin route protection now exist, but longer-term requirements such as token storage hardening, user profile refresh cadence, audit logging, and permission expansion still need explicit product decisions.
+Why it matters: JWT/refresh auth, permission enforcement, and audit logging exist, but token storage hardening and user-profile refresh cadence still need explicit product decisions.
 
 ### What API access pattern should the remaining frontend modules adopt?
 
 Why it matters: notifications now use the existing Axios wrapper plus Redux for shell-level badge state, but broader server-state modules still need a consistent choice between Redux, TanStack Query, or focused hooks.
 Why it matters: `src/lib/api.ts` and typed functions under `src/services/` are now the active pattern for backend calls. The remaining question is whether future server state should move to TanStack Query consistently or continue with page-local loading state for smaller admin modules.
 
-### What persistence model should replace localStorage admin stores?
+### When should master-data languages move to backend persistence?
 
-Why it matters: content, project, recruitment, settings, and system screens currently feel interactive but do not persist outside the browser.
+Why it matters: production modules are API-backed, but `/admin/master-data` still stores its editable language list in localStorage and therefore cannot provide shared multi-user persistence.
 
-### What deployment/environment contract should this Vite app use?
+### Should the current deployment contract change?
 
-Why it matters: Vercel or another host will need clear build commands, output directory, environment variables, and API routing/proxy assumptions.
+Why it matters: the committed baseline builds the SPA into the ASP.NET application, serves the integrated app on port `5043`, uses `VITE_API_URL` for split development, supports `NIHOMEWEB_DIST_PATH`, and publishes an IIS ZIP. A move to a separate frontend host would require an explicit replacement contract.
 
 ### Should Project field-extraction use fuzzy title matching?
 
@@ -114,4 +124,3 @@ Why it matters: 7 of the 74 real projects (e.g. `stfood-marketing-factory-vn`, `
 - When resolving an open question, convert the outcome into a dated decision and update the related memory-bank file in the same task.
 - If a future task changes product scope, architecture, or UI conventions, update this file along with the corresponding detail file.
 - Before closing a non-trivial task, confirm that the owner was clear, the task boundary stayed clear, and any durable decision was written into the repo.
-- Do not delete `legacy/` as part of routine agent work without explicit user approval immediately before the destructive operation.

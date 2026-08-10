@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-Last reviewed: 2026-05-16
+Last reviewed: 2026-08-10
 
 ## Core Direction
 
@@ -24,14 +24,14 @@ Last reviewed: 2026-05-16
 
 ## Data Fetching Defaults
 
-- The current baseline uses static seed data and localStorage-backed demo stores.
-- `src/lib/auth.ts` is mock UI auth, not production authentication.
-- `src/lib/adminStore.ts` and `src/lib/settingsStore.ts` are demo persistence layers, not backend integration.
+- Authentication uses the backend JWT/refresh contract with Redux state and `ProtectedRoute`.
+- API-backed public and admin functions are centralized under `src/services/`; extend the existing service boundary rather than creating route-local clients.
+- `src/lib/masterDataStore.ts` is the known route-specific localStorage persistence exception for `/admin/master-data`; it must not be treated as the default data model. Other localStorage usage is UI preference state.
 - TanStack Query is already installed and wrapped at the app level; evaluate it before adding another server-state library.
-- If real API calls are introduced, centralize request handling and document the API/environment contract in the same task.
+- Centralize request handling and document new API/environment contracts in the same task.
 - Avoid route-local `useEffect` fetch blocks becoming the default integration style.
 - Auth state is centralized in Redux. Route protection uses `src/components/auth/ProtectedRoute.tsx`, which refreshes persisted cookie tokens before deciding redirects.
-- API-backed admin service functions belong in `src/services/adminApi.ts`; Users/RBAC follows that existing service boundary.
+- API-backed operational service functions belong in the existing typed modules under `src/services/`. User CRUD uses `adminApi.ts`; role and permission management uses `rbacApi.ts`.
 
 ## Environment and Integration Rules
 
@@ -47,10 +47,10 @@ Last reviewed: 2026-05-16
 The app should be treated as a client-rendered Vite SPA on top of the current Lovable/shadcn source tree.
 The current baseline intentionally favors immediate productivity over framework migration.
 
-Until later phases are opened:
+For future phases:
 
 - do not document auth or API behavior that is not committed
-- do not introduce real auth or API client layers before the team decides those interfaces
+- extend the existing Redux authentication and centralized API service interfaces unless a replacement is explicitly decided
 - do not reintroduce the old Next.js or Materialize starter-kit baseline
 - do not import a full admin template as a second active architecture
 

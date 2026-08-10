@@ -44,7 +44,7 @@ Schema (per file):
 | --- | --- | --- |
 | `activities.json` | `activities` (+ `entity_translations`) | `tools/scrape_legacy_data/run.py` |
 | `news.json` | `news_articles` (+ `entity_translations`) | `tools/scrape_legacy_data/run.py` |
-| `projects.json` | _generated; not yet wired into seeder_ | `tools/scrape_legacy_data/run.py` |
+| `projects.json` | `projects` (+ `entity_translations`) | `tools/scrape_legacy_data/run.py` |
 | `processes.json` | `process_documents` | legacy admin scraper |
 
 Each entry looks like:
@@ -64,7 +64,7 @@ Each entry looks like:
 }
 ```
 
-`ContentSeeder` is **backfill-only** for `activities.json` / `news.json`: it
+`ContentSeeder` is **backfill-only** for `activities.json`, `news.json`, and `projects.json`: it
 adds rows for slugs missing from the DB and adds `entity_translations` rows
 that don't exist yet, but it never deletes or overwrites a row/translation
 that's already in the database. This is deliberate — once an admin edits an
@@ -76,3 +76,14 @@ used to happen (row-count mismatch or legacy stock-thumbnail detection
 triggered a full drop-and-reseed) and was the root cause of translations
 disappearing after a backend restart; the destructive path has been
 removed.
+
+Process documents are different: the current process seeder can replace database rows when manifest counts or seeded asset state drift. Logo seeding also contains cleanup behavior. Treat those manifests as seed-owned inputs and review the relevant seeder before changing or removing entries; do not assume all content manifests preserve administrator-created rows.
+
+## Other embedded seed families
+
+- `master-data/` supplies reference values used by CRM, design, permits, and construction forms.
+- `workflows/` supplies configurable workflow definitions.
+- `notification-templates/` supplies in-app notification templates.
+- `Data/Rbac/rbac-defaults.json` supplies the permission catalog, system-role patterns, and business roles.
+
+Outside the `IntegrationTests` environment, startup applies database migrations and invokes the complete seed pipeline. This currently includes deterministic accounts and sample operational data, so production deployments must review and gate demo seeding and rotate seeded credentials.

@@ -18,7 +18,7 @@ Use it together with `AGENTS.md`, `docs/ai/project-brief.md`, and the memory ban
 - `src/pages/` contains React page components; it is not Next.js Pages Router.
 - `src/components/ui/` contains shadcn/ui primitives configured by `components.json`.
 - `src/index.css` and `tailwind.config.ts` own design tokens and global utilities.
-- The app currently uses local seed data and localStorage-backed demo stores.
+- The app uses backend APIs for authentication and production modules. `/admin/master-data` is the known persistence exception: its editable language list uses `src/lib/masterDataStore.ts` and localStorage.
 - Do not reintroduce the old Materialize starter-kit, full admin template, or Next.js assumptions without a dated decision and migration plan.
 
 ## Vercel Skill Routing
@@ -71,15 +71,15 @@ Use it only if a future task explicitly starts a Next.js migration and the decis
 - Admin pages use `src/components/layout/AdminLayout.tsx` for sidebar, topbar, and admin navigation.
 - Shared primitive UI belongs in `src/components/ui/`.
 - Shared app-specific components belong in `src/components/` by role, not by page location.
-- Static seed content belongs in `src/data/`.
-- Client-side demo persistence belongs in `src/lib/`, but production data access should be centralized separately.
+- Static display-only seed content belongs in `src/data/`.
+- Production data access belongs in `src/services/`; shared URL, permission, i18n, and formatting helpers belong in `src/lib/`.
 - Use the `@/` alias configured by Vite and TypeScript.
 
 ### Data Fetching And State
 
-- Keep the current static/localStorage demo baseline explicit.
-- Do not treat `src/lib/auth.ts`, `src/lib/adminStore.ts`, or `src/lib/settingsStore.ts` as production-ready backend integration.
-- If real API calls are introduced, centralize API access instead of scattering raw `fetch` calls across presentation components.
+- Preserve existing API-backed data flows and account explicitly for the `/admin/master-data` localStorage exception before editing that route.
+- Do not treat `src/lib/masterDataStore.ts` as production persistence. Other localStorage usage stores UI preferences rather than domain records.
+- Centralize API access in `src/services/` instead of scattering raw `fetch` calls across presentation components.
 - Prefer TanStack Query for shared client-side server state if the existing dependency fits the use case.
 - Keep backend base URLs and environment contracts documented; Vite-exposed variables must use the `VITE_` prefix.
 

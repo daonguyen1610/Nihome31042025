@@ -1,6 +1,6 @@
 # Current State
 
-Last reviewed: 2026-05-16
+Last reviewed: 2026-08-10
 
 ## Stack
 
@@ -39,12 +39,12 @@ The active frontend includes:
 - `src/pages/Register.tsx`
 - `src/pages/admin/**/*.tsx`
 - `src/data/`
-- `src/lib/auth.ts`
-- `src/lib/adminStore.ts`
-- `src/lib/settingsStore.ts`
+- `src/services/`
+- `src/lib/adminPermissions.ts`
+- `src/lib/url.ts`
 - `src/lib/i18n.tsx`
 
-`nihomeweb/` now ships the Vite + React source tree as the active frontend. The old Materialize starter-kit and Next.js shell have been moved under `legacy/` and are no longer the active frontend architecture.
+`nihomeweb/` ships the Vite + React source tree as the active frontend. The old Materialize starter-kit and Next.js shell are no longer present and are not part of the active architecture.
 
 ## Current Route Surface
 
@@ -61,32 +61,32 @@ Public route groups:
 - `/contact`
 - `/login`
 - `/register`
+- `/forgot-password`
+- `/my-profile`
+- `/forbidden`
 
 Admin route groups:
 
 - `/admin`
-- `/admin/users` and `/admin/roles` for super-admin user and role management
-- `/admin/posts`, post create/view/edit routes
-- `/admin/projects`, project create/view/edit routes
-- `/admin/contacts`
-- `/admin/recruitment`
-- `/admin/settings` and detailed settings routes
-- `/admin/categories`
-- `/admin/customers`, customer roles, online customers, and activity log
-- `/admin/clients`, `/admin/partners`, `/admin/suppliers`
-- `/admin/awards`, slideshow, map, about, and help placeholder/simple pages
+- `/admin/users` and `/admin/roles` for permission-gated user and dynamic-role management
+- content routes for activities, news, projects, services, categories, about content, logos, contacts, and recruitment
+- CRM routes for leads, customers, opportunities, quotes, capability documents, tenders, surveys, and contracts
+- design routes for design projects and their concepts, basic design, shop drawings, revisions, and IFC data
+- permitting and construction routes for permits, tasks/Gantt, site diaries, punch lists, partial acceptance, as-built records, and handover
+- settings, languages, translations, master data, workflows, notifications, email templates, and audit/activity log routes
 - `/admin/processes/*`
-- `/admin/system/*`
+
+`/admin/posts/*`, `/admin/project-categories`, and `/admin/slideshow` are compatibility redirects to active routes rather than separate modules.
 
 The catch-all route renders `src/pages/NotFound.tsx`.
 
 ## Current Portal Shell Behavior
 
-- `src/App.tsx` wraps the app in `QueryClientProvider`, `I18nProvider`, `TooltipProvider`, toast providers, and `BrowserRouter`.
+- `src/App.tsx` wraps the app in the Redux `Provider`, `QueryClientProvider`, `I18nProvider`, `TooltipProvider`, toast providers, and `BrowserRouter`.
 - Public pages use the public header/footer layout where implemented.
 - Admin pages use `AdminLayout` for sidebar navigation, admin topbar behavior, and language controls.
 - `/login` and `/register` use the backend auth API through Redux auth state.
-- Admin routes are protected with `ProtectedRoute`; `ADMIN` and `SUPER_ADMIN` can enter the admin area, while `/admin/users` and `/admin/roles` require `SUPER_ADMIN`.
+- Admin routes are protected with `ProtectedRoute`; backend permissions govern route visibility and actions, including `/admin/users` and `/admin/roles`.
 
 ## Current Config Reality
 
@@ -95,20 +95,18 @@ The catch-all route renders `src/pages/NotFound.tsx`.
 - `components.json` configures shadcn/ui with aliases under `@/`.
 - `tailwind.config.ts` and `src/index.css` own the active design tokens and utility classes.
 - `vitest.config.ts` and `src/test/setup.ts` define the current test setup.
-- There is no committed production `.env.example` contract yet.
+- Split frontend development uses `VITE_API_URL`; integrated deployment serves the built SPA and API from ASP.NET Core. `NIHOMEWEB_DIST_PATH` can override the SPA distribution path.
 - The repo includes repo-local AI docs, a project brief, and a memory bank under `docs/ai/`.
-- Repo-local skills live under `.agents/skills/`.
 
 ## Current Gaps
 
-- Production auth is partially implemented with backend JWT/refresh APIs and Redux token state.
-- API-backed admin modules exist for content/settings and Users/RBAC, but not every legacy/demo admin screen has been migrated.
-- Admin content/settings persistence is still localStorage-backed demo behavior.
-- No documented deployment/environment contract is committed yet.
-- Legacy source under `legacy/` has not been deleted because it remains useful as reference material during the refactor.
+- Backend JWT/refresh authentication, Redux auth state, and permission loading are implemented.
+- API-backed modules cover public content, CRM, contracts, design, permitting, construction, recruitment, settings, and system administration.
+- `/admin/master-data` still persists its editable language list through `src/lib/masterDataStore.ts` and localStorage.
+- Survey records and timeline are implemented, but survey media management is pending. Cash flow, profit-and-loss, procurement/warehouse operations, Google Drive integration, and broad cross-module analytics are also pending.
 
 ## Agent Notes
 
 - Do not assume Next.js Pages Router, `_app.tsx`, `_document.tsx`, `next.config.*`, MUI, Emotion, or Materialize are active in this repo.
 - `src/pages/` means React page components routed from `src/App.tsx`, not filesystem routing.
-- Treat localStorage stores as demo scaffolding until a backend API decision is recorded.
+- Reuse typed functions under `src/services/` for backend access; treat `src/lib/masterDataStore.ts` as known migration debt, not the platform default.

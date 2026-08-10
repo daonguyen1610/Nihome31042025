@@ -8,8 +8,8 @@ Agents should read it before any non-trivial implementation task together with `
 
 - Repo name: `nihomeweb`
 - Product name: NICON / Nihome
-- Product shape: public corporate website plus lightweight admin/content portal for a design-and-build business
-- Current phase: Vite/Lovable baseline adoption after the template refactor
+- Product shape: public corporate website plus an internal CRM, design, permitting, construction, content, and system-administration platform for a design-and-build business
+- Current phase: API-backed Vite/React operational platform with selected incomplete workflows documented below
 
 ## Current Technical Baseline
 
@@ -27,8 +27,9 @@ Current repo reality:
 - `nihomeweb/` now contains the Vite + React frontend copied from the Lovable source direction.
 - The app is a client-rendered SPA, not a Next.js app.
 - Public website pages and an admin shell already exist.
-- Demo auth, admin CRUD, and settings behavior are localStorage-backed placeholders.
-- No production API client, auth provider, or backend session model is committed yet.
+- Authentication uses the ASP.NET Core JWT/refresh contract with Redux state and protected routes.
+- Public and admin modules use centralized typed services under `src/services/`. `/admin/master-data` is the known exception whose editable language list still uses localStorage.
+- Permission-based route/action gates consume the backend permission contract.
 
 ## Architectural Defaults
 
@@ -39,8 +40,8 @@ Current repo reality:
 - Public layout belongs in `src/components/layout/Layout.tsx`.
 - Admin layout belongs in `src/components/layout/AdminLayout.tsx`.
 - Shared shadcn/Radix primitives belong in `src/components/ui/`.
-- Static seed data belongs in `src/data/`.
-- Demo localStorage stores belong in `src/lib/` until a real API strategy replaces them.
+- Static display-only seed data belongs in `src/data/`.
+- Backend access belongs in `src/services/`; shared permissions, URL resolution, i18n, and other utilities belong in `src/lib/`.
 
 ## Current Scope
 
@@ -50,14 +51,17 @@ Completed in the baseline refactor:
 - removed the Materialize starter-kit and Next.js shells entirely
 - rewrote AI docs and memory around Vite, React Router, Tailwind, shadcn, and the current source tree
 - preserved the existing public and admin route surfaces in `src/App.tsx`
-- kept demo auth and localStorage stores as explicit placeholders
+- established centralized backend APIs, Redux authentication, protected routes, and permission-driven admin navigation
+- added API-backed CRM workflows for leads, customers, opportunities, quotes, capability documents, tenders, surveys, contracts, and variation orders
+- added API-backed design projects, concepts, basic design, shop drawings, revisions, IFC tracking, and permit checklists
+- added API-backed construction tasks/Gantt, site diaries, partial acceptance, as-built records, punch lists, and project handover
+- added backend-backed content, recruitment, contacts, notifications, users/RBAC, audit, settings, translations, workflows, logos, and process-document administration
 
 Explicitly deferred:
 
-- production auth provider choice
-- route protection and backend session ownership
-- API client layer and backend integration contract
-- production persistence for admin content/settings
+- migration of the `/admin/master-data` editable language list from localStorage to backend persistence
+- survey media management, procurement/warehouse operations, Google Drive integration, cash flow, profit-and-loss, and broader cross-module analytics
+- consistent server-state strategy for future modules
 - broad imports from Materialize or another full admin template
 - migration back to Next.js
 
@@ -89,10 +93,9 @@ The refactor documentation baseline is only complete when:
 
 Future work may introduce:
 
-- production auth and route protection
-- API integration with the backend
-- persistent admin content management
-- richer admin modules
+- stronger authentication/session hardening
+- backend persistence for the remaining master-data language configuration
+- completion of the explicitly partial operational areas
 - stronger client portal flows
 - deployment and environment-variable hardening
 
