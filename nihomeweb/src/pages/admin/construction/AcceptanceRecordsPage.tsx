@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { resolveAssetUrl } from "@/lib/url";
+import { resolveSafeLinkUrl } from "@/lib/url";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -998,19 +998,30 @@ export default function AcceptanceRecordsPage() {
                     <p className="text-xs text-muted-foreground">{t("acceptance.documents.empty")}</p>
                   ) : (
                     <ul className="space-y-2">
-                      {parseDocuments(detail.documents).map((path) => (
-                        <li key={path}>
-                          <a
-                            href={resolveAssetUrl(path)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-2 break-all text-sm text-primary hover:underline"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                            {path.split("/").pop() || path}
-                          </a>
-                        </li>
-                      ))}
+                      {parseDocuments(detail.documents).map((path) => {
+                        const href = resolveSafeLinkUrl(path);
+                        const label = path.split("/").pop() || path;
+                        return (
+                          <li key={path}>
+                            {href ? (
+                              <a
+                                href={href}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex items-center gap-2 break-all text-sm text-primary hover:underline"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                {label}
+                              </a>
+                            ) : (
+                              <span className="flex items-center gap-2 break-all text-sm text-muted-foreground">
+                                <FileText className="h-3.5 w-3.5 shrink-0" />
+                                {label}
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

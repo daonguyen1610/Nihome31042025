@@ -406,6 +406,9 @@ public class AcceptanceRecordService(
                 throw new JsonException();
             if (paths.Any(path => path.Trim().Length > 500))
                 throw new AcceptanceRecordOperationException("Mỗi đường dẫn tài liệu không được vượt quá 500 ký tự.");
+            if (paths.Any(path => !IsSafeDocumentUrl(path)))
+                throw new AcceptanceRecordOperationException(
+                    "Đường dẫn tài liệu phải bắt đầu bằng / hoặc là URL HTTP(S) tuyệt đối.");
         }
         catch (AcceptanceRecordOperationException)
         {
@@ -416,6 +419,18 @@ public class AcceptanceRecordService(
             throw new AcceptanceRecordOperationException(
                 $"Tài liệu phải là mảng JSON gồm tối đa {MaxDocuments} đường dẫn hợp lệ.");
         }
+    }
+
+    private static bool IsSafeDocumentUrl(string value)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.StartsWith("/", StringComparison.Ordinal))
+            return !trimmed.StartsWith("//", StringComparison.Ordinal)
+                && !trimmed.StartsWith("/\\", StringComparison.Ordinal);
+
+        return Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            && !string.IsNullOrWhiteSpace(uri.Host);
     }
 
     private async Task<string> AllocateCodeAsync(int projectId, CancellationToken ct)
