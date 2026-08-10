@@ -2000,6 +2000,22 @@
     "ja": "部分・段階検収記録の一覧と詳細の閲覧を許可します。"
   },
   {
+    "key": "rbac.perm.construction.acceptance.view.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ nghiệm thu từng phần",
+    "en": "View all partial acceptance records",
+    "zh": "查看所有分部验收记录",
+    "ja": "すべての部分検収記録を表示"
+  },
+  {
+    "key": "rbac.perm.construction.acceptance.view.all.description",
+    "category": "rbac",
+    "vi": "Xem biên bản nghiệm thu thuộc mọi dự án, không giới hạn theo phân công.",
+    "en": "View acceptance records across all projects regardless of assignment.",
+    "zh": "查看所有项目的验收记录，不受分配范围限制。",
+    "ja": "担当範囲に関係なく全プロジェクトの検収記録を表示します。"
+  },
+  {
     "key": "rbac.perm.construction.acceptance.manage.label",
     "category": "rbac",
     "vi": "Quản lý nghiệm thu từng phần",

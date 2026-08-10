@@ -2369,9 +2369,14 @@ export interface AcceptanceRecordListParams {
   designProjectId?: number;
   status?: string;
   constructionTaskId?: number;
+  responsibleUserId?: number;
+  acceptanceFrom?: string;
+  acceptanceTo?: string;
   search?: string;
   overdueOnly?: boolean;
   openOnly?: boolean;
+  sortBy?: "date" | "code" | "title" | "project" | "status" | "updatedAt";
+  sortDirection?: "asc" | "desc";
   page?: number;
   pageSize?: number;
 }
@@ -3341,10 +3346,15 @@ export const adminApi = {
     const q = new URLSearchParams();
     if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
     if (params.constructionTaskId != null) q.append("constructionTaskId", String(params.constructionTaskId));
+    if (params.responsibleUserId != null) q.append("responsibleUserId", String(params.responsibleUserId));
+    if (params.acceptanceFrom) q.append("acceptanceFrom", params.acceptanceFrom);
+    if (params.acceptanceTo) q.append("acceptanceTo", params.acceptanceTo);
     if (params.status) q.append("status", params.status);
     if (params.search) q.append("search", params.search);
     if (params.openOnly) q.append("openOnly", "true");
     if (params.overdueOnly) q.append("overdueOnly", "true");
+    if (params.sortBy) q.append("sortBy", params.sortBy);
+    if (params.sortDirection) q.append("sortDirection", params.sortDirection);
     if (params.page) q.append("page", String(params.page));
     if (params.pageSize) q.append("pageSize", String(params.pageSize));
     const qs = q.toString();

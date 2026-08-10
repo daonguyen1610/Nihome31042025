@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -19,18 +20,19 @@ public class AcceptanceRecordService(
 {
     private const int MaxPageSize = 200;
     private const int MaxBulkDelete = 100;
+    private const int MaxDocuments = 20;
 
     // --------------------------------------------------------------------
     //  Read paths
     // --------------------------------------------------------------------
 
-    public async Task<AcceptanceRecordListResponse> ListAsync(AcceptanceRecordListParams p, CancellationToken ct = default)
+    public async Task<AcceptanceRecordListResponse> ListAsync(
+        AcceptanceRecordListParams p, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 20 : p.PageSize, 1, MaxPageSize);
 
-        var q = db.AcceptanceRecords
-            .AsNoTracking()
+        var q = ApplyScope(db.AcceptanceRecords.AsNoTracking(), callerUserId, canSeeAll)
             .Include(a => a.DesignProject)
             .Include(a => a.ConstructionTask)
             .Include(a => a.SubmittedBy)
@@ -40,6 +42,16 @@ public class AcceptanceRecordService(
 
         if (p.DesignProjectId.HasValue) q = q.Where(a => a.DesignProjectId == p.DesignProjectId.Value);
         if (p.ConstructionTaskId.HasValue) q = q.Where(a => a.ConstructionTaskId == p.ConstructionTaskId.Value);
+        if (p.ResponsibleUserId.HasValue)
+        {
+            var responsibleUserId = p.ResponsibleUserId.Value;
+            q = q.Where(a => a.CreatedByUserId == responsibleUserId
+                          || a.DesignProject.ProjectManagerUserId == responsibleUserId
+                          || a.DesignProject.DesignLeadUserId == responsibleUserId
+                          || (a.ConstructionTask != null && a.ConstructionTask.OwnerUserId == responsibleUserId));
+        }
+        if (p.AcceptanceFrom.HasValue) q = q.Where(a => a.AcceptanceDate >= p.AcceptanceFrom.Value);
+        if (p.AcceptanceTo.HasValue) q = q.Where(a => a.AcceptanceDate <= p.AcceptanceTo.Value);
 
         if (!string.IsNullOrWhiteSpace(p.Status))
         {
@@ -74,16 +86,15 @@ public class AcceptanceRecordService(
 
         var total = await q.CountAsync(ct);
 
-        var rows = await q
-            .OrderByDescending(a => a.AcceptanceDate)
-            .ThenBy(a => a.AcceptanceCode)
+        var ordered = ApplySort(q, p.SortBy, p.SortDirection);
+        var rows = await ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);
 
         // Per-status + overdue roll-up in the same project scope so the
         // stat tiles stay aligned with the current filter.
-        var scope = db.AcceptanceRecords.AsNoTracking();
+        var scope = ApplyScope(db.AcceptanceRecords.AsNoTracking(), callerUserId, canSeeAll);
         if (p.DesignProjectId.HasValue) scope = scope.Where(a => a.DesignProjectId == p.DesignProjectId.Value);
         if (p.ConstructionTaskId.HasValue) scope = scope.Where(a => a.ConstructionTaskId == p.ConstructionTaskId.Value);
 
@@ -106,10 +117,10 @@ public class AcceptanceRecordService(
         };
     }
 
-    public async Task<AcceptanceRecordResponse?> GetAsync(int id, CancellationToken ct = default)
+    public async Task<AcceptanceRecordResponse?> GetAsync(
+        int id, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
-        var entity = await db.AcceptanceRecords
-            .AsNoTracking()
+        var entity = await ApplyScope(db.AcceptanceRecords.AsNoTracking(), callerUserId, canSeeAll)
             .Include(a => a.DesignProject)
             .Include(a => a.ConstructionTask)
             .Include(a => a.SubmittedBy)
@@ -123,34 +134,39 @@ public class AcceptanceRecordService(
     //  Write paths
     // --------------------------------------------------------------------
 
-    public async Task<AcceptanceRecordResponse> CreateAsync(CreateAcceptanceRecordRequest request, int callerUserId, CancellationToken ct = default)
+    public async Task<AcceptanceRecordResponse> CreateAsync(
+        CreateAcceptanceRecordRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default)
     {
-        var title = (request.Title ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(title))
-        {
-            throw new AcceptanceRecordOperationException("Tiêu đề biên bản nghiệm thu là bắt buộc.");
-        }
+        ValidateRequest(request.Title, request.AcceptanceDate, request.Description, request.Location,
+            request.Participants, request.Findings, request.Documents);
+        var title = request.Title.Trim();
 
         var project = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == request.DesignProjectId, ct);
         if (project is null)
         {
             throw new AcceptanceRecordOperationException($"Dự án #{request.DesignProjectId} không tồn tại.");
         }
-
+        int? taskOwnerUserId = null;
         if (request.ConstructionTaskId.HasValue)
         {
-            var taskProject = await db.ConstructionTasks
+            var task = await db.ConstructionTasks
                 .Where(t => t.Id == request.ConstructionTaskId.Value)
-                .Select(t => (int?)t.DesignProjectId)
+                .Select(t => new { t.DesignProjectId, t.OwnerUserId })
                 .FirstOrDefaultAsync(ct);
-            if (taskProject is null)
+            if (task is null)
             {
                 throw new AcceptanceRecordOperationException($"Hạng mục #{request.ConstructionTaskId} không tồn tại.");
             }
-            if (taskProject.Value != request.DesignProjectId)
+            if (task.DesignProjectId != request.DesignProjectId)
             {
                 throw new AcceptanceRecordOperationException("Hạng mục không thuộc dự án đã chọn.");
             }
+            taskOwnerUserId = task.OwnerUserId;
+        }
+        if (!canSeeAll && project.ProjectManagerUserId != callerUserId
+            && project.DesignLeadUserId != callerUserId && taskOwnerUserId != callerUserId)
+        {
+            throw new AcceptanceRecordOperationException("Bạn không thuộc phạm vi dự án hoặc hạng mục đã chọn.");
         }
 
         var code = await AllocateCodeAsync(request.DesignProjectId, ct);
@@ -175,12 +191,14 @@ public class AcceptanceRecordService(
         await db.SaveChangesAsync(ct);
         logger.LogInformation("AcceptanceRecord {Id} ({Code}) created on project {ProjectId}",
             entity.Id, entity.AcceptanceCode, entity.DesignProjectId);
-        return (await GetAsync(entity.Id, ct))!;
+        return (await GetAsync(entity.Id, callerUserId, true, ct))!;
     }
 
-    public async Task<AcceptanceRecordResponse?> UpdateAsync(int id, UpdateAcceptanceRecordRequest request, int callerUserId, CancellationToken ct = default)
+    public async Task<AcceptanceRecordResponse?> UpdateAsync(
+        int id, UpdateAcceptanceRecordRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default)
     {
-        var entity = await db.AcceptanceRecords.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+            .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return null;
 
         if (entity.Status is AcceptanceStatus.Approved or AcceptanceStatus.Cancelled)
@@ -189,11 +207,9 @@ public class AcceptanceRecordService(
                 $"Không thể chỉnh sửa biên bản đã ở trạng thái '{entity.Status}'.");
         }
 
-        var title = (request.Title ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(title))
-        {
-            throw new AcceptanceRecordOperationException("Tiêu đề biên bản nghiệm thu là bắt buộc.");
-        }
+        ValidateRequest(request.Title, request.AcceptanceDate, request.Description, request.Location,
+            request.Participants, request.Findings, request.Documents);
+        var title = request.Title.Trim();
 
         if (request.ConstructionTaskId.HasValue)
         {
@@ -218,16 +234,18 @@ public class AcceptanceRecordService(
         entity.Location = TrimOrNull(request.Location);
         entity.Participants = TrimOrNull(request.Participants);
         entity.Findings = TrimOrNull(request.Findings);
-        entity.Documents = TrimOrNull(request.Documents);
+        if (request.Documents is not null) entity.Documents = TrimOrNull(request.Documents);
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        return await GetAsync(id, ct);
+        return await GetAsync(id, callerUserId, true, ct);
     }
 
-    public async Task<AcceptanceRecordResponse?> TransitionAsync(int id, TransitionAcceptanceStatusRequest request, int callerUserId, CancellationToken ct = default)
+    public async Task<AcceptanceRecordResponse?> TransitionAsync(
+        int id, TransitionAcceptanceStatusRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default)
     {
-        var entity = await db.AcceptanceRecords.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+            .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return null;
 
         if (!Enum.TryParse<AcceptanceStatus>(request.Status, true, out var next))
@@ -242,28 +260,32 @@ public class AcceptanceRecordService(
 
         EnsureTransitionAllowed(entity.Status, next);
 
+        var previous = entity.Status;
         ApplyTransition(entity, next, callerUserId, request.ResolutionNote);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("AcceptanceRecord {Id} transitioned {From} -> {To}",
-            id, entity.Status, next);
-        return await GetAsync(id, ct);
+            id, previous, next);
+        return await GetAsync(id, callerUserId, true, ct);
     }
 
-    public async Task<AcceptanceRecordResponse?> ApproveAsync(int id, TransitionAcceptanceStatusRequest request, int callerUserId, CancellationToken ct = default)
+    public async Task<AcceptanceRecordResponse?> ApproveAsync(
+        int id, TransitionAcceptanceStatusRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default)
     {
-        var entity = await db.AcceptanceRecords.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+            .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return null;
 
         EnsureTransitionAllowed(entity.Status, AcceptanceStatus.Approved);
         ApplyTransition(entity, AcceptanceStatus.Approved, callerUserId, request.ResolutionNote);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("AcceptanceRecord {Id} approved by user {UserId}", id, callerUserId);
-        return await GetAsync(id, ct);
+        return await GetAsync(id, callerUserId, true, ct);
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId = 0, bool canSeeAll = true, CancellationToken ct = default)
     {
-        var entity = await db.AcceptanceRecords.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+            .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return false;
         if (entity.Status == AcceptanceStatus.Approved)
         {
@@ -275,7 +297,8 @@ public class AcceptanceRecordService(
         return true;
     }
 
-    public async Task<AcceptanceRecordBulkDeleteResponse> BulkDeleteAsync(BulkDeleteAcceptanceRecordsRequest request, CancellationToken ct = default)
+    public async Task<AcceptanceRecordBulkDeleteResponse> BulkDeleteAsync(
+        BulkDeleteAcceptanceRecordsRequest request, int callerUserId = 0, bool canSeeAll = true, CancellationToken ct = default)
     {
         var ids = (request.Ids ?? new List<int>()).Distinct().ToList();
         if (ids.Count == 0)
@@ -288,7 +311,8 @@ public class AcceptanceRecordService(
                 $"Chỉ xoá tối đa {MaxBulkDelete} biên bản mỗi lần.");
         }
 
-        var rows = await db.AcceptanceRecords.Where(a => ids.Contains(a.Id)).ToListAsync(ct);
+        var rows = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+            .Where(a => ids.Contains(a.Id)).ToListAsync(ct);
         var response = new AcceptanceRecordBulkDeleteResponse();
         foreach (var row in rows)
         {
@@ -312,6 +336,87 @@ public class AcceptanceRecordService(
     // --------------------------------------------------------------------
     //  Helpers
     // --------------------------------------------------------------------
+
+    private static IQueryable<AcceptanceRecord> ApplyScope(
+        IQueryable<AcceptanceRecord> query, int callerUserId, bool canSeeAll)
+    {
+        if (canSeeAll) return query;
+        return query.Where(a => a.CreatedByUserId == callerUserId
+            || a.SubmittedByUserId == callerUserId
+            || a.ApprovedByUserId == callerUserId
+            || a.RejectedByUserId == callerUserId
+            || a.DesignProject.ProjectManagerUserId == callerUserId
+            || a.DesignProject.DesignLeadUserId == callerUserId
+            || (a.ConstructionTask != null && a.ConstructionTask.OwnerUserId == callerUserId));
+    }
+
+    private static IOrderedQueryable<AcceptanceRecord> ApplySort(
+        IQueryable<AcceptanceRecord> query, string? sortBy, string? sortDirection)
+    {
+        var descending = !string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+        return (sortBy?.Trim().ToLowerInvariant(), descending) switch
+        {
+            ("code", false) => query.OrderBy(a => a.AcceptanceCode),
+            ("code", true) => query.OrderByDescending(a => a.AcceptanceCode),
+            ("title", false) => query.OrderBy(a => a.Title),
+            ("title", true) => query.OrderByDescending(a => a.Title),
+            ("project", false) => query.OrderBy(a => a.DesignProject.Name),
+            ("project", true) => query.OrderByDescending(a => a.DesignProject.Name),
+            ("status", false) => query.OrderBy(a => a.Status),
+            ("status", true) => query.OrderByDescending(a => a.Status),
+            ("updatedat", false) => query.OrderBy(a => a.UpdatedAt),
+            ("updatedat", true) => query.OrderByDescending(a => a.UpdatedAt),
+            (_, false) => query.OrderBy(a => a.AcceptanceDate).ThenBy(a => a.AcceptanceCode),
+            _ => query.OrderByDescending(a => a.AcceptanceDate).ThenBy(a => a.AcceptanceCode),
+        };
+    }
+
+    private static void ValidateRequest(
+        string? title, DateOnly acceptanceDate, string? description, string? location,
+        string? participants, string? findings, string? documents)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new AcceptanceRecordOperationException("Tiêu đề biên bản nghiệm thu là bắt buộc.");
+        if (title.Trim().Length > 300)
+            throw new AcceptanceRecordOperationException("Tiêu đề không được vượt quá 300 ký tự.");
+        if (acceptanceDate == default)
+            throw new AcceptanceRecordOperationException("Ngày nghiệm thu là bắt buộc.");
+        EnsureMaxLength(description, 4000, "Mô tả");
+        EnsureMaxLength(location, 200, "Địa điểm");
+        EnsureMaxLength(participants, 1000, "Thành phần tham gia");
+        EnsureMaxLength(findings, 4000, "Ghi nhận");
+        ValidateDocuments(documents);
+    }
+
+    private static void EnsureMaxLength(string? value, int maxLength, string field)
+    {
+        if (value?.Trim().Length > maxLength)
+            throw new AcceptanceRecordOperationException($"{field} không được vượt quá {maxLength} ký tự.");
+    }
+
+    private static void ValidateDocuments(string? documents)
+    {
+        if (string.IsNullOrWhiteSpace(documents)) return;
+        if (documents.Length > 4000)
+            throw new AcceptanceRecordOperationException("Danh sách tài liệu không được vượt quá 4000 ký tự.");
+        try
+        {
+            var paths = JsonSerializer.Deserialize<List<string>>(documents);
+            if (paths is null || paths.Count > MaxDocuments || paths.Any(string.IsNullOrWhiteSpace))
+                throw new JsonException();
+            if (paths.Any(path => path.Trim().Length > 500))
+                throw new AcceptanceRecordOperationException("Mỗi đường dẫn tài liệu không được vượt quá 500 ký tự.");
+        }
+        catch (AcceptanceRecordOperationException)
+        {
+            throw;
+        }
+        catch (JsonException)
+        {
+            throw new AcceptanceRecordOperationException(
+                $"Tài liệu phải là mảng JSON gồm tối đa {MaxDocuments} đường dẫn hợp lệ.");
+        }
+    }
 
     private async Task<string> AllocateCodeAsync(int projectId, CancellationToken ct)
     {

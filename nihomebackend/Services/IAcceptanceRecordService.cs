@@ -19,21 +19,21 @@ public class AcceptanceRecordOperationException(string message) : Exception(mess
 /// </summary>
 public interface IAcceptanceRecordService
 {
-    Task<AcceptanceRecordListResponse> ListAsync(AcceptanceRecordListParams parameters, CancellationToken ct = default);
+    Task<AcceptanceRecordListResponse> ListAsync(AcceptanceRecordListParams parameters, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 
-    Task<AcceptanceRecordResponse?> GetAsync(int id, CancellationToken ct = default);
+    Task<AcceptanceRecordResponse?> GetAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 
-    Task<AcceptanceRecordResponse> CreateAsync(CreateAcceptanceRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<AcceptanceRecordResponse> CreateAsync(CreateAcceptanceRecordRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default);
 
-    Task<AcceptanceRecordResponse?> UpdateAsync(int id, UpdateAcceptanceRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<AcceptanceRecordResponse?> UpdateAsync(int id, UpdateAcceptanceRecordRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default);
 
     /// <summary>Non-approving transitions: Submit / Reject / Revise / Cancel. Refuses Approve.</summary>
-    Task<AcceptanceRecordResponse?> TransitionAsync(int id, TransitionAcceptanceStatusRequest request, int callerUserId, CancellationToken ct = default);
+    Task<AcceptanceRecordResponse?> TransitionAsync(int id, TransitionAcceptanceStatusRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default);
 
     /// <summary>Dedicated approve endpoint — separate permission gate.</summary>
-    Task<AcceptanceRecordResponse?> ApproveAsync(int id, TransitionAcceptanceStatusRequest request, int callerUserId, CancellationToken ct = default);
+    Task<AcceptanceRecordResponse?> ApproveAsync(int id, TransitionAcceptanceStatusRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, int callerUserId = 0, bool canSeeAll = true, CancellationToken ct = default);
 
-    Task<AcceptanceRecordBulkDeleteResponse> BulkDeleteAsync(BulkDeleteAcceptanceRecordsRequest request, CancellationToken ct = default);
+    Task<AcceptanceRecordBulkDeleteResponse> BulkDeleteAsync(BulkDeleteAcceptanceRecordsRequest request, int callerUserId = 0, bool canSeeAll = true, CancellationToken ct = default);
 }

@@ -234,7 +234,8 @@ public class AcceptanceRecordServiceTests : IDisposable
         var open = await _sut.CreateAsync(Req("Open", tomorrow), _userId);
         await _sut.TransitionAsync(open.Id, new TransitionAcceptanceStatusRequest { Status = "Submitted" }, _userId);
 
-        var list = await _sut.ListAsync(new AcceptanceRecordListParams { DesignProjectId = _projectId });
+        var list = await _sut.ListAsync(
+            new AcceptanceRecordListParams { DesignProjectId = _projectId }, _userId, true);
         Assert.Equal(2, list.Total);
         Assert.Equal(1, list.OverdueCount);
         Assert.Equal(1, list.StatusCounts["Draft"]);
@@ -250,7 +251,8 @@ public class AcceptanceRecordServiceTests : IDisposable
         await _sut.TransitionAsync(a2.Id, new TransitionAcceptanceStatusRequest { Status = "Submitted" }, _userId);
         await _sut.ApproveAsync(a2.Id, new TransitionAcceptanceStatusRequest { Status = "Approved" }, _userId);
 
-        var list = await _sut.ListAsync(new AcceptanceRecordListParams { DesignProjectId = _projectId, OpenOnly = true });
+        var list = await _sut.ListAsync(
+            new AcceptanceRecordListParams { DesignProjectId = _projectId, OpenOnly = true }, _userId, true);
         Assert.Single(list.Items);
         Assert.Equal(a1.Id, list.Items[0].Id);
     }
@@ -267,11 +269,106 @@ public class AcceptanceRecordServiceTests : IDisposable
         }, _userId);
         await _sut.CreateAsync(Req("Different"), _userId);
 
-        var byLoc = await _sut.ListAsync(new AcceptanceRecordListParams { DesignProjectId = _projectId, Search = "hầm" });
+        var byLoc = await _sut.ListAsync(
+            new AcceptanceRecordListParams { DesignProjectId = _projectId, Search = "hầm" }, _userId, true);
         Assert.Single(byLoc.Items);
 
-        var byCode = await _sut.ListAsync(new AcceptanceRecordListParams { DesignProjectId = _projectId, Search = "A-002" });
+        var byCode = await _sut.ListAsync(
+            new AcceptanceRecordListParams { DesignProjectId = _projectId, Search = "A-002" }, _userId, true);
         Assert.Single(byCode.Items);
+    }
+
+    [Fact]
+    public async Task Scoped_reads_only_return_records_in_callers_project_scope()
+    {
+        var otherUser = new ApplicationUser
+        {
+            PhoneNumber = "0900000144",
+            FullName = "Other Acceptance User",
+            Email = "other.acc@example.com",
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
+        };
+        _db.Users.Add(otherUser);
+        _db.SaveChanges();
+
+        var own = await _sut.CreateAsync(Req("Own"), _userId);
+        var other = await _sut.CreateAsync(Req("Other"), otherUser.Id);
+
+        var scoped = await _sut.ListAsync(
+            new AcceptanceRecordListParams { DesignProjectId = _projectId }, _userId, false);
+
+        Assert.Single(scoped.Items);
+        Assert.Equal(own.Id, scoped.Items[0].Id);
+        Assert.Null(await _sut.GetAsync(other.Id, _userId, false));
+        Assert.NotNull(await _sut.GetAsync(other.Id, _userId, true));
+    }
+
+    [Fact]
+    public async Task ListAsync_filters_date_range_and_sorts_title()
+    {
+        await _sut.CreateAsync(Req("Zulu", new DateOnly(2026, 6, 10)), _userId);
+        await _sut.CreateAsync(Req("Alpha", new DateOnly(2026, 6, 20)), _userId);
+        await _sut.CreateAsync(Req("Outside", new DateOnly(2026, 7, 1)), _userId);
+
+        var list = await _sut.ListAsync(new AcceptanceRecordListParams
+        {
+            DesignProjectId = _projectId,
+            AcceptanceFrom = new DateOnly(2026, 6, 1),
+            AcceptanceTo = new DateOnly(2026, 6, 30),
+            SortBy = "title",
+            SortDirection = "asc",
+        }, _userId, true);
+
+        Assert.Equal(new[] { "Alpha", "Zulu" }, list.Items.Select(item => item.Title));
+    }
+
+    [Fact]
+    public async Task CreateAsync_rejects_missing_date_and_invalid_documents()
+    {
+        var missingDate = Req("Missing date");
+        missingDate.AcceptanceDate = default;
+        await Assert.ThrowsAsync<AcceptanceRecordOperationException>(
+            () => _sut.CreateAsync(missingDate, _userId));
+
+        var invalidDocuments = Req("Invalid documents");
+        invalidDocuments.Documents = "not-json";
+        await Assert.ThrowsAsync<AcceptanceRecordOperationException>(
+            () => _sut.CreateAsync(invalidDocuments, _userId));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_preserves_documents_when_field_is_omitted()
+    {
+        var request = Req("With documents");
+        request.Documents = "[\"/files/acceptance/minutes.pdf\"]";
+        var created = await _sut.CreateAsync(request, _userId);
+
+        var updated = await _sut.UpdateAsync(created.Id, new UpdateAcceptanceRecordRequest
+        {
+            Title = "Updated",
+            AcceptanceDate = created.AcceptanceDate,
+        }, _userId);
+
+        Assert.Equal(request.Documents, updated!.Documents);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_clears_documents_when_empty_array_is_supplied()
+    {
+        var request = Req("With documents");
+        request.Documents = "[\"/files/acceptance/minutes.pdf\"]";
+        var created = await _sut.CreateAsync(request, _userId);
+
+        var updated = await _sut.UpdateAsync(created.Id, new UpdateAcceptanceRecordRequest
+        {
+            Title = "Documents cleared",
+            AcceptanceDate = created.AcceptanceDate,
+            Documents = "[]",
+        }, _userId);
+
+        Assert.Equal("[]", updated!.Documents);
     }
 
     public void Dispose() => _db.Dispose();

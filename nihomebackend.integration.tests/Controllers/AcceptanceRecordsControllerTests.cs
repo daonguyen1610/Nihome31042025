@@ -181,6 +181,61 @@ public class AcceptanceRecordsControllerTests : IntegrationTestBase
         (await Client.GetAsync("/api/acceptance-records/999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Get_AsUnassignedDesignUser_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var recordId = await CreateAsync(projectId);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
+        (await Client.GetAsync($"/api/acceptance-records/{recordId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Create_WithInvalidDocuments_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+
+        var response = await Client.PostAsJsonAsync("/api/acceptance-records", new
+        {
+            designProjectId = projectId,
+            title = "Invalid documents",
+            acceptanceDate = "2026-06-15",
+            documents = "not-json",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Update_WithoutDocuments_PreservesExistingDocuments()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var create = await Client.PostAsJsonAsync("/api/acceptance-records", new
+        {
+            designProjectId = projectId,
+            title = "Document preservation",
+            acceptanceDate = "2026-06-15",
+            documents = "[\"/files/acceptance/minutes.pdf\"]",
+        });
+        create.EnsureSuccessStatusCode();
+        var id = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var update = await Client.PutAsJsonAsync($"/api/acceptance-records/{id}", new
+        {
+            title = "Document preservation updated",
+            acceptanceDate = "2026-06-16",
+        });
+
+        update.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(update)).GetProperty("documents").GetString()
+            .Should().Be("[\"/files/acceptance/minutes.pdf\"]");
+    }
+
     // -------- helpers --------
 
     private async Task<(int projectId, int id)> CreateSubmittedAsync(int? projectId = null)

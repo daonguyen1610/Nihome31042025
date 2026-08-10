@@ -52,6 +52,18 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       name: `E2E-ACC ${projSuffix}`,
       customerId,
     });
+    const taskName = `Acceptance task ${uid()}`;
+    const taskResponse = await api.post("/api/construction-tasks", {
+      headers: authHeader,
+      data: {
+        designProjectId: projectId,
+        name: taskName,
+        plannedStart: "2026-08-01",
+        plannedEnd: "2026-08-31",
+      },
+    });
+    expect(taskResponse.ok(), await taskResponse.text()).toBeTruthy();
+    const documentPath = `/files/acceptance/e2e-${uid()}.pdf`;
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/construction/acceptance`, { waitUntil: "networkidle" });
@@ -80,6 +92,9 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await page.waitForSelector('[data-testid="acceptance-form-title"]');
     const titleText = `E2E acceptance ${uid()}`;
     await page.getByTestId("acceptance-form-title").fill(titleText);
+    await page.getByTestId("acceptance-form-task").getByRole("combobox").click();
+    await page.getByRole("option", { name: new RegExp(taskName) }).click();
+    await page.getByTestId("acceptance-form-documents").fill(documentPath);
     await Promise.all([
       page.waitForResponse(
         (r) =>
@@ -90,12 +105,17 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       page.waitForResponse(
         (r) => r.url().includes("/api/acceptance-records?") && r.request().method() === "GET",
       ),
-      page.getByTestId("acceptance-form-save").click({ force: true }),
+      page.getByTestId("acceptance-form-save").click(),
     ]);
 
     const row = page.locator('[data-testid^="acceptance-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
     await row.click();
+    await expect(page.getByText(taskName, { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: documentPath.split("/").pop()! })).toHaveAttribute(
+      "href",
+      new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
+    );
 
     // Draft -> Submitted
     await page.getByTestId("acceptance-submit").click();
@@ -103,7 +123,7 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       page.waitForResponse(
         (r) => /\/api\/acceptance-records\/\d+\/status$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("acceptance-action-confirm").click({ force: true }),
+      page.getByRole("alertdialog").getByTestId("acceptance-action-confirm").click(),
     ]);
     await expect(page.getByTestId("acceptance-approve")).toBeVisible();
 
@@ -113,7 +133,7 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       page.waitForResponse(
         (r) => /\/api\/acceptance-records\/\d+\/approve$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("acceptance-action-confirm").click({ force: true }),
+      page.getByRole("alertdialog").getByTestId("acceptance-action-confirm").click(),
     ]);
 
     await expect
