@@ -38,4 +38,5 @@ public static class EntityTypes
     public const string PunchItem = "PunchItem";
     public const string AcceptanceRecord = "AcceptanceRecord";
     public const string AsBuiltDocument = "AsBuiltDocument";
+    public const string HandoverRecord = "HandoverRecord";
 }

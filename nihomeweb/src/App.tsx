@@ -77,6 +77,7 @@ import AdminSiteDiary from "./pages/admin/construction/SiteDiaryPage.tsx";
 import AdminPunchList from "./pages/admin/construction/PunchListPage.tsx";
 import AdminAcceptanceRecords from "./pages/admin/construction/AcceptanceRecordsPage.tsx";
 import AdminAsBuiltDocuments from "./pages/admin/construction/AsBuiltDocumentsPage.tsx";
+import AdminHandoverRecords from "./pages/admin/construction/HandoverRecordsPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const LegacyPostRedirect = ({ edit = false }: { edit?: boolean }) => {
@@ -201,6 +202,9 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.constructionAsBuilt} />}>
                 <Route path="/admin/construction/asbuilt" element={<AdminAsBuiltDocuments />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.constructionHandover} />}>
+                <Route path="/admin/construction/handover" element={<AdminHandoverRecords />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                 <Route path="/admin/recruitment" element={<AdminRecruitment />} />

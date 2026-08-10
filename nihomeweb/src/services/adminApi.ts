@@ -2505,6 +2505,109 @@ export interface AsBuiltDocumentBulkDeleteResponse {
   skippedIds: number[];
 }
 
+// --- Project handover (NIH-144) --------------------------------------
+export type HandoverStatus = "Draft" | "ReadyForHandover" | "HandedOver" | "Reopened" | "Cancelled";
+
+export interface HandoverChecklistItem {
+  name: string;
+  isCompleted: boolean;
+  note?: string | null;
+}
+
+export interface HandoverReadiness {
+  approvedRequiredAsBuiltCategories: number;
+  requiredAsBuiltCategories: number;
+  unresolvedPunchItems: number;
+  approvedAcceptanceRecords: number;
+  commissioningCompleted: boolean;
+  checklistCompleted: boolean;
+  isReady: boolean;
+}
+
+export interface HandoverStatusHistory {
+  fromStatus?: HandoverStatus | null;
+  toStatus: HandoverStatus;
+  note?: string | null;
+  changedByUserId: number;
+  changedByName: string;
+  changedAt: string;
+}
+
+export interface HandoverRecordResponse {
+  id: number;
+  designProjectId: number;
+  designProjectName: string;
+  handoverCode: string;
+  title: string;
+  description?: string | null;
+  plannedHandoverDate: string;
+  actualHandoverDate?: string | null;
+  location?: string | null;
+  responsibleUserId: number;
+  responsibleUserName: string;
+  commissioningCompleted: boolean;
+  commissioningNotes?: string | null;
+  checklistItems: HandoverChecklistItem[];
+  documents: string[];
+  signatories: string[];
+  resolutionNote?: string | null;
+  status: HandoverStatus;
+  readiness: HandoverReadiness;
+  statusHistory: HandoverStatusHistory[];
+  submittedAt?: string | null;
+  submittedByName?: string | null;
+  handedOverAt?: string | null;
+  handedOverByName?: string | null;
+  reopenCount: number;
+  createdAt: string;
+  createdByUserId: number;
+  updatedAt: string;
+}
+
+export interface HandoverRecordListResponse {
+  items: HandoverRecordResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+  statusCounts: Partial<Record<HandoverStatus, number>>;
+  readyCount: number;
+}
+
+export interface HandoverRecordListParams {
+  designProjectId?: number;
+  responsibleUserId?: number;
+  status?: HandoverStatus;
+  plannedFrom?: string;
+  plannedTo?: string;
+  search?: string;
+  readyOnly?: boolean;
+  sortBy?: "date" | "code" | "title" | "project" | "status" | "updatedAt";
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateHandoverRecordRequest {
+  designProjectId: number;
+  title: string;
+  description?: string | null;
+  plannedHandoverDate: string;
+  location?: string | null;
+  responsibleUserId: number;
+  commissioningCompleted: boolean;
+  commissioningNotes?: string | null;
+  checklistItems: HandoverChecklistItem[];
+  documents: string[];
+  signatories: string[];
+}
+
+export type UpdateHandoverRecordRequest = Omit<CreateHandoverRecordRequest, "designProjectId">;
+
+export interface TransitionHandoverStatusRequest {
+  status: HandoverStatus;
+  note?: string | null;
+}
+
 /**
  * RBAC role code. Historically restricted to the three system codes
  * (`SUPER_ADMIN` / `ADMIN` / `USER`); now any code from the `roles` table
@@ -3416,6 +3519,50 @@ export const adminApi = {
     api.delete(`/as-built-documents/${id}`),
   bulkDeleteAsBuiltDocuments: (body: BulkDeleteAsBuiltDocumentsRequest) =>
     api.post<AsBuiltDocumentBulkDeleteResponse>("/as-built-documents/bulk-delete", body),
+
+  // Project handover (NIH-144)
+  listHandoverRecords: (params: HandoverRecordListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.responsibleUserId != null) q.append("responsibleUserId", String(params.responsibleUserId));
+    if (params.status) q.append("status", params.status);
+    if (params.plannedFrom) q.append("plannedFrom", params.plannedFrom);
+    if (params.plannedTo) q.append("plannedTo", params.plannedTo);
+    if (params.search) q.append("search", params.search);
+    if (params.readyOnly) q.append("readyOnly", "true");
+    if (params.sortBy) q.append("sortBy", params.sortBy);
+    if (params.sortDirection) q.append("sortDirection", params.sortDirection);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<HandoverRecordListResponse>(`/handover-records${qs ? `?${qs}` : ""}`);
+  },
+  exportHandoverRecords: (params: HandoverRecordListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
+    if (params.responsibleUserId != null) q.append("responsibleUserId", String(params.responsibleUserId));
+    if (params.status) q.append("status", params.status);
+    if (params.plannedFrom) q.append("plannedFrom", params.plannedFrom);
+    if (params.plannedTo) q.append("plannedTo", params.plannedTo);
+    if (params.search) q.append("search", params.search);
+    if (params.readyOnly) q.append("readyOnly", "true");
+    if (params.sortBy) q.append("sortBy", params.sortBy);
+    if (params.sortDirection) q.append("sortDirection", params.sortDirection);
+    const qs = q.toString();
+    return api.get<Blob>(`/handover-records/export${qs ? `?${qs}` : ""}`, { responseType: "blob" });
+  },
+  getHandoverRecord: (id: number) =>
+    api.get<HandoverRecordResponse>(`/handover-records/${id}`),
+  createHandoverRecord: (body: CreateHandoverRecordRequest) =>
+    api.post<HandoverRecordResponse>("/handover-records", body),
+  updateHandoverRecord: (id: number, body: UpdateHandoverRecordRequest) =>
+    api.put<HandoverRecordResponse>(`/handover-records/${id}`, body),
+  transitionHandoverStatus: (id: number, body: TransitionHandoverStatusRequest) =>
+    api.post<HandoverRecordResponse>(`/handover-records/${id}/status`, body),
+  completeHandoverRecord: (id: number, body: TransitionHandoverStatusRequest) =>
+    api.post<HandoverRecordResponse>(`/handover-records/${id}/complete`, body),
+  deleteHandoverRecord: (id: number) =>
+    api.delete(`/handover-records/${id}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
   getMasterDataOptions: (category: string) =>

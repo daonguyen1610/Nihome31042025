@@ -120,8 +120,8 @@ The platform is being developed incrementally. The following components are curr
 | Design management (3-phase) | Not yet implemented |
 | Permitting module | Not yet implemented |
 | Construction management (Gantt, site logs) | Not yet implemented |
-| Acceptance and handover | Not yet implemented |
-| Punchlist management | Not yet implemented |
+| Acceptance and handover | Implemented |
+| Punchlist management | Implemented |
 | Procurement module (vendors, BOQ, MR, warehouse) | Not yet implemented |
 | Finance module (contracts, VO, cash flow, P&L) | Not yet implemented |
 | Google Drive integration | Not yet implemented |
@@ -329,7 +329,11 @@ Open **Admin > Construction > Partial Acceptance** to manage phase or work-item 
 
 #### 3.4.4 Full Acceptance (Handover)
 
-Establish comprehensive building inspection checklists. Manage commissioning (trial operation) procedures. Upload handover acceptance records. Manage multi-party signatures. Update handover status. Store records for occupancy.
+Open **Admin > Construction > Project Handover** to manage one full-project handover record per design project. The list supports project, responsible user, planned date, status, readiness, text search, sorting, pagination, and CSV export. Users without the view-all permission only see records they created, are responsible for, or whose project they manage or lead.
+
+Create or edit a Draft/Reopened record with the planned date, responsible user, commissioning result, checklist, supporting HTTP(S) or host-relative document links, and signatories. Readiness is calculated from canonical project data: at least one approved partial acceptance record, every required as-built category approved, no unresolved punch items, commissioning complete, and every handover checklist item complete.
+
+The lifecycle is **Draft → Ready for Handover → Handed Over**. Managers may return a ready record to Draft, cancel it, or reopen a completed handover for controlled correction. Final completion requires the dedicated completion permission and at least one signatory; it records the actual handover date, actor, timestamp, and immutable status history. Completed records are locked until reopened.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
