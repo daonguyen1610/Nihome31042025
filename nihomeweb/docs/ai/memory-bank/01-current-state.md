@@ -12,7 +12,7 @@ Last reviewed: 2026-08-10
 - Tailwind CSS `3.4.x`
 - shadcn/ui and Radix UI primitives
 - TanStack React Query `5.x`
-- Vitest `3.x`
+- Playwright `1.x`
 
 ## Current App Structure
 
@@ -94,7 +94,7 @@ The catch-all route renders `src/pages/NotFound.tsx`.
 - The dev server defaults to port `8080`.
 - `components.json` configures shadcn/ui with aliases under `@/`.
 - `tailwind.config.ts` and `src/index.css` own the active design tokens and utility classes.
-- `vitest.config.ts` and `src/test/setup.ts` define the current test setup.
+- `playwright.config.ts` and `e2e/smoke/` define real-browser E2E coverage; separate frontend unit tests are not part of the active test strategy.
 - Split frontend development uses `VITE_API_URL`; integrated deployment serves the built SPA and API from ASP.NET Core. `NIHOMEWEB_DIST_PATH` can override the SPA distribution path.
 - The repo includes repo-local AI docs, a project brief, and a memory bank under `docs/ai/`.
 

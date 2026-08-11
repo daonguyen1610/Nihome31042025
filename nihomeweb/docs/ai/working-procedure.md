@@ -89,7 +89,7 @@ Run the relevant checks for the blast radius:
 
 - `npm run lint` for TS/TSX changes
 - `npm run build` for app, route, config, or bundling changes
-- `npm run test` for logic or store changes when tests exist or are touched
+- Playwright for real-browser behavior that backend integration tests cannot prove
 
 ## Non-Negotiable Rules
 

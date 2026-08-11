@@ -41,7 +41,7 @@ Read `AGENTS.md` before any non-trivial work in this repository.
 ### Quality gates — run before closing any task
 ```bash
 # Frontend
-cd nihomeweb && npm run lint && npm run test && npm run build
+cd nihomeweb && npm run lint && npm run build
 
 # Backend
 docker exec nihome31042025-backend dotnet build
@@ -50,6 +50,9 @@ docker exec nihome31042025-backend dotnet format --verify-no-changes
 # Backend unit and integration tests
 # Run through the repository's CI-equivalent .NET 8 SDK/Docker test environment;
 # the running backend container does not mount the test projects.
+
+# Browser E2E
+cd nihomeweb && BASE_URL=http://localhost:5043 npx playwright test
 
 # Browser/deployment smoke
 docker compose up -d --build
