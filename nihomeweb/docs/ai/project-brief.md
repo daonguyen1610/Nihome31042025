@@ -55,12 +55,13 @@ Completed in the baseline refactor:
 - added API-backed CRM workflows for leads, customers, opportunities, quotes, capability documents, tenders, surveys, contracts, and variation orders
 - added API-backed design projects, concepts, basic design, shop drawings, revisions, IFC tracking, and permit checklists
 - added API-backed construction tasks/Gantt, site diaries, partial acceptance, as-built records, punch lists, and project handover
+- added API-backed procurement vendor profiles, documents, project evaluations, history, and filtered export
 - added backend-backed content, recruitment, contacts, notifications, users/RBAC, audit, settings, translations, workflows, logos, and process-document administration
 
 Explicitly deferred:
 
 - migration of the `/admin/master-data` editable language list from localStorage to backend persistence
-- survey media management, procurement/warehouse operations, Google Drive integration, cash flow, profit-and-loss, and broader cross-module analytics
+- survey media management, procurement BOQ/material-request/warehouse operations, Google Drive integration, cash flow, profit-and-loss, and broader cross-module analytics
 - consistent server-state strategy for future modules
 - broad imports from Materialize or another full admin template
 - migration back to Next.js

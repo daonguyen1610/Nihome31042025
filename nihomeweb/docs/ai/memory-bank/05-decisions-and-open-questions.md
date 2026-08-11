@@ -96,6 +96,10 @@ Rationale: authentication, permissions, content/settings, Users/RBAC, CRM, desig
 
 Rationale: NIH-144 makes the backend authoritative for readiness across acceptance, as-built, punch-list, commissioning, and checklist data. `construction.handover.view.all` broadens reads only, while `construction.handover.manage.all` independently broadens mutations. The frontend displays the server result, uses the shared safe URL resolver, requires a signatory before completion, and reloads after HTTP `409` conflicts instead of overwriting concurrent changes.
 
+### 2026-08-12 - Procurement vendors use owner-scoped reads and private operational records
+
+Rationale: NIH-165 scopes vendor reads and writes to the assigned owner unless `procurement.vendors.view.all` is granted. Project evaluations use design-project records and a separate `evaluate` permission. Vendor documents are private streams served only through authenticated download endpoints; the frontend never receives or exposes storage paths.
+
 ## Open Questions
 
 ### Which authentication hardening should NICON / Nihome adopt next?

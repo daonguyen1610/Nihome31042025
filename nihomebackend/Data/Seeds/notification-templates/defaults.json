@@ -55,6 +55,18 @@
       "module": "permit.checklists",
       "channel": "Both",
       "adminDescription": "PM/BGĐ được cảnh báo giấy phép sắp hết hạn."
+    },
+    {
+      "code": "vendor.assigned",
+      "module": "procurement.vendors",
+      "channel": "InApp",
+      "adminDescription": "Người phụ trách được thông báo khi nhà cung cấp được giao hoặc giao lại."
+    },
+    {
+      "code": "vendor.evaluation-changed",
+      "module": "procurement.vendors",
+      "channel": "InApp",
+      "adminDescription": "Người phụ trách và người đánh giá được thông báo khi đánh giá nhà cung cấp thay đổi."
     }
   ]
 }

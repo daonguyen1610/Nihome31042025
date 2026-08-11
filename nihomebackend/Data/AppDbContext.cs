@@ -100,6 +100,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<HandoverRecord> HandoverRecords => Set<HandoverRecord>();
     public DbSet<HandoverStatusHistory> HandoverStatusHistory => Set<HandoverStatusHistory>();
 
+    // Procurement
+    public DbSet<Vendor> Vendors => Set<Vendor>();
+    public DbSet<VendorDocument> VendorDocuments => Set<VendorDocument>();
+    public DbSet<VendorEvaluation> VendorEvaluations => Set<VendorEvaluation>();
+
     // Internationalization (i18n)
     public DbSet<Translation> Translations => Set<Translation>();
     public DbSet<EntityTranslation> EntityTranslations => Set<EntityTranslation>();
@@ -347,6 +352,63 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<WorkflowConfig>().HasKey(w => w.Id);
         modelBuilder.Entity<WorkflowConfig>().HasIndex(w => new { w.Module, w.Action }).IsUnique();
         modelBuilder.Entity<WorkflowConfig>().HasIndex(w => w.Module);
+
+        modelBuilder.Entity<Vendor>(b =>
+        {
+            b.ToTable("procurement_vendors", table =>
+                table.HasCheckConstraint("CK_procurement_vendors_VendorType", "[VendorType] IN ('Supplier','SubContractor','Both')"));
+            b.HasKey(v => v.Id);
+            b.Property(v => v.VendorCode).HasMaxLength(50).IsRequired();
+            b.Property(v => v.CompanyName).HasMaxLength(300).IsRequired();
+            b.Property(v => v.NormalizedCompanyName).HasMaxLength(300).IsRequired();
+            b.Property(v => v.VendorType).HasConversion<string>().HasMaxLength(30);
+            b.Property(v => v.TaxCode).HasMaxLength(20);
+            b.Property(v => v.Phone).HasMaxLength(30);
+            b.Property(v => v.Email).HasMaxLength(200);
+            b.Property(v => v.Address).HasMaxLength(500);
+            b.Property(v => v.ContactPerson).HasMaxLength(150);
+            b.Property(v => v.LicenseNo).HasMaxLength(100);
+            b.Property(v => v.ServiceGroupCode).HasMaxLength(80).IsRequired();
+            b.HasIndex(v => v.VendorCode).IsUnique();
+            b.HasIndex(v => v.NormalizedCompanyName).IsUnique();
+            b.HasIndex(v => v.TaxCode).IsUnique();
+            b.HasIndex(v => v.VendorType);
+            b.HasIndex(v => v.IsActive);
+            b.HasIndex(v => v.OwnerUserId);
+            b.HasIndex(v => v.ServiceGroupCode);
+            b.HasOne(v => v.Owner).WithMany().HasForeignKey(v => v.OwnerUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<VendorDocument>(b =>
+        {
+            b.ToTable("procurement_vendor_documents");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.DocumentType).HasConversion<string>().HasMaxLength(30);
+            b.Property(d => d.OriginalFileName).HasMaxLength(255).IsRequired();
+            b.Property(d => d.StoredFileName).HasMaxLength(100).IsRequired();
+            b.Property(d => d.ContentType).HasMaxLength(150).IsRequired();
+            b.HasIndex(d => new { d.VendorId, d.CreatedAt });
+            b.HasOne(d => d.Vendor).WithMany(v => v.Documents).HasForeignKey(d => d.VendorId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<VendorEvaluation>(b =>
+        {
+            b.ToTable("procurement_vendor_evaluations", table =>
+            {
+                table.HasCheckConstraint("CK_vendor_evaluations_Quality", "[ScoreQuality] BETWEEN 0 AND 10");
+                table.HasCheckConstraint("CK_vendor_evaluations_Schedule", "[ScoreSchedule] BETWEEN 0 AND 10");
+                table.HasCheckConstraint("CK_vendor_evaluations_Cost", "[ScoreCost] BETWEEN 0 AND 10");
+                table.HasCheckConstraint("CK_vendor_evaluations_Safety", "[ScoreSafety] BETWEEN 0 AND 10");
+            });
+            b.HasKey(e => e.Id);
+            b.Property(e => e.Comment).HasMaxLength(1000);
+            b.HasIndex(e => new { e.VendorId, e.ProjectId }).IsUnique();
+            b.HasIndex(e => e.EvaluatedAt);
+            b.HasOne(e => e.Vendor).WithMany(v => v.Evaluations).HasForeignKey(e => e.VendorId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(e => e.Project).WithMany().HasForeignKey(e => e.ProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(e => e.EvaluatedBy).WithMany().HasForeignKey(e => e.EvaluatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(e => e.UpdatedBy).WithMany().HasForeignKey(e => e.UpdatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
 
         modelBuilder.Entity<Lead>(b =>
         {

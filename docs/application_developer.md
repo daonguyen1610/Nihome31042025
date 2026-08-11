@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 10 August 2026
+Last Updated: 12 August 2026
 
 ---
 
@@ -24,7 +24,7 @@ Last Updated: 10 August 2026
 
 ## 1. Overview
 
-Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, and project handover. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
+Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, project handover, and procurement vendor management. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
 
 This guide covers development setup, configuration, database management, build and test procedures, and deployment.
 
@@ -625,6 +625,28 @@ Both `/api/handover-records` and `/api/v1/handover-records` expose the same cont
 `view.all` controls unrestricted reads; `manage.all` independently controls unrestricted writes. A caller with only the base permission is scoped to records they created or own and projects they manage or lead. Business-rule failures return `400`, hidden/missing records return `404`, and duplicate or concurrent writes return `409` so clients can reload instead of overwriting newer data.
 
 Readiness is derived on the server from approved partial acceptance, required approved as-built categories, unresolved punch items, commissioning, and checklist completion. Clients must display this result and must not duplicate it as an authoritative frontend calculation.
+
+### 8.7 Procurement Vendor Contract
+
+The protected frontend routes are `/admin/procurement/vendors`, `/new`, `/:id`, and `/:id/edit`. Typed API calls live in `src/services/vendorApi.ts`. The responsive list uses server-side filters and pagination; the detail view owns private documents, project evaluations, and audit history. The public-logo supplier workspace at `/admin/suppliers` is a separate content-management feature and must not be used for operational procurement records.
+
+Both `/api/procurement/vendors` and `/api/v1/procurement/vendors` expose the vendor controller. All specialized actions also require `procurement.vendors.view`:
+
+| Method | Route | Additional permission | Purpose |
+|--------|-------|-----------------------|---------|
+| `GET` | `/api/procurement/vendors` | None | Owner-scoped, filtered, sorted, paginated list |
+| `GET` | `/api/procurement/vendors/export` | `procurement.vendors.export` | Complete filtered export data with audit event |
+| `GET` | `/api/procurement/vendors/owner-options` | None | Lightweight active-owner selector data |
+| `GET` | `/api/procurement/vendors/project-options` | `procurement.vendors.evaluate` | Lightweight project selector data |
+| `GET` | `/api/procurement/vendors/{id}` | None | Profile, documents, and evaluations |
+| `GET` | `/api/procurement/vendors/{id}/history` | None | Vendor audit timeline with old/new snapshots |
+| `POST` / `PUT` | `/api/procurement/vendors[/{id}]` | `procurement.vendors.manage` | Create or update a profile |
+| `POST` | `/api/procurement/vendors/{id}/documents` | `procurement.vendors.manage` | Upload a validated private document |
+| `GET` | `/api/procurement/vendors/{id}/documents/{documentId}` | None | Authorized private document stream |
+| `DELETE` | `/api/procurement/vendors/{id}/documents/{documentId}` | `procurement.vendors.manage` | Delete a private document |
+| `POST` / `PUT` / `DELETE` | `/api/procurement/vendors/{id}/evaluations[/{evaluationId}]` | `procurement.vendors.evaluate` | Maintain project-linked four-axis evaluations |
+
+Without `procurement.vendors.view.all`, reads and writes are restricted to records owned by the caller, and owner assignment is forced to that caller. Storage paths are never returned by the API; document bytes are streamed only after vendor-scope authorization. Vendor code, normalized company name, and non-null tax code are unique. Duplicate and concurrent writes return `409`; validation failures return `400`; hidden and missing records return `404`.
 
 ---
 

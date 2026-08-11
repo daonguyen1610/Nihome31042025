@@ -38,6 +38,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/tenders",
   "/admin/surveys",
   "/admin/contracts",
+  "/admin/procurement/vendors",
   "/admin/design-projects",
   "/admin/permits",
   "/admin/construction/tasks",
@@ -156,6 +157,7 @@ const matrix: RoleExpectation[] = [
       "/admin/workflows",
       "/admin/contracts",
       "/admin/surveys",
+      "/admin/procurement/vendors",
       "/admin/design-projects",
       "/admin/permits",
       "/admin/construction/tasks",
@@ -168,10 +170,9 @@ const matrix: RoleExpectation[] = [
   },
   {
     // QS: content.projects.view + processes.view + crm.quotes.view +
-    // crm.tenders.view (read-only access to approved quotes / tenders
-    // for takeoff / cost tracking).
+    // crm.tenders.view and procurement vendor view/evaluate/export access.
     user: TEST_USERS.qs,
-    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/contracts", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/contracts", "/admin/procurement/vendors", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)

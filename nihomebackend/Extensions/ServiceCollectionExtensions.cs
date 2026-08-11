@@ -116,6 +116,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAcceptanceRecordService, AcceptanceRecordService>();
         services.AddScoped<IAsBuiltDocumentService, AsBuiltDocumentService>();
         services.AddScoped<IHandoverRecordService, HandoverRecordService>();
+        services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<HostedImageService>();
 
         // Content services

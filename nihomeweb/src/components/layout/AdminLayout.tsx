@@ -158,6 +158,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         ],
       },
       {
+        id: "procurement",
+        label: t("nav.procurement"),
+        icon: Truck,
+        items: [
+          { to: "/admin/procurement/vendors", label: t("nav.procurementVendors"), icon: Truck, permission: ADMIN_PERMS.vendors },
+        ],
+      },
+      {
         id: "design",
         label: t("nav.design"),
         icon: PenTool,

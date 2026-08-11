@@ -17,6 +17,7 @@ Implemented frontend surface areas include:
 - users, dynamic RBAC, notifications, audit, settings, translations, master data, workflows, and process documents
 - CRM for leads, customers, opportunities, quotes, capability documents, tenders, surveys, contracts, appendices, attachments, and variation orders
 - design projects, concepts, basic design, shop drawings, revisions, IFC tracking, and permit checklists
+- operational procurement vendor profiles, scoped ownership, private documents, project evaluations, audit history, and filtered export
 - construction tasks/Gantt, site diaries, punch lists, partial acceptance, as-built records, and project handover
 
 The detailed route and API catalogs live in the user and developer guides. Partial areas are called out explicitly rather than treating the whole operational platform as aspirational.
@@ -35,7 +36,7 @@ The detailed route and API catalogs live in the user and developer guides. Parti
 
 - migration of `/admin/master-data` language configuration to backend persistence
 - survey media management
-- procurement vendor, BOQ, material-request, and warehouse operations
+- procurement BOQ, material-request, and warehouse operations beyond the implemented vendor module
 - cash flow, profit-and-loss, Google Drive integration, and broad cross-module analytics
 - finalized server-state strategy across future modules beyond the existing focused service/page patterns
 - migration back to Next.js or Materialize/full-template admin architecture

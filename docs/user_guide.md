@@ -123,7 +123,7 @@ The platform is being developed incrementally. The following components are curr
 | Construction management (tasks/Gantt and site diaries) | Implemented |
 | Acceptance and handover | Implemented |
 | Punchlist management | Implemented |
-| Procurement module (vendors, BOQ, MR, warehouse) | Not yet implemented |
+| Procurement module | Partially implemented — operational vendor management is live; BOQ, material requests, and warehouse operations are pending |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
 | Google Drive integration | Not yet implemented |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
@@ -375,11 +375,16 @@ Record defects at the construction site with location and description. Upload de
 
 Maintain vendor/subcontractor profiles (company name, tax ID, address, contacts). Upload capability documents. Classify by specialty (materials, construction, MEP, interior, etc.). Track cooperation history. Evaluate partners after each project based on four criteria: quality, schedule, cost, safety.
 
-| Page | Functions | Estimate |
-|------|-----------|----------|
-| Vendor List | All vendors and subcontractors | 1.5 days |
-| Vendor Create/Edit | Create and update vendor information | 2 days |
-| Vendor Detail | Capability documents, licenses, cooperation history, evaluations | 2.5 days |
+The operational workspace is available at `/admin/procurement/vendors`. The list supports server-side search, type/status/service-group/owner filters, sorting, pagination, responsive table/card views, and filtered CSV export. Records are active or inactive rather than physically deleted so cooperation history remains available.
+
+Create and edit screens capture the unique vendor code, company identity, supplier/subcontractor type, service group, owner, contacts, tax code, license, and active status. Users without unrestricted access can only create or reassign records to themselves. The detail screen provides:
+
+- private capability, license, and supporting document upload/download; accepted files are PDF, Office documents, PNG, and JPEG up to 20 MB;
+- one project evaluation per vendor/project, scored from 0 to 10 for quality, schedule, cost, and safety;
+- original evaluator and latest updater attribution;
+- cooperation history through project evaluations and an auditable change timeline.
+
+Permissions are separated by action: `procurement.vendors.view`, `view.all`, `manage`, `evaluate`, and `export`. Base view users only see vendors assigned to them; `view.all` enables all records and the owner filter. PM has full vendor operations, QS can view all/evaluate/export without editing profiles, BGD can view, and WAREHOUSE has no vendor access by default.
 
 #### 3.5.2 Bid Comparison (Bid Tabulation)
 
@@ -679,6 +684,7 @@ The main admin page provides an overview of system status and quick access to ma
 | CRM | `/admin/leads`, `/admin/customers`, `/admin/opportunities`, `/admin/quotes`, `/admin/capability-documents`, `/admin/tenders`, `/admin/surveys`, `/admin/contracts` | Sales and contract lifecycle |
 | Design and permits | `/admin/design-projects`, `/admin/permits` | Concept, basic design, shop drawing, revision, IFC, and permit workflows |
 | Construction | `/admin/construction/tasks`, `/diary`, `/punchlist`, `/acceptance`, `/asbuilt`, `/handover` | Delivery, quality, acceptance, and handover |
+| Procurement | `/admin/procurement/vendors` | Owner-scoped vendor profiles, private documents, project evaluations, history, and filtered export |
 | Content | `/admin/activities`, `/admin/news`, `/admin/projects`, `/admin/services`, `/admin/about`, `/admin/categories` | Public website content and categories |
 | Recruitment and contacts | `/admin/recruitment`, `/admin/recruitment/employment-types`, `/admin/contacts` | Positions, applications, options, and inquiries |
 | Branding and processes | `/admin/clients`, `/admin/partners`, `/admin/suppliers`, `/admin/awards`, `/admin/processes/*` | Logo catalogs and internal process documents |

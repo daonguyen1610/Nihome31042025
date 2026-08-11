@@ -185,6 +185,17 @@
     },
 
     {
+      "category": "vendor_service_group",
+      "options": [
+        { "code": "construction-materials", "name": "Vật liệu xây dựng", "sortOrder": 1 },
+        { "code": "mep", "name": "Cơ điện (MEP)", "sortOrder": 2 },
+        { "code": "civil-works", "name": "Thi công xây dựng", "sortOrder": 3 },
+        { "code": "finishing", "name": "Hoàn thiện nội thất", "sortOrder": 4 },
+        { "code": "other", "name": "Khác", "sortOrder": 99 }
+      ]
+    },
+
+    {
       "category": "permit_type",
       "options": [
         { "code": "gpxd",         "name": "Giấy phép xây dựng (GPXD)", "sortOrder": 1 },

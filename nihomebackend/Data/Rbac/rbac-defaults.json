@@ -94,6 +94,12 @@
     { "module": "crm.contracts", "action": "activate" },
     { "module": "crm.contracts", "action": "appendix-manage" },
 
+    { "module": "procurement.vendors", "action": "view" },
+    { "module": "procurement.vendors", "action": "view.all" },
+    { "module": "procurement.vendors", "action": "manage" },
+    { "module": "procurement.vendors", "action": "evaluate" },
+    { "module": "procurement.vendors", "action": "export" },
+
     { "module": "design.projects", "action": "view" },
     { "module": "design.projects", "action": "manage" },
     { "module": "design.concepts", "action": "view" },
@@ -303,6 +309,7 @@
         "workflow.view",
         "crm.contracts.view",
         "crm.surveys.view",
+        "procurement.vendors.**",
         "design.projects.view",
         "design.basic.view",
         "design.shop.view",
@@ -340,6 +347,8 @@
         "crm.quotes.view",
         "crm.tenders.view",
         "crm.contracts.view",
+        "procurement.vendors.view", "procurement.vendors.view.all",
+        "procurement.vendors.evaluate", "procurement.vendors.export",
         "design.basic.view",
         "design.shop.view",
         "profile.me.*"

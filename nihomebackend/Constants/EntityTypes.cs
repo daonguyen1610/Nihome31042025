@@ -39,4 +39,7 @@ public static class EntityTypes
     public const string AcceptanceRecord = "AcceptanceRecord";
     public const string AsBuiltDocument = "AsBuiltDocument";
     public const string HandoverRecord = "HandoverRecord";
+    public const string Vendor = "Vendor";
+    public const string VendorDocument = "VendorDocument";
+    public const string VendorEvaluation = "VendorEvaluation";
 }

@@ -72,6 +72,7 @@ Admin route groups:
 - content routes for activities, news, projects, services, categories, about content, logos, contacts, and recruitment
 - CRM routes for leads, customers, opportunities, quotes, capability documents, tenders, surveys, and contracts
 - design routes for design projects and their concepts, basic design, shop drawings, revisions, and IFC data
+- procurement vendor routes for scoped profiles, private documents, project evaluations, history, and filtered CSV export
 - permitting and construction routes for permits, tasks/Gantt, site diaries, punch lists, partial acceptance, as-built records, and handover
 - settings, languages, translations, master data, workflows, notifications, email templates, and audit/activity log routes
 - `/admin/processes/*`
@@ -103,7 +104,7 @@ The catch-all route renders `src/pages/NotFound.tsx`.
 - Backend JWT/refresh authentication, Redux auth state, and permission loading are implemented.
 - API-backed modules cover public content, CRM, contracts, design, permitting, construction, recruitment, settings, and system administration.
 - `/admin/master-data` still persists its editable language list through `src/lib/masterDataStore.ts` and localStorage.
-- Survey records and timeline are implemented, but survey media management is pending. Cash flow, profit-and-loss, procurement/warehouse operations, Google Drive integration, and broad cross-module analytics are also pending.
+- Survey records and timeline are implemented, but survey media management is pending. Procurement vendor management is implemented; BOQ/material-request/warehouse operations, cash flow, profit-and-loss, Google Drive integration, and broad cross-module analytics remain pending.
 
 ## Agent Notes
 

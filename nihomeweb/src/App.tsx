@@ -69,6 +69,9 @@ import MasterDataPage from "./pages/admin/MasterData.tsx";
 import WorkflowsPage from "./pages/admin/Workflows.tsx";
 import ContractsPage from "./pages/admin/Contracts.tsx";
 import ContractDetailPage from "./pages/admin/ContractDetail.tsx";
+import VendorListPage from "./pages/admin/procurement/VendorListPage.tsx";
+import VendorFormPage from "./pages/admin/procurement/VendorFormPage.tsx";
+import VendorDetailPage from "./pages/admin/procurement/VendorDetailPage.tsx";
 import AdminDesignProjects from "./pages/admin/DesignProjects.tsx";
 import AdminDesignProjectDetail from "./pages/admin/DesignProjectDetail.tsx";
 import AdminPermits from "./pages/admin/Permits.tsx";
@@ -180,6 +183,12 @@ const App = () => (
               <Route element={<RequirePermission code={ADMIN_PERMS.contracts} />}>
                 <Route path="/admin/contracts" element={<ContractsPage />} />
                 <Route path="/admin/contracts/:id" element={<ContractDetailPage />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.vendors} />}>
+                <Route path="/admin/procurement/vendors" element={<VendorListPage />} />
+                <Route path="/admin/procurement/vendors/new" element={<VendorFormPage />} />
+                <Route path="/admin/procurement/vendors/:id" element={<VendorDetailPage />} />
+                <Route path="/admin/procurement/vendors/:id/edit" element={<VendorFormPage />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.designProjects} />}>
                 <Route path="/admin/design-projects" element={<AdminDesignProjects />} />
