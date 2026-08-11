@@ -63,7 +63,7 @@ This guide covers development setup, configuration, database management, build a
 | shadcn/ui (Radix)  | UI component library     |
 | React Router       | Client-side routing      |
 | Redux              | State management         |
-| Vitest             | Unit testing             |
+| Playwright         | Browser E2E testing      |
 
 ---
 
@@ -576,7 +576,7 @@ To add a new content entity:
 | shadcn/ui        | Radix-based component library      |
 | React Router     | Client-side routing                |
 | Redux            | Authentication state management    |
-| Vitest           | Unit testing framework             |
+| Playwright       | Browser E2E testing                |
 
 ### 8.2 API Service Modules
 
@@ -590,8 +590,7 @@ API calls are organized into typed modules under `src/services/`. `authApi.ts` o
 | `npm run build`      | Production build                   |
 | `npm run build:dev`  | Development build                  |
 | `npm run lint`       | Run ESLint                         |
-| `npm run test`       | Run tests once                     |
-| `npm run test:watch` | Run tests in watch mode            |
+| `npm run test:e2e`   | Run Playwright browser tests       |
 | `npm run preview`    | Preview production build locally   |
 
 ### 8.4 Admin CSV Export
@@ -654,20 +653,14 @@ nihomebackend.tests/
 
 Unit tests cover isolated service logic, validation, branching, helpers, and mappings. HTTP status codes, model binding, authorization, middleware, and persistence round-trips belong in `nihomebackend.integration.tests`. Current integration tests use EF InMemory, so they do not prove SQL Server relational constraints or SQL Server-specific behavior.
 
-### 9.2 Frontend Tests
+### 9.2 Browser E2E Tests
 
-Frontend tests use Vitest.
-
-```bash
-cd nihomeweb
-npm run test
-```
-
-Watch mode for development:
+Frontend behavior is validated through Playwright against the integrated Docker stack. Pure service logic and HTTP contracts belong in backend unit and integration tests respectively.
 
 ```bash
+docker compose up -d --build
 cd nihomeweb
-npm run test:watch
+BASE_URL=http://localhost:5043 npx playwright test
 ```
 
 ### 9.3 Manual As-Built Smoke Test
@@ -734,7 +727,7 @@ npm run lint
 | Frontend build     | `npm run build`                      |
 | Backend tests      | `dotnet test nihomebackend.tests/nihomebackend.tests.csproj` in CI or an SDK test environment |
 | Backend integration tests | `dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj` |
-| Frontend tests     | `cd nihomeweb && npm run test`       |
+| Browser E2E tests  | `cd nihomeweb && BASE_URL=http://localhost:5043 npx playwright test` |
 | Backend lint       | `docker exec nihome31042025-backend dotnet format --verify-no-changes` |
 | Frontend lint      | `cd nihomeweb && npm run lint`       |
 | Docker full build  | `docker compose up --build`          |

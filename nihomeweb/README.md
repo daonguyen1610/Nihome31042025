@@ -2,7 +2,7 @@
 
 Active frontend for the NICON / Nihome design-and-build platform. It is a production API-backed single-page application served with the ASP.NET Core backend in the Docker Compose stack.
 
-This project has been refactored away from the prior Next.js / Materialize starter-kit baseline. The active app is now a Vite + React single-page app using React Router, Tailwind CSS, shadcn/ui, Radix UI, TanStack Query, and Vitest.
+This project has been refactored away from the prior Next.js / Materialize starter-kit baseline. The active app is now a Vite + React single-page app using React Router, Tailwind CSS, shadcn/ui, Radix UI, and TanStack Query.
 
 The prior Next.js and Materialize starter sources are no longer present. New feature work must build on the current source tree under `src/`.
 
@@ -15,7 +15,7 @@ The prior Next.js and Materialize starter sources are no longer present. New fea
 - Tailwind CSS `3.4.x`
 - shadcn/ui and Radix UI primitives
 - TanStack React Query `5.x`
-- Vitest `3.x`
+- Playwright `1.x` for browser E2E smoke coverage
 
 ## Source Map
 
@@ -50,7 +50,7 @@ Repo-facing AI docs stay in English so Claude, Codex, and Vercel skill guidance 
 npm run dev
 npm run build
 npm run lint
-npm run test
+npm run test:e2e
 ```
 
 The Vite dev server is configured in `vite.config.ts` and defaults to port `8080`. The integrated Docker application is available at `http://localhost:5043`.
