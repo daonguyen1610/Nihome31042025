@@ -144,7 +144,15 @@ test.describe("NIH-115 — Basic Design + Shop Drawing unlock (real-user flow)",
       ).toBeVisible();
     }
 
+    // Team and Documents are real API-backed rollups, not follow-up placeholders.
+    await page.locator('button[role="tab"]').filter({ hasText: /^Team$/i }).click({ force: true });
+    await expect(page.getByTestId("design-project-team-tab")).toBeVisible();
+    await page.locator('button[role="tab"]').filter({ hasText: /^Tài liệu$|^Documents$/i }).click({ force: true });
+    await expect(page.getByTestId("design-project-documents-tab")).toBeVisible();
+    await expect(page.getByText(/NIH-114\.\.118/)).toHaveCount(0);
+
     // ---------- 5. Click the "Unlock Shop Drawing" button ----------
+    await basicTab.click({ force: true });
     const unlockBtn = page.getByRole("button", {
       name: /M\u1edf kho\u00e1 Shop Drawing|Unlock Shop Drawing/i,
     });

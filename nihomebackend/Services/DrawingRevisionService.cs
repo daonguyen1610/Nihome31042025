@@ -27,6 +27,16 @@ public class DrawingRevisionService(
             .Include(r => r.CreatedBy)
             .AsQueryable();
 
+        if (p.DesignProjectId.HasValue)
+        {
+            var designProjectId = p.DesignProjectId.Value;
+            q = q.Where(r =>
+                (r.TargetType == DrawingRevisionTargetType.BasicDesignDoc &&
+                 db.BasicDesignDocs.Any(d => d.Id == r.TargetId && d.DesignProjectId == designProjectId)) ||
+                (r.TargetType == DrawingRevisionTargetType.ShopDrawing &&
+                 db.ShopDrawings.Any(d => d.Id == r.TargetId && d.DesignProjectId == designProjectId)));
+        }
+
         DrawingRevisionTargetType? targetType = null;
         if (!string.IsNullOrWhiteSpace(p.TargetType))
         {

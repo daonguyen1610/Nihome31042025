@@ -23,9 +23,10 @@ public class CreateDrawingRevisionRequest
     public string Note { get; set; } = string.Empty;
 }
 
-/// <summary>List filter — one target at a time (drawing history view).</summary>
+/// <summary>List filters for a drawing history or project rollup.</summary>
 public class DrawingRevisionListParams
 {
+    public int? DesignProjectId { get; set; }
     /// <summary>Enum name — <c>BasicDesignDoc</c> or <c>ShopDrawing</c>.</summary>
     public string? TargetType { get; set; }
     public int? TargetId { get; set; }

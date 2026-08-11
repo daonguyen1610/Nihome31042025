@@ -37,6 +37,29 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task List_ByDesignProject_ReturnsOnlyThatProjectsRevisions()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (projectId, shopId) = await CreateShopStageProjectWithFirstDrawingAsync();
+        var created = await Client.PostAsJsonAsync("/api/drawing-revisions", new
+        {
+            targetType = "ShopDrawing",
+            targetId = shopId,
+            reasonCode = "client-request",
+            note = "Project-filtered revision",
+        });
+        created.EnsureSuccessStatusCode();
+
+        var matching = await Client.GetAsync($"/api/drawing-revisions?designProjectId={projectId}");
+        var missing = await Client.GetAsync("/api/drawing-revisions?designProjectId=2147483647");
+
+        matching.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(matching)).GetProperty("items").GetArrayLength().Should().Be(1);
+        missing.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(missing)).GetProperty("items").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
     public async Task Create_ForShopDrawing_HappyPath_StartsAtR1()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));

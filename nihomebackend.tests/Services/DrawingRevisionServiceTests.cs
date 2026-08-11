@@ -20,6 +20,7 @@ public class DrawingRevisionServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly DrawingRevisionService _sut;
     private readonly int _userId;
+    private readonly int _projectId;
     private readonly int _basicId;
     private readonly int _shopId;
     private readonly int _otherShopId;
@@ -59,6 +60,7 @@ public class DrawingRevisionServiceTests : IDisposable
         };
         _db.DesignProjects.Add(project);
         _db.SaveChanges();
+        _projectId = project.Id;
 
         var basic = new BasicDesignDoc
         {
@@ -111,6 +113,18 @@ public class DrawingRevisionServiceTests : IDisposable
         };
 
     // ---------------- Create ----------------
+
+    [Fact]
+    public async Task ListAsync_DesignProjectFilter_ReturnsOnlyProjectRevisions()
+    {
+        await _sut.CreateAsync(ValidCreate(targetId: _shopId), _userId);
+
+        var matching = await _sut.ListAsync(new DrawingRevisionListParams { DesignProjectId = _projectId });
+        var missing = await _sut.ListAsync(new DrawingRevisionListParams { DesignProjectId = int.MaxValue });
+
+        Assert.Single(matching.Items);
+        Assert.Empty(missing.Items);
+    }
 
     [Fact]
     public async Task CreateAsync_HappyPath_StartsAtR1_AndIsCurrent()

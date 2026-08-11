@@ -23,6 +23,8 @@ import { ConceptOptionsTab } from "./design/ConceptOptionsTab";
 import { BasicDesignTab } from "./design/BasicDesignTab";
 import { ShopDrawingTab } from "./design/ShopDrawingTab";
 import { IfcReleasesTab } from "./design/IfcReleasesTab";
+import { DesignProjectTeamTab } from "./design/DesignProjectTeamTab";
+import { DesignProjectDocumentsTab } from "./design/DesignProjectDocumentsTab";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-sky-200 bg-sky-50 text-sky-700",
@@ -215,7 +217,7 @@ const AdminDesignProjectDetail = () => {
         </header>
 
         <Tabs defaultValue="overview">
-          <TabsList>
+          <TabsList className="h-auto w-full justify-start overflow-x-auto whitespace-nowrap">
             <TabsTrigger value="overview">{t("designProjects.detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="concept">{t("designProjects.detail.tab.concept")}</TabsTrigger>
             <TabsTrigger value="basic">{t("designProjects.detail.tab.basic")}</TabsTrigger>
@@ -256,10 +258,10 @@ const AdminDesignProjectDetail = () => {
                 <ShopDrawingTab project={project} onProjectMayHaveChanged={fetchProject} />
               ) : tab === "ifc" ? (
                 <IfcReleasesTab project={project} />
+              ) : tab === "team" ? (
+                <DesignProjectTeamTab project={project} />
               ) : (
-                <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
-                  {t("designProjects.detail.stageComingSoon")}
-                </div>
+                <DesignProjectDocumentsTab project={project} />
               )}
             </TabsContent>
           ))}
