@@ -20,7 +20,7 @@ Agents should read it before any non-trivial implementation task together with `
 - Tailwind CSS `3.4.x`
 - shadcn/ui and Radix UI primitives
 - TanStack React Query `5.x`
-- Vitest `3.x`
+- Playwright `1.x`
 
 Current repo reality:
 
@@ -84,7 +84,7 @@ The refactor documentation baseline is only complete when:
 
 - `npm run build` passes
 - `npm run lint` passes or any existing lint baseline issues are documented
-- `npm run test` passes when tests are present and dependencies are installed
+- relevant Playwright E2E smoke coverage passes against the integrated stack
 - the official public and admin route surfaces render cleanly
 - no Materialize, Next.js, or stale starter-kit assumptions remain in active repo docs
 - repo docs and memory reflect the same implementation reality
