@@ -171,6 +171,58 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Delete_Approved_RemovesRevisionAndIfcItemButPreservesRelease()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateShopStageProjectAsync();
+        var drawingId = await CreateDrawingAsync(projectId, "architecture");
+        (await Client.PostAsJsonAsync($"/api/shop-drawings/{drawingId}/status", new { status = "InReview" }))
+            .EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/shop-drawings/{drawingId}/status", new { status = "Approved" }))
+            .EnsureSuccessStatusCode();
+        var releaseId = await WithDbAsync<int>(async db =>
+        {
+            var userId = await db.Users.Select(user => user.Id).FirstAsync();
+            var release = new IfcRelease
+            {
+                DesignProjectId = projectId,
+                ReleaseNumber = $"IFC-DELETE-{Guid.NewGuid():N}",
+                Title = "Preserved release",
+            };
+            db.IfcReleases.Add(release);
+            await db.SaveChangesAsync();
+            db.IfcReleaseItems.Add(new IfcReleaseItem
+            {
+                IfcReleaseId = release.Id,
+                ShopDrawingId = drawingId,
+            });
+            db.DrawingRevisions.Add(new DrawingRevision
+            {
+                TargetType = DrawingRevisionTargetType.ShopDrawing,
+                TargetId = drawingId,
+                RevisionNumber = 1,
+                ReasonCode = "client-change",
+                Note = "Delete cleanup",
+                IsCurrent = true,
+                CreatedByUserId = userId,
+            });
+            await db.SaveChangesAsync();
+            return release.Id;
+        });
+
+        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await WithDbAsync(async db =>
+        {
+            (await db.ShopDrawings.AnyAsync(drawing => drawing.Id == drawingId)).Should().BeFalse();
+            (await db.IfcReleaseItems.AnyAsync(item => item.ShopDrawingId == drawingId)).Should().BeFalse();
+            (await db.DrawingRevisions.AnyAsync(revision => revision.TargetId == drawingId
+                && revision.TargetType == DrawingRevisionTargetType.ShopDrawing)).Should().BeFalse();
+            (await db.IfcReleases.AnyAsync(release => release.Id == releaseId)).Should().BeTrue();
+        });
+    }
+
     // -------- helpers --------
 
     /// <summary>

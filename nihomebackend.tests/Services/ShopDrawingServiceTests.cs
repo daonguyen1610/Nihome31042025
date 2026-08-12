@@ -200,12 +200,41 @@ public class ShopDrawingServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_AfterReview_Throws()
+    public async Task DeleteAsync_AfterReview_RemovesRevisionsAndIfcReferences()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await Transition(created.Id, "InReview");
-        await Assert.ThrowsAsync<ShopDrawingOperationException>(() =>
-            _sut.DeleteAsync(created.Id));
+        var release = new IfcRelease
+        {
+            DesignProjectId = _projectId,
+            ReleaseNumber = "IFC-DELETE-001",
+            Title = "Preserved release",
+            Status = IfcReleaseStatus.Released,
+        };
+        _db.IfcReleases.Add(release);
+        await _db.SaveChangesAsync();
+        _db.IfcReleaseItems.Add(new IfcReleaseItem
+        {
+            IfcReleaseId = release.Id,
+            ShopDrawingId = created.Id,
+        });
+        _db.DrawingRevisions.Add(new DrawingRevision
+        {
+            TargetType = DrawingRevisionTargetType.ShopDrawing,
+            TargetId = created.Id,
+            RevisionNumber = 1,
+            ReasonCode = "client-change",
+            Note = "Delete cleanup",
+            IsCurrent = true,
+            CreatedByUserId = _userId,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.Null(await _db.ShopDrawings.FindAsync(created.Id));
+        Assert.Empty(await _db.IfcReleaseItems.ToListAsync());
+        Assert.Empty(await _db.DrawingRevisions.ToListAsync());
+        Assert.NotNull(await _db.IfcReleases.FindAsync(release.Id));
     }
 
     // ---------------- Bulk delete ----------------

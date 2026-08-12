@@ -197,6 +197,27 @@ public class IfcReleasesControllerTests : IntegrationTestBase
         (await ReadJsonAsync(res)).GetProperty("status").GetString().Should().Be("Cancelled");
     }
 
+    [Fact]
+    public async Task DeleteItemsRecipientsAndRelease_AfterRelease_Succeeds()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (projectId, approvedId, _) = await CreateShopStageProjectWithApprovedDrawingAsync();
+        var releaseId = await CreateFullDraftAsync(projectId, approvedId);
+        var full = await ReadJsonAsync(await Client.GetAsync($"/api/ifc-releases/{releaseId}"));
+        var itemId = full.GetProperty("items")[0].GetProperty("id").GetInt32();
+        var recipientId = full.GetProperty("recipients")[0].GetProperty("id").GetInt32();
+        (await Client.PostAsync($"/api/ifc-releases/{releaseId}/release", null)).EnsureSuccessStatusCode();
+
+        (await Client.DeleteAsync($"/api/ifc-releases/{releaseId}/items/{itemId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.DeleteAsync($"/api/ifc-releases/{releaseId}/recipients/{recipientId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.DeleteAsync($"/api/ifc-releases/{releaseId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/ifc-releases/{releaseId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // -------- helpers --------
 
     private async Task<(int ProjectId, int ApprovedShopId, int DraftingShopId)> CreateShopStageProjectWithApprovedDrawingAsync()

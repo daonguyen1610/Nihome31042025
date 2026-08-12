@@ -166,7 +166,6 @@ public class IfcReleaseService(
             .Include(r => r.Recipients)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
         if (entity is null) return false;
-        EnsureDraft(entity, "xoá");
         db.IfcReleases.Remove(entity);
         await db.SaveChangesAsync(ct);
         return true;
@@ -226,7 +225,6 @@ public class IfcReleaseService(
             .Include(r => r.Items)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
-        EnsureDraft(entity, "gỡ bản vẽ");
 
         var item = entity.Items.FirstOrDefault(i => i.Id == itemId)
             ?? throw new IfcReleaseOperationException($"Dòng #{itemId} không tồn tại trong phiếu.");
@@ -276,7 +274,6 @@ public class IfcReleaseService(
             .Include(r => r.Recipients)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
-        EnsureDraft(entity, "gỡ nơi nhận");
 
         var recipient = entity.Recipients.FirstOrDefault(x => x.Id == recipientId)
             ?? throw new IfcReleaseOperationException($"Nơi nhận #{recipientId} không tồn tại.");

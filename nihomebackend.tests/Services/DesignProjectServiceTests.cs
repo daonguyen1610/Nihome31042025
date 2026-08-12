@@ -203,7 +203,7 @@ public class DesignProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_BeyondConcept_Throws()
+    public async Task DeleteAsync_BeyondConcept_RemovesBlockersAndPreservesExternalRows()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await _sut.UpdateAsync(created.Id, new UpdateDesignProjectRequest
@@ -212,8 +212,109 @@ public class DesignProjectServiceTests : IDisposable
             CustomerId = _customerId,
             CurrentStage = "BasicDesign",
         }, _userId);
-        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
-            _sut.DeleteAsync(created.Id));
+        var basicDoc = new BasicDesignDoc
+        {
+            DesignProjectId = created.Id,
+            DisciplineCode = "architecture",
+            DocumentCode = "BD-DELETE-001",
+            Title = "Basic cleanup",
+        };
+        var shopDrawing = new ShopDrawing
+        {
+            DesignProjectId = created.Id,
+            DisciplineCode = "architecture",
+            ConstructionItem = "Cleanup",
+            DrawingCode = "SD-DELETE-001",
+            Title = "Shop cleanup",
+        };
+        var predecessor = new ConstructionTask
+        {
+            DesignProjectId = created.Id,
+            TaskCode = "T-DELETE-001",
+            Name = "Predecessor",
+            PlannedStart = new DateOnly(2026, 8, 1),
+            PlannedEnd = new DateOnly(2026, 8, 2),
+        };
+        var successor = new ConstructionTask
+        {
+            DesignProjectId = created.Id,
+            TaskCode = "T-DELETE-002",
+            Name = "Successor",
+            PlannedStart = new DateOnly(2026, 8, 3),
+            PlannedEnd = new DateOnly(2026, 8, 4),
+        };
+        _db.AddRange(basicDoc, shopDrawing, predecessor, successor);
+        await _db.SaveChangesAsync();
+
+        var release = new IfcRelease
+        {
+            DesignProjectId = created.Id,
+            ReleaseNumber = "IFC-DELETE-001",
+            Title = "Release cleanup",
+        };
+        _db.AddRange(
+            new DrawingRevision
+            {
+                TargetType = DrawingRevisionTargetType.BasicDesignDoc,
+                TargetId = basicDoc.Id,
+                RevisionNumber = 1,
+                ReasonCode = "client-change",
+                Note = "Basic revision",
+                IsCurrent = true,
+                CreatedByUserId = _userId,
+            },
+            new DrawingRevision
+            {
+                TargetType = DrawingRevisionTargetType.ShopDrawing,
+                TargetId = shopDrawing.Id,
+                RevisionNumber = 1,
+                ReasonCode = "client-change",
+                Note = "Shop revision",
+                IsCurrent = true,
+                CreatedByUserId = _userId,
+            },
+            new ConstructionTaskDependency
+            {
+                TaskId = successor.Id,
+                PredecessorTaskId = predecessor.Id,
+            },
+            new AcceptanceRecord
+            {
+                DesignProjectId = created.Id,
+                ConstructionTaskId = successor.Id,
+                AcceptanceCode = "A-DELETE-001",
+                Title = "Acceptance blocker",
+                AcceptanceDate = new DateOnly(2026, 8, 5),
+            },
+            new HandoverRecord
+            {
+                DesignProjectId = created.Id,
+                HandoverCode = "H-DELETE-001",
+                Title = "Handover blocker",
+                PlannedHandoverDate = new DateOnly(2026, 8, 6),
+                ResponsibleUserId = _userId,
+                CreatedByUserId = _userId,
+                UpdatedByUserId = _userId,
+            },
+            release);
+        await _db.SaveChangesAsync();
+        _db.IfcReleaseItems.Add(new IfcReleaseItem
+        {
+            IfcReleaseId = release.Id,
+            ShopDrawingId = shopDrawing.Id,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.Null(await _db.DesignProjects.FindAsync(created.Id));
+        Assert.Empty(await _db.DrawingRevisions.ToListAsync());
+        Assert.Empty(await _db.ConstructionTaskDependencies.ToListAsync());
+        Assert.Empty(await _db.AcceptanceRecords.ToListAsync());
+        Assert.Empty(await _db.HandoverRecords.ToListAsync());
+        Assert.Empty(await _db.IfcReleaseItems.ToListAsync());
+        Assert.NotNull(await _db.Customers.FindAsync(_customerId));
+        Assert.NotNull(await _db.Contracts.FindAsync(_contractId));
+        Assert.NotNull(await _db.Users.FindAsync(_userId));
     }
 
     // ---------------- Auto-create hook ----------------

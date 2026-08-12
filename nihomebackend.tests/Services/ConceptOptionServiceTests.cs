@@ -188,12 +188,12 @@ public class ConceptOptionServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_PresentedRow_Throws()
+    public async Task DeleteAsync_PresentedRow_Succeeds()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await MoveToPresentedAsync(created.Id);
-        await Assert.ThrowsAsync<ConceptOptionOperationException>(() =>
-            _sut.DeleteAsync(created.Id));
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.Null(await _sut.GetAsync(created.Id));
     }
 
     // ---------------- helpers ----------------

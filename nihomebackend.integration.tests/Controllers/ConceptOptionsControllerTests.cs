@@ -130,7 +130,7 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_PresentedRow_IsBadRequest()
+    public async Task Delete_PresentedRow_Succeeds()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
@@ -138,7 +138,9 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
         await Transition(id, "PendingInternalReview");
         await Transition(id, "PresentedToClient");
         (await Client.DeleteAsync($"/api/concept-options/{id}"))
-            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/concept-options/{id}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // -------- helpers --------
