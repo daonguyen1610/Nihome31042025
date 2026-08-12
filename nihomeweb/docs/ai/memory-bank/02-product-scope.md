@@ -1,6 +1,6 @@
 # Product Scope
 
-Last reviewed: 2026-08-10
+Last reviewed: 2026-08-12
 
 ## Product Intent
 
@@ -18,6 +18,7 @@ Implemented frontend surface areas include:
 - CRM for leads, customers, opportunities, quotes, capability documents, tenders, surveys, contracts, appendices, attachments, and variation orders
 - design projects, concepts, basic design, shop drawings, revisions, IFC tracking, and permit checklists
 - construction tasks/Gantt, site diaries, punch lists, partial acceptance, as-built records, and project handover
+- procurement vendor list, create/edit, detail, filtering, status, permissions, and export
 
 The detailed route and API catalogs live in the user and developer guides. Partial areas are called out explicitly rather than treating the whole operational platform as aspirational.
 
@@ -35,7 +36,7 @@ The detailed route and API catalogs live in the user and developer guides. Parti
 
 - migration of `/admin/master-data` language configuration to backend persistence
 - survey media management
-- procurement vendor, BOQ, material-request, and warehouse operations
+- procurement BOQ, material-request, vendor evaluation, bid comparison, and warehouse operations
 - cash flow, profit-and-loss, Google Drive integration, and broad cross-module analytics
 - finalized server-state strategy across future modules beyond the existing focused service/page patterns
 - migration back to Next.js or Materialize/full-template admin architecture

@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-08-10
+Last reviewed: 2026-08-12
 
 ## Decisions
 
@@ -95,6 +95,10 @@ Rationale: authentication, permissions, content/settings, Users/RBAC, CRM, desig
 ### 2026-08-10 - Project handover uses server-derived readiness and split scope permissions
 
 Rationale: NIH-144 makes the backend authoritative for readiness across acceptance, as-built, punch-list, commissioning, and checklist data. `construction.handover.view.all` broadens reads only, while `construction.handover.manage.all` independently broadens mutations. The frontend displays the server result, uses the shared safe URL resolver, requires a signatory before completion, and reloads after HTTP `409` conflicts instead of overwriting concurrent changes.
+
+### 2026-08-12 - Procurement vendor management is the NIH-165 MVP boundary
+
+Rationale: NIH-165 and subtasks NIH-171 through NIH-173 require vendor list, create/edit, and detail workflows. The implemented API and admin routes own vendor identity, contacts, legal/capability metadata, active status, audit, permissions, filtering, sorting, paging, and export. Evaluations, bid comparisons, subcontracts, and warehouse transactions remain with their owning procurement stories rather than introducing incomplete cross-module contracts here.
 
 ## Open Questions
 

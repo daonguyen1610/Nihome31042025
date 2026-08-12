@@ -38,6 +38,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/tenders",
   "/admin/surveys",
   "/admin/contracts",
+  "/admin/vendors",
   "/admin/design-projects",
   "/admin/permits",
   "/admin/construction/tasks",
@@ -156,6 +157,7 @@ const matrix: RoleExpectation[] = [
       "/admin/workflows",
       "/admin/contracts",
       "/admin/surveys",
+      "/admin/vendors",
       "/admin/design-projects",
       "/admin/permits",
       "/admin/construction/tasks",
@@ -171,17 +173,17 @@ const matrix: RoleExpectation[] = [
     // crm.tenders.view (read-only access to approved quotes / tenders
     // for takeoff / cost tracking).
     user: TEST_USERS.qs,
-    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/contracts", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/projects", "/admin/quotes", "/admin/tenders", "/admin/contracts", "/admin/vendors", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
   },
   {
     // ACCOUNTANT: contacts.view + system.audit.view + crm.customers.view (+ view.all)
     user: TEST_USERS.accountant,
-    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/customers", "/admin/contracts", "/admin/vendors", "/admin/contacts", "/admin/activity-log", "/admin/master-data", "/admin/workflows"],
   },
   {
     // WAREHOUSE: processes.view only (plus dashboard)
     user: TEST_USERS.warehouse,
-    allowed: ["/admin", "/admin/notifications", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/vendors", "/admin/processes/general", "/admin/master-data", "/admin/workflows"],
   },
   {
     // BGD: **.view + dashboard.view + system.audit.view — every view route.

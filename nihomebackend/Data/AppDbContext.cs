@@ -72,6 +72,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Survey> Surveys => Set<Survey>();
 
+    // Procurement
+    public DbSet<Vendor> Vendors => Set<Vendor>();
+
     public DbSet<DesignProject> DesignProjects => Set<DesignProject>();
 
     public DbSet<PermitChecklistItem> PermitChecklistItems => Set<PermitChecklistItem>();
@@ -423,6 +426,32 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(c => c.CustomerId);
             b.HasIndex(c => c.Phone); // used for duplicate detection on Individual
+        });
+
+        modelBuilder.Entity<Vendor>(b =>
+        {
+            b.ToTable("procurement_vendors");
+            b.HasKey(v => v.Id);
+            b.Property(v => v.VendorCode).HasMaxLength(50).IsRequired();
+            b.Property(v => v.CompanyName).HasMaxLength(300).IsRequired();
+            b.Property(v => v.VendorType).HasConversion<string>().HasMaxLength(30);
+            b.Property(v => v.TaxCode).HasMaxLength(20);
+            b.Property(v => v.Phone).HasMaxLength(20);
+            b.Property(v => v.Email).HasMaxLength(200);
+            b.Property(v => v.Address).HasMaxLength(500);
+            b.Property(v => v.ContactPerson).HasMaxLength(150);
+            b.Property(v => v.LicenseNo).HasMaxLength(100);
+            b.Property(v => v.TradeCategory).HasMaxLength(300);
+            b.Property(v => v.CapabilityFileUrl).HasMaxLength(1000);
+            b.Property(v => v.DriveFolder).HasMaxLength(1000);
+            b.HasIndex(v => v.VendorCode).IsUnique();
+            b.HasIndex(v => v.VendorType);
+            b.HasIndex(v => v.IsActive);
+            b.HasIndex(v => v.CreatedAt);
+            b.HasOne(v => v.CreatedBy)
+                .WithMany()
+                .HasForeignKey(v => v.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CustomerActivity>(b =>

@@ -29,6 +29,7 @@ public static class SampleCrmDataSeeder
 
         SeedLeads(db, owner, now);
         SeedCustomers(db, owner, now);
+        SeedVendors(db, owner, now);
         SeedOpportunities(db, owner, now);
         SeedQuotes(db, owner, now);
         SeedContracts(db, owner, now, webRootPath);
@@ -316,6 +317,66 @@ public static class SampleCrmDataSeeder
             });
             db.SaveChanges();
         }
+    }
+
+    private static void SeedVendors(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        var samples = new[]
+        {
+            new Vendor
+            {
+                VendorCode = "NCC-ELECTRIC-01",
+                CompanyName = $"{SampleTag} Công ty Thiết bị Điện Đông Á",
+                VendorType = VendorType.Supplier,
+                TaxCode = "0310001001",
+                Phone = "0900000501",
+                Email = "sales.donga.sample@example.com",
+                Address = "TP. Hồ Chí Minh",
+                ContactPerson = "Nguyễn Minh Điện",
+                LicenseNo = "ELEC-SAMPLE-01",
+                TradeCategory = "Thiết bị điện",
+                IsActive = true,
+            },
+            new Vendor
+            {
+                VendorCode = "TP-MEP-01",
+                CompanyName = $"{SampleTag} Công ty Cơ điện Minh Phát",
+                VendorType = VendorType.SubContractor,
+                TaxCode = "0310001002",
+                Phone = "0900000502",
+                Email = "contact.minhphat.sample@example.com",
+                Address = "Bình Dương",
+                ContactPerson = "Trần Quốc Minh",
+                LicenseNo = "MEP-SAMPLE-01",
+                TradeCategory = "Thi công MEP",
+                IsActive = true,
+            },
+            new Vendor
+            {
+                VendorCode = "DT-FINISH-01",
+                CompanyName = $"{SampleTag} Nội thất Hoàn Thiện Việt",
+                VendorType = VendorType.Both,
+                TaxCode = "0310001003",
+                Phone = "0900000503",
+                Email = "hello.hoanthien.sample@example.com",
+                Address = "Đồng Nai",
+                ContactPerson = "Lê Thanh Việt",
+                TradeCategory = "Vật tư và thi công hoàn thiện",
+                IsActive = false,
+            },
+        };
+
+        foreach (var vendor in samples)
+        {
+            if (db.Vendors.Any(existing => existing.VendorCode == vendor.VendorCode)) continue;
+            vendor.CreatedByUserId = owner.Id;
+            vendor.UpdatedByUserId = owner.Id;
+            vendor.CreatedAt = now;
+            vendor.UpdatedAt = now;
+            db.Vendors.Add(vendor);
+        }
+
+        db.SaveChanges();
     }
 
     private const string SampleQuoteNoteMarker = "[SAMPLE_QUOTE]";

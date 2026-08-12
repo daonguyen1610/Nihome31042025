@@ -94,6 +94,10 @@
     { "module": "crm.contracts", "action": "activate" },
     { "module": "crm.contracts", "action": "appendix-manage" },
 
+    { "module": "proc.vendors", "action": "view" },
+    { "module": "proc.vendors", "action": "manage" },
+    { "module": "proc.vendors", "action": "export" },
+
     { "module": "design.projects", "action": "view" },
     { "module": "design.projects", "action": "manage" },
     { "module": "design.concepts", "action": "view" },
@@ -303,6 +307,7 @@
         "workflow.view",
         "crm.contracts.view",
         "crm.surveys.view",
+        "proc.vendors.view",
         "design.projects.view",
         "design.basic.view",
         "design.shop.view",
@@ -340,6 +345,7 @@
         "crm.quotes.view",
         "crm.tenders.view",
         "crm.contracts.view",
+        "proc.vendors.*",
         "design.basic.view",
         "design.shop.view",
         "profile.me.*"
@@ -355,11 +361,12 @@
         "crm.customers.view",
         "crm.customers.view.all",
         "crm.contracts.view",
+        "proc.vendors.view",
         "profile.me.*"
       ]
     },
     "WAREHOUSE": {
-      "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "proc.vendors.view", "profile.me.*"]
     },
     "BGD": {
       "patterns": ["dashboard.view", "**.view", "**.view.all", "system.audit.view", "profile.me.*"]

@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 10 August 2026
+Last Updated: 12 August 2026
 
 ---
 
@@ -24,7 +24,9 @@ Last Updated: 10 August 2026
 
 ## 1. Overview
 
-Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, and project handover. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
+Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, procurement vendor management, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, and project handover. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
+
+The procurement vendor vertical slice uses `/api/vendors` for paged search, type/status filtering, sorting, detail, create, and update operations. Access is controlled by `proc.vendors.view`, `proc.vendors.manage`, and `proc.vendors.export`. Vendor codes are normalized to uppercase and unique. The `IsActive` flag preserves historical partners while preventing the UI from presenting them as available for new work. Bid comparisons, evaluations, subcontracts, and warehouse links remain separate future procurement slices.
 
 This guide covers development setup, configuration, database management, build and test procedures, and deployment.
 
