@@ -55,7 +55,7 @@
   { "key": "quotes.action.customerApprove", "category": "quotes", "vi": "Khách duyệt", "en": "Mark customer approved", "zh": "客户已批准", "ja": "顧客承認とする" },
   { "key": "quotes.action.customerReject", "category": "quotes", "vi": "Khách từ chối", "en": "Mark customer rejected", "zh": "客户已拒绝", "ja": "顧客却下とする" },
   { "key": "quotes.action.cancel", "category": "quotes", "vi": "Huỷ báo giá", "en": "Cancel quote", "zh": "取消报价", "ja": "見積をキャンセル" },
-  { "key": "quotes.action.delete", "category": "quotes", "vi": "Xoá (chỉ Draft)", "en": "Delete (Draft only)", "zh": "删除（仅草稿）", "ja": "削除（下書きのみ）" },
+  { "key": "quotes.action.delete", "category": "quotes", "vi": "Xóa vĩnh viễn", "en": "Permanently delete", "zh": "永久删除", "ja": "完全に削除" },
 
   { "key": "quotes.log.create", "category": "quotes", "vi": "Tạo mới", "en": "Created", "zh": "创建", "ja": "作成" },
   { "key": "quotes.log.update", "category": "quotes", "vi": "Cập nhật", "en": "Updated", "zh": "更新", "ja": "更新" },

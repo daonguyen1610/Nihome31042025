@@ -260,14 +260,9 @@ public class CustomerService(
         // we never leak the customer's existence to unauthorised callers.
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return false;
 
-        // Delete guard: downstream FKs. Opportunity + Contract entities land
-        // in later stories; until they exist there's nothing to check here.
-        // When they do, this becomes:
-        //   var openOpps = await db.Opportunities.CountAsync(o => o.CustomerId == id && o.Status != Closed, ct);
-        //   if (openOpps > 0) throw new CustomerOperationException($"…");
-
-        db.Customers.Remove(customer);
+        await AggregateDeletionService.DeleteCustomerAsync(db, customer, ct);
         await db.SaveChangesAsync(ct);
+        logger.LogInformation("Deleted customer {Id} and its dependent aggregates", id);
         return true;
     }
 

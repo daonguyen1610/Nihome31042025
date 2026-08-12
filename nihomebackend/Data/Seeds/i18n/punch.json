@@ -66,7 +66,7 @@
   { "key": "punch.form.hint", "category": "punch", "vi": "Ghi ngắn gọn lỗi + vị trí + mức độ. Gán người xử lý và deadline nếu đã có kế hoạch.", "en": "Log the defect briefly + location + severity. Assign an owner and deadline if known.", "zh": "简要记录缺陷、位置和严重程度。若已知，请分配负责人与截止日期。", "ja": "不具合内容・場所・重要度を簡潔に記録。担当者と期限が決まっていれば設定してください。" },
 
   { "key": "punch.confirmDelete", "category": "punch", "vi": "Xoá lỗi {code}? Thao tác không thể hoàn tác. Nếu muốn giữ lịch sử, hãy chuyển sang Đã huỷ.", "en": "Delete punch {code}? This cannot be undone. To keep the history, use Cancel instead.", "zh": "删除缺陷 {code}？此操作无法撤销。若要保留历史，请改用取消。", "ja": "パンチ {code} を削除しますか？元に戻せません。履歴を残すには取消を使用してください。" },
-  { "key": "punch.confirmBulkDelete", "category": "punch", "vi": "Xoá {count} lỗi đã chọn (chỉ trạng thái Mở)?", "en": "Delete {count} selected items (Open only)?", "zh": "删除所选 {count} 项（仅未开始）？", "ja": "選択された {count} 件を削除しますか？（オープンのみ）" },
+  { "key": "punch.confirmBulkDelete", "category": "punch", "vi": "Xóa vĩnh viễn {count} lỗi đã chọn ở mọi trạng thái? Hành động này không thể hoàn tác.", "en": "Permanently delete {count} selected items in any status? This cannot be undone.", "zh": "永久删除所选 {count} 项（任意状态）？此操作无法撤销。", "ja": "状態に関係なく、選択された {count} 件を完全に削除しますか？元に戻せません。" },
   { "key": "punch.confirmVerify", "category": "punch", "vi": "Xác nhận lỗi {code} đã được xử lý xong?", "en": "Verify punch {code} as resolved?", "zh": "确认缺陷 {code} 已解决？", "ja": "パンチ {code} を対応完了として確認しますか？" },
   { "key": "punch.confirmReopen", "category": "punch", "vi": "Mở lại lỗi {code}? Số lần mở lại sẽ tăng.", "en": "Reopen punch {code}? The reopen counter will increment.", "zh": "重新打开缺陷 {code}？重新打开计数将增加。", "ja": "パンチ {code} を再オープンしますか？再オープン回数が増加します。" }
 ]

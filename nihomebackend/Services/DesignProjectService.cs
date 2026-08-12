@@ -177,47 +177,7 @@ public class DesignProjectService(
         var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
         if (entity is null) return false;
 
-        var basicDesignDocIds = await db.BasicDesignDocs
-            .Where(doc => doc.DesignProjectId == id)
-            .Select(doc => doc.Id)
-            .ToListAsync(ct);
-        var shopDrawingIds = await db.ShopDrawings
-            .Where(drawing => drawing.DesignProjectId == id)
-            .Select(drawing => drawing.Id)
-            .ToListAsync(ct);
-        var taskIds = await db.ConstructionTasks
-            .Where(task => task.DesignProjectId == id)
-            .Select(task => task.Id)
-            .ToListAsync(ct);
-
-        var revisions = await db.DrawingRevisions
-            .Where(revision =>
-                (revision.TargetType == DrawingRevisionTargetType.BasicDesignDoc
-                    && basicDesignDocIds.Contains(revision.TargetId))
-                || (revision.TargetType == DrawingRevisionTargetType.ShopDrawing
-                    && shopDrawingIds.Contains(revision.TargetId)))
-            .ToListAsync(ct);
-        var releaseItems = await db.IfcReleaseItems
-            .Where(item => shopDrawingIds.Contains(item.ShopDrawingId))
-            .ToListAsync(ct);
-        var taskDependencies = await db.ConstructionTaskDependencies
-            .Where(dependency => taskIds.Contains(dependency.TaskId)
-                || taskIds.Contains(dependency.PredecessorTaskId))
-            .ToListAsync(ct);
-        var acceptanceRecords = await db.AcceptanceRecords
-            .Where(record => record.DesignProjectId == id)
-            .ToListAsync(ct);
-        var handoverRecords = await db.HandoverRecords
-            .Where(record => record.DesignProjectId == id)
-            .ToListAsync(ct);
-
-        db.DrawingRevisions.RemoveRange(revisions);
-        db.IfcReleaseItems.RemoveRange(releaseItems);
-        db.ConstructionTaskDependencies.RemoveRange(taskDependencies);
-        db.AcceptanceRecords.RemoveRange(acceptanceRecords);
-        db.HandoverRecords.RemoveRange(handoverRecords);
-
-        db.DesignProjects.Remove(entity);
+        await AggregateDeletionService.DeleteDesignProjectsAsync(db, new[] { id }, ct);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("DesignProject {Id} deleted", id);
         return true;

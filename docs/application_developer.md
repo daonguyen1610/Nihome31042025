@@ -594,6 +594,12 @@ Both `/api/permits` and `/api/v1/permits` expose the same controller:
 
 Duplicate project/type pairs return `409`; invalid projects, permit types, owners, or statuses return `400`; missing rows return `404`. Create, update, and delete operations write `permit.create`, `permit.update`, and `permit.delete` audit events. Delete returns `204` and records the removed item snapshot.
 
+### 7.7 Permanent Aggregate Deletion
+
+Authorized ADMIN `DELETE` operations are permanent and are not limited by workflow status. Status rules still govern editing and lifecycle transitions. Root deletion removes the selected record plus rows that cannot exist independently: Customer deletion removes its Opportunities, Quotes, Contracts, Tenders, Design Projects, design documents, and construction records; Opportunity deletion removes its Quotes. Nullable references from preserved Leads, Surveys, Contracts, and Tenders are cleared rather than deleting those shared records. Design deletion also removes polymorphic drawing revisions and entity translations.
+
+Do not replace this orchestration with blanket database cascades across shared relationships. Users, unrelated customers/projects, audit logs, and other shared principals remain intact. Database file metadata is removed with its owning row, but physical files are retained until storage ownership and sharing rules can prove that deleting the blob is safe. Every destructive frontend action must require an explicit irreversible-delete confirmation.
+
 ---
 
 ## 8. Frontend Development
@@ -653,7 +659,7 @@ Both `/api/handover-records` and `/api/v1/handover-records` expose the same cont
 | `PUT` | `/api/handover-records/{id}` | `construction.handover.manage` | Update Draft/Reopened data |
 | `POST` | `/api/handover-records/{id}/status` | `construction.handover.manage` | Perform non-final lifecycle transitions |
 | `POST` | `/api/handover-records/{id}/complete` | `construction.handover.complete` | Complete a ready, signed handover |
-| `DELETE` | `/api/handover-records/{id}` | `construction.handover.manage` | Delete Draft/Cancelled records |
+| `DELETE` | `/api/handover-records/{id}` | `construction.handover.manage` | Permanently delete a record in any status |
 
 `view.all` controls unrestricted reads; `manage.all` independently controls unrestricted writes. A caller with only the base permission is scoped to records they created or own and projects they manage or lead. Business-rule failures return `400`, hidden/missing records return `404`, and duplicate or concurrent writes return `409` so clients can reload instead of overwriting newer data.
 

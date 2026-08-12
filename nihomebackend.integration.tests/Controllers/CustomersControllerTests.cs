@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -294,6 +296,77 @@ public class CustomersControllerTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = null;
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         (await Client.GetAsync($"/api/customers/{id}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Delete_WithDownstreamAggregates_RemovesCompleteCustomerTree()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var created = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Individual",
+            name = "Aggregate delete " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Owner", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+        });
+        created.EnsureSuccessStatusCode();
+        var customerId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+        var ids = await WithDbAsync(async db =>
+        {
+            var opportunity = new Opportunity { Name = "Owned opportunity", CustomerId = customerId };
+            db.Opportunities.Add(opportunity);
+            await db.SaveChangesAsync();
+            var quote = new Quote
+            {
+                Code = UniqueSlug("QT-CUSTOMER-DELETE"),
+                OpportunityId = opportunity.Id,
+                AreaSqm = 1,
+                UnitPricePerSqm = 1,
+                Subtotal = 1,
+                GrandTotal = 1,
+            };
+            var contract = new Contract
+            {
+                ContractNumber = UniqueSlug("HD-CUSTOMER-DELETE"),
+                CustomerId = customerId,
+                OpportunityId = opportunity.Id,
+            };
+            var tender = new Tender
+            {
+                Code = UniqueSlug("TD-CUSTOMER-DELETE"),
+                Name = "Owned tender",
+                CustomerId = customerId,
+                SubmissionDeadline = DateTime.UtcNow.AddDays(1),
+            };
+            var project = new DesignProject
+            {
+                ProjectCode = UniqueSlug("DP-CUSTOMER-DELETE"),
+                Name = "Owned project",
+                CustomerId = customerId,
+                Contract = contract,
+            };
+            db.AddRange(quote, tender, project);
+            await db.SaveChangesAsync();
+            return (
+                OpportunityId: opportunity.Id,
+                QuoteId: quote.Id,
+                ContractId: contract.Id,
+                TenderId: tender.Id,
+                ProjectId: project.Id);
+        });
+
+        (await Client.DeleteAsync($"/api/customers/{customerId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await WithDbAsync(async db =>
+        {
+            (await db.Customers.AnyAsync(row => row.Id == customerId)).Should().BeFalse();
+            (await db.Opportunities.AnyAsync(row => row.Id == ids.OpportunityId)).Should().BeFalse();
+            (await db.Quotes.AnyAsync(row => row.Id == ids.QuoteId)).Should().BeFalse();
+            (await db.Contracts.AnyAsync(row => row.Id == ids.ContractId)).Should().BeFalse();
+            (await db.Tenders.AnyAsync(row => row.Id == ids.TenderId)).Should().BeFalse();
+            (await db.DesignProjects.AnyAsync(row => row.Id == ids.ProjectId)).Should().BeFalse();
+        });
     }
 
     [Fact]

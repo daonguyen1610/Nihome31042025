@@ -429,6 +429,101 @@ public class OpportunityServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_RemovesQuotesAndClearsPreservedReferences()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(customer, user);
+        var quote = new Quote
+        {
+            Code = "QT-DELETE-OPPORTUNITY",
+            OpportunityId = opportunity.Id,
+            OwnerUserId = user.Id,
+            AreaSqm = 1,
+            UnitPricePerSqm = 1,
+            Subtotal = 1,
+            GrandTotal = 1,
+        };
+        _db.Quotes.Add(quote);
+        await _db.SaveChangesAsync();
+        _db.QuoteItems.Add(new QuoteItem
+        {
+            QuoteId = quote.Id,
+            Name = "Owned quote item",
+            Unit = "item",
+            Quantity = 1,
+            UnitPrice = 1,
+            Amount = 1,
+        });
+        var contract = new Contract
+        {
+            ContractNumber = "HD-DELETE-OPPORTUNITY",
+            CustomerId = customer.Id,
+            OpportunityId = opportunity.Id,
+            QuoteId = quote.Id,
+            OwnerUserId = user.Id,
+        };
+        var survey = new Survey
+        {
+            Code = "SV-DELETE-OPPORTUNITY",
+            Location = "Preserved survey",
+            SurveyDate = DateTime.UtcNow,
+            LinkedOpportunityId = opportunity.Id,
+        };
+        var lead = new Lead
+        {
+            Name = "Preserved lead",
+            Phone = "0900000999",
+            SourceCode = "marketing",
+            ConvertedOpportunityId = opportunity.Id,
+        };
+        var tender = new Tender
+        {
+            Code = "TD-DELETE-OPPORTUNITY",
+            Name = "Preserved tender",
+            CustomerId = customer.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(1),
+            WonOpportunityId = opportunity.Id,
+        };
+        _db.AddRange(contract, survey, lead, tender);
+        _db.EntityTranslations.AddRange(
+            new EntityTranslation
+            {
+                EntityType = "Opportunity",
+                EntityId = opportunity.Id,
+                FieldName = "Name",
+                LanguageCode = "en",
+                Value = "Deleted opportunity",
+            },
+            new EntityTranslation
+            {
+                EntityType = "Quote",
+                EntityId = quote.Id,
+                FieldName = "PackageDescription",
+                LanguageCode = "en",
+                Value = "Deleted quote",
+            });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(
+            opportunity.Id, user.Id, canManage: true, canSeeAll: true));
+
+        Assert.False(await _db.Opportunities.AnyAsync(row => row.Id == opportunity.Id));
+        Assert.False(await _db.Quotes.AnyAsync(row => row.Id == quote.Id));
+        Assert.False(await _db.QuoteItems.AnyAsync(row => row.QuoteId == quote.Id));
+        Assert.False(await _db.EntityTranslations.AnyAsync(row =>
+            (row.EntityType == "Opportunity" && row.EntityId == opportunity.Id)
+            || (row.EntityType == "Quote" && row.EntityId == quote.Id)));
+        Assert.Null((await _db.Contracts.FindAsync(contract.Id))!.OpportunityId);
+        Assert.Null((await _db.Contracts.FindAsync(contract.Id))!.QuoteId);
+        Assert.Null((await _db.Surveys.FindAsync(survey.Id))!.LinkedOpportunityId);
+        Assert.Null((await _db.Leads.FindAsync(lead.Id))!.ConvertedOpportunityId);
+        Assert.Null((await _db.Tenders.FindAsync(tender.Id))!.WonOpportunityId);
+        Assert.NotNull(await _db.Customers.FindAsync(customer.Id));
+        Assert.NotNull(await _db.Users.FindAsync(user.Id));
+    }
+
+    [Fact]
     public async Task ChangeStageAsync_SameStage_IsNoOpAndDoesNotEmitActivity()
     {
         var user = await SeedUserAsync();

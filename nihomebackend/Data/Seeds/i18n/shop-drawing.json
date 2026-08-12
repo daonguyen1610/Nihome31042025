@@ -56,11 +56,11 @@
   { "key": "shopDrawing.stats.released", "category": "shopDrawing", "vi": "Đã phát hành", "en": "Released", "zh": "已发布", "ja": "発行済み" },
 
   { "key": "shopDrawing.bulk.delete", "category": "shopDrawing", "vi": "Xoá đã chọn", "en": "Delete selected", "zh": "删除所选", "ja": "選択を削除" },
-  { "key": "shopDrawing.bulk.deleteHint", "category": "shopDrawing", "vi": "Chỉ áp dụng với bản vẽ ở trạng thái Đang vẽ.", "en": "Only applies to drawings still in Drafting.", "zh": "仅适用于绘制中的图纸。", "ja": "作成中の図面にのみ適用されます。" },
+  { "key": "shopDrawing.bulk.deleteHint", "category": "shopDrawing", "vi": "Các bản vẽ đã chọn ở mọi trạng thái sẽ bị xóa vĩnh viễn.", "en": "Selected drawings in any status will be permanently deleted.", "zh": "所选任意状态的图纸将被永久删除。", "ja": "状態に関係なく、選択した図面は完全に削除されます。" },
   { "key": "shopDrawing.bulk.confirmTitle", "category": "shopDrawing", "vi": "Xoá {count} bản vẽ đã chọn?", "en": "Delete {count} selected drawings?", "zh": "删除 {count} 张所选图纸？", "ja": "選択した {count} 件の図面を削除しますか？" },
   { "key": "shopDrawing.bulk.result", "category": "shopDrawing", "vi": "Đã xoá {success}, thất bại {failed} bản vẽ.", "en": "{success} deleted, {failed} failed.", "zh": "已删除 {success} 张，失败 {failed} 张。", "ja": "{success} 件を削除、{failed} 件失敗。" },
 
   { "key": "shopDrawing.delete.confirmTitle", "category": "shopDrawing", "vi": "Xoá bản vẽ?", "en": "Delete drawing?", "zh": "删除图纸？", "ja": "図面を削除しますか？" },
-  { "key": "shopDrawing.delete.confirmBody", "category": "shopDrawing", "vi": "Chỉ xoá được \"{code}\" khi còn ở trạng thái Đang vẽ. Không thể hoàn tác.", "en": "\"{code}\" can only be deleted while still in Drafting. This cannot be undone.", "zh": "仅在绘制中状态可删除“{code}”。此操作无法撤销。", "ja": "「{code}」は作成中の状態のみ削除できます。取り消せません。" },
+  { "key": "shopDrawing.delete.confirmBody", "category": "shopDrawing", "vi": "Xóa vĩnh viễn bản vẽ \"{code}\" và dữ liệu phụ thuộc? Hành động này không thể hoàn tác.", "en": "Permanently delete drawing \"{code}\" and its dependent data? This cannot be undone.", "zh": "永久删除图纸“{code}”及其相关数据？此操作无法撤销。", "ja": "図面「{code}」とその関連データを完全に削除しますか？元に戻せません。" },
   { "key": "shopDrawing.delete.confirm", "category": "shopDrawing", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
 ]

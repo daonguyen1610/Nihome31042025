@@ -24,7 +24,7 @@
   { "key": "surveys.form.linkedOpportunityNone", "category": "surveys", "vi": "Không gắn cơ hội", "en": "No linked opportunity", "zh": "不关联机会", "ja": "商機と紐付けない" },
 
   { "key": "surveys.delete.confirmTitle", "category": "surveys", "vi": "Xoá phiếu khảo sát?", "en": "Delete survey?", "zh": "删除勘察记录？", "ja": "調査記録を削除しますか？" },
-  { "key": "surveys.delete.confirmBody", "category": "surveys", "vi": "Chỉ có thể xoá phiếu \"{location}\" khi chưa đồng bộ Drive. Hành động này không thể hoàn tác.", "en": "\"{location}\" can only be deleted while it has not synced to Drive. This cannot be undone.", "zh": "仅在未同步 Drive 时可删除“{location}”。此操作无法撤销。", "ja": "「{location}」は Drive 未同期のみ削除できます。取り消せません。" },
+  { "key": "surveys.delete.confirmBody", "category": "surveys", "vi": "Xóa vĩnh viễn phiếu khảo sát \"{location}\" ở trạng thái đồng bộ hiện tại? Hành động này không thể hoàn tác.", "en": "Permanently delete survey \"{location}\" in its current sync status? This cannot be undone.", "zh": "永久删除当前同步状态的调查“{location}”？此操作无法撤销。", "ja": "現在の同期状態の調査「{location}」を完全に削除しますか？元に戻せません。" },
   { "key": "surveys.delete.confirm", "category": "surveys", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" },
 
   { "key": "surveys.field.code", "category": "surveys", "vi": "Mã phiếu", "en": "Code", "zh": "编号", "ja": "番号" },

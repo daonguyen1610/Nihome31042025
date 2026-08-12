@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -413,6 +414,115 @@ public class CustomerServiceTests : IDisposable
 
         Assert.True(await _sut.DeleteAsync(mine.Id, sales.Id, canManage: true, canSeeAll: false));
         Assert.Empty(_db.Customers);
+    }
+
+    [Fact]
+    public async Task Delete_RemovesRequiredDescendantAggregatesAndPreservesSharedRows()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var created = await _sut.CreateAsync(BuildCreate(), user.Id, canManage: true);
+        var otherCustomer = new Customer
+        {
+            Name = "Unrelated customer",
+            Type = CustomerType.Individual,
+            SourceCode = "marketing",
+            OwnerUserId = user.Id,
+        };
+        _db.Customers.Add(otherCustomer);
+        await _db.SaveChangesAsync();
+
+        var opportunity = new Opportunity
+        {
+            Name = "Owned opportunity",
+            CustomerId = created.Id,
+            OwnerUserId = user.Id,
+        };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+        var quote = new Quote
+        {
+            Code = "QT-DELETE-CUSTOMER",
+            OpportunityId = opportunity.Id,
+            OwnerUserId = user.Id,
+            AreaSqm = 1,
+            UnitPricePerSqm = 1,
+            Subtotal = 1,
+            GrandTotal = 1,
+        };
+        var contract = new Contract
+        {
+            ContractNumber = "HD-DELETE-CUSTOMER",
+            CustomerId = created.Id,
+            OpportunityId = opportunity.Id,
+            OwnerUserId = user.Id,
+        };
+        var tender = new Tender
+        {
+            Code = "TD-DELETE-CUSTOMER",
+            Name = "Owned tender",
+            CustomerId = created.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(1),
+            ChecklistItems =
+            [
+                new TenderChecklistItem { Title = "Owned checklist item" },
+            ],
+        };
+        var project = new DesignProject
+        {
+            ProjectCode = "DP-DELETE-CUSTOMER",
+            Name = "Owned design project",
+            CustomerId = created.Id,
+            Contract = contract,
+        };
+        var convertedLead = new Lead
+        {
+            Name = "Preserved converted lead",
+            Phone = "0900000888",
+            SourceCode = "marketing",
+            ConvertedCustomerId = created.Id,
+            ConvertedOpportunityId = opportunity.Id,
+        };
+        _db.AddRange(quote, tender, project, convertedLead);
+        await _db.SaveChangesAsync();
+        _db.EntityTranslations.AddRange(
+            new EntityTranslation
+            {
+                EntityType = "Customer",
+                EntityId = created.Id,
+                FieldName = "Name",
+                LanguageCode = "en",
+                Value = "Deleted customer",
+            },
+            new EntityTranslation
+            {
+                EntityType = "DesignProject",
+                EntityId = project.Id,
+                FieldName = "Name",
+                LanguageCode = "en",
+                Value = "Deleted project",
+            });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(
+            created.Id, user.Id, canManage: true, canSeeAll: true));
+
+        Assert.False(await _db.Customers.AnyAsync(row => row.Id == created.Id));
+        Assert.False(await _db.Opportunities.AnyAsync(row => row.Id == opportunity.Id));
+        Assert.False(await _db.Quotes.AnyAsync(row => row.Id == quote.Id));
+        Assert.False(await _db.Contracts.AnyAsync(row => row.Id == contract.Id));
+        Assert.False(await _db.Tenders.AnyAsync(row => row.Id == tender.Id));
+        Assert.False(await _db.TenderChecklistItems.AnyAsync(row => row.TenderId == tender.Id));
+        Assert.False(await _db.DesignProjects.AnyAsync(row => row.Id == project.Id));
+        Assert.False(await _db.EntityTranslations.AnyAsync(row =>
+            (row.EntityType == "Customer" && row.EntityId == created.Id)
+            || (row.EntityType == "DesignProject" && row.EntityId == project.Id)));
+        var preservedLead = await _db.Leads.FindAsync(convertedLead.Id);
+        Assert.NotNull(preservedLead);
+        Assert.Null(preservedLead!.ConvertedCustomerId);
+        Assert.Null(preservedLead.ConvertedOpportunityId);
+        Assert.NotNull(await _db.Customers.FindAsync(otherCustomer.Id));
+        Assert.NotNull(await _db.Users.FindAsync(user.Id));
     }
 
     // ---------------- Helpers ----------------

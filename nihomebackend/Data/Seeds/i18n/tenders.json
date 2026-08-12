@@ -44,7 +44,7 @@
   { "key": "tenders.form.createHint", "category": "tenders", "vi": "Điền thông tin gói thầu và bấm Lưu để bắt đầu.", "en": "Fill in the tender details and click Save to start.", "zh": "填写投标信息并点击保存以开始。", "ja": "入札情報を入力し、保存で開始します。" },
 
   { "key": "tenders.delete.confirmTitle", "category": "tenders", "vi": "Xoá gói thầu?", "en": "Delete tender?", "zh": "删除投标？", "ja": "入札を削除しますか？" },
-  { "key": "tenders.delete.confirmBody", "category": "tenders", "vi": "Chỉ có thể xoá gói thầu \"{name}\" khi còn ở trạng thái Đang chuẩn bị. Hành động này không thể hoàn tác.", "en": "\"{name}\" can only be deleted while it is Preparing. This cannot be undone.", "zh": "\"{name}\" 仅在准备中状态可删除。此操作无法撤销。", "ja": "「{name}」は準備中の場合のみ削除可能です。取り消せません。" },
+  { "key": "tenders.delete.confirmBody", "category": "tenders", "vi": "Xóa vĩnh viễn gói thầu \"{name}\" và checklist liên quan? Hành động này không thể hoàn tác.", "en": "Permanently delete \"{name}\" and its checklist? This cannot be undone.", "zh": "永久删除“{name}”及其清单？此操作无法撤销。", "ja": "「{name}」とチェックリストを完全に削除しますか？元に戻せません。" },
   { "key": "tenders.delete.confirm", "category": "tenders", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" },
 
   { "key": "tenders.detail.back", "category": "tenders", "vi": "Quay lại danh sách gói thầu", "en": "Back to tenders", "zh": "返回投标列表", "ja": "入札一覧へ戻る" },

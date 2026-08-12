@@ -53,6 +53,6 @@
   { "key": "basicDesign.readiness.unlocked", "category": "basicDesign", "vi": "Đã mở khoá Shop Drawing. Dự án đã chuyển giai đoạn.", "en": "Shop Drawing unlocked. Project stage advanced.", "zh": "已解锁施工图，项目阶段已更新。", "ja": "施工図が解放され、案件段階が進みました。" },
 
   { "key": "basicDesign.delete.confirmTitle", "category": "basicDesign", "vi": "Xoá bản vẽ?", "en": "Delete document?", "zh": "删除文档？", "ja": "ドキュメントを削除しますか？" },
-  { "key": "basicDesign.delete.confirmBody", "category": "basicDesign", "vi": "Chỉ xoá được \"{code}\" khi còn ở trạng thái Đang thiết kế. Không thể hoàn tác.", "en": "\"{code}\" can only be deleted while still In Progress. This cannot be undone.", "zh": "仅在设计中状态可删除“{code}”。此操作无法撤销。", "ja": "「{code}」は作成中の状態のみ削除できます。取り消せません。" },
+  { "key": "basicDesign.delete.confirmBody", "category": "basicDesign", "vi": "Xóa vĩnh viễn hồ sơ \"{code}\" và lịch sử phiên bản liên quan? Hành động này không thể hoàn tác.", "en": "Permanently delete document \"{code}\" and its revision history? This cannot be undone.", "zh": "永久删除文档“{code}”及其修订历史？此操作无法撤销。", "ja": "文書「{code}」と改訂履歴を完全に削除しますか？元に戻せません。" },
   { "key": "basicDesign.delete.confirm", "category": "basicDesign", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
 ]

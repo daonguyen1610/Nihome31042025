@@ -42,6 +42,6 @@
   { "key": "concepts.finalize.confirm", "category": "concepts", "vi": "Chốt phương án", "en": "Finalize", "zh": "确认", "ja": "確定" },
 
   { "key": "concepts.delete.confirmTitle", "category": "concepts", "vi": "Xoá phương án Concept?", "en": "Delete concept option?", "zh": "删除方案设计选项？", "ja": "コンセプト案を削除しますか？" },
-  { "key": "concepts.delete.confirmBody", "category": "concepts", "vi": "Chỉ xoá được \"{name}\" khi còn ở trạng thái Đang thiết kế. Không thể hoàn tác.", "en": "\"{name}\" can only be deleted while still in Drafting. This cannot be undone.", "zh": "仅在设计中状态可删除“{name}”。此操作无法撤销。", "ja": "「{name}」は作成中の状態のみ削除できます。取り消せません。" },
+  { "key": "concepts.delete.confirmBody", "category": "concepts", "vi": "Xóa vĩnh viễn phương án \"{name}\" ở trạng thái hiện tại? Hành động này không thể hoàn tác.", "en": "Permanently delete concept \"{name}\" in its current status? This cannot be undone.", "zh": "永久删除当前状态的方案“{name}”？此操作无法撤销。", "ja": "現在の状態の案「{name}」を完全に削除しますか？元に戻せません。" },
   { "key": "concepts.delete.confirm", "category": "concepts", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
 ]

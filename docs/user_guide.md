@@ -376,6 +376,10 @@ Record defects at the construction site with location and description. Upload de
 | Punchlist Detail | Description, photos/video, status, re-open capability | 2 days |
 | Floor Plan Annotation | Upload drawing, pin defect locations, popup details | 3.5 days |
 
+#### 3.4.7 Permanent Delete Behavior
+
+Users with the relevant management permission can permanently delete records in any workflow status after confirming the destructive action. Edit and workflow-transition buttons may remain locked by status. Deleting a Customer also removes its dependent sales, contract, design, permit, drawing, and construction records; deleting an Opportunity removes its Quotes. Shared users and unrelated records remain, while preserved records such as linked Leads, Surveys, Contracts, or Tenders have the deleted reference cleared. Audit history and physical uploaded files are retained for traceability and storage safety.
+
 ### 3.5 Module 5: Procurement
 
 **Objective**: Manage suppliers, subcontractors, and project materials.
