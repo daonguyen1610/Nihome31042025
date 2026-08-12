@@ -149,7 +149,7 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_TaskWithSuccessor_IsBadRequest()
+    public async Task Delete_TaskWithSuccessor_RemovesEdgesAndNullsAcceptanceLink()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
@@ -159,10 +159,30 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
         {
             predecessorTaskIds = new[] { a },
         })).EnsureSuccessStatusCode();
+        var acceptanceId = await WithDbAsync(async db =>
+        {
+            var record = new AcceptanceRecord
+            {
+                DesignProjectId = projectId,
+                ConstructionTaskId = a,
+                AcceptanceCode = $"A-{Guid.NewGuid():N}"[..20],
+                Title = "Task acceptance",
+                AcceptanceDate = new DateOnly(2026, 6, 5),
+                Status = AcceptanceStatus.Approved,
+            };
+            db.AcceptanceRecords.Add(record);
+            await db.SaveChangesAsync();
+            return record.Id;
+        });
 
-        (await Client.DeleteAsync($"/api/construction-tasks/{a}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await Client.DeleteAsync($"/api/construction-tasks/{b}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.DeleteAsync($"/api/construction-tasks/{a}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/construction-tasks/{b}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.AcceptanceRecords
+            .Where(record => record.Id == acceptanceId)
+            .Select(record => record.ConstructionTaskId)
+            .SingleAsync())).Should().BeNull();
+        (await WithDbAsync(db => db.ConstructionTaskDependencies.AnyAsync(edge =>
+            edge.TaskId == a || edge.PredecessorTaskId == a))).Should().BeFalse();
     }
 
     [Fact]
@@ -195,10 +215,8 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BulkDelete_BlocksWhenExternalDependentSurvives()
+    public async Task BulkDelete_RemovesExternalEdgeAndPreservesDependentTask()
     {
-        // A -> B. Deleting only A must still fail because B (not in the
-        // set) still depends on it — no accidental cascade.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
         var a = await CreateTaskAsync(projectId, "2026-06-01", "2026-06-05");
@@ -210,12 +228,15 @@ public class ConstructionTasksControllerTests : IntegrationTestBase
 
         var res = await Client.PostAsJsonAsync("/api/construction-tasks/bulk-delete", new
         {
-            ids = new[] { a },
+            ids = new[] { a, 999_999 },
         });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
-        body.GetProperty("deleted").GetInt32().Should().Be(0);
+        body.GetProperty("deleted").GetInt32().Should().Be(1);
         body.GetProperty("failures").GetArrayLength().Should().Be(1);
+        (await Client.GetAsync($"/api/construction-tasks/{b}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.ConstructionTaskDependencies.AnyAsync(edge =>
+            edge.TaskId == a || edge.PredecessorTaskId == a))).Should().BeFalse();
     }
 
     [Fact]

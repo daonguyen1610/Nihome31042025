@@ -12,7 +12,7 @@ namespace nihomebackend.tests.Services;
 /// Unit coverage for the NIH-141 Gantt / Construction Task service:
 /// CRUD validation, auto task-code allocation, predecessor cycle
 /// detection, planned-vs-actual date rules, overdue flag on list, and
-/// bulk-delete behaviour when other tasks depend on the row.
+/// hard-delete dependency cleanup.
 /// </summary>
 public class ConstructionTaskServiceTests : IDisposable
 {
@@ -361,7 +361,7 @@ public class ConstructionTaskServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_blocks_when_task_is_predecessor_of_others()
+    public async Task DeleteAsync_removes_incident_edges_nulls_acceptance_and_preserves_other_rows()
     {
         var a = await _sut.CreateAsync(Req("A"), _userId);
         var b = await _sut.CreateAsync(new CreateConstructionTaskRequest
@@ -372,10 +372,26 @@ public class ConstructionTaskServiceTests : IDisposable
             PlannedEnd = new DateOnly(2026, 6, 15),
             PredecessorTaskIds = new List<int> { a.Id },
         }, _userId);
+        var acceptance = new AcceptanceRecord
+        {
+            DesignProjectId = _projectId,
+            ConstructionTaskId = a.Id,
+            AcceptanceCode = "A-TASK-001",
+            Title = "Task acceptance",
+            AcceptanceDate = new DateOnly(2026, 6, 5),
+            Status = AcceptanceStatus.Approved,
+        };
+        _db.AcceptanceRecords.Add(acceptance);
+        await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<ConstructionTaskOperationException>(() => _sut.DeleteAsync(a.Id));
-        Assert.True(await _sut.DeleteAsync(b.Id));
         Assert.True(await _sut.DeleteAsync(a.Id));
+        Assert.False(await _db.ConstructionTasks.AnyAsync(task => task.Id == a.Id));
+        Assert.True(await _db.ConstructionTasks.AnyAsync(task => task.Id == b.Id));
+        Assert.False(await _db.ConstructionTaskDependencies.AnyAsync(edge =>
+            edge.TaskId == a.Id || edge.PredecessorTaskId == a.Id));
+        Assert.Null((await _db.AcceptanceRecords.SingleAsync(record => record.Id == acceptance.Id)).ConstructionTaskId);
+        Assert.True(await _db.DesignProjects.AnyAsync(project => project.Id == _projectId));
+        Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
     }
 
     [Fact]
@@ -414,10 +430,8 @@ public class ConstructionTaskServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task BulkDeleteAsync_blocks_when_external_dependent_survives()
+    public async Task BulkDeleteAsync_removes_external_edges_and_preserves_unselected_tasks()
     {
-        // A -> B. Deleting just A must still fail because B (not in the
-        // delete set) still depends on it.
         var a = await _sut.CreateAsync(Req("A"), _userId);
         var b = await _sut.CreateAsync(new CreateConstructionTaskRequest
         {
@@ -428,13 +442,14 @@ public class ConstructionTaskServiceTests : IDisposable
             PredecessorTaskIds = new List<int> { a.Id },
         }, _userId);
 
-        var response = await _sut.BulkDeleteAsync(new[] { a.Id });
-        Assert.Equal(1, response.Requested);
-        Assert.Equal(0, response.Deleted);
-        Assert.Single(response.Failures);
-        Assert.Equal(a.Id, response.Failures[0].Id);
+        var response = await _sut.BulkDeleteAsync(new[] { a.Id, 999 });
+        Assert.Equal(2, response.Requested);
+        Assert.Equal(1, response.Deleted);
+        var failure = Assert.Single(response.Failures);
+        Assert.Equal(999, failure.Id);
         Assert.True(await _db.ConstructionTasks.AnyAsync(t => t.Id == b.Id));
-        Assert.True(await _db.ConstructionTasks.AnyAsync(t => t.Id == a.Id));
+        Assert.False(await _db.ConstructionTasks.AnyAsync(t => t.Id == a.Id));
+        Assert.False(await _db.ConstructionTaskDependencies.AnyAsync());
     }
 
     [Fact]

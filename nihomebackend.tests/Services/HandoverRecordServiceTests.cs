@@ -222,6 +222,24 @@ public class HandoverRecordServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_removes_any_status_with_history_and_preserves_scope_and_principals()
+    {
+        var created = await _sut.CreateAsync(Request(), _userId, false);
+        var outsider = AddUser("0900000149", "delete.outsider@example.com");
+        Assert.False(await _sut.DeleteAsync(created.Id, outsider.Id, false));
+
+        var entity = await _db.HandoverRecords.SingleAsync(record => record.Id == created.Id);
+        entity.Status = HandoverStatus.HandedOver;
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(created.Id, _userId, false));
+        Assert.False(await _db.HandoverRecords.AnyAsync(record => record.Id == created.Id));
+        Assert.False(await _db.HandoverStatusHistory.AnyAsync(history => history.HandoverRecordId == created.Id));
+        Assert.True(await _db.DesignProjects.AnyAsync(project => project.Id == _projectId));
+        Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
+    }
+
+    [Fact]
     public async Task ListAsync_readyOnly_and_scope_use_canonical_readiness()
     {
         SeedReadyUpstream();

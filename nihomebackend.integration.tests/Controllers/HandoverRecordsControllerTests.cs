@@ -110,6 +110,36 @@ public class HandoverRecordsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_HandedOver_CascadesHistoryAndPreservesSharedPrincipals()
+    {
+        var pmUserId = await UserIdForRoleAsync("PM");
+        var projectId = await CreateProjectAsync(projectManagerUserId: pmUserId);
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var created = await CreateHandoverAsync(projectId, pmUserId,
+            $"Delete handover {Guid.NewGuid():N}", commissioningCompleted: true,
+            checklistCompleted: true, includeSignatory: true);
+        var handoverId = created.GetProperty("id").GetInt32();
+        await SeedCanonicalReadinessAsync(projectId, pmUserId);
+        (await Client.PostAsJsonAsync($"/api/handover-records/{handoverId}/status", new
+        {
+            status = "ReadyForHandover",
+        })).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/handover-records/{handoverId}/complete", new
+        {
+            status = "HandedOver",
+        })).EnsureSuccessStatusCode();
+
+        (await Client.DeleteAsync($"/api/handover-records/{handoverId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/handover-records/{handoverId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.HandoverStatusHistory
+            .AnyAsync(history => history.HandoverRecordId == handoverId))).Should().BeFalse();
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.Id == projectId))).Should().BeTrue();
+        (await WithDbAsync(db => db.Users.AnyAsync(user => user.Id == pmUserId))).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task ReadyForHandover_WhenCommissioningMissing_ReturnsBadRequest()
     {
         var responsibleUserId = await UserIdForRoleAsync("PM");

@@ -11,7 +11,7 @@ namespace nihomebackend.tests.Services;
 /// <summary>
 /// Unit coverage for the NIH-145 as-built dossier service —
 /// state machine, code allocation, completeness roll-up, update
-/// lock on Approved/Archived, and bulk-delete rules.
+/// lock on Approved/Archived, and hard-delete rules.
 /// </summary>
 public class AsBuiltDocumentServiceTests : IDisposable
 {
@@ -198,28 +198,31 @@ public class AsBuiltDocumentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_only_draft_or_cancelled()
+    public async Task DeleteAsync_removes_submitted_and_preserves_shared_principals()
     {
         var a = await _sut.CreateAsync(Req("Del"), _userId);
         await _sut.TransitionAsync(a.Id, new TransitionAsBuiltStatusRequest { Status = "Submitted" }, _userId);
-        await Assert.ThrowsAsync<AsBuiltDocumentOperationException>(() => _sut.DeleteAsync(a.Id));
 
-        // Revise back to Draft — now delete works.
-        await _sut.TransitionAsync(a.Id, new TransitionAsBuiltStatusRequest { Status = "Draft" }, _userId);
         Assert.True(await _sut.DeleteAsync(a.Id));
+        Assert.False(await _db.AsBuiltDocuments.AnyAsync(document => document.Id == a.Id));
+        Assert.True(await _db.DesignProjects.AnyAsync(project => project.Id == _projectId));
+        Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
     }
 
     [Fact]
-    public async Task BulkDelete_skips_non_deletable_statuses()
+    public async Task BulkDelete_removes_all_statuses_and_skips_only_missing()
     {
         var a1 = await _sut.CreateAsync(Req("Bulk1"), _userId);
         var a2 = await _sut.CreateAsync(Req("Bulk2"), _userId);
         await _sut.TransitionAsync(a2.Id, new TransitionAsBuiltStatusRequest { Status = "Submitted" }, _userId);
         await _sut.ApproveAsync(a2.Id, new TransitionAsBuiltStatusRequest { Status = "Approved" }, _userId);
 
-        var res = await _sut.BulkDeleteAsync(new BulkDeleteAsBuiltDocumentsRequest { Ids = new List<int> { a1.Id, a2.Id } });
-        Assert.Contains(a1.Id, res.DeletedIds);
-        Assert.Contains(a2.Id, res.SkippedIds);
+        var res = await _sut.BulkDeleteAsync(new BulkDeleteAsBuiltDocumentsRequest
+        {
+            Ids = new List<int> { a1.Id, a2.Id, 999 },
+        });
+        Assert.Equal(new[] { a1.Id, a2.Id }, res.DeletedIds.Order());
+        Assert.Equal(new[] { 999 }, res.SkippedIds);
     }
 
     [Fact]

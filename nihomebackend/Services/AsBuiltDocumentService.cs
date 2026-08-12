@@ -208,11 +208,6 @@ public class AsBuiltDocumentService(
     {
         var entity = await db.AsBuiltDocuments.FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return false;
-        if (entity.Status != AsBuiltStatus.Draft && entity.Status != AsBuiltStatus.Cancelled)
-        {
-            throw new AsBuiltDocumentOperationException(
-                "Chỉ có thể xoá tài liệu ở trạng thái Nháp hoặc Đã huỷ.");
-        }
         db.AsBuiltDocuments.Remove(entity);
         await db.SaveChangesAsync(ct);
         return true;
@@ -235,15 +230,8 @@ public class AsBuiltDocumentService(
         var response = new AsBuiltDocumentBulkDeleteResponse();
         foreach (var row in rows)
         {
-            if (row.Status == AsBuiltStatus.Draft || row.Status == AsBuiltStatus.Cancelled)
-            {
-                response.DeletedIds.Add(row.Id);
-                db.AsBuiltDocuments.Remove(row);
-            }
-            else
-            {
-                response.SkippedIds.Add(row.Id);
-            }
+            response.DeletedIds.Add(row.Id);
+            db.AsBuiltDocuments.Remove(row);
         }
         response.SkippedIds.AddRange(ids.Except(rows.Select(r => r.Id)));
         if (response.DeletedIds.Count > 0) await db.SaveChangesAsync(ct);

@@ -11,7 +11,7 @@ namespace nihomebackend.tests.Services;
 /// <summary>
 /// Unit coverage for the NIH-146 Punch List service: CRUD validation,
 /// state-machine transitions, reopen counter, overdue roll-up on list,
-/// verified/cancelled lock on edits and bulk-delete rules.
+/// verified/cancelled lock on edits and hard-delete rules.
 /// </summary>
 public class PunchItemServiceTests : IDisposable
 {
@@ -173,15 +173,19 @@ public class PunchItemServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_only_allowed_on_open()
+    public async Task DeleteAsync_removes_non_open_item_and_preserves_shared_principals()
     {
         var p = await _sut.CreateAsync(Req(), _userId);
         await _sut.TransitionStatusAsync(p.Id, new TransitionPunchStatusRequest { Status = "InProgress" }, _userId);
-        await Assert.ThrowsAsync<PunchItemOperationException>(() => _sut.DeleteAsync(p.Id));
+
+        Assert.True(await _sut.DeleteAsync(p.Id));
+        Assert.False(await _db.PunchItems.AnyAsync(item => item.Id == p.Id));
+        Assert.True(await _db.DesignProjects.AnyAsync(project => project.Id == _projectId));
+        Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
     }
 
     [Fact]
-    public async Task BulkDeleteAsync_only_removes_open_and_reports_failures()
+    public async Task BulkDeleteAsync_removes_all_statuses_and_reports_only_missing()
     {
         var a = await _sut.CreateAsync(Req("A"), _userId);
         var b = await _sut.CreateAsync(Req("B"), _userId);
@@ -190,10 +194,9 @@ public class PunchItemServiceTests : IDisposable
 
         var response = await _sut.BulkDeleteAsync(new[] { a.Id, b.Id, c.Id, 999 });
         Assert.Equal(4, response.Requested);
-        Assert.Equal(2, response.Deleted); // a + c
-        Assert.Equal(2, response.Failures.Count);
-        Assert.Contains(response.Failures, f => f.Id == b.Id);
-        Assert.Contains(response.Failures, f => f.Id == 999);
+        Assert.Equal(3, response.Deleted);
+        var failure = Assert.Single(response.Failures);
+        Assert.Equal(999, failure.Id);
     }
 
     [Fact]

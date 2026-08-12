@@ -252,11 +252,6 @@ public class PunchItemService(
     {
         var entity = await db.PunchItems.FirstOrDefaultAsync(pi => pi.Id == id, ct);
         if (entity is null) return false;
-        if (entity.Status != PunchStatus.Open)
-        {
-            throw new PunchItemOperationException(
-                "Chỉ xoá được lỗi ở trạng thái Mở. Chuyển sang Đã huỷ để đóng dòng.");
-        }
         db.PunchItems.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("PunchItem {Id} deleted", id);
@@ -286,25 +281,11 @@ public class PunchItemService(
                 Message = $"Lỗi #{missing} không tồn tại.",
             });
         }
-        var toDelete = new List<PunchItem>();
-        foreach (var row in rows)
+        if (rows.Count > 0)
         {
-            if (row.Status != PunchStatus.Open)
-            {
-                response.Failures.Add(new PunchItemBulkDeleteFailure
-                {
-                    Id = row.Id,
-                    Message = "Chỉ xoá được lỗi ở trạng thái Mở.",
-                });
-                continue;
-            }
-            toDelete.Add(row);
-        }
-        if (toDelete.Count > 0)
-        {
-            db.PunchItems.RemoveRange(toDelete);
+            db.PunchItems.RemoveRange(rows);
             await db.SaveChangesAsync(ct);
-            response.Deleted = toDelete.Count;
+            response.Deleted = rows.Count;
         }
         return response;
     }
