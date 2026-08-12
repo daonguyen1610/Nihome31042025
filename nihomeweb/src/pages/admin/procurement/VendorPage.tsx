@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { extractApiError } from "@/lib/apiError";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { useI18n } from "@/lib/i18n";
 import { adminApi, type CreateVendorRequest, type VendorListParams, type VendorResponse, type VendorType } from "@/services/adminApi";
@@ -37,6 +38,7 @@ export default function VendorPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const pageSize = 20;
 
   useEffect(() => {
@@ -71,20 +73,42 @@ export default function VendorPage() {
     await load();
   };
 
-  const exportRows = () => downloadCsv({
-    filename: createCsvFilename("vendors"),
-    rows,
-    columns: [
-      { header: t("proc.vendors.field.code"), value: "vendorCode" },
-      { header: t("proc.vendors.field.companyName"), value: "companyName" },
-      { header: t("proc.vendors.field.type"), value: (row) => t(`proc.vendors.type.${row.vendorType}`) },
-      { header: t("proc.vendors.field.taxCode"), value: "taxCode" },
-      { header: t("proc.vendors.field.contactPerson"), value: "contactPerson" },
-      { header: t("proc.vendors.field.phone"), value: "phone" },
-      { header: t("proc.vendors.field.email"), value: "email" },
-      { header: t("proc.vendors.field.status"), value: (row) => t(row.isActive ? "proc.vendors.status.active" : "proc.vendors.status.inactive") },
-    ],
-  });
+  const exportRows = async () => {
+    setExporting(true);
+    try {
+      const params: VendorListParams = { page: 1, pageSize: 100, sortBy: "companyName", sortDirection };
+      if (type !== "all") params.vendorType = type;
+      if (status !== "all") params.isActive = status === "active";
+      if (search) params.search = search;
+
+      const firstPage = (await adminApi.listVendors(params)).data;
+      const exportData = [...firstPage.items];
+      const pageCount = Math.ceil(firstPage.total / firstPage.pageSize);
+      for (let exportPage = 2; exportPage <= pageCount; exportPage += 1) {
+        const response = await adminApi.listVendors({ ...params, page: exportPage });
+        exportData.push(...response.data.items);
+      }
+
+      downloadCsv({
+        filename: createCsvFilename("vendors"),
+        rows: exportData,
+        columns: [
+          { header: t("proc.vendors.field.code"), value: "vendorCode" },
+          { header: t("proc.vendors.field.companyName"), value: "companyName" },
+          { header: t("proc.vendors.field.type"), value: (row) => t(`proc.vendors.type.${row.vendorType}`) },
+          { header: t("proc.vendors.field.taxCode"), value: "taxCode" },
+          { header: t("proc.vendors.field.contactPerson"), value: "contactPerson" },
+          { header: t("proc.vendors.field.phone"), value: "phone" },
+          { header: t("proc.vendors.field.email"), value: "email" },
+          { header: t("proc.vendors.field.status"), value: (row) => t(row.isActive ? "proc.vendors.status.active" : "proc.vendors.status.inactive") },
+        ],
+      });
+    } catch (exportError) {
+      toast({ variant: "destructive", title: extractApiError(exportError) || t("common.error") });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -94,7 +118,7 @@ export default function VendorPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div><h1 className="text-2xl font-semibold">{t("proc.vendors.title")}</h1><p className="text-sm text-muted-foreground">{t("proc.vendors.subtitle")}</p></div>
           <div className="flex gap-2">
-            {canExport && <AdminExportButton onClick={exportRows} disabled={rows.length === 0 || loading} />}
+            {canExport && <AdminExportButton onClick={() => void exportRows()} disabled={total === 0 || loading || exporting} />}
             {canManage && <Button onClick={() => setCreating(true)} className="gap-2"><Plus className="h-4 w-4" />{t("proc.vendors.action.create")}</Button>}
           </div>
         </div>

@@ -105,7 +105,8 @@ public class VendorService(AppDbContext db) : IVendorService
 
         db.Vendors.Add(vendor);
         await db.SaveChangesAsync(ct);
-        return Map(vendor, null);
+        await db.Entry(vendor).Reference(v => v.CreatedBy).LoadAsync(ct);
+        return Map(vendor, vendor.CreatedBy?.FullName);
     }
 
     public async Task<VendorResponse?> UpdateAsync(
@@ -114,7 +115,9 @@ public class VendorService(AppDbContext db) : IVendorService
         int callerUserId,
         CancellationToken ct = default)
     {
-        var vendor = await db.Vendors.FirstOrDefaultAsync(v => v.Id == id, ct);
+        var vendor = await db.Vendors
+            .Include(v => v.CreatedBy)
+            .FirstOrDefaultAsync(v => v.Id == id, ct);
         if (vendor is null) return null;
 
         var code = NormalizeCode(request.VendorCode);
@@ -138,7 +141,7 @@ public class VendorService(AppDbContext db) : IVendorService
         vendor.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
-        return Map(vendor, null);
+        return Map(vendor, vendor.CreatedBy?.FullName);
     }
 
     private async Task EnsureCodeAvailableAsync(string code, int? existingId, CancellationToken ct)

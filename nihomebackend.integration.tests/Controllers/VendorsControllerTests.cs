@@ -73,6 +73,12 @@ public class VendorsControllerTests : IntegrationTestBase
         var createdBody = await ReadJsonAsync(created);
         var id = createdBody.GetProperty("id").GetInt32();
         createdBody.GetProperty("isActive").GetBoolean().Should().BeTrue();
+        var createdByName = createdBody.GetProperty("createdByName").GetString();
+        createdByName.Should().NotBeNullOrWhiteSpace();
+
+        var detailBeforeUpdate = await Client.GetAsync($"/api/vendors/{id}");
+        detailBeforeUpdate.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(detailBeforeUpdate)).GetProperty("createdByName").GetString().Should().Be(createdByName);
 
         var filtered = await Client.GetAsync($"/api/vendors?search={code}&vendorType=Supplier&isActive=true");
         filtered.EnsureSuccessStatusCode();
@@ -89,7 +95,9 @@ public class VendorsControllerTests : IntegrationTestBase
             isActive = false,
         });
         updated.EnsureSuccessStatusCode();
-        (await ReadJsonAsync(updated)).GetProperty("isActive").GetBoolean().Should().BeFalse();
+        var updatedBody = await ReadJsonAsync(updated);
+        updatedBody.GetProperty("isActive").GetBoolean().Should().BeFalse();
+        updatedBody.GetProperty("createdByName").GetString().Should().Be(createdByName);
 
         var duplicate = await Client.PostAsJsonAsync("/api/vendors", new
         {
