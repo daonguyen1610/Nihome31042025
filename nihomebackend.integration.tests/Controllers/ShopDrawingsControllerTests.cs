@@ -122,7 +122,7 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BulkDelete_MixedRows_ReportsPartialSuccess()
+    public async Task BulkDelete_MixedStatuses_DeletesEveryRequestedRow()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateShopStageProjectAsync();
@@ -139,8 +139,8 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("requested").GetInt32().Should().Be(3);
-        body.GetProperty("deleted").GetInt32().Should().Be(2);
-        body.GetProperty("failures").GetArrayLength().Should().Be(1);
+        body.GetProperty("deleted").GetInt32().Should().Be(3);
+        body.GetProperty("failures").GetArrayLength().Should().Be(0);
     }
 
     [Fact]

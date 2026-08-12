@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -178,6 +180,58 @@ public class OpportunitiesControllerTests : IntegrationTestBase
         // Manager confirms still exists
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         (await Client.GetAsync($"/api/opportunities/{opId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Delete_WithQuote_RemovesQuoteAndClearsLinkedRecords()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var ids = await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(row => row.Id == opportunityId);
+            var quote = new Quote
+            {
+                Code = UniqueSlug("QT-OP-DELETE"),
+                OpportunityId = opportunityId,
+                AreaSqm = 1,
+                UnitPricePerSqm = 1,
+                Subtotal = 1,
+                GrandTotal = 1,
+            };
+            var contract = new Contract
+            {
+                ContractNumber = UniqueSlug("HD-OP-DELETE"),
+                CustomerId = opportunity.CustomerId,
+                OpportunityId = opportunityId,
+            };
+            var survey = new Survey
+            {
+                Code = UniqueSlug("SV-OP-DELETE"),
+                Location = "Preserved integration survey",
+                SurveyDate = DateTime.UtcNow,
+                LinkedOpportunityId = opportunityId,
+            };
+            db.AddRange(quote, contract, survey);
+            await db.SaveChangesAsync();
+            return (
+                QuoteId: quote.Id,
+                ContractId: contract.Id,
+                SurveyId: survey.Id,
+                CustomerId: opportunity.CustomerId);
+        });
+
+        (await Client.DeleteAsync($"/api/opportunities/{opportunityId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await WithDbAsync(async db =>
+        {
+            (await db.Opportunities.AnyAsync(row => row.Id == opportunityId)).Should().BeFalse();
+            (await db.Quotes.AnyAsync(row => row.Id == ids.QuoteId)).Should().BeFalse();
+            (await db.Contracts.FindAsync(ids.ContractId))!.OpportunityId.Should().BeNull();
+            (await db.Surveys.FindAsync(ids.SurveyId))!.LinkedOpportunityId.Should().BeNull();
+            (await db.Customers.AnyAsync(row => row.Id == ids.CustomerId)).Should().BeTrue();
+        });
     }
 
     // ---------- regression coverage ----------

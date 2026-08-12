@@ -371,12 +371,9 @@ public class OpportunityService(
         if (op is null) return false;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return false;
 
-        // Spec: block delete if linked Quote/Contract exists. Those modules
-        // ship in NIH-84/NIH-87 — placeholder guard until they land.
-        // TODO(NIH-84/NIH-87): re-enable once linked entities exist.
-
-        db.Opportunities.Remove(op);
+        await AggregateDeletionService.DeleteOpportunitiesAsync(db, new[] { id }, ct);
         await db.SaveChangesAsync(ct);
+        logger.LogInformation("Deleted opportunity {Id} and its dependent quote aggregates", id);
         return true;
     }
 
