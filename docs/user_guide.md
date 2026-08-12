@@ -135,8 +135,6 @@ The platform is being developed incrementally. The following components are curr
 
 This section provides detailed functional analysis for each module based on the NICON business requirements.
 
-The implemented procurement vendor area is available at `/admin/vendors`. Authorized users can search by code, company, tax code, contact, phone, email, or trade category; filter by vendor type and active state; sort and page through results; export the current filtered page; create or edit records; and review legal, contact, document, status, and audit metadata on the detail page. Inactive vendors remain visible for historical reporting and are clearly marked as unavailable for new transactions.
-
 ### 3.1 Module 1: CRM / Sale / Contract
 
 **Objective**: Manage customer acquisition and business development flexibly.
@@ -376,13 +374,17 @@ Record defects at the construction site with location and description. Upload de
 
 #### 3.5.1 Vendor and Subcontractor Management
 
-Maintain vendor/subcontractor profiles (company name, tax ID, address, contacts). Upload capability documents. Classify by specialty (materials, construction, MEP, interior, etc.). Track cooperation history. Evaluate partners after each project based on four criteria: quality, schedule, cost, safety.
+Open **Admin > Procurement > Vendors / Subcontractors** or navigate to `/admin/vendors`. Authorized users can search by code, company, tax code, contact, phone, email, or trade category; filter by vendor type and active state; sort and paginate the results; and export the complete filtered result. Users with management permission can create and edit company, legal, contact, capability-document, and status information.
+
+Select a company name or the view action to open its detail page. The page shows company, contact, document, active-status, creator, and timestamp information. Inactive vendors remain available for historical reporting and are clearly marked as unavailable for new transactions.
+
+The current NIH-165 scope does not include file upload, project cooperation history, partner evaluations, bid comparisons, subcontracts, or warehouse transactions. Those capabilities remain planned procurement work.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Vendor List | All vendors and subcontractors | 1.5 days |
-| Vendor Create/Edit | Create and update vendor information | 2 days |
-| Vendor Detail | Capability documents, licenses, cooperation history, evaluations | 2.5 days |
+| Vendor List | Search, filter, sort, paginate, and export vendors and subcontractors | Implemented |
+| Vendor Create/Edit | Create and update profile, contact, document-link, and active-status information | Implemented |
+| Vendor Detail | Company, contact, license, document-link, status, and audit metadata | Implemented |
 
 #### 3.5.2 Bid Comparison (Bid Tabulation)
 

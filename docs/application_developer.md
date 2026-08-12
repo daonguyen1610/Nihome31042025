@@ -24,9 +24,7 @@ Last Updated: 12 August 2026
 
 ## 1. Overview
 
-Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, procurement vendor management, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, and project handover. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
-
-The procurement vendor vertical slice uses `/api/vendors` for paged search, type/status filtering, sorting, detail, create, and update operations. Access is controlled by `proc.vendors.view`, `proc.vendors.manage`, and `proc.vendors.export`. Vendor codes are normalized to uppercase and unique. The `IsActive` flag preserves historical partners while preventing the UI from presenting them as available for new work. Bid comparisons, evaluations, subcontracts, and warehouse links remain separate future procurement slices.
+Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, and project handover. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
 
 This guide covers development setup, configuration, database management, build and test procedures, and deployment.
 
@@ -563,6 +561,21 @@ To add a new content entity:
 - Keep controllers under 20 lines per action method where possible.
 - JSON columns use string serialization (e.g., `ContentJson`, `SectionsJson`).
 
+### 7.5 Procurement Vendor API
+
+The procurement vendor slice stores supplier and subcontractor profiles in `procurement_vendors`. Vendor codes are trimmed, normalized to uppercase, and protected by a unique database index. Deactivation uses `IsActive` instead of deleting historical partner records.
+
+Both `/api/vendors` and `/api/v1/vendors` expose the same controller:
+
+| Method | Route | Permission | Purpose |
+|--------|-------|------------|---------|
+| `GET` | `/api/vendors` | `proc.vendors.view` | Search, filter, sort, and paginate vendors |
+| `GET` | `/api/vendors/{id}` | `proc.vendors.view` | Read vendor details and audit metadata |
+| `POST` | `/api/vendors` | `proc.vendors.manage` | Create an active vendor |
+| `PUT` | `/api/vendors/{id}` | `proc.vendors.manage` | Update profile data or active status |
+
+Duplicate normalized codes return `409`; invalid request data returns `400`; missing records return `404`. Create and update operations write `vendor.create` and `vendor.update` audit events. `proc.vendors.export` controls the frontend export action but does not grant API read access by itself.
+
 ---
 
 ## 8. Frontend Development
@@ -599,7 +612,7 @@ API calls are organized into typed modules under `src/services/`. `authApi.ts` o
 
 Admin list exports are implemented on the frontend with `src/lib/exportCsv.ts` and `src/components/admin/AdminExportButton.tsx`. The helper writes UTF-8 BOM CSV output so Excel opens Vietnamese, Chinese, and Japanese text correctly without adding an `.xlsx` dependency.
 
-Export buttons must preserve the current filters and sort order and remain disabled when there are no rows. Small, unpaginated lists can export the loaded rows on the frontend. Paginated operational lists must use an authorized backend export endpoint so the file contains the complete filtered result rather than only the visible page. The as-built dossier follows this pattern through `GET /api/as-built-documents/export` and records the export in the audit log.
+Export buttons must preserve the current filters and sort order, contain the complete filtered result rather than only the visible page, and remain disabled when there are no rows. Small, unpaginated lists can export loaded rows on the frontend. A bounded, low-volume list may retrieve all matching API pages before generating the file. High-volume exports and exports that require server-side authorization or audit records must use a dedicated backend endpoint. The as-built dossier follows the backend pattern through `GET /api/as-built-documents/export` and records the export in the audit log.
 
 The project handover list follows the same backend-export pattern through `GET /api/handover-records/export`. Its CSV includes a UTF-8 BOM, preserves active filters and sorting, records an audit event, and prefixes formula-like cell values so spreadsheet applications do not execute them.
 
@@ -627,6 +640,12 @@ Both `/api/handover-records` and `/api/v1/handover-records` expose the same cont
 `view.all` controls unrestricted reads; `manage.all` independently controls unrestricted writes. A caller with only the base permission is scoped to records they created or own and projects they manage or lead. Business-rule failures return `400`, hidden/missing records return `404`, and duplicate or concurrent writes return `409` so clients can reload instead of overwriting newer data.
 
 Readiness is derived on the server from approved partial acceptance, required approved as-built categories, unresolved punch items, commissioning, and checklist completion. Clients must display this result and must not duplicate it as an authoritative frontend calculation.
+
+### 8.7 Procurement Vendor Frontend
+
+The protected routes are `/admin/vendors` and `/admin/vendors/:id`. The list provides server-side search, vendor-type and active-state filters, company-name sorting, pagination, and responsive table/card views. The create/edit dialog retains entered values when the API rejects a request. The detail page shows company, contact, document, status, and audit metadata and resolves persisted document links through `src/lib/url.ts` before rendering them.
+
+CSV export preserves the active filters and sort order. Because the vendor API currently caps pages at 100 rows and has no dedicated export endpoint, the client retrieves every matching page before passing the complete result to `src/lib/exportCsv.ts`. If vendor volume or export auditing requirements grow, replace this batching with an authorized backend export endpoint.
 
 ---
 
