@@ -245,10 +245,10 @@ public class HandoverRecordService(
         CancellationToken ct = default)
     {
         var entity = await ApplyScope(db.HandoverRecords, callerUserId, canSeeAll)
+            .Include(row => row.StatusHistory)
             .FirstOrDefaultAsync(row => row.Id == id, ct);
         if (entity is null) return false;
-        if (entity.Status is not (HandoverStatus.Draft or HandoverStatus.Cancelled))
-            throw new HandoverRecordOperationException("Chỉ có thể xoá hồ sơ nháp hoặc đã huỷ.");
+        db.HandoverStatusHistory.RemoveRange(entity.StatusHistory);
         db.HandoverRecords.Remove(entity);
         await SaveWithConcurrencyAsync(ct);
         return true;

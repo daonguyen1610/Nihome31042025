@@ -279,25 +279,20 @@ public class ConstructionTaskService(
         var entity = await db.ConstructionTasks.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return false;
 
-        // Block delete when this task is a predecessor for another —
-        // the caller must first re-wire the dependent tasks.
-        var dependents = await db.ConstructionTaskDependencies
-            .CountAsync(d => d.PredecessorTaskId == id, ct);
-        if (dependents > 0)
+        var dependencyEdges = await db.ConstructionTaskDependencies
+            .Where(d => d.TaskId == id || d.PredecessorTaskId == id)
+            .ToListAsync(ct);
+        if (dependencyEdges.Count > 0)
         {
-            throw new ConstructionTaskOperationException(
-                $"Không thể xoá — công việc này đang là tiền nhiệm của {dependents} công việc khác.");
+            db.ConstructionTaskDependencies.RemoveRange(dependencyEdges);
         }
 
-        // Explicitly clear this task's own predecessor edges before
-        // dropping the task itself — SQL Server cascades handle this via
-        // the mapping, but the in-memory provider used in tests does not.
-        var ownEdges = await db.ConstructionTaskDependencies
-            .Where(d => d.TaskId == id)
+        var acceptanceRecords = await db.AcceptanceRecords
+            .Where(record => record.ConstructionTaskId == id)
             .ToListAsync(ct);
-        if (ownEdges.Count > 0)
+        foreach (var acceptanceRecord in acceptanceRecords)
         {
-            db.ConstructionTaskDependencies.RemoveRange(ownEdges);
+            acceptanceRecord.ConstructionTaskId = null;
         }
 
         db.ConstructionTasks.Remove(entity);
@@ -322,17 +317,6 @@ public class ConstructionTaskService(
         var rows = await db.ConstructionTasks
             .Where(t => distinctIds.Contains(t.Id))
             .ToListAsync(ct);
-        // Count only *external* dependents — edges pointing from a task
-        // that is itself in the delete set will be cleaned up before the
-        // row is removed, so they must not block the operation. Without
-        // this exclusion, bulk-deleting a whole dependency chain would
-        // always fail on the earlier links.
-        var dependencyCounts = await db.ConstructionTaskDependencies
-            .Where(d => distinctIds.Contains(d.PredecessorTaskId)
-                     && !distinctIds.Contains(d.TaskId))
-            .GroupBy(d => d.PredecessorTaskId)
-            .Select(g => new { Id = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Id, x => x.Count, ct);
 
         var response = new ConstructionTaskBulkDeleteResponse { Requested = distinctIds.Count };
         var found = rows.Select(r => r.Id).ToHashSet();
@@ -345,38 +329,32 @@ public class ConstructionTaskService(
             });
         }
 
-        var toDelete = new List<ConstructionTask>();
-        foreach (var row in rows)
+        if (rows.Count > 0)
         {
-            if (dependencyCounts.TryGetValue(row.Id, out var depCount) && depCount > 0)
-            {
-                response.Failures.Add(new ConstructionTaskBulkDeleteFailure
-                {
-                    Id = row.Id,
-                    Message = $"Đang là tiền nhiệm của {depCount} công việc khác.",
-                });
-                continue;
-            }
-            toDelete.Add(row);
-        }
-
-        if (toDelete.Count > 0)
-        {
-            var toDeleteIds = toDelete.Select(t => t.Id).ToList();
-            // Same reasoning as DeleteAsync — explicit dependency cleanup
-            // for providers that don't honour cascade delete.
-            var ownEdges = await db.ConstructionTaskDependencies
-                .Where(d => toDeleteIds.Contains(d.TaskId))
+            var toDeleteIds = rows.Select(t => t.Id).ToList();
+            var dependencyEdges = await db.ConstructionTaskDependencies
+                .Where(d => toDeleteIds.Contains(d.TaskId)
+                    || toDeleteIds.Contains(d.PredecessorTaskId))
                 .ToListAsync(ct);
-            if (ownEdges.Count > 0)
+            if (dependencyEdges.Count > 0)
             {
-                db.ConstructionTaskDependencies.RemoveRange(ownEdges);
+                db.ConstructionTaskDependencies.RemoveRange(dependencyEdges);
             }
-            db.ConstructionTasks.RemoveRange(toDelete);
+
+            var acceptanceRecords = await db.AcceptanceRecords
+                .Where(record => record.ConstructionTaskId.HasValue
+                    && toDeleteIds.Contains(record.ConstructionTaskId.Value))
+                .ToListAsync(ct);
+            foreach (var acceptanceRecord in acceptanceRecords)
+            {
+                acceptanceRecord.ConstructionTaskId = null;
+            }
+
+            db.ConstructionTasks.RemoveRange(rows);
             await db.SaveChangesAsync(ct);
-            response.Deleted = toDelete.Count;
+            response.Deleted = rows.Count;
             logger.LogInformation("ConstructionTask bulk-deleted {Count} rows ({Ids})",
-                toDelete.Count, string.Join(",", toDelete.Select(r => r.Id)));
+                rows.Count, string.Join(",", rows.Select(r => r.Id)));
         }
         return response;
     }

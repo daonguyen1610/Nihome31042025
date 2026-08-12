@@ -176,7 +176,20 @@ public class AsBuiltDocumentsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BulkDelete_SkipsApproved()
+    public async Task Delete_Approved_HardDeletes()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (projectId, id) = await CreateSubmittedAsync();
+        (await Client.PostAsJsonAsync($"/api/as-built-documents/{id}/approve", new { status = "Approved" }))
+            .EnsureSuccessStatusCode();
+
+        (await Client.DeleteAsync($"/api/as-built-documents/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/as-built-documents/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/design-projects/{projectId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task BulkDelete_AllStatuses_SkipsOnlyMissing()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
@@ -188,12 +201,14 @@ public class AsBuiltDocumentsControllerTests : IntegrationTestBase
 
         var res = await Client.PostAsJsonAsync("/api/as-built-documents/bulk-delete", new
         {
-            ids = new[] { draftId, submittedId },
+            ids = new[] { draftId, submittedId, 999_999 },
         });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
-        body.GetProperty("deletedIds").EnumerateArray().Select(x => x.GetInt32()).Should().Contain(draftId);
-        body.GetProperty("skippedIds").EnumerateArray().Select(x => x.GetInt32()).Should().Contain(submittedId);
+        body.GetProperty("deletedIds").EnumerateArray().Select(x => x.GetInt32())
+            .Should().BeEquivalentTo(new[] { draftId, submittedId });
+        body.GetProperty("skippedIds").EnumerateArray().Select(x => x.GetInt32())
+            .Should().Equal(999_999);
     }
 
     [Fact]

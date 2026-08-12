@@ -287,11 +287,6 @@ public class AcceptanceRecordService(
         var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return false;
-        if (entity.Status == AcceptanceStatus.Approved)
-        {
-            throw new AcceptanceRecordOperationException(
-                "Không thể xoá biên bản đã được duyệt. Hãy huỷ (Cancel) trước khi xoá.");
-        }
         db.AcceptanceRecords.Remove(entity);
         await db.SaveChangesAsync(ct);
         return true;
@@ -316,18 +311,9 @@ public class AcceptanceRecordService(
         var response = new AcceptanceRecordBulkDeleteResponse();
         foreach (var row in rows)
         {
-            if (row.Status == AcceptanceStatus.Approved)
-            {
-                response.SkippedIds.Add(row.Id);
-            }
-            else
-            {
-                response.DeletedIds.Add(row.Id);
-                db.AcceptanceRecords.Remove(row);
-            }
+            response.DeletedIds.Add(row.Id);
+            db.AcceptanceRecords.Remove(row);
         }
-        // Missing ids also skipped (surfaced to the caller so their toast
-        // can distinguish 'blocked' vs 'gone').
         response.SkippedIds.AddRange(ids.Except(rows.Select(r => r.Id)));
         if (response.DeletedIds.Count > 0) await db.SaveChangesAsync(ct);
         return response;

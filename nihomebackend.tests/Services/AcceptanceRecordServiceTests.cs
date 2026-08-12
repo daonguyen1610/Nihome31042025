@@ -12,7 +12,7 @@ namespace nihomebackend.tests.Services;
 /// <summary>
 /// Unit coverage for the NIH-143 partial acceptance service — state
 /// machine, code allocation, filter roll-ups, update lock on
-/// Approved/Cancelled and bulk-delete rules.
+/// Approved/Cancelled and hard-delete rules.
 /// </summary>
 public class AcceptanceRecordServiceTests : IDisposable
 {
@@ -204,25 +204,32 @@ public class AcceptanceRecordServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_blocks_approved()
+    public async Task DeleteAsync_removes_approved_and_preserves_shared_principals()
     {
         var a = await _sut.CreateAsync(Req("NoDel"), _userId);
         await _sut.TransitionAsync(a.Id, new TransitionAcceptanceStatusRequest { Status = "Submitted" }, _userId);
         await _sut.ApproveAsync(a.Id, new TransitionAcceptanceStatusRequest { Status = "Approved" }, _userId);
-        await Assert.ThrowsAsync<AcceptanceRecordOperationException>(() => _sut.DeleteAsync(a.Id));
+
+        Assert.True(await _sut.DeleteAsync(a.Id));
+        Assert.False(await _db.AcceptanceRecords.AnyAsync(record => record.Id == a.Id));
+        Assert.True(await _db.DesignProjects.AnyAsync(project => project.Id == _projectId));
+        Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
     }
 
     [Fact]
-    public async Task BulkDelete_skips_approved()
+    public async Task BulkDelete_removes_approved_and_skips_only_missing()
     {
         var a1 = await _sut.CreateAsync(Req("Bulk1"), _userId);
         var a2 = await _sut.CreateAsync(Req("Bulk2"), _userId);
         await _sut.TransitionAsync(a2.Id, new TransitionAcceptanceStatusRequest { Status = "Submitted" }, _userId);
         await _sut.ApproveAsync(a2.Id, new TransitionAcceptanceStatusRequest { Status = "Approved" }, _userId);
 
-        var res = await _sut.BulkDeleteAsync(new BulkDeleteAcceptanceRecordsRequest { Ids = new List<int> { a1.Id, a2.Id } });
-        Assert.Contains(a1.Id, res.DeletedIds);
-        Assert.Contains(a2.Id, res.SkippedIds);
+        var res = await _sut.BulkDeleteAsync(new BulkDeleteAcceptanceRecordsRequest
+        {
+            Ids = new List<int> { a1.Id, a2.Id, 999 },
+        });
+        Assert.Equal(new[] { a1.Id, a2.Id }, res.DeletedIds.Order());
+        Assert.Equal(new[] { 999 }, res.SkippedIds);
     }
 
     [Fact]

@@ -151,7 +151,20 @@ public class PunchItemsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BulkDelete_OpenOnly()
+    public async Task Delete_NonOpen_HardDeletes()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var id = await CreatePunchAsync(projectId);
+        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "InProgress" })).EnsureSuccessStatusCode();
+
+        (await Client.DeleteAsync($"/api/punch-items/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/punch-items/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/design-projects/{projectId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task BulkDelete_AllStatuses_ReportOnlyMissing()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
@@ -164,8 +177,10 @@ public class PunchItemsControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("requested").GetInt32().Should().Be(4);
-        body.GetProperty("deleted").GetInt32().Should().Be(2);
-        body.GetProperty("failures").GetArrayLength().Should().Be(2);
+        body.GetProperty("deleted").GetInt32().Should().Be(3);
+        var failures = body.GetProperty("failures");
+        failures.GetArrayLength().Should().Be(1);
+        failures[0].GetProperty("id").GetInt32().Should().Be(999_999);
     }
 
     [Fact]
