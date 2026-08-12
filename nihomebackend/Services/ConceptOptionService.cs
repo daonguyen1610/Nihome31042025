@@ -158,12 +158,6 @@ public class ConceptOptionService(
         var entity = await db.ConceptOptions.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (entity is null) return false;
 
-        if (entity.Status != ConceptOptionStatus.Drafting)
-        {
-            throw new ConceptOptionOperationException(
-                "Chỉ có thể xoá phương án khi còn ở trạng thái Đang thiết kế. Hãy loại bỏ (Discard) thay vì xoá.");
-        }
-
         db.ConceptOptions.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("ConceptOption {Id} deleted", id);

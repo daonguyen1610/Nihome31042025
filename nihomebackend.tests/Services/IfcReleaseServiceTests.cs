@@ -357,7 +357,32 @@ public class IfcReleaseServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_AfterRelease_Throws()
+    public async Task RemoveItemAndRecipient_AfterRelease_Succeeds()
+    {
+        var release = await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.AddItemsAsync(release.Id, new AddIfcReleaseItemsRequest
+        {
+            ShopDrawingIds = new List<int> { _approvedShopId },
+        }, _userId);
+        await _sut.AddRecipientAsync(release.Id, new AddIfcReleaseRecipientRequest
+        {
+            Name = "ABC",
+            RecipientTypeCode = "main-contractor",
+        }, _userId);
+        var released = await _sut.ReleaseAsync(release.Id, _userId);
+
+        var withoutItem = await _sut.RemoveItemAsync(
+            release.Id, released.Items.Single().Id, _userId);
+        var withoutRecipient = await _sut.RemoveRecipientAsync(
+            release.Id, released.Recipients.Single().Id, _userId);
+
+        Assert.Empty(withoutItem.Items);
+        Assert.Empty(withoutRecipient.Recipients);
+        Assert.NotNull(await _db.IfcReleases.FindAsync(release.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AfterRelease_Succeeds()
     {
         var release = await _sut.CreateAsync(ValidCreate(), _userId);
         await _sut.AddItemsAsync(release.Id, new AddIfcReleaseItemsRequest
@@ -370,7 +395,8 @@ public class IfcReleaseServiceTests : IDisposable
             RecipientTypeCode = "main-contractor",
         }, _userId);
         await _sut.ReleaseAsync(release.Id, _userId);
-        await Assert.ThrowsAsync<IfcReleaseOperationException>(() =>
-            _sut.DeleteAsync(release.Id));
+
+        Assert.True(await _sut.DeleteAsync(release.Id));
+        Assert.Null(await _db.IfcReleases.FindAsync(release.Id));
     }
 }

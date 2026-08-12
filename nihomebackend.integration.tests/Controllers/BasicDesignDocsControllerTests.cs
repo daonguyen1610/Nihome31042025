@@ -161,6 +161,40 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task Delete_AfterReview_RemovesRevision()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        var id = await CreateDocAsync(projectId, "architecture");
+        (await Client.PostAsJsonAsync($"/api/basic-design-docs/{id}/status", new { status = "SubmittedForReview" }))
+            .EnsureSuccessStatusCode();
+        await WithDbAsync(async db =>
+        {
+            var userId = await db.Users.Select(user => user.Id).FirstAsync();
+            db.DrawingRevisions.Add(new DrawingRevision
+            {
+                TargetType = DrawingRevisionTargetType.BasicDesignDoc,
+                TargetId = id,
+                RevisionNumber = 1,
+                ReasonCode = "client-change",
+                Note = "Delete cleanup",
+                IsCurrent = true,
+                CreatedByUserId = userId,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        (await Client.DeleteAsync($"/api/basic-design-docs/{id}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await WithDbAsync(async db =>
+        {
+            (await db.BasicDesignDocs.AnyAsync(doc => doc.Id == id)).Should().BeFalse();
+            (await db.DrawingRevisions.AnyAsync(revision => revision.TargetId == id
+                && revision.TargetType == DrawingRevisionTargetType.BasicDesignDoc)).Should().BeFalse();
+        });
+    }
+
     // -------- helpers --------
 
     /// <summary>

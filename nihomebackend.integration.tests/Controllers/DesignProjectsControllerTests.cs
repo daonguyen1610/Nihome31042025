@@ -106,19 +106,69 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_BeyondConcept_IsBadRequest()
+    public async Task Delete_BeyondConcept_RemovesRestrictedDependentsAndPreservesExternalRows()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
-        var id = await CreateAsync(customerId, "Cannot delete after stage");
+        var id = await CreateAsync(customerId, "Delete aggregate after stage");
         await Client.PutAsJsonAsync($"/api/design-projects/{id}", new
         {
-            name = "Cannot delete after stage",
+            name = "Delete aggregate after stage",
             customerId,
             currentStage = "BasicDesign",
         });
+        var userId = await WithDbAsync<int>(db => db.Users.Select(user => user.Id).FirstAsync());
+        var taskId = await WithDbAsync<int>(async db =>
+        {
+            var task = new ConstructionTask
+            {
+                DesignProjectId = id,
+                TaskCode = $"T-{Guid.NewGuid():N}",
+                Name = "Aggregate task",
+                PlannedStart = new DateOnly(2026, 8, 1),
+                PlannedEnd = new DateOnly(2026, 8, 2),
+            };
+            db.ConstructionTasks.Add(task);
+            await db.SaveChangesAsync();
+            db.ConstructionTaskDependencies.Add(new ConstructionTaskDependency
+            {
+                TaskId = task.Id,
+                PredecessorTaskId = task.Id,
+            });
+            db.AcceptanceRecords.Add(new AcceptanceRecord
+            {
+                DesignProjectId = id,
+                ConstructionTaskId = task.Id,
+                AcceptanceCode = $"A-{Guid.NewGuid():N}",
+                Title = "Acceptance blocker",
+                AcceptanceDate = new DateOnly(2026, 8, 3),
+            });
+            db.HandoverRecords.Add(new HandoverRecord
+            {
+                DesignProjectId = id,
+                HandoverCode = $"H-{Guid.NewGuid():N}",
+                Title = "Handover blocker",
+                PlannedHandoverDate = new DateOnly(2026, 8, 4),
+                ResponsibleUserId = userId,
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            });
+            await db.SaveChangesAsync();
+            return task.Id;
+        });
+
         (await Client.DeleteAsync($"/api/design-projects/{id}"))
-            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await WithDbAsync(async db =>
+        {
+            (await db.DesignProjects.AnyAsync(project => project.Id == id)).Should().BeFalse();
+            (await db.ConstructionTaskDependencies.AnyAsync(dependency => dependency.TaskId == taskId
+                || dependency.PredecessorTaskId == taskId)).Should().BeFalse();
+            (await db.AcceptanceRecords.AnyAsync(record => record.DesignProjectId == id)).Should().BeFalse();
+            (await db.HandoverRecords.AnyAsync(record => record.DesignProjectId == id)).Should().BeFalse();
+            (await db.Customers.AnyAsync(customer => customer.Id == customerId)).Should().BeTrue();
+            (await db.Users.AnyAsync(user => user.Id == userId)).Should().BeTrue();
+        });
     }
 
     [Fact]

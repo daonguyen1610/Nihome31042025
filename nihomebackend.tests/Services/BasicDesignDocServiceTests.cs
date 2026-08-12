@@ -212,13 +212,26 @@ public class BasicDesignDocServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_AfterReview_Throws()
+    public async Task DeleteAsync_AfterReview_RemovesRevisions()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         await _sut.TransitionStatusAsync(created.Id,
             new TransitionBasicDesignDocStatusRequest { Status = "SubmittedForReview" }, _userId);
-        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
-            _sut.DeleteAsync(created.Id));
+        _db.DrawingRevisions.Add(new DrawingRevision
+        {
+            TargetType = DrawingRevisionTargetType.BasicDesignDoc,
+            TargetId = created.Id,
+            RevisionNumber = 1,
+            ReasonCode = "client-change",
+            Note = "Delete cleanup",
+            IsCurrent = true,
+            CreatedByUserId = _userId,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.Null(await _db.BasicDesignDocs.FindAsync(created.Id));
+        Assert.Empty(await _db.DrawingRevisions.ToListAsync());
     }
 
     // ---------------- helpers ----------------

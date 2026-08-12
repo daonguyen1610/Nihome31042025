@@ -177,15 +177,45 @@ public class DesignProjectService(
         var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
         if (entity is null) return false;
 
-        // Overview-slice guard: refuse to hard-delete a project that has
-        // moved beyond Concept. Downstream stages will attach docs +
-        // members, so a raw DELETE would blow away referential history.
-        // NIH-114+ replaces this with a real "has any doc?" check.
-        if (entity.CurrentStage != DesignProjectStage.Concept)
-        {
-            throw new DesignProjectOperationException(
-                "Không thể xoá dự án đã qua giai đoạn Concept. Hãy chuyển trạng thái sang Tạm dừng hoặc Huỷ.");
-        }
+        var basicDesignDocIds = await db.BasicDesignDocs
+            .Where(doc => doc.DesignProjectId == id)
+            .Select(doc => doc.Id)
+            .ToListAsync(ct);
+        var shopDrawingIds = await db.ShopDrawings
+            .Where(drawing => drawing.DesignProjectId == id)
+            .Select(drawing => drawing.Id)
+            .ToListAsync(ct);
+        var taskIds = await db.ConstructionTasks
+            .Where(task => task.DesignProjectId == id)
+            .Select(task => task.Id)
+            .ToListAsync(ct);
+
+        var revisions = await db.DrawingRevisions
+            .Where(revision =>
+                (revision.TargetType == DrawingRevisionTargetType.BasicDesignDoc
+                    && basicDesignDocIds.Contains(revision.TargetId))
+                || (revision.TargetType == DrawingRevisionTargetType.ShopDrawing
+                    && shopDrawingIds.Contains(revision.TargetId)))
+            .ToListAsync(ct);
+        var releaseItems = await db.IfcReleaseItems
+            .Where(item => shopDrawingIds.Contains(item.ShopDrawingId))
+            .ToListAsync(ct);
+        var taskDependencies = await db.ConstructionTaskDependencies
+            .Where(dependency => taskIds.Contains(dependency.TaskId)
+                || taskIds.Contains(dependency.PredecessorTaskId))
+            .ToListAsync(ct);
+        var acceptanceRecords = await db.AcceptanceRecords
+            .Where(record => record.DesignProjectId == id)
+            .ToListAsync(ct);
+        var handoverRecords = await db.HandoverRecords
+            .Where(record => record.DesignProjectId == id)
+            .ToListAsync(ct);
+
+        db.DrawingRevisions.RemoveRange(revisions);
+        db.IfcReleaseItems.RemoveRange(releaseItems);
+        db.ConstructionTaskDependencies.RemoveRange(taskDependencies);
+        db.AcceptanceRecords.RemoveRange(acceptanceRecords);
+        db.HandoverRecords.RemoveRange(handoverRecords);
 
         db.DesignProjects.Remove(entity);
         await db.SaveChangesAsync(ct);

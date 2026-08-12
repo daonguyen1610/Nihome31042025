@@ -277,12 +277,15 @@ public class ShopDrawingService(
         var entity = await db.ShopDrawings.FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return false;
 
-        if (entity.Status != ShopDrawingStatus.Drafting)
-        {
-            throw new ShopDrawingOperationException(
-                "Chỉ xoá được bản vẽ khi còn ở trạng thái Đang vẽ.");
-        }
-
+        var releaseItems = await db.IfcReleaseItems
+            .Where(item => item.ShopDrawingId == id)
+            .ToListAsync(ct);
+        var revisions = await db.DrawingRevisions
+            .Where(revision => revision.TargetType == DrawingRevisionTargetType.ShopDrawing
+                && revision.TargetId == id)
+            .ToListAsync(ct);
+        db.IfcReleaseItems.RemoveRange(releaseItems);
+        db.DrawingRevisions.RemoveRange(revisions);
         db.ShopDrawings.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("ShopDrawing {Id} deleted", id);

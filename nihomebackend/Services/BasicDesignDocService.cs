@@ -246,12 +246,11 @@ public class BasicDesignDocService(
         var entity = await db.BasicDesignDocs.FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return false;
 
-        if (entity.Status != BasicDesignDocStatus.InProgress)
-        {
-            throw new BasicDesignDocOperationException(
-                "Chỉ xoá được bản vẽ khi còn ở trạng thái Đang thiết kế.");
-        }
-
+        var revisions = await db.DrawingRevisions
+            .Where(revision => revision.TargetType == DrawingRevisionTargetType.BasicDesignDoc
+                && revision.TargetId == id)
+            .ToListAsync(ct);
+        db.DrawingRevisions.RemoveRange(revisions);
         db.BasicDesignDocs.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("BasicDesignDoc {Id} deleted", id);
