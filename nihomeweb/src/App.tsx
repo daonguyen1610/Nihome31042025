@@ -38,6 +38,8 @@ import AdminProjects from "./pages/admin/Projects.tsx";
 import AdminContacts from "./pages/admin/Contacts.tsx";
 import AdminLeads from "./pages/admin/Leads.tsx";
 import AdminCustomers from "./pages/admin/Customers.tsx";
+import VendorPage from "./pages/admin/procurement/VendorPage.tsx";
+import VendorDetail from "./pages/admin/procurement/VendorDetail.tsx";
 import AdminOpportunities from "./pages/admin/Opportunities.tsx";
 import AdminQuotes from "./pages/admin/Quotes.tsx";
 import AdminQuoteDetail from "./pages/admin/QuoteDetail.tsx";
@@ -158,6 +160,10 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.customers} />}>
                 <Route path="/admin/customers" element={<AdminCustomers />} />
+              </Route>
+              <Route element={<RequirePermission code={ADMIN_PERMS.vendors} />}>
+                <Route path="/admin/vendors" element={<VendorPage />} />
+                <Route path="/admin/vendors/:id" element={<VendorDetail />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.opportunities} />}>
                 <Route path="/admin/opportunities" element={<AdminOpportunities />} />

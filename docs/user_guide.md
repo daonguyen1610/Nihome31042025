@@ -2,7 +2,7 @@
 
 Version 1.0
 
-Last Updated: 10 August 2026
+Last Updated: 12 August 2026
 
 ---
 
@@ -123,7 +123,8 @@ The platform is being developed incrementally. The following components are curr
 | Construction management (tasks/Gantt and site diaries) | Implemented |
 | Acceptance and handover | Implemented |
 | Punchlist management | Implemented |
-| Procurement module (vendors, BOQ, MR, warehouse) | Not yet implemented |
+| Procurement vendor management | Implemented |
+| Procurement BOQ, material requests, and warehouse | Not yet implemented |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
 | Google Drive integration | Not yet implemented |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
@@ -133,6 +134,8 @@ The platform is being developed incrementally. The following components are curr
 ## 3. Module Analysis
 
 This section provides detailed functional analysis for each module based on the NICON business requirements.
+
+The implemented procurement vendor area is available at `/admin/vendors`. Authorized users can search by code, company, tax code, contact, phone, email, or trade category; filter by vendor type and active state; sort and page through results; export the current filtered page; create or edit records; and review legal, contact, document, status, and audit metadata on the detail page. Inactive vendors remain visible for historical reporting and are clearly marked as unavailable for new transactions.
 
 ### 3.1 Module 1: CRM / Sale / Contract
 

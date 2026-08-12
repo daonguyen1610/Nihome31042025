@@ -2318,5 +2318,53 @@
     "en": "Manage handover records across all projects regardless of assignment.",
     "zh": "管理所有项目的交付记录，不受分配范围限制。",
     "ja": "担当範囲に関係なく全プロジェクトの引渡記録を管理します。"
+  },
+  {
+    "key": "rbac.perm.proc.vendors.view.label",
+    "category": "rbac",
+    "vi": "Xem nhà cung cấp / thầu phụ",
+    "en": "View vendors / subcontractors",
+    "zh": "查看供应商 / 分包商",
+    "ja": "仕入先 / 下請業者を表示"
+  },
+  {
+    "key": "rbac.perm.proc.vendors.view.description",
+    "category": "rbac",
+    "vi": "Xem danh sách và chi tiết đối tác mua sắm.",
+    "en": "View procurement vendor lists and details.",
+    "zh": "查看采购供应商列表和详细信息。",
+    "ja": "調達仕入先の一覧と詳細を表示します。"
+  },
+  {
+    "key": "rbac.perm.proc.vendors.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý nhà cung cấp / thầu phụ",
+    "en": "Manage vendors / subcontractors",
+    "zh": "管理供应商 / 分包商",
+    "ja": "仕入先 / 下請業者を管理"
+  },
+  {
+    "key": "rbac.perm.proc.vendors.manage.description",
+    "category": "rbac",
+    "vi": "Tạo, chỉnh sửa và thay đổi trạng thái đối tác mua sắm.",
+    "en": "Create, update, and change procurement vendor status.",
+    "zh": "创建、编辑和更改采购供应商状态。",
+    "ja": "調達仕入先の作成、編集、状態変更を行います。"
+  },
+  {
+    "key": "rbac.perm.proc.vendors.export.label",
+    "category": "rbac",
+    "vi": "Xuất danh sách đối tác",
+    "en": "Export vendors",
+    "zh": "导出供应商",
+    "ja": "仕入先をエクスポート"
+  },
+  {
+    "key": "rbac.perm.proc.vendors.export.description",
+    "category": "rbac",
+    "vi": "Xuất danh sách đối tác đang được lọc sang CSV.",
+    "en": "Export the current filtered vendor list to CSV.",
+    "zh": "将当前筛选的供应商列表导出为 CSV。",
+    "ja": "現在絞り込まれている仕入先一覧をCSVに出力します。"
   }
 ]

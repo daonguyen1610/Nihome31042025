@@ -601,6 +601,68 @@ export interface CustomerListParams {
   pageSize?: number;
 }
 
+// -------- Procurement Vendor --------
+
+export type VendorType = "Supplier" | "SubContractor" | "Both";
+
+export interface VendorResponse {
+  id: number;
+  vendorCode: string;
+  companyName: string;
+  vendorType: VendorType;
+  taxCode?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  contactPerson?: string;
+  licenseNo?: string;
+  tradeCategory?: string;
+  capabilityFileUrl?: string;
+  driveFolder?: string;
+  isActive: boolean;
+  createdByUserId: number;
+  createdByName?: string;
+  createdAt: string;
+  updatedByUserId?: number;
+  updatedAt: string;
+}
+
+export interface VendorListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: VendorResponse[];
+}
+
+export interface CreateVendorRequest {
+  vendorCode: string;
+  companyName: string;
+  vendorType: VendorType;
+  taxCode?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  contactPerson?: string;
+  licenseNo?: string;
+  tradeCategory?: string;
+  capabilityFileUrl?: string;
+  driveFolder?: string;
+}
+
+export interface UpdateVendorRequest extends CreateVendorRequest {
+  isActive: boolean;
+}
+
+export interface VendorListParams {
+  vendorType?: VendorType;
+  isActive?: boolean;
+  search?: string;
+  sortBy?: "vendorCode" | "companyName" | "vendorType" | "updatedAt";
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
 // ─── CRM Opportunity (NIH-83) ────────────────────────────────────────
 
 export type OpportunityStage =
@@ -3001,6 +3063,23 @@ export const adminApi = {
     api.delete(`/customers/${id}/contacts/${contactId}`),
   addCustomerActivity: (id: number, body: CreateCustomerActivityRequest) =>
     api.post<CustomerActivityResponse>(`/customers/${id}/activities`, body),
+
+  // Procurement vendors
+  listVendors: (params: VendorListParams = {}) => {
+    const q = new URLSearchParams();
+    if (params.vendorType) q.append("vendorType", params.vendorType);
+    if (params.isActive != null) q.append("isActive", String(params.isActive));
+    if (params.search) q.append("search", params.search);
+    if (params.sortBy) q.append("sortBy", params.sortBy);
+    if (params.sortDirection) q.append("sortDirection", params.sortDirection);
+    if (params.page) q.append("page", String(params.page));
+    if (params.pageSize) q.append("pageSize", String(params.pageSize));
+    const qs = q.toString();
+    return api.get<VendorListResponse>(`/vendors${qs ? `?${qs}` : ""}`);
+  },
+  getVendor: (id: number) => api.get<VendorResponse>(`/vendors/${id}`),
+  createVendor: (body: CreateVendorRequest) => api.post<VendorResponse>("/vendors", body),
+  updateVendor: (id: number, body: UpdateVendorRequest) => api.put<VendorResponse>(`/vendors/${id}`, body),
 
   // CRM opportunities (NIH-83)
   listOpportunities: (params: OpportunityListParams = {}) => {
