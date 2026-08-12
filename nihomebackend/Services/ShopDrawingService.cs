@@ -446,6 +446,10 @@ public class ShopDrawingService(
         OwnerName = d.Owner?.FullName,
         Status = d.Status.ToString(),
         Note = d.Note,
+        FilePath = d.FilePath,
+        OriginalFileName = d.OriginalFileName,
+        FileSize = d.FileSize,
+        ContentType = d.ContentType,
         CreatedAt = d.CreatedAt,
         UpdatedAt = d.UpdatedAt,
     };

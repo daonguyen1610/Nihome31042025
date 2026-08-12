@@ -52,10 +52,10 @@ For development setup, database management, build procedures, and deployment ins
 
 NICON operates as a Design and Build construction company based in Ho Chi Minh City, Vietnam. The business model covers the full lifecycle of construction projects: from initial customer engagement and design through permitting, construction execution, quality acceptance, and final handover.
 
-- **Site Name**: Nihome (NICON Platform)
-- **Primary Contact**: 1900 3311
-- **Primary Email**: nihome@nihome.vn
-- **Address**: 123 Nguyen Hue Street, District 1, Ho Chi Minh City, Vietnam
+- **Site Name**: NICON
+- **Primary Contact**: 028 7300 1976
+- **Primary Email**: info@nihome.vn
+- **Address**: 92 Đường 56, Phường Bình Trưng, TP. Hồ Chí Minh
 
 ### 2.2 System Scope
 
@@ -248,6 +248,8 @@ Manage drawings for construction permit applications. Maintain technical descrip
 #### 3.2.4 Phase 3: Detailed Design / Shop Drawing
 
 Manage detailed construction drawings separated by discipline (Architecture, Structure, MEP, Interior). Catalog drawings by construction work item. Link drawings to construction tasks. Manage drawing versions. Submit for review and approval.
+
+The current implementation manages drawing metadata, workflow status, revision reasons, and IFC distribution records. Binary design-file upload, in-browser PDF/DWG preview, revision file snapshots, and IFC package export remain deferred; therefore the Documents tab lists design records but does not currently provide an Open or Download action for Concept, Basic Design, or Shop Drawing files.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

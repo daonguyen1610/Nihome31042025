@@ -37,6 +37,71 @@ public class DbSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_UsesRealisticNiconSettings_AndCreatesEveryBusinessRoleUser()
+    {
+        DbSeeder.Seed(_db);
+
+        var settings = _db.SiteSettings.Single();
+        Assert.Equal("NICON", settings.SiteName);
+        Assert.Contains("thi công trọn gói", settings.SiteDescription);
+
+        var businessRoles = _db.Roles.Where(role => !role.IsSystem).ToList();
+        Assert.NotEmpty(businessRoles);
+        Assert.All(businessRoles, role => Assert.Contains(_db.Users, user =>
+            user.RoleEntityId == role.Id
+            && user.Email != null
+            && user.Email.EndsWith("@nihome.vn")));
+    }
+
+    [Fact]
+    public void Seed_BackfillsOnlyExactLegacySiteAndDemoUserValues()
+    {
+        var settings = CreateSettings(EmailTemplateFormatter.DefaultOtpBody);
+        settings.SiteName = "NICON Custom Portal";
+        settings.SiteDescription = "Căn hộ dịch vụ cao cấp - Không gian sống tiện nghi";
+        _db.SiteSettings.Add(settings);
+        _db.Users.Add(new ApplicationUser
+        {
+            PhoneNumber = "0911000003",
+            FullName = "Sale Tester",
+            Email = "sale.test@nihome.vn",
+            Role = UserRole.USER,
+            IsActive = true,
+        });
+        _db.SaveChanges();
+
+        DbSeeder.Seed(_db);
+
+        var reloadedSettings = _db.SiteSettings.Single();
+        Assert.Equal("NICON Custom Portal", reloadedSettings.SiteName);
+        Assert.Contains("thi công trọn gói", reloadedSettings.SiteDescription);
+        var sale = _db.Users.Single(user => user.PhoneNumber == "0911000003");
+        Assert.Equal("Nguyễn Minh Anh", sale.FullName);
+        Assert.Equal("minh.anh.sale@nihome.vn", sale.Email);
+        Assert.Equal(_db.Roles.Single(role => role.Code == "SALE").Id, sale.RoleEntityId);
+    }
+
+    [Fact]
+    public void Seed_PreservesCustomDemoUserIdentity()
+    {
+        _db.Users.Add(new ApplicationUser
+        {
+            PhoneNumber = "0911000003",
+            FullName = "Tên quản trị tùy chỉnh",
+            Email = "custom.owner@example.com",
+            Role = UserRole.USER,
+            IsActive = true,
+        });
+        _db.SaveChanges();
+
+        DbSeeder.Seed(_db);
+
+        var sale = _db.Users.Single(user => user.PhoneNumber == "0911000003");
+        Assert.Equal("Tên quản trị tùy chỉnh", sale.FullName);
+        Assert.Equal("custom.owner@example.com", sale.Email);
+    }
+
+    [Fact]
     public void Seed_AddsProcessDocumentsFromSeedJson()
     {
         DbSeeder.Seed(_db);

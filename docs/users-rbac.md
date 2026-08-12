@@ -75,11 +75,9 @@ The same endpoints are also exposed below `/api/v1/handover-records`. Unauthoriz
 
 ## Seeded test users (dev + integration tests)
 
-Development and integration seeders provide deterministic accounts for the system roles and selected business roles used by manual smoke, integration, and Playwright tests. Not every role in the catalog has a seeded login. Account identifiers and development credentials are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and `nihomeweb/e2e/fixtures/auth.ts`; keep those sources aligned rather than duplicating secrets here.
+Development and integration seeders provide deterministic accounts for the system and business roles used by manual smoke, integration, and Playwright tests. Account identifiers and development credentials are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and `nihomeweb/e2e/fixtures/auth.ts`; keep those sources aligned rather than duplicating secrets here.
 
-The seeded business-role login set currently covers `SALE`, `SALES_MANAGER`, `DESIGN`, `PM`, `QS`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a deterministic `USER` account.
-
-`DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, and `LEGAL_OFFICER` currently have no deterministic development login. Create test users explicitly when a scenario requires those roles.
+The development seed now provides a deterministic login for every declared business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `LEGAL_OFFICER`, `QS`, `ACCOUNTANT`, `WAREHOUSE`, and `BGD`. Integration tests additionally provide a deterministic `USER` account.
 
 System roles are stored using the legacy `UserRole` enum; business-role users carry `Role = USER` and the real role link via `RoleEntityId`. `PermissionService` reads `RoleEntityId` first, so the business-role permission matrix from `rbac-defaults.json` applies as-is.
 
