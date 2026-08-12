@@ -1810,6 +1810,10 @@ export interface BasicDesignDocResponse {
   ownerName?: string | null;
   status: BasicDesignDocStatus;
   note?: string | null;
+  filePath?: string | null;
+  originalFileName?: string | null;
+  fileSize?: number | null;
+  contentType?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1891,6 +1895,10 @@ export interface ShopDrawingResponse {
   ownerName?: string | null;
   status: ShopDrawingStatus;
   note?: string | null;
+  filePath?: string | null;
+  originalFileName?: string | null;
+  fileSize?: number | null;
+  contentType?: string | null;
   createdAt: string;
   updatedAt: string;
 }

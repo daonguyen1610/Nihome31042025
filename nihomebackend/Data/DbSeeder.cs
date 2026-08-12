@@ -5,6 +5,11 @@ namespace NihomeBackend.Data;
 
 public static class DbSeeder
 {
+    private const string SiteName = "NICON";
+    private const string SiteDescription = "Tư vấn thiết kế và thi công trọn gói nhà máy, nhà xưởng và công trình dân dụng.";
+    private const string SiteAddress = "92 Đường 56, Phường Bình Trưng, TP. Hồ Chí Minh";
+    private const string SiteMapUrl = "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed";
+
     /// <summary>
     /// Seed the database with baseline users, RBAC, master-data, content
     /// translations and sample CRM rows. <paramref name="webRootPath"/>
@@ -70,14 +75,14 @@ public static class DbSeeder
         {
             db.SiteSettings.Add(new SiteSettings
             {
-                SiteName = "Nihome",
-                SiteDescription = "Căn hộ dịch vụ cao cấp - Không gian sống tiện nghi",
-                PrimaryEmail = "nihome@nihome.vn",
-                SecondaryEmail = "booking@nihome.vn",
-                PrimaryPhone = "1900 3311",
-                SecondaryPhone = "+84 987 654 321",
-                Address = "92 Đường 56, Bình Trưng, Hồ Chí Minh 700000, Vietnam",
-                MapEmbedUrl = "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed",
+                SiteName = SiteName,
+                SiteDescription = SiteDescription,
+                PrimaryEmail = "info@nihome.vn",
+                SecondaryEmail = "projects@nihome.vn",
+                PrimaryPhone = "028 7300 1976",
+                SecondaryPhone = "+84 90 000 2006",
+                Address = SiteAddress,
+                MapEmbedUrl = SiteMapUrl,
                 EnableOtpForRegistration = true,
                 EnableOtpForForgotPassword = true,
                 OtpEmailSubjectTemplate = EmailTemplateFormatter.DefaultOtpSubject,
@@ -95,6 +100,47 @@ public static class DbSeeder
         if (existingSettings != null)
         {
             var updated = false;
+
+            if (existingSettings.SiteName == "Nihome")
+            {
+                existingSettings.SiteName = SiteName;
+                updated = true;
+            }
+            if (existingSettings.SiteDescription == "Căn hộ dịch vụ cao cấp - Không gian sống tiện nghi")
+            {
+                existingSettings.SiteDescription = SiteDescription;
+                updated = true;
+            }
+            if (existingSettings.PrimaryEmail == "nihome@nihome.vn")
+            {
+                existingSettings.PrimaryEmail = "info@nihome.vn";
+                updated = true;
+            }
+            if (existingSettings.SecondaryEmail == "booking@nihome.vn")
+            {
+                existingSettings.SecondaryEmail = "projects@nihome.vn";
+                updated = true;
+            }
+            if (existingSettings.PrimaryPhone == "1900 3311")
+            {
+                existingSettings.PrimaryPhone = "028 7300 1976";
+                updated = true;
+            }
+            if (existingSettings.SecondaryPhone == "+84 987 654 321")
+            {
+                existingSettings.SecondaryPhone = "+84 90 000 2006";
+                updated = true;
+            }
+            if (existingSettings.Address == "92 Đường 56, Bình Trưng, Hồ Chí Minh 700000, Vietnam")
+            {
+                existingSettings.Address = SiteAddress;
+                updated = true;
+            }
+            if (string.IsNullOrWhiteSpace(existingSettings.MapEmbedUrl))
+            {
+                existingSettings.MapEmbedUrl = SiteMapUrl;
+                updated = true;
+            }
 
             if (string.IsNullOrWhiteSpace(existingSettings.OtpEmailSubjectTemplate))
             {
@@ -127,12 +173,6 @@ public static class DbSeeder
                 updated = true;
             }
 
-            if (string.IsNullOrWhiteSpace(existingSettings.MapEmbedUrl))
-            {
-                existingSettings.MapEmbedUrl = "https://www.google.com/maps?q=92+%C4%90%C6%B0%E1%BB%9Dng+56%2C+B%C3%ACnh+Tr%C6%B0ng%2C+H%E1%BB%93+Ch%C3%AD+Minh+700000%2C+Vietnam&output=embed";
-                updated = true;
-            }
-
             if (updated)
             {
                 existingSettings.UpdatedAt = now;
@@ -153,16 +193,21 @@ public static class DbSeeder
     // Phone numbers used here are stable, predictable test credentials so the
     // RBAC test matrix in docs/users-rbac.md and the playwright/integration
     // tests can always log in as any role.
-    private static readonly (string RoleCode, string Phone, string FullName, string Email)[] _businessRoleUsers =
+    private static readonly (string RoleCode, string Phone, string FullName, string Email, string? LegacyName, string? LegacyEmail)[] _businessRoleUsers =
     [
-        ("SALE",           "0911000003", "Sale Tester",           "sale.test@nihome.vn"),
-        ("SALES_MANAGER",  "0911000010", "Sales Manager Tester",  "sales.manager.test@nihome.vn"),
-        ("DESIGN",         "0911000004", "Design Tester",         "design.test@nihome.vn"),
-        ("PM",             "0911000005", "PM Tester",             "pm.test@nihome.vn"),
-        ("QS",             "0911000006", "QS Tester",             "qs.test@nihome.vn"),
-        ("ACCOUNTANT",     "0911000007", "Accountant Tester",     "accountant.test@nihome.vn"),
-        ("WAREHOUSE",      "0911000008", "Warehouse Tester",      "warehouse.test@nihome.vn"),
-        ("BGD",            "0911000009", "BGD Tester",            "bgd.test@nihome.vn"),
+        ("SALE",            "0911000003", "Nguyễn Minh Anh",  "minh.anh.sale@nihome.vn",       "Sale Tester",          "sale.test@nihome.vn"),
+        ("SALES_MANAGER",   "0911000010", "Trần Quốc Huy",    "quoc.huy.sales@nihome.vn",      "Sales Manager Tester", "sales.manager.test@nihome.vn"),
+        ("DESIGN",          "0911000004", "Lê Hoàng Nam",     "hoang.nam.design@nihome.vn",    "Design Tester",        "design.test@nihome.vn"),
+        ("DESIGN_LEAD",     "0911000011", "Phạm Thu Hà",      "thu.ha.design@nihome.vn",       null,                   null),
+        ("ARCHITECT",       "0911000012", "Vũ Đức Long",      "duc.long.architect@nihome.vn",  null,                   null),
+        ("MEP_ENGINEER",    "0911000013", "Đỗ Thành Công",    "thanh.cong.mep@nihome.vn",      null,                   null),
+        ("STRUCT_ENGINEER", "0911000014", "Bùi Quang Khải",   "quang.khai.struct@nihome.vn",   null,                   null),
+        ("PM",              "0911000005", "Ngô Tuấn Kiệt",    "tuan.kiet.pm@nihome.vn",        "PM Tester",            "pm.test@nihome.vn"),
+        ("LEGAL_OFFICER",   "0911000015", "Đặng Ngọc Mai",    "ngoc.mai.legal@nihome.vn",      null,                   null),
+        ("QS",              "0911000006", "Hoàng Gia Bảo",    "gia.bao.qs@nihome.vn",          "QS Tester",            "qs.test@nihome.vn"),
+        ("ACCOUNTANT",      "0911000007", "Nguyễn Thùy Linh", "thuy.linh.accounting@nihome.vn", "Accountant Tester",    "accountant.test@nihome.vn"),
+        ("WAREHOUSE",       "0911000008", "Trịnh Văn Sơn",    "van.son.warehouse@nihome.vn",   "Warehouse Tester",     "warehouse.test@nihome.vn"),
+        ("BGD",             "0911000009", "Phan Anh Dũng",    "anh.dung.bgd@nihome.vn",        "BGD Tester",           "bgd.test@nihome.vn"),
     ];
 
     private static void SeedBusinessRoleUsers(AppDbContext db)
@@ -172,10 +217,29 @@ public static class DbSeeder
             .Where(r => !r.IsSystem)
             .ToDictionary(r => r.Code, r => r.Id, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var (code, phone, fullName, email) in _businessRoleUsers)
+        foreach (var (code, phone, fullName, email, legacyName, legacyEmail) in _businessRoleUsers)
         {
             if (!rolesByCode.TryGetValue(code, out var roleId)) continue;
-            if (db.Users.Any(u => u.PhoneNumber == phone)) continue;
+
+            var existingUser = db.Users.FirstOrDefault(u => u.PhoneNumber == phone);
+            if (existingUser is not null)
+            {
+                var hasLegacyIdentity = (legacyName is not null && existingUser.FullName == legacyName)
+                    || (legacyEmail is not null && existingUser.Email == legacyEmail);
+                if (!existingUser.RoleEntityId.HasValue || hasLegacyIdentity)
+                {
+                    existingUser.RoleEntityId = roleId;
+                }
+                if (legacyName is not null && existingUser.FullName == legacyName)
+                {
+                    existingUser.FullName = fullName;
+                }
+                if (legacyEmail is not null && existingUser.Email == legacyEmail)
+                {
+                    existingUser.Email = email;
+                }
+                continue;
+            }
 
             var user = new ApplicationUser
             {

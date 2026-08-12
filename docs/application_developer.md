@@ -790,6 +790,14 @@ Before deploying to production:
 
 The production artifact includes `web.config` for the ASP.NET Core Module and serves the compiled SPA from `wwwroot`. `NIHOMEWEB_DIST_PATH` can override the frontend distribution directory at runtime; startup fails if the configured directory does not exist. Swagger is Development-only and should not be enabled by switching production to the Development environment.
 
+### 10.1 Deterministic demonstration data
+
+`DbSeeder` creates a deterministic demonstration dataset covering the CRM funnel, all contract statuses, design stages, permitting, construction, acceptance, as-built, and handover workflows. Seeder-owned rows use stable markers such as `[SAMPLE]`, `[SAMPLE_CONTRACT]`, and `[SAMPLE_DP]`; downstream records are attached only to marker-owned sample projects rather than arbitrary database rows.
+
+The dataset is idempotent: rerunning startup seeding preserves row counts and administrator-edited free text and values. A constrained repair pass updates only sample-marker relationship fields needed for referential coherence, including opportunity/quote links, project/customer/contract links, and PM/design-lead assignments. Sales records are owned by the SALE demo user, project and construction records prefer PM, design documents prefer DESIGN_LEAD then DESIGN, and permit work prefers LEGAL_OFFICER with safe fallbacks.
+
+When a web root is available, the seeder materializes small placeholder PDFs beneath `wwwroot/files/capability/`, `wwwroot/files/contracts/`, and `wwwroot/files/asbuilt/`; URL metadata is still seeded when no web root is supplied. These files and all named contacts, phone numbers, and email addresses in sample rows are demonstration data, not real personal or customer data, and must not be treated as production records.
+
 ---
 
 ## 11. Troubleshooting

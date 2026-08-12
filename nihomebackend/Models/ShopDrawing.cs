@@ -55,6 +55,12 @@ public class ShopDrawing
     /// <summary>Free-text working note.</summary>
     public string? Note { get; set; }
 
+    /// <summary>Host-relative path to the current PDF/source file.</summary>
+    public string? FilePath { get; set; }
+    public string? OriginalFileName { get; set; }
+    public long? FileSize { get; set; }
+    public string? ContentType { get; set; }
+
     // --- Audit ---
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedByUserId { get; set; }

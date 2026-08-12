@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DraftingCompass, FileText, History, Lightbulb, Loader2, PackageCheck, RefreshCw, Ruler } from "lucide-react";
+import { Download, DraftingCompass, ExternalLink, FileText, History, Lightbulb, Loader2, PackageCheck, RefreshCw, Ruler } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
+import { resolveAssetUrl } from "@/lib/url";
 import {
   adminApi,
   type BasicDesignDocResponse,
@@ -24,6 +25,15 @@ interface DocumentsState {
   shopDrawings: ShopDrawingResponse[];
   revisions: DrawingRevisionResponse[];
   ifcReleases: IfcReleaseResponse[];
+}
+
+interface DocumentRow {
+  id: number;
+  code: string;
+  title: string;
+  status: string;
+  filePath?: string | null;
+  originalFileName?: string | null;
 }
 
 const EMPTY_STATE: DocumentsState = {
@@ -74,7 +84,7 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
     [data],
   );
 
-  const groups = [
+  const groups: Array<{ key: string; title: string; icon: typeof FileText; rows: DocumentRow[] }> = [
     {
       key: "concepts",
       title: t("designProjects.documents.group.concepts"),
@@ -85,13 +95,13 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
       key: "basic",
       title: t("designProjects.documents.group.basic"),
       icon: Ruler,
-      rows: data.basicDocs.map((item) => ({ id: item.id, code: item.documentCode, title: item.title, status: t(`basicDesign.status.${item.status}`) })),
+      rows: data.basicDocs.map((item) => ({ id: item.id, code: item.documentCode, title: item.title, status: t(`basicDesign.status.${item.status}`), filePath: item.filePath, originalFileName: item.originalFileName })),
     },
     {
       key: "shop",
       title: t("designProjects.documents.group.shop"),
       icon: DraftingCompass,
-      rows: data.shopDrawings.map((item) => ({ id: item.id, code: item.drawingCode, title: item.title, status: t(`shopDrawing.status.${item.status}`) })),
+      rows: data.shopDrawings.map((item) => ({ id: item.id, code: item.drawingCode, title: item.title, status: t(`shopDrawing.status.${item.status}`), filePath: item.filePath, originalFileName: item.originalFileName })),
     },
     {
       key: "revisions",
@@ -163,9 +173,25 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
                         <p className="font-mono text-xs text-slate-500">{row.code}</p>
                         <p className="truncate text-sm font-medium text-slate-900">{row.title}</p>
                       </div>
-                      <Badge variant="outline" className="max-w-full whitespace-normal text-right text-xs font-normal text-slate-600">
-                        {row.status}
-                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="max-w-full whitespace-normal text-right text-xs font-normal text-slate-600">
+                          {row.status}
+                        </Badge>
+                        {row.filePath ? (
+                          <>
+                            <Button asChild size="icon" variant="ghost" className="h-7 w-7" title={t("designProjects.documents.openFile")}>
+                              <a href={resolveAssetUrl(row.filePath)} target="_blank" rel="noopener noreferrer" aria-label={t("designProjects.documents.openFile")}>
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </Button>
+                            <Button asChild size="icon" variant="ghost" className="h-7 w-7" title={t("designProjects.documents.downloadFile")}>
+                              <a href={resolveAssetUrl(row.filePath)} download={row.originalFileName ?? true} aria-label={t("designProjects.documents.downloadFile")}>
+                                <Download className="h-3.5 w-3.5" />
+                              </a>
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>

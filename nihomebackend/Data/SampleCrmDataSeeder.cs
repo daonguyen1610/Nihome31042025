@@ -26,6 +26,9 @@ public static class SampleCrmDataSeeder
                     ?? db.Users.FirstOrDefault(u => u.Role == UserRole.SUPER_ADMIN)
                     ?? db.Users.FirstOrDefault();
         if (owner is null) return;
+        var projectManager = ResolveRoleUser(db, "PM", owner);
+        var designOwner = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
+        var legalOwner = ResolveRoleUser(db, "LEGAL_OFFICER", projectManager);
 
         SeedLeads(db, owner, now);
         SeedCustomers(db, owner, now);
@@ -37,18 +40,21 @@ public static class SampleCrmDataSeeder
         SeedTenders(db, owner, now);
         SeedSurveys(db, owner, now);
         SeedDesignProjects(db, owner, now);
-        SeedPermitChecklists(db, owner, now);
-        SeedConceptOptions(db, owner, now);
-        SeedBasicDesignDocs(db, owner, now);
-        SeedShopDrawings(db, owner, now);
-        SeedDrawingRevisions(db, owner, now);
-        SeedIfcReleases(db, owner, now);
-        SeedConstructionTasks(db, owner, now);
-        SeedSiteDiaries(db, owner, now);
-        SeedPunchItems(db, owner, now);
-        SeedAcceptanceRecords(db, owner, now);
-        SeedAsBuiltDocuments(db, owner, now);
-        SeedHandoverRecords(db, owner, now);
+        SeedPermitChecklists(db, legalOwner, now);
+        SeedConceptOptions(db, designOwner, now);
+        SeedBasicDesignDocs(db, designOwner, now);
+        SeedShopDrawings(db, designOwner, now);
+        SeedDesignLifecycleHistory(db, designOwner, now);
+        SeedDesignSampleFiles(db, webRootPath);
+        SeedDrawingRevisions(db, designOwner, now);
+        SeedIfcReleases(db, designOwner, now);
+        SeedConstructionTasks(db, projectManager, now);
+        SeedSiteDiaries(db, projectManager, now);
+        SeedPunchItems(db, projectManager, now);
+        SeedAcceptanceRecords(db, projectManager, now);
+        SeedAsBuiltDocuments(db, projectManager, now, webRootPath);
+        SeedHandoverRecords(db, projectManager, now);
+        RepairSampleRelationships(db, owner);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -405,7 +411,7 @@ public static class SampleCrmDataSeeder
             (2, QuoteMethod.Boq,      QuoteStatus.PendingApproval,   30, "Chờ duyệt nội bộ"),
             (3, QuoteMethod.UnitCost, QuoteStatus.Approved,          30, "Đã duyệt · sẵn gửi khách"),
             (4, QuoteMethod.Boq,      QuoteStatus.SentToCustomer,     2, "Đã gửi khách · sắp hết hạn"),
-            (0, QuoteMethod.UnitCost, QuoteStatus.CustomerApproved,  60, "Khách đã duyệt · terminal"),
+            (4, QuoteMethod.UnitCost, QuoteStatus.CustomerApproved,  60, "Khách đã duyệt · terminal"),
             (1, QuoteMethod.Boq,      QuoteStatus.Rejected,          30, "Khách từ chối · terminal"),
             (2, QuoteMethod.UnitCost, QuoteStatus.Expired,           -5, "Hết hạn · quá hạn 5 ngày"),
             (3, QuoteMethod.Boq,      QuoteStatus.Cancelled,         30, "Đã huỷ · terminal"),
@@ -695,12 +701,19 @@ public static class SampleCrmDataSeeder
 
     private static void SeedContractHeaders(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        var sampleCustomers = db.Customers
-            .Where(c => c.Name.StartsWith(SampleTag))
-            .OrderBy(c => c.Id)
-            .Take(6)
+        var sampleOpportunities = db.Opportunities
+            .Where(o => o.Name.StartsWith(SampleTag))
+            .OrderBy(o => o.Id)
             .ToList();
-        if (sampleCustomers.Count == 0) return;
+        if (sampleOpportunities.Count == 0) return;
+
+        var sampleQuotes = db.Quotes
+            .Where(q => q.Note != null && q.Note.StartsWith(SampleQuoteNoteMarker))
+            .OrderByDescending(q => q.Status == QuoteStatus.CustomerApproved)
+            .ThenBy(q => q.Id)
+            .ToList()
+            .GroupBy(q => q.OpportunityId)
+            .ToDictionary(group => group.Key, group => group.First());
 
         var year = now.Year;
         var nextSeq = 1 + (db.Contracts.AsNoTracking()
@@ -711,7 +724,7 @@ public static class SampleCrmDataSeeder
             .DefaultIfEmpty(0)
             .Max());
 
-        // (custIdx, status, signedOffsetDays, durationDays, value, label)
+        // (opportunityIdx, status, signedOffsetDays, durationDays, value, label)
         // The InProgress row uses a short remaining window on purpose so
         // the FE red badge (endDate - now ≤ 30 days) has a live example.
         var seeds = new (int CustIdx, ContractStatus Status, int SignedOffset, int DurationDays, decimal Value, string Label)[]
@@ -720,14 +733,14 @@ public static class SampleCrmDataSeeder
             (1, ContractStatus.Signed,     -20, 200,  850_000_000m, "Đã ký — chuẩn bị khởi công"),
             (2, ContractStatus.InProgress, -90, 100, 1_500_000_000m, "Đang thi công — sắp kết thúc"),
             (3, ContractStatus.InProgress, -30, 240,  620_000_000m, "Đang thi công — mới bắt đầu"),
-            (4, ContractStatus.OnHold,     -60, 180,  480_000_000m, "Tạm dừng theo yêu cầu KH"),
-            (5, ContractStatus.Completed, -240, 180,  980_000_000m, "Hoàn thành, đã bàn giao"),
+            (3, ContractStatus.OnHold,     -60, 180,  480_000_000m, "Tạm dừng theo yêu cầu KH"),
+            (4, ContractStatus.Completed, -240, 180,  980_000_000m, "Hoàn thành, đã bàn giao"),
         };
 
-        foreach (var (custIdx, status, signedOffset, durationDays, value, label) in seeds)
+        foreach (var (opportunityIdx, status, signedOffset, durationDays, value, label) in seeds)
         {
-            if (custIdx >= sampleCustomers.Count) continue;
-            var customer = sampleCustomers[custIdx];
+            var opportunity = sampleOpportunities[opportunityIdx % sampleOpportunities.Count];
+            sampleQuotes.TryGetValue(opportunity.Id, out var quote);
             var signedDate = status == ContractStatus.Draft ? (DateTime?)null : now.AddDays(signedOffset);
             var startDate = signedDate?.AddDays(7);
             var endDate = startDate?.AddDays(durationDays);
@@ -736,7 +749,9 @@ public static class SampleCrmDataSeeder
             db.Contracts.Add(new Contract
             {
                 ContractNumber = number,
-                CustomerId = customer.Id,
+                CustomerId = opportunity.CustomerId,
+                OpportunityId = opportunity.Id,
+                QuoteId = quote?.Id,
                 OwnerUserId = owner.Id,
                 Status = status,
                 SignedDate = signedDate,
@@ -1062,60 +1077,72 @@ public static class SampleCrmDataSeeder
         // Phase 2 — DB rows are inserted only when the sample set is
         // absent, so admin edits (e.g. renaming a sample row) are not
         // clobbered on subsequent boots.
-        if (db.CapabilityDocuments.Any(d => d.Description != null
-            && d.Description.StartsWith(SampleCapabilityMarker))) return;
-
-        var i = 0;
-        foreach (var (name, tag, issuedDaysAgo, expiryDaysFromNow, file) in seeds)
+        if (!db.CapabilityDocuments.Any(d => d.Description != null
+            && d.Description.StartsWith(SampleCapabilityMarker)))
         {
-            long size = 512 * 1024 * (i + 1);
-            if (storageDir is not null)
+            var i = 0;
+            foreach (var (name, tag, issuedDaysAgo, expiryDaysFromNow, file) in seeds)
             {
-                var fullPath = Path.Combine(storageDir, file);
-                if (File.Exists(fullPath)) size = new FileInfo(fullPath).Length;
+                long size = 512 * 1024 * (i + 1);
+                if (storageDir is not null)
+                {
+                    var fullPath = Path.Combine(storageDir, file);
+                    if (File.Exists(fullPath)) size = new FileInfo(fullPath).Length;
+                }
+
+                var doc = new CapabilityDocument
+                {
+                    Name = name,
+                    TagCode = tag,
+                    IssuedDate = issuedDaysAgo.HasValue ? now.AddDays(issuedDaysAgo.Value) : null,
+                    ExpiryDate = expiryDaysFromNow.HasValue ? now.AddDays(expiryDaysFromNow.Value) : null,
+                    Description = $"{SampleCapabilityMarker} Sample capability document.",
+                    FilePath = $"/files/capability/{file}",
+                    OriginalFileName = file,
+                    FileSize = size,
+                    ContentType = "application/pdf",
+                    CurrentVersion = 1,
+                    UploadedByUserId = owner.Id,
+                    UpdatedByUserId = owner.Id,
+                    CreatedAt = now.AddDays(-14 + i),
+                    UpdatedAt = now.AddDays(-14 + i),
+                };
+                db.CapabilityDocuments.Add(doc);
+                i++;
             }
 
-            var doc = new CapabilityDocument
-            {
-                Name = name,
-                TagCode = tag,
-                IssuedDate = issuedDaysAgo.HasValue ? now.AddDays(issuedDaysAgo.Value) : null,
-                ExpiryDate = expiryDaysFromNow.HasValue ? now.AddDays(expiryDaysFromNow.Value) : null,
-                Description = $"{SampleCapabilityMarker} Sample capability document.",
-                FilePath = $"/files/capability/{file}",
-                OriginalFileName = file,
-                FileSize = size,
-                ContentType = "application/pdf",
-                CurrentVersion = 1,
-                UploadedByUserId = owner.Id,
-                UpdatedByUserId = owner.Id,
-                CreatedAt = now.AddDays(-14 + i),
-                UpdatedAt = now.AddDays(-14 + i),
-            };
-            db.CapabilityDocuments.Add(doc);
-            i++;
+            db.SaveChanges();
         }
 
-        db.SaveChanges();
+        SeedCapabilityDocumentVersion(db);
     }
 
     /// <summary>
     /// Build a minimal valid single-page PDF containing the document's
-    /// display name. Kept intentionally small (well under 1KB) — real
-    /// customer files still replace these via the upload endpoint.
+    /// display name and optional sample details.
     /// </summary>
-    private static byte[] BuildPlaceholderPdf(string title)
+    private static byte[] BuildPlaceholderPdf(string title, IEnumerable<string>? details = null)
     {
-        // Escape PDF-string metacharacters and strip anything outside
-        // WinAnsi so the built-in Helvetica font can render it.
-        var safeTitle = new string(title
-            .Where(c => c is >= (char)0x20 and < (char)0x7F)
-            .ToArray())
+        static string Sanitize(string value) => new string(value
+                .Where(c => c is >= (char)0x20 and < (char)0x7F)
+                .ToArray())
             .Replace("\\", "\\\\").Replace("(", "\\(").Replace(")", "\\)");
+
+        var safeTitle = Sanitize(title);
         if (string.IsNullOrWhiteSpace(safeTitle)) safeTitle = "Nihome capability document (sample)";
 
-        // Hand-rolled PDF — six objects, one page, one Helvetica text run.
-        var streamContent = $"BT /F1 14 Tf 40 740 Td ({safeTitle}) Tj ET";
+        var commands = new List<string> { $"BT /F1 16 Tf 40 780 Td ({safeTitle}) Tj ET" };
+        var lineOffset = 0;
+        foreach (var detail in details ?? [])
+        {
+            var safeDetail = Sanitize(detail);
+            if (string.IsNullOrWhiteSpace(safeDetail)) continue;
+            commands.Add($"BT /F1 10 Tf 40 {750 - lineOffset} Td ({safeDetail}) Tj ET");
+            lineOffset += 18;
+        }
+
+        // Hand-rolled PDF — six objects, one page, Helvetica text runs.
+        var streamContent = string.Join("\n", commands);
         var streamBytes = System.Text.Encoding.ASCII.GetBytes(streamContent);
         var sb = new System.Text.StringBuilder();
         sb.Append("%PDF-1.4\n");
@@ -1395,48 +1422,45 @@ public static class SampleCrmDataSeeder
     {
         if (db.DesignProjects.Any(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker))) return;
 
-        // We need at least one customer to satisfy the FK. Sample customers
-        // are created upstream in SeedCustomers; fall back to the first
-        // real customer if none exist yet.
-        var sampleCustomer = db.Customers
+        var sampleContracts = GetSampleContracts(db);
+        var sampleCustomers = db.Customers
             .Where(c => c.Name.StartsWith(SampleTag))
             .OrderBy(c => c.Id)
-            .FirstOrDefault()
-            ?? db.Customers.OrderBy(c => c.Id).FirstOrDefault();
-        if (sampleCustomer is null) return;
+            .ToList();
+        if (sampleContracts.Count == 0 && sampleCustomers.Count == 0) return;
 
-        // Prefer the sample contract that has already been pushed to
-        // InProgress by the contracts seed so the auto-created project
-        // matches production behaviour.
-        var sampleContract = db.Contracts
-            .Where(c => c.CustomerId == sampleCustomer.Id && c.Status == ContractStatus.InProgress)
-            .OrderBy(c => c.Id)
-            .FirstOrDefault();
+        var projectManager = ResolveRoleUser(db, "PM", owner);
+        var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
 
         var year = now.Year;
         var nextSeq = 1 + db.DesignProjects.Count(dp => dp.ProjectCode.StartsWith($"DP-{year}-"));
 
-        // (Name, Stage, Status, StartDaysAgo, DeadlineDaysAhead, LinkContract)
+        // Each row deterministically uses a distinct sample contract when one
+        // is available; this keeps the project/customer relationship coherent.
         var seeds = new (string Name, DesignProjectStage Stage, DesignProjectStatus Status,
-            int StartDaysAgo, int DeadlineDaysAhead, bool LinkContract)[]
+            int StartDaysAgo, int DeadlineDaysAhead)[]
         {
-            ("Nhà máy Alpha - Giai đoạn 1",   DesignProjectStage.Concept,     DesignProjectStatus.Active, 3,  90, true),
-            ("Villa Bãi Dài - Nha Trang",     DesignProjectStage.BasicDesign, DesignProjectStatus.Active, 30, 120, false),
-            ("Showroom nội thất Đông Anh",    DesignProjectStage.ShopDrawing, DesignProjectStatus.Active, 60, 30,  false),
-            ("Nhà kho lạnh KCN Bắc Ninh",     DesignProjectStage.BasicDesign, DesignProjectStatus.OnHold, 45, -5,  false),
+            ("Nhà máy Alpha - Giai đoạn 1",   DesignProjectStage.Concept,     DesignProjectStatus.Active, 3,  90),
+            ("Villa Bãi Dài - Nha Trang",     DesignProjectStage.BasicDesign, DesignProjectStatus.Active, 30, 120),
+            ("Showroom nội thất Đông Anh",    DesignProjectStage.ShopDrawing, DesignProjectStatus.Active, 60, 30),
+            ("Nhà kho lạnh KCN Bắc Ninh",     DesignProjectStage.BasicDesign, DesignProjectStatus.OnHold, 45, -5),
         };
 
-        foreach (var (name, stage, status, startDaysAgo, deadlineDaysAhead, linkContract) in seeds)
+        for (var index = 0; index < seeds.Length; index++)
         {
+            var (name, stage, status, startDaysAgo, deadlineDaysAhead) = seeds[index];
+            var contract = sampleContracts.Count > index ? sampleContracts[index] : null;
+            if (contract is null && sampleCustomers.Count == 0) continue;
+            var customerId = contract?.CustomerId ?? sampleCustomers[index % sampleCustomers.Count].Id;
             var seq = nextSeq++;
             var dp = new DesignProject
             {
                 ProjectCode = $"DP-{year}-{seq:D4}",
                 Name = $"{SampleTag} {name}",
-                CustomerId = sampleCustomer.Id,
-                ContractId = linkContract ? sampleContract?.Id : null,
-                ProjectManagerUserId = owner.Id,
-                DesignLeadUserId = owner.Id,
+                CustomerId = customerId,
+                ContractId = contract?.Id,
+                ProjectManagerUserId = projectManager.Id,
+                DesignLeadUserId = designLead.Id,
                 StartDate = now.AddDays(-startDaysAgo),
                 Deadline = now.AddDays(deadlineDaysAhead),
                 CurrentStage = stage,
@@ -1468,6 +1492,7 @@ public static class SampleCrmDataSeeder
         if (templateCodes.Count == 0) return;
 
         var designProjects = db.DesignProjects
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker))
             .OrderBy(dp => dp.Id)
             .ToList();
         if (designProjects.Count == 0) return;
@@ -1542,7 +1567,8 @@ public static class SampleCrmDataSeeder
     private static void SeedConceptOptions(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.Concept)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.Concept)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -1590,7 +1616,8 @@ public static class SampleCrmDataSeeder
         const string SampleMarker = "[SAMPLE_BD]";
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.BasicDesign)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.BasicDesign)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -1642,7 +1669,8 @@ public static class SampleCrmDataSeeder
         const string SampleMarker = "[SAMPLE_SD]";
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -1686,6 +1714,196 @@ public static class SampleCrmDataSeeder
     }
 
     /// <summary>
+    /// Adds the approved Concept and Basic Design history that a real project
+    /// must complete before reaching Shop Drawing. This gives the project
+    /// document summary one coherent end-to-end sample instead of spreading
+    /// every document family across unrelated stage examples.
+    /// </summary>
+    private static void SeedDesignLifecycleHistory(AppDbContext db, ApplicationUser owner, DateTime now)
+    {
+        const string ConceptMarker = "[SAMPLE_HISTORY]";
+        const string BasicMarker = "[SAMPLE_BD_HISTORY]";
+        var project = db.DesignProjects
+            .Where(item => item.Note != null
+                        && item.Note.StartsWith(SampleDesignProjectMarker)
+                        && item.CurrentStage == DesignProjectStage.ShopDrawing)
+            .OrderBy(item => item.Id)
+            .FirstOrDefault();
+        if (project is null) return;
+
+        if (!db.ConceptOptions.Any(item => item.DesignProjectId == project.Id
+                                        && item.InternalNote == ConceptMarker))
+        {
+            db.ConceptOptions.Add(new ConceptOption
+            {
+                DesignProjectId = project.Id,
+                Name = "Phương án showroom được phê duyệt",
+                Description = $"{SampleTag} Mặt bằng mở, luồng tham quan một chiều và mặt tiền nhận diện thương hiệu.",
+                InternalNote = ConceptMarker,
+                OwnerUserId = owner.Id,
+                PresentedAt = now.AddDays(-55),
+                Status = ConceptOptionStatus.Finalized,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-65),
+                UpdatedAt = now.AddDays(-54),
+            });
+        }
+
+        var basicDocuments = new[]
+        {
+            new { Discipline = "architecture", Code = "KT-BD-101", Title = "Mặt bằng và mặt đứng showroom", Status = BasicDesignDocStatus.PermitApproved },
+            new { Discipline = "structure", Code = "KC-BD-101", Title = "Gia cường kết cấu sàn khu trưng bày", Status = BasicDesignDocStatus.InternallyApproved },
+            new { Discipline = "mep", Code = "MEP-BD-101", Title = "Nguyên lý điện, chiếu sáng và điều hòa", Status = BasicDesignDocStatus.InternallyApproved },
+        };
+        foreach (var document in basicDocuments)
+        {
+            if (db.BasicDesignDocs.Any(item => item.DesignProjectId == project.Id
+                                           && item.DocumentCode == document.Code)) continue;
+            db.BasicDesignDocs.Add(new BasicDesignDoc
+            {
+                DesignProjectId = project.Id,
+                DisciplineCode = document.Discipline,
+                DocumentCode = document.Code,
+                Title = document.Title,
+                Description = "Hồ sơ thiết kế cơ sở đã hoàn tất để chuyển sang triển khai bản vẽ thi công.",
+                OwnerUserId = owner.Id,
+                Status = document.Status,
+                Note = $"{BasicMarker} Approved lifecycle document.",
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-50),
+                UpdatedAt = now.AddDays(-40),
+            });
+        }
+
+        db.SaveChanges();
+    }
+
+    private static void SeedDesignSampleFiles(AppDbContext db, string? webRootPath)
+    {
+        var basicDocuments = db.BasicDesignDocs
+            .Include(item => item.DesignProject)
+            .Where(item => item.Note != null
+                        && (item.Note.StartsWith("[SAMPLE_BD]")
+                         || item.Note.StartsWith("[SAMPLE_BD_HISTORY]")))
+            .ToList();
+        var shopDrawings = db.ShopDrawings
+            .Include(item => item.DesignProject)
+            .Where(item => item.Note != null && item.Note.StartsWith("[SAMPLE_SD]"))
+            .ToList();
+
+        foreach (var document in basicDocuments)
+        {
+            AttachDesignSampleFile(
+                document.DocumentCode,
+                "basic",
+                document.DesignProject?.ProjectCode,
+                document.DisciplineCode,
+                document.Title,
+                document.Status.ToString(),
+                document.CreatedAt,
+                [
+                    "Document class: Basic Design / Design Development",
+                    "Design basis: TCVN load, fire safety and accessibility requirements",
+                    "Review scope: geometry, coordination, material intent and permit readiness",
+                    "Sheet scale: 1:100 unless noted otherwise",
+                    "Status: DEMONSTRATION FILE - NOT FOR CONSTRUCTION",
+                ],
+                webRootPath,
+                () => document.FilePath,
+                value => document.FilePath = value,
+                value => document.OriginalFileName = value,
+                value => document.FileSize = value,
+                value => document.ContentType = value);
+        }
+
+        foreach (var drawing in shopDrawings)
+        {
+            AttachDesignSampleFile(
+                drawing.DrawingCode,
+                "shop",
+                drawing.DesignProject?.ProjectCode,
+                drawing.DisciplineCode,
+                drawing.Title,
+                drawing.Status.ToString(),
+                drawing.CreatedAt,
+                [
+                    $"Construction package: {drawing.ConstructionItem}",
+                    "Coordination: Architecture / Structure / MEP interfaces checked",
+                    "General note: Verify all dimensions on site before fabrication",
+                    "Drawing scale: 1:50; details 1:20 and 1:10",
+                    "Status: DEMONSTRATION FILE - VERIFY IFC STATUS BEFORE SITE USE",
+                ],
+                webRootPath,
+                () => drawing.FilePath,
+                value => drawing.FilePath = value,
+                value => drawing.OriginalFileName = value,
+                value => drawing.FileSize = value,
+                value => drawing.ContentType = value);
+        }
+
+        db.SaveChanges();
+    }
+
+    private static void AttachDesignSampleFile(
+        string code,
+        string category,
+        string? projectCode,
+        string discipline,
+        string title,
+        string status,
+        DateTime issueDate,
+        IEnumerable<string> technicalNotes,
+        string? webRootPath,
+        Func<string?> getFilePath,
+        Action<string> setFilePath,
+        Action<string> setOriginalFileName,
+        Action<long> setFileSize,
+        Action<string> setContentType)
+    {
+        var safeCode = new string(code.ToLowerInvariant()
+            .Select(character => char.IsLetterOrDigit(character) ? character : '-')
+            .ToArray()).Trim('-');
+        var fileName = $"{safeCode}.pdf";
+        var relativePath = $"/files/design/{category}/{fileName}";
+        var lines = new List<string>
+        {
+            $"Project: {projectCode ?? "NICON-SAMPLE"}",
+            $"Document number: {code}",
+            $"Discipline: {discipline.ToUpperInvariant()}",
+            $"Title: {title}",
+            $"Workflow status: {status}",
+            $"Issue date: {issueDate:yyyy-MM-dd}",
+            "Prepared by: NICON Design & Engineering Team",
+        };
+        lines.AddRange(technicalNotes);
+        var bytes = BuildPlaceholderPdf($"NICON SAMPLE DRAWING - {code}", lines);
+
+        var currentPath = getFilePath();
+        if (string.IsNullOrWhiteSpace(currentPath))
+        {
+            setFilePath(relativePath);
+            setOriginalFileName(fileName);
+            setFileSize(bytes.Length);
+            setContentType("application/pdf");
+            currentPath = relativePath;
+        }
+
+        if (string.IsNullOrWhiteSpace(webRootPath)
+            || !string.Equals(currentPath, relativePath, StringComparison.Ordinal)) return;
+
+        var root = Path.GetFullPath(webRootPath);
+        var target = Path.GetFullPath(Path.Combine(root, relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)));
+        var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!target.StartsWith(rootPrefix, StringComparison.Ordinal)) return;
+
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        if (!File.Exists(target)) File.WriteAllBytes(target, bytes);
+        setFileSize(new FileInfo(target).Length);
+    }
+
+    /// <summary>
     /// NIH-117 Drawing Revision showcase. Attaches R1 revisions to the
     /// first sample shop drawing and the first sample basic design doc
     /// so the revision tab lights up on a fresh DB. Idempotent — guarded
@@ -1700,6 +1918,7 @@ public static class SampleCrmDataSeeder
         // a follow-up MEP-coordination R2 so the FE has real diff data
         // to show.
         var firstShop = db.ShopDrawings
+            .Where(s => s.Note != null && s.Note.StartsWith("[SAMPLE_SD]"))
             .OrderBy(s => s.Id)
             .FirstOrDefault();
         if (firstShop is not null)
@@ -1731,6 +1950,7 @@ public static class SampleCrmDataSeeder
         // First seeded BasicDesignDoc — one revision showing the reason
         // matrix flows across both drawing families.
         var firstBasic = db.BasicDesignDocs
+            .Where(b => b.Note != null && b.Note.StartsWith("[SAMPLE_BD]"))
             .OrderBy(b => b.Id)
             .FirstOrDefault();
         if (firstBasic is not null)
@@ -1762,7 +1982,8 @@ public static class SampleCrmDataSeeder
         if (db.IfcReleases.Any(r => r.Note != null && r.Note.StartsWith(SampleMarker))) return;
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -1817,7 +2038,8 @@ public static class SampleCrmDataSeeder
         if (db.ConstructionTasks.Any(t => t.Description != null && t.Description.StartsWith(SampleMarker))) return;
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -1929,7 +2151,8 @@ public static class SampleCrmDataSeeder
         if (db.SiteDiaries.Any(d => d.Note != null && d.Note.StartsWith(SampleMarker))) return;
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -2027,7 +2250,8 @@ public static class SampleCrmDataSeeder
         if (db.PunchItems.Any(p => p.Note != null && p.Note.StartsWith(SampleMarker))) return;
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -2127,13 +2351,16 @@ public static class SampleCrmDataSeeder
         if (db.AcceptanceRecords.Any(a => a.Description != null && a.Description.StartsWith(SampleMarker))) return;
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
 
         var task = db.ConstructionTasks
-            .Where(t => t.DesignProjectId == project.Id)
+            .Where(t => t.DesignProjectId == project.Id
+                     && t.Description != null
+                     && t.Description.StartsWith("[SAMPLE_CONSTR]"))
             .OrderBy(t => t.TaskCode)
             .FirstOrDefault();
 
@@ -2250,13 +2477,15 @@ public static class SampleCrmDataSeeder
     /// completeness roll-up on the list page has real numbers on a
     /// fresh boot. Idempotent via <c>Note</c> marker.
     /// </summary>
-    private static void SeedAsBuiltDocuments(AppDbContext db, ApplicationUser owner, DateTime now)
+    private static void SeedAsBuiltDocuments(AppDbContext db, ApplicationUser owner, DateTime now, string? webRootPath)
     {
         const string SampleMarker = "[SAMPLE_ASBUILT]";
+        MaterializeAsBuiltPlaceholders(webRootPath);
         if (db.AsBuiltDocuments.Any(a => a.Note != null && a.Note.StartsWith(SampleMarker))) return;
 
         var project = db.DesignProjects
-            .Where(dp => dp.CurrentStage == DesignProjectStage.ShopDrawing)
+            .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
+                      && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
@@ -2378,7 +2607,9 @@ public static class SampleCrmDataSeeder
         if (db.HandoverRecords.Any(record => record.HandoverCode == SampleCode)) return;
 
         var project = db.DesignProjects
-            .Where(item => !db.HandoverRecords.Any(record => record.DesignProjectId == item.Id))
+            .Where(item => item.Note != null
+                        && item.Note.StartsWith(SampleDesignProjectMarker)
+                        && !db.HandoverRecords.Any(record => record.DesignProjectId == item.Id))
             .OrderByDescending(item => item.CurrentStage)
             .ThenBy(item => item.Id)
             .FirstOrDefault();
@@ -2420,6 +2651,170 @@ public static class SampleCrmDataSeeder
             Note = "Khởi tạo hồ sơ bàn giao mẫu.",
         });
         db.HandoverRecords.Add(record);
+        db.SaveChanges();
+    }
+
+    private static ApplicationUser ResolveRoleUser(AppDbContext db, string roleCode, ApplicationUser fallback)
+    {
+        var roleId = db.Roles
+            .Where(role => role.Code == roleCode)
+            .Select(role => (int?)role.Id)
+            .FirstOrDefault();
+        return roleId.HasValue
+            ? db.Users.FirstOrDefault(user => user.RoleEntityId == roleId.Value && user.IsActive) ?? fallback
+            : fallback;
+    }
+
+    private static List<Contract> GetSampleContracts(AppDbContext db) => db.Contracts
+        .Where(contract => contract.Note != null && contract.Note.StartsWith(SampleContractMarker))
+        .OrderByDescending(contract => contract.Status == ContractStatus.InProgress)
+        .ThenBy(contract => contract.Id)
+        .ToList();
+
+    private static void SeedCapabilityDocumentVersion(AppDbContext db)
+    {
+        var document = db.CapabilityDocuments
+            .Where(item => item.Description != null && item.Description.StartsWith(SampleCapabilityMarker))
+            .OrderBy(item => item.Id)
+            .FirstOrDefault();
+        if (document is null || db.CapabilityDocumentVersions.Any(version =>
+                version.CapabilityDocumentId == document.Id && version.VersionNumber == 1)) return;
+
+        db.CapabilityDocumentVersions.Add(new CapabilityDocumentVersion
+        {
+            CapabilityDocumentId = document.Id,
+            VersionNumber = 1,
+            FilePath = document.FilePath,
+            OriginalFileName = document.OriginalFileName,
+            FileSize = document.FileSize,
+            ContentType = document.ContentType,
+            UploadedByUserId = document.UploadedByUserId,
+            CreatedAt = document.CreatedAt,
+        });
+        db.SaveChanges();
+    }
+
+    private static void MaterializeAsBuiltPlaceholders(string? webRootPath)
+    {
+        if (string.IsNullOrWhiteSpace(webRootPath)) return;
+
+        var root = Path.GetFullPath(webRootPath);
+        var storageDirectory = Path.GetFullPath(Path.Combine(root, "files", "asbuilt"));
+        var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        if (!storageDirectory.StartsWith(rootPrefix, StringComparison.Ordinal)) return;
+
+        Directory.CreateDirectory(storageDirectory);
+        var files = new Dictionary<string, string>
+        {
+            ["sample-arch-l1.pdf"] = "Sample as-built architecture drawing",
+            ["sample-minute-foundation.pdf"] = "Sample foundation acceptance minute",
+            ["sample-test-c30.pdf"] = "Sample concrete C30 test report",
+            ["sample-warranty-mep.pdf"] = "Sample MEP warranty certificate",
+        };
+        foreach (var (fileName, title) in files)
+        {
+            var filePath = Path.GetFullPath(Path.Combine(storageDirectory, fileName));
+            if (!filePath.StartsWith(rootPrefix, StringComparison.Ordinal) || File.Exists(filePath)) continue;
+            File.WriteAllBytes(filePath, BuildPlaceholderPdf(title));
+        }
+    }
+
+    private static void RepairSampleRelationships(AppDbContext db, ApplicationUser owner)
+    {
+        var opportunities = db.Opportunities
+            .Where(opportunity => opportunity.Name.StartsWith(SampleTag))
+            .OrderBy(opportunity => opportunity.Id)
+            .ToList();
+        var contracts = db.Contracts
+            .Where(contract => contract.Note != null && contract.Note.StartsWith(SampleContractMarker))
+            .OrderBy(contract => contract.Id)
+            .ToList();
+        var quotes = db.Quotes
+            .Where(quote => quote.Note != null && quote.Note.StartsWith(SampleQuoteNoteMarker))
+            .OrderByDescending(quote => quote.Status == QuoteStatus.CustomerApproved)
+            .ThenBy(quote => quote.Id)
+            .ToList();
+
+        var opportunityIndexesByStatus = new Dictionary<ContractStatus, int>
+        {
+            [ContractStatus.Draft] = 0,
+            [ContractStatus.Signed] = 1,
+            [ContractStatus.InProgress] = 2,
+            [ContractStatus.OnHold] = 3,
+            [ContractStatus.Completed] = 4,
+        };
+        var statusOccurrences = new Dictionary<ContractStatus, int>();
+        if (opportunities.Count > 0)
+        {
+            foreach (var contract in contracts)
+            {
+                statusOccurrences.TryGetValue(contract.Status, out var occurrence);
+                statusOccurrences[contract.Status] = occurrence + 1;
+                var baseIndex = opportunityIndexesByStatus.GetValueOrDefault(contract.Status, 0);
+                var opportunity = opportunities[(baseIndex + occurrence) % opportunities.Count];
+                var quote = quotes.FirstOrDefault(item => item.OpportunityId == opportunity.Id);
+                contract.CustomerId = opportunity.CustomerId;
+                contract.OpportunityId = opportunity.Id;
+                contract.QuoteId = quote?.Id;
+            }
+        }
+
+        foreach (var opportunity in opportunities.Where(item => item.Stage == OpportunityStage.Won))
+        {
+            opportunity.WonQuoteId = quotes.FirstOrDefault(quote =>
+                quote.OpportunityId == opportunity.Id && quote.Status == QuoteStatus.CustomerApproved)?.Id;
+        }
+
+        var convertedLead = db.Leads
+            .Where(lead => lead.Name.StartsWith(SampleTag))
+            .OrderBy(lead => lead.Id)
+            .FirstOrDefault();
+        var convertedOpportunity = opportunities.FirstOrDefault();
+        if (convertedLead is not null && convertedOpportunity is not null)
+        {
+            convertedLead.Status = LeadStatus.Converted;
+            convertedLead.ConvertedCustomerId = convertedOpportunity.CustomerId;
+            convertedLead.ConvertedOpportunityId = convertedOpportunity.Id;
+            convertedLead.ConvertedAt ??= convertedOpportunity.CreatedAt;
+        }
+
+        var projectManager = ResolveRoleUser(db, "PM", owner);
+        var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
+        var sampleProjects = db.DesignProjects
+            .Where(project => project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker))
+            .OrderBy(project => project.Id)
+            .ToList();
+        var reservedContractIds = db.DesignProjects
+            .Where(project => (project.Note == null || !project.Note.StartsWith(SampleDesignProjectMarker))
+                           && project.ContractId.HasValue)
+            .Select(project => project.ContractId!.Value)
+            .ToHashSet();
+        var sampleContracts = GetSampleContracts(db)
+            .Where(contract => !reservedContractIds.Contains(contract.Id))
+            .ToList();
+        var usedContractIds = new HashSet<int>();
+
+        foreach (var project in sampleProjects)
+        {
+            var contract = project.ContractId.HasValue
+                ? sampleContracts.FirstOrDefault(item => item.Id == project.ContractId.Value
+                                                      && usedContractIds.Add(item.Id))
+                : null;
+            contract ??= sampleContracts.FirstOrDefault(item => !usedContractIds.Contains(item.Id));
+            if (contract is not null)
+            {
+                usedContractIds.Add(contract.Id);
+                project.ContractId = contract.Id;
+                project.CustomerId = contract.CustomerId;
+            }
+            else
+            {
+                project.ContractId = null;
+            }
+            project.ProjectManagerUserId = projectManager.Id;
+            project.DesignLeadUserId = designLead.Id;
+        }
+
         db.SaveChanges();
     }
 }

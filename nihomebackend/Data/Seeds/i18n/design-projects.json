@@ -83,6 +83,8 @@
   { "key": "designProjects.documents.recordCount", "category": "designProjects", "vi": "hồ sơ", "en": "records", "zh": "条记录", "ja": "件" },
   { "key": "designProjects.documents.empty", "category": "designProjects", "vi": "Dự án chưa có hồ sơ thiết kế.", "en": "This project has no design records yet.", "zh": "该项目尚无设计资料。", "ja": "このプロジェクトにはまだ設計記録がありません。" },
   { "key": "designProjects.documents.groupEmpty", "category": "designProjects", "vi": "Chưa có hồ sơ", "en": "No records", "zh": "暂无记录", "ja": "記録なし" },
+  { "key": "designProjects.documents.openFile", "category": "designProjects", "vi": "Mở file thiết kế", "en": "Open design file", "zh": "打开设计文件", "ja": "設計ファイルを開く" },
+  { "key": "designProjects.documents.downloadFile", "category": "designProjects", "vi": "Tải file thiết kế", "en": "Download design file", "zh": "下载设计文件", "ja": "設計ファイルをダウンロード" },
   { "key": "designProjects.documents.group.concepts", "category": "designProjects", "vi": "Phương án Concept", "en": "Concept options", "zh": "概念方案", "ja": "コンセプト案" },
   { "key": "designProjects.documents.group.basic", "category": "designProjects", "vi": "Hồ sơ Basic Design", "en": "Basic design documents", "zh": "基本设计文件", "ja": "基本設計書類" },
   { "key": "designProjects.documents.group.shop", "category": "designProjects", "vi": "Bản vẽ Shop Drawing", "en": "Shop drawings", "zh": "施工图", "ja": "施工図" },

@@ -913,6 +913,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(d => d.Title).HasMaxLength(300).IsRequired();
             b.Property(d => d.Description).HasMaxLength(4000);
             b.Property(d => d.Note).HasMaxLength(4000);
+            b.Property(d => d.FilePath).HasMaxLength(500);
+            b.Property(d => d.OriginalFileName).HasMaxLength(255);
+            b.Property(d => d.ContentType).HasMaxLength(100);
             b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30);
 
             b.HasOne(d => d.DesignProject)
@@ -940,6 +943,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(d => d.Title).HasMaxLength(300).IsRequired();
             b.Property(d => d.Description).HasMaxLength(4000);
             b.Property(d => d.Note).HasMaxLength(4000);
+            b.Property(d => d.FilePath).HasMaxLength(500);
+            b.Property(d => d.OriginalFileName).HasMaxLength(255);
+            b.Property(d => d.ContentType).HasMaxLength(100);
             b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30);
 
             b.HasOne(d => d.DesignProject)

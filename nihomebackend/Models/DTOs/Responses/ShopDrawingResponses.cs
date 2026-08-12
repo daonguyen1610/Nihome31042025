@@ -22,6 +22,10 @@ public class ShopDrawingResponse
     public string Status { get; set; } = string.Empty;
 
     public string? Note { get; set; }
+    public string? FilePath { get; set; }
+    public string? OriginalFileName { get; set; }
+    public long? FileSize { get; set; }
+    public string? ContentType { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
