@@ -12,8 +12,8 @@ namespace NihomeBackend.Controllers;
 
 /// <summary>
 /// M3 Permitting checklist endpoints (NIH-137). Per-project auto-generation
-/// happens implicitly via <see cref="IDesignProjectService"/> so there is no
-/// public POST here — the FE only reads + patches existing rows.
+/// happens implicitly via <see cref="IDesignProjectService"/> while authorized
+/// operators can also manage individual checklist rows.
 /// </summary>
 [ApiController]
 [Route("api/permits")]
@@ -38,6 +38,36 @@ public class PermitsController(
     {
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpPost]
+    [RequirePermission("permit.checklists", "manage")]
+    public async Task<ActionResult<PermitChecklistItemResponse>> Create(
+        [FromBody] CreatePermitChecklistItemRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var response = await svc.CreateAsync(request, userId.Value, ct);
+            audit.Log(new AuditEvent
+            {
+                Action = "permit.create",
+                ResourceType = EntityTypes.PermitChecklistItem,
+                ResourceId = response.Id.ToString(),
+                Message = $"Permit checklist item #{response.Id} created ({response.PermitTypeCode}).",
+                NewValue = response,
+            });
+            return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
+        }
+        catch (PermitChecklistDuplicateException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (PermitChecklistOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPatch("{id:int}")]
@@ -108,6 +138,24 @@ public class PermitsController(
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    [HttpDelete("{id:int}")]
+    [RequirePermission("permit.checklists", "manage")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        var response = await svc.DeleteAsync(id, ct);
+        if (response is null) return NotFound();
+
+        audit.Log(new AuditEvent
+        {
+            Action = "permit.delete",
+            ResourceType = EntityTypes.PermitChecklistItem,
+            ResourceId = id.ToString(),
+            Message = $"Permit checklist item #{id} deleted ({response.PermitTypeCode}).",
+            OldValue = response,
+        });
+        return NoContent();
     }
 
     private int? GetUserId()

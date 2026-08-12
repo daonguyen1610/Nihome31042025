@@ -156,7 +156,27 @@ public class SiteDiariesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task BulkDelete_DeletesDraftAndReportsFailures()
+    public async Task Delete_RemovesDiariesInEveryStatus()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateProjectAsync();
+        var draftId = await CreateDiaryAsync(projectId, "2026-07-15");
+        var submittedId = await CreateDiaryAsync(projectId, "2026-07-16");
+        var confirmedId = await CreateDiaryAsync(projectId, "2026-07-17");
+        (await Client.PostAsync($"/api/site-diaries/{submittedId}/submit", null)).EnsureSuccessStatusCode();
+        (await Client.PostAsync($"/api/site-diaries/{confirmedId}/submit", null)).EnsureSuccessStatusCode();
+        (await Client.PostAsync($"/api/site-diaries/{confirmedId}/confirm", null)).EnsureSuccessStatusCode();
+
+        (await Client.DeleteAsync($"/api/site-diaries/{draftId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/site-diaries/{draftId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/site-diaries/{submittedId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/site-diaries/{submittedId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/site-diaries/{confirmedId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/site-diaries/{confirmedId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task BulkDelete_DeletesAllStatusesAndReportsMissingRows()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateProjectAsync();
@@ -172,8 +192,8 @@ public class SiteDiariesControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("requested").GetInt32().Should().Be(4);
-        body.GetProperty("deleted").GetInt32().Should().Be(2); // a + c
-        body.GetProperty("failures").GetArrayLength().Should().Be(2);
+        body.GetProperty("deleted").GetInt32().Should().Be(3);
+        body.GetProperty("failures").GetArrayLength().Should().Be(1);
     }
 
     [Fact]

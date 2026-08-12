@@ -200,6 +200,14 @@
     "ja": "サイドバーを開く"
   },
   {
+    "key": "nav.closeSidebar",
+    "category": "nav",
+    "vi": "Đóng sidebar",
+    "en": "Close sidebar",
+    "zh": "关闭侧边栏",
+    "ja": "サイドバーを閉じる"
+  },
+  {
     "key": "nav.toggleSidebar",
     "category": "nav",
     "vi": "Ẩn/hiện sidebar",

@@ -279,11 +279,6 @@ public class LeadService(
         // lead's existence is not leaked to unauthorised callers.
         if (!canSeeAll && lead.OwnerUserId != callerUserId) return false;
 
-        if (lead.Status == LeadStatus.Converted)
-        {
-            throw new LeadOperationException("Converted leads cannot be deleted — they seed downstream customer records.");
-        }
-
         db.Leads.Remove(lead);
         await db.SaveChangesAsync(ct);
         return true;

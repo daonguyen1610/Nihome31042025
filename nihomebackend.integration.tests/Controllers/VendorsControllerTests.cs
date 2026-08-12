@@ -25,6 +25,7 @@ public class VendorsControllerTests : IntegrationTestBase
             companyName = "Denied Vendor",
             vendorType = "Supplier",
         })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.DeleteAsync("/api/vendors/2147483647")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -106,5 +107,9 @@ public class VendorsControllerTests : IntegrationTestBase
             vendorType = "SubContractor",
         });
         duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        (await Client.DeleteAsync($"/api/vendors/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/vendors/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/vendors/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 }

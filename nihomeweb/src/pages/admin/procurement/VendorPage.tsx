@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ArrowDownAZ, ArrowUpAZ, Eye, Plus, Search } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminExportButton from "@/components/admin/AdminExportButton";
@@ -7,6 +7,16 @@ import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -15,7 +25,7 @@ import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { useI18n } from "@/lib/i18n";
-import { adminApi, type CreateVendorRequest, type VendorListParams, type VendorResponse, type VendorType } from "@/services/adminApi";
+import { adminApi, type CreateVendorRequest, type UpdateVendorRequest, type VendorListParams, type VendorResponse, type VendorType } from "@/services/adminApi";
 import VendorForm from "./VendorForm";
 
 const TYPES: VendorType[] = ["Supplier", "SubContractor", "Both"];
@@ -38,6 +48,9 @@ export default function VendorPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<VendorResponse | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<VendorResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const pageSize = 20;
 
@@ -71,6 +84,30 @@ export default function VendorPage() {
     setCreating(false);
     toast({ title: t("proc.vendors.created") });
     await load();
+  };
+
+  const update = async (request: UpdateVendorRequest) => {
+    if (!editing) return;
+    await adminApi.updateVendor(editing.id, request);
+    setEditing(null);
+    toast({ title: t("proc.vendors.updated") });
+    await load();
+  };
+
+  const deleteVendor = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await adminApi.deleteVendor(pendingDelete.id);
+      setPendingDelete(null);
+      toast({ title: t("proc.vendors.deleted") });
+      if (rows.length === 1 && page > 1) setPage((current) => current - 1);
+      else await load();
+    } catch (deleteError) {
+      toast({ variant: "destructive", title: extractApiError(deleteError) || t("common.error") });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const exportRows = async () => {
@@ -132,13 +169,15 @@ export default function VendorPage() {
 
         {loading ? <PageLoading /> : error ? <PageError message={error} onRetry={() => void load()} /> : rows.length === 0 ? <PageEmpty message={t("proc.vendors.empty")} /> : (
           <>
-            <div className="hidden overflow-hidden rounded-md border md:block"><table className="w-full text-sm"><thead className="bg-muted/60 text-left"><tr><th className="px-4 py-3">{t("proc.vendors.field.code")}</th><th className="px-4 py-3">{t("proc.vendors.field.companyName")}</th><th className="px-4 py-3">{t("proc.vendors.field.type")}</th><th className="px-4 py-3">{t("proc.vendors.field.contact")}</th><th className="px-4 py-3">{t("proc.vendors.field.status")}</th><th className="w-16 px-4 py-3"><span className="sr-only">{t("common.actions")}</span></th></tr></thead><tbody className="divide-y">{rows.map((vendor) => <tr key={vendor.id} className="hover:bg-muted/30"><td className="px-4 py-3 font-medium">{vendor.vendorCode}</td><td className="px-4 py-3"><button className="text-left font-medium hover:text-primary" onClick={() => navigate(`/admin/vendors/${vendor.id}`)}>{vendor.companyName}</button><p className="text-xs text-muted-foreground">{vendor.tradeCategory || t("common.noData")}</p></td><td className="px-4 py-3">{t(`proc.vendors.type.${vendor.vendorType}`)}</td><td className="px-4 py-3"><p>{vendor.contactPerson || t("common.noData")}</p><p className="text-xs text-muted-foreground">{vendor.phone || vendor.email || t("common.noData")}</p></td><td className="px-4 py-3"><Badge variant={vendor.isActive ? "default" : "secondary"}>{t(vendor.isActive ? "proc.vendors.status.active" : "proc.vendors.status.inactive")}</Badge></td><td className="px-4 py-3"><Button variant="ghost" size="icon" title={t("common.view")} onClick={() => navigate(`/admin/vendors/${vendor.id}`)}><Eye className="h-4 w-4" /></Button></td></tr>)}</tbody></table></div>
-            <div className="grid gap-3 md:hidden">{rows.map((vendor) => <button key={vendor.id} onClick={() => navigate(`/admin/vendors/${vendor.id}`)} className="rounded-md border bg-card p-4 text-left"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{vendor.companyName}</p><p className="text-xs text-muted-foreground">{vendor.vendorCode} · {t(`proc.vendors.type.${vendor.vendorType}`)}</p></div><Badge variant={vendor.isActive ? "default" : "secondary"}>{t(vendor.isActive ? "proc.vendors.status.active" : "proc.vendors.status.inactive")}</Badge></div><p className="mt-3 text-sm">{vendor.contactPerson || t("common.noData")}</p><p className="text-xs text-muted-foreground">{vendor.phone || vendor.email || t("common.noData")}</p></button>)}</div>
+            <div className="hidden overflow-hidden rounded-md border md:block"><table className="w-full text-sm"><thead className="bg-muted/60 text-left"><tr><th className="px-4 py-3">{t("proc.vendors.field.code")}</th><th className="px-4 py-3">{t("proc.vendors.field.companyName")}</th><th className="px-4 py-3">{t("proc.vendors.field.type")}</th><th className="px-4 py-3">{t("proc.vendors.field.contact")}</th><th className="px-4 py-3">{t("proc.vendors.field.status")}</th><th className="px-4 py-3 text-right">{t("common.actions")}</th></tr></thead><tbody className="divide-y">{rows.map((vendor) => <tr key={vendor.id} className="hover:bg-muted/30"><td className="px-4 py-3 font-medium">{vendor.vendorCode}</td><td className="px-4 py-3"><button className="text-left font-medium hover:text-primary" onClick={() => navigate(`/admin/vendors/${vendor.id}`)}>{vendor.companyName}</button><p className="text-xs text-muted-foreground">{vendor.tradeCategory || t("common.noData")}</p></td><td className="px-4 py-3">{t(`proc.vendors.type.${vendor.vendorType}`)}</td><td className="px-4 py-3"><p>{vendor.contactPerson || t("common.noData")}</p><p className="text-xs text-muted-foreground">{vendor.phone || vendor.email || t("common.noData")}</p></td><td className="px-4 py-3"><Badge variant={vendor.isActive ? "default" : "secondary"}>{t(vendor.isActive ? "proc.vendors.status.active" : "proc.vendors.status.inactive")}</Badge></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => navigate(`/admin/vendors/${vendor.id}`)}><Eye className="h-4 w-4" /></Button>{canManage && <><Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} onClick={() => setEditing(vendor)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(vendor)}><Trash2 className="h-4 w-4" /></Button></>}</div></td></tr>)}</tbody></table></div>
+            <div className="grid gap-3 md:hidden">{rows.map((vendor) => <article key={vendor.id} className="rounded-md border bg-card p-4"><button type="button" onClick={() => navigate(`/admin/vendors/${vendor.id}`)} className="w-full text-left"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{vendor.companyName}</p><p className="text-xs text-muted-foreground">{vendor.vendorCode} · {t(`proc.vendors.type.${vendor.vendorType}`)}</p></div><Badge variant={vendor.isActive ? "default" : "secondary"}>{t(vendor.isActive ? "proc.vendors.status.active" : "proc.vendors.status.inactive")}</Badge></div><p className="mt-3 text-sm">{vendor.contactPerson || t("common.noData")}</p><p className="text-xs text-muted-foreground">{vendor.phone || vendor.email || t("common.noData")}</p></button><div className="mt-3 flex justify-end gap-1 border-t pt-2"><Button variant="ghost" size="sm" onClick={() => navigate(`/admin/vendors/${vendor.id}`)}><Eye className="mr-1 h-4 w-4" />{t("common.view")}</Button>{canManage && <><Button variant="ghost" size="sm" onClick={() => setEditing(vendor)}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button><Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(vendor)}><Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}</Button></>}</div></article>)}</div>
             <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{t("proc.vendors.total")} {total}</p><div className="flex items-center gap-2"><Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>{t("common.prev")}</Button><span className="text-sm">{page} / {pages}</span><Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((value) => value + 1)}>{t("common.next")}</Button></div></div>
           </>
         )}
       </div>
       <Dialog open={creating} onOpenChange={setCreating}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto"><DialogHeader><DialogTitle>{t("proc.vendors.createTitle")}</DialogTitle><DialogDescription>{t("proc.vendors.formDescription")}</DialogDescription></DialogHeader><VendorForm onSubmit={create} onCancel={() => setCreating(false)} /></DialogContent></Dialog>
+      <Dialog open={editing !== null} onOpenChange={(open) => { if (!open) setEditing(null); }}><DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto"><DialogHeader><DialogTitle>{t("proc.vendors.editTitle")}</DialogTitle><DialogDescription>{t("proc.vendors.formDescription")}</DialogDescription></DialogHeader>{editing && <VendorForm vendor={editing} onSubmit={(request) => update(request as UpdateVendorRequest)} onCancel={() => setEditing(null)} />}</DialogContent></Dialog>
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open && !deleting) setPendingDelete(null); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("proc.vendors.deleteTitle")}</AlertDialogTitle><AlertDialogDescription>{t("proc.vendors.deleteDescription").replace("{name}", pendingDelete?.companyName ?? "")}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel><AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void deleteVendor(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{deleting ? t("proc.vendors.deleting") : t("common.delete")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </AdminLayout>
   );
 }

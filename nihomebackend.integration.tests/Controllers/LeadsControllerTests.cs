@@ -320,7 +320,7 @@ public class LeadsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_ConvertedLead_IsRejected()
+    public async Task Delete_ConvertedLead_RemovesLeadButPreservesConvertedPrincipals()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
 
@@ -335,8 +335,47 @@ public class LeadsControllerTests : IntegrationTestBase
 
         var convert = await Client.PostAsJsonAsync($"/api/leads/{leadId}/convert", new { });
         convert.EnsureSuccessStatusCode();
+        var (customerId, opportunityId) = await WithDbAsync(async db =>
+        {
+            var customer = new NihomeBackend.Models.Customer
+            {
+                Name = "Preserved converted customer",
+                Type = NihomeBackend.Models.CustomerType.Company,
+                SourceCode = "marketing",
+            };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var opportunity = new NihomeBackend.Models.Opportunity
+            {
+                Name = "Preserved converted opportunity",
+                CustomerId = customer.Id,
+            };
+            db.Opportunities.Add(opportunity);
+            var lead = await db.Leads.FirstAsync(l => l.Id == leadId);
+            lead.ConvertedCustomerId = customer.Id;
+            lead.ConvertedOpportunityId = opportunity.Id;
+            await db.SaveChangesAsync();
+            return (customer.Id, opportunity.Id);
+        });
 
-        (await Client.DeleteAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.DeleteAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/customers/{customerId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/opportunities/{opportunityId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Delete_MissingLead_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.DeleteAsync("/api/leads/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutManagePermission_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.DeleteAsync("/api/leads/9999999")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

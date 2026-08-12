@@ -371,14 +371,8 @@ const AdminDesignProjects = () => {
   };
 
   // -------- bulk selection --------
-  // Server refuses to delete rows past the Concept stage (audit / cascade
-  // safety), so we mirror that constraint in the checkbox availability —
-  // only Concept-stage rows can be bulk-deleted.
   const deletableIds = useMemo(
-    () =>
-      canManage
-        ? rows.filter((r) => r.currentStage === "Concept").map((r) => r.id)
-        : [],
+    () => canManage ? rows.map((row) => row.id) : [],
     [rows, canManage],
   );
   const {
@@ -564,7 +558,7 @@ const AdminDesignProjects = () => {
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => {
-                const canDelete = canManage && r.currentStage === "Concept";
+                const canDelete = canManage;
                 return (
                   <article
                     key={r.id}
@@ -624,17 +618,18 @@ const AdminDesignProjects = () => {
                           <Pencil className="mr-1 h-3.5 w-3.5" />
                           {t("common.edit")}
                         </Button>
-                        {canDelete ? (
+                        <span>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            disabled={!canDelete}
+                            className="text-rose-700 hover:bg-rose-50 hover:text-rose-800 disabled:text-muted-foreground"
                             onClick={() => setDeleting(r)}
                           >
                             <Trash2 className="mr-1 h-3.5 w-3.5" />
                             {t("common.delete")}
                           </Button>
-                        ) : null}
+                        </span>
                       </div>
                     ) : null}
                   </article>
@@ -674,7 +669,7 @@ const AdminDesignProjects = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {rows.map((r) => {
-                    const canDelete = canManage && r.currentStage === "Concept";
+                    const canDelete = canManage;
                     return (
                       <tr
                         key={r.id}
@@ -719,16 +714,18 @@ const AdminDesignProjects = () => {
                               <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              {canDelete ? (
+                              <span>
                                 <Button
                                   variant="ghost"
                                   size="sm"
+                                  disabled={!canDelete}
+                                  aria-label={t("common.delete")}
                                   className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
                                   onClick={() => setDeleting(r)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
-                              ) : null}
+                              </span>
                             </div>
                           ) : null}
                         </td>

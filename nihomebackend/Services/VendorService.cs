@@ -144,6 +144,19 @@ public class VendorService(AppDbContext db) : IVendorService
         return Map(vendor, vendor.CreatedBy?.FullName);
     }
 
+    public async Task<VendorResponse?> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        var vendor = await db.Vendors
+            .Include(item => item.CreatedBy)
+            .FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (vendor is null) return null;
+
+        var deleted = Map(vendor, vendor.CreatedBy?.FullName);
+        db.Vendors.Remove(vendor);
+        await db.SaveChangesAsync(ct);
+        return deleted;
+    }
+
     private async Task EnsureCodeAvailableAsync(string code, int? existingId, CancellationToken ct)
     {
         if (await db.Vendors.AsNoTracking().AnyAsync(v => v.VendorCode == code && v.Id != existingId, ct))

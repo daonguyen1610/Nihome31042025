@@ -19,6 +19,7 @@ public interface IVendorService
     Task<VendorResponse?> GetAsync(int id, CancellationToken ct = default);
     Task<VendorResponse> CreateAsync(CreateVendorRequest request, int callerUserId, CancellationToken ct = default);
     Task<VendorResponse?> UpdateAsync(int id, UpdateVendorRequest request, int callerUserId, CancellationToken ct = default);
+    Task<VendorResponse?> DeleteAsync(int id, CancellationToken ct = default);
 }
 
 public sealed class VendorDuplicateException(string message) : InvalidOperationException(message);

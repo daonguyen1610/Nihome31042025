@@ -356,8 +356,15 @@ public class DesignProjectServiceTests : IDisposable
         public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
 
+        public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse> CreateAsync(
+            NihomeBackend.Models.DTOs.Requests.CreatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default)
+            => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse());
+
         public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> UpdateAsync(
             int id, NihomeBackend.Models.DTOs.Requests.UpdatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default)
+            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
+
+        public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> DeleteAsync(int id, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
     }
 }

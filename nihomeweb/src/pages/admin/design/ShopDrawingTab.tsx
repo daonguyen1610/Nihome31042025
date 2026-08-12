@@ -221,7 +221,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
 
   // -------- selection (per-row bulk delete) --------
   const draftableIds = useMemo(
-    () => new Set(rows.filter((r) => r.status === "Drafting").map((r) => r.id)),
+    () => new Set(rows.map((row) => row.id)),
     [rows],
   );
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -827,7 +827,7 @@ const DisciplineSection = ({
                         ) : null}
                       </div>
                     </div>
-                    {canManage && isShopStage ? (
+                    {canManage ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <RowActions
                           row={row}
@@ -884,11 +884,6 @@ const RowActions = ({
             onClick={() => onTransition("InReview")} data-testid={`shop-drawing-send-${row.id}`}>
             <Send className="mr-1 h-3.5 w-3.5" />
             {t("shopDrawing.action.sendReview")}
-          </Button>
-          <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
-            onClick={onDelete}>
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            {t("shopDrawing.action.delete")}
           </Button>
         </>
       )}
@@ -955,6 +950,11 @@ const RowActions = ({
           {t("shopDrawing.status.Rejected")}
         </Badge>
       )}
+      <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+        onClick={onDelete}>
+        <Trash2 className="mr-1 h-3.5 w-3.5" />
+        {t("shopDrawing.action.delete")}
+      </Button>
     </>
   );
 };

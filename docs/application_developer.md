@@ -563,7 +563,7 @@ To add a new content entity:
 
 ### 7.5 Procurement Vendor API
 
-The procurement vendor slice stores supplier and subcontractor profiles in `procurement_vendors`. Vendor codes are trimmed, normalized to uppercase, and protected by a unique database index. Deactivation uses `IsActive` instead of deleting historical partner records.
+The procurement vendor slice stores supplier and subcontractor profiles in `procurement_vendors`. Vendor codes are trimmed, normalized to uppercase, and protected by a unique database index. Use `IsActive` to retain a vendor for historical reporting while preventing new use. `DELETE` permanently removes obsolete, duplicate, or test records and should only be used when historical retention is not required.
 
 Both `/api/vendors` and `/api/v1/vendors` expose the same controller:
 
@@ -573,8 +573,26 @@ Both `/api/vendors` and `/api/v1/vendors` expose the same controller:
 | `GET` | `/api/vendors/{id}` | `proc.vendors.view` | Read vendor details and audit metadata |
 | `POST` | `/api/vendors` | `proc.vendors.manage` | Create an active vendor |
 | `PUT` | `/api/vendors/{id}` | `proc.vendors.manage` | Update profile data or active status |
+| `DELETE` | `/api/vendors/{id}` | `proc.vendors.manage` | Permanently delete a vendor |
 
-Duplicate normalized codes return `409`; invalid request data returns `400`; missing records return `404`. Create and update operations write `vendor.create` and `vendor.update` audit events. `proc.vendors.export` controls the frontend export action but does not grant API read access by itself.
+Duplicate normalized codes return `409`; invalid request data returns `400`; missing records return `404`. Create, update, and delete operations write `vendor.create`, `vendor.update`, and `vendor.delete` audit events. Delete returns `204` and records the removed vendor snapshot in the audit event. `proc.vendors.export` controls the frontend export action but does not grant API read access by itself.
+
+### 7.6 Permit Checklist API
+
+The permit checklist is auto-generated from active `permit_type` master data when a design project is created. Authorized operators can also manage individual rows when project-specific requirements differ from the default template. Each design-project and permit-type pair remains unique.
+
+Both `/api/permits` and `/api/v1/permits` expose the same controller:
+
+| Method | Route | Permission | Purpose |
+|--------|-------|------------|---------|
+| `GET` | `/api/permits` | `permit.checklists.view` | Filter, paginate, and read the permit risk summary |
+| `GET` | `/api/permits/{id}` | `permit.checklists.view` | Read one checklist item |
+| `POST` | `/api/permits` | `permit.checklists.manage` | Create a project-specific checklist item |
+| `PATCH` | `/api/permits/{id}` | `permit.checklists.manage` | Update status, ownership, dates, agency, or notes |
+| `DELETE` | `/api/permits/{id}` | `permit.checklists.manage` | Permanently delete one checklist item |
+| `POST` | `/api/permits/design-project/{projectId}/ensure` | `permit.checklists.manage` | Add missing active template items without overwriting existing rows |
+
+Duplicate project/type pairs return `409`; invalid projects, permit types, owners, or statuses return `400`; missing rows return `404`. Create, update, and delete operations write `permit.create`, `permit.update`, and `permit.delete` audit events. Delete returns `204` and records the removed item snapshot.
 
 ---
 

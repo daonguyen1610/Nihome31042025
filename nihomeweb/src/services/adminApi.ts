@@ -1691,6 +1691,19 @@ export interface PermitChecklistListParams {
   pageSize?: number;
 }
 
+export interface CreatePermitChecklistItemRequest {
+  designProjectId: number;
+  permitTypeCode: string;
+  status?: PermitStatus;
+  issuingAgency?: string | null;
+  ownerUserId?: number | null;
+  targetDeadline?: string | null;
+  submittedAt?: string | null;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+  note?: string | null;
+}
+
 export interface UpdatePermitChecklistItemRequest {
   status?: PermitStatus;
   issuingAgency?: string | null;
@@ -3088,6 +3101,7 @@ export const adminApi = {
   getVendor: (id: number) => api.get<VendorResponse>(`/vendors/${id}`),
   createVendor: (body: CreateVendorRequest) => api.post<VendorResponse>("/vendors", body),
   updateVendor: (id: number, body: UpdateVendorRequest) => api.put<VendorResponse>(`/vendors/${id}`, body),
+  deleteVendor: (id: number) => api.delete(`/vendors/${id}`),
 
   // CRM opportunities (NIH-83)
   listOpportunities: (params: OpportunityListParams = {}) => {
@@ -3313,8 +3327,11 @@ export const adminApi = {
   },
   getPermit: (id: number) =>
     api.get<PermitChecklistItemResponse>(`/permits/${id}`),
+  createPermit: (body: CreatePermitChecklistItemRequest) =>
+    api.post<PermitChecklistItemResponse>("/permits", body),
   updatePermit: (id: number, body: UpdatePermitChecklistItemRequest) =>
     api.patch<PermitChecklistItemResponse>(`/permits/${id}`, body),
+  deletePermit: (id: number) => api.delete(`/permits/${id}`),
   ensurePermitsForProject: (designProjectId: number) =>
     api.post<PermitChecklistListResponse>(`/permits/design-project/${designProjectId}/ensure`),
 

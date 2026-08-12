@@ -651,11 +651,6 @@ const RowActions = ({
             <Send className="mr-1 h-3.5 w-3.5" />
             {t("basicDesign.action.sendReview")}
           </Button>
-          <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
-            onClick={onDelete}>
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            {t("basicDesign.action.delete")}
-          </Button>
         </>
       )}
       {s === "SubmittedForReview" && (
@@ -721,6 +716,11 @@ const RowActions = ({
           {t("basicDesign.status.Rejected")}
         </Badge>
       )}
+      <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+        onClick={onDelete}>
+        <Trash2 className="mr-1 h-3.5 w-3.5" />
+        {t("basicDesign.action.delete")}
+      </Button>
     </>
   );
 };

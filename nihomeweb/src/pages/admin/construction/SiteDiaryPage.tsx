@@ -5,6 +5,8 @@ import {
   CircleDot,
   ClipboardList,
   CloudSun,
+  Eye,
+  Pencil,
   RefreshCcw,
   Search,
   Send,
@@ -167,6 +169,7 @@ const AdminSiteDiary = () => {
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [detail, setDetail] = useState<SiteDiaryResponse | null>(null);
+  const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
   const [detailForm, setDetailForm] = useState<DiaryForm | null>(null);
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -308,8 +311,9 @@ const AdminSiteDiary = () => {
   };
 
   // ---- detail ----
-  const openDetail = (row: SiteDiaryResponse) => {
+  const openDetail = (row: SiteDiaryResponse, mode: "view" | "edit" = "view") => {
     setDetail(row);
+    setDetailMode(mode);
     setDetailForm(formFromRow(row));
     setDetailError(null);
   };
@@ -324,7 +328,7 @@ const AdminSiteDiary = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail?.id]);
 
-  const canEditDetail = canManage && detail?.status === "Draft";
+  const canEditDetail = canManage && detailMode === "edit" && detail?.status === "Draft";
 
   const submitDetail = async () => {
     if (!detail || !detailForm) return;
@@ -401,7 +405,7 @@ const AdminSiteDiary = () => {
     });
   };
   const toggleSelectAll = (checked: boolean) => {
-    if (checked) setSelected(new Set(rows.map((r) => r.id)));
+    if (checked) setSelected(new Set(rows.map((row) => row.id)));
     else setSelected(new Set());
   };
   const submitBulkDelete = async () => {
@@ -580,13 +584,9 @@ const AdminSiteDiary = () => {
             {/* Mobile cards (< md) */}
             <div className="space-y-3 md:hidden">
               {rows.map((row) => (
-                <div
+                <article
                   key={`m-${row.id}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openDetail(row)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(row); } }}
-                  className="relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -595,8 +595,8 @@ const AdminSiteDiary = () => {
                         {formatDate(row.diaryDate, lang)}
                       </div>
                     </div>
-                    {canManage && (
-                      <div onClick={(e) => e.stopPropagation()} role="presentation">
+                    {canManage ? (
+                      <div>
                         <Checkbox
                           checked={selected.has(row.id)}
                           onCheckedChange={(v) => toggleSelect(row.id, !!v)}
@@ -604,7 +604,7 @@ const AdminSiteDiary = () => {
                           className="mt-1"
                         />
                       </div>
-                    )}
+                    ) : null}
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {renderStatusBadge(row)}
@@ -624,7 +624,24 @@ const AdminSiteDiary = () => {
                       <span className="line-clamp-2">{row.incidents}</span>
                     </div>
                   )}
-                </div>
+                  <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => openDetail(row, "view")}>
+                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    </Button>
+                    {canManage ? (
+                      <>
+                        <span title={row.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined}>
+                          <Button variant="ghost" size="sm" disabled={row.status !== "Draft"} onClick={() => openDetail(row, "edit")}>
+                            <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                          </Button>
+                        </span>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmAction({ kind: "delete", row })}>
+                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                </article>
               ))}
               <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
                 <span>{t("common.showing")} {rows.length} / {total}</span>
@@ -658,18 +675,18 @@ const AdminSiteDiary = () => {
                       <th className="px-3 py-2">{t("siteDiary.field.headcountTotal")}</th>
                       <th className="px-3 py-2">{t("siteDiary.field.workPerformed")}</th>
                       <th className="px-3 py-2">{t("siteDiary.field.status")}</th>
+                      <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {rows.map((row) => (
                       <tr
                         key={row.id}
-                        className="cursor-pointer hover:bg-slate-50"
-                        onClick={() => openDetail(row)}
+                        className="hover:bg-slate-50"
                         data-testid={`diary-row-${row.id}`}
                       >
                         {canManage && (
-                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                          <td className="px-3 py-2">
                             <Checkbox
                               checked={selected.has(row.id)}
                               onCheckedChange={(v) => toggleSelect(row.id, !!v)}
@@ -704,6 +721,25 @@ const AdminSiteDiary = () => {
                           )}
                         </td>
                         <td className="px-3 py-2">{renderStatusBadge(row)}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => openDetail(row, "view")}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {canManage ? (
+                              <>
+                                <span title={row.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined}>
+                                  <Button variant="ghost" size="icon" disabled={row.status !== "Draft"} aria-label={row.status === "Draft" ? t("common.edit") : t("siteDiary.action.draftOnly")} onClick={() => openDetail(row, "edit")}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </span>
+                                <Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} className="text-destructive hover:text-destructive" onClick={() => setConfirmAction({ kind: "delete", row })}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -804,7 +840,7 @@ const AdminSiteDiary = () => {
             {detail && detailForm && (
               <>
                 <SheetHeader>
-                  <SheetTitle>{formatDate(detail.diaryDate, lang)} — {detail.designProjectCode}</SheetTitle>
+                  <SheetTitle>{t(detailMode === "edit" ? "siteDiary.edit" : "siteDiary.view")} · {formatDate(detail.diaryDate, lang)} — {detail.designProjectCode}</SheetTitle>
                   <SheetDescription className="text-xs text-slate-500">{detail.designProjectName}</SheetDescription>
                 </SheetHeader>
                 <div className="mt-4 space-y-4">
@@ -860,6 +896,7 @@ const AdminSiteDiary = () => {
 
                   {detail.status !== "Draft" && (
                     <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                      <p className="mb-2 font-medium text-slate-700">{t("siteDiary.action.draftOnly")}</p>
                       {detail.submittedByName && (
                         <div>
                           <span className="font-semibold">{t("siteDiary.field.submittedBy")}:</span> {detail.submittedByName} · {formatDateTime(detail.submittedAt, lang)}
@@ -877,12 +914,12 @@ const AdminSiteDiary = () => {
 
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                     <div className="flex flex-wrap gap-2">
-                      {canManage && detail.status === "Draft" && (
+                      {canManage ? (
                         <Button variant="destructive" size="sm" onClick={() => setConfirmAction({ kind: "delete", row: detail })} data-testid="diary-detail-delete">
                           <Trash2 className="mr-2 h-4 w-4" />
                           {t("siteDiary.action.delete")}
                         </Button>
-                      )}
+                      ) : null}
                       {canManage && detail.status === "Draft" && (
                         <Button variant="outline" size="sm" onClick={() => setConfirmAction({ kind: "submit", row: detail })} data-testid="diary-submit">
                           <Send className="mr-2 h-4 w-4" />
@@ -903,6 +940,13 @@ const AdminSiteDiary = () => {
                     </div>
                     <div className="flex gap-2">
                       <Button variant="ghost" onClick={closeDetail} disabled={detailSaving}>{t("common.close")}</Button>
+                      {canManage && detailMode === "view" ? (
+                        <span title={detail.status !== "Draft" ? t("siteDiary.action.draftOnly") : undefined}>
+                          <Button variant="outline" disabled={detail.status !== "Draft"} onClick={() => setDetailMode("edit")}>
+                            <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                          </Button>
+                        </span>
+                      ) : null}
                       {canEditDetail && (
                         <Button onClick={submitDetail} disabled={detailSaving} data-testid="diary-detail-save">
                           {detailSaving ? t("common.saving") : t("common.save")}
@@ -929,8 +973,9 @@ const AdminSiteDiary = () => {
                 onClick={runAction}
                 disabled={actionBusy}
                 data-testid="diary-action-confirm"
+                className={confirmAction.kind === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : undefined}
               >
-                {actionBusy ? t("common.saving") : t("common.confirm")}
+                {actionBusy ? t("common.saving") : t(confirmAction.kind === "delete" ? "common.delete" : "common.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -947,7 +992,12 @@ const AdminSiteDiary = () => {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={bulkDeleting}>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={submitBulkDelete} disabled={bulkDeleting} data-testid="diary-bulk-delete-confirm">
+              <AlertDialogAction
+                onClick={submitBulkDelete}
+                disabled={bulkDeleting}
+                data-testid="diary-bulk-delete-confirm"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
                 {bulkDeleting ? t("common.saving") : t("common.delete")}
               </AlertDialogAction>
             </AlertDialogFooter>

@@ -2,6 +2,29 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
+public class CreatePermitChecklistItemRequest
+{
+    [Range(1, int.MaxValue)]
+    public int DesignProjectId { get; set; }
+
+    [Required, StringLength(50)]
+    public string PermitTypeCode { get; set; } = string.Empty;
+
+    public string? Status { get; set; }
+
+    [StringLength(200)]
+    public string? IssuingAgency { get; set; }
+
+    public int? OwnerUserId { get; set; }
+    public DateTime? TargetDeadline { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? IssuedAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+
+    [StringLength(4000)]
+    public string? Note { get; set; }
+}
+
 /// <summary>
 /// Patch payload for a permit checklist item. All fields are optional so the
 /// FE can send a minimal delta (e.g. "just move to Submitted"). Explicit

@@ -345,7 +345,7 @@ const AdminQuoteDetail = () => {
     quote.status === "Rejected" ||
     quote.status === "Cancelled";
   const showEditToggle = canManage && !editing && !isTerminal;
-  const canDelete = canManage && quote.status === "Draft";
+  const canDelete = canManage;
 
   return (
     <AdminLayout>

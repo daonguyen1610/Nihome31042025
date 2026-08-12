@@ -838,7 +838,7 @@ export default function AcceptanceRecordsPage() {
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                        {canManage && r.status !== "Approved" && (
+                        {canManage && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1069,7 +1069,7 @@ export default function AcceptanceRecordsPage() {
                         {tr.label}
                       </Button>
                     ))}
-                    {canManage && detail.status !== "Approved" && (
+                    {canManage && (
                       <Button
                         variant="ghost"
                         size="sm"

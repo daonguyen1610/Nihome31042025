@@ -175,6 +175,57 @@ public class PermitChecklistService(
             now.AddDays(ExpiringSoonDays));
     }
 
+    public async Task<PermitChecklistItemResponse> CreateAsync(
+        CreatePermitChecklistItemRequest request,
+        int callerUserId,
+        CancellationToken ct = default)
+    {
+        if (!await db.DesignProjects.AsNoTracking().AnyAsync(x => x.Id == request.DesignProjectId, ct))
+        {
+            throw new PermitChecklistOperationException($"Dự án #{request.DesignProjectId} không tồn tại.");
+        }
+
+        var permitTypeCode = request.PermitTypeCode.Trim();
+        if (!await db.MasterDataOptions.AsNoTracking().AnyAsync(
+                x => x.Category == PermitTypeCategory && x.Code == permitTypeCode && x.IsActive, ct))
+        {
+            throw new PermitChecklistOperationException($"Loại giấy phép '{permitTypeCode}' không hợp lệ hoặc đã ngừng sử dụng.");
+        }
+
+        if (await db.PermitChecklistItems.AsNoTracking().AnyAsync(
+                x => x.DesignProjectId == request.DesignProjectId && x.PermitTypeCode == permitTypeCode, ct))
+        {
+            throw new PermitChecklistDuplicateException("Dự án đã có hạng mục cho loại giấy phép này.");
+        }
+
+        var status = ParseStatus(request.Status);
+        await ValidateOwnerAsync(request.OwnerUserId, ct);
+        var now = DateTime.UtcNow;
+        var entity = new PermitChecklistItem
+        {
+            DesignProjectId = request.DesignProjectId,
+            PermitTypeCode = permitTypeCode,
+            Status = status,
+            IssuingAgency = TrimOrNull(request.IssuingAgency),
+            OwnerUserId = request.OwnerUserId,
+            TargetDeadline = request.TargetDeadline,
+            SubmittedAt = request.SubmittedAt,
+            IssuedAt = request.IssuedAt,
+            ExpiresAt = request.ExpiresAt,
+            Note = TrimOrNull(request.Note),
+            CreatedAt = now,
+            CreatedByUserId = callerUserId,
+            UpdatedAt = now,
+            UpdatedByUserId = callerUserId,
+        };
+        if (entity.Status == PermitStatus.Issued && entity.IssuedAt is null) entity.IssuedAt = now;
+
+        db.PermitChecklistItems.Add(entity);
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Permit checklist item {Id} created by user {UserId}", entity.Id, callerUserId);
+        return (await GetAsync(entity.Id, ct))!;
+    }
+
     public async Task<PermitChecklistItemResponse?> UpdateAsync(int id, UpdatePermitChecklistItemRequest request,
         int callerUserId, CancellationToken ct = default)
     {
@@ -183,19 +234,12 @@ public class PermitChecklistService(
 
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
-            if (!Enum.TryParse<PermitStatus>(request.Status, true, out var newStatus))
-            {
-                throw new PermitChecklistOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
-            }
-            entity.Status = newStatus;
+            entity.Status = ParseStatus(request.Status);
         }
 
         if (request.OwnerUserId.HasValue)
         {
-            if (!await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
-            {
-                throw new PermitChecklistOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
-            }
+            await ValidateOwnerAsync(request.OwnerUserId, ct);
             entity.OwnerUserId = request.OwnerUserId;
         }
         else if (request.ClearOwner)
@@ -230,7 +274,37 @@ public class PermitChecklistService(
         return await GetAsync(id, ct);
     }
 
+    public async Task<PermitChecklistItemResponse?> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        var response = await GetAsync(id, ct);
+        if (response is null) return null;
+
+        var entity = await db.PermitChecklistItems.FirstAsync(x => x.Id == id, ct);
+        db.PermitChecklistItems.Remove(entity);
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Permit checklist item {Id} deleted", id);
+        return response;
+    }
+
     // ------------------------------ Helpers ---------------------------------
+
+    private async Task ValidateOwnerAsync(int? ownerUserId, CancellationToken ct)
+    {
+        if (ownerUserId.HasValue && !await db.Users.AsNoTracking().AnyAsync(u => u.Id == ownerUserId.Value, ct))
+        {
+            throw new PermitChecklistOperationException($"Người phụ trách #{ownerUserId} không tồn tại.");
+        }
+    }
+
+    private static PermitStatus ParseStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return PermitStatus.NotStarted;
+        if (Enum.TryParse<PermitStatus>(status, true, out var parsed)) return parsed;
+        throw new PermitChecklistOperationException($"Trạng thái '{status}' không hợp lệ.");
+    }
+
+    private static string? TrimOrNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private async Task<PermitChecklistRiskSummary> ComputeRiskAsync(
         DateTime now, DateTime dueSoonCutoff, DateTime expiringSoonCutoff, CancellationToken ct)

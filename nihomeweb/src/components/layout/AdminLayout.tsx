@@ -370,8 +370,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             />
           </Link>
           <button
+            type="button"
             onClick={() => setOpen(false)}
-            className="lg:hidden w-9 h-9 rounded-full bg-muted flex items-center justify-center"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-muted transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+            aria-label={t("nav.closeSidebar")}
           >
             <X className="w-4 h-4" />
           </button>
@@ -448,9 +450,11 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       </aside>
 
       {open && (
-        <div
+        <button
+          type="button"
           onClick={() => setOpen(false)}
-          className="lg:hidden fixed inset-0 z-30 bg-black/40"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          aria-label={t("nav.closeSidebar")}
         />
       )}
 
@@ -542,7 +546,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
 
-        <main className="flex-1 p-5 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-x-hidden bg-muted/15 p-4 sm:p-5 lg:p-8">{children}</main>
       </div>
     </div>
   );

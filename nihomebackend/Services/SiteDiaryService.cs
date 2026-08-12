@@ -9,8 +9,8 @@ namespace NihomeBackend.Services;
 /// <summary>
 /// Slice-1 implementation of <see cref="ISiteDiaryService"/> for the
 /// NIH-142 daily site diary. Enforces the one-per-day-per-project rule,
-/// the Draft → Submitted → Confirmed transitions and locks edits /
-/// deletes when a diary is out of Draft.
+/// the Draft → Submitted → Confirmed transitions and locks edits when a
+/// diary is out of Draft. Authorized deletes remain available in every status.
 /// </summary>
 public class SiteDiaryService(
     AppDbContext db,
@@ -270,11 +270,6 @@ public class SiteDiaryService(
     {
         var entity = await db.SiteDiaries.FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return false;
-        if (entity.Status != SiteDiaryStatus.Draft)
-        {
-            throw new SiteDiaryOperationException(
-                "Chỉ xoá được nhật ký ở trạng thái Nháp.");
-        }
         db.SiteDiaries.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("SiteDiary {Id} deleted", id);
@@ -307,20 +302,7 @@ public class SiteDiaryService(
             });
         }
 
-        var toDelete = new List<SiteDiary>();
-        foreach (var row in rows)
-        {
-            if (row.Status != SiteDiaryStatus.Draft)
-            {
-                response.Failures.Add(new SiteDiaryBulkDeleteFailure
-                {
-                    Id = row.Id,
-                    Message = "Chỉ xoá được nhật ký ở trạng thái Nháp.",
-                });
-                continue;
-            }
-            toDelete.Add(row);
-        }
+        var toDelete = rows;
 
         if (toDelete.Count > 0)
         {

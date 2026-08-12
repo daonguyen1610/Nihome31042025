@@ -224,13 +224,6 @@ public class ContractAppendixService(AppDbContext db, ILogger<ContractAppendixSe
             .FirstOrDefaultAsync(v => v.Id == voId && v.ContractId == contractId, ct);
         if (vo == null) return false;
 
-        // Approved VOs are locked: they've already changed the contract's
-        // effective value. Reject them first if a mistake needs undoing.
-        if (vo.Status == ContractAppendixStatus.Approved)
-        {
-            throw new ContractValidationException("Không thể xoá VO đã phê duyệt.");
-        }
-
         db.ContractAppendices.Remove(vo);
         await db.SaveChangesAsync(ct);
         return true;

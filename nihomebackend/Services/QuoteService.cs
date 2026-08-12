@@ -421,10 +421,12 @@ public class QuoteService(
         if (quote is null) return false;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return false;
 
-        // Hard delete only allowed on Draft. Any other state should use Cancel.
-        if (quote.Status != QuoteStatus.Draft)
+        var winningOpportunities = await db.Opportunities
+            .Where(opportunity => opportunity.WonQuoteId == id)
+            .ToListAsync(ct);
+        foreach (var opportunity in winningOpportunities)
         {
-            throw new QuoteOperationException("Chỉ báo giá ở trạng thái Draft mới được xoá. Trạng thái khác dùng Cancel.");
+            opportunity.WonQuoteId = null;
         }
 
         db.Quotes.Remove(quote);
