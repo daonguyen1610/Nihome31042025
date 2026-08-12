@@ -284,8 +284,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     groups.forEach((g) => {
       map[g.id] = g.items.some((it) => location.pathname.startsWith(it.to));
     });
-    // open content group by default
-    if (!Object.values(map).some(Boolean)) map["content"] = true;
     return map;
   }, [groups, location.pathname]);
 
