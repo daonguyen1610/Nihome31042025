@@ -229,22 +229,34 @@ public class TenderServiceTests : IDisposable
 
     // ---------------- Delete ----------------
 
-    [Fact]
-    public async Task DeleteAsync_WhilePreparing_Succeeds()
-    {
-        var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        Assert.True(await _sut.DeleteAsync(created.Id));
-        Assert.False(await _db.Tenders.AnyAsync(t => t.Id == created.Id));
-    }
-
-    [Fact]
-    public async Task DeleteAsync_AfterSubmitted_Throws()
+    [Theory]
+    [InlineData(TenderStatus.Preparing)]
+    [InlineData(TenderStatus.Submitted)]
+    [InlineData(TenderStatus.Won)]
+    [InlineData(TenderStatus.Lost)]
+    [InlineData(TenderStatus.Cancelled)]
+    public async Task DeleteAsync_AnyStatus_RemovesTenderAndChecklist(TenderStatus status)
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var raw = await _db.Tenders.FirstAsync(t => t.Id == created.Id);
-        raw.Status = TenderStatus.Submitted;
+        raw.Status = status;
+        var opportunity = new Opportunity
+        {
+            Name = "Preserved winning opportunity",
+            CustomerId = _customerId,
+            OwnerUserId = _userId,
+            WonTenderId = created.Id,
+        };
+        _db.Opportunities.Add(opportunity);
         await _db.SaveChangesAsync();
-        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.DeleteAsync(created.Id));
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.False(await _db.Tenders.AnyAsync(t => t.Id == created.Id));
+        Assert.False(await _db.TenderChecklistItems.AnyAsync(i => i.TenderId == created.Id));
+        Assert.True(await _db.Opportunities.AnyAsync(item => item.Id == opportunity.Id));
+        Assert.Null((await _db.Opportunities.FindAsync(opportunity.Id))!.WonTenderId);
+        Assert.True(await _db.Customers.AnyAsync(c => c.Id == _customerId));
+        Assert.True(await _db.Users.AnyAsync(u => u.Id == _userId));
     }
 
     [Fact]

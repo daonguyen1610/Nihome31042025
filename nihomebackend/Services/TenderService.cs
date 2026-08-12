@@ -257,16 +257,20 @@ public class TenderService(
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await db.Tenders.FirstOrDefaultAsync(t => t.Id == id, ct);
+        var entity = await db.Tenders
+            .Include(t => t.ChecklistItems)
+            .FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return false;
 
-        // Guard: once submitted (or terminal) we keep the audit trail so
-        // outcomes cannot silently disappear.
-        if (entity.Status != TenderStatus.Preparing)
+        var winningOpportunities = await db.Opportunities
+            .Where(opportunity => opportunity.WonTenderId == id)
+            .ToListAsync(ct);
+        foreach (var opportunity in winningOpportunities)
         {
-            throw new TenderOperationException("Chỉ có thể xoá gói thầu đang Chuẩn bị.");
+            opportunity.WonTenderId = null;
         }
 
+        db.TenderChecklistItems.RemoveRange(entity.ChecklistItems);
         db.Tenders.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Tender {Id} deleted", id);

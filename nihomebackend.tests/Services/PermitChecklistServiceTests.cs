@@ -109,6 +109,57 @@ public class PermitChecklistServiceTests : IDisposable
         Assert.Equal(4, await _db.PermitChecklistItems.CountAsync(p => p.DesignProjectId == _designProjectId));
     }
 
+    // ---------------- Create / Delete ----------------
+
+    [Fact]
+    public async Task CreateAsync_CreatesRequestedChecklistItem()
+    {
+        var response = await _sut.CreateAsync(new CreatePermitChecklistItemRequest
+        {
+            DesignProjectId = _designProjectId,
+            PermitTypeCode = "gpxd",
+            Status = "Preparing",
+            OwnerUserId = _userId,
+            IssuingAgency = " Sở Xây dựng ",
+        }, _userId);
+
+        Assert.Equal("gpxd", response.PermitTypeCode);
+        Assert.Equal("Preparing", response.Status);
+        Assert.Equal("Sở Xây dựng", response.IssuingAgency);
+        Assert.Equal(_userId, response.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DuplicateProjectAndType_Throws()
+    {
+        var request = new CreatePermitChecklistItemRequest
+        {
+            DesignProjectId = _designProjectId,
+            PermitTypeCode = "gpxd",
+        };
+        await _sut.CreateAsync(request, _userId);
+
+        await Assert.ThrowsAsync<PermitChecklistDuplicateException>(() =>
+            _sut.CreateAsync(request, _userId));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesRowAndReturnsSnapshot()
+    {
+        var created = await _sut.CreateAsync(new CreatePermitChecklistItemRequest
+        {
+            DesignProjectId = _designProjectId,
+            PermitTypeCode = "pccc",
+        }, _userId);
+
+        var deleted = await _sut.DeleteAsync(created.Id);
+
+        Assert.NotNull(deleted);
+        Assert.Equal(created.Id, deleted!.Id);
+        Assert.Null(await _db.PermitChecklistItems.FindAsync(created.Id));
+        Assert.Null(await _sut.DeleteAsync(created.Id));
+    }
+
     // ---------------- Update ----------------
 
     [Fact]

@@ -320,28 +320,24 @@ public class ShopDrawingService(
             });
         }
 
-        var toDelete = new List<ShopDrawing>();
-        foreach (var row in rows)
+        if (rows.Count > 0)
         {
-            if (row.Status != ShopDrawingStatus.Drafting)
-            {
-                response.Failures.Add(new ShopDrawingBulkDeleteFailure
-                {
-                    Id = row.Id,
-                    Message = "Chỉ xoá được bản vẽ ở trạng thái Đang vẽ.",
-                });
-                continue;
-            }
-            toDelete.Add(row);
-        }
+            var drawingIds = rows.Select(row => row.Id).ToList();
+            var releaseItems = await db.IfcReleaseItems
+                .Where(item => drawingIds.Contains(item.ShopDrawingId))
+                .ToListAsync(ct);
+            var revisions = await db.DrawingRevisions
+                .Where(revision => revision.TargetType == DrawingRevisionTargetType.ShopDrawing
+                    && drawingIds.Contains(revision.TargetId))
+                .ToListAsync(ct);
 
-        if (toDelete.Count > 0)
-        {
-            db.ShopDrawings.RemoveRange(toDelete);
+            db.IfcReleaseItems.RemoveRange(releaseItems);
+            db.DrawingRevisions.RemoveRange(revisions);
+            db.ShopDrawings.RemoveRange(rows);
             await db.SaveChangesAsync(ct);
-            response.Deleted = toDelete.Count;
+            response.Deleted = rows.Count;
             logger.LogInformation("ShopDrawing bulk-deleted {Count} rows ({Ids})",
-                toDelete.Count, string.Join(",", toDelete.Select(r => r.Id)));
+                rows.Count, string.Join(",", drawingIds));
         }
         return response;
     }

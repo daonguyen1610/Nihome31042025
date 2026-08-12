@@ -134,6 +134,47 @@ public class QuotesControllerTests : IntegrationTestBase
         (await Client.GetAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Delete_SubmittedQuote_RemovesAggregateAndPreservesOpportunity()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var opportunityId = quote.GetProperty("opportunityId").GetInt32();
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new { })).EnsureSuccessStatusCode();
+
+        (await Client.DeleteAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await Client.GetAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/opportunities/{opportunityId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Delete_MissingQuote_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.DeleteAsync("/api/quotes/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutManagePermission_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.DeleteAsync("/api/quotes/9999999")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_OtherOwnersQuote_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        (await Client.DeleteAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     // ---------- helpers ----------
 
     private async Task<int> CreateCustomerAsync()

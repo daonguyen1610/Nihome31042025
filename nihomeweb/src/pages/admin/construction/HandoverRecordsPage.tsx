@@ -68,7 +68,6 @@ const HANDOVER_STATUSES: HandoverStatus[] = [
 ];
 
 const EDITABLE_STATUSES = new Set<HandoverStatus>(["Draft", "Reopened"]);
-const DELETABLE_STATUSES = new Set<HandoverStatus>(["Draft", "Cancelled"]);
 
 const STATUS_BADGE: Record<HandoverStatus, string> = {
   Draft: "border-slate-200 bg-slate-50 text-slate-700",
@@ -490,7 +489,7 @@ export default function HandoverRecordsPage() {
           {action.label}
         </Button>
       ))}
-      {canManage && DELETABLE_STATUSES.has(record.status) && (
+      {canManage && (
         <Button size="sm" variant="destructive" onClick={() => setPendingDelete(record)}>
           <Trash2 className="mr-2 h-4 w-4" />
           {t("handover.action.delete")}

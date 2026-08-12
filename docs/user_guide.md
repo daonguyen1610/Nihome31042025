@@ -283,7 +283,11 @@ Submit drawings for approval before issuance. Apply electronic "Issued For Const
 
 #### 3.3.1 Legal Document Checklist
 
-Manage required legal documents by project: construction permit (GPXD), fire safety (PCCC), electrical supply, water supply, sidewalk permit, completion certificate, and others. Upload and store scanned documents, drawings, and official letters. Track document status: not prepared, in preparation, submitted, approved. Assign responsible personnel. Alert on approaching expiry dates.
+Open **Admin > Design and Permits > Permits** or navigate to `/admin/permits`. The checklist is generated automatically from active permit types when a design project is created. Users with management permission can create, view, edit, and delete project-specific items from desktop tables or mobile cards. Each project can contain only one item for each permit type.
+
+Track construction permits (GPXD), fire safety (PCCC), electrical supply, water supply, sidewalk permits, completion certificates, and other configured types. Record status, issuing agency, responsible person, submission and issue dates, expiry, target deadline, and notes. Risk cards and filters highlight overdue, due-soon, and expiring items.
+
+Delete is permanent and requires confirmation. Use **Regenerate default checklist** afterward when an accidentally removed active template item should be restored; regeneration adds only missing items and does not overwrite operator changes.
 
 #### 3.3.2 Permit Application Tracking
 
@@ -291,9 +295,9 @@ Track submission status at government agencies. Monitor processing progress: sub
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Legal Document List | Checklist by project | 1.5 days |
-| Legal Document Create/Edit | Create and update checklist | 2 days |
-| Legal Document Detail | Upload files, status updates, timeline, expiry alerts | 2.5 days |
+| Legal Document List | Search, filter, risk summary, pagination, and responsive CRUD actions | Implemented |
+| Legal Document Create/Edit | Create and update status, ownership, agency, dates, and notes | Implemented |
+| Legal Document Detail | Read-only item details and edit handoff | Implemented |
 
 ### 3.4 Module 4: Construction and Acceptance
 
@@ -312,13 +316,15 @@ Create construction schedules with phases and work items (WBS). Assign responsib
 
 #### 3.4.2 Electronic Site Log
 
-Record daily construction conditions. Upload site photos and videos. Update weather conditions. Record workforce count. Record materials and equipment delivered to site. Note incidents and issues. Maintain site log history.
+Open **Admin > Construction > Site Diary** to record daily weather, workforce, equipment, materials, completed work, incidents, and internal notes. The list provides explicit View, Edit, and Delete actions on desktop and mobile, plus multi-select deletion.
+
+The lifecycle is **Draft → Submitted → Confirmed**. Only Draft diaries can be edited; reopen a Submitted or Confirmed diary to Draft when its content needs correction. Users with management permission can permanently delete a diary in any status when it was created or transitioned accidentally. Single and bulk deletion always show a destructive confirmation and cannot be undone; the single-delete audit event retains the removed record snapshot.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Site Log List | Daily logs by project | 1.5 days |
-| Site Log Create/Edit | Create and update daily log | 2 days |
-| Site Log Detail | Photos/videos, incidents, acknowledgment signatures | 2.5 days |
+| Site Log List | Filters, status summary, responsive CRUD actions, and bulk delete | Implemented |
+| Site Log Create/Edit | Create Draft logs; edit after reopening when required | Implemented |
+| Site Log Detail | View workflow metadata, submit, confirm, reopen, and force delete | Implemented |
 | Mobile Media Upload | Camera picker, gallery, upload progress, thumbnails | 2 days |
 
 #### 3.4.3 Partial Acceptance (Phase/Section Acceptance)
@@ -376,17 +382,17 @@ Record defects at the construction site with location and description. Upload de
 
 #### 3.5.1 Vendor and Subcontractor Management
 
-Open **Admin > Procurement > Vendors / Subcontractors** or navigate to `/admin/vendors`. Authorized users can search by code, company, tax code, contact, phone, email, or trade category; filter by vendor type and active state; sort and paginate the results; and export the complete filtered result. Users with management permission can create and edit company, legal, contact, capability-document, and status information.
+Open **Admin > Procurement > Vendors / Subcontractors** or navigate to `/admin/vendors`. Authorized users can search by code, company, tax code, contact, phone, email, or trade category; filter by vendor type and active state; sort and paginate the results; and export the complete filtered result. Users with management permission can create, view, edit, and delete vendor records from the desktop list, mobile cards, or detail page.
 
-Select a company name or the view action to open its detail page. The page shows company, contact, document, active-status, creator, and timestamp information. Inactive vendors remain available for historical reporting and are clearly marked as unavailable for new transactions.
+Select a company name or the view action to open its detail page. The page shows company, contact, document, active-status, creator, and timestamp information. Set a vendor to inactive when its identity must remain available for historical reporting. Delete is permanent, requires confirmation, and is intended for obsolete, duplicate, or test records whose history is not required.
 
 The current NIH-165 scope does not include file upload, project cooperation history, partner evaluations, bid comparisons, subcontracts, or warehouse transactions. Those capabilities remain planned procurement work.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Vendor List | Search, filter, sort, paginate, and export vendors and subcontractors | Implemented |
+| Vendor List | Search, filter, sort, paginate, export, view, edit, and delete vendors and subcontractors | Implemented |
 | Vendor Create/Edit | Create and update profile, contact, document-link, and active-status information | Implemented |
-| Vendor Detail | Company, contact, license, document-link, status, and audit metadata | Implemented |
+| Vendor Detail | View company metadata and edit or permanently delete the record | Implemented |
 
 #### 3.5.2 Bid Comparison (Bid Tabulation)
 

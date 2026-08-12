@@ -186,7 +186,7 @@ public class SurveysControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_AfterSynced_IsBadRequest()
+    public async Task Delete_AfterSynced_Succeeds()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateSurveyAsync("Cannot delete", "residential");
@@ -199,7 +199,22 @@ public class SurveysControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
         });
 
-        (await Client.DeleteAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.DeleteAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_MissingSurvey_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.DeleteAsync("/api/surveys/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutManagePermission_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.DeleteAsync("/api/surveys/9999999")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     // ---------- NIH-101 timeline ----------

@@ -11,6 +11,10 @@ public class PermitChecklistOperationException(string message) : Exception(messa
 {
 }
 
+public class PermitChecklistDuplicateException(string message) : Exception(message)
+{
+}
+
 /// <summary>
 /// NIH-137 M3 Permitting service. Owns the checklist that lives against a
 /// <see cref="Models.DesignProject"/>: idempotent auto-generation from the
@@ -34,6 +38,8 @@ public interface IPermitChecklistService
 
     Task<PermitChecklistItemResponse?> GetAsync(int id, CancellationToken ct = default);
 
+    Task<PermitChecklistItemResponse> CreateAsync(CreatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default);
+
     /// <summary>
     /// Patch a single checklist row. Returns <c>null</c> when the row does not
     /// exist. Throws <see cref="PermitChecklistOperationException"/> when the
@@ -41,4 +47,6 @@ public interface IPermitChecklistService
     /// rule.
     /// </summary>
     Task<PermitChecklistItemResponse?> UpdateAsync(int id, UpdatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default);
+
+    Task<PermitChecklistItemResponse?> DeleteAsync(int id, CancellationToken ct = default);
 }

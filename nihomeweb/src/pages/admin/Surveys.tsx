@@ -412,13 +412,8 @@ const AdminSurveys = () => {
   };
 
   // -------- bulk selection --------
-  // Backend rejects delete on synced rows (audit rule), so we mirror that in
-  // the checkbox availability — only NotSynced rows can be bulk-deleted.
   const deletableIds = useMemo(
-    () =>
-      canManage
-        ? rows.filter((r) => r.driveSyncStatus === "NotSynced").map((r) => r.id)
-        : [],
+    () => canManage ? rows.map((row) => row.id) : [],
     [rows, canManage],
   );
   const {
@@ -613,7 +608,7 @@ const AdminSurveys = () => {
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => {
-                const canDelete = canManage && r.driveSyncStatus === "NotSynced";
+                const canDelete = canManage;
                 return (
                   <article
                     key={r.id}
@@ -715,7 +710,7 @@ const AdminSurveys = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const canDelete = canManage && r.driveSyncStatus === "NotSynced";
+                    const canDelete = canManage;
                     return (
                       <tr
                         key={r.id}

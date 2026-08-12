@@ -302,6 +302,34 @@ public class ContractsControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(refreshed);
         body.GetProperty("approvedVoTotal").GetDecimal().Should().Be(50_000_000m);
         body.GetProperty("currentValue").GetDecimal().Should().Be(550_000_000m);
+
+        (await Client.DeleteAsync($"/api/contracts/{contractId}/appendices/{voId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var afterDelete = await Client.GetAsync($"/api/contracts/{contractId}");
+        afterDelete.StatusCode.Should().Be(HttpStatusCode.OK);
+        var afterDeleteBody = await ReadJsonAsync(afterDelete);
+        afterDeleteBody.GetProperty("approvedVoTotal").GetDecimal().Should().Be(0);
+        afterDeleteBody.GetProperty("currentValue").GetDecimal().Should().Be(500_000_000m);
+        (await Client.GetAsync($"/api/customers/{customerId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task DeleteAppendix_MissingAppendix_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+
+        (await Client.DeleteAsync($"/api/contracts/{contractId}/appendices/9999999"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteAppendix_WithoutManagePermission_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.DeleteAsync("/api/contracts/9999999/appendices/9999999"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

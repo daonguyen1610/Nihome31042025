@@ -7,7 +7,7 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 /// <summary>
 /// End-to-end coverage for <c>PermitsController</c> (NIH-137): RBAC gating,
-/// list + get, patch semantics + the ensure/regenerate endpoint. Auto-
+/// full CRUD + the ensure/regenerate endpoint. Auto-
 /// generation on <c>DesignProject</c> create is exercised through the
 /// public POST so we know the two services wire together in the DI pipeline.
 /// </summary>
@@ -77,6 +77,45 @@ public class PermitsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task CrudRoundTrip_CreatesReadsUpdatesAndDeletesItem()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateDesignProjectAsync();
+        var existing = await Client.GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
+        existing.EnsureSuccessStatusCode();
+        var existingItems = (await ReadJsonAsync(existing)).GetProperty("items");
+        var existingId = existingItems[0].GetProperty("id").GetInt32();
+        (await Client.DeleteAsync($"/api/permits/{existingId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var permitTypeCode = existingItems[0].GetProperty("permitTypeCode").GetString();
+        var created = await Client.PostAsJsonAsync("/api/permits", new
+        {
+            designProjectId = projectId,
+            permitTypeCode,
+            status = "Preparing",
+            issuingAgency = "Integration agency",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var createdBody = await ReadJsonAsync(created);
+        var id = createdBody.GetProperty("id").GetInt32();
+
+        (await Client.GetAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.PostAsJsonAsync("/api/permits", new
+        {
+            designProjectId = projectId,
+            permitTypeCode,
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var updated = await Client.PatchAsJsonAsync($"/api/permits/{id}", new { status = "Submitted" });
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(updated)).GetProperty("status").GetString().Should().Be("Submitted");
+
+        (await Client.DeleteAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Patch_UnknownId_Is404()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
@@ -104,6 +143,7 @@ public class PermitsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
         var res = await Client.PatchAsJsonAsync($"/api/permits/{id}", new { status = "Submitted" });
         res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.DeleteAsync($"/api/permits/{id}")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

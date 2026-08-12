@@ -112,12 +112,36 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_WhilePreparing_Succeeds()
+    public async Task Delete_Submitted_RemovesTenderAndChecklistButPreservesCustomer()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateTenderAsync();
+        var customerId = await WithDbAsync(async db =>
+        {
+            var tender = await db.Tenders.FirstAsync(t => t.Id == id);
+            tender.Status = TenderStatus.Submitted;
+            await db.SaveChangesAsync();
+            return tender.CustomerId;
+        });
+
         (await Client.DeleteAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/customers/{customerId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.TenderChecklistItems.AnyAsync(i => i.TenderId == id))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_MissingTender_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.DeleteAsync("/api/tenders/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutManagePermission_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.DeleteAsync("/api/tenders/9999999")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

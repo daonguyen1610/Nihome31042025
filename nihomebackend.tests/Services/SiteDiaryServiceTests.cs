@@ -11,7 +11,7 @@ namespace nihomebackend.tests.Services;
 /// <summary>
 /// Unit coverage for the NIH-142 Site Diary service: CRUD validation,
 /// weather-code lookup, one-per-day guard, Draft → Submitted → Confirmed
-/// lifecycle, edit/delete gates and bulk-delete rules.
+/// lifecycle, edit gates and confirmed deletion rules.
 /// </summary>
 public class SiteDiaryServiceTests : IDisposable
 {
@@ -240,29 +240,28 @@ public class SiteDiaryServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_only_allowed_on_draft()
+    public async Task DeleteAsync_allows_confirmed_diary()
     {
         var d = await _sut.CreateAsync(Req(), _userId);
         await _sut.SubmitAsync(d.Id, _userId);
-        await Assert.ThrowsAsync<SiteDiaryOperationException>(() => _sut.DeleteAsync(d.Id));
+        await _sut.ConfirmAsync(d.Id, _userId);
 
-        await _sut.ReopenAsync(d.Id, _userId);
         Assert.True(await _sut.DeleteAsync(d.Id));
+        Assert.Null(await _sut.GetAsync(d.Id));
     }
 
     [Fact]
-    public async Task BulkDeleteAsync_deletes_only_draft_and_reports_failures()
+    public async Task BulkDeleteAsync_deletes_all_statuses_and_reports_missing_rows()
     {
         var a = await _sut.CreateAsync(Req(date: new DateOnly(2026, 7, 1)), _userId);
         var b = await _sut.CreateAsync(Req(date: new DateOnly(2026, 7, 2)), _userId);
         var c = await _sut.CreateAsync(Req(date: new DateOnly(2026, 7, 3)), _userId);
-        await _sut.SubmitAsync(b.Id, _userId); // b becomes Submitted → cannot delete
+        await _sut.SubmitAsync(b.Id, _userId);
 
         var response = await _sut.BulkDeleteAsync(new[] { a.Id, b.Id, c.Id, 999 });
         Assert.Equal(4, response.Requested);
-        Assert.Equal(2, response.Deleted); // a + c
-        Assert.Equal(2, response.Failures.Count);
-        Assert.Contains(response.Failures, f => f.Id == b.Id);
+        Assert.Equal(3, response.Deleted);
+        Assert.Single(response.Failures);
         Assert.Contains(response.Failures, f => f.Id == 999);
     }
 

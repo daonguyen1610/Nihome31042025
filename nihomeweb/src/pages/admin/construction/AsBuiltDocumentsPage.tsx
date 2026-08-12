@@ -71,7 +71,6 @@ const ASBUILT_CATEGORIES: AsBuiltCategory[] = [
   "Other",
 ];
 const EDITABLE_STATUSES = new Set<AsBuiltStatus>(["Draft", "Submitted"]);
-const DELETABLE_STATUSES = new Set<AsBuiltStatus>(["Draft", "Cancelled"]);
 
 const STATUS_BADGE: Record<AsBuiltStatus, string> = {
   Draft: "border-slate-200 bg-slate-50 text-slate-700",
@@ -704,7 +703,7 @@ export default function AsBuiltDocumentsPage() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                        {canManage && DELETABLE_STATUSES.has(r.status) && (
+                        {canManage && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -899,7 +898,7 @@ export default function AsBuiltDocumentsPage() {
                         {tr.label}
                       </Button>
                     ))}
-                    {canManage && DELETABLE_STATUSES.has(detail.status) && (
+                    {canManage && (
                       <Button
                         variant="ghost"
                         size="sm"

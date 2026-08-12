@@ -270,15 +270,6 @@ public class SurveyService(
         var entity = await db.Surveys.FirstOrDefaultAsync(s => s.Id == id, ct);
         if (entity is null) return false;
 
-        // Guard once the row has hit Drive so the audit trail is preserved.
-        // NIH-100 AC #7 spells this out for media ("chỉ được thêm, không xoá
-        // sau khi đã đồng bộ Drive"); we apply the same discipline to the
-        // parent survey so a synced record cannot silently disappear.
-        if (entity.DriveSyncStatus != SurveyDriveSyncStatus.NotSynced)
-        {
-            throw new SurveyOperationException("Chỉ có thể xoá phiếu khảo sát khi chưa đồng bộ Drive.");
-        }
-
         db.Surveys.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Survey {Id} deleted", id);

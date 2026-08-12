@@ -100,6 +100,24 @@ public class VendorsController(IVendorService service, IAuditLogger audit) : Con
         }
     }
 
+    [HttpDelete("{id:int}")]
+    [RequirePermission("proc.vendors", "manage")]
+    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    {
+        var vendor = await service.DeleteAsync(id, ct);
+        if (vendor is null) return NotFound();
+
+        audit.Log(new AuditEvent
+        {
+            Action = "vendor.delete",
+            ResourceType = EntityTypes.Vendor,
+            ResourceId = vendor.Id.ToString(),
+            Message = $"Vendor #{vendor.Id} '{vendor.CompanyName}' deleted.",
+            OldValue = vendor,
+        });
+        return NoContent();
+    }
+
     private int? GetUserId()
     {
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");

@@ -915,7 +915,7 @@ const AdminPunchList = () => {
 
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                     <div className="flex flex-wrap gap-2">
-                      {canManage && detail.status === "Open" && (
+                      {canManage && (
                         <Button variant="destructive" size="sm" onClick={() => setConfirmAction({ kind: "delete", row: detail })} data-testid="punch-detail-delete">
                           <Trash2 className="mr-2 h-4 w-4" />
                           {t("punch.action.delete")}

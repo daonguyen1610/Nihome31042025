@@ -3,7 +3,14 @@
 
   { "key": "permits.title", "category": "permits", "vi": "Checklist pháp lý", "en": "Permitting checklist", "zh": "许可证清单", "ja": "許認可チェックリスト" },
   { "key": "permits.subtitle", "category": "permits", "vi": "Theo dõi giấy phép của các dự án thiết kế: GPXD, PCCC, cấp điện, cấp nước, ATLĐ, môi trường và hoàn công.", "en": "Track permits across design projects: construction, fire, electricity, water, safety, environment and completion.", "zh": "跟踪设计项目的许可证：建设、消防、供电、供水、安全、环境与竣工。", "ja": "設計プロジェクトの許認可（建設、消防、電気、給水、安全、環境、竣工）を追跡します。" },
+  { "key": "permits.create", "category": "permits", "vi": "Thêm hạng mục", "en": "Add permit item", "zh": "添加许可证项目", "ja": "許認可項目を追加" },
+  { "key": "permits.created", "category": "permits", "vi": "Đã tạo hạng mục pháp lý", "en": "Permit item created", "zh": "许可证项目已创建", "ja": "許認可項目を作成しました" },
   { "key": "permits.updated", "category": "permits", "vi": "Đã cập nhật hạng mục pháp lý", "en": "Permit item updated", "zh": "已更新许可证项目", "ja": "許認可項目を更新しました" },
+  { "key": "permits.deleted", "category": "permits", "vi": "Đã xóa hạng mục pháp lý", "en": "Permit item deleted", "zh": "许可证项目已删除", "ja": "許認可項目を削除しました" },
+  { "key": "permits.deleting", "category": "permits", "vi": "Đang xóa...", "en": "Deleting...", "zh": "正在删除...", "ja": "削除中..." },
+  { "key": "permits.viewTitle", "category": "permits", "vi": "Chi tiết hạng mục pháp lý", "en": "Permit item details", "zh": "许可证项目详情", "ja": "許認可項目の詳細" },
+  { "key": "permits.deleteTitle", "category": "permits", "vi": "Xóa hạng mục pháp lý?", "en": "Delete permit item?", "zh": "删除许可证项目？", "ja": "許認可項目を削除しますか？" },
+  { "key": "permits.deleteDescription", "category": "permits", "vi": "Hạng mục “{type}” của dự án “{project}” sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.", "en": "The “{type}” item for project “{project}” will be permanently deleted. This action cannot be undone.", "zh": "项目“{project}”的“{type}”项目将被永久删除。此操作无法撤销。", "ja": "プロジェクト「{project}」の「{type}」項目は完全に削除されます。この操作は元に戻せません。" },
   { "key": "permits.empty", "category": "permits", "vi": "Chưa có hạng mục pháp lý nào.", "en": "No permit items yet.", "zh": "暂无许可证项目。", "ja": "許認可項目がまだありません。" },
   { "key": "permits.emptyFiltered", "category": "permits", "vi": "Không có hạng mục nào khớp bộ lọc hiện tại.", "en": "No items match the current filters.", "zh": "没有符合当前筛选条件的项目。", "ja": "現在の条件に一致する項目はありません。" },
   { "key": "permits.total", "category": "permits", "vi": "{count} hạng mục", "en": "{count} items", "zh": "{count} 项", "ja": "{count} 件" },
@@ -49,6 +56,11 @@
   { "key": "permits.filter.showExpiringSoon", "category": "permits", "vi": "Sắp hết hạn (30 ngày)", "en": "Expiring soon (30d)", "zh": "即将到期 (30天)", "ja": "有効期限間近 (30日)" },
 
   { "key": "permits.form.title", "category": "permits", "vi": "Cập nhật hạng mục pháp lý", "en": "Update permit item", "zh": "更新许可证项目", "ja": "許認可項目を更新" },
+  { "key": "permits.form.createTitle", "category": "permits", "vi": "Thêm hạng mục pháp lý", "en": "Add permit item", "zh": "添加许可证项目", "ja": "許認可項目を追加" },
+  { "key": "permits.form.create", "category": "permits", "vi": "Tạo hạng mục", "en": "Create item", "zh": "创建项目", "ja": "項目を作成" },
+  { "key": "permits.form.selectProject", "category": "permits", "vi": "Chọn dự án thiết kế", "en": "Select a design project", "zh": "选择设计项目", "ja": "設計プロジェクトを選択" },
+  { "key": "permits.form.selectType", "category": "permits", "vi": "Chọn loại giấy phép", "en": "Select a permit type", "zh": "选择许可证类型", "ja": "許認可種別を選択" },
+  { "key": "permits.form.projectTypeRequired", "category": "permits", "vi": "Vui lòng chọn dự án và loại giấy phép.", "en": "Select a project and permit type.", "zh": "请选择项目和许可证类型。", "ja": "プロジェクトと許認可種別を選択してください。" },
   { "key": "permits.form.hint", "category": "permits", "vi": "Cập nhật trạng thái theo tiến độ thực tế. Khi chuyển sang \"Đã cấp\", hệ thống tự gắn ngày cấp nếu bạn để trống.", "en": "Move the status forward as work progresses. When you flip to \"Issued\" and leave the issue date empty, today is stamped automatically.", "zh": "根据实际进度更新状态。切换到“已签发”且未填写签发日期时，系统会自动填入今天。", "ja": "進捗に合わせて状態を更新します。「発行済み」に切り替えて発行日を空欄にすると、今日の日付が自動設定されます。" },
   { "key": "permits.form.ownerNone", "category": "permits", "vi": "Chưa gán người phụ trách", "en": "Unassigned", "zh": "未指派", "ja": "未割当" }
 ]

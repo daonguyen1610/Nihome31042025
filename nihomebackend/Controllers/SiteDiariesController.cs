@@ -175,6 +175,8 @@ public class SiteDiariesController(
     {
         try
         {
+            var snapshot = await svc.GetAsync(id, ct);
+            if (snapshot is null) return NotFound();
             var removed = await svc.DeleteAsync(id, ct);
             if (!removed) return NotFound();
             audit.Log(new AuditEvent
@@ -183,6 +185,7 @@ public class SiteDiariesController(
                 ResourceType = EntityTypes.SiteDiary,
                 ResourceId = id.ToString(),
                 Message = $"Site diary #{id} deleted.",
+                OldValue = snapshot,
             });
             return NoContent();
         }

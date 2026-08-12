@@ -440,13 +440,8 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
   const [rejectNote, setRejectNote] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Only Draft / Submitted / Rejected VOs may be bulk-deleted. Approved
-  // rows are frozen server-side (they already changed the contract's
-  // effective value) — we filter them out of the visible selection set so
-  // the header checkbox and "N selected" counter never include a row the
-  // user cannot actually delete.
   const deletableIds = useMemo(
-    () => rows.filter((v) => v.status !== "Approved").map((v) => v.id),
+    () => rows.map((row) => row.id),
     [rows],
   );
   const bulk = useBulkSelection<number>({
@@ -608,7 +603,7 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
             const editable = vo.status === "Draft" || vo.status === "Rejected";
             const canSubmit = vo.status === "Draft";
             const canDecide = vo.status === "Submitted";
-            const canDelete = vo.status !== "Approved";
+            const canDelete = true;
             return (
               <div key={vo.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">

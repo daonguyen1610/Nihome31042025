@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Clock, FileCheck2, Filter, RefreshCcw, Search, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Clock, Eye, FileCheck2, Filter, Pencil, Plus, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -30,8 +30,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   adminApi,
   PERMIT_STATUSES,
+  type CreatePermitChecklistItemRequest,
   type DesignProjectListItemResponse,
   type MasterDataOption,
   type PermitChecklistItemResponse,
@@ -75,7 +86,9 @@ interface UserOption {
   fullName: string;
 }
 
-interface EditForm {
+interface PermitForm {
+  projectId: number | null;
+  permitTypeCode: string;
   status: PermitStatus;
   issuingAgency: string;
   ownerUserId: number | null;
@@ -86,7 +99,22 @@ interface EditForm {
   note: string;
 }
 
-const formFrom = (row: PermitChecklistItemResponse): EditForm => ({
+const emptyForm = (): PermitForm => ({
+  projectId: null,
+  permitTypeCode: "",
+  status: "NotStarted",
+  issuingAgency: "",
+  ownerUserId: null,
+  targetDeadline: "",
+  submittedAt: "",
+  issuedAt: "",
+  expiresAt: "",
+  note: "",
+});
+
+const formFrom = (row: PermitChecklistItemResponse): PermitForm => ({
+  projectId: row.designProjectId,
+  permitTypeCode: row.permitTypeCode,
   status: row.status,
   issuingAgency: row.issuingAgency ?? "",
   ownerUserId: row.ownerUserId ?? null,
@@ -237,29 +265,67 @@ const AdminPermits = () => {
     setPage(1);
   };
 
-  // -------- edit dialog --------
+  // -------- CRUD dialogs --------
+  const [dialogMode, setDialogMode] = useState<"create" | "edit" | null>(null);
   const [editing, setEditing] = useState<PermitChecklistItemResponse | null>(null);
-  const [form, setForm] = useState<EditForm | null>(null);
+  const [viewing, setViewing] = useState<PermitChecklistItemResponse | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PermitChecklistItemResponse | null>(null);
+  const [form, setForm] = useState<PermitForm | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm());
+    setFormError(null);
+    setDialogMode("create");
+  };
 
   const openEdit = (row: PermitChecklistItemResponse) => {
     setEditing(row);
     setForm(formFrom(row));
     setFormError(null);
+    setDialogMode("edit");
   };
 
-  const closeEdit = () => {
+  const closeForm = () => {
+    setDialogMode(null);
     setEditing(null);
     setForm(null);
     setFormError(null);
   };
 
   const submitForm = async () => {
-    if (!editing || !form) return;
+    if (!form || !dialogMode) return;
     setFormError(null);
+    if (dialogMode === "create" && (!form.projectId || !form.permitTypeCode)) {
+      setFormError(t("permits.form.projectTypeRequired"));
+      return;
+    }
     setSaving(true);
     try {
+      if (dialogMode === "create") {
+        const payload: CreatePermitChecklistItemRequest = {
+          designProjectId: form.projectId!,
+          permitTypeCode: form.permitTypeCode,
+          status: form.status,
+          issuingAgency: form.issuingAgency.trim() || null,
+          ownerUserId: form.ownerUserId,
+          targetDeadline: toUtcMidnight(form.targetDeadline) || null,
+          submittedAt: toUtcMidnight(form.submittedAt) || null,
+          issuedAt: toUtcMidnight(form.issuedAt) || null,
+          expiresAt: toUtcMidnight(form.expiresAt) || null,
+          note: form.note.trim() || null,
+        };
+        await adminApi.createPermit(payload);
+        toast({ title: t("permits.created") });
+        closeForm();
+        setPage(1);
+        await fetchList();
+        return;
+      }
+      if (!editing) return;
       // Compute an explicit patch payload — Clear* flags are used only when
       // the field was previously set and the operator wiped it clean.
       const payload: UpdatePermitChecklistItemRequest = { status: form.status };
@@ -284,12 +350,28 @@ const AdminPermits = () => {
 
       await adminApi.updatePermit(editing.id, payload);
       toast({ title: t("permits.updated") });
-      closeEdit();
+      closeForm();
       await fetchList();
     } catch (err) {
       setFormError(extractApiError(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const deletePermit = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await adminApi.deletePermit(pendingDelete.id);
+      setPendingDelete(null);
+      toast({ title: t("permits.deleted") });
+      if (rows.length === 1 && page > 1) setPage((current) => current - 1);
+      else await fetchList();
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -328,6 +410,12 @@ const AdminPermits = () => {
             </h1>
             <p className="text-sm text-slate-600">{t("permits.subtitle")}</p>
           </div>
+          {canManage ? (
+            <Button size="sm" onClick={openCreate}>
+              <Plus className="mr-1 h-4 w-4" />
+              {t("permits.create")}
+            </Button>
+          ) : null}
         </header>
 
         {/* Risk register */}
@@ -500,11 +588,7 @@ const AdminPermits = () => {
               {rows.map((r) => (
                 <article
                   key={r.id}
-                  className={cn(
-                    "rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70",
-                    canManage && "cursor-pointer",
-                  )}
-                  onClick={() => (canManage ? openEdit(r) : undefined)}
+                  className="rounded-lg border bg-white p-3 shadow-sm"
                 >
                   <header className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -541,6 +625,21 @@ const AdminPermits = () => {
                       <dd className="font-medium">{formatDate(r.expiresAt, lang)}</dd>
                     </div>
                   </dl>
+                  <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setViewing(r)}>
+                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    </Button>
+                    {canManage ? (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)}>
+                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
                 </article>
               ))}
             </div>
@@ -557,18 +656,12 @@ const AdminPermits = () => {
                     <th className="px-3 py-2">{t("permits.field.status")}</th>
                     <th className="px-3 py-2">{t("permits.field.targetDeadline")}</th>
                     <th className="px-3 py-2">{t("permits.field.expiresAt")}</th>
+                    <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {rows.map((r) => (
-                    <tr
-                      key={r.id}
-                      className={cn(
-                        "transition-colors hover:bg-slate-50/70",
-                        canManage && "cursor-pointer",
-                      )}
-                      onClick={() => (canManage ? openEdit(r) : undefined)}
-                    >
+                    <tr key={r.id} className="transition-colors hover:bg-slate-50/70">
                       <td className="px-3 py-2 text-slate-700">
                         <div className="font-mono text-xs text-slate-500">{r.designProjectCode ?? "—"}</div>
                         <div className="text-slate-800">{r.designProjectName ?? "—"}</div>
@@ -591,6 +684,23 @@ const AdminPermits = () => {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-slate-700">
                         {formatDate(r.expiresAt, lang)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => setViewing(r)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {canManage ? (
+                            <>
+                              <Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} onClick={() => openEdit(r)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -629,13 +739,13 @@ const AdminPermits = () => {
         )}
       </div>
 
-      {/* Edit dialog */}
-      <Dialog open={!!editing} onOpenChange={(o) => (!o ? closeEdit() : undefined)}>
+      {/* Create / edit dialog */}
+      <Dialog open={dialogMode !== null} onOpenChange={(open) => (!open ? closeForm() : undefined)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{t("permits.form.title")}</DialogTitle>
+            <DialogTitle>{t(dialogMode === "create" ? "permits.form.createTitle" : "permits.form.title")}</DialogTitle>
             <DialogDescription>
-              {editing ? (
+              {dialogMode === "edit" && editing ? (
                 <span className="text-xs text-slate-600">
                   {(editing.designProjectCode ?? "") + " — " + (editing.permitTypeLabel ?? editing.permitTypeCode)}
                 </span>
@@ -643,8 +753,33 @@ const AdminPermits = () => {
               <span className="mt-1 block">{t("permits.form.hint")}</span>
             </DialogDescription>
           </DialogHeader>
-          {form && editing ? (
+          {form ? (
             <div className="grid gap-3 md:grid-cols-2">
+              {dialogMode === "create" ? (
+                <>
+                  <div>
+                    <Label>{t("permits.field.project")}</Label>
+                    <SearchableSelect
+                      className="mt-1"
+                      value={form.projectId != null ? String(form.projectId) : ""}
+                      onChange={(value) => setForm((current) => current ? { ...current, projectId: value ? Number(value) : null } : current)}
+                      options={projectOptions}
+                      placeholder={t("permits.form.selectProject")}
+                    />
+                  </div>
+                  <div>
+                    <Label>{t("permits.field.permitType")}</Label>
+                    <Select value={form.permitTypeCode} onValueChange={(value) => setForm((current) => current ? { ...current, permitTypeCode: value } : current)}>
+                      <SelectTrigger className="mt-1 h-9">
+                        <SelectValue placeholder={t("permits.form.selectType")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {permitTypes.map((type) => <SelectItem key={type.code} value={type.code}>{type.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : null}
               <div>
                 <Label>{t("permits.field.status")}</Label>
                 <Select
@@ -726,18 +861,74 @@ const AdminPermits = () => {
           ) : null}
           {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
           <DialogFooter>
-            <Button variant="outline" onClick={closeEdit} disabled={saving}>
+            <Button variant="outline" onClick={closeForm} disabled={saving}>
               {t("common.cancel")}
             </Button>
             <Button onClick={() => void submitForm()} disabled={saving || !canManage}>
-              {t("common.save")}
+              {saving ? t("common.loading") : t(dialogMode === "create" ? "permits.form.create" : "common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={viewing !== null} onOpenChange={(open) => { if (!open) setViewing(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("permits.viewTitle")}</DialogTitle>
+            <DialogDescription>
+              {viewing ? `${viewing.designProjectCode ?? ""} — ${viewing.permitTypeLabel ?? viewing.permitTypeCode}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {viewing ? (
+            <dl className="grid gap-4 rounded-lg border bg-muted/10 p-4 sm:grid-cols-2">
+              <DetailValue label={t("permits.field.project")} value={`${viewing.designProjectCode ?? ""} — ${viewing.designProjectName ?? "—"}`} />
+              <DetailValue label={t("permits.field.permitType")} value={viewing.permitTypeLabel ?? viewing.permitTypeCode} />
+              <DetailValue label={t("permits.field.status")} value={t(`permits.status.${viewing.status}`)} />
+              <DetailValue label={t("permits.field.agency")} value={viewing.issuingAgency} />
+              <DetailValue label={t("permits.field.owner")} value={viewing.ownerName} />
+              <DetailValue label={t("permits.field.targetDeadline")} value={formatDate(viewing.targetDeadline, lang)} />
+              <DetailValue label={t("permits.field.submittedAt")} value={formatDate(viewing.submittedAt, lang)} />
+              <DetailValue label={t("permits.field.issuedAt")} value={formatDate(viewing.issuedAt, lang)} />
+              <DetailValue label={t("permits.field.expiresAt")} value={formatDate(viewing.expiresAt, lang)} />
+              <DetailValue label={t("permits.field.updatedAt")} value={formatDate(viewing.updatedAt, lang)} />
+              <div className="sm:col-span-2"><DetailValue label={t("permits.field.note")} value={viewing.note} /></div>
+            </dl>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewing(null)}>{t("common.close")}</Button>
+            {canManage && viewing ? <Button onClick={() => { const row = viewing; setViewing(null); openEdit(row); }}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button> : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open && !deleting) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("permits.deleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("permits.deleteDescription")
+                .replace("{type}", pendingDelete?.permitTypeLabel ?? pendingDelete?.permitTypeCode ?? "")
+                .replace("{project}", pendingDelete?.designProjectName ?? "")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction disabled={deleting} onClick={(event) => { event.preventDefault(); void deletePermit(); }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? t("permits.deleting") : t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
+
+const DetailValue = ({ label, value }: { label: string; value?: string | null }) => (
+  <div>
+    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+    <dd className="mt-1 break-words text-sm font-medium">{value || "—"}</dd>
+  </div>
+);
 
 const RiskCard = ({
   title,

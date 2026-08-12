@@ -240,25 +240,49 @@ public class ShopDrawingServiceTests : IDisposable
     // ---------------- Bulk delete ----------------
 
     [Fact]
-    public async Task BulkDelete_MixedRows_ReportsPartialSuccess()
+    public async Task BulkDelete_AllStatuses_RemovesAggregatesAndReportsMissingRows()
     {
         var a = await _sut.CreateAsync(ValidCreate(title: "A"), _userId);
         var b = await _sut.CreateAsync(ValidCreate(title: "B"), _userId);
         var c = await _sut.CreateAsync(ValidCreate(title: "C"), _userId);
 
-        // c is out of the Drafting state — should fail per-row without
-        // aborting the whole batch.
         await Transition(c.Id, "InReview");
+        var release = new IfcRelease
+        {
+            DesignProjectId = _projectId,
+            ReleaseNumber = "IFC-BULK-DELETE-001",
+            Title = "Preserved release",
+        };
+        _db.IfcReleases.Add(release);
+        await _db.SaveChangesAsync();
+        _db.IfcReleaseItems.Add(new IfcReleaseItem
+        {
+            IfcReleaseId = release.Id,
+            ShopDrawingId = c.Id,
+        });
+        _db.DrawingRevisions.Add(new DrawingRevision
+        {
+            TargetType = DrawingRevisionTargetType.ShopDrawing,
+            TargetId = c.Id,
+            RevisionNumber = 1,
+            ReasonCode = "client-change",
+            Note = "Bulk delete cleanup",
+            IsCurrent = true,
+            CreatedByUserId = _userId,
+        });
+        await _db.SaveChangesAsync();
 
         var result = await _sut.BulkDeleteAsync(new[] { a.Id, b.Id, c.Id, 999999 });
 
         Assert.Equal(4, result.Requested);
-        Assert.Equal(2, result.Deleted);
-        Assert.Equal(2, result.Failures.Count);
-        Assert.Contains(result.Failures, f => f.Id == c.Id);
+        Assert.Equal(3, result.Deleted);
+        Assert.Single(result.Failures);
         Assert.Contains(result.Failures, f => f.Id == 999999);
         Assert.Null(await _db.ShopDrawings.FindAsync(a.Id));
-        Assert.NotNull(await _db.ShopDrawings.FindAsync(c.Id));
+        Assert.Null(await _db.ShopDrawings.FindAsync(c.Id));
+        Assert.Empty(await _db.IfcReleaseItems.ToListAsync());
+        Assert.Empty(await _db.DrawingRevisions.ToListAsync());
+        Assert.NotNull(await _db.IfcReleases.FindAsync(release.Id));
     }
 
     [Fact]

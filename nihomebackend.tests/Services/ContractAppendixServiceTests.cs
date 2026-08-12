@@ -101,22 +101,38 @@ public class ContractAppendixServiceTests : IDisposable
         Assert.Null(edited.DecidedAt);
     }
 
-    [Fact]
-    public async Task Delete_ApprovedRow_IsBlocked()
+    [Theory]
+    [InlineData(ContractAppendixStatus.Draft)]
+    [InlineData(ContractAppendixStatus.Submitted)]
+    [InlineData(ContractAppendixStatus.Approved)]
+    [InlineData(ContractAppendixStatus.Rejected)]
+    public async Task Delete_AnyStatus_RemovesAppendixAndPreservesContract(ContractAppendixStatus status)
     {
         var vo = await _sut.CreateAsync(_contract.Id, Req(), 100, true);
-        await _sut.SubmitAsync(_contract.Id, vo!.Id, 100, true);
-        await _sut.ApproveAsync(_contract.Id, vo.Id, null, 200, true);
-        await Assert.ThrowsAsync<ContractValidationException>(
-            () => _sut.DeleteAsync(_contract.Id, vo.Id, 100, true));
+        var row = _db.ContractAppendices.Single(v => v.Id == vo!.Id);
+        row.Status = status;
+        await _db.SaveChangesAsync();
+        var customerId = _contract.CustomerId;
+
+        Assert.True(await _sut.DeleteAsync(_contract.Id, vo!.Id, 100, true));
+        Assert.Empty(_db.ContractAppendices);
+        Assert.True(_db.Contracts.Any(c => c.Id == _contract.Id));
+        Assert.True(_db.Customers.Any(c => c.Id == customerId));
     }
 
     [Fact]
-    public async Task Delete_DraftRow_Succeeds()
+    public async Task Delete_MissingAppendix_ReturnsFalse()
+    {
+        Assert.False(await _sut.DeleteAsync(_contract.Id, 99999, 100, true));
+    }
+
+    [Fact]
+    public async Task Delete_OtherOwnersContract_ReturnsFalse()
     {
         var vo = await _sut.CreateAsync(_contract.Id, Req(), 100, true);
-        Assert.True(await _sut.DeleteAsync(_contract.Id, vo!.Id, 100, true));
-        Assert.Empty(_db.ContractAppendices);
+
+        Assert.False(await _sut.DeleteAsync(_contract.Id, vo!.Id, 999, canSeeAll: false));
+        Assert.Single(_db.ContractAppendices);
     }
 
     [Fact]

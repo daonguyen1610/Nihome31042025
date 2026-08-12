@@ -256,16 +256,9 @@ const AdminQuotes = () => {
     await runAction(id, () => adminApi.deleteQuote(id), "quotes.updated");
   };
 
-  // ---------- bulk selection (Draft-only, canManage-only) ----------
-  // Non-Draft quotes can't be deleted by the workflow, so we don't expose
-  // checkboxes on them — mirroring the per-row delete button gating.
+  // ---------- bulk selection ----------
   const deletableIds = useMemo(
-    () =>
-      canManage
-        ? rows
-            .filter((r) => ACTIONS_BY_STATUS[r.status].includes("delete"))
-            .map((r) => r.id)
-        : [],
+    () => canManage ? rows.map((row) => row.id) : [],
     [rows, canManage],
   );
   const {
@@ -452,8 +445,7 @@ const AdminQuotes = () => {
               <tbody className="divide-y">
                 {rows.map((r) => {
                   const isPending = pendingAction === r.id;
-                  const canDelete =
-                    canManage && ACTIONS_BY_STATUS[r.status].includes("delete");
+                  const canDelete = canManage;
                   return (
                     <tr
                       key={r.id}
@@ -523,8 +515,7 @@ const AdminQuotes = () => {
           <ul className="grid gap-2 sm:grid-cols-2 xl:hidden">
             {rows.map((r) => {
               const isPending = pendingAction === r.id;
-              const canDelete =
-                canManage && ACTIONS_BY_STATUS[r.status].includes("delete");
+              const canDelete = canManage;
               return (
                 <li
                   key={r.id}
@@ -1056,7 +1047,7 @@ const RowActions = ({
           {compact && <span className="ml-1 text-xs">{t("common.edit")}</span>}
         </Link>
       </Button>
-      {canManage && actions.includes("delete") &&
+      {canManage &&
         btn(t("quotes.action.delete"), <Trash2 className="h-3.5 w-3.5" />, () => void onDelete(row.id), { danger: true })}
     </div>
   );

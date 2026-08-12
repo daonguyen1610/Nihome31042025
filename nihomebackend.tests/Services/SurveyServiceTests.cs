@@ -289,34 +289,27 @@ public class SurveyServiceTests : IDisposable
         Assert.Null(updated.Note);
     }
 
-    [Fact]
-    public async Task DeleteAsync_NotSynced_Succeeds()
-    {
-        var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        Assert.True(await _sut.DeleteAsync(created.Id));
-        Assert.False(await _db.Surveys.AnyAsync(s => s.Id == created.Id));
-    }
-
-    [Fact]
-    public async Task DeleteAsync_UnknownId_ReturnsFalse()
-    {
-        Assert.False(await _sut.DeleteAsync(99999));
-    }
-
     [Theory]
+    [InlineData(SurveyDriveSyncStatus.NotSynced)]
     [InlineData(SurveyDriveSyncStatus.Syncing)]
     [InlineData(SurveyDriveSyncStatus.Synced)]
     [InlineData(SurveyDriveSyncStatus.Failed)]
-    public async Task DeleteAsync_AfterDriveTouched_Throws(SurveyDriveSyncStatus status)
+    public async Task DeleteAsync_AnyDriveStatus_RemovesSurveyAndPreservesUser(SurveyDriveSyncStatus status)
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var raw = await _db.Surveys.FirstAsync(s => s.Id == created.Id);
         raw.DriveSyncStatus = status;
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<SurveyOperationException>(() => _sut.DeleteAsync(created.Id));
-        // Row must still exist so the audit trail is preserved.
-        Assert.True(await _db.Surveys.AnyAsync(s => s.Id == created.Id));
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.False(await _db.Surveys.AnyAsync(s => s.Id == created.Id));
+        Assert.True(await _db.Users.AnyAsync(u => u.Id == _userId));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    {
+        Assert.False(await _sut.DeleteAsync(99999));
     }
 
     // ---------------- NIH-101 Timeline ----------------

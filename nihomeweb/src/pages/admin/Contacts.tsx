@@ -15,6 +15,16 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
 
@@ -27,6 +37,8 @@ const AdminContacts = () => {
   const [sending, setSending] = useState(false);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "new" | "replied">("all");
+  const [pendingDelete, setPendingDelete] = useState<ContactMessageResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const safeList = useMemo(() => list ?? [], [list]);
   const newCount = useMemo(() => safeList.filter((c) => !c.isReplied).length, [safeList]);
@@ -120,14 +132,19 @@ const AdminContacts = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
     try {
-      await adminApi.deleteContact(id);
-      if (active?.id === id) setActive(null);
+      await adminApi.deleteContact(pendingDelete.id);
+      if (active?.id === pendingDelete.id) setActive(null);
+      setPendingDelete(null);
       refetch();
       toast({ title: t("common.deleted") });
     } catch {
       toast({ title: t("common.error"), variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -136,10 +153,10 @@ const AdminContacts = () => {
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
     const diffH = Math.floor(diffMs / 3600000);
-    if (diffH < 1) return t("contacts.justNow") || "Vừa xong";
-    if (diffH < 24) return `${diffH} ${t("contacts.hoursAgo") || "giờ trước"}`;
+    if (diffH < 1) return t("contacts.justNow");
+    if (diffH < 24) return `${diffH} ${t("contacts.hoursAgo")}`;
     const diffD = Math.floor(diffH / 24);
-    if (diffD < 7) return `${diffD} ${t("contacts.daysAgo") || "ngày trước"}`;
+    if (diffD < 7) return `${diffD} ${t("contacts.daysAgo")}`;
     return d.toLocaleDateString("vi-VN");
   };
 
@@ -220,7 +237,7 @@ const AdminContacts = () => {
                   <div className="rounded-full bg-muted p-3">
                     <Mail className="h-5 w-5" aria-hidden />
                   </div>
-                  <p>{t("contacts.empty") || "Không có tin nhắn nào"}</p>
+                  <p>{t("contacts.empty")}</p>
                 </div>
               ) : (
                 filteredList.map((c) => (
@@ -307,7 +324,7 @@ const AdminContacts = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDelete(active.id)}
+                      onClick={() => setPendingDelete(active)}
                       title={t("common.delete")}
                       aria-label={t("common.delete")}
                       className="text-destructive hover:text-destructive"
@@ -328,7 +345,7 @@ const AdminContacts = () => {
                 {active.replyContent && (
                   <div className="mb-6">
                     <p className="mb-2 text-xs font-medium uppercase tracking-wide text-green-700">
-                      {t("contacts.replyContent") || "Nội dung phản hồi"}
+                      {t("contacts.replyContent")}
                     </p>
                     <p className="whitespace-pre-wrap rounded-md border border-green-200 bg-green-50 p-4 leading-relaxed text-green-900">
                       {active.replyContent}
@@ -359,6 +376,26 @@ const AdminContacts = () => {
             )}
           </section>
         </div>
+        <AlertDialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open && !deleting) setPendingDelete(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("common.delete")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("form.confirmDelete")}{pendingDelete ? ` · ${pendingDelete.subject}` : ""}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={deleting}
+                onClick={(event) => { event.preventDefault(); void handleDelete(); }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? t("common.loading") : t("common.delete")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

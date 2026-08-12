@@ -218,14 +218,67 @@ public class QuoteServiceTests : IDisposable
         Assert.Null(theirs);
     }
 
-    [Fact]
-    public async Task DeleteAsync_NonDraft_Throws()
+    [Theory]
+    [InlineData(QuoteStatus.Draft)]
+    [InlineData(QuoteStatus.PendingApproval)]
+    [InlineData(QuoteStatus.Approved)]
+    [InlineData(QuoteStatus.SentToCustomer)]
+    [InlineData(QuoteStatus.CustomerApproved)]
+    [InlineData(QuoteStatus.Rejected)]
+    [InlineData(QuoteStatus.Expired)]
+    [InlineData(QuoteStatus.Cancelled)]
+    public async Task DeleteAsync_AnyStatus_RemovesAggregateAndPreservesPrincipals(QuoteStatus status)
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();
-        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        quote.Status = status;
+        _db.QuoteItems.Add(new QuoteItem
+        {
+            QuoteId = quote.Id,
+            Name = "Owned item",
+            Unit = "item",
+            Quantity = 1,
+            UnitPrice = 1,
+            Amount = 1,
+        });
+        _db.QuoteVersionSnapshots.Add(new QuoteVersionSnapshot
+        {
+            QuoteId = quote.Id,
+            VersionNumber = 1,
+        });
+        await _db.SaveChangesAsync();
+        var opportunityId = quote.OpportunityId;
+        var opportunity = (await _db.Opportunities.FindAsync(opportunityId))!;
+        opportunity.WonQuoteId = quote.Id;
+        await _db.SaveChangesAsync();
+        var customerId = opportunity.CustomerId;
 
-        await Assert.ThrowsAsync<QuoteOperationException>(() =>
-            _sut.DeleteAsync(quote.Id, user.Id, canManage: true, canSeeAll: true));
+        Assert.True(await _sut.DeleteAsync(quote.Id, user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Empty(_db.Quotes);
+        Assert.Empty(_db.QuoteItems);
+        Assert.Empty(_db.QuoteApprovalLogs);
+        Assert.Empty(_db.QuoteVersionSnapshots);
+        Assert.True(await _db.Opportunities.AnyAsync(o => o.Id == opportunityId));
+        Assert.Null((await _db.Opportunities.FindAsync(opportunityId))!.WonQuoteId);
+        Assert.True(await _db.Customers.AnyAsync(c => c.Id == customerId));
+        Assert.True(await _db.Users.AnyAsync(u => u.Id == user.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_MissingId_ReturnsFalse()
+    {
+        var user = await SeedUserAsync();
+        Assert.False(await _sut.DeleteAsync(99999, user.Id, canManage: true, canSeeAll: true));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_OtherOwnersQuote_ReturnsFalse()
+    {
+        var (_, quote) = await SeedApprovedReadyQuoteAsync();
+        var stranger = await SeedUserAsync();
+
+        Assert.False(await _sut.DeleteAsync(quote.Id, stranger.Id, canManage: true, canSeeAll: false));
+        Assert.Single(_db.Quotes);
     }
 
     // =========================== Helpers ===========================

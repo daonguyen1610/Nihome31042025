@@ -226,6 +226,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
 
   const removeItem = async (itemId: number) => {
     if (!selected) return;
+    if (!window.confirm(t("form.confirmDelete"))) return;
     try {
       const { data } = await adminApi.removeIfcReleaseItem(selected.id, itemId);
       setSelected(data);
@@ -263,6 +264,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
   };
   const removeRecipient = async (recipientId: number) => {
     if (!selected) return;
+    if (!window.confirm(t("form.confirmDelete"))) return;
     try {
       const { data } = await adminApi.removeIfcReleaseRecipient(selected.id, recipientId);
       setSelected(data);
@@ -475,7 +477,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                             <p className="text-sm text-slate-900">{item.title}</p>
                             <p className="text-[10px] text-muted-foreground">{item.disciplineLabel ?? item.disciplineCode} · {item.status}</p>
                           </div>
-                          {canManage && isDraft ? (
+                          {canManage ? (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -558,7 +560,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                                 {t("ifcRelease.action.acknowledge")}
                               </Button>
                             ) : null}
-                            {canManage && isDraft ? (
+                            {canManage ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -607,7 +609,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
               </div>
 
               <DialogFooter className="flex-wrap gap-2">
-                {isDraft && canManage ? (
+                {canManage ? (
                   <Button variant="ghost" onClick={() => void doDelete()} disabled={busy} className="text-rose-700 hover:bg-rose-50">
                     <Trash2 className="mr-1 h-4 w-4" />
                     {t("ifcRelease.action.deleteRelease")}

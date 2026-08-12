@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Data;
@@ -638,30 +639,53 @@ public class LeadServiceTests : IDisposable
 
     // ---------------- Delete ----------------
 
-    [Fact]
-    public async Task DeleteAsync_ConvertedLead_Throws()
+    [Theory]
+    [InlineData(LeadStatus.New)]
+    [InlineData(LeadStatus.Contacted)]
+    [InlineData(LeadStatus.Interested)]
+    [InlineData(LeadStatus.NotInterested)]
+    [InlineData(LeadStatus.Converted)]
+    [InlineData(LeadStatus.Junk)]
+    public async Task DeleteAsync_AnyStatus_RemovesLead(LeadStatus status)
     {
         var manager = await SeedUserAsync(UserRole.USER);
         SeedSource("marketing");
-        var lead = await SeedLeadAsync(status: LeadStatus.Converted);
-
-        await Assert.ThrowsAsync<LeadOperationException>(() =>
-            _sut.DeleteAsync(lead.Id, manager.Id, canManage: true, canSeeAll: true));
-
-        Assert.Single(_db.Leads);
-    }
-
-    [Fact]
-    public async Task DeleteAsync_UnconvertedLead_Removed()
-    {
-        var manager = await SeedUserAsync(UserRole.USER);
-        SeedSource("marketing");
-        var lead = await SeedLeadAsync();
+        var lead = await SeedLeadAsync(status: status);
 
         var deleted = await _sut.DeleteAsync(lead.Id, manager.Id, canManage: true, canSeeAll: true);
 
         Assert.True(deleted);
         Assert.Empty(_db.Leads);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ConvertedLead_PreservesConvertedPrincipals()
+    {
+        var manager = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var customer = new Customer { Name = "Converted customer", Type = CustomerType.Company };
+        _db.Customers.Add(customer);
+        await _db.SaveChangesAsync();
+        var opportunity = new Opportunity
+        {
+            Name = "Converted opportunity",
+            CustomerId = customer.Id,
+            OwnerUserId = manager.Id,
+        };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+        var lead = await SeedLeadAsync(status: LeadStatus.Converted);
+        lead.ConvertedCustomerId = customer.Id;
+        lead.ConvertedOpportunityId = opportunity.Id;
+        await _db.SaveChangesAsync();
+
+        var deleted = await _sut.DeleteAsync(lead.Id, manager.Id, canManage: true, canSeeAll: true);
+
+        Assert.True(deleted);
+        Assert.Empty(_db.Leads);
+        Assert.True(await _db.Customers.AnyAsync(c => c.Id == customer.Id));
+        Assert.True(await _db.Opportunities.AnyAsync(o => o.Id == opportunity.Id));
+        Assert.True(await _db.Users.AnyAsync(u => u.Id == manager.Id));
     }
 
     [Fact]

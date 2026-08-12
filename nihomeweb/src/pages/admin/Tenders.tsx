@@ -283,14 +283,9 @@ const AdminTenders = () => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusLabel = (s: TenderStatus) => t(`tenders.status.${s}`);
 
-  // -------- bulk selection (Preparing-only, canManage-only) --------
-  // Backend rejects delete on non-Preparing tenders (audit trail rule),
-  // so we mirror that in the checkbox availability.
+  // -------- bulk selection --------
   const deletableIds = useMemo(
-    () =>
-      canManage
-        ? rows.filter((r) => r.status === "Preparing").map((r) => r.id)
-        : [],
+    () => canManage ? rows.map((row) => row.id) : [],
     [rows, canManage],
   );
   const {
@@ -434,7 +429,7 @@ const AdminTenders = () => {
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => {
-                const canDelete = canManage && r.status === "Preparing";
+                const canDelete = canManage;
                 return (
                   <article
                     key={r.id}
@@ -544,7 +539,7 @@ const AdminTenders = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const canDelete = canManage && r.status === "Preparing";
+                    const canDelete = canManage;
                     return (
                       <tr
                         key={r.id}

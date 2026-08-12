@@ -98,7 +98,11 @@ Rationale: NIH-144 makes the backend authoritative for readiness across acceptan
 
 ### 2026-08-12 - Procurement vendor management is the NIH-165 MVP boundary
 
-Rationale: NIH-165 and subtasks NIH-171 through NIH-173 require vendor list, create/edit, and detail workflows. The implemented API and admin routes own vendor identity, contacts, legal/capability metadata, active status, audit, permissions, filtering, sorting, paging, and export. Evaluations, bid comparisons, subcontracts, and warehouse transactions remain with their owning procurement stories rather than introducing incomplete cross-module contracts here.
+Rationale: NIH-165 and subtasks NIH-171 through NIH-173 require complete vendor list, create, view, edit, delete, and detail workflows. The implemented API and admin routes own vendor identity, contacts, legal/capability metadata, active status, audit, permissions, filtering, sorting, paging, and export. Deactivation remains the preferred retention path for historical partners; permanent delete is available for obsolete, duplicate, or test records after confirmation. Evaluations, bid comparisons, subcontracts, and warehouse transactions remain with their owning procurement stories rather than introducing incomplete cross-module contracts here.
+
+### 2026-08-12 - Permit checklist supports explicit CRUD alongside auto-generation
+
+Rationale: Active permit types still auto-generate idempotently for each design project, but legal requirements can vary by project. Authorized operators can therefore create and permanently delete individual checklist rows while the unique project/type contract prevents duplicates. Regeneration remains the recovery path for restoring missing active template rows without overwriting existing work.
 
 ## Open Questions
 
