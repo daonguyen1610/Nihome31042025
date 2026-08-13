@@ -11,6 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +19,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
-import { resolveAssetUrl } from "@/lib/url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -359,11 +359,7 @@ const CapabilityDocuments = () => {
 
   const renderRowActions = (r: CapabilityDocumentResponse) => (
     <>
-      <Button asChild size="icon" variant="ghost" title={t("capDocs.action.download")}>
-        <a href={resolveAssetUrl(r.filePath)} target="_blank" rel="noreferrer" aria-label={t("capDocs.action.download")}>
-          <Download className="h-4 w-4" />
-        </a>
-      </Button>
+      <AdminFilePreview url={r.filePath} fileName={r.originalFileName} contentType={r.contentType} variant="ghost" />
       {canManage && (
         <>
           <Button
@@ -788,11 +784,7 @@ const CapabilityDocuments = () => {
                             {formatDate(v.createdAt, lang)} · {formatBytes(v.fileSize)}
                           </div>
                         </div>
-                        <Button asChild size="sm" variant="ghost">
-                          <a href={resolveAssetUrl(v.filePath)} target="_blank" rel="noreferrer">
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
+                        <AdminFilePreview url={v.filePath} fileName={v.originalFileName} contentType={v.contentType} variant="ghost" />
                       </li>
                     ))}
                   </ul>
@@ -940,16 +932,13 @@ const CapabilityDocuments = () => {
               {t("common.close")}
             </Button>
             {previewRow && (
-              <Button asChild variant="outline" className="w-full sm:w-auto">
-                <a
-                  href={resolveAssetUrl(previewRow.filePath)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <Download className="mr-1.5 h-3.5 w-3.5" />
-                  {t("capDocs.action.download")}
-                </a>
-              </Button>
+              <AdminFilePreview
+                url={previewRow.filePath}
+                fileName={previewRow.originalFileName}
+                contentType={previewRow.contentType}
+                showLabel
+                className="w-full sm:w-auto"
+              />
             )}
             {previewRow && canManage && (
               <Button

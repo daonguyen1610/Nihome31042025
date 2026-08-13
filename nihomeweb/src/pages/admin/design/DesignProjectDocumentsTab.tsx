@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, DraftingCompass, ExternalLink, FileText, History, Lightbulb, Loader2, PackageCheck, RefreshCw, Ruler } from "lucide-react";
+import { DraftingCompass, FileText, History, Lightbulb, Loader2, PackageCheck, RefreshCw, Ruler } from "lucide-react";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
-import { resolveAssetUrl } from "@/lib/url";
 import {
   adminApi,
   type BasicDesignDocResponse,
@@ -178,18 +178,7 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
                           {row.status}
                         </Badge>
                         {row.filePath ? (
-                          <>
-                            <Button asChild size="icon" variant="ghost" className="h-7 w-7" title={t("designProjects.documents.openFile")}>
-                              <a href={resolveAssetUrl(row.filePath)} target="_blank" rel="noopener noreferrer" aria-label={t("designProjects.documents.openFile")}>
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            </Button>
-                            <Button asChild size="icon" variant="ghost" className="h-7 w-7" title={t("designProjects.documents.downloadFile")}>
-                              <a href={resolveAssetUrl(row.filePath)} download={row.originalFileName ?? true} aria-label={t("designProjects.documents.downloadFile")}>
-                                <Download className="h-3.5 w-3.5" />
-                              </a>
-                            </Button>
-                          </>
+                          <AdminFilePreview url={row.filePath} fileName={row.originalFileName} variant="ghost" className="h-7 w-7" />
                         ) : null}
                       </div>
                     </li>

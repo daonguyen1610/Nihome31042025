@@ -54,3 +54,4 @@ New work should preserve the NICON / Nihome design language already encoded in `
 ## Updates
 
 - 2026-05-15: Added recharts (via shadcn chart wrapper) for admin dashboard charts. Charts include posts over time (bar), projects by status (donut), and applications by position (horizontal bar). Data derives from existing admin hooks.
+- 2026-08-13: Admin document references use the shared `AdminFilePreview` control. It resolves host-relative paths through `src/lib/url.ts`, previews browser-supported image/PDF/text files in a dialog, and provides open/download fallbacks for unsupported formats. Do not recreate file-host resolution or preview dialogs inside individual pages.

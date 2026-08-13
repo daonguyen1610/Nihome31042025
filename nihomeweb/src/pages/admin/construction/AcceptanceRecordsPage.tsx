@@ -5,7 +5,6 @@ import {
   ClipboardCheck,
   ClipboardList,
   Eye,
-  ExternalLink,
   FileCheck,
   FileText,
   Pencil,
@@ -15,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -1044,35 +1044,17 @@ export default function AcceptanceRecordsPage() {
                     <p className="text-xs text-muted-foreground">{t("acceptance.documents.empty")}</p>
                   ) : (
                     <ul className="space-y-2">
-                      {parseDocuments(detail.documents).map((path) => {
-                        const href = resolveSafeLinkUrl(path);
+                      {parseDocuments(detail.documents).map((path, index) => {
                         const label = path.split("/").pop() || path;
                         return (
-                          <li key={path}>
-                            {href ? (
-                              <a
-                                href={href}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2 break-all text-sm text-primary hover:underline"
-                              >
-                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                                {label}
-                              </a>
-                            ) : (
-                              <span
-                                className="flex items-start gap-2 break-all text-sm text-muted-foreground"
-                                title={t("acceptance.documents.linkUnavailable")}
-                              >
-                                <FileText className="h-3.5 w-3.5 shrink-0" />
-                                <span>
-                                  {label}
-                                  <span className="ml-2 text-xs">
-                                    ({t("acceptance.documents.linkUnavailable")})
-                                  </span>
-                                </span>
-                              </span>
-                            )}
+                          <li key={path} className="flex items-center gap-2 rounded-md border px-2 py-1.5">
+                            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 break-all text-sm">{label}</span>
+                            <AdminFilePreview
+                              url={path}
+                              fileName={label}
+                              testId={`acceptance-document-preview-${index}`}
+                            />
                           </li>
                         );
                       })}
@@ -1219,6 +1201,19 @@ export default function AcceptanceRecordsPage() {
               <p id="acceptance-form-documents-help" className="mt-1 text-xs text-muted-foreground">
                 {t("acceptance.form.documentsHelp")}
               </p>
+              {documentPaths(form.documents).length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {documentPaths(form.documents).map((path) => (
+                    <AdminFilePreview
+                      key={path}
+                      url={path}
+                      fileName={path.split("/").pop() || path}
+                      showLabel
+                      label={path.split("/").pop() || t("common.previewFile")}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
             {formError && <div role="alert" className="text-sm text-rose-600">{formError}</div>}
           </div>
