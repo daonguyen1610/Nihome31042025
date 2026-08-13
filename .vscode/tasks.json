@@ -1,0 +1,155 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Frontend quality check",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"nihomeweb",
+				"run",
+				"lint",
+				"&&",
+				"npm",
+				"--prefix",
+				"nihomeweb",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Focused Site Diary integration tests",
+			"type": "shell",
+			"command": "rm -rf /tmp/nihome-diary-tests && mkdir -p /tmp/nihome-diary-tests && rsync -a --exclude bin --exclude obj --exclude '._*' nihomebackend nihomebackend.integration.tests /tmp/nihome-diary-tests/ && docker run --rm -v /tmp/nihome-diary-tests:/src -v nihome31042025_nuget_packages:/root/.nuget/packages -w /src/nihomebackend.integration.tests mcr.microsoft.com/dotnet/sdk:8.0 dotnet test nihomebackend.integration.tests.csproj -p:SkipNihomeWebBuild=true --filter FullyQualifiedName~SiteDiariesControllerTests",
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Permit backend quality check",
+			"type": "shell",
+			"command": "docker",
+			"args": [
+				"exec",
+				"nihome31042025-backend",
+				"sh",
+				"-lc",
+				"dotnet build && dotnet format --verify-no-changes && dotnet test ../nihomebackend.tests/nihomebackend.tests.csproj --filter FullyQualifiedName~PermitChecklistServiceTests && dotnet test ../nihomebackend.integration.tests/nihomebackend.integration.tests.csproj --filter FullyQualifiedName~PermitsControllerTests"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Focused Permit tests",
+			"type": "shell",
+			"command": "rm",
+			"args": [
+				"-rf",
+				"/tmp/nihome-permit-tests",
+				"&&",
+				"mkdir",
+				"-p",
+				"/tmp/nihome-permit-tests",
+				"&&",
+				"rsync",
+				"-a",
+				"--exclude",
+				"bin",
+				"--exclude",
+				"obj",
+				"--exclude",
+				"._*",
+				"nihomebackend",
+				"nihomebackend.tests",
+				"nihomebackend.integration.tests",
+				"/tmp/nihome-permit-tests/",
+				"&&",
+				"docker",
+				"run",
+				"--rm",
+				"-v",
+				"/tmp/nihome-permit-tests:/src",
+				"-v",
+				"nihome31042025_nuget_packages:/root/.nuget/packages",
+				"-w",
+				"/src",
+				"mcr.microsoft.com/dotnet/sdk:8.0",
+				"sh",
+				"-lc",
+				"dotnet test nihomebackend.tests/nihomebackend.tests.csproj -p:SkipNihomeWebBuild=true --filter FullyQualifiedName~PermitChecklistServiceTests && dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj -p:SkipNihomeWebBuild=true --filter FullyQualifiedName~PermitsControllerTests"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "test"
+		},
+		{
+			"label": "Admin file preview construction E2E",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"nihomeweb",
+				"run",
+				"test:e2e",
+				"--",
+				"e2e/smoke/admin-acceptance.spec.ts",
+				"e2e/smoke/admin-asbuilt.spec.ts",
+				"e2e/smoke/admin-handover.spec.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Admin file preview headed full flow",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"nihomeweb",
+				"run",
+				"test:e2e",
+				"--",
+				"e2e/smoke/admin-acceptance.spec.ts",
+				"e2e/smoke/admin-asbuilt.spec.ts",
+				"e2e/smoke/admin-handover.spec.ts",
+				"--headed",
+				"--workers=1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Handover headed verification",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--prefix",
+				"nihomeweb",
+				"run",
+				"test:e2e",
+				"--",
+				"e2e/smoke/admin-handover.spec.ts",
+				"--headed",
+				"--workers=1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		}
+	]
+}
