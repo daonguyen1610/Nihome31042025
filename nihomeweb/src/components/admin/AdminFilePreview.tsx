@@ -119,7 +119,12 @@ export default function AdminFilePreview({
 
         <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto rounded-md border bg-muted/30">
           {previewKind === "image" ? (
-            <img src={href} alt={displayName} className="max-h-[70vh] max-w-full object-contain" />
+            <img
+              src={href}
+              alt={displayName}
+              className="max-h-[70vh] max-w-full object-contain"
+              data-testid={testId ? `${testId}-image` : undefined}
+            />
           ) : previewKind === "pdf" || previewKind === "text" ? (
             <iframe
               src={href}

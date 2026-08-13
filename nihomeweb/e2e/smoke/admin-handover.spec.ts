@@ -23,7 +23,12 @@ test.describe("NIH-144 — Project handover", () => {
     const responsibleUserId = (await users.json()).items?.[0]?.id as number;
     expect(responsibleUserId).toBeGreaterThan(0);
     const title = `E2E handover ${uid()}`;
-    const documentPath = `/files/handover/e2e-${uid()}.pdf`;
+    const documentPath = "/images/activities/activity-ceremony.jpg";
+    const documentResponse = await api.get(documentPath);
+    expect(documentResponse.ok()).toBeTruthy();
+    expect(documentResponse.headers()["content-type"]).toContain("image/jpeg");
+    const imageBytes = await documentResponse.body();
+    expect([...imageBytes.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
     const created = await api.post("/api/handover-records", {
       headers: authHeader,
       data: {
@@ -67,10 +72,18 @@ test.describe("NIH-144 — Project handover", () => {
     const detail = page.getByTestId("handover-detail");
     await expect(detail.getByText(title, { exact: true })).toBeVisible();
     await page.getByTestId("handover-document-preview-0").click();
-    await expect(page.getByTestId("handover-document-preview-0-frame")).toHaveAttribute(
+    const previewImage = page.getByTestId("handover-document-preview-0-image");
+    await expect(previewImage).toHaveAttribute(
       "src",
       new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
     );
+    await expect
+      .poll(() => previewImage.evaluate((image: HTMLImageElement) => ({
+        complete: image.complete,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      })))
+      .toEqual({ complete: true, width: 1280, height: 960 });
     await page.getByTestId("handover-document-preview-0-close").click();
     await expect(page.getByTestId("handover-document-preview-0-dialog")).toHaveCount(0);
     await page.getByTestId("handover-detail-edit").click();
