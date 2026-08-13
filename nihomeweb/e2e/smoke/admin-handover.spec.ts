@@ -44,6 +44,19 @@ test.describe("NIH-144 — Project handover", () => {
 
     await expect(page.getByTestId("handover-page")).toBeVisible();
     await expect(page.locator("body")).not.toContainText("handover.title");
+    await Promise.all([
+      page.waitForResponse(
+        (response) => {
+          const url = new URL(response.url());
+          return (
+            url.pathname === "/api/handover-records" &&
+            url.searchParams.get("search") === title &&
+            response.request().method() === "GET"
+          );
+        },
+      ),
+      page.getByTestId("handover-search").fill(title),
+    ]);
     const row = page.locator('[data-testid^="handover-row-"]').filter({ hasText: title });
     await expect(row).toBeVisible();
     await expect(row.locator('[data-testid^="handover-row-view-"]')).toBeVisible();
@@ -72,6 +85,9 @@ test.describe("NIH-144 — Project handover", () => {
 
     const updatedRow = page.locator('[data-testid^="handover-row-"]').filter({ hasText: updatedTitle });
     await expect(updatedRow).toBeVisible();
+    await expect(page.locator('[data-radix-collection-item][data-state="open"]')).toHaveCount(0, {
+      timeout: 10_000,
+    });
     await page.getByTestId("handover-detail-delete").click();
     await Promise.all([
       page.waitForResponse(

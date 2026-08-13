@@ -570,7 +570,7 @@ export default function HandoverRecordsPage() {
             </div>
             <div className="space-y-1.5 md:col-span-2">
               <Label>{t("handover.filter.search")}</Label>
-              <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder={t("handover.filter.searchPlaceholder")} /></div>
+              <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input className="pl-9" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder={t("handover.filter.searchPlaceholder")} data-testid="handover-search" /></div>
             </div>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-sm"><Checkbox checked={readyOnly} onCheckedChange={(checked) => { setReadyOnly(Boolean(checked)); setPage(1); }} />{t("handover.filter.readyOnly")}</label>
