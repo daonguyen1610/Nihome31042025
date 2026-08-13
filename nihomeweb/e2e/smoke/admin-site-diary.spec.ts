@@ -8,7 +8,7 @@ import { createDesignProject } from "../fixtures/designProjects";
  *   1. SUPER_ADMIN provisions a fresh DesignProject via the API.
  *   2. The `/admin/construction/diary` page renders + accepts the
  *      "New diary" dialog.
- *   3. Clicking the new row opens the detail sheet; Submit fires
+ *   3. Clicking the new row's View action opens the detail sheet; Submit fires
  *      the workflow endpoint and flips the row to `Submitted`.
  *   4. Confirm flips it to `Confirmed`, Reopen returns to `Draft`.
  *   5. SALE role is bounced from the endpoints (no perms).
@@ -100,7 +100,7 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
     await expect(row).toBeVisible();
 
     // ---------- 4. Submit → Confirm → Reopen via the detail sheet ----------
-    await row.click();
+    await row.locator('[data-testid^="diary-view-"]').click();
     await expect(page.getByTestId("diary-submit")).toBeVisible();
     await page.getByTestId("diary-submit").click();
     await Promise.all([

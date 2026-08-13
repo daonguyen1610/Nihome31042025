@@ -625,7 +625,7 @@ const AdminSiteDiary = () => {
                     </div>
                   )}
                   <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => openDetail(row, "view")}>
+                    <Button variant="ghost" size="sm" onClick={() => openDetail(row, "view")} data-testid={`diary-view-${row.id}`}>
                       <Eye className="mr-1 h-4 w-4" />{t("common.view")}
                     </Button>
                     {canManage ? (
@@ -723,7 +723,7 @@ const AdminSiteDiary = () => {
                         <td className="px-3 py-2">{renderStatusBadge(row)}</td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => openDetail(row, "view")}>
+                            <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => openDetail(row, "view")} data-testid={`diary-view-${row.id}`}>
                               <Eye className="h-4 w-4" />
                             </Button>
                             {canManage ? (
