@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Briefcase, MapPin, Eye, CheckCircle2, X, Pencil, Trash2, Users, FileDown, Search } from "lucide-react";
+import { Plus, Briefcase, MapPin, Eye, CheckCircle2, X, Pencil, Trash2, Users, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -554,15 +555,7 @@ const AdminRecruitment = () => {
                             </Button>
                           )}
                           {a.cvUrl && (
-                            <Button asChild variant="ghost" size="icon" title="CV" aria-label="CV">
-                              <a
-                                href={`${import.meta.env.VITE_API_URL ?? ""}${a.cvUrl}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <FileDown className="h-4 w-4" />
-                              </a>
-                            </Button>
+                            <AdminFilePreview url={a.cvUrl} fileName={`${a.candidateName}-CV`} />
                           )}
                           <Button
                             variant="ghost"
@@ -668,15 +661,7 @@ const AdminRecruitment = () => {
                               </Button>
                             )}
                             {a.cvUrl && (
-                              <Button asChild variant="ghost" size="icon" title="CV" aria-label="CV">
-                                <a
-                                  href={`${import.meta.env.VITE_API_URL ?? ""}${a.cvUrl}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <FileDown className="h-4 w-4" />
-                                </a>
-                              </Button>
+                              <AdminFilePreview url={a.cvUrl} fileName={`${a.candidateName}-CV`} />
                             )}
                             <Button
                               variant="ghost"

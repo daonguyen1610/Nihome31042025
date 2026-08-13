@@ -584,6 +584,54 @@
     "ja": "閉じる"
   },
   {
+    "key": "common.previewFile",
+    "category": "common",
+    "vi": "Xem trước",
+    "en": "Preview",
+    "zh": "预览",
+    "ja": "プレビュー"
+  },
+  {
+    "key": "common.filePreviewTitle",
+    "category": "common",
+    "vi": "Xem trước tài liệu",
+    "en": "Document preview",
+    "zh": "文档预览",
+    "ja": "ドキュメントプレビュー"
+  },
+  {
+    "key": "common.openInNewTab",
+    "category": "common",
+    "vi": "Mở trong tab mới",
+    "en": "Open in new tab",
+    "zh": "在新标签页中打开",
+    "ja": "新しいタブで開く"
+  },
+  {
+    "key": "common.downloadFile",
+    "category": "common",
+    "vi": "Tải file",
+    "en": "Download file",
+    "zh": "下载文件",
+    "ja": "ファイルをダウンロード"
+  },
+  {
+    "key": "common.previewUnavailable",
+    "category": "common",
+    "vi": "Trình duyệt không hỗ trợ xem trước định dạng này. Hãy mở trong tab mới hoặc tải file để kiểm tra.",
+    "en": "This format cannot be previewed in the browser. Open it in a new tab or download the file to review it.",
+    "zh": "浏览器无法预览此格式。请在新标签页中打开或下载文件以进行检查。",
+    "ja": "この形式はブラウザーでプレビューできません。新しいタブで開くか、ダウンロードして確認してください。"
+  },
+  {
+    "key": "common.invalidFileLink",
+    "category": "common",
+    "vi": "Liên kết file không hợp lệ",
+    "en": "Invalid file link",
+    "zh": "文件链接无效",
+    "ja": "ファイルリンクが無効です"
+  },
+  {
     "key": "common.change",
     "category": "common",
     "vi": "Thay đổi",

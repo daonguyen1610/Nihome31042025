@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Loader2, Save } from "lucide-react";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
 import { Button } from "@/components/ui/button";
@@ -114,7 +115,13 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
         {field("licenseNo", "proc.vendors.field.licenseNo", { maxLength: 100 })}
         {field("tradeCategory", "proc.vendors.field.tradeCategory", { maxLength: 300 })}
         {field("address", "proc.vendors.field.address", { maxLength: 500 })}
-        {field("capabilityFileUrl", "proc.vendors.field.capabilityFileUrl", { type: "url", maxLength: 1000 })}
+        <div className="space-y-2">
+          <Label htmlFor="vendor-capabilityFileUrl">{t("proc.vendors.field.capabilityFileUrl")}</Label>
+          <div className="flex items-center gap-2">
+            <Input id="vendor-capabilityFileUrl" value={form.capabilityFileUrl ?? ""} onChange={(event) => update("capabilityFileUrl", event.target.value)} disabled={saving} maxLength={1000} />
+            {form.capabilityFileUrl?.trim() && <AdminFilePreview url={form.capabilityFileUrl} />}
+          </div>
+        </div>
         {field("driveFolder", "proc.vendors.field.driveFolder", { maxLength: 1000 })}
       </div>
       {vendor && (

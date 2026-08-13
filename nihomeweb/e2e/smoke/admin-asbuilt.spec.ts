@@ -80,7 +80,9 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     await page.getByTestId("asbuilt-new").click();
     await page.waitForSelector('[data-testid="asbuilt-form-title"]');
     const titleText = `E2E as-built ${uid()}`;
+    const documentPath = `/files/asbuilt/e2e-${uid()}.pdf`;
     await page.getByTestId("asbuilt-form-title").fill(titleText);
+    await page.getByTestId("asbuilt-form-file-url").fill(documentPath);
     await Promise.all([
       page.waitForResponse(
         (r) =>
@@ -118,6 +120,13 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
 
     // Edit the draft and verify the list reflects the saved value.
     await row.locator('[data-testid^="asbuilt-row-view-"]').click();
+    await page.getByTestId("asbuilt-detail-file-preview").click();
+    await expect(page.getByTestId("asbuilt-detail-file-preview-frame")).toHaveAttribute(
+      "src",
+      new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
+    );
+    await page.getByTestId("asbuilt-detail-file-preview-close").click();
+    await expect(page.getByTestId("asbuilt-detail-file-preview-dialog")).toHaveCount(0);
     await page.getByTestId("asbuilt-edit").click();
     const updatedTitle = `${titleText} updated`;
     await page.getByTestId("asbuilt-form-title").fill(updatedTitle);

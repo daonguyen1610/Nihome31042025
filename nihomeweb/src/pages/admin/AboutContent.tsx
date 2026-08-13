@@ -11,6 +11,7 @@ import {
   Upload,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
@@ -1505,6 +1506,14 @@ const AboutContent = () => {
                             }}
                           />
                         </label>
+                        {item.url.trim() && (
+                          <AdminFilePreview
+                            url={item.url}
+                            fileName={item.name || undefined}
+                            showLabel
+                            className="shrink-0"
+                          />
+                        )}
                       </div>
                     </Field>
                   </div>

@@ -23,6 +23,7 @@ test.describe("NIH-144 — Project handover", () => {
     const responsibleUserId = (await users.json()).items?.[0]?.id as number;
     expect(responsibleUserId).toBeGreaterThan(0);
     const title = `E2E handover ${uid()}`;
+    const documentPath = `/files/handover/e2e-${uid()}.pdf`;
     const created = await api.post("/api/handover-records", {
       headers: authHeader,
       data: {
@@ -32,7 +33,7 @@ test.describe("NIH-144 — Project handover", () => {
         responsibleUserId,
         commissioningCompleted: false,
         checklistItems: [],
-        documents: [],
+        documents: [documentPath],
         signatories: [],
       },
     });
@@ -52,6 +53,13 @@ test.describe("NIH-144 — Project handover", () => {
     await row.locator('[data-testid^="handover-row-view-"]').click();
     const detail = page.getByTestId("handover-detail");
     await expect(detail.getByText(title, { exact: true })).toBeVisible();
+    await page.getByTestId("handover-document-preview-0").click();
+    await expect(page.getByTestId("handover-document-preview-0-frame")).toHaveAttribute(
+      "src",
+      new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
+    );
+    await page.getByTestId("handover-document-preview-0-close").click();
+    await expect(page.getByTestId("handover-document-preview-0-dialog")).toHaveCount(0);
     await page.getByTestId("handover-detail-edit").click();
     const updatedTitle = `${title} updated`;
     await page.getByTestId("handover-form-title").fill(updatedTitle);

@@ -13,12 +13,14 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
+import { resolveSafeLinkUrl } from "@/lib/url";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -228,6 +230,10 @@ export default function AsBuiltDocumentsPage() {
     }
     if (!form.category) {
       setFormError(t("asbuilt.form.required.category"));
+      return;
+    }
+    if (form.fileUrl.trim() && !resolveSafeLinkUrl(form.fileUrl)) {
+      setFormError(t("common.invalidFileLink"));
       return;
     }
     setSaving(true);
@@ -821,15 +827,9 @@ export default function AsBuiltDocumentsPage() {
                   {detail.fileUrl && (
                     <>
                       <dt className="text-muted-foreground">{t("asbuilt.field.fileUrl")}</dt>
-                      <dd>
-                        <a
-                          href={detail.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="break-all text-primary underline"
-                        >
-                          {detail.fileUrl}
-                        </a>
+                      <dd className="flex min-w-0 items-center gap-2">
+                        <span className="min-w-0 flex-1 break-all">{detail.fileUrl}</span>
+                        <AdminFilePreview url={detail.fileUrl} testId="asbuilt-detail-file-preview" />
                       </dd>
                     </>
                   )}
@@ -979,11 +979,15 @@ export default function AsBuiltDocumentsPage() {
             </div>
             <div>
               <Label>{t("asbuilt.field.fileUrl")}</Label>
-              <Input
-                value={form.fileUrl}
-                onChange={(e) => setForm({ ...form, fileUrl: e.target.value })}
-                placeholder="/files/asbuilt/…"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  value={form.fileUrl}
+                  onChange={(e) => setForm({ ...form, fileUrl: e.target.value })}
+                  placeholder="/files/asbuilt/…"
+                  data-testid="asbuilt-form-file-url"
+                />
+                {form.fileUrl.trim() && <AdminFilePreview url={form.fileUrl} />}
+              </div>
             </div>
             <div>
               <Label>{t("asbuilt.field.description")}</Label>

@@ -115,10 +115,17 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await expect(row.locator('[data-testid^="acceptance-row-delete-"]')).toBeVisible();
     await row.locator('[data-testid^="acceptance-row-view-"]').click();
     await expect(page.getByText(taskName, { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: documentPath.split("/").pop()! })).toHaveAttribute(
+    await page.getByTestId("acceptance-document-preview-0").click();
+    await expect(page.getByTestId("acceptance-document-preview-0-frame")).toHaveAttribute(
+      "src",
+      new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
+    );
+    await expect(page.getByTestId("acceptance-document-preview-0-dialog").getByRole("link", { name: /tab|thẻ/i })).toHaveAttribute(
       "href",
       new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
     );
+    await page.getByTestId("acceptance-document-preview-0-close").click();
+    await expect(page.getByTestId("acceptance-document-preview-0-dialog")).toHaveCount(0);
 
     const updatedTitle = `${titleText} updated`;
     await page.getByTestId("acceptance-edit").click();

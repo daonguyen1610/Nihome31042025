@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
-  Download,
   History,
   Library,
   Loader2,
@@ -18,6 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -85,16 +85,6 @@ const CHECKLIST_STATUSES: TenderChecklistItemStatus[] = [
 ];
 
 const DEADLINE_ALERT_DAYS = 3;
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-const FILE_BASE = API_BASE.replace(/\/api\/?$/, "");
-
-/** Resolve host-relative `/files/...` paths to an absolute URL for downloads. */
-const resolveFileUrl = (path?: string | null): string | null => {
-  if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${FILE_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
-};
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
@@ -393,15 +383,7 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
                 </td>
                 <td className="px-3 py-2">
                   {item.filePath ? (
-                    <a
-                      href={resolveFileUrl(item.filePath) ?? "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-sky-700 hover:underline"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      <span className="max-w-[140px] truncate">{item.originalFileName ?? "file"}</span>
-                    </a>
+                    <AdminFilePreview url={item.filePath} fileName={item.originalFileName} showLabel label={item.originalFileName ?? t("common.previewFile")} variant="ghost" />
                   ) : (
                     <span className="text-xs text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
                   )}
@@ -476,15 +458,7 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
             </div>
             <div className="mt-2 flex items-center justify-between gap-2 text-xs">
               {item.filePath ? (
-                <a
-                  href={resolveFileUrl(item.filePath) ?? "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex min-w-0 items-center gap-1 text-sky-700 hover:underline"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="truncate">{item.originalFileName ?? "file"}</span>
-                </a>
+                <AdminFilePreview url={item.filePath} fileName={item.originalFileName} showLabel label={item.originalFileName ?? t("common.previewFile")} variant="ghost" />
               ) : (
                 <span className="text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
               )}

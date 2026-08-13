@@ -8,7 +8,6 @@ import {
   LayoutList,
   Grid2x2,
   FileText,
-  Download,
   Plus,
   Trash2,
   Save,
@@ -17,6 +16,7 @@ import {
   Loader2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useProcesses } from "@/hooks/useContentApi";
@@ -151,7 +151,6 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
   const { t } = useI18n();
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [stackView, setStackView] = useState(false);
-  const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
   const hasImages = process.images.length > 0;
   const hasFiles = process.files.length > 0;
 
@@ -240,20 +239,17 @@ function AssetPanel({ process }: { process: ProcessResponse }) {
           </div>
           <div className="space-y-1.5">
             {process.files.map((file, i) => (
-              <a
+              <div
                 key={i}
-                href={`${apiBase}${file.url}`}
-                download={file.originalFileName}
                 className="group flex items-center gap-2 rounded-md border px-3 py-2 transition hover:bg-muted/50"
-                title={`${t("proc.download")}: ${file.originalFileName}`}
               >
                 <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="flex-1 truncate text-sm">{file.displayName}</span>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {formatBytes(file.fileSizeBytes)}
                 </span>
-                <Download className="h-4 w-4 shrink-0 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
-              </a>
+                <AdminFilePreview url={file.url} fileName={file.originalFileName} />
+              </div>
             ))}
           </div>
         </div>

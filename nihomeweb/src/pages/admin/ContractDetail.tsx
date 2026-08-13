@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
-  Download,
   FileText,
   History,
   Loader2,
@@ -21,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -114,19 +114,6 @@ const formatBytes = (bytes: number | undefined | null): string => {
 const getErrorMessage = (err: unknown): string | undefined => {
   const parsed = extractApiError(err);
   return parsed?.message;
-};
-
-/**
- * Turn a host-relative <c>/files/...</c> path from the API into an
- * absolute URL we can hand to <a href> for download. Falls back to the
- * raw path when already absolute (shouldn't happen but be defensive).
- */
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-const FILE_BASE = API_BASE.replace(/\/api\/?$/, "");
-const resolveFileUrl = (path?: string | null): string | null => {
-  if (!path) return null;
-  if (/^https?:\/\//i.test(path)) return path;
-  return `${FILE_BASE}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
 // -------- header --------
@@ -657,15 +644,9 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
                       </p>
                     ) : null}
                     {vo.filePath ? (
-                      <a
-                        href={resolveFileUrl(vo.filePath) ?? "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-flex items-center gap-1 text-xs text-sky-700 hover:underline"
-                      >
-                        <FileText className="h-3 w-3" />
-                        {vo.originalFileName ?? "file"}
-                      </a>
+                      <div className="mt-2">
+                        <AdminFilePreview url={vo.filePath} fileName={vo.originalFileName} showLabel label={vo.originalFileName ?? t("common.previewFile")} variant="ghost" />
+                      </div>
                     ) : null}
                     </div>
                   </div>
@@ -993,15 +974,7 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
                   </div>
                 </div>
               <div className="flex gap-2">
-                <a
-                  href={resolveFileUrl(att.filePath) ?? "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
-                >
-                  <Download className="h-3 w-3" />
-                  {t("contracts.documents.download")}
-                </a>
+                  <AdminFilePreview url={att.filePath} fileName={att.originalFileName} contentType={att.contentType} showLabel />
                 <Button
                   size="sm"
                   variant="ghost"
