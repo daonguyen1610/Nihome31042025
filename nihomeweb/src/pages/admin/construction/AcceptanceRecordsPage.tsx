@@ -4,9 +4,11 @@ import {
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
+  Eye,
   ExternalLink,
   FileCheck,
   FileText,
+  Pencil,
   Plus,
   RefreshCcw,
   Search,
@@ -258,7 +260,7 @@ export default function AcceptanceRecordsPage() {
       setOverdueCount(res.data.overdueCount ?? 0);
       setSelected(new Set());
     } catch (e) {
-      setError(extractApiError(e, t("acceptance.error")));
+      setError(extractApiError(e) || t("acceptance.error"));
     } finally {
       setLoading(false);
     }
@@ -285,7 +287,7 @@ export default function AcceptanceRecordsPage() {
       const response = await adminApi.getAcceptanceRecord(id);
       setDetail(response.data);
     } catch (error) {
-      setDetailError(extractApiError(error, t("acceptance.detail.error")));
+      setDetailError(extractApiError(error) || t("acceptance.detail.error"));
     } finally {
       setDetailLoading(false);
     }
@@ -376,7 +378,7 @@ export default function AcceptanceRecordsPage() {
       setFormOpen(false);
       await load();
     } catch (e) {
-      setFormError(extractApiError(e, t("acceptance.error")));
+      setFormError(extractApiError(e) || t("acceptance.error"));
     } finally {
       setSaving(false);
     }
@@ -394,7 +396,7 @@ export default function AcceptanceRecordsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e, t("acceptance.error")),
+        title: extractApiError(e) || t("acceptance.error"),
       });
     }
   };
@@ -424,7 +426,7 @@ export default function AcceptanceRecordsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e, t("acceptance.error")),
+        title: extractApiError(e) || t("acceptance.error"),
       });
     }
   };
@@ -447,7 +449,7 @@ export default function AcceptanceRecordsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e, t("acceptance.error")),
+        title: extractApiError(e) || t("acceptance.error"),
       });
     }
   };
@@ -789,7 +791,7 @@ export default function AcceptanceRecordsPage() {
                     <th className="px-3 py-2">{t("acceptance.field.project")}</th>
                     <th className="px-3 py-2">{t("acceptance.field.date")}</th>
                     <th className="px-3 py-2">{t("acceptance.field.status")}</th>
-                    <th className="w-10 px-3 py-2"></th>
+                    <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -838,16 +840,36 @@ export default function AcceptanceRecordsPage() {
                         </div>
                       </td>
                       <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                        {canManage && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setPendingDelete(r)}
-                            data-testid={`acceptance-row-delete-${r.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-rose-500" />
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => void openDetail(r.id)} data-testid={`acceptance-row-view-${r.id}`}>
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        )}
+                          {canManage && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.edit")}
+                                aria-label={t("common.edit")}
+                                disabled={!OPEN_STATUSES.has(r.status)}
+                                onClick={() => openEdit(r)}
+                                data-testid={`acceptance-row-edit-${r.id}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={t("common.delete")}
+                                aria-label={t("common.delete")}
+                                onClick={() => setPendingDelete(r)}
+                                data-testid={`acceptance-row-delete-${r.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-rose-500" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -858,11 +880,10 @@ export default function AcceptanceRecordsPage() {
             {/* Mobile cards */}
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {rows.map((r) => (
-                <div
+                <article
                   key={r.id}
                   className="rounded-lg border bg-card p-3 shadow-sm"
                   data-testid={`acceptance-card-${r.id}`}
-                  {...rowClickable(r)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -882,7 +903,22 @@ export default function AcceptanceRecordsPage() {
                     </div>
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">{formatDate(r.acceptanceDate)}</div>
-                </div>
+                  <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => void openDetail(r.id)} data-testid={`acceptance-card-view-${r.id}`}>
+                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    </Button>
+                    {canManage && (
+                      <>
+                        <Button variant="ghost" size="sm" disabled={!OPEN_STATUSES.has(r.status)} onClick={() => openEdit(r)} data-testid={`acceptance-card-edit-${r.id}`}>
+                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)} data-testid={`acceptance-card-delete-${r.id}`}>
+                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </article>
               ))}
             </div>
 

@@ -110,12 +110,25 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
 
     const row = page.locator('[data-testid^="acceptance-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
-    await row.click();
+    await expect(row.locator('[data-testid^="acceptance-row-view-"]')).toBeVisible();
+    await expect(row.locator('[data-testid^="acceptance-row-edit-"]')).toBeVisible();
+    await expect(row.locator('[data-testid^="acceptance-row-delete-"]')).toBeVisible();
+    await row.locator('[data-testid^="acceptance-row-view-"]').click();
     await expect(page.getByText(taskName, { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: documentPath.split("/").pop()! })).toHaveAttribute(
       "href",
       new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
     );
+
+    const updatedTitle = `${titleText} updated`;
+    await page.getByTestId("acceptance-edit").click();
+    await page.getByTestId("acceptance-form-title").fill(updatedTitle);
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/acceptance-records\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+      ),
+      page.getByTestId("acceptance-form-save").click(),
+    ]);
 
     // Draft -> Submitted
     await page.getByTestId("acceptance-submit").click();
@@ -149,12 +162,20 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
             status: string;
             revisionCount: number;
           }>;
-          const match = items.find((i) => i.title === titleText);
+          const match = items.find((i) => i.title === updatedTitle);
           return match ?? { status: "missing" };
         },
         { timeout: 5_000 },
       )
       .toMatchObject({ status: "Approved" });
+
+    await page.getByTestId("acceptance-delete").click();
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/acceptance-records\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
+      ),
+      page.getByTestId("acceptance-delete-confirm").click(),
+    ]);
   });
 
   test("Reject then revise bumps revisionCount", async ({ api, loginAs }) => {

@@ -4,8 +4,10 @@ import {
   Check,
   CheckCircle2,
   ClipboardCheck,
+  Eye,
   ExternalLink,
   PackageCheck,
+  Pencil,
   Plus,
   RefreshCcw,
   Search,
@@ -468,7 +470,7 @@ export default function HandoverRecordsPage() {
   const ActionButtons = ({ record }: { record: HandoverRecordResponse }) => (
     <div className="flex flex-wrap gap-2">
       {canManage && EDITABLE_STATUSES.has(record.status) && (
-        <Button size="sm" variant="outline" onClick={() => openEdit(record)}>{t("handover.action.edit")}</Button>
+        <Button size="sm" variant="outline" onClick={() => openEdit(record)} data-testid="handover-detail-edit">{t("handover.action.edit")}</Button>
       )}
       {availableActions(record).map((action) => (
         <Button
@@ -511,7 +513,7 @@ export default function HandoverRecordsPage() {
             <Button variant="outline" onClick={load} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />{t("common.refresh")}
             </Button>
-            {canManage && <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />{t("handover.action.new")}</Button>}
+            {canManage && <Button onClick={openCreate} data-testid="handover-new"><Plus className="mr-2 h-4 w-4" />{t("handover.action.new")}</Button>}
           </div>
         </header>
 
@@ -580,26 +582,38 @@ export default function HandoverRecordsPage() {
           <>
             <div className="hidden overflow-x-auto rounded-xl border bg-card shadow-sm md:block">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left"><tr><th className="px-4 py-3">{t("handover.field.code")}</th><th className="px-4 py-3">{t("handover.field.project")}</th><th className="px-4 py-3">{t("handover.field.plannedDate")}</th><th className="px-4 py-3">{t("handover.field.responsible")}</th><th className="px-4 py-3">{t("handover.field.readiness")}</th><th className="px-4 py-3">{t("handover.field.status")}</th></tr></thead>
+                <thead className="bg-muted/50 text-left"><tr><th className="px-4 py-3">{t("handover.field.code")}</th><th className="px-4 py-3">{t("handover.field.project")}</th><th className="px-4 py-3">{t("handover.field.plannedDate")}</th><th className="px-4 py-3">{t("handover.field.responsible")}</th><th className="px-4 py-3">{t("handover.field.readiness")}</th><th className="px-4 py-3">{t("handover.field.status")}</th><th className="px-4 py-3 text-right">{t("common.actions")}</th></tr></thead>
                 <tbody>{rows.map((record) => (
-                  <tr key={record.id} className="cursor-pointer border-t hover:bg-muted/30" tabIndex={0} role="button" onClick={() => openDetail(record.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") void openDetail(record.id); }}>
+                  <tr key={record.id} className="cursor-pointer border-t hover:bg-muted/30" tabIndex={0} role="button" onClick={() => openDetail(record.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") void openDetail(record.id); }} data-testid={`handover-row-${record.id}`}>
                     <td className="px-4 py-3"><p className="font-semibold">{record.handoverCode}</p><p className="max-w-52 truncate text-xs text-muted-foreground">{record.title}</p></td>
                     <td className="px-4 py-3">{record.designProjectName}</td>
                     <td className="whitespace-nowrap px-4 py-3">{formatDate(record.plannedHandoverDate, emptyValue)}</td>
                     <td className="px-4 py-3">{record.responsibleUserName}</td>
                     <td className="px-4 py-3"><Badge className={record.readiness.isReady ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"} variant="outline">{record.readiness.isReady ? t("handover.readiness.ready") : t("handover.readiness.notReady")}</Badge></td>
                     <td className="px-4 py-3"><Badge className={STATUS_BADGE[record.status]} variant="outline">{t(`handover.status.${record.status.toLowerCase()}`)}</Badge></td>
+                    <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => void openDetail(record.id)} data-testid={`handover-row-view-${record.id}`}><Eye className="h-4 w-4" /></Button>
+                        {canManage && <Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} disabled={!EDITABLE_STATUSES.has(record.status)} onClick={() => openEdit(record)} data-testid={`handover-row-edit-${record.id}`}><Pencil className="h-4 w-4" /></Button>}
+                        {canManage && <Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(record)} data-testid={`handover-row-delete-${record.id}`}><Trash2 className="h-4 w-4" /></Button>}
+                      </div>
+                    </td>
                   </tr>
                 ))}</tbody>
               </table>
             </div>
             <div className="grid gap-3 md:hidden">{rows.map((record) => (
-              <button key={record.id} type="button" onClick={() => openDetail(record.id)} className="rounded-xl border bg-card p-4 text-left shadow-sm">
+              <article key={record.id} className="rounded-xl border bg-card p-4 text-left shadow-sm" data-testid={`handover-card-${record.id}`}>
                 <div className="flex items-start justify-between gap-2"><div><p className="font-semibold">{record.handoverCode}</p><p className="text-sm">{record.title}</p></div><Badge className={STATUS_BADGE[record.status]} variant="outline">{t(`handover.status.${record.status.toLowerCase()}`)}</Badge></div>
                 <p className="mt-3 text-sm text-muted-foreground">{record.designProjectName}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs"><span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{formatDate(record.plannedHandoverDate, emptyValue)}</span><span className="flex items-center gap-1"><UserRound className="h-3.5 w-3.5" />{record.responsibleUserName}</span></div>
                 <p className={cn("mt-3 text-xs font-medium", record.readiness.isReady ? "text-emerald-700" : "text-amber-700")}>{record.readiness.isReady ? t("handover.readiness.ready") : t("handover.readiness.notReady")}</p>
-              </button>
+                <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => void openDetail(record.id)} data-testid={`handover-card-view-${record.id}`}><Eye className="mr-1 h-4 w-4" />{t("common.view")}</Button>
+                  {canManage && <Button variant="ghost" size="sm" disabled={!EDITABLE_STATUSES.has(record.status)} onClick={() => openEdit(record)} data-testid={`handover-card-edit-${record.id}`}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button>}
+                  {canManage && <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(record)} data-testid={`handover-card-delete-${record.id}`}><Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}</Button>}
+                </div>
+              </article>
             ))}</div>
           </>
         )}
@@ -608,7 +622,7 @@ export default function HandoverRecordsPage() {
       </div>
 
       <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-2xl" data-testid="handover-detail">
           <SheetHeader><SheetTitle>{detail?.handoverCode ?? t("handover.detail.title")}</SheetTitle><SheetDescription>{detail?.title ?? t("handover.detail.description")}</SheetDescription></SheetHeader>
           {detailLoading ? <PageLoading /> : detailError ? <PageError message={detailError} /> : detail && (
             <div className="mt-6 space-y-6">
@@ -634,7 +648,7 @@ export default function HandoverRecordsPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5"><Label>{t("handover.field.project")}</Label><SearchableSelect disabled={Boolean(editingId)} value={form.designProjectId || null} onChange={(value) => setForm((current) => ({ ...current, designProjectId: value }))} options={projectOptions} placeholder={t("handover.form.selectProject")} searchPlaceholder={t("handover.filter.searchProject")} /></div>
             <div className="space-y-1.5"><Label>{t("handover.field.responsible")}</Label><SearchableSelect value={form.responsibleUserId || null} onChange={(value) => setForm((current) => ({ ...current, responsibleUserId: value }))} options={userOptions} placeholder={t("handover.form.selectResponsible")} searchPlaceholder={t("handover.filter.searchResponsible")} /></div>
-            <div className="space-y-1.5 sm:col-span-2"><Label>{t("handover.field.title")}</Label><Input maxLength={300} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} /></div>
+            <div className="space-y-1.5 sm:col-span-2"><Label>{t("handover.field.title")}</Label><Input maxLength={300} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} data-testid="handover-form-title" /></div>
             <div className="space-y-1.5 sm:col-span-2"><Label>{t("handover.field.description")}</Label><Textarea maxLength={4000} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} /></div>
             <div className="space-y-1.5"><Label>{t("handover.field.plannedDate")}</Label><Input type="date" value={form.plannedHandoverDate} onChange={(event) => setForm((current) => ({ ...current, plannedHandoverDate: event.target.value }))} /></div>
             <div className="space-y-1.5"><Label>{t("handover.field.location")}</Label><Input maxLength={300} value={form.location} onChange={(event) => setForm((current) => ({ ...current, location: event.target.value }))} /></div>
@@ -645,7 +659,7 @@ export default function HandoverRecordsPage() {
           <section className="space-y-3"><div className="flex items-center justify-between"><Label>{t("handover.field.documents")}</Label><Button type="button" size="sm" variant="outline" disabled={form.documents.length >= 20} onClick={() => setForm((current) => ({ ...current, documents: [...current.documents, ""] }))}><Plus className="mr-2 h-4 w-4" />{t("handover.form.addDocument")}</Button></div>{form.documents.map((item, index) => <div key={index} className="flex gap-2"><Input maxLength={500} value={item} onChange={(event) => updateStringRow("documents", index, event.target.value)} placeholder={t("handover.form.documentPlaceholder")} /><Button type="button" size="icon" variant="ghost" onClick={() => removeRow("documents", index)} aria-label={t("handover.action.remove")}><Trash2 className="h-4 w-4" /></Button></div>)}</section>
           <section className="space-y-3"><div className="flex items-center justify-between"><Label>{t("handover.field.signatories")}</Label><Button type="button" size="sm" variant="outline" disabled={form.signatories.length >= 20} onClick={() => setForm((current) => ({ ...current, signatories: [...current.signatories, ""] }))}><Plus className="mr-2 h-4 w-4" />{t("handover.form.addSignatory")}</Button></div>{form.signatories.map((item, index) => <div key={index} className="flex gap-2"><Input maxLength={200} value={item} onChange={(event) => updateStringRow("signatories", index, event.target.value)} placeholder={t("handover.form.signatoryPlaceholder")} /><Button type="button" size="icon" variant="ghost" onClick={() => removeRow("signatories", index)} aria-label={t("handover.action.remove")}><Trash2 className="h-4 w-4" /></Button></div>)}</section>
           {formError && <p className="text-sm font-medium text-destructive">{formError}</p>}
-          <DialogFooter><Button variant="outline" onClick={() => setFormOpen(false)}>{t("common.cancel")}</Button><Button onClick={handleSave} disabled={saving}>{saving ? t("handover.form.saving") : t("common.save")}</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setFormOpen(false)}>{t("common.cancel")}</Button><Button onClick={handleSave} disabled={saving} data-testid="handover-form-save">{saving ? t("handover.form.saving") : t("common.save")}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -654,7 +668,7 @@ export default function HandoverRecordsPage() {
       </Dialog>
 
       <Dialog open={Boolean(pendingDelete)} onOpenChange={(open) => { if (!open && !acting) setPendingDelete(null); }}>
-        <DialogContent><DialogHeader><DialogTitle>{t("handover.confirm.deleteTitle")}</DialogTitle><DialogDescription>{t("handover.confirm.deleteBody").replace("{title}", pendingDelete?.title ?? "")}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={acting} onClick={() => setPendingDelete(null)}>{t("common.cancel")}</Button><Button variant="destructive" disabled={acting} onClick={handleDelete}>{acting ? t("handover.action.processing") : t("handover.action.delete")}</Button></DialogFooter></DialogContent>
+        <DialogContent><DialogHeader><DialogTitle>{t("handover.confirm.deleteTitle")}</DialogTitle><DialogDescription>{t("handover.confirm.deleteBody").replace("{title}", pendingDelete?.title ?? "")}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" disabled={acting} onClick={() => setPendingDelete(null)}>{t("common.cancel")}</Button><Button variant="destructive" disabled={acting} onClick={handleDelete} data-testid="handover-delete-confirm">{acting ? t("handover.action.processing") : t("handover.action.delete")}</Button></DialogFooter></DialogContent>
       </Dialog>
     </AdminLayout>
   );

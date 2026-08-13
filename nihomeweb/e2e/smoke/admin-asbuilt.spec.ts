@@ -96,6 +96,9 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
 
     const row = page.locator('[data-testid^="asbuilt-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
+    await expect(row.locator('[data-testid^="asbuilt-row-view-"]')).toBeVisible();
+    await expect(row.locator('[data-testid^="asbuilt-row-edit-"]')).toBeVisible();
+    await expect(row.locator('[data-testid^="asbuilt-row-delete-"]')).toBeVisible();
 
     // API validation feedback keeps the user's input in the open form.
     await page.getByTestId("asbuilt-new").click();
@@ -114,7 +117,7 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     await page.keyboard.press("Escape");
 
     // Edit the draft and verify the list reflects the saved value.
-    await row.click();
+    await row.locator('[data-testid^="asbuilt-row-view-"]').click();
     await page.getByTestId("asbuilt-edit").click();
     const updatedTitle = `${titleText} updated`;
     await page.getByTestId("asbuilt-form-title").fill(updatedTitle);
@@ -180,6 +183,14 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
         { timeout: 5_000 },
       )
       .toMatchObject({ status: "Approved", completedRequiredCategories: 1 });
+
+    await page.getByTestId("asbuilt-delete").click();
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/as-built-documents\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
+      ),
+      page.getByTestId("asbuilt-delete-confirm").click(),
+    ]);
   });
 
   test("SALE role is blocked from as-built endpoints", async ({ api, loginAs }) => {

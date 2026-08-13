@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Download,
+  Eye,
   FileCheck,
   FolderArchive,
   FolderOpen,
+  Pencil,
   Plus,
   RefreshCcw,
   Search,
@@ -664,7 +666,7 @@ export default function AsBuiltDocumentsPage() {
                     <th className="px-3 py-2">{t("asbuilt.field.category")}</th>
                     <th className="px-3 py-2">{t("asbuilt.field.project")}</th>
                     <th className="px-3 py-2">{t("asbuilt.field.status")}</th>
-                    <th className="w-10 px-3 py-2"></th>
+                    <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -703,16 +705,21 @@ export default function AsBuiltDocumentsPage() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                        {canManage && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setPendingDelete(r)}
-                            data-testid={`asbuilt-row-delete-${r.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-rose-500" />
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => setDetail(r)} data-testid={`asbuilt-row-view-${r.id}`}>
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        )}
+                          {canManage && (
+                            <>
+                              <Button variant="ghost" size="icon" title={t("common.edit")} aria-label={t("common.edit")} disabled={!EDITABLE_STATUSES.has(r.status)} onClick={() => openEdit(r)} data-testid={`asbuilt-row-edit-${r.id}`}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" title={t("common.delete")} aria-label={t("common.delete")} onClick={() => setPendingDelete(r)} data-testid={`asbuilt-row-delete-${r.id}`}>
+                                <Trash2 className="h-4 w-4 text-rose-500" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -723,11 +730,10 @@ export default function AsBuiltDocumentsPage() {
             {/* Mobile cards */}
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {rows.map((r) => (
-                <div
+                <article
                   key={r.id}
                   className="rounded-lg border bg-card p-3 shadow-sm"
                   data-testid={`asbuilt-card-${r.id}`}
-                  {...rowClickable(r)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -744,7 +750,22 @@ export default function AsBuiltDocumentsPage() {
                       </Badge>
                     </div>
                   </div>
-                </div>
+                  <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setDetail(r)} data-testid={`asbuilt-card-view-${r.id}`}>
+                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    </Button>
+                    {canManage && (
+                      <>
+                        <Button variant="ghost" size="sm" disabled={!EDITABLE_STATUSES.has(r.status)} onClick={() => openEdit(r)} data-testid={`asbuilt-card-edit-${r.id}`}>
+                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setPendingDelete(r)} data-testid={`asbuilt-card-delete-${r.id}`}>
+                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </article>
               ))}
             </div>
 
