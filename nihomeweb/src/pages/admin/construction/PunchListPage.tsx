@@ -3,7 +3,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   CircleDot,
+  Eye,
   MapPin,
+  Pencil,
   Play,
   RefreshCcw,
   RotateCcw,
@@ -170,6 +172,7 @@ const AdminPunchList = () => {
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [detail, setDetail] = useState<PunchItemResponse | null>(null);
+  const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
   const [detailForm, setDetailForm] = useState<PunchForm | null>(null);
   const [detailSaving, setDetailSaving] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -314,8 +317,9 @@ const AdminPunchList = () => {
   };
 
   // ---- detail ----
-  const openDetail = (row: PunchItemResponse) => {
+  const openDetail = (row: PunchItemResponse, mode: "view" | "edit" = "view") => {
     setDetail(row);
+    setDetailMode(mode);
     setDetailForm(formFromRow(row));
     setDetailError(null);
   };
@@ -331,6 +335,7 @@ const AdminPunchList = () => {
   }, [detail?.id]);
 
   const canEditDetail = canManage
+    && detailMode === "edit"
     && detail
     && detail.status !== "Verified"
     && detail.status !== "Cancelled";
@@ -613,14 +618,10 @@ const AdminPunchList = () => {
             {/* Mobile cards (< md) */}
             <div className="space-y-3 md:hidden">
               {rows.map((row) => (
-                <div
+                <article
                   key={`m-${row.id}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => openDetail(row)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(row); } }}
                   className={cn(
-                    "relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300",
+                    "relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm",
                     row.isOverdue && "border-amber-300 bg-amber-50/40",
                   )}
                 >
@@ -656,7 +657,34 @@ const AdminPunchList = () => {
                       <div>{formatDate(row.deadline, lang)}</div>
                     </div>
                   </div>
-                </div>
+                  <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => openDetail(row)} data-testid={`punch-view-${row.id}`}>
+                      <Eye className="mr-1 h-4 w-4" />{t("common.view")}
+                    </Button>
+                    {canManage && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={row.status === "Verified" || row.status === "Cancelled"}
+                          onClick={() => openDetail(row, "edit")}
+                          data-testid={`punch-edit-${row.id}`}
+                        >
+                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => setConfirmAction({ kind: "delete", row })}
+                          data-testid={`punch-delete-${row.id}`}
+                        >
+                          <Trash2 className="mr-1 h-4 w-4" />{t("common.delete")}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </article>
               ))}
               <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
                 <span>{t("common.showing")} {rows.length} / {total}</span>
@@ -690,6 +718,7 @@ const AdminPunchList = () => {
                       <th className="px-3 py-2">{t("punch.field.status")}</th>
                       <th className="px-3 py-2">{t("punch.field.assignee")}</th>
                       <th className="px-3 py-2">{t("punch.field.deadline")}</th>
+                      <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -737,6 +766,39 @@ const AdminPunchList = () => {
                         </td>
                         <td className="px-3 py-2 text-xs text-slate-600">{row.assigneeName ?? "—"}</td>
                         <td className="px-3 py-2 text-xs text-slate-600">{formatDate(row.deadline, lang)}</td>
+                        <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" title={t("common.view")} aria-label={t("common.view")} onClick={() => openDetail(row)} data-testid={`punch-view-${row.id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {canManage && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title={t("common.edit")}
+                                  aria-label={t("common.edit")}
+                                  disabled={row.status === "Verified" || row.status === "Cancelled"}
+                                  onClick={() => openDetail(row, "edit")}
+                                  data-testid={`punch-edit-${row.id}`}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title={t("common.delete")}
+                                  aria-label={t("common.delete")}
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setConfirmAction({ kind: "delete", row })}
+                                  data-testid={`punch-delete-${row.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -838,7 +900,7 @@ const AdminPunchList = () => {
             {detail && detailForm && (
               <>
                 <SheetHeader>
-                  <SheetTitle>{detail.punchCode} — {detail.title}</SheetTitle>
+                  <SheetTitle>{t(detailMode === "edit" ? "common.edit" : "common.view")} · {detail.punchCode} — {detail.title}</SheetTitle>
                   <SheetDescription className="text-xs text-slate-500">
                     {detail.designProjectCode} · {detail.designProjectName}
                   </SheetDescription>
@@ -853,7 +915,7 @@ const AdminPunchList = () => {
 
                   <div>
                     <Label>{t("punch.field.title")}</Label>
-                    <Input value={detailForm.title} onChange={(e) => setDetailForm((f) => f && { ...f, title: e.target.value })} disabled={!canEditDetail} />
+                    <Input value={detailForm.title} onChange={(e) => setDetailForm((f) => f && { ...f, title: e.target.value })} disabled={!canEditDetail} data-testid="punch-detail-title" />
                   </div>
                   <div>
                     <Label>{t("punch.field.description")}</Label>
@@ -883,6 +945,7 @@ const AdminPunchList = () => {
                           onChange={(v) => setDetailForm((f) => f && { ...f, assigneeUserId: v ? Number(v) : null })}
                           options={userFormOptions}
                           placeholder="—"
+                          disabled={!canEditDetail}
                         />
                       ) : (
                         <Input value={detail.assigneeName ?? "—"} disabled />
@@ -953,6 +1016,16 @@ const AdminPunchList = () => {
                     </div>
                     <div className="flex gap-2">
                       <Button variant="ghost" onClick={closeDetail} disabled={detailSaving}>{t("common.close")}</Button>
+                      {canManage && detailMode === "view" && (
+                        <Button
+                          variant="outline"
+                          disabled={detail.status === "Verified" || detail.status === "Cancelled"}
+                          onClick={() => setDetailMode("edit")}
+                          data-testid="punch-detail-edit"
+                        >
+                          <Pencil className="mr-1 h-4 w-4" />{t("common.edit")}
+                        </Button>
+                      )}
                       {canEditDetail && (
                         <Button onClick={submitDetail} disabled={detailSaving} data-testid="punch-detail-save">
                           {detailSaving ? t("common.saving") : t("common.save")}

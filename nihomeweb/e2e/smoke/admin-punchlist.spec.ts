@@ -8,11 +8,11 @@ import { createDesignProject } from "../fixtures/designProjects";
  *   1. SUPER_ADMIN provisions a fresh DesignProject.
  *   2. The `/admin/construction/punchlist` page renders + accepts the
  *      "New punch" dialog.
- *   3. Row click opens the detail sheet; walking Open → InProgress →
+ *   3. Explicit View/Edit/Delete actions execute complete CRUD; walking Open → InProgress →
  *      Fixed → Verified via the toolbar buttons hits the correct
  *      endpoints (Verify goes through the dedicated /verify route).
  *   4. Reopen from Verified flips the row back to Open and bumps the
- *      reopen counter.
+ *      reopen counter, then permanent Delete removes the item.
  *   5. SALE is bounced from the endpoints.
  */
 
@@ -98,10 +98,26 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     );
     const row = page.locator('[data-testid^="punch-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
+    await expect(row.locator('[data-testid^="punch-view-"]')).toBeVisible();
+    await expect(row.locator('[data-testid^="punch-edit-"]')).toBeVisible();
+    await expect(row.locator('[data-testid^="punch-delete-"]')).toBeVisible();
 
-    // Walk the workflow via the detail sheet toolbar
-    await row.click();
+    // Open through the explicit View action, then walk the workflow via the detail sheet toolbar.
+    await row.locator('[data-testid^="punch-view-"]').click();
+    await expect(page.getByTestId("punch-detail-edit")).toBeVisible();
     await expect(page.getByTestId("punch-start")).toBeVisible();
+
+    // Update through the explicit Edit mode before moving through workflow states.
+    const updatedTitle = `${titleText} updated`;
+    await page.getByTestId("punch-detail-edit").click();
+    await page.getByTestId("punch-detail-title").fill(updatedTitle);
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/punch-items\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+      ),
+      page.getByTestId("punch-detail-save").click(),
+    ]);
+    await expect(page.getByTestId("punch-detail-title")).toHaveValue(updatedTitle);
 
     await Promise.all([
       page.waitForResponse(
@@ -137,7 +153,7 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
           );
           if (!list.ok()) return { status: "err" };
           const items = (await list.json()).items as Array<{ title: string; status: string; reopenCount: number }>;
-          const match = items.find((i) => i.title === titleText);
+          const match = items.find((i) => i.title === updatedTitle);
           return match ?? { status: "missing" };
         },
         { timeout: 5_000 },
@@ -162,12 +178,35 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
           );
           if (!list.ok()) return { status: "err" };
           const items = (await list.json()).items as Array<{ title: string; status: string; reopenCount: number }>;
-          const match = items.find((i) => i.title === titleText);
+          const match = items.find((i) => i.title === updatedTitle);
           return match ?? { status: "missing" };
         },
         { timeout: 5_000 },
       )
       .toMatchObject({ status: "Open", reopenCount: 1 });
+
+    // Permanent Delete completes the CRUD flow and removes the record.
+    await page.getByTestId("punch-detail-delete").click();
+    await Promise.all([
+      page.waitForResponse(
+        (r) => /\/api\/punch-items\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
+      ),
+      page.getByTestId("punch-action-confirm").click({ force: true }),
+    ]);
+    await expect
+      .poll(
+        async () => {
+          const list = await api.get(
+            `/api/punch-items?designProjectId=${projectId}&pageSize=50`,
+            { headers: authHeader },
+          );
+          if (!list.ok()) return false;
+          const items = (await list.json()).items as Array<{ title: string }>;
+          return items.some((item) => item.title === updatedTitle);
+        },
+        { timeout: 5_000 },
+      )
+      .toBe(false);
   });
 
   test("SALE role is blocked from Punch List endpoints", async ({ api, loginAs }) => {
