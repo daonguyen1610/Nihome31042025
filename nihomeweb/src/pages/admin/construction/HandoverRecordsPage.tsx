@@ -492,7 +492,7 @@ export default function HandoverRecordsPage() {
         </Button>
       ))}
       {canManage && (
-        <Button size="sm" variant="destructive" onClick={() => setPendingDelete(record)}>
+        <Button size="sm" variant="destructive" onClick={() => setPendingDelete(record)} data-testid="handover-detail-delete">
           <Trash2 className="mr-2 h-4 w-4" />
           {t("handover.action.delete")}
         </Button>

@@ -64,7 +64,7 @@ test.describe("NIH-144 — Project handover", () => {
 
     const updatedRow = page.locator('[data-testid^="handover-row-"]').filter({ hasText: updatedTitle });
     await expect(updatedRow).toBeVisible();
-    await updatedRow.locator('[data-testid^="handover-row-delete-"]').click();
+    await page.getByTestId("handover-detail-delete").click();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/handover-records\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
