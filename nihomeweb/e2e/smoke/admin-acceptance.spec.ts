@@ -63,7 +63,11 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       },
     });
     expect(taskResponse.ok(), await taskResponse.text()).toBeTruthy();
-    const documentPath = `/files/acceptance/e2e-${uid()}.pdf`;
+    const documentPath = "/process-assets/files/501e798356d44d8792986b936ac2d100.pdf";
+    const documentResponse = await api.get(documentPath);
+    expect(documentResponse.ok()).toBeTruthy();
+    expect(documentResponse.headers()["content-type"]).toContain("application/pdf");
+    expect((await documentResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/construction/acceptance`, { waitUntil: "networkidle" });

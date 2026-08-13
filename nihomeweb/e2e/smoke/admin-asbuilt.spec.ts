@@ -80,7 +80,11 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
     await page.getByTestId("asbuilt-new").click();
     await page.waitForSelector('[data-testid="asbuilt-form-title"]');
     const titleText = `E2E as-built ${uid()}`;
-    const documentPath = `/files/asbuilt/e2e-${uid()}.pdf`;
+    const documentPath = "/process-assets/files/501e798356d44d8792986b936ac2d100.pdf";
+    const documentResponse = await api.get(documentPath);
+    expect(documentResponse.ok()).toBeTruthy();
+    expect(documentResponse.headers()["content-type"]).toContain("application/pdf");
+    expect((await documentResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
     await page.getByTestId("asbuilt-form-title").fill(titleText);
     await page.getByTestId("asbuilt-form-file-url").fill(documentPath);
     await Promise.all([
