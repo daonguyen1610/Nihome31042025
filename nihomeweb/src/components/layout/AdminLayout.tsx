@@ -420,7 +420,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                 {isOpen && (
                   <div
                     id={`admin-nav-group-${g.id}`}
-                    className="mt-1 space-y-1 rounded-xl bg-muted/30 py-1 pl-4"
+                    className="mt-1 space-y-1 rounded-r-xl border-l-2 border-primary/40 bg-muted/60 py-1 pl-4"
                   >
                     {g.items.map(renderItem)}
                   </div>
