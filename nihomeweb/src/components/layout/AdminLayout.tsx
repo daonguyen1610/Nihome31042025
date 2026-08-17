@@ -405,8 +405,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                   aria-expanded={isOpen}
                   aria-controls={`admin-nav-group-${g.id}`}
                   className={cn(
-                    "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-[11px] uppercase tracking-[0.18em] font-bold transition text-muted-foreground",
-                    groupActive ? "" : "hover:bg-muted/60",
+                    "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-[11px] uppercase tracking-[0.18em] font-bold transition",
+                    isOpen || groupActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted/60",
                   )}
                 >
                   <g.icon className="w-3.5 h-3.5" />
@@ -416,7 +418,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                   />
                 </button>
                 {isOpen && (
-                  <div id={`admin-nav-group-${g.id}`} className="mt-1 space-y-1">
+                  <div
+                    id={`admin-nav-group-${g.id}`}
+                    className="mt-1 space-y-1 rounded-xl bg-muted/30 py-1 pl-4"
+                  >
                     {g.items.map(renderItem)}
                   </div>
                 )}
