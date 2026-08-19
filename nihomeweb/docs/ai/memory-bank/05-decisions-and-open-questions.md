@@ -112,6 +112,10 @@ Rationale: `Customer.OwnerUserId` is the CRM source of truth for the responsible
 
 Rationale: Customer-related files need shared multi-user persistence, owner-scoped authorization, auditability, and cleanup. Metadata therefore lives in the backend and files use the dedicated host-relative path `/files/customers/{customerId}/`; the customer detail UI reuses `AdminFilePreview` and the existing customer permissions.
 
+### 2026-08-19 - Authenticated DOCX files render client-side
+
+Rationale: Private operational documents cannot be exposed through a public URL for third-party Office viewers, and browsers do not natively render DOCX. `AdminFilePreview` therefore loads `docx-preview` on demand and renders the authenticated blob locally while preserving the existing open and download actions.
+
 ## Open Questions
 
 ### Which authentication hardening should NICON / Nihome adopt next?

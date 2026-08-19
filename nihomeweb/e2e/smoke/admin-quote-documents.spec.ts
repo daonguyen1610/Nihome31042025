@@ -1,7 +1,57 @@
 /// <reference types="node" />
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import JSZip from "jszip";
 
-test("sales manager uploads, previews, persists, and deletes a quote document", async ({
+const DOCX_CONTENT = "NIH-430 DOCX preview evidence";
+const UNSAFE_LINK_TEXT = "Unsafe DOCX link";
+
+async function createDocxFixture() {
+  const archive = new JSZip();
+  archive.file(
+    "[Content_Types].xml",
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+        <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml" />
+        <Default Extension="xml" ContentType="application/xml" />
+        <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml" />
+      </Types>`,
+  );
+  archive.file(
+    "_rels/.rels",
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml" />
+      </Relationships>`,
+  );
+  archive.file(
+    "word/_rels/document.xml.rels",
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+        <Relationship Id="rIdUnsafe" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="javascript:document.body.dataset.compromised='true'" TargetMode="External" />
+      </Relationships>`,
+  );
+  archive.file(
+    "word/document.xml",
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:p><w:r><w:t>${DOCX_CONTENT}</w:t></w:r></w:p>
+          <w:p>
+            <w:hyperlink r:id="rIdUnsafe" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <w:r><w:t>${UNSAFE_LINK_TEXT}</w:t></w:r>
+            </w:hyperlink>
+          </w:p>
+          <w:sectPr>
+            <w:pgSz w:w="12240" w:h="15840" />
+            <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" />
+          </w:sectPr>
+        </w:body>
+      </w:document>`,
+  );
+  return archive.generateAsync({ type: "nodebuffer" });
+}
+
+test("sales manager uploads, renders, persists, and deletes a DOCX quote document", async ({
   api,
   page,
   loginAs,
@@ -12,7 +62,7 @@ test("sales manager uploads, previews, persists, and deletes a quote document", 
   const token = await loginAs(TEST_USERS.salesManager);
   const headers = { Authorization: `Bearer ${token}` };
   const unique = Date.now().toString();
-  const fileName = `nih-430-${unique}.pdf`;
+  const fileName = `nih-430-${unique}.docx`;
   let customerId = 0;
   let opportunityId = 0;
   let quoteId = 0;
@@ -67,8 +117,8 @@ test("sales manager uploads, previews, persists, and deletes a quote document", 
 
     await page.locator("#quote-document-file").setInputFiles({
       name: fileName,
-      mimeType: "application/pdf",
-      buffer: Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF"),
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      buffer: await createDocxFixture(),
     });
     await page.locator("#quote-document-label").fill("NIH-430 browser evidence");
     await page.getByRole("button", { name: /Tải lên|Upload|上传|アップロード/i }).click();
@@ -81,7 +131,17 @@ test("sales manager uploads, previews, persists, and deletes a quote document", 
     const previewDialog = page.getByRole("dialog", { name: /Xem trước tài liệu|File preview/i });
     await expect(previewDialog).toBeVisible();
     await expect(previewDialog).toContainText(fileName);
-    await expect(previewDialog.locator("iframe")).toBeVisible();
+    await expect(previewDialog.getByText(DOCX_CONTENT)).toBeVisible({ timeout: 10_000 });
+    await expect(previewDialog.getByText(UNSAFE_LINK_TEXT)).not.toHaveAttribute("href");
+
+    const popupPromise = page.waitForEvent("popup");
+    await previewDialog.getByRole("button", { name: /Mở trong tab mới|Open in new tab|新标签页|新しいタブ/i }).click();
+    const previewPage = await popupPromise;
+    await expect(previewPage.getByText(DOCX_CONTENT)).toBeVisible({ timeout: 10_000 });
+    await expect(previewPage.getByText(UNSAFE_LINK_TEXT)).not.toHaveAttribute("href");
+    await expect(previewPage.locator("body")).not.toHaveAttribute("data-compromised");
+    await previewPage.close();
+
     await previewDialog.getByRole("button", { name: /Đóng|Close|关闭|閉じる/i }).first().click();
 
     await page.reload({ waitUntil: "networkidle" });
