@@ -37,6 +37,26 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
 
     await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}$`));
 
+    const editButton = page.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).first();
+    await expect(editButton).toBeVisible();
+    const contractNumber = await page.getByRole("heading", { level: 1 }).textContent();
+    await editButton.click();
+    const editForm = page.getByTestId("contract-inline-edit-form");
+    await expect(editForm).toBeVisible();
+    const numberInput = editForm.locator("#contract-detail-number");
+    await numberInput.fill(`${contractNumber?.trim()}-cancelled`);
+    await page.getByRole("button", { name: /Huỷ|Hủy|Cancel|取消|キャンセル/i }).click();
+    await expect(editForm).toBeHidden();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(contractNumber?.trim() ?? "");
+
+    await editButton.click();
+    const updateResponse = page.waitForResponse((response) =>
+        response.request().method() === "PUT" && /\/api\/contracts\/\d+$/.test(response.url()),
+    );
+    await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
+    expect((await updateResponse).ok()).toBe(true);
+    await expect(editForm).toBeHidden();
+
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 

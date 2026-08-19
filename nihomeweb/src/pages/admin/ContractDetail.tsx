@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   CheckCircle2,
   ChevronDown,
   Clock,
@@ -52,16 +54,22 @@ import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import {
   adminApi,
+  PAYMENT_MILESTONE_STATUSES,
   type ContractAppendixResponse,
   type ContractAppendixStatus,
   type ContractAttachmentKind,
   type ContractAttachmentResponse,
+  type ContractPaymentMilestoneRequest,
   type ContractResponse,
   type ContractStatus,
+  type CustomerResponse,
   type ContractTimelineEvent,
   type PaymentMilestoneStatus,
+  type UpsertContractRequest,
   type UpsertContractAppendixRequest,
 } from "@/services/adminApi";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 
 // -------- shared helpers --------
 
@@ -116,6 +124,56 @@ const getErrorMessage = (err: unknown): string | undefined => {
   return parsed?.message;
 };
 
+interface MilestoneDraft {
+  order: number;
+  name: string;
+  percentValue: number;
+  dueDate: string;
+  status: PaymentMilestoneStatus;
+  note: string;
+}
+
+interface ContractEditForm {
+  contractNumber: string;
+  customerId: number;
+  ownerName: string;
+  signedDate: string;
+  startDate: string;
+  endDate: string;
+  value: number;
+  scopeOfWork: string;
+  note: string;
+  milestones: MilestoneDraft[];
+}
+
+const toIsoDate = (value?: string | null): string => value?.slice(0, 10) ?? "";
+
+const toIsoTimestamp = (value: string): string | null => {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+const toEditForm = (contract: ContractResponse): ContractEditForm => ({
+  contractNumber: contract.contractNumber,
+  customerId: contract.customerId,
+  ownerName: contract.ownerName ?? "",
+  signedDate: toIsoDate(contract.signedDate),
+  startDate: toIsoDate(contract.startDate),
+  endDate: toIsoDate(contract.endDate),
+  value: contract.value,
+  scopeOfWork: contract.scopeOfWork ?? "",
+  note: contract.note ?? "",
+  milestones: contract.paymentMilestones.map((milestone) => ({
+    order: milestone.order,
+    name: milestone.name,
+    percentValue: milestone.percentValue,
+    dueDate: toIsoDate(milestone.dueDate),
+    status: milestone.status,
+    note: milestone.note ?? "",
+  })),
+});
+
 // -------- header --------
 
 const AVAILABLE_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
@@ -149,12 +207,27 @@ const TRANSITION_LABEL_KEY: Record<ContractStatus, string> = {
 
 interface HeaderProps {
   contract: ContractResponse;
+  canEdit: boolean;
+  editing: boolean;
+  saving: boolean;
   onEditInfo: () => void;
+  onCancelEdit: () => void;
+  onSave: () => void;
   onTransition: (next: ContractStatus) => void;
   transitionBusy: ContractStatus | null;
 }
 
-const ContractHeader = ({ contract, onEditInfo, onTransition, transitionBusy }: HeaderProps) => {
+const ContractHeader = ({
+  contract,
+  canEdit,
+  editing,
+  saving,
+  onEditInfo,
+  onCancelEdit,
+  onSave,
+  onTransition,
+  transitionBusy,
+}: HeaderProps) => {
   const { t, lang } = useI18n();
 
   const transitions = AVAILABLE_TRANSITIONS[contract.status] ?? [];
@@ -192,10 +265,25 @@ const ContractHeader = ({ contract, onEditInfo, onTransition, transitionBusy }: 
             ) : null}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onEditInfo} className="shrink-0">
-          <Pencil className="mr-1 h-4 w-4" />
-          {t("contracts.detail.editInfo")}
-        </Button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {canEdit && !editing ? (
+            <Button variant="outline" size="sm" onClick={onEditInfo}>
+              <Pencil className="mr-1 h-4 w-4" />
+              {t("common.edit")}
+            </Button>
+          ) : null}
+          {editing ? (
+            <>
+              <Button variant="outline" size="sm" onClick={onCancelEdit} disabled={saving}>
+                {t("common.cancel")}
+              </Button>
+              <Button size="sm" onClick={onSave} disabled={saving}>
+                {saving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Save className="mr-1 h-4 w-4" />}
+                {t("common.save")}
+              </Button>
+            </>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -225,7 +313,7 @@ const ContractHeader = ({ contract, onEditInfo, onTransition, transitionBusy }: 
         </div>
       </div>
 
-      {transitions.length > 0 ? (
+      {!editing && transitions.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {transitions.map((target) => (
             <Button
@@ -296,6 +384,87 @@ const InfoTab = ({ contract }: { contract: ContractResponse }) => {
           <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">{contract.note}</p>
         </div>
       ) : null}
+    </div>
+  );
+};
+
+interface EditInfoTabProps {
+  form: ContractEditForm;
+  customers: CustomerResponse[];
+  error: string | null;
+  onChange: (next: ContractEditForm) => void;
+}
+
+const EditInfoTab = ({ form, customers, error, onChange }: EditInfoTabProps) => {
+  const { t, lang } = useI18n();
+
+  return (
+    <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-number">{t("contracts.field.number")}</Label>
+          <Input
+            id="contract-detail-number"
+            value={form.contractNumber}
+            onChange={(event) => onChange({ ...form, contractNumber: event.target.value })}
+            className="font-mono"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-customer">{t("contracts.field.customer")} *</Label>
+          <Select
+            value={String(form.customerId)}
+            onValueChange={(value) => {
+              const customerId = Number(value);
+              const customer = customers.find((item) => item.id === customerId);
+              onChange({ ...form, customerId, ownerName: customer?.ownerName ?? "" });
+            }}
+          >
+            <SelectTrigger id="contract-detail-customer"><SelectValue /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              {customers.map((customer) => (
+                <SelectItem key={customer.id} value={String(customer.id)}>{customer.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1.5 rounded-md border bg-slate-50 px-3 py-2.5">
+        <Label>{t("contracts.field.owner")}</Label>
+        <p className="text-sm font-medium">{form.ownerName || t("contracts.ownerCurrentUserFallback")}</p>
+        <p className="text-xs text-slate-500">{t("contracts.ownerInheritedHint")}</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-signed">{t("contracts.field.signedDate")}</Label>
+          <Input id="contract-detail-signed" type="date" value={form.signedDate} onChange={(event) => onChange({ ...form, signedDate: event.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-start">{t("contracts.field.startDate")}</Label>
+          <Input id="contract-detail-start" type="date" value={form.startDate} onChange={(event) => onChange({ ...form, startDate: event.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="contract-detail-end">{t("contracts.field.endDate")}</Label>
+          <Input id="contract-detail-end" type="date" value={form.endDate} onChange={(event) => onChange({ ...form, endDate: event.target.value })} />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="contract-detail-value">{t("contracts.field.value")} *</Label>
+        <Input id="contract-detail-value" type="number" min={0} value={form.value} onChange={(event) => onChange({ ...form, value: Number(event.target.value) || 0 })} />
+        <p className="text-xs text-slate-500">{formatCurrency(form.value, lang)} ₫</p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="contract-detail-scope">{t("contracts.field.scope")}</Label>
+        <Textarea id="contract-detail-scope" rows={4} value={form.scopeOfWork} onChange={(event) => onChange({ ...form, scopeOfWork: event.target.value })} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="contract-detail-note">{t("contracts.field.note")}</Label>
+        <Textarea id="contract-detail-note" rows={3} value={form.note} onChange={(event) => onChange({ ...form, note: event.target.value })} />
+      </div>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
 };
@@ -387,6 +556,94 @@ const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleT
           </div>
         );
       })}
+    </div>
+  );
+};
+
+interface EditScheduleTabProps {
+  value: number;
+  milestones: MilestoneDraft[];
+  onChange: (milestones: MilestoneDraft[]) => void;
+}
+
+const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) => {
+  const { t, lang } = useI18n();
+  const total = milestones.reduce((sum, milestone) => sum + milestone.percentValue, 0);
+  const totalValid = milestones.length === 0 || Math.abs(total - 100) <= 0.01;
+  const patch = (index: number, next: Partial<MilestoneDraft>) =>
+    onChange(milestones.map((milestone, current) => current === index ? { ...milestone, ...next } : milestone));
+  const move = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= milestones.length) return;
+    const next = [...milestones];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next.map((milestone, current) => ({ ...milestone, order: current + 1 })));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button type="button" size="sm" variant="outline" onClick={() => onChange([...milestones, { order: milestones.length + 1, name: "", percentValue: 0, dueDate: "", status: "Pending", note: "" }])}>
+          <Plus className="mr-1 h-4 w-4" />
+          {t("contracts.addMilestone")}
+        </Button>
+      </div>
+      {milestones.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">{t("contracts.milestonesEmpty")}</div>
+      ) : milestones.map((milestone, index) => {
+        const amount = Math.round(value * milestone.percentValue) / 100;
+        return (
+          <div key={index} className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm" data-testid={`contract-detail-milestone-${index}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-slate-500">#{index + 1}</span>
+              <div className="flex gap-1">
+                <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={index === 0} onClick={() => move(index, -1)} aria-label={t("workflow.moveUp")}><ArrowUp className="h-4 w-4" /></Button>
+                <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={index === milestones.length - 1} onClick={() => move(index, 1)} aria-label={t("workflow.moveDown")}><ArrowDown className="h-4 w-4" /></Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={() => onChange(
+                    milestones
+                      .filter((_, current) => current !== index)
+                      .map((item, current) => ({ ...item, order: current + 1 })),
+                  )}
+                  aria-label={t("common.delete")}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5"><Label>{t("contracts.milestone.name")} *</Label><Input value={milestone.name} onChange={(event) => patch(index, { name: event.target.value })} /></div>
+              <div className="space-y-1.5"><Label>{t("contracts.milestone.percent")} *</Label><Input type="number" min={0} max={100} step="0.01" value={milestone.percentValue} onChange={(event) => patch(index, { percentValue: Number(event.target.value) || 0 })} /><p className="text-xs text-slate-500">≈ {formatCurrency(amount, lang)} ₫</p></div>
+              <div className="space-y-1.5"><Label>{t("contracts.milestone.dueDate")}</Label><Input type="date" value={milestone.dueDate} onChange={(event) => patch(index, { dueDate: event.target.value })} /></div>
+              <div className="space-y-1.5">
+                <Label>{t("contracts.milestone.status")}</Label>
+                <Select
+                  value={milestone.status}
+                  onValueChange={(status) => patch(index, { status: status as PaymentMilestoneStatus })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_MILESTONE_STATUSES.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {t(`contracts.milestoneStatus.${status}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      {milestones.length > 0 ? (
+        <div className={cn("flex items-center justify-between rounded px-3 py-2 text-sm", totalValid ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>
+          <span>{t("contracts.milestonesSum")}</span><span className="font-semibold">{total.toFixed(2)}% / 100%</span>
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -1037,9 +1294,11 @@ type TabId = "info" | "schedule" | "appendices" | "documents" | "timeline";
 const ContractDetail = () => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const { has } = usePermissions();
   const params = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const idNum = Number(params.id);
+  const canManage = has(ADMIN_PERMS.contractsManage);
 
   const [contract, setContract] = useState<ContractResponse | null>(null);
   const [appendices, setAppendices] = useState<ContractAppendixResponse[]>([]);
@@ -1050,6 +1309,11 @@ const ContractDetail = () => {
   const [tab, setTab] = useState<TabId>("info");
   const [transitionBusy, setTransitionBusy] = useState<ContractStatus | null>(null);
   const [busyMilestoneId, setBusyMilestoneId] = useState<number | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<ContractEditForm | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<CustomerResponse[]>([]);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
@@ -1063,6 +1327,7 @@ const ContractDetail = () => {
         adminApi.getContractTimeline(idNum).catch(() => ({ data: [] as ContractTimelineEvent[] })),
       ]);
       setContract(c.data);
+      setForm(toEditForm(c.data));
       setAppendices(vos.data);
       setAttachments(atts.data);
       setTimeline(tl.data);
@@ -1144,6 +1409,98 @@ const ContractDetail = () => {
     [contract, refreshContract, toast],
   );
 
+  const beginEdit = useCallback(async () => {
+    if (!contract) return;
+    setForm(toEditForm(contract));
+    setFormError(null);
+    setTab("info");
+    if (customers.length === 0) {
+      try {
+        const { data } = await adminApi.listCustomers({ pageSize: 200 });
+        setCustomers(data.items);
+      } catch (err) {
+        toast({ variant: "destructive", title: getErrorMessage(err) ?? t("common.error") });
+        return;
+      }
+    }
+    setEditing(true);
+  }, [contract, customers.length, t, toast]);
+
+  useEffect(() => {
+    if (searchParams.get("edit") !== "true" || !contract || !canManage || editing) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+    void beginEdit();
+  }, [beginEdit, canManage, contract, editing, searchParams, setSearchParams]);
+
+  const cancelEdit = useCallback(() => {
+    if (contract) setForm(toEditForm(contract));
+    setFormError(null);
+    setEditing(false);
+  }, [contract]);
+
+  const saveEdit = useCallback(async () => {
+    if (!contract || !form) return;
+    setFormError(null);
+    if (form.signedDate && form.startDate && form.startDate < form.signedDate) {
+      setFormError(t("form.invalidDateRange"));
+      setTab("info");
+      return;
+    }
+    if (form.startDate && form.endDate && form.endDate < form.startDate) {
+      setFormError(t("form.invalidDateRange"));
+      setTab("info");
+      return;
+    }
+    const milestoneTotal = form.milestones.reduce((sum, milestone) => sum + milestone.percentValue, 0);
+    if (form.milestones.length > 0 && Math.abs(milestoneTotal - 100) > 0.01) {
+      setFormError(t("contracts.milestoneSumInvalid"));
+      setTab("schedule");
+      return;
+    }
+    if (form.milestones.some((milestone) => !milestone.name.trim())) {
+      setFormError(t("contracts.milestoneNameRequired"));
+      setTab("schedule");
+      return;
+    }
+    const paymentMilestones: ContractPaymentMilestoneRequest[] = form.milestones.map((milestone, index) => ({
+      order: index + 1,
+      name: milestone.name.trim(),
+      percentValue: milestone.percentValue,
+      dueDate: toIsoTimestamp(milestone.dueDate),
+      status: milestone.status,
+      note: milestone.note.trim() || null,
+    }));
+    const payload: UpsertContractRequest = {
+      contractNumber: form.contractNumber.trim() || null,
+      customerId: form.customerId,
+      opportunityId: contract.opportunityId,
+      quoteId: contract.quoteId,
+      status: contract.status,
+      signedDate: toIsoTimestamp(form.signedDate),
+      startDate: toIsoTimestamp(form.startDate),
+      endDate: toIsoTimestamp(form.endDate),
+      value: Number.isFinite(form.value) ? Math.max(0, form.value) : 0,
+      scopeOfWork: form.scopeOfWork.trim() || null,
+      note: form.note.trim() || null,
+      paymentMilestones,
+    };
+    setSaving(true);
+    try {
+      const { data } = await adminApi.updateContract(contract.id, payload);
+      setContract(data);
+      setForm(toEditForm(data));
+      setEditing(false);
+      toast({ title: t("form.updated") });
+      await refreshContract();
+    } catch (err) {
+      setFormError(getErrorMessage(err) ?? t("common.error"));
+    } finally {
+      setSaving(false);
+    }
+  }, [contract, form, refreshContract, t, toast]);
+
   if (!Number.isFinite(idNum)) {
     return (
       <AdminLayout>
@@ -1173,7 +1530,12 @@ const ContractDetail = () => {
       <div className="space-y-4">
         <ContractHeader
           contract={contract}
-          onEditInfo={() => navigate(`/admin/contracts?edit=${contract.id}`)}
+          canEdit={canManage}
+          editing={editing}
+          saving={saving}
+          onEditInfo={() => void beginEdit()}
+          onCancelEdit={cancelEdit}
+          onSave={() => void saveEdit()}
           onTransition={handleTransition}
           transitionBusy={transitionBusy}
         />
@@ -1209,14 +1571,21 @@ const ContractDetail = () => {
           </div>
 
           <TabsContent value="info" className="mt-4">
-            <InfoTab contract={contract} />
+            {editing && form ? (
+              <div data-testid="contract-inline-edit-form">
+                <EditInfoTab form={form} customers={customers} error={formError} onChange={setForm} />
+              </div>
+            ) : <InfoTab contract={contract} />}
           </TabsContent>
           <TabsContent value="schedule" className="mt-4">
-            <ScheduleTab
-              contract={contract}
-              onMilestoneStatus={handleMilestoneStatus}
-              busyMilestoneId={busyMilestoneId}
-            />
+            {editing && form ? (
+              <div className="space-y-3">
+                <EditScheduleTab value={form.value} milestones={form.milestones} onChange={(milestones) => setForm({ ...form, milestones })} />
+                {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
+              </div>
+            ) : (
+              <ScheduleTab contract={contract} onMilestoneStatus={handleMilestoneStatus} busyMilestoneId={busyMilestoneId} />
+            )}
           </TabsContent>
           <TabsContent value="appendices" className="mt-4">
             <VoTab contract={contract} rows={appendices} refresh={refreshContract} />
