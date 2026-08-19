@@ -175,6 +175,8 @@ const Contracts = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.contractsManage);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const customerIdParam = Number(searchParams.get("customerId"));
 
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -183,7 +185,9 @@ const Contracts = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
-  const [customerFilter, setCustomerFilter] = useState<number | "all">("all");
+  const [customerFilter, setCustomerFilter] = useState<number | "all">(
+    Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : "all",
+  );
   const [signedFrom, setSignedFrom] = useState("");
   const [signedTo, setSignedTo] = useState("");
   const [valueMin, setValueMin] = useState("");
@@ -233,7 +237,6 @@ const Contracts = () => {
   // detail page). We wait until the list is loaded so we can find the
   // row and hydrate the form via openEdit(). The flag is consumed once
   // by clearing the search param so a back-navigation doesn't loop.
-  const [searchParams, setSearchParams] = useSearchParams();
   const editParam = searchParams.get("edit");
   const consumedEditRef = useRef<string | null>(null);
   useEffect(() => {

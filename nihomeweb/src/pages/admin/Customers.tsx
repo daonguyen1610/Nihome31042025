@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, Plus, Search, Trash2, RefreshCw, Star, Upload, X, Pencil } from "lucide-react";
+import { Link } from "react-router-dom";
+import { BriefcaseBusiness, ExternalLink, FileSignature, FileText, Plus, ReceiptText, Search, Trash2, RefreshCw, Star, Upload, X, Pencil } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
@@ -44,10 +45,14 @@ import {
   type CustomerRelationshipStatus,
   type CustomerResponse,
   type CustomerType,
+  type ContractResponse,
   type MasterDataOption,
+  type OpportunityResponse,
+  type QuoteListItemResponse,
   type UpdateCustomerRequest,
   type UpsertCustomerContactRequest,
 } from "@/services/adminApi";
+import { formatVndWithSymbol } from "@/lib/numberFormat";
 
 const TYPES: CustomerType[] = ["Individual", "Company"];
 const STATUSES: CustomerRelationshipStatus[] = ["Prospect", "InProgress", "Signed", "Suspended"];
@@ -101,6 +106,9 @@ const AdminCustomers = () => {
   const { has } = usePermissions();
   const canSeeAll = has(ADMIN_PERMS.customersViewAll);
   const canManage = has(ADMIN_PERMS.customersManage);
+  const canViewOpportunities = has(ADMIN_PERMS.opportunities);
+  const canViewQuotes = has(ADMIN_PERMS.quotes);
+  const canViewContracts = has(ADMIN_PERMS.contracts);
 
   const [rows, setRows] = useState<CustomerResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -144,6 +152,13 @@ const AdminCustomers = () => {
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
   const [documentInputKey, setDocumentInputKey] = useState(0);
+
+  const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
+  const [quotes, setQuotes] = useState<QuoteListItemResponse[]>([]);
+  const [contracts, setContracts] = useState<ContractResponse[]>([]);
+  const [relatedTotals, setRelatedTotals] = useState({ opportunities: 0, quotes: 0, contracts: 0 });
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedErrors, setRelatedErrors] = useState<Partial<Record<"opportunities" | "quotes" | "contracts", string>>>({});
 
   useEffect(() => {
     const h = window.setTimeout(() => {
@@ -206,18 +221,58 @@ const AdminCustomers = () => {
     }
   };
 
+  const fetchRelatedRecords = async (customerId: number) => {
+    setRelatedLoading(true);
+    setRelatedErrors({});
+
+    await Promise.all([
+      canViewOpportunities
+        ? adminApi.listOpportunities({ customerId, pageSize: 100 })
+            .then(({ data }) => {
+              setOpportunities(data.items);
+              setRelatedTotals((current) => ({ ...current, opportunities: data.total }));
+            })
+            .catch((error) => setRelatedErrors((current) => ({ ...current, opportunities: extractApiError(error) })))
+        : Promise.resolve(),
+      canViewQuotes
+        ? adminApi.listQuotes({ customerId, pageSize: 100 })
+            .then(({ data }) => {
+              setQuotes(data.items);
+              setRelatedTotals((current) => ({ ...current, quotes: data.total }));
+            })
+            .catch((error) => setRelatedErrors((current) => ({ ...current, quotes: extractApiError(error) })))
+        : Promise.resolve(),
+      canViewContracts
+        ? adminApi.listContracts({ customerId, pageSize: 100 })
+            .then(({ data }) => {
+              setContracts(data.items);
+              setRelatedTotals((current) => ({ ...current, contracts: data.total }));
+            })
+            .catch((error) => setRelatedErrors((current) => ({ ...current, contracts: extractApiError(error) })))
+        : Promise.resolve(),
+    ]);
+
+    setRelatedLoading(false);
+  };
+
   const openDetail = async (id: number, options: { startEditing?: boolean } = {}) => {
     setDetailLoading(true);
     setDetail(null);
     setEditing(false);
     setEditForm(null);
     setDocuments([]);
+    setOpportunities([]);
+    setQuotes([]);
+    setContracts([]);
+    setRelatedTotals({ opportunities: 0, quotes: 0, contracts: 0 });
+    setRelatedErrors({});
     setDocumentFile(null);
     setDocumentLabel("");
     try {
       const [{ data }] = await Promise.all([
         adminApi.getCustomer(id),
         fetchDocuments(id),
+        fetchRelatedRecords(id),
       ]);
       setDetail(data);
       if (options.startEditing && canManage) {
@@ -249,6 +304,11 @@ const AdminCustomers = () => {
     setActivityContent("");
     setDocuments([]);
     setDocumentsError(null);
+    setOpportunities([]);
+    setQuotes([]);
+    setContracts([]);
+    setRelatedTotals({ opportunities: 0, quotes: 0, contracts: 0 });
+    setRelatedErrors({});
     setDocumentFile(null);
     setDocumentLabel("");
   };
@@ -1425,9 +1485,93 @@ const AdminCustomers = () => {
                 </TabsContent>
 
                 <TabsContent value="related" className="pt-3">
-                  <p className="rounded border border-dashed p-4 text-center text-xs text-muted-foreground">
-                    {t("customers.tab.related.empty")}
-                  </p>
+                  {relatedLoading ? (
+                    <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+                      <RefreshCw className="h-4 w-4 animate-spin" aria-hidden />
+                      {t("customers.tab.related.loading")}
+                    </div>
+                  ) : !canViewOpportunities && !canViewQuotes && !canViewContracts ? (
+                    <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
+                      {t("customers.tab.related.noAccess")}
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.keys(relatedErrors).length > 0 && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                          <span>{t("customers.tab.related.loadError")}</span>
+                          <Button variant="outline" size="sm" onClick={() => void fetchRelatedRecords(detail.id)}>
+                            <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> {t("common.retry")}
+                          </Button>
+                        </div>
+                      )}
+
+                      {canViewOpportunities && (
+                        <RelatedSection
+                          title={t("customers.tab.related.opportunities")}
+                          icon={<BriefcaseBusiness className="h-4 w-4 text-sky-600" />}
+                          count={relatedTotals.opportunities}
+                          emptyText={t("customers.tab.related.opportunities.empty")}
+                          error={relatedErrors.opportunities}
+                          viewAllHref={`/admin/opportunities?customerId=${detail.id}`}
+                          viewAllLabel={t("customers.tab.related.viewAll")}
+                        >
+                          {opportunities.map((opportunity) => (
+                            <RelatedRow
+                              key={opportunity.id}
+                              title={opportunity.name}
+                              subtitle={`${t(`opportunities.stage.${opportunity.stage}`)} · ${opportunity.winProbability}%`}
+                              value={formatVndWithSymbol(opportunity.estimatedValue)}
+                              href={`/admin/opportunities?open=${opportunity.id}`}
+                            />
+                          ))}
+                        </RelatedSection>
+                      )}
+
+                      {canViewQuotes && (
+                        <RelatedSection
+                          title={t("customers.tab.related.quotes")}
+                          icon={<ReceiptText className="h-4 w-4 text-amber-600" />}
+                          count={relatedTotals.quotes}
+                          emptyText={t("customers.tab.related.quotes.empty")}
+                          error={relatedErrors.quotes}
+                          viewAllHref={`/admin/quotes?customerId=${detail.id}`}
+                          viewAllLabel={t("customers.tab.related.viewAll")}
+                        >
+                          {quotes.map((quote) => (
+                            <RelatedRow
+                              key={quote.id}
+                              title={quote.code}
+                              subtitle={`${t(`quotes.status.${quote.status}`)} · V${quote.version}`}
+                              value={formatVndWithSymbol(quote.grandTotal)}
+                              href={`/admin/quotes/${quote.id}`}
+                            />
+                          ))}
+                        </RelatedSection>
+                      )}
+
+                      {canViewContracts && (
+                        <RelatedSection
+                          title={t("customers.tab.related.contracts")}
+                          icon={<FileSignature className="h-4 w-4 text-emerald-600" />}
+                          count={relatedTotals.contracts}
+                          emptyText={t("customers.tab.related.contracts.empty")}
+                          error={relatedErrors.contracts}
+                          viewAllHref={`/admin/contracts?customerId=${detail.id}`}
+                          viewAllLabel={t("customers.tab.related.viewAll")}
+                        >
+                          {contracts.map((contract) => (
+                            <RelatedRow
+                              key={contract.id}
+                              title={contract.contractNumber}
+                              subtitle={t(`contracts.status.${contract.status}`)}
+                              value={formatVndWithSymbol(contract.currentValue)}
+                              href={`/admin/contracts/${contract.id}`}
+                            />
+                          ))}
+                        </RelatedSection>
+                      )}
+                    </div>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="documents" className="space-y-3 pt-3">
@@ -1599,3 +1743,70 @@ const AdminCustomers = () => {
 };
 
 export default AdminCustomers;
+
+const RelatedSection = ({
+  title,
+  icon,
+  count,
+  emptyText,
+  error,
+  viewAllHref,
+  viewAllLabel,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  count: number;
+  emptyText: string;
+  error?: string;
+  viewAllHref: string;
+  viewAllLabel: string;
+  children: React.ReactNode;
+}) => (
+  <section className="overflow-hidden rounded-lg border bg-card">
+    <header className="flex items-center justify-between gap-3 border-b bg-muted/30 px-3 py-2.5">
+      <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+        {icon}
+        <span className="truncate">{title}</span>
+        <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1.5 text-[11px]">{count}</Badge>
+      </div>
+      <Link to={viewAllHref} className="shrink-0 text-xs font-medium text-primary hover:underline">
+        {viewAllLabel}
+      </Link>
+    </header>
+    {error ? (
+      <p className="p-4 text-center text-xs text-destructive">{error}</p>
+    ) : count === 0 ? (
+      <p className="p-4 text-center text-xs text-muted-foreground">{emptyText}</p>
+    ) : (
+      <ul className="divide-y">{children}</ul>
+    )}
+  </section>
+);
+
+const RelatedRow = ({
+  title,
+  subtitle,
+  value,
+  href,
+}: {
+  title: string;
+  subtitle: string;
+  value: string;
+  href?: string;
+}) => {
+  const content = (
+    <div className="flex items-start justify-between gap-3 px-3 py-2.5 text-sm hover:bg-muted/20">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1 font-medium">
+          <span className="truncate">{title}</span>
+          {href && <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />}
+        </div>
+        <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>
+      </div>
+      <span className="shrink-0 text-right text-xs font-semibold sm:text-sm">{value}</span>
+    </div>
+  );
+
+  return <li>{href ? <Link to={href}>{content}</Link> : content}</li>;
+};
