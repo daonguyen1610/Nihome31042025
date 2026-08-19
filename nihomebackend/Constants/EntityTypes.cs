@@ -24,6 +24,7 @@ public static class EntityTypes
     public const string Opportunity = "Opportunity";
     public const string OpportunityActivity = "OpportunityActivity";
     public const string Quote = "Quote";
+    public const string QuoteDocument = "QuoteDocument";
     public const string Contract = "Contract";
     public const string CapabilityDocument = "CapabilityDocument";
     public const string Tender = "Tender";

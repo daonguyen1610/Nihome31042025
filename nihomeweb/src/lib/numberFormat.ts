@@ -18,6 +18,12 @@ export function formatVndWithSymbol(value: number | null | undefined): string {
     return `${vndFormatter.format(value)} ₫`;
 }
 
+export function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 /**
  * Parse a user-typed currency string ("1.234.567", "1,234,567", "1234567 đ",
  * even a raw "150tr" → 150 not 150_000_000; the multiplier suffix is left

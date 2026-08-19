@@ -22,6 +22,7 @@ public class QuoteServiceTests : IDisposable
         _sut = new QuoteService(
             _db,
             _notifications.Object,
+            Mock.Of<IQuoteDocumentService>(),
             NullLogger<QuoteService>.Instance);
     }
 
