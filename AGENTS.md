@@ -29,6 +29,19 @@ Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
 
 ---
 
+## Business Validation Skill Routing
+
+For non-trivial features and business-rule changes, use the repository skills in this order after implementation:
+
+1. `.github/skills/senior-business-analyst/SKILL.md` — validate business intent, actors, rules, lifecycle, contracts, and requirement-to-test traceability.
+2. `.github/skills/business-functional-qa/SKILL.md` — design and execute risk-based functional validation from the approved business contract and BA handoff.
+
+Use both skills before declaring a feature business-ready. The BA review approves the business contract as the QA test basis; the QA review proves release readiness with evidence at the correct test layer. Agents without native skill discovery must read and follow these files directly.
+
+Use a separate agent or clean review context for BA and QA validation when available. If the same agent must validate its implementation, treat the implementation summary as untrusted, re-read source evidence, and record that independence limitation as a risk. Report ambiguities, missing evidence, defects, blocked checks, and residual risks explicitly. Only the product or business owner may accept requirement risk; only fix findings when the user requests remediation, then rerun the affected validation.
+
+---
+
 ## Fast Delivery Rules
 
 * Optimize for speed but keep changes safe.
