@@ -26,7 +26,12 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await expect(page.locator("#c-status")).toBeVisible();
 
     // Sample seeder inserts at least one row for freshly booted stacks.
-    await expect(page.locator("table tbody tr").first()).toBeVisible();
+    const row = page.locator('[data-testid^="contract-row-"]').first();
+    await expect(row).toBeVisible();
+    const contractId = await row.getAttribute("data-testid");
+    await row.locator("td").nth(2).click();
+
+    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}$`));
 
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
