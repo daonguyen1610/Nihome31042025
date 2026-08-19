@@ -69,7 +69,20 @@
 
   { "key": "quotes.tab.content", "category": "quotes", "vi": "Nội dung", "en": "Content", "zh": "内容", "ja": "内容" },
   { "key": "quotes.tab.versions", "category": "quotes", "vi": "Phiên bản", "en": "Versions", "zh": "版本", "ja": "バージョン" },
+  { "key": "quotes.tab.documents", "category": "quotes", "vi": "Tài liệu", "en": "Documents", "zh": "文档", "ja": "資料" },
   { "key": "quotes.tab.workflow", "category": "quotes", "vi": "Luồng duyệt", "en": "Workflow", "zh": "审批流程", "ja": "承認履歴" },
+
+  { "key": "quotes.document.file", "category": "quotes", "vi": "Chọn tài liệu", "en": "Choose document", "zh": "选择文档", "ja": "資料を選択" },
+  { "key": "quotes.document.fileHint", "category": "quotes", "vi": "PDF, Word, Excel hoặc ảnh; tối đa 20MB.", "en": "PDF, Word, Excel or image; maximum 20MB.", "zh": "PDF、Word、Excel 或图片；最大 20MB。", "ja": "PDF、Word、Excel、画像（最大20MB）。" },
+  { "key": "quotes.document.label", "category": "quotes", "vi": "Nhãn tài liệu (tuỳ chọn)", "en": "Document label (optional)", "zh": "文档标签（可选）", "ja": "資料ラベル（任意）" },
+  { "key": "quotes.document.labelPlaceholder", "category": "quotes", "vi": "Ví dụ: Báo giá gửi khách", "en": "For example: Customer proposal", "zh": "例如：客户报价", "ja": "例：顧客向け見積" },
+  { "key": "quotes.document.upload", "category": "quotes", "vi": "Tải lên", "en": "Upload", "zh": "上传", "ja": "アップロード" },
+  { "key": "quotes.document.uploading", "category": "quotes", "vi": "Đang tải lên...", "en": "Uploading...", "zh": "正在上传...", "ja": "アップロード中..." },
+  { "key": "quotes.document.uploaded", "category": "quotes", "vi": "Đã tải tài liệu lên", "en": "Document uploaded", "zh": "文档已上传", "ja": "資料をアップロードしました" },
+  { "key": "quotes.document.deleted", "category": "quotes", "vi": "Đã xóa tài liệu", "en": "Document deleted", "zh": "文档已删除", "ja": "資料を削除しました" },
+  { "key": "quotes.document.deleteConfirm", "category": "quotes", "vi": "Xóa tài liệu này?", "en": "Delete this document?", "zh": "删除此文档？", "ja": "この資料を削除しますか？" },
+  { "key": "quotes.document.empty", "category": "quotes", "vi": "Chưa có tài liệu nào cho báo giá này.", "en": "No documents have been uploaded for this quote.", "zh": "此报价尚未上传文档。", "ja": "この見積には資料がまだありません。" },
+  { "key": "quotes.document.uploadedBy", "category": "quotes", "vi": "Tải lên bởi {name}", "en": "Uploaded by {name}", "zh": "由 {name} 上传", "ja": "{name} がアップロード" },
 
   { "key": "quotes.version.current", "category": "quotes", "vi": "Hiện tại", "en": "Current", "zh": "当前", "ja": "現行" },
   { "key": "quotes.preview.unsaved", "category": "quotes", "vi": "Chưa lưu — tổng cộng đang là dự tính, hãy bấm Lưu để cập nhật.", "en": "Unsaved — grand total is a preview, click Save to commit.", "zh": "未保存 — 总计为预览，请点击保存。", "ja": "未保存 — 合計はプレビューです。保存してください。" },

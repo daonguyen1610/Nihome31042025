@@ -62,6 +62,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
+    public DbSet<QuoteDocument> QuoteDocuments => Set<QuoteDocument>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractPaymentMilestone> ContractPaymentMilestones => Set<ContractPaymentMilestone>();
     public DbSet<ContractAppendix> ContractAppendices => Set<ContractAppendix>();
@@ -564,6 +565,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(q => q.Status);
             b.HasIndex(q => q.ValidUntil);
             b.HasIndex(q => q.CreatedAt);
+        });
+
+        modelBuilder.Entity<QuoteDocument>(b =>
+        {
+            b.ToTable("quote_documents");
+            b.HasKey(document => document.Id);
+            b.Property(document => document.FilePath).HasMaxLength(500).IsRequired();
+            b.Property(document => document.OriginalFileName).HasMaxLength(300).IsRequired();
+            b.Property(document => document.ContentType).HasMaxLength(150).IsRequired();
+            b.Property(document => document.Label).HasMaxLength(300);
+            b.HasOne(document => document.Quote)
+                .WithMany(quote => quote.Documents)
+                .HasForeignKey(document => document.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(document => document.UploadedBy)
+                .WithMany()
+                .HasForeignKey(document => document.UploadedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(document => new { document.QuoteId, document.CreatedAt });
         });
 
         modelBuilder.Entity<QuoteItem>(b =>

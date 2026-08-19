@@ -6,6 +6,7 @@ import {
   Calendar,
   CheckCheck,
   Clipboard,
+  FileText,
   History,
   ListChecks,
   Loader2,
@@ -16,17 +17,19 @@ import {
   ThumbsDown,
   ThumbsUp,
   Trash2,
+  Upload,
   User,
   XCircle,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { formatVnd, parseVnd } from "@/lib/numberFormat";
+import { formatFileSize, formatVnd, parseVnd } from "@/lib/numberFormat";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +47,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   adminApi,
+  type QuoteDocumentResponse,
   type QuoteItemInput,
   type QuoteResponse,
   type QuoteStatus,
@@ -155,6 +159,15 @@ const AdminQuoteDetail = () => {
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
 
+  const [documents, setDocuments] = useState<QuoteDocumentResponse[] | null>(null);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentLabel, setDocumentLabel] = useState("");
+  const [documentInputKey, setDocumentInputKey] = useState(0);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
+
   const [workflow, setWorkflow] = useState<WorkflowKind | null>(null);
   const [workflowNote, setWorkflowNote] = useState("");
   const [workflowBusy, setWorkflowBusy] = useState(false);
@@ -196,6 +209,20 @@ const AdminQuoteDetail = () => {
       setVersionsLoading(false);
     }
   }, [quoteId, toast, t]);
+
+  const loadDocuments = useCallback(async () => {
+    if (!Number.isFinite(quoteId)) return;
+    setDocumentsLoading(true);
+    setDocumentsError(null);
+    try {
+      const { data } = await adminApi.listQuoteDocuments(quoteId);
+      setDocuments(data);
+    } catch (err) {
+      setDocumentsError(extractApiError(err));
+    } finally {
+      setDocumentsLoading(false);
+    }
+  }, [quoteId]);
 
   // ---------- BOQ helpers ----------
 
@@ -324,6 +351,45 @@ const AdminQuoteDetail = () => {
         description: extractApiError(err),
         variant: "destructive",
       });
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!quote || !documentFile) return;
+    setUploadingDocument(true);
+    try {
+      await adminApi.uploadQuoteDocument(quote.id, documentFile, documentLabel);
+      setDocumentFile(null);
+      setDocumentLabel("");
+      setDocumentInputKey((value) => value + 1);
+      await loadDocuments();
+      toast({ title: t("quotes.document.uploaded") });
+    } catch (err) {
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: number) => {
+    if (!quote || !window.confirm(t("quotes.document.deleteConfirm"))) return;
+    setDeletingDocumentId(documentId);
+    try {
+      await adminApi.deleteQuoteDocument(quote.id, documentId);
+      setDocuments((current) => current?.filter((document) => document.id !== documentId) ?? []);
+      toast({ title: t("quotes.document.deleted") });
+    } catch (err) {
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -470,9 +536,10 @@ const AdminQuoteDetail = () => {
         className="w-full"
         onValueChange={(v) => {
           if (v === "versions" && !versions) void loadVersions();
+          if (v === "documents" && documents === null && !documentsLoading) void loadDocuments();
         }}
       >
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="content">
             <ListChecks className="mr-1.5 h-4 w-4" />
             {t("quotes.tab.content")}
@@ -480,6 +547,10 @@ const AdminQuoteDetail = () => {
           <TabsTrigger value="versions">
             <History className="mr-1.5 h-4 w-4" />
             {t("quotes.tab.versions")}
+          </TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileText className="mr-1.5 h-4 w-4" />
+            {t("quotes.tab.documents")}
           </TabsTrigger>
           <TabsTrigger value="workflow">
             {t("quotes.tab.workflow")}
@@ -596,6 +667,111 @@ const AdminQuoteDetail = () => {
               )}
             </aside>
           </div>
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-4 space-y-4">
+          {canManage && (
+            <div className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="quote-document-file">{t("quotes.document.file")}</Label>
+                <Input
+                  key={documentInputKey}
+                  id="quote-document-file"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
+                />
+                <p className="text-xs text-muted-foreground">{t("quotes.document.fileHint")}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="quote-document-label">{t("quotes.document.label")}</Label>
+                <Input
+                  id="quote-document-label"
+                  value={documentLabel}
+                  onChange={(event) => setDocumentLabel(event.target.value)}
+                  maxLength={300}
+                  placeholder={t("quotes.document.labelPlaceholder")}
+                />
+              </div>
+              <Button
+                type="button"
+                onClick={() => void handleUploadDocument()}
+                disabled={!documentFile || uploadingDocument}
+              >
+                {uploadingDocument ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-1.5 h-4 w-4" />
+                )}
+                {uploadingDocument ? t("quotes.document.uploading") : t("quotes.document.upload")}
+              </Button>
+            </div>
+          )}
+
+          {documentsLoading ? (
+            <PageLoading />
+          ) : documentsError ? (
+            <PageError message={documentsError} onRetry={() => void loadDocuments()} />
+          ) : documents?.length === 0 ? (
+            <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+              {t("quotes.document.empty")}
+            </p>
+          ) : documents ? (
+            <ul className="grid gap-3 lg:grid-cols-2">
+              {documents.map((document) => (
+                <li key={document.id} className="flex min-w-0 items-start gap-3 rounded-lg border bg-card p-3">
+                  <div className="rounded-md bg-muted p-2">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium" title={document.originalFileName}>
+                      {document.label || document.originalFileName}
+                    </p>
+                    {document.label && (
+                      <p className="truncate text-xs text-muted-foreground" title={document.originalFileName}>
+                        {document.originalFileName}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(document.fileSize)} · {new Date(document.createdAt).toLocaleString()}
+                    </p>
+                    {document.uploadedByName && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {t("quotes.document.uploadedBy").replace("{name}", document.uploadedByName)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <AdminFilePreview
+                      url={document.filePath}
+                      fileName={document.originalFileName}
+                      contentType={document.contentType}
+                      fetchFile={async () => (
+                        await adminApi.getQuoteDocumentContent(quote.id, document.id)
+                      ).data}
+                    />
+                    {canManage && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={deletingDocumentId === document.id}
+                        onClick={() => void handleDeleteDocument(document.id)}
+                        title={t("common.delete")}
+                        aria-label={t("common.delete")}
+                      >
+                        {deletingDocumentId === document.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </TabsContent>
 
         {/* ---------- VERSIONS ---------- */}

@@ -63,6 +63,7 @@ public class Quote
     public List<QuoteItem> Items { get; set; } = new();
     public List<QuoteApprovalLog> ApprovalLogs { get; set; } = new();
     public List<QuoteVersionSnapshot> VersionSnapshots { get; set; } = new();
+    public List<QuoteDocument> Documents { get; set; } = new();
 }
 
 /// <summary>Line item in a Boq quote. Ignored when Method=UnitCost.</summary>

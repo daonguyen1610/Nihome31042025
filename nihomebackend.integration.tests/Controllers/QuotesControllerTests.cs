@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -175,7 +176,86 @@ public class QuotesControllerTests : IntegrationTestBase
         (await Client.DeleteAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Documents_UploadListDelete_RoundTrips()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var quoteId = await CreateQuoteAsync();
+
+        var upload = await UploadDocumentAsync(quoteId, "proposal.pdf", "Customer proposal");
+
+        upload.StatusCode.Should().Be(HttpStatusCode.Created);
+        var uploaded = await ReadJsonAsync(upload);
+        uploaded.GetProperty("originalFileName").GetString().Should().Be("proposal.pdf");
+        uploaded.GetProperty("label").GetString().Should().Be("Customer proposal");
+        uploaded.GetProperty("filePath").GetString().Should().StartWith($"/files/quotes/{quoteId}/");
+
+        var list = await Client.GetAsync($"/api/quotes/{quoteId}/documents");
+        list.EnsureSuccessStatusCode();
+        var listed = await ReadJsonAsync(list);
+        listed.GetArrayLength().Should().Be(1);
+
+        var documentId = uploaded.GetProperty("id").GetInt32();
+        var content = await Client.GetAsync($"/api/quotes/{quoteId}/documents/{documentId}/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("document");
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        (await Client.GetAsync($"/api/quotes/{quoteId}/documents/{documentId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        (await Client.DeleteAsync($"/api/quotes/{quoteId}/documents/{documentId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/documents")))
+            .GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Documents_UnsupportedExtension_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var quoteId = await CreateQuoteAsync();
+
+        (await UploadDocumentAsync(quoteId, "proposal.exe", null))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Documents_OtherOwnersQuote_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        (await Client.GetAsync($"/api/quotes/{quoteId}/documents"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await UploadDocumentAsync(quoteId, "proposal.pdf", null))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Documents_WithoutManagePermission_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+
+        (await UploadDocumentAsync(9999999, "proposal.pdf", null))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     // ---------- helpers ----------
+
+    private async Task<HttpResponseMessage> UploadDocumentAsync(int quoteId, string fileName, string? label)
+    {
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent("document"u8.ToArray());
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        content.Add(fileContent, "file", fileName);
+        if (label is not null) content.Add(new StringContent(label), "label");
+        return await Client.PostAsync($"/api/quotes/{quoteId}/documents", content);
+    }
 
     private async Task<int> CreateCustomerAsync()
     {

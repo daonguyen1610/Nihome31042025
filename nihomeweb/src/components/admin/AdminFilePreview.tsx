@@ -1,4 +1,5 @@
-import { Download, ExternalLink, Eye, FileWarning } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Download, ExternalLink, Eye, FileWarning, Loader2 } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +27,7 @@ type AdminFilePreviewProps = {
   size?: ButtonProps["size"];
   className?: string;
   testId?: string;
+  fetchFile?: () => Promise<Blob>;
 };
 
 const IMAGE_EXTENSIONS = new Set(["bmp", "gif", "jpeg", "jpg", "png", "svg", "webp"]);
@@ -67,14 +69,43 @@ export default function AdminFilePreview({
   size = showLabel ? "sm" : "icon",
   className,
   testId,
+  fetchFile,
 }: AdminFilePreviewProps) {
   const { t } = useI18n();
   const href = resolveSafeLinkUrl(url ?? "");
+  const [open, setOpen] = useState(false);
+  const [blobHref, setBlobHref] = useState<string | null>(null);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileLoadFailed, setFileLoadFailed] = useState(false);
+  const blobHrefRef = useRef<string | null>(null);
   const displayName = getDisplayName(url ?? "", fileName);
   const previewKind = href ? getPreviewKind(href, fileName, contentType) : "unsupported";
   const triggerLabel = label ?? t("common.previewFile");
+  const effectiveHref = fetchFile ? blobHref : href;
 
-  if (!href) {
+  useEffect(() => () => {
+    if (blobHrefRef.current) URL.revokeObjectURL(blobHrefRef.current);
+  }, []);
+
+  const handleOpenChange = async (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen || !fetchFile || blobHrefRef.current || fileLoading) return;
+
+    setFileLoading(true);
+    setFileLoadFailed(false);
+    try {
+      const blob = await fetchFile();
+      const objectUrl = URL.createObjectURL(blob);
+      blobHrefRef.current = objectUrl;
+      setBlobHref(objectUrl);
+    } catch {
+      setFileLoadFailed(true);
+    } finally {
+      setFileLoading(false);
+    }
+  };
+
+  if (!href && !fetchFile) {
     return (
       <Button
         type="button"
@@ -93,7 +124,7 @@ export default function AdminFilePreview({
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={(nextOpen) => void handleOpenChange(nextOpen)}>
       <DialogTrigger asChild>
         <Button
           type="button"
@@ -118,16 +149,23 @@ export default function AdminFilePreview({
         </DialogHeader>
 
         <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto rounded-md border bg-muted/30">
-          {previewKind === "image" ? (
+          {fileLoading ? (
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          ) : fileLoadFailed || !effectiveHref ? (
+            <div className="max-w-md p-8 text-center text-sm text-muted-foreground">
+              <FileWarning className="mx-auto mb-3 h-10 w-10" />
+              <p>{t("common.previewUnavailable")}</p>
+            </div>
+          ) : previewKind === "image" ? (
             <img
-              src={href}
+              src={effectiveHref}
               alt={displayName}
               className="max-h-[70vh] max-w-full object-contain"
               data-testid={testId ? `${testId}-image` : undefined}
             />
           ) : previewKind === "pdf" || previewKind === "text" ? (
             <iframe
-              src={href}
+              src={effectiveHref}
               title={`${t("common.filePreviewTitle")}: ${displayName}`}
               className="h-[70vh] w-full bg-background"
               referrerPolicy="no-referrer"
@@ -151,14 +189,14 @@ export default function AdminFilePreview({
               {t("common.close")}
             </Button>
           </DialogClose>
-          <Button asChild variant="outline">
-            <a href={href} target="_blank" rel="noopener noreferrer">
+          <Button asChild variant="outline" disabled={!effectiveHref}>
+            <a href={effectiveHref ?? undefined} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="mr-1.5 h-4 w-4" />
               {t("common.openInNewTab")}
             </a>
           </Button>
-          <Button asChild>
-            <a href={href} download={fileName || true}>
+          <Button asChild disabled={!effectiveHref}>
+            <a href={effectiveHref ?? undefined} download={fileName || true}>
               <Download className="mr-1.5 h-4 w-4" />
               {t("common.downloadFile")}
             </a>

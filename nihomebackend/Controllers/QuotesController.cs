@@ -23,6 +23,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class QuotesController(
     IQuoteService svc,
+    IQuoteDocumentService documentSvc,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
@@ -72,6 +73,88 @@ public class QuotesController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
         var found = await svc.GetVersionsAsync(id, userId.Value, canSeeAll, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("{id:int}/documents")]
+    [RequirePermission("crm.quotes", "view")]
+    public async Task<ActionResult<List<QuoteDocumentResponse>>> ListDocuments(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+        var documents = await documentSvc.ListAsync(id, userId.Value, canSeeAll, ct);
+        return documents is null ? NotFound() : Ok(documents);
+    }
+
+    [HttpGet("{id:int}/documents/{documentId:int}/content")]
+    [RequirePermission("crm.quotes", "view")]
+    public async Task<IActionResult> GetDocumentContent(int id, int documentId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+        var document = await documentSvc.GetContentAsync(id, documentId, userId.Value, canSeeAll, ct);
+        return document is null
+            ? NotFound()
+            : PhysicalFile(
+                document.FullPath,
+                document.ContentType,
+                enableRangeProcessing: true);
+    }
+
+    [HttpPost("{id:int}/documents")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission("crm.quotes", "manage")]
+    public async Task<ActionResult<QuoteDocumentResponse>> UploadDocument(
+        int id,
+        [FromForm] IFormFile? file,
+        [FromForm] string? label,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+        try
+        {
+            var document = await documentSvc.UploadAsync(id, file, label, userId.Value, canSeeAll, ct);
+            if (document is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "quote.document.upload",
+                ResourceType = EntityTypes.QuoteDocument,
+                ResourceId = document.Id.ToString(),
+                Message = $"Document {document.OriginalFileName} uploaded for quote #{id}.",
+                NewValue = document,
+            });
+            return Created($"/api/quotes/{id}/documents/{document.Id}", document);
+        }
+        catch (QuoteDocumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}/documents/{documentId:int}")]
+    [RequirePermission("crm.quotes", "manage")]
+    public async Task<IActionResult> DeleteDocument(int id, int documentId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+        var removed = await documentSvc.DeleteAsync(id, documentId, userId.Value, canSeeAll, ct);
+        if (!removed) return NotFound();
+        audit.Log(new AuditEvent
+        {
+            Action = "quote.document.delete",
+            ResourceType = EntityTypes.QuoteDocument,
+            ResourceId = documentId.ToString(),
+            Message = $"Document #{documentId} deleted from quote #{id}.",
+        });
+        return NoContent();
     }
 
     [HttpPost]

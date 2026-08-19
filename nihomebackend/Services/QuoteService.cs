@@ -36,6 +36,7 @@ public class QuoteOperationException : Exception
 public class QuoteService(
     AppDbContext db,
     INotificationService notifications,
+    IQuoteDocumentService quoteDocuments,
     ILogger<QuoteService> logger) : IQuoteService
 {
     private const int MaxPageSize = 100;
@@ -431,6 +432,7 @@ public class QuoteService(
 
         db.Quotes.Remove(quote);
         await db.SaveChangesAsync(ct);
+        quoteDocuments.DeleteQuoteFiles(id);
         return true;
     }
 

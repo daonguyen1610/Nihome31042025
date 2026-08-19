@@ -98,6 +98,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICustomerDocumentService, CustomerDocumentService>();
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IOpportunityService, OpportunityService>();
+        services.AddScoped<IQuoteDocumentService, QuoteDocumentService>();
         services.AddScoped<IQuoteService, QuoteService>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<IContractAppendixService, ContractAppendixService>();

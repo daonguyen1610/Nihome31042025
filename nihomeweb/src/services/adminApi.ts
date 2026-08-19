@@ -1121,6 +1121,19 @@ export interface QuoteResponse {
   approvalLogs: QuoteApprovalLogResponse[];
 }
 
+export interface QuoteDocumentResponse {
+  id: number;
+  quoteId: number;
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+  label?: string;
+  createdAt: string;
+  uploadedByUserId?: number;
+  uploadedByName?: string;
+}
+
 export interface QuoteListItemResponse {
   id: number;
   code: string;
@@ -3201,6 +3214,20 @@ export const adminApi = {
     api.post<QuoteResponse>(`/quotes/${id}/cancel`, body),
   extendQuoteValidity: (id: number, body: ExtendQuoteValidityRequest) =>
     api.post<QuoteResponse>(`/quotes/${id}/extend-validity`, body),
+  listQuoteDocuments: (id: number) =>
+    api.get<QuoteDocumentResponse[]>(`/quotes/${id}/documents`),
+  getQuoteDocumentContent: (id: number, documentId: number) =>
+    api.get<Blob>(`/quotes/${id}/documents/${documentId}/content`, {
+      responseType: "blob",
+    }),
+  uploadQuoteDocument: (id: number, file: File, label?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (label?.trim()) formData.append("label", label.trim());
+    return api.post<QuoteDocumentResponse>(`/quotes/${id}/documents`, formData);
+  },
+  deleteQuoteDocument: (id: number, documentId: number) =>
+    api.delete(`/quotes/${id}/documents/${documentId}`),
   deleteQuote: (id: number) => api.delete(`/quotes/${id}`),
 
   // Capability documents (NIH-98)
