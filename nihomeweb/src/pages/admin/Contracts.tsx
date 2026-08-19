@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -174,6 +174,7 @@ const Contracts = () => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const navigate = useNavigate();
   const canManage = has(ADMIN_PERMS.contractsManage);
   const [searchParams, setSearchParams] = useSearchParams();
   const customerIdParam = Number(searchParams.get("customerId"));
@@ -786,7 +787,12 @@ const Contracts = () => {
                   {contracts.map((row) => {
                     const endingSoon = isEndingSoon(row);
                     return (
-                      <tr key={row.id} className="hover:bg-muted/40 transition">
+                      <tr
+                        key={row.id}
+                        data-testid={`contract-row-${row.id}`}
+                        className="cursor-pointer transition hover:bg-muted/40"
+                        onClick={() => navigate(`/admin/contracts/${row.id}`)}
+                      >
                         {canManage && (
                           <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
@@ -796,7 +802,7 @@ const Contracts = () => {
                             />
                           </td>
                         )}
-                        <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">
+                        <td className="whitespace-nowrap px-3 py-3 font-mono text-xs" onClick={(event) => event.stopPropagation()}>
                           <Link to={`/admin/contracts/${row.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
                             {row.contractNumber}
                             <ExternalLink className="h-3 w-3 opacity-70" />
@@ -829,7 +835,7 @@ const Contracts = () => {
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{row.ownerName ?? "—"}</td>
                         {canManage && (
-                          <td className="whitespace-nowrap px-3 py-3 text-right">
+                          <td className="whitespace-nowrap px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
                             <div className="inline-flex items-center gap-1">
                               <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
                                 <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
