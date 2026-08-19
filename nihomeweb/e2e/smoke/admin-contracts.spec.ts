@@ -30,3 +30,26 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
 
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
+
+test("mobile contract card opens the complete contract detail", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+
+    const card = page.locator('[data-testid^="contract-card-"]').first();
+    await expect(card).toBeVisible();
+    const contractId = await card.getAttribute("data-testid");
+    const cardLink = card.locator(":scope > a");
+    const cardBox = await card.boundingBox();
+    const linkBox = await cardLink.boundingBox();
+    expect(Math.abs((linkBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThanOrEqual(2);
+    expect(Math.abs((linkBox?.height ?? 0) - (cardBox?.height ?? 0))).toBeLessThanOrEqual(2);
+    await cardLink.click();
+
+    await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}$`));
+    await expect(page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i })).toBeVisible();
+});

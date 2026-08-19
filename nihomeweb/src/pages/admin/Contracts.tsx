@@ -669,11 +669,21 @@ const Contracts = () => {
               {contracts.map((row) => {
                 const endingSoon = isEndingSoon(row);
                 return (
-                  <li key={row.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                  <li
+                    key={row.id}
+                    data-testid={`contract-card-${row.id}`}
+                    className="group relative rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/30"
+                  >
+                    <Link
+                      to={`/admin/contracts/${row.id}`}
+                      className="absolute inset-0 z-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      aria-label={`${t("common.view")} ${row.contractNumber}`}
+                    />
+                    <div className="pointer-events-none relative z-10">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         {canManage && (
-                          <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                          <span className="pointer-events-auto pt-0.5">
                             <Checkbox
                               checked={selectedIds.has(row.id)}
                               onCheckedChange={(v) => toggleOne(row.id, v === true)}
@@ -685,7 +695,7 @@ const Contracts = () => {
                           <h3 className="break-words text-sm font-semibold leading-tight">{row.customerName ?? "—"}</h3>
                           <Link
                             to={`/admin/contracts/${row.id}`}
-                            className="mt-0.5 inline-flex items-center gap-1 break-all font-mono text-xs text-primary hover:underline"
+                            className="pointer-events-auto mt-0.5 inline-flex items-center gap-1 break-all font-mono text-xs text-primary hover:underline"
                           >
                             {row.contractNumber}
                             <ExternalLink className="h-3 w-3 opacity-70" />
@@ -719,7 +729,9 @@ const Contracts = () => {
                       )}
                     </dl>
                     {canManage && (
-                      <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2">
+                      <div
+                        className="pointer-events-auto mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2"
+                      >
                         <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
                           <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
                         </Button>
@@ -732,6 +744,7 @@ const Contracts = () => {
                         </Button>
                       </div>
                     )}
+                    </div>
                   </li>
                 );
               })}
