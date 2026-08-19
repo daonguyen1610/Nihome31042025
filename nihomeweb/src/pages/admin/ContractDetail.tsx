@@ -1106,16 +1106,31 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
     onAfter: () => refresh(),
   });
 
-  const handleFile = async (file: File) => {
+  const handleFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+
     setUploading(true);
+    let uploadedCount = 0;
+    for (const file of files) {
+      try {
+        await adminApi.uploadContractAttachment(contract.id, file, uploadKind, label.trim() || undefined);
+        uploadedCount += 1;
+      } catch (err) {
+        toast({
+          variant: "destructive",
+          title: file.name,
+          description: getErrorMessage(err) ?? String(err),
+        });
+      }
+    }
+
     try {
-      await adminApi.uploadContractAttachment(contract.id, file, uploadKind, label.trim() || undefined);
-      setLabel("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      await refresh();
+      if (uploadedCount > 0) await refresh();
     } catch (err) {
       toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
     } finally {
+      if (uploadedCount === files.length) setLabel("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       setUploading(false);
     }
   };
@@ -1156,11 +1171,14 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
           <div className="flex items-end">
             <input
               ref={fileInputRef}
+              id="contract-attachment-files"
               type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
               className="hidden"
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) void handleFile(f);
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) void handleFiles(files);
               }}
             />
             <Button

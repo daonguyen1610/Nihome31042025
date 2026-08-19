@@ -84,3 +84,71 @@ test("mobile contract card opens the complete contract detail", async ({
     await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}$`));
     await expect(page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i })).toBeVisible();
 });
+
+test("contract documents accept and upload multiple local files", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+
+    const row = page.locator('[data-testid^="contract-row-"]').first();
+    await expect(row).toBeVisible();
+    const rowTestId = await row.getAttribute("data-testid");
+    const contractId = Number(rowTestId?.replace("contract-row-", ""));
+    expect(contractId).toBeGreaterThan(0);
+
+    const uploadedFiles: Array<Record<string, unknown>> = [];
+    await page.route(`**/api/contracts/${contractId}/attachments`, async (route) => {
+        const request = route.request();
+        if (request.method() === "GET") {
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(uploadedFiles) });
+            return;
+        }
+        if (request.method() !== "POST") {
+            await route.continue();
+            return;
+        }
+
+        const multipartBody = request.postDataBuffer()?.toString("utf8") ?? "";
+        const fileName = multipartBody.match(/filename="([^"]+)"/)?.[1] ?? "unknown.pdf";
+        const attachment = {
+            id: uploadedFiles.length + 1,
+            contractId,
+            kind: "Supporting",
+            filePath: `/files/contracts/${fileName}`,
+            originalFileName: fileName,
+            fileSize: 32,
+            contentType: "application/pdf",
+            label: null,
+            createdAt: new Date().toISOString(),
+            uploadedByUserId: 1,
+            uploadedByName: "E2E Admin",
+        };
+        uploadedFiles.push(attachment);
+        await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(attachment) });
+    });
+
+    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Tài liệu|Documents|文档|資料/i }).click();
+
+    const fileInput = page.locator("#contract-attachment-files");
+    await expect(fileInput).toHaveAttribute("multiple", "");
+    await fileInput.setInputFiles([
+        {
+            name: "contract-batch-one.pdf",
+            mimeType: "application/pdf",
+            buffer: Buffer.from("%PDF-1.4\ncontract one\n%%EOF"),
+        },
+        {
+            name: "contract-batch-two.pdf",
+            mimeType: "application/pdf",
+            buffer: Buffer.from("%PDF-1.4\ncontract two\n%%EOF"),
+        },
+    ]);
+
+    await expect.poll(() => uploadedFiles.length).toBe(2);
+    await expect(page.getByText("contract-batch-one.pdf", { exact: true })).toBeVisible();
+    await expect(page.getByText("contract-batch-two.pdf", { exact: true })).toBeVisible();
+});
