@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCheck,
@@ -102,6 +102,7 @@ const AdminQuotes = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const [searchParams] = useSearchParams();
 
   const canManage = has(ADMIN_PERMS.quotesManage);
   const canApprove = has(ADMIN_PERMS.quotesApprove);
@@ -121,6 +122,10 @@ const AdminQuotes = () => {
   const [search, setSearch] = useState("");
   const [minValue, setMinValue] = useState<string>("");
   const [maxValue, setMaxValue] = useState<string>("");
+  const customerIdParam = Number(searchParams.get("customerId"));
+  const customerIdFilter = Number.isInteger(customerIdParam) && customerIdParam > 0
+    ? customerIdParam
+    : undefined;
 
   useEffect(() => {
     const h = window.setTimeout(() => {
@@ -135,6 +140,7 @@ const AdminQuotes = () => {
     setError(null);
     try {
       const params: QuoteListParams = { page, pageSize };
+      if (customerIdFilter) params.customerId = customerIdFilter;
       if (statusFilter) params.status = statusFilter;
       if (minValue) params.minValue = Number(minValue);
       if (maxValue) params.maxValue = Number(maxValue);
@@ -147,7 +153,7 @@ const AdminQuotes = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, minValue, maxValue, search]);
+  }, [page, statusFilter, minValue, maxValue, search, customerIdFilter]);
 
   useEffect(() => {
     void fetchList();

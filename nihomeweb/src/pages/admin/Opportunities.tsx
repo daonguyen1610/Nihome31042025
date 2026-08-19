@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AlertTriangle, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -83,6 +84,8 @@ const AdminOpportunities = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [handledOpenId, setHandledOpenId] = useState<number | null>(null);
 
   const canManage = has(ADMIN_PERMS.opportunitiesManage);
   const canSeeAll = has(ADMIN_PERMS.opportunitiesViewAll);
@@ -102,7 +105,10 @@ const AdminOpportunities = () => {
 
   // filters
   const [stageFilter, setStageFilter] = useState<OpportunityStage | "">("");
-  const [customerFilter, setCustomerFilter] = useState<number | "">("");
+  const customerIdParam = Number(searchParams.get("customerId"));
+  const [customerFilter, setCustomerFilter] = useState<number | "">(
+    Number.isInteger(customerIdParam) && customerIdParam > 0 ? customerIdParam : "",
+  );
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [minValue, setMinValue] = useState<string>("");
@@ -273,7 +279,7 @@ const AdminOpportunities = () => {
     }
   }, []);
 
-  const openDetail = async (id: number, options: { startEditing?: boolean } = {}) => {
+  const openDetail = useCallback(async (id: number, options: { startEditing?: boolean } = {}) => {
     setDetailLoading(true);
     setDetail(null);
     setEditing(false);
@@ -301,7 +307,15 @@ const AdminOpportunities = () => {
     } finally {
       setDetailLoading(false);
     }
-  };
+  }, [canManage, loadAuditForOpportunity, t, toast]);
+
+  useEffect(() => {
+    const openId = Number(searchParams.get("open"));
+    if (Number.isInteger(openId) && openId > 0 && handledOpenId !== openId) {
+      setHandledOpenId(openId);
+      void openDetail(openId);
+    }
+  }, [handledOpenId, openDetail, searchParams]);
 
   const closeDetail = () => {
     setDetail(null);
@@ -312,6 +326,14 @@ const AdminOpportunities = () => {
     setLostReason("");
     setLostNote("");
     setWonQuote("");
+    if (searchParams.has("open")) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete("open");
+        return next;
+      }, { replace: true });
+    }
+    setHandledOpenId(null);
   };
 
   const handleSaveEdit = async () => {
