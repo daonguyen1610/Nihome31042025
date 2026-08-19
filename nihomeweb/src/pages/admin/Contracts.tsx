@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -112,11 +112,6 @@ const PRESET_30_30_30_10: MilestoneDraft[] = [
   { order: 4, name: "Đợt 4 - Quyết toán bảo hành", percentValue: 10, dueDate: "", status: "Pending", note: "" },
 ];
 
-const toIsoDate = (value?: string | null): string => {
-  if (!value) return "";
-  return value.slice(0, 10);
-};
-
 const toIsoTimestamp = (value: string): string | null => {
   if (!value) return null;
   const d = new Date(value + "T00:00:00Z");
@@ -176,7 +171,7 @@ const Contracts = () => {
   const { has } = usePermissions();
   const navigate = useNavigate();
   const canManage = has(ADMIN_PERMS.contractsManage);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const customerIdParam = Number(searchParams.get("customerId"));
 
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
@@ -234,30 +229,6 @@ const Contracts = () => {
     void load();
   }, [load]);
 
-  // Auto-open the edit dialog when the caller navigates in with
-  // /admin/contracts?edit={id} (e.g. the "Edit info" button on the
-  // detail page). We wait until the list is loaded so we can find the
-  // row and hydrate the form via openEdit(). The flag is consumed once
-  // by clearing the search param so a back-navigation doesn't loop.
-  const editParam = searchParams.get("edit");
-  const consumedEditRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!editParam || loading) return;
-    if (consumedEditRef.current === editParam) return;
-    const id = Number(editParam);
-    if (!Number.isFinite(id)) return;
-    const row = contracts.find((c) => c.id === id);
-    if (!row) return;
-    consumedEditRef.current = editParam;
-    openEdit(row);
-    // Strip the query param so refreshing the page doesn't re-open.
-    const next = new URLSearchParams(searchParams);
-    next.delete("edit");
-    setSearchParams(next, { replace: true });
-  // openEdit is stable (component-local closure); linting off exhaustive-deps
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editParam, loading]);
-
   const resetFilters = () => {
     setStatusFilter("all");
     setCustomerFilter("all");
@@ -303,89 +274,28 @@ const Contracts = () => {
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  // True when the current form's milestone list reflects the server truth
-  // (either freshly authored on create, or loaded via GET on edit). When
-  // false, submit sends `paymentMilestones: null` so the server leaves any
-  // existing schedule alone — preventing an in-flight fetch failure from
-  // silently wiping the schedule.
-  const [milestonesLoaded, setMilestonesLoaded] = useState(true);
 
   const openCreate = () => {
-    setEditingId(null);
     setForm({ ...emptyForm });
     setFormError(null);
-    setMilestonesLoaded(true);
     setDialogOpen(true);
   };
-  const openEdit = (row: ContractResponse) => {
-    setEditingId(row.id);
-    // The list response omits payment milestones to keep the payload lean —
-    // fetch the full detail so the edit dialog reflects the true schedule.
-    setMilestonesLoaded(false);
-    setForm({
-      contractNumber: row.contractNumber,
-      customerId: row.customerId,
-      ownerUserId: row.ownerUserId ?? null,
-      ownerName: row.ownerName ?? "",
-      status: row.status,
-      signedDate: toIsoDate(row.signedDate),
-      startDate: toIsoDate(row.startDate),
-      endDate: toIsoDate(row.endDate),
-      value: row.value,
-      scopeOfWork: row.scopeOfWork ?? "",
-      note: row.note ?? "",
-      milestones: [],
-    });
-    setFormError(null);
-    setDialogOpen(true);
-    void (async () => {
-      try {
-        const { data } = await adminApi.getContract(row.id);
-        // Guard against a race: if the user already touched the schedule
-        // (preset / add / edit) before the fetch completed, do not clobber
-        // their input with the freshly-loaded server value.
-        setMilestonesLoaded((alreadyLoaded) => {
-          if (alreadyLoaded) return true;
-          setForm((prev) => ({
-            ...prev,
-            milestones: data.paymentMilestones.map((m) => ({
-              order: m.order,
-              name: m.name,
-              percentValue: m.percentValue,
-              dueDate: toIsoDate(m.dueDate),
-              status: m.status,
-              note: m.note ?? "",
-            })),
-          }));
-          return true;
-        });
-      } catch {
-        // Detail fetch failed — leave milestonesLoaded=false so submit sends
-        // null (preserve) instead of the empty array (which would wipe).
-      }
-    })();
-  };
-
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
-    setMilestonesLoaded(true);
     setForm((prev) => ({
       ...prev,
       milestones: prev.milestones.map((m, i) => (i === index ? { ...m, ...patch } : m)),
     }));
   };
   const addMilestone = () => {
-    setMilestonesLoaded(true);
     setForm((prev) => ({
       ...prev,
       milestones: [...prev.milestones, blankMilestone(prev.milestones.length + 1)],
     }));
   };
   const removeMilestone = (index: number) => {
-    setMilestonesLoaded(true);
     setForm((prev) => ({
       ...prev,
       milestones: prev.milestones
@@ -394,7 +304,6 @@ const Contracts = () => {
     }));
   };
   const moveMilestone = (index: number, direction: -1 | 1) => {
-    setMilestonesLoaded(true);
     setForm((prev) => {
       const next = [...prev.milestones];
       const target = index + direction;
@@ -408,7 +317,6 @@ const Contracts = () => {
     // filling in the schedule should be asked before wiping it.
     const hasWork = form.milestones.some((m) => m.name.trim() !== "" || m.percentValue > 0);
     if (hasWork && !window.confirm(t("contracts.milestonePresetConfirm"))) return;
-    setMilestonesLoaded(true);
     setForm((prev) => ({ ...prev, milestones: PRESET_30_30_30_10.map((m) => ({ ...m })) }));
   };
 
@@ -449,16 +357,14 @@ const Contracts = () => {
         }
       }
     }
-    const milestonesPayload: ContractPaymentMilestoneRequest[] | null = milestonesLoaded
-      ? form.milestones.map((m, i) => ({
+    const milestonesPayload: ContractPaymentMilestoneRequest[] = form.milestones.map((m, i) => ({
         order: i + 1,
         name: m.name.trim(),
         percentValue: Number.isFinite(m.percentValue) ? m.percentValue : 0,
         dueDate: toIsoTimestamp(m.dueDate),
         status: m.status,
         note: m.note.trim() || null,
-      }))
-      : null;
+      }));
     const payload: UpsertContractRequest = {
       contractNumber: form.contractNumber.trim() || null,
       customerId: form.customerId,
@@ -476,13 +382,8 @@ const Contracts = () => {
     };
     setSaving(true);
     try {
-      if (editingId != null) {
-        await adminApi.updateContract(editingId, payload);
-        toast({ title: t("form.updated") });
-      } else {
-        await adminApi.createContract(payload);
-        toast({ title: t("form.created") });
-      }
+      await adminApi.createContract(payload);
+      toast({ title: t("form.created") });
       setDialogOpen(false);
       await load();
     } catch (err) {
@@ -734,7 +635,7 @@ const Contracts = () => {
                       <div
                         className="pointer-events-auto mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2"
                       >
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/contracts/${row.id}?edit=true`)}>
                           <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
                         </Button>
                         <Button
@@ -847,7 +748,7 @@ const Contracts = () => {
                             onMouseLeave={() => setHoveredContractId(row.id)}
                           >
                             <div className="inline-flex items-center gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
+                              <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/contracts/${row.id}?edit=true`)}>
                                 <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
                               </Button>
                               <Button
@@ -876,7 +777,6 @@ const Contracts = () => {
         onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) {
-            setEditingId(null);
             setFormError(null);
           }
         }}
@@ -884,7 +784,7 @@ const Contracts = () => {
         <DialogContent className="w-[95vw] max-w-xl max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>
-              {editingId != null ? t("contracts.editModalTitle") : t("contracts.createModalTitle")}
+              {t("contracts.createModalTitle")}
             </DialogTitle>
             <DialogDescription>{t("contracts.numberHint")}</DialogDescription>
           </DialogHeader>
