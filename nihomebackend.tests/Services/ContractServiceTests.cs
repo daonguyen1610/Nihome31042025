@@ -116,6 +116,65 @@ public class ContractServiceTests : IDisposable
         Assert.Equal(999, result.OwnerUserId);
     }
 
+    [Fact]
+    public async Task Create_WithoutExplicitOwner_InheritsCustomerOwner()
+    {
+        var customer = await _db.Customers.FindAsync(_customerA);
+        customer!.OwnerUserId = 321;
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.CreateAsync(Req(), callerUserId: 1, canReassignOwner: true);
+
+        Assert.Equal(321, result.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Create_SalesCallerCannotUseAnotherOwnersCustomer()
+    {
+        var customer = await _db.Customers.FindAsync(_customerA);
+        customer!.OwnerUserId = 321;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.CreateAsync(Req(), callerUserId: 100, canReassignOwner: false));
+    }
+
+    [Fact]
+    public async Task Create_RejectsOpportunityFromAnotherCustomer()
+    {
+        var opportunity = new Opportunity { Name = "Other customer opportunity", CustomerId = _customerB };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+        var request = Req(customerId: _customerA);
+        request.OpportunityId = opportunity.Id;
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.CreateAsync(request, callerUserId: 1, canReassignOwner: true));
+    }
+
+    [Fact]
+    public async Task Create_RejectsQuoteFromAnotherOpportunity()
+    {
+        var selectedOpportunity = new Opportunity { Name = "Selected opportunity", CustomerId = _customerA };
+        var otherOpportunity = new Opportunity { Name = "Other opportunity", CustomerId = _customerA };
+        _db.Opportunities.AddRange(selectedOpportunity, otherOpportunity);
+        await _db.SaveChangesAsync();
+        var quote = new Quote
+        {
+            Code = "QT-OTHER-OPPORTUNITY",
+            OpportunityId = otherOpportunity.Id,
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Quotes.Add(quote);
+        await _db.SaveChangesAsync();
+        var request = Req(customerId: _customerA);
+        request.OpportunityId = selectedOpportunity.Id;
+        request.QuoteId = quote.Id;
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.CreateAsync(request, callerUserId: 1, canReassignOwner: true));
+    }
+
     // ---------------- List / RBAC scoping ----------------
 
     [Fact]
@@ -220,6 +279,25 @@ public class ContractServiceTests : IDisposable
         var result = await _sut.UpdateAsync(owned.Id, req, callerUserId: 1, canSeeAll: true, canReassignOwner: true);
         Assert.NotNull(result);
         Assert.Equal(999, result!.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task Update_ManagerChangingCustomer_InheritsNewCustomerOwner()
+    {
+        var customer = await _db.Customers.FindAsync(_customerB);
+        customer!.OwnerUserId = 456;
+        await _db.SaveChangesAsync();
+        var contract = await _sut.CreateAsync(Req(owner: 100), 1, canReassignOwner: true);
+
+        var result = await _sut.UpdateAsync(
+            contract.Id,
+            Req(customerId: _customerB),
+            callerUserId: 1,
+            canSeeAll: true,
+            canReassignOwner: true);
+
+        Assert.NotNull(result);
+        Assert.Equal(456, result!.OwnerUserId);
     }
 
     [Fact]

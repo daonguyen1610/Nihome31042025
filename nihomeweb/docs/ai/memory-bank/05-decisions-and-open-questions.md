@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-08-12
+Last reviewed: 2026-08-18
 
 ## Decisions
 
@@ -103,6 +103,14 @@ Rationale: NIH-165 and subtasks NIH-171 through NIH-173 require complete vendor 
 ### 2026-08-12 - Permit checklist supports explicit CRUD alongside auto-generation
 
 Rationale: Active permit types still auto-generate idempotently for each design project, but legal requirements can vary by project. Authorized operators can therefore create and permanently delete individual checklist rows while the unique project/type contract prevents duplicates. Regeneration remains the recovery path for restoring missing active template rows without overwriting existing work.
+
+### 2026-08-18 - Contract ownership follows the selected customer
+
+Rationale: `Customer.OwnerUserId` is the CRM source of truth for the responsible salesperson. Contract create inherits that owner unless an authorized caller explicitly reassigns it, and changing a contract's customer realigns ownership for manager-tier callers. The contract form displays this derived owner instead of introducing a parallel editable field.
+
+### 2026-08-18 - Customer documents use customer-scoped API storage
+
+Rationale: Customer-related files need shared multi-user persistence, owner-scoped authorization, auditability, and cleanup. Metadata therefore lives in the backend and files use the dedicated host-relative path `/files/customers/{customerId}/`; the customer detail UI reuses `AdminFilePreview` and the existing customer permissions.
 
 ## Open Questions
 

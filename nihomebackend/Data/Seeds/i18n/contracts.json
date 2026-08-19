@@ -168,6 +168,22 @@
     "ja": "担当セールス"
   },
   {
+    "key": "contracts.ownerInheritedHint",
+    "category": "contracts",
+    "vi": "Tự động lấy theo Sales phụ trách của khách hàng đã chọn.",
+    "en": "Automatically inherited from the selected customer's sales owner.",
+    "zh": "自动继承所选客户的负责销售。",
+    "ja": "選択した顧客の担当営業を自動的に引き継ぎます。"
+  },
+  {
+    "key": "contracts.ownerCurrentUserFallback",
+    "category": "contracts",
+    "vi": "Người tạo hợp đồng",
+    "en": "Contract creator",
+    "zh": "合同创建者",
+    "ja": "契約作成者"
+  },
+  {
     "key": "contracts.field.status",
     "category": "contracts",
     "vi": "Trạng thái",

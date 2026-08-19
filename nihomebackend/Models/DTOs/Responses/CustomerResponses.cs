@@ -23,6 +23,20 @@ public class CustomerActivityResponse
     public DateTime CreatedAt { get; set; }
 }
 
+public class CustomerDocumentResponse
+{
+    public int Id { get; set; }
+    public int CustomerId { get; set; }
+    public string FilePath { get; set; } = string.Empty;
+    public string OriginalFileName { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string ContentType { get; set; } = string.Empty;
+    public string? Label { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public int? UploadedByUserId { get; set; }
+    public string? UploadedByName { get; set; }
+}
+
 public class CustomerResponse
 {
     public int Id { get; set; }

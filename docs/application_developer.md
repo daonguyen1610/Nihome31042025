@@ -596,9 +596,21 @@ Duplicate project/type pairs return `409`; invalid projects, permit types, owner
 
 ### 7.7 Permanent Aggregate Deletion
 
-Authorized ADMIN `DELETE` operations are permanent and are not limited by workflow status. Status rules still govern editing and lifecycle transitions. Root deletion removes the selected record plus rows that cannot exist independently: Customer deletion removes its Opportunities, Quotes, Contracts, Tenders, Design Projects, design documents, and construction records; Opportunity deletion removes its Quotes. Nullable references from preserved Leads, Surveys, Contracts, and Tenders are cleared rather than deleting those shared records. Design deletion also removes polymorphic drawing revisions and entity translations.
+Authorized ADMIN `DELETE` operations are permanent and are not limited by workflow status. Status rules still govern editing and lifecycle transitions. Root deletion removes the selected record plus rows that cannot exist independently: Customer deletion removes its Documents, Opportunities, Quotes, Contracts, Tenders, Design Projects, design documents, and construction records; Opportunity deletion removes its Quotes. Nullable references from preserved Leads, Surveys, Contracts, and Tenders are cleared rather than deleting those shared records. Design deletion also removes polymorphic drawing revisions and entity translations.
 
-Do not replace this orchestration with blanket database cascades across shared relationships. Users, unrelated customers/projects, audit logs, and other shared principals remain intact. Database file metadata is removed with its owning row, but physical files are retained until storage ownership and sharing rules can prove that deleting the blob is safe. Every destructive frontend action must require an explicit irreversible-delete confirmation.
+Do not replace this orchestration with blanket database cascades across shared relationships. Users, unrelated customers/projects, audit logs, and other shared principals remain intact. Database file metadata is removed with its owning row. Physical files are retained unless the feature owns a dedicated unshared path; customer documents are stored under `/files/customers/{customerId}/`, so deleting a document removes its file and deleting the customer removes that dedicated directory. Every destructive frontend action must require an explicit irreversible-delete confirmation.
+
+### 7.8 Customer Documents and Contract Ownership
+
+Customer document metadata is stored in `customer_documents`; files are stored under the owning customer's dedicated web-root directory. The endpoints reuse customer owner scoping and existing CRM permissions:
+
+| Method | Route | Permission | Purpose |
+|--------|-------|------------|---------|
+| `GET` | `/api/customers/{id}/documents` | `crm.customers.view` | List documents for an accessible customer |
+| `POST` | `/api/customers/{id}/documents` | `crm.customers.manage` | Upload PDF, Word, Excel, or image files up to 20 MB |
+| `DELETE` | `/api/customers/{id}/documents/{documentId}` | `crm.customers.manage` | Delete document metadata and its managed file |
+
+Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
 
 ---
 

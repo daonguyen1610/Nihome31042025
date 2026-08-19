@@ -515,6 +515,19 @@ export interface CustomerActivityResponse {
   createdAt: string;
 }
 
+export interface CustomerDocumentResponse {
+  id: number;
+  customerId: number;
+  filePath: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+  label?: string;
+  createdAt: string;
+  uploadedByUserId?: number;
+  uploadedByName?: string;
+}
+
 export interface CustomerResponse {
   id: number;
   type: CustomerType;
@@ -3084,6 +3097,16 @@ export const adminApi = {
     api.delete(`/customers/${id}/contacts/${contactId}`),
   addCustomerActivity: (id: number, body: CreateCustomerActivityRequest) =>
     api.post<CustomerActivityResponse>(`/customers/${id}/activities`, body),
+  listCustomerDocuments: (id: number) =>
+    api.get<CustomerDocumentResponse[]>(`/customers/${id}/documents`),
+  uploadCustomerDocument: (id: number, file: File, label?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (label?.trim()) formData.append("label", label.trim());
+    return api.post<CustomerDocumentResponse>(`/customers/${id}/documents`, formData);
+  },
+  deleteCustomerDocument: (id: number, documentId: number) =>
+    api.delete(`/customers/${id}/documents/${documentId}`),
 
   // Procurement vendors
   listVendors: (params: VendorListParams = {}) => {
