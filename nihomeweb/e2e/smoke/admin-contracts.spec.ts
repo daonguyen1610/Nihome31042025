@@ -29,6 +29,10 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     const row = page.locator('[data-testid^="contract-row-"]').first();
     await expect(row).toBeVisible();
     const contractId = await row.getAttribute("data-testid");
+    await row.locator("td").nth(2).hover();
+    await expect(row).toHaveAttribute("data-navigation-active", "true");
+    await row.locator("[data-contract-actions]").getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
+    await expect(row).toHaveAttribute("data-navigation-active", "false");
     await row.locator("td").nth(2).click();
 
     await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-row-", "")}$`));
@@ -53,6 +57,8 @@ test("mobile contract card opens the complete contract detail", async ({
     const linkBox = await cardLink.boundingBox();
     expect(Math.abs((linkBox?.width ?? 0) - (cardBox?.width ?? 0))).toBeLessThanOrEqual(2);
     expect(Math.abs((linkBox?.height ?? 0) - (cardBox?.height ?? 0))).toBeLessThanOrEqual(2);
+    await card.getByRole("button", { name: /Sửa|Edit|编辑|編集/i }).hover();
+    expect(await cardLink.evaluate((element) => element.matches(":hover"))).toBe(false);
     await cardLink.click();
 
     await expect(page).toHaveURL(new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}$`));

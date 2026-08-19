@@ -182,6 +182,7 @@ const Contracts = () => {
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const [hoveredContractId, setHoveredContractId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -673,11 +674,11 @@ const Contracts = () => {
                   <li
                     key={row.id}
                     data-testid={`contract-card-${row.id}`}
-                    className="group relative rounded-lg border bg-card p-3 shadow-sm transition-colors hover:bg-muted/30"
+                    className="relative rounded-lg border bg-card p-3 shadow-sm"
                   >
                     <Link
                       to={`/admin/contracts/${row.id}`}
-                      className="absolute inset-0 z-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      className="absolute inset-0 z-0 rounded-lg transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       aria-label={`${t("common.view")} ${row.contractNumber}`}
                     />
                     <div className="pointer-events-none relative z-10">
@@ -790,8 +791,11 @@ const Contracts = () => {
                       <tr
                         key={row.id}
                         data-testid={`contract-row-${row.id}`}
-                        className="cursor-pointer transition hover:bg-muted/40"
+                        data-navigation-active={hoveredContractId === row.id ? "true" : "false"}
+                        className={`cursor-pointer transition ${hoveredContractId === row.id ? "bg-muted/40" : ""}`}
                         onClick={() => navigate(`/admin/contracts/${row.id}`)}
+                        onMouseEnter={() => setHoveredContractId(row.id)}
+                        onMouseLeave={() => setHoveredContractId(null)}
                       >
                         {canManage && (
                           <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -835,7 +839,13 @@ const Contracts = () => {
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">{row.ownerName ?? "—"}</td>
                         {canManage && (
-                          <td className="whitespace-nowrap px-3 py-3 text-right" onClick={(event) => event.stopPropagation()}>
+                          <td
+                            data-contract-actions
+                            className="whitespace-nowrap px-3 py-3 text-right"
+                            onClick={(event) => event.stopPropagation()}
+                            onMouseEnter={() => setHoveredContractId(null)}
+                            onMouseLeave={() => setHoveredContractId(row.id)}
+                          >
                             <div className="inline-flex items-center gap-1">
                               <Button variant="ghost" size="sm" onClick={() => openEdit(row)}>
                                 <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
