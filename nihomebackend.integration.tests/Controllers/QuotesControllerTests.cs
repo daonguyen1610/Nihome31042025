@@ -125,6 +125,34 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Versions_EnforcesAuthenticationPermissionAndOwnerScope()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var quoteId = await CreateQuoteAsync();
+        (await Client.GetAsync($"/api/quotes/{quoteId}/versions"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        (await Client.GetAsync($"/api/quotes/{quoteId}/versions"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync($"/api/quotes/{quoteId}/versions"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.GetAsync($"/api/quotes/{quoteId}/versions"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var managerQuoteId = await CreateQuoteAsync();
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/quotes/{managerQuoteId}/versions"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Sale_CannotSeeAnotherSalesQuote()
     {
         // SALES_MANAGER creates the quote → owned by that user.

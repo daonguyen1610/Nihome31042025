@@ -85,6 +85,10 @@
   { "key": "quotes.document.uploadedBy", "category": "quotes", "vi": "Tải lên bởi {name}", "en": "Uploaded by {name}", "zh": "由 {name} 上传", "ja": "{name} がアップロード" },
 
   { "key": "quotes.version.current", "category": "quotes", "vi": "Hiện tại", "en": "Current", "zh": "当前", "ja": "現行" },
+  { "key": "quotes.version.view", "category": "quotes", "vi": "Xem phiên bản", "en": "View version", "zh": "查看版本", "ja": "バージョンを表示" },
+  { "key": "quotes.version.snapshot", "category": "quotes", "vi": "Lịch sử nội dung báo giá", "en": "Quote content history", "zh": "报价内容历史", "ja": "見積内容履歴" },
+  { "key": "quotes.version.capturedAt", "category": "quotes", "vi": "Lưu lúc", "en": "Captured at", "zh": "保存时间", "ja": "保存日時" },
+  { "key": "quotes.version.description", "category": "quotes", "vi": "Mỗi phiên bản lưu nội dung và giá trị báo giá tại thời điểm chỉnh sửa sau duyệt. Chọn một phiên bản để xem lại lịch sử.", "en": "Each version preserves the quote content and value when an approved quote is edited. Select a version to review its history.", "zh": "每个版本会保留已审批报价修改时的内容和金额。请选择一个版本查看历史记录。", "ja": "各バージョンは、承認済み見積の編集時点の内容と金額を保存します。履歴を確認するバージョンを選択してください。" },
   { "key": "quotes.preview.unsaved", "category": "quotes", "vi": "Chưa lưu — tổng cộng đang là dự tính, hãy bấm Lưu để cập nhật.", "en": "Unsaved — grand total is a preview, click Save to commit.", "zh": "未保存 — 总计为预览，请点击保存。", "ja": "未保存 — 合計はプレビューです。保存してください。" },
 
   { "key": "quotes.action.noteOptional", "category": "quotes", "vi": "Ghi chú (tuỳ chọn — bắt buộc cho các thao tác từ chối).", "en": "Note (optional — required for rejection actions).", "zh": "备注（可选 — 拒绝操作需填写）。", "ja": "備考（任意 — 却下時は必須）。" },
