@@ -8,6 +8,7 @@ namespace NihomeBackend.Services;
 
 public class CustomerService(
     AppDbContext db,
+    ICustomerDocumentService customerDocumentService,
     ILogger<CustomerService> logger) : ICustomerService
 {
     private const int MaxPageSize = 100;
@@ -262,6 +263,7 @@ public class CustomerService(
 
         await AggregateDeletionService.DeleteCustomerAsync(db, customer, ct);
         await db.SaveChangesAsync(ct);
+        customerDocumentService.DeleteCustomerFiles(id);
         logger.LogInformation("Deleted customer {Id} and its dependent aggregates", id);
         return true;
     }

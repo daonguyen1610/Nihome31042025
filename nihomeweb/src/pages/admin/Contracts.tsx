@@ -68,6 +68,8 @@ type MilestoneDraft = {
 type FormData = {
   contractNumber: string;
   customerId: number | null;
+  ownerUserId: number | null;
+  ownerName: string;
   status: ContractStatus;
   signedDate: string;
   startDate: string;
@@ -81,6 +83,8 @@ type FormData = {
 const emptyForm: FormData = {
   contractNumber: "",
   customerId: null,
+  ownerUserId: null,
+  ownerName: "",
   status: "Draft",
   signedDate: "",
   startDate: "",
@@ -320,6 +324,8 @@ const Contracts = () => {
     setForm({
       contractNumber: row.contractNumber,
       customerId: row.customerId,
+      ownerUserId: row.ownerUserId ?? null,
+      ownerName: row.ownerName ?? "",
       status: row.status,
       signedDate: toIsoDate(row.signedDate),
       startDate: toIsoDate(row.startDate),
@@ -880,7 +886,16 @@ const Contracts = () => {
               <Label htmlFor="c-customer-form" className="text-xs">{t("contracts.field.customer")} *</Label>
               <Select
                 value={form.customerId != null ? String(form.customerId) : ""}
-                onValueChange={(v) => setForm({ ...form, customerId: Number(v) })}
+                onValueChange={(v) => {
+                  const customerId = Number(v);
+                  const customer = customers.find((item) => item.id === customerId);
+                  setForm({
+                    ...form,
+                    customerId,
+                    ownerUserId: customer?.ownerUserId ?? null,
+                    ownerName: customer?.ownerName ?? "",
+                  });
+                }}
               >
                 <SelectTrigger id="c-customer-form" className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent className="max-h-72">
@@ -889,6 +904,14 @@ const Contracts = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5">
+              <Label className="text-xs">{t("contracts.field.owner")}</Label>
+              <p className="text-sm font-medium">
+                {form.ownerName || (form.ownerUserId ? `#${form.ownerUserId}` : t("contracts.ownerCurrentUserFallback"))}
+              </p>
+              <p className="text-xs text-muted-foreground">{t("contracts.ownerInheritedHint")}</p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">

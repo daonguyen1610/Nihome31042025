@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -16,7 +17,10 @@ public class CustomerServiceTests : IDisposable
     public CustomerServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new CustomerService(_db, NullLogger<CustomerService>.Instance);
+        _sut = new CustomerService(
+            _db,
+            Mock.Of<ICustomerDocumentService>(),
+            NullLogger<CustomerService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

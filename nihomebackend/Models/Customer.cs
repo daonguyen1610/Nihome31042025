@@ -42,6 +42,7 @@ public class Customer
 
     public List<CustomerContact> Contacts { get; set; } = new();
     public List<CustomerActivity> Activities { get; set; } = new();
+    public List<CustomerDocument> Documents { get; set; } = new();
 }
 
 public enum CustomerType

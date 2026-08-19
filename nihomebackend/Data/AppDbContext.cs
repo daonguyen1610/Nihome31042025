@@ -55,6 +55,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
     public DbSet<CustomerActivity> CustomerActivities => Set<CustomerActivity>();
+    public DbSet<CustomerDocument> CustomerDocuments => Set<CustomerDocument>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityActivity> OpportunityActivities => Set<OpportunityActivity>();
     public DbSet<Quote> Quotes => Set<Quote>();
@@ -470,6 +471,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(a => a.CustomerId);
             b.HasIndex(a => a.OccurredAt);
+        });
+
+        modelBuilder.Entity<CustomerDocument>(b =>
+        {
+            b.ToTable("customer_documents");
+            b.HasKey(document => document.Id);
+            b.Property(document => document.FilePath).HasMaxLength(500).IsRequired();
+            b.Property(document => document.OriginalFileName).HasMaxLength(300).IsRequired();
+            b.Property(document => document.ContentType).HasMaxLength(150).IsRequired();
+            b.Property(document => document.Label).HasMaxLength(300);
+            b.HasOne(document => document.Customer)
+                .WithMany(customer => customer.Documents)
+                .HasForeignKey(document => document.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(document => document.UploadedBy)
+                .WithMany()
+                .HasForeignKey(document => document.UploadedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(document => new { document.CustomerId, document.CreatedAt });
         });
 
         modelBuilder.Entity<Opportunity>(b =>

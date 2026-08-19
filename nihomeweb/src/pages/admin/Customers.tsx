@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Search, Trash2, RefreshCw, Star, X, Pencil } from "lucide-react";
+import { FileText, Plus, Search, Trash2, RefreshCw, Star, Upload, X, Pencil } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,7 @@ import {
   type CreateCustomerRequest,
   type CustomerActivityType,
   type CustomerContactResponse,
+  type CustomerDocumentResponse,
   type CustomerDuplicateDetail,
   type CustomerListParams,
   type CustomerRelationshipStatus,
@@ -87,6 +89,12 @@ const emptyCreate: CreateCustomerRequest = {
   primaryContact: { ...emptyContact },
 };
 
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const AdminCustomers = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -127,6 +135,15 @@ const AdminCustomers = () => {
   const [activityType, setActivityType] = useState<CustomerActivityType>("Call");
   const [activityContent, setActivityContent] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
+
+  const [documents, setDocuments] = useState<CustomerDocumentResponse[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState<string | null>(null);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentLabel, setDocumentLabel] = useState("");
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
+  const [documentInputKey, setDocumentInputKey] = useState(0);
 
   useEffect(() => {
     const h = window.setTimeout(() => {
@@ -176,13 +193,32 @@ const AdminCustomers = () => {
     return map;
   }, [sources]);
 
+  const fetchDocuments = async (customerId: number) => {
+    setDocumentsLoading(true);
+    setDocumentsError(null);
+    try {
+      const { data } = await adminApi.listCustomerDocuments(customerId);
+      setDocuments(data);
+    } catch (err) {
+      setDocumentsError(extractApiError(err));
+    } finally {
+      setDocumentsLoading(false);
+    }
+  };
+
   const openDetail = async (id: number, options: { startEditing?: boolean } = {}) => {
     setDetailLoading(true);
     setDetail(null);
     setEditing(false);
     setEditForm(null);
+    setDocuments([]);
+    setDocumentFile(null);
+    setDocumentLabel("");
     try {
-      const { data } = await adminApi.getCustomer(id);
+      const [{ data }] = await Promise.all([
+        adminApi.getCustomer(id),
+        fetchDocuments(id),
+      ]);
       setDetail(data);
       if (options.startEditing && canManage) {
         setEditForm({
@@ -211,6 +247,10 @@ const AdminCustomers = () => {
     setEditForm(null);
     setContactForm(null);
     setActivityContent("");
+    setDocuments([]);
+    setDocumentsError(null);
+    setDocumentFile(null);
+    setDocumentLabel("");
   };
 
   const handleSaveCreate = async (opts?: { overrideReason?: string }) => {
@@ -384,6 +424,37 @@ const AdminCustomers = () => {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setAddingActivity(false);
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!detail || !documentFile) return;
+    setUploadingDocument(true);
+    try {
+      await adminApi.uploadCustomerDocument(detail.id, documentFile, documentLabel);
+      setDocumentFile(null);
+      setDocumentLabel("");
+      setDocumentInputKey((value) => value + 1);
+      await fetchDocuments(detail.id);
+      toast({ title: t("customers.document.uploaded") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: number) => {
+    if (!detail || !window.confirm(t("customers.document.deleteConfirm"))) return;
+    setDeletingDocumentId(documentId);
+    try {
+      await adminApi.deleteCustomerDocument(detail.id, documentId);
+      setDocuments((current) => current.filter((document) => document.id !== documentId));
+      toast({ title: t("customers.document.deleted") });
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -1048,6 +1119,9 @@ const AdminCustomers = () => {
                     {t("customers.tab.contacts")} ({detail.contacts.length})
                   </TabsTrigger>
                   <TabsTrigger value="related">{t("customers.tab.related")}</TabsTrigger>
+                  <TabsTrigger value="documents">
+                    {t("customers.tab.documents")} ({documents.length})
+                  </TabsTrigger>
                   <TabsTrigger value="timeline">
                     {t("customers.tab.timeline")} ({detail.activities.length})
                   </TabsTrigger>
@@ -1354,6 +1428,108 @@ const AdminCustomers = () => {
                   <p className="rounded border border-dashed p-4 text-center text-xs text-muted-foreground">
                     {t("customers.tab.related.empty")}
                   </p>
+                </TabsContent>
+
+                <TabsContent value="documents" className="space-y-3 pt-3">
+                  {canManage && (
+                    <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="customer-document-file">{t("customers.document.file")}</Label>
+                        <Input
+                          key={documentInputKey}
+                          id="customer-document-file"
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                          onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
+                        />
+                        <p className="text-xs text-muted-foreground">{t("customers.document.fileHint")}</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="customer-document-label">{t("customers.document.label")}</Label>
+                        <Input
+                          id="customer-document-label"
+                          value={documentLabel}
+                          onChange={(event) => setDocumentLabel(event.target.value)}
+                          maxLength={300}
+                          placeholder={t("customers.document.labelPlaceholder")}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => void handleUploadDocument()}
+                        disabled={!documentFile || uploadingDocument}
+                      >
+                        <Upload className="mr-1.5 h-4 w-4" />
+                        {uploadingDocument ? t("customers.document.uploading") : t("customers.document.upload")}
+                      </Button>
+                    </div>
+                  )}
+
+                  {documentsLoading ? (
+                    <div className="flex items-center justify-center gap-2 rounded border border-dashed p-6 text-sm text-muted-foreground">
+                      <RefreshCw className="h-4 w-4 animate-spin" /> {t("common.loading")}
+                    </div>
+                  ) : documentsError ? (
+                    <div className="flex flex-col items-center gap-2 rounded border border-destructive/40 p-4 text-center text-sm text-destructive">
+                      <p>{documentsError}</p>
+                      <Button variant="outline" size="sm" onClick={() => void fetchDocuments(detail.id)}>
+                        {t("common.retry")}
+                      </Button>
+                    </div>
+                  ) : documents.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 rounded border border-dashed p-6 text-center text-sm text-muted-foreground">
+                      <FileText className="h-8 w-8" />
+                      <p>{t("customers.document.empty")}</p>
+                    </div>
+                  ) : (
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {documents.map((document) => (
+                        <li key={document.id} className="flex min-w-0 items-start gap-3 rounded-lg border p-3">
+                          <div className="rounded-md bg-muted p-2">
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium" title={document.originalFileName}>
+                              {document.label || document.originalFileName}
+                            </p>
+                            {document.label && (
+                              <p className="truncate text-xs text-muted-foreground" title={document.originalFileName}>
+                                {document.originalFileName}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(document.fileSize)} · {new Date(document.createdAt).toLocaleString()}
+                            </p>
+                            {document.uploadedByName && (
+                              <p className="truncate text-xs text-muted-foreground">
+                                {t("customers.document.uploadedBy").replace("{name}", document.uploadedByName)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 gap-1">
+                            <AdminFilePreview
+                              url={document.filePath}
+                              fileName={document.originalFileName}
+                              contentType={document.contentType}
+                            />
+                            {canManage && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                disabled={deletingDocumentId === document.id}
+                                onClick={() => void handleDeleteDocument(document.id)}
+                                title={t("common.delete")}
+                                aria-label={t("common.delete")}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="timeline" className="space-y-3 pt-3">

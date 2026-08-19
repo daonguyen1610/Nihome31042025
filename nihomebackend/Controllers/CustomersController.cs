@@ -29,6 +29,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class CustomersController(
     ICustomerService svc,
+    ICustomerDocumentService documentSvc,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
@@ -277,6 +278,72 @@ public class CustomersController(
             Message = $"Activity ({response.Type}) added to customer #{id}.",
         });
         return CreatedAtAction(nameof(Get), new { id }, response);
+    }
+
+    // ------- Documents -------
+
+    [HttpGet("{id:int}/documents")]
+    [RequirePermission("crm.customers", "view")]
+    public async Task<ActionResult<List<CustomerDocumentResponse>>> ListDocuments(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
+        var documents = await documentSvc.ListAsync(id, userId.Value, canSeeAll, ct);
+        return documents is null ? NotFound() : Ok(documents);
+    }
+
+    [HttpPost("{id:int}/documents")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission("crm.customers", "manage")]
+    public async Task<ActionResult<CustomerDocumentResponse>> UploadDocument(
+        int id,
+        [FromForm] IFormFile? file,
+        [FromForm] string? label,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
+        try
+        {
+            var document = await documentSvc.UploadAsync(id, file, label, userId.Value, canSeeAll, ct);
+            if (document is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "customer.document.create",
+                ResourceType = EntityTypes.CustomerDocument,
+                ResourceId = document.Id.ToString(),
+                Message = $"Document '{document.OriginalFileName}' uploaded for customer #{id}.",
+            });
+            return CreatedAtAction(nameof(ListDocuments), new { id }, document);
+        }
+        catch (CustomerDocumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}/documents/{documentId:int}")]
+    [RequirePermission("crm.customers", "manage")]
+    public async Task<IActionResult> DeleteDocument(int id, int documentId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
+        var removed = await documentSvc.DeleteAsync(id, documentId, userId.Value, canSeeAll, ct);
+        if (!removed) return NotFound();
+        audit.Log(new AuditEvent
+        {
+            Action = "customer.document.delete",
+            ResourceType = EntityTypes.CustomerDocument,
+            ResourceId = documentId.ToString(),
+            Message = $"Document #{documentId} deleted from customer #{id}.",
+        });
+        return NoContent();
     }
 
     private int? GetUserId()

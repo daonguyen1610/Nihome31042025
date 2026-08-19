@@ -160,7 +160,7 @@ public class ContractService(
 
     public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
     {
-        await ValidateReferencesAsync(req, ct);
+        var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
 
         var number = string.IsNullOrWhiteSpace(req.ContractNumber)
             ? await GenerateNumberAsync(ct)
@@ -171,10 +171,13 @@ public class ContractService(
             throw new ContractDuplicateNumberException(number);
         }
 
-        // Sales users without view.all cannot reassign a new record to a
-        // different owner: force ownership to the caller so the row stays
-        // visible to them under the ownership scope.
-        var ownerUserId = canReassignOwner ? (req.OwnerUserId ?? callerUserId) : callerUserId;
+        if (!canReassignOwner && customerOwnerUserId.HasValue && customerOwnerUserId.Value != callerUserId)
+        {
+            throw new ContractValidationException("Customer is outside the caller's ownership scope.");
+        }
+        var ownerUserId = canReassignOwner && req.OwnerUserId.HasValue
+            ? req.OwnerUserId.Value
+            : customerOwnerUserId ?? callerUserId;
 
         var entity = new Contract
         {
@@ -215,7 +218,7 @@ public class ContractService(
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
 
-        await ValidateReferencesAsync(req, ct);
+        var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
 
         var newNumber = string.IsNullOrWhiteSpace(req.ContractNumber)
             ? entity.ContractNumber
@@ -227,6 +230,13 @@ public class ContractService(
         }
 
         entity.ContractNumber = newNumber;
+        var customerChanged = entity.CustomerId != req.CustomerId;
+        if (!canReassignOwner && customerChanged
+            && customerOwnerUserId.HasValue
+            && customerOwnerUserId.Value != callerUserId)
+        {
+            throw new ContractValidationException("Customer is outside the caller's ownership scope.");
+        }
         entity.CustomerId = req.CustomerId;
         entity.OpportunityId = req.OpportunityId;
         entity.QuoteId = req.QuoteId;
@@ -236,6 +246,10 @@ public class ContractService(
         if (canReassignOwner && req.OwnerUserId.HasValue)
         {
             entity.OwnerUserId = req.OwnerUserId.Value;
+        }
+        else if (canReassignOwner && customerChanged)
+        {
+            entity.OwnerUserId = customerOwnerUserId ?? callerUserId;
         }
         entity.Status = req.Status;
         entity.SignedDate = req.SignedDate;
@@ -421,29 +435,50 @@ public class ContractService(
 
     // -------- helpers --------
 
-    private async Task ValidateReferencesAsync(UpsertContractRequest req, CancellationToken ct)
+    private async Task<int?> ValidateReferencesAsync(UpsertContractRequest req, CancellationToken ct)
     {
-        var customerExists = await db.Customers.AsNoTracking().AnyAsync(c => c.Id == req.CustomerId, ct);
-        if (!customerExists)
+        var customer = await db.Customers.AsNoTracking()
+            .Where(customer => customer.Id == req.CustomerId)
+            .Select(customer => new { customer.OwnerUserId })
+            .SingleOrDefaultAsync(ct);
+        if (customer is null)
         {
             throw new ContractValidationException($"Customer {req.CustomerId} does not exist.");
         }
 
         if (req.OpportunityId.HasValue)
         {
-            var oppExists = await db.Opportunities.AsNoTracking().AnyAsync(o => o.Id == req.OpportunityId.Value, ct);
-            if (!oppExists)
+            var opportunityCustomerId = await db.Opportunities.AsNoTracking()
+                .Where(opportunity => opportunity.Id == req.OpportunityId.Value)
+                .Select(opportunity => (int?)opportunity.CustomerId)
+                .SingleOrDefaultAsync(ct);
+            if (!opportunityCustomerId.HasValue)
             {
                 throw new ContractValidationException($"Opportunity {req.OpportunityId} does not exist.");
+            }
+            if (opportunityCustomerId.Value != req.CustomerId)
+            {
+                throw new ContractValidationException("Opportunity does not belong to the selected customer.");
             }
         }
 
         if (req.QuoteId.HasValue)
         {
-            var quoteExists = await db.Quotes.AsNoTracking().AnyAsync(q => q.Id == req.QuoteId.Value, ct);
-            if (!quoteExists)
+            var quoteOpportunity = await db.Quotes.AsNoTracking()
+                .Where(quote => quote.Id == req.QuoteId.Value)
+                .Select(quote => new { quote.OpportunityId, quote.Opportunity.CustomerId })
+                .SingleOrDefaultAsync(ct);
+            if (quoteOpportunity is null)
             {
                 throw new ContractValidationException($"Quote {req.QuoteId} does not exist.");
+            }
+            if (quoteOpportunity.CustomerId != req.CustomerId)
+            {
+                throw new ContractValidationException("Quote does not belong to the selected customer.");
+            }
+            if (req.OpportunityId.HasValue && quoteOpportunity.OpportunityId != req.OpportunityId.Value)
+            {
+                throw new ContractValidationException("Quote does not belong to the selected opportunity.");
             }
         }
 
@@ -451,6 +486,7 @@ public class ContractService(
         {
             throw new ContractValidationException("End date must be on or after start date.");
         }
+        return customer.OwnerUserId;
     }
 
     private async Task<bool> NumberExistsAsync(string number, int? excludeId, CancellationToken ct) =>

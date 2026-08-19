@@ -19,6 +19,7 @@ public static class EntityTypes
     public const string Customer = "Customer";
     public const string CustomerContact = "CustomerContact";
     public const string CustomerActivity = "CustomerActivity";
+    public const string CustomerDocument = "CustomerDocument";
     public const string Vendor = "Vendor";
     public const string Opportunity = "Opportunity";
     public const string OpportunityActivity = "OpportunityActivity";

@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -393,5 +395,63 @@ public class CustomersControllerTests : IntegrationTestBase
 
         var detail = await Client.GetAsync($"/api/customers/{id}");
         (await ReadJsonAsync(detail)).GetProperty("activities").GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Documents_AsOwner_CanUploadListAndDelete()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var customerId = await CreateIndividualCustomerAsync("Document owner");
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes("customer document"));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "brief.pdf");
+        form.Add(new StringContent("Contract brief"), "label");
+
+        var upload = await Client.PostAsync($"/api/customers/{customerId}/documents", form);
+        upload.StatusCode.Should().Be(HttpStatusCode.Created);
+        var uploaded = await ReadJsonAsync(upload);
+        var documentId = uploaded.GetProperty("id").GetInt32();
+        uploaded.GetProperty("filePath").GetString().Should()
+            .StartWith($"/files/customers/{customerId}/");
+
+        var list = await Client.GetAsync($"/api/customers/{customerId}/documents");
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(list)).EnumerateArray()
+            .Should().ContainSingle(document => document.GetProperty("id").GetInt32() == documentId);
+
+        (await Client.DeleteAsync($"/api/customers/{customerId}/documents/{documentId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ReadJsonAsync(await Client.GetAsync($"/api/customers/{customerId}/documents")))
+            .GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Documents_AsSale_CannotAccessAnotherOwnersCustomer()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateIndividualCustomerAsync("Manager document owner");
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        (await Client.GetAsync($"/api/customers/{customerId}/documents"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private async Task<int> CreateIndividualCustomerAsync(string name)
+    {
+        var response = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Individual",
+            name = name + " " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new
+            {
+                fullName = "Owner",
+                phone = "0911" + Guid.NewGuid().ToString("N")[..6],
+            },
+        });
+        response.EnsureSuccessStatusCode();
+        return (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
     }
 }
