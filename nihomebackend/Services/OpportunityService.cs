@@ -10,6 +10,7 @@ namespace NihomeBackend.Services;
 public class OpportunityService(
     AppDbContext db,
     INotificationService notifications,
+    IQuoteDocumentService quoteDocumentService,
     ILogger<OpportunityService> logger) : IOpportunityService
 {
     private const int MaxPageSize = 100;
@@ -371,8 +372,9 @@ public class OpportunityService(
         if (op is null) return false;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return false;
 
-        await AggregateDeletionService.DeleteOpportunitiesAsync(db, new[] { id }, ct);
+        var quoteIds = await AggregateDeletionService.DeleteOpportunitiesAsync(db, new[] { id }, ct);
         await db.SaveChangesAsync(ct);
+        foreach (var quoteId in quoteIds) quoteDocumentService.DeleteQuoteFiles(quoteId);
         logger.LogInformation("Deleted opportunity {Id} and its dependent quote aggregates", id);
         return true;
     }

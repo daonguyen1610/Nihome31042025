@@ -12,14 +12,17 @@ namespace nihomebackend.tests.Services;
 public class CustomerServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
+    private readonly Mock<IQuoteDocumentService> _quoteDocuments;
     private readonly CustomerService _sut;
 
     public CustomerServiceTests()
     {
         _db = DbContextFactory.Create();
+        _quoteDocuments = new Mock<IQuoteDocumentService>();
         _sut = new CustomerService(
             _db,
             Mock.Of<ICustomerDocumentService>(),
+            _quoteDocuments.Object,
             NullLogger<CustomerService>.Instance);
     }
 
@@ -514,6 +517,7 @@ public class CustomerServiceTests : IDisposable
         Assert.False(await _db.Customers.AnyAsync(row => row.Id == created.Id));
         Assert.False(await _db.Opportunities.AnyAsync(row => row.Id == opportunity.Id));
         Assert.False(await _db.Quotes.AnyAsync(row => row.Id == quote.Id));
+        _quoteDocuments.Verify(service => service.DeleteQuoteFiles(quote.Id), Times.Once);
         Assert.False(await _db.Contracts.AnyAsync(row => row.Id == contract.Id));
         Assert.False(await _db.Tenders.AnyAsync(row => row.Id == tender.Id));
         Assert.False(await _db.TenderChecklistItems.AnyAsync(row => row.TenderId == tender.Id));

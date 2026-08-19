@@ -13,15 +13,18 @@ public class OpportunityServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
+    private readonly Mock<IQuoteDocumentService> _quoteDocuments;
     private readonly OpportunityService _sut;
 
     public OpportunityServiceTests()
     {
         _db = DbContextFactory.Create();
         _notifications = new Mock<INotificationService>();
+        _quoteDocuments = new Mock<IQuoteDocumentService>();
         _sut = new OpportunityService(
             _db,
             _notifications.Object,
+            _quoteDocuments.Object,
             NullLogger<OpportunityService>.Instance);
     }
 
@@ -510,6 +513,7 @@ public class OpportunityServiceTests : IDisposable
 
         Assert.False(await _db.Opportunities.AnyAsync(row => row.Id == opportunity.Id));
         Assert.False(await _db.Quotes.AnyAsync(row => row.Id == quote.Id));
+        _quoteDocuments.Verify(service => service.DeleteQuoteFiles(quote.Id), Times.Once);
         Assert.False(await _db.QuoteItems.AnyAsync(row => row.QuoteId == quote.Id));
         Assert.False(await _db.EntityTranslations.AnyAsync(row =>
             (row.EntityType == "Opportunity" && row.EntityId == opportunity.Id)

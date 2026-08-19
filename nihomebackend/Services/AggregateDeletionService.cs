@@ -7,7 +7,7 @@ namespace NihomeBackend.Services;
 
 internal static class AggregateDeletionService
 {
-    public static async Task DeleteCustomerAsync(
+    public static async Task<IReadOnlyList<int>> DeleteCustomerAsync(
         AppDbContext db,
         Customer customer,
         CancellationToken ct)
@@ -31,7 +31,7 @@ internal static class AggregateDeletionService
             .ToListAsync(ct);
 
         await DeleteDesignProjectsAsync(db, designProjectIds, ct);
-        await DeleteOpportunitiesAsync(db, opportunityIds, ct);
+        var quoteIds = await DeleteOpportunitiesAsync(db, opportunityIds, ct);
 
         var convertedLeads = await db.Leads
             .Where(lead => lead.ConvertedCustomerId == customerId)
@@ -56,19 +56,20 @@ internal static class AggregateDeletionService
         await RemoveTranslationsAsync(db, EntityTypes.Tender, tenderIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.Customer, new[] { customerId }, ct);
         db.Customers.Remove(customer);
+        return quoteIds;
     }
 
-    public static async Task DeleteOpportunitiesAsync(
+    public static async Task<IReadOnlyList<int>> DeleteOpportunitiesAsync(
         AppDbContext db,
         IReadOnlyCollection<int> opportunityIds,
         CancellationToken ct)
     {
-        if (opportunityIds.Count == 0) return;
+        if (opportunityIds.Count == 0) return Array.Empty<int>();
 
         var opportunities = await db.Opportunities
             .Where(opportunity => opportunityIds.Contains(opportunity.Id))
             .ToListAsync(ct);
-        if (opportunities.Count == 0) return;
+        if (opportunities.Count == 0) return Array.Empty<int>();
 
         var foundIds = opportunities.Select(opportunity => opportunity.Id).ToList();
         var quoteIds = await db.Quotes
@@ -104,6 +105,7 @@ internal static class AggregateDeletionService
         db.Opportunities.RemoveRange(opportunities);
         await RemoveTranslationsAsync(db, EntityTypes.Quote, quoteIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.Opportunity, foundIds, ct);
+        return quoteIds;
     }
 
     public static async Task DeleteDesignProjectsAsync(
