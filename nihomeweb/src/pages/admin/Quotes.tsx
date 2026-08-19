@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCheck,
@@ -54,7 +54,6 @@ import {
   type QuoteListItemResponse,
   type QuoteListParams,
   type QuoteMethod,
-  type QuoteResponse,
   type QuoteStatus,
 } from "@/services/adminApi";
 
@@ -102,6 +101,7 @@ const AdminQuotes = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const canManage = has(ADMIN_PERMS.quotesManage);
@@ -282,38 +282,6 @@ const AdminQuotes = () => {
     onAfter: fetchList,
   });
 
-  // ---------- quick-view preview dialog ----------
-  // Click on a row/card opens a summary dialog. Full editing still happens
-  // on /admin/quotes/:id — the dialog is read-only info + shortcut buttons.
-  const [previewId, setPreviewId] = useState<number | null>(null);
-  const [preview, setPreview] = useState<QuoteResponse | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (previewId == null) {
-      setPreview(null);
-      setPreviewError(null);
-      return;
-    }
-    let cancelled = false;
-    setPreviewLoading(true);
-    setPreviewError(null);
-    (async () => {
-      try {
-        const { data } = await adminApi.getQuote(previewId);
-        if (!cancelled) setPreview(data);
-      } catch (err) {
-        if (!cancelled) setPreviewError(extractApiError(err));
-      } finally {
-        if (!cancelled) setPreviewLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [previewId]);
-
   const totalPages = useMemo(
     () => (total > 0 ? Math.ceil(total / pageSize) : 1),
     [total],
@@ -456,7 +424,7 @@ const AdminQuotes = () => {
                     <tr
                       key={r.id}
                       className="cursor-pointer hover:bg-muted/20"
-                      onClick={() => setPreviewId(r.id)}
+                      onClick={() => navigate(`/admin/quotes/${r.id}`)}
                     >
                       {canManage && (
                         <Td onClick={(e) => e.stopPropagation()}>
@@ -526,7 +494,7 @@ const AdminQuotes = () => {
                 <li
                   key={r.id}
                   className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/20"
-                  onClick={() => setPreviewId(r.id)}
+                  onClick={() => navigate(`/admin/quotes/${r.id}`)}
                 >
                   <div className="mb-1 flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-start gap-2">
@@ -793,152 +761,6 @@ const AdminQuotes = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Quick-view preview dialog. Read-only summary — full editing is on
-          /admin/quotes/:id. Fetches the full QuoteResponse so we can show
-          subtotal / discount / VAT / grand total instead of just list-item
-          fields. */}
-      <Dialog
-        open={previewId !== null}
-        onOpenChange={(o) => !o && setPreviewId(null)}
-      >
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
-          <DialogHeader>
-            <DialogTitle>{preview?.code ?? t("quotes.field.code")}</DialogTitle>
-            <DialogDescription>
-              {preview?.opportunityName ?? t("quotes.title")}
-            </DialogDescription>
-          </DialogHeader>
-
-          {previewLoading ? (
-            <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {t("common.loading")}
-            </div>
-          ) : previewError ? (
-            <p className="text-sm text-destructive">{previewError}</p>
-          ) : preview ? (
-            <div className="space-y-4 text-sm">
-              <StatusCell
-                status={preview.status}
-                expiring={false}
-                t={t}
-              />
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    {t("quotes.field.customer")}
-                  </dt>
-                  <dd className="font-medium">{preview.customerName ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    {t("quotes.field.owner")}
-                  </dt>
-                  <dd className="font-medium">{preview.ownerName ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    {t("quotes.field.method")}
-                  </dt>
-                  <dd className="font-medium">
-                    {t(`quotes.method.${preview.method}`)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    {t("quotes.field.version")}
-                  </dt>
-                  <dd className="font-medium">V{preview.version}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    {t("quotes.field.validUntil")}
-                  </dt>
-                  <dd className="font-medium">
-                    {new Date(preview.validUntil).toLocaleDateString()}
-                  </dd>
-                </div>
-                {preview.method === "UnitCost" && preview.areaSqm != null && (
-                  <div>
-                    <dt className="text-xs text-muted-foreground">
-                      {t("quotes.field.areaSqm")}
-                    </dt>
-                    <dd className="font-medium">
-                      {preview.areaSqm} × {formatVnd(preview.unitPricePerSqm ?? 0)} ₫
-                    </dd>
-                  </div>
-                )}
-              </dl>
-
-              {preview.packageDescription && (
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("quotes.field.packageDescription")}
-                  </div>
-                  <p className="whitespace-pre-wrap">{preview.packageDescription}</p>
-                </div>
-              )}
-
-              <div className="rounded-md border bg-muted/30 p-3">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{t("quotes.field.subtotal")}</span>
-                  <span>{formatVnd(preview.subtotal)} ₫</span>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    {t("quotes.field.discountPercent")} ({preview.discountPercent}%)
-                  </span>
-                  <span>
-                    −{formatVnd((preview.subtotal * preview.discountPercent) / 100)} ₫
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    {t("quotes.field.vatPercent")} ({preview.vatPercent}%)
-                  </span>
-                  <span>
-                    +
-                    {formatVnd(
-                      ((preview.subtotal *
-                        (100 - preview.discountPercent)) /
-                        100) *
-                        (preview.vatPercent / 100),
-                    )}{" "}
-                    ₫
-                  </span>
-                </div>
-                <div className="mt-1 flex items-center justify-between border-t pt-2 text-base font-semibold">
-                  <span>{t("quotes.field.grandTotal")}</span>
-                  <span>{formatVnd(preview.grandTotal)} ₫</span>
-                </div>
-              </div>
-
-              {preview.note && (
-                <div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("quotes.field.note")}
-                  </div>
-                  <p className="whitespace-pre-wrap">{preview.note}</p>
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <Button variant="outline" onClick={() => setPreviewId(null)}>
-              {t("common.close")}
-            </Button>
-            {preview && (
-              <Button asChild>
-                <Link to={`/admin/quotes/${preview.id}`}>
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                  {t("common.edit")}
-                </Link>
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };

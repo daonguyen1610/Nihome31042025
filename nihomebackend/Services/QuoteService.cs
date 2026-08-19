@@ -228,6 +228,7 @@ public class QuoteService(
             or QuoteStatus.Expired;
         if (isPostApproval)
         {
+            var previousStatus = quote.Status;
             db.QuoteVersionSnapshots.Add(SnapshotOf(quote, now, callerUserId));
             quote.Version += 1;
             quote.Status = QuoteStatus.Draft;
@@ -242,7 +243,7 @@ public class QuoteService(
             {
                 QuoteId = quote.Id,
                 Action = QuoteWorkflowAction.NewVersion,
-                FromStatus = QuoteStatus.Approved,
+                FromStatus = previousStatus,
                 ToStatus = QuoteStatus.Draft,
                 ByUserId = callerUserId,
                 Note = $"Bumped to V{quote.Version} on edit-after-approval.",

@@ -204,6 +204,30 @@ public class QuoteServiceTests : IDisposable
         Assert.True(versions.Versions.Single(v => v.Version == 2).IsCurrent);
     }
 
+    [Theory]
+    [InlineData(QuoteStatus.Approved)]
+    [InlineData(QuoteStatus.SentToCustomer)]
+    [InlineData(QuoteStatus.Expired)]
+    public async Task UpdateAsync_AfterApproval_LogsActualSourceStatus(QuoteStatus sourceStatus)
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.Status = sourceStatus;
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(quote.Id, new UpdateQuoteRequest
+        {
+            AreaSqm = 120m,
+            UnitPricePerSqm = 10_000_000m,
+            DiscountPercent = 0m,
+            VatPercent = 8m,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var log = await _db.QuoteApprovalLogs
+            .SingleAsync(entry => entry.Action == QuoteWorkflowAction.NewVersion);
+        Assert.Equal(sourceStatus, log.FromStatus);
+        Assert.Equal(QuoteStatus.Draft, log.ToStatus);
+    }
+
     // ---------------- Ownership scoping ----------------
 
     [Fact]

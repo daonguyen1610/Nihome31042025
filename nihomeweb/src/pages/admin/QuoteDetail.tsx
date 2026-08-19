@@ -51,6 +51,7 @@ import {
   type QuoteItemInput,
   type QuoteResponse,
   type QuoteStatus,
+  type QuoteVersionResponse,
   type QuoteVersionsResponse,
   type UpdateQuoteRequest,
 } from "@/services/adminApi";
@@ -158,6 +159,7 @@ const AdminQuoteDetail = () => {
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState<QuoteVersionResponse | null>(null);
 
   const [documents, setDocuments] = useState<QuoteDocumentResponse[] | null>(null);
   const [documentsLoading, setDocumentsLoading] = useState(false);
@@ -784,16 +786,22 @@ const AdminQuoteDetail = () => {
             </div>
           ) : (
             <div className="space-y-2">
+              <p className="rounded-lg border border-dashed bg-muted/20 p-3 text-sm text-muted-foreground">
+                {t("quotes.version.description")}
+              </p>
               {versions.versions
                 .slice()
                 .sort((a, b) => b.version - a.version)
                 .map((v) => (
-                  <div
+                  <button
+                    type="button"
                     key={v.version}
                     className={cn(
-                      "rounded-lg border p-3 text-sm",
+                      "w-full rounded-lg border p-3 text-left text-sm transition-colors hover:border-primary/50 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                       v.isCurrent ? "border-primary bg-primary/5" : "bg-card",
                     )}
+                    onClick={() => setSelectedVersion(v)}
+                    aria-label={`${t("quotes.version.view")} V${v.version}`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 font-medium">
@@ -811,10 +819,13 @@ const AdminQuoteDetail = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {t(`quotes.method.${v.method}`)} · {t("quotes.field.subtotal")} {formatVnd(v.subtotal)} · VAT {v.vatPercent}%
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>
+                        {t(`quotes.method.${v.method}`)} · {t("quotes.field.subtotal")} {formatVnd(v.subtotal)} · VAT {v.vatPercent}%
+                      </span>
+                      <span className="font-medium text-primary">{t("quotes.version.view")}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
             </div>
           )}
@@ -868,6 +879,34 @@ const AdminQuoteDetail = () => {
             <Button onClick={() => void runWorkflow()} disabled={workflowBusy}>
               {workflowBusy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={selectedVersion !== null} onOpenChange={(open) => !open && setSelectedVersion(null)}>
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-4xl overflow-y-auto sm:w-full">
+          <DialogHeader>
+            <DialogTitle className="flex flex-wrap items-center gap-2">
+              {t("quotes.version.snapshot")} V{selectedVersion?.version}
+              {selectedVersion?.isCurrent && (
+                <Badge variant="outline" className="border-primary text-primary">
+                  {t("quotes.version.current")}
+                </Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedVersion && (
+                <>
+                  {t("quotes.version.capturedAt")}: {new Date(selectedVersion.capturedAt).toLocaleString()}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedVersion && <QuoteVersionDetails version={selectedVersion} t={t} />}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedVersion(null)}>
+              {t("common.close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -972,6 +1011,103 @@ const FormField = ({
   <div>
     <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
     {children}
+  </div>
+);
+
+const QuoteVersionDetails = ({
+  version,
+  t,
+}: {
+  version: QuoteVersionResponse;
+  t: (k: string) => string;
+}) => (
+  <div className="space-y-4">
+    <dl className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/20 p-4 text-sm sm:grid-cols-4">
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.method")}</dt>
+        <dd className="font-medium">{t(`quotes.method.${version.method}`)}</dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.subtotal")}</dt>
+        <dd className="font-medium">{formatVnd(version.subtotal)} ₫</dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.discountPercent")}</dt>
+        <dd className="font-medium">{version.discountPercent}%</dd>
+      </div>
+      <div>
+        <dt className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.vatPercent")}</dt>
+        <dd className="font-medium">{version.vatPercent}%</dd>
+      </div>
+    </dl>
+
+    {version.method === "UnitCost" ? (
+      <div className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-2">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.areaSqm")}</div>
+          <div className="font-medium">{version.areaSqm ?? "—"}</div>
+        </div>
+        <div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.unitPricePerSqm")}</div>
+          <div className="font-medium">{version.unitPricePerSqm != null ? `${formatVnd(version.unitPricePerSqm)} ₫` : "—"}</div>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.packageDescription")}</div>
+          <div className="mt-1 whitespace-pre-wrap">{version.packageDescription || "—"}</div>
+        </div>
+      </div>
+    ) : (
+      <div className="rounded-lg border bg-card">
+        <div className="border-b bg-muted/30 p-2 text-xs uppercase tracking-wide text-muted-foreground">
+          {t("quotes.boq.title")}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[560px] divide-y text-sm">
+            <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.code")}</th>
+                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
+                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
+                <th className="px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
+                <th className="px-2 py-1.5 text-right font-medium">{t("quotes.boq.unitPrice")}</th>
+                <th className="px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {version.items.map((item, index) => (
+                <tr key={`${item.id}-${index}`}>
+                  <td className="px-2 py-2">{item.itemCode || "—"}</td>
+                  <td className="px-2 py-2 font-medium">{item.name}</td>
+                  <td className="px-2 py-2">{item.unit}</td>
+                  <td className="px-2 py-2 text-right">{item.quantity}</td>
+                  <td className="px-2 py-2 text-right">{formatVnd(item.unitPrice)} ₫</td>
+                  <td className="px-2 py-2 text-right font-medium">{formatVnd(item.amount)} ₫</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <ul className="divide-y md:hidden">
+          {version.items.map((item, index) => (
+            <li key={`${item.id}-${index}`} className="space-y-1 p-3 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium">{item.name}</span>
+                <span className="whitespace-nowrap font-semibold">{formatVnd(item.amount)} ₫</span>
+              </div>
+              {item.itemCode && <div className="text-xs text-muted-foreground">{t("quotes.boq.code")}: {item.itemCode}</div>}
+              <div className="text-xs text-muted-foreground">
+                {item.quantity} {item.unit} × {formatVnd(item.unitPrice)} ₫
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-4">
+      <span className="font-semibold">{t("quotes.field.grandTotal")}</span>
+      <span className="text-xl font-bold text-primary">{formatVnd(version.grandTotal)} ₫</span>
+    </div>
   </div>
 );
 
