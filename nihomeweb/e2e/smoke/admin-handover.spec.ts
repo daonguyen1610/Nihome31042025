@@ -89,12 +89,13 @@ test.describe("NIH-144 — Project handover", () => {
     await page.getByTestId("handover-detail-edit").click();
     const updatedTitle = `${title} updated`;
     await page.getByTestId("handover-form-title").fill(updatedTitle);
-    await Promise.all([
-      page.waitForResponse(
-        (r) => /\/api\/handover-records\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
-      ),
-      page.getByTestId("handover-form-save").click(),
-    ]);
+    // Set up response waiter before clicking to avoid race conditions in CI
+    const updateResponse = page.waitForResponse(
+      (r) => /\/api\/handover-records\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+      { timeout: 15_000 },
+    );
+    await page.getByTestId("handover-form-save").click();
+    await updateResponse;
 
     const updatedRow = page.locator('[data-testid^="handover-row-"]').filter({ hasText: updatedTitle });
     await expect(updatedRow).toBeVisible();

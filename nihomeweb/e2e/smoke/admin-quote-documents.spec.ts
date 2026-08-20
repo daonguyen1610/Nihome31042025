@@ -51,6 +51,9 @@ async function createDocxFixture() {
   return archive.generateAsync({ type: "nodebuffer" });
 }
 
+// Run quote tests serially to avoid race condition in quote code generation
+test.describe.serial("quote document management", () => {
+
 test("sales manager uploads, renders, persists, and deletes a DOCX quote document", async ({
   api,
   page,
@@ -331,3 +334,4 @@ test("sales manager opens BOQ version history from the mobile quote list", async
     if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
   }
 });
+}); // end describe.serial
