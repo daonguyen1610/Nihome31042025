@@ -11,6 +11,7 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class PermitChecklistService(
     AppDbContext db,
+    IBusinessDocumentStorageService documentStorage,
     ILogger<PermitChecklistService> logger) : IPermitChecklistService
 {
     private const int MaxPageSize = 200;
@@ -271,6 +272,37 @@ public class PermitChecklistService(
         await db.SaveChangesAsync(ct);
 
         logger.LogInformation("Permit checklist item {Id} updated by user {UserId}", id, callerUserId);
+        return await GetAsync(id, ct);
+    }
+
+    public async Task<PermitChecklistItemResponse?> UploadDocumentAsync(
+        int id,
+        PermitDocumentKind kind,
+        IFormFile? file,
+        int callerUserId,
+        CancellationToken ct = default)
+    {
+        var entity = await db.PermitChecklistItems.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (entity is null) return null;
+
+        var uploaded = await documentStorage.StoreAsync(file, BusinessDocumentArea.Permits, ct);
+        if (kind == PermitDocumentKind.SubmittedPackage)
+        {
+            entity.SubmittedFilePath = uploaded.Path;
+        }
+        else
+        {
+            entity.IssuedFilePath = uploaded.Path;
+        }
+        entity.UpdatedAt = DateTime.UtcNow;
+        entity.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "Permit checklist item {Id} {Kind} document uploaded by user {UserId}",
+            id,
+            kind,
+            callerUserId);
         return await GetAsync(id, ct);
     }
 

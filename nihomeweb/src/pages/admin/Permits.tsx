@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Clock, Eye, FileCheck2, Filter, Pencil, Plus, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -48,6 +50,7 @@ import {
   type PermitChecklistItemResponse,
   type PermitChecklistListParams,
   type PermitChecklistRiskSummary,
+  type PermitDocumentKind,
   type PermitStatus,
   type UpdatePermitChecklistItemRequest,
 } from "@/services/adminApi";
@@ -373,6 +376,21 @@ const AdminPermits = () => {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const uploadPermitFile = async (id: number, kind: PermitDocumentKind, file: File) => {
+    const { data } = await adminApi.uploadPermitDocument(id, kind, file);
+    const path = kind === "SubmittedPackage" ? data.submittedFilePath : data.issuedFilePath;
+    if (!path) throw new Error(t("common.documentUpload.error"));
+    return path;
+  };
+
+  const refreshPermitAfterUpload = async (id: number) => {
+    const { data } = await adminApi.getPermit(id);
+    setEditing((current) => current?.id === id ? data : current);
+    setViewing((current) => current?.id === id ? data : current);
+    await fetchList();
+    toast({ title: t("permits.document.uploaded") });
   };
 
   const applyDatePatch = (
@@ -857,6 +875,26 @@ const AdminPermits = () => {
                   onChange={(e) => setForm((f) => (f ? { ...f, note: e.target.value } : f))}
                 />
               </div>
+              {dialogMode === "edit" && editing ? (
+                <div className="space-y-4 md:col-span-2">
+                  <PermitDocumentField
+                    label={t("permits.document.submittedPackage")}
+                    path={editing.submittedFilePath}
+                    uploadFile={(file) => uploadPermitFile(editing.id, "SubmittedPackage", file)}
+                    onUploaded={() => refreshPermitAfterUpload(editing.id)}
+                    disabled={saving}
+                    testId="permit-submitted-package-upload"
+                  />
+                  <PermitDocumentField
+                    label={t("permits.document.issuedPermit")}
+                    path={editing.issuedFilePath}
+                    uploadFile={(file) => uploadPermitFile(editing.id, "IssuedPermit", file)}
+                    onUploaded={() => refreshPermitAfterUpload(editing.id)}
+                    disabled={saving}
+                    testId="permit-issued-file-upload"
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
           {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
@@ -892,6 +930,26 @@ const AdminPermits = () => {
               <DetailValue label={t("permits.field.expiresAt")} value={formatDate(viewing.expiresAt, lang)} />
               <DetailValue label={t("permits.field.updatedAt")} value={formatDate(viewing.updatedAt, lang)} />
               <div className="sm:col-span-2"><DetailValue label={t("permits.field.note")} value={viewing.note} /></div>
+              <div className="space-y-2 sm:col-span-2">
+                <PermitDocumentField
+                  label={t("permits.document.submittedPackage")}
+                  path={viewing.submittedFilePath}
+                  uploadFile={(file) => uploadPermitFile(viewing.id, "SubmittedPackage", file)}
+                  onUploaded={() => refreshPermitAfterUpload(viewing.id)}
+                  disabled={!canManage}
+                  testId="permit-detail-submitted-package-upload"
+                  hideUpload={!canManage}
+                />
+                <PermitDocumentField
+                  label={t("permits.document.issuedPermit")}
+                  path={viewing.issuedFilePath}
+                  uploadFile={(file) => uploadPermitFile(viewing.id, "IssuedPermit", file)}
+                  onUploaded={() => refreshPermitAfterUpload(viewing.id)}
+                  disabled={!canManage}
+                  testId="permit-detail-issued-file-upload"
+                  hideUpload={!canManage}
+                />
+              </div>
             </dl>
           ) : null}
           <DialogFooter>
@@ -927,6 +985,40 @@ const DetailValue = ({ label, value }: { label: string; value?: string | null })
   <div>
     <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
     <dd className="mt-1 break-words text-sm font-medium">{value || "—"}</dd>
+  </div>
+);
+
+const PermitDocumentField = ({
+  label,
+  path,
+  uploadFile,
+  onUploaded,
+  disabled,
+  testId,
+  hideUpload = false,
+}: {
+  label: string;
+  path?: string | null;
+  uploadFile: (file: File) => Promise<string>;
+  onUploaded: (paths: string[]) => void | Promise<void>;
+  disabled: boolean;
+  testId: string;
+  hideUpload?: boolean;
+}) => (
+  <div className="space-y-2 rounded-md border p-3">
+    <div className="flex items-center justify-between gap-2">
+      <Label>{label}</Label>
+      {path ? <AdminFilePreview url={path} fileName={path.split("/").pop()} /> : null}
+    </div>
+    <p className="break-all text-xs text-muted-foreground">{path ?? "—"}</p>
+    {!hideUpload ? (
+      <AdminDocumentUpload
+        uploadFile={uploadFile}
+        onUploaded={onUploaded}
+        disabled={disabled}
+        testId={testId}
+      />
+    ) : null}
   </div>
 );
 

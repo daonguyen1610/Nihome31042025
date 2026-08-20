@@ -364,6 +364,10 @@ public class DesignProjectServiceTests : IDisposable
             int id, NihomeBackend.Models.DTOs.Requests.UpdatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
 
+        public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> UploadDocumentAsync(
+            int id, PermitDocumentKind kind, Microsoft.AspNetCore.Http.IFormFile? file, int callerUserId, CancellationToken ct = default)
+            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
+
         public Task<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?> DeleteAsync(int id, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.PermitChecklistItemResponse?>(null);
     }

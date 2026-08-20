@@ -1086,5 +1086,45 @@
     "en": "Deleted {success} · {failed} failed",
     "zh": "已删除 {success} 条 · {failed} 条失败",
     "ja": "{success} 件削除 · {failed} 件失敗"
+  },
+  {
+    "key": "common.documentUpload.select",
+    "category": "common",
+    "vi": "Chọn tệp từ máy",
+    "en": "Choose local file",
+    "zh": "选择本地文件",
+    "ja": "ローカルファイルを選択"
+  },
+  {
+    "key": "common.documentUpload.uploading",
+    "category": "common",
+    "vi": "Đang tải lên...",
+    "en": "Uploading...",
+    "zh": "正在上传...",
+    "ja": "アップロード中..."
+  },
+  {
+    "key": "common.documentUpload.help",
+    "category": "common",
+    "vi": "PDF, Word, Excel, PNG hoặc JPG; tối đa 20 MB mỗi tệp.",
+    "en": "PDF, Word, Excel, PNG or JPG; up to 20 MB per file.",
+    "zh": "支持 PDF、Word、Excel、PNG 或 JPG；每个文件最大 20 MB。",
+    "ja": "PDF、Word、Excel、PNG、JPG（1ファイル最大20 MB）。"
+  },
+  {
+    "key": "common.documentUpload.maxFiles",
+    "category": "common",
+    "vi": "Chỉ có thể chọn thêm tối đa {count} tệp.",
+    "en": "You can select up to {count} more files.",
+    "zh": "最多还可选择 {count} 个文件。",
+    "ja": "追加で選択できるのは最大 {count} ファイルです。"
+  },
+  {
+    "key": "common.documentUpload.error",
+    "category": "common",
+    "vi": "Không thể tải tệp lên.",
+    "en": "The file could not be uploaded.",
+    "zh": "无法上传文件。",
+    "ja": "ファイルをアップロードできませんでした。"
   }
 ]

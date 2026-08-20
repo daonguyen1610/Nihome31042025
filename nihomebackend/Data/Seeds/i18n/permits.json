@@ -62,5 +62,8 @@
   { "key": "permits.form.selectType", "category": "permits", "vi": "Chọn loại giấy phép", "en": "Select a permit type", "zh": "选择许可证类型", "ja": "許認可種別を選択" },
   { "key": "permits.form.projectTypeRequired", "category": "permits", "vi": "Vui lòng chọn dự án và loại giấy phép.", "en": "Select a project and permit type.", "zh": "请选择项目和许可证类型。", "ja": "プロジェクトと許認可種別を選択してください。" },
   { "key": "permits.form.hint", "category": "permits", "vi": "Cập nhật trạng thái theo tiến độ thực tế. Khi chuyển sang \"Đã cấp\", hệ thống tự gắn ngày cấp nếu bạn để trống.", "en": "Move the status forward as work progresses. When you flip to \"Issued\" and leave the issue date empty, today is stamped automatically.", "zh": "根据实际进度更新状态。切换到“已签发”且未填写签发日期时，系统会自动填入今天。", "ja": "進捗に合わせて状態を更新します。「発行済み」に切り替えて発行日を空欄にすると、今日の日付が自動設定されます。" },
-  { "key": "permits.form.ownerNone", "category": "permits", "vi": "Chưa gán người phụ trách", "en": "Unassigned", "zh": "未指派", "ja": "未割当" }
+  { "key": "permits.form.ownerNone", "category": "permits", "vi": "Chưa gán người phụ trách", "en": "Unassigned", "zh": "未指派", "ja": "未割当" },
+  { "key": "permits.document.submittedPackage", "category": "permits", "vi": "Hồ sơ đã nộp", "en": "Submitted package", "zh": "已提交材料", "ja": "提出済み書類" },
+  { "key": "permits.document.issuedPermit", "category": "permits", "vi": "Giấy phép đã cấp", "en": "Issued permit", "zh": "已签发许可证", "ja": "発行済み許可証" },
+  { "key": "permits.document.uploaded", "category": "permits", "vi": "Đã tải lên và cập nhật tệp giấy phép", "en": "Permit file uploaded and updated", "zh": "许可证文件已上传并更新", "ja": "許可証ファイルをアップロードして更新しました" }
 ]

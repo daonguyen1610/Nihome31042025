@@ -106,6 +106,45 @@ public class PermitsController(
         }
     }
 
+    [HttpPost("{id:int}/documents/{kind}")]
+    [RequirePermission("permit.checklists", "manage")]
+    public async Task<ActionResult<PermitChecklistItemResponse>> UploadDocument(
+        int id,
+        PermitDocumentKind kind,
+        [FromForm] IFormFile? file,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var response = await svc.UploadDocumentAsync(id, kind, file, userId.Value, ct);
+            if (response is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "permit.upload-document",
+                ResourceType = EntityTypes.PermitChecklistItem,
+                ResourceId = id.ToString(),
+                Message = $"Permit checklist item #{id} {kind} document uploaded.",
+                NewValue = response,
+            });
+            return Ok(response);
+        }
+        catch (BusinessDocumentStorageException ex)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "permit.upload-document",
+                ResourceType = EntityTypes.PermitChecklistItem,
+                ResourceId = id.ToString(),
+                Message = ex.Message,
+                Status = AuditStatus.Failure,
+                FailureReason = ex.Message,
+            });
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     /// <summary>
     /// Re-run the auto-generator for a given project. Useful after the master
     /// template gains a new permit type (e.g. a new local requirement) so
