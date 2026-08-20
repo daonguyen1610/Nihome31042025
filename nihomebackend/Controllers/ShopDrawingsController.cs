@@ -189,9 +189,10 @@ public class ShopDrawingsController(
     /// Upload a file and attach it to an existing shop drawing.
     /// </summary>
     [HttpPost("{id:int}/upload")]
+    [Consumes("multipart/form-data")]
     [RequirePermission("design.shop", "manage")]
     public async Task<ActionResult<ShopDrawingResponse>> UploadFile(
-        int id, IFormFile file, CancellationToken ct)
+        int id, [FromForm] IFormFile file, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
