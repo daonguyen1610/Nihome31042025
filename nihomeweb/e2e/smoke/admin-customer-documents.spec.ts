@@ -42,6 +42,7 @@ test("customer related records, documents, and contract owner inheritance work i
         primaryContact: {
           fullName: "Playwright Contact",
           phone: `09${unique.slice(-8)}`,
+          email: `test-${unique}@example.com`,
           isPrimary: true,
         },
       },

@@ -280,6 +280,8 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       const customer = await customerRes.json();
       expect(customer.name).toBe(`Auto Corp ${unique}`); // Uses companyName
       expect(customer.sourceCode).toBe("marketing");
+      // Verify owner is preserved from lead
+      expect(customer.ownerUserId).toBeTruthy();
 
       // Verify primary contact has lead info
       const primaryContact = customer.contacts?.find((c: { isPrimary: boolean }) => c.isPrimary);
@@ -313,6 +315,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
         primaryContact: {
           fullName: "Lost Contact",
           phone: `08${unique.slice(-8)}`,
+          email: `lost-${unique}@test.example`,
           isPrimary: true,
         },
       });
@@ -371,6 +374,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
         primaryContact: {
           fullName: "RBAC Contact",
           phone: `07${unique.slice(-8)}`,
+          email: `rbac-${unique}@test.example`,
           isPrimary: true,
         },
       });

@@ -844,8 +844,9 @@ const AdminCustomers = () => {
                       <td className="px-3 py-3 text-xs">
                         {primary ? (
                           <>
-                            <div>{primary.fullName}</div>
-                            <div className="text-muted-foreground">{primary.phone || primary.email || "—"}</div>
+                            {primary.phone && <div>{primary.phone}</div>}
+                            {primary.email && <div className="text-muted-foreground">{primary.email}</div>}
+                            {!primary.phone && !primary.email && "—"}
                           </>
                         ) : "—"}
                       </td>
@@ -1013,7 +1014,7 @@ const AdminCustomers = () => {
             )}
             <div className="rounded border p-3 space-y-3">
               <h4 className="text-sm font-medium">{t("customers.field.primaryContact")} *</h4>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
                 <div>
                   <Label>{t("customers.contact.fullName")} *</Label>
                   <Input
@@ -1024,36 +1025,28 @@ const AdminCustomers = () => {
                     })}
                   />
                 </div>
-                <div>
-                  <Label>{t("customers.contact.position")}</Label>
-                  <Input
-                    value={createForm.primaryContact.position ?? ""}
-                    onChange={(e) => setCreateForm({
-                      ...createForm,
-                      primaryContact: { ...createForm.primaryContact, position: e.target.value },
-                    })}
-                  />
-                </div>
-                <div>
-                  <Label>{t("customers.contact.phone")}</Label>
-                  <Input
-                    value={createForm.primaryContact.phone ?? ""}
-                    onChange={(e) => setCreateForm({
-                      ...createForm,
-                      primaryContact: { ...createForm.primaryContact, phone: e.target.value },
-                    })}
-                  />
-                </div>
-                <div>
-                  <Label>{t("customers.contact.email")}</Label>
-                  <Input
-                    type="email"
-                    value={createForm.primaryContact.email ?? ""}
-                    onChange={(e) => setCreateForm({
-                      ...createForm,
-                      primaryContact: { ...createForm.primaryContact, email: e.target.value },
-                    })}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>{t("customers.contact.phone")}</Label>
+                    <Input
+                      value={createForm.primaryContact.phone ?? ""}
+                      onChange={(e) => setCreateForm({
+                        ...createForm,
+                        primaryContact: { ...createForm.primaryContact, phone: e.target.value },
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>{t("customers.contact.email")}</Label>
+                    <Input
+                      type="email"
+                      value={createForm.primaryContact.email ?? ""}
+                      onChange={(e) => setCreateForm({
+                        ...createForm,
+                        primaryContact: { ...createForm.primaryContact, email: e.target.value },
+                      })}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -1440,18 +1433,11 @@ const AdminCustomers = () => {
                         </Button>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div>
+                        <div className="col-span-2">
                           <Label className="text-xs">{t("customers.contact.fullName")} *</Label>
                           <Input
                             value={contactForm.fullName}
                             onChange={(e) => setContactForm({ ...contactForm, fullName: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">{t("customers.contact.position")}</Label>
-                          <Input
-                            value={contactForm.position ?? ""}
-                            onChange={(e) => setContactForm({ ...contactForm, position: e.target.value })}
                           />
                         </div>
                         <div>

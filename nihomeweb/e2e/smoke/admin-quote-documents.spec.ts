@@ -83,6 +83,7 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
         primaryContact: {
           fullName: "Quote Document Contact",
           phone: `08${unique.slice(-8)}`,
+          email: `quote-${unique}@test.example`,
           isPrimary: true,
         },
       },
@@ -251,6 +252,7 @@ test("sales manager opens BOQ version history from the mobile quote list", async
         primaryContact: {
           fullName: "BOQ Version Contact",
           phone: `07${unique.slice(-8)}`,
+          email: `boq-${unique}@test.example`,
           isPrimary: true,
         },
       },

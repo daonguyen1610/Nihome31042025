@@ -619,6 +619,8 @@ public class LeadServiceTests : IDisposable
         Assert.Equal(lead.Phone, customer.Contacts.First().Phone);
         Assert.Equal(lead.Email, customer.Contacts.First().Email);
         Assert.Equal(lead.SourceCode, customer.SourceCode);
+        // Verify owner is preserved from lead
+        Assert.Equal(lead.OwnerUserId, customer.OwnerUserId);
     }
 
     [Fact]
