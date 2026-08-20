@@ -166,7 +166,70 @@ const CapabilityDocuments = () => {
     };
   }, []);
 
-  // -------- upload flow --------
+  // -------- create dialog flow --------
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    tagCode: "",
+    issuedDate: "",
+    expiryDate: "",
+    description: "",
+  });
+  const [createFile, setCreateFile] = useState<File | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [savingCreate, setSavingCreate] = useState(false);
+  const createFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const openCreateDialog = () => {
+    setCreateForm({ name: "", tagCode: "", issuedDate: "", expiryDate: "", description: "" });
+    setCreateFile(null);
+    setCreateError(null);
+    setCreateOpen(true);
+  };
+
+  const handleCreateFileChange = (file: File | null) => {
+    setCreateFile(file);
+    // Auto-fill name from file name if empty
+    if (file && !createForm.name.trim()) {
+      setCreateForm((prev) => ({ ...prev, name: file.name.replace(/\.[^.]+$/, "") }));
+    }
+  };
+
+  const submitCreate = async () => {
+    if (!createForm.name.trim() || !createForm.tagCode) {
+      setCreateError(t("capDocs.validation.missingFields"));
+      return;
+    }
+    if (!createFile) {
+      setCreateError(t("capDocs.validation.missingFile"));
+      return;
+    }
+    setSavingCreate(true);
+    setCreateError(null);
+    try {
+      const uploaded = await adminApi.uploadCapabilityDocument(createFile);
+      await adminApi.createCapabilityDocument({
+        name: createForm.name.trim(),
+        tagCode: createForm.tagCode,
+        issuedDate: createForm.issuedDate || null,
+        expiryDate: createForm.expiryDate || null,
+        description: createForm.description || null,
+        filePath: uploaded.data.filePath,
+        originalFileName: uploaded.data.originalFileName,
+        fileSize: uploaded.data.fileSize,
+        contentType: uploaded.data.contentType,
+      });
+      toast({ title: t("capDocs.uploaded").replace("{count}", "1") });
+      setCreateOpen(false);
+      await fetchList();
+    } catch (err) {
+      setCreateError(extractApiError(err));
+    } finally {
+      setSavingCreate(false);
+    }
+  };
+
+  // Legacy drag-drop upload (for quick multi-file upload)
   const [uploadTag, setUploadTag] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -410,8 +473,8 @@ const CapabilityDocuments = () => {
             {canManage && (
               <Button
                 size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={busy || !uploadTag}
+                onClick={openCreateDialog}
+                disabled={busy}
                 className="flex-1 md:flex-none"
               >
                 <Plus className="mr-2 h-4 w-4" />
@@ -953,6 +1016,117 @@ const CapabilityDocuments = () => {
                 {t("capDocs.action.edit")}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create dialog — user fills form before uploading */}
+      <Dialog open={createOpen} onOpenChange={(v) => !v && setCreateOpen(false)}>
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
+          <DialogHeader>
+            <DialogTitle>{t("capDocs.create.title")}</DialogTitle>
+            <DialogDescription>{t("capDocs.create.description")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("capDocs.field.name")} *</Label>
+                <Input
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  placeholder={t("capDocs.placeholder.name")}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("capDocs.field.tag")} *</Label>
+                <Select value={createForm.tagCode} onValueChange={(v) => setCreateForm({ ...createForm, tagCode: v })}>
+                  <SelectTrigger><SelectValue placeholder={t("capDocs.placeholder.tag")} /></SelectTrigger>
+                  <SelectContent>
+                    {tags.map((tag) => (
+                      <SelectItem key={tag.code} value={tag.code}>{tag.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label>{t("capDocs.field.issuedDate")}</Label>
+                <Input
+                  type="date"
+                  value={createForm.issuedDate}
+                  onChange={(e) => setCreateForm({ ...createForm, issuedDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>{t("capDocs.field.expiryDate")}</Label>
+                <Input
+                  type="date"
+                  value={createForm.expiryDate}
+                  onChange={(e) => setCreateForm({ ...createForm, expiryDate: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>{t("capDocs.field.description")}</Label>
+              <Textarea
+                value={createForm.description}
+                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                rows={3}
+                placeholder={t("capDocs.placeholder.description")}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>{t("capDocs.field.file")} *</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => createFileInputRef.current?.click()}
+                  className="shrink-0"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t("capDocs.create.selectFile")}
+                </Button>
+                <input
+                  ref={createFileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  className="hidden"
+                  onChange={(e) => {
+                    handleCreateFileChange(e.target.files?.[0] ?? null);
+                    if (createFileInputRef.current) createFileInputRef.current.value = "";
+                  }}
+                />
+                {createFile && (
+                  <span className="min-w-0 truncate text-sm text-muted-foreground">
+                    {createFile.name} ({formatBytes(createFile.size)})
+                  </span>
+                )}
+              </div>
+            </div>
+            {createError && (
+              <p className="text-sm text-rose-600">{createError}</p>
+            )}
+          </div>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="ghost"
+              onClick={() => setCreateOpen(false)}
+              disabled={savingCreate}
+              className="w-full sm:w-auto"
+            >
+              {t("common.cancel") ?? "Cancel"}
+            </Button>
+            <Button
+              onClick={() => void submitCreate()}
+              disabled={savingCreate || !createForm.name.trim() || !createForm.tagCode || !createFile}
+              className="w-full sm:w-auto"
+            >
+              {savingCreate && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("capDocs.create.submit")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

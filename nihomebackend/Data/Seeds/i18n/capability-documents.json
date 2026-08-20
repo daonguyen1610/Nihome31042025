@@ -47,6 +47,15 @@
   { "key": "capDocs.form.uploading", "category": "capability-docs", "vi": "Đang tải lên...", "en": "Uploading...", "zh": "上传中...", "ja": "アップロード中..." },
   { "key": "capDocs.form.uploadFailed", "category": "capability-docs", "vi": "Tải lên thất bại: {message}", "en": "Upload failed: {message}", "zh": "上传失败：{message}", "ja": "アップロード失敗：{message}" },
 
+  { "key": "capDocs.create.title", "category": "capability-docs", "vi": "Thêm hồ sơ năng lực", "en": "Add capability document", "zh": "添加能力文件", "ja": "能力書類を追加" },
+  { "key": "capDocs.create.description", "category": "capability-docs", "vi": "Nhập thông tin hồ sơ trước khi tải file lên.", "en": "Fill in document details before uploading the file.", "zh": "上传文件前请填写文档信息。", "ja": "ファイルをアップロードする前に書類情報を入力してください。" },
+  { "key": "capDocs.create.selectFile", "category": "capability-docs", "vi": "Chọn file", "en": "Select file", "zh": "选择文件", "ja": "ファイルを選択" },
+  { "key": "capDocs.create.submit", "category": "capability-docs", "vi": "Tải lên", "en": "Upload", "zh": "上传", "ja": "アップロード" },
+  { "key": "capDocs.placeholder.name", "category": "capability-docs", "vi": "Nhập tên hồ sơ...", "en": "Enter document name...", "zh": "输入文档名称...", "ja": "書類名を入力..." },
+  { "key": "capDocs.placeholder.tag", "category": "capability-docs", "vi": "Chọn phân loại", "en": "Select a tag", "zh": "选择分类", "ja": "分類を選択" },
+  { "key": "capDocs.placeholder.description", "category": "capability-docs", "vi": "Mô tả ngắn về hồ sơ (tuỳ chọn)", "en": "Brief description of the document (optional)", "zh": "文档简介（可选）", "ja": "書類の簡単な説明（任意）" },
+  { "key": "capDocs.validation.missingFile", "category": "capability-docs", "vi": "Vui lòng chọn file để tải lên.", "en": "Please select a file to upload.", "zh": "请选择要上传的文件。", "ja": "アップロードするファイルを選択してください。" },
+
   { "key": "capDocs.delete.confirmTitle", "category": "capability-docs", "vi": "Xoá hồ sơ?", "en": "Delete document?", "zh": "删除文档？", "ja": "書類を削除？" },
   { "key": "capDocs.delete.confirmBody", "category": "capability-docs", "vi": "Toàn bộ phiên bản của \"{name}\" sẽ bị xoá vĩnh viễn. Hành động này không thể hoàn tác.", "en": "All versions of \"{name}\" will be permanently removed. This cannot be undone.", "zh": "\"{name}\" 的所有版本将被永久删除。此操作无法撤销。", "ja": "「{name}」の全バージョンを完全に削除します。取り消せません。" },
   { "key": "capDocs.delete.confirm", "category": "capability-docs", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" },
