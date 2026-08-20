@@ -263,7 +263,15 @@ public class CustomerService(
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return false;
 
         var quoteIds = await AggregateDeletionService.DeleteCustomerAsync(db, customer, ct);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Customer was already deleted by another operation (cascade or concurrent request)
+            return false;
+        }
         customerDocumentService.DeleteCustomerFiles(id);
         foreach (var quoteId in quoteIds) quoteDocumentService.DeleteQuoteFiles(quoteId);
         logger.LogInformation("Deleted customer {Id} and its dependent aggregates", id);
