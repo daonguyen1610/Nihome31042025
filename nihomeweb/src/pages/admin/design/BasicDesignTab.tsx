@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronsRight, Circle, History, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, ChevronsRight, Circle, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -200,6 +201,23 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
 
   // -------- revisions panel --------
   const [revisionsFor, setRevisionsFor] = useState<BasicDesignDocResponse | null>(null);
+
+  // -------- file upload --------
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUploadFile = async (docId: number, file: File) => {
+    setUploading(true);
+    try {
+      await adminApi.uploadBasicDesignDocFile(docId, file);
+      toast({ title: t("basicDesign.fileUploaded") });
+      await fetchRows();
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // -------- create / edit dialog --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -456,6 +474,39 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                         </p>
                         {row.ownerName ? (
                           <p className="mt-0.5 text-xs text-muted-foreground">{row.ownerName}</p>
+                        ) : null}
+                        {/* File preview/upload */}
+                        {row.filePath ? (
+                          <div className="mt-2">
+                            <AdminFilePreview
+                              filePath={row.filePath}
+                              fileName={row.originalFileName}
+                              className="max-w-xs"
+                            />
+                          </div>
+                        ) : canManage && isBasicStage ? (
+                          <div className="mt-2">
+                            <input
+                              type="file"
+                              className="hidden"
+                              ref={fileInputRef}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) void handleUploadFile(row.id, file);
+                                e.target.value = "";
+                              }}
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 text-xs"
+                              disabled={uploading}
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <FileUp className="h-3.5 w-3.5" />
+                              {t("basicDesign.uploadFile")}
+                            </Button>
+                          </div>
                         ) : null}
                       </div>
                       <div className="flex flex-col items-end gap-1">

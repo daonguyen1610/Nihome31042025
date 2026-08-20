@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronDown, ChevronUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, ChevronDown, ChevronUp, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -249,6 +250,23 @@ export const ShopDrawingTab = ({ project }: Props) => {
 
   // -------- revisions panel --------
   const [revisionsFor, setRevisionsFor] = useState<ShopDrawingResponse | null>(null);
+
+  // -------- file upload --------
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleUploadFile = async (docId: number, file: File) => {
+    setUploading(true);
+    try {
+      await adminApi.uploadShopDrawingFile(docId, file);
+      toast({ title: t("shopDrawing.fileUploaded") });
+      await fetchRows();
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   // -------- create / edit dialog --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -524,12 +542,14 @@ export const ShopDrawingTab = ({ project }: Props) => {
               selectedIds={selectedIds}
               draftableIds={draftableIds}
               transitioningId={transitioning}
+              uploading={uploading}
               onToggle={toggleOne}
               onEdit={openEdit}
               onDelete={setDeleting}
               onTransition={(row, next) => void transition(row, next)}
               canViewRevisions={canViewRevisions}
               onOpenRevisions={setRevisionsFor}
+              onUploadFile={(id, file) => void handleUploadFile(id, file)}
             />
           ))}
         </div>
@@ -734,11 +754,13 @@ const DisciplineSection = ({
   selectedIds,
   draftableIds,
   transitioningId,
+  uploading,
   onToggle,
   onEdit,
   onDelete,
   onTransition,
   onOpenRevisions,
+  onUploadFile,
 }: {
   disciplineCode: string;
   disciplineLabel: string;
@@ -752,11 +774,13 @@ const DisciplineSection = ({
   selectedIds: Set<number>;
   draftableIds: Set<number>;
   transitioningId: number | null;
+  uploading: boolean;
   onToggle: (id: number, checked: boolean) => void;
   onEdit: (row: ShopDrawingResponse) => void;
   onDelete: (row: ShopDrawingResponse) => void;
   onTransition: (row: ShopDrawingResponse, next: ShopDrawingStatus) => void;
   onOpenRevisions: (row: ShopDrawingResponse) => void;
+  onUploadFile: (id: number, file: File) => void;
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const total = Array.from(itemMap.values()).reduce((n, arr) => n + arr.length, 0);
@@ -801,6 +825,37 @@ const DisciplineSection = ({
                           <p className="mt-0.5 break-words text-sm font-medium text-slate-900">{row.title}</p>
                           {row.ownerName ? (
                             <p className="mt-0.5 text-xs text-muted-foreground">{row.ownerName}</p>
+                          ) : null}
+                          {/* File preview/upload */}
+                          {row.filePath ? (
+                            <div className="mt-2">
+                              <AdminFilePreview
+                                filePath={row.filePath}
+                                fileName={row.originalFileName}
+                                className="max-w-xs"
+                              />
+                            </div>
+                          ) : canManage ? (
+                            <div className="mt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1 text-xs"
+                                disabled={uploading}
+                                onClick={() => {
+                                  const input = document.createElement("input");
+                                  input.type = "file";
+                                  input.onchange = (e) => {
+                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                    if (file) void onUploadFile(row.id, file);
+                                  };
+                                  input.click();
+                                }}
+                              >
+                                <FileUp className="h-3.5 w-3.5" />
+                                {t("shopDrawing.uploadFile")}
+                              </Button>
+                            </div>
                           ) : null}
                         </div>
                       </div>

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -276,6 +277,37 @@ public class BasicDesignDocService(
         await db.SaveChangesAsync(ct);
         logger.LogInformation(
             "BasicDesignDoc {Id} transitioned to {Status} by user {UserId}", id, next, callerUserId);
+        return await GetAsync(id, ct);
+    }
+
+    public async Task<BasicDesignDocResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default)
+    {
+        var entity = await db.BasicDesignDocs.FirstOrDefaultAsync(d => d.Id == id, ct);
+        if (entity is null) return null;
+
+        var now = DateTime.UtcNow;
+        var uploadDir = Path.Combine("storage", "design", "basic");
+        Directory.CreateDirectory(uploadDir);
+
+        var ext = Path.GetExtension(file.FileName);
+        var fileName = $"{id}_{now:yyyyMMddHHmmss}{ext}";
+        var filePath = Path.Combine(uploadDir, fileName);
+
+        await using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream, ct);
+        }
+
+        entity.FilePath = filePath;
+        entity.OriginalFileName = file.FileName;
+        entity.FileSize = file.Length;
+        entity.ContentType = file.ContentType;
+        entity.UpdatedAt = now;
+        entity.UpdatedByUserId = callerUserId;
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("File uploaded to BasicDesignDoc {Id}: {FileName}", id, file.FileName);
+
         return await GetAsync(id, ct);
     }
 
