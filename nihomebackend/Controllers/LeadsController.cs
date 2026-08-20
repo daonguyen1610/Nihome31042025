@@ -243,6 +243,49 @@ public class LeadsController(
         return CreatedAtAction(nameof(Get), new { id }, response);
     }
 
+    /// <summary>
+    /// Reverts a converted lead back to Contacted status.
+    /// Only allowed if the auto-created customer has no opportunities, quotes, or contracts.
+    /// </summary>
+    [HttpPost("{id:int}/revert")]
+    [RequirePermission("crm.leads", "convert")]
+    public async Task<ActionResult<LeadResponse>> Revert(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canRevert = await permissions.HasAsync(userId.Value, "crm.leads.convert", ct);
+
+        try
+        {
+            var response = await svc.RevertAsync(id, userId.Value, canRevert, ct);
+            if (response is null) return NotFound();
+
+            audit.Log(new AuditEvent
+            {
+                Action = "lead.revert",
+                ResourceType = EntityTypes.Lead,
+                ResourceId = id.ToString(),
+                Message = $"Lead #{id} reverted from Converted to Contacted.",
+                NewValue = response,
+            });
+            return Ok(response);
+        }
+        catch (LeadOperationException ex)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = "lead.revert",
+                ResourceType = EntityTypes.Lead,
+                ResourceId = id.ToString(),
+                Message = ex.Message,
+                Status = AuditStatus.Failure,
+                FailureReason = ex.Message,
+            });
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     private int? GetUserId()
     {
         var principal = HttpContext?.User;

@@ -413,6 +413,92 @@ public class LeadService(
         };
     }
 
+    public async Task<LeadResponse?> RevertAsync(
+        int id,
+        int callerUserId,
+        bool canRevert,
+        CancellationToken ct = default)
+    {
+        if (!canRevert)
+        {
+            throw new LeadOperationException("Caller does not have permission to revert leads.");
+        }
+
+        var lead = await db.Leads.Include(l => l.Owner).FirstOrDefaultAsync(l => l.Id == id, ct);
+        if (lead is null) return null;
+
+        if (lead.Status != LeadStatus.Converted)
+        {
+            throw new LeadOperationException("Only converted leads can be reverted.");
+        }
+
+        var customerId = lead.ConvertedCustomerId;
+        if (customerId is null)
+        {
+            throw new LeadOperationException("Lead has no linked customer to revert.");
+        }
+
+        // Check if customer has any related data (opportunities, quotes, contracts, design projects)
+        var hasOpportunities = await db.Opportunities.AnyAsync(o => o.CustomerId == customerId, ct);
+        if (hasOpportunities)
+        {
+            throw new LeadOperationException("Cannot revert: customer already has opportunities.");
+        }
+
+        var hasQuotes = await db.Quotes.AnyAsync(q => q.Opportunity!.CustomerId == customerId, ct);
+        if (hasQuotes)
+        {
+            throw new LeadOperationException("Cannot revert: customer already has quotes.");
+        }
+
+        var hasContracts = await db.Contracts.AnyAsync(c => c.CustomerId == customerId, ct);
+        if (hasContracts)
+        {
+            throw new LeadOperationException("Cannot revert: customer already has contracts.");
+        }
+
+        var hasDesignProjects = await db.DesignProjects.AnyAsync(dp => dp.CustomerId == customerId, ct);
+        if (hasDesignProjects)
+        {
+            throw new LeadOperationException("Cannot revert: customer already has design projects.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        // Delete the auto-created customer and its contacts
+        var customer = await db.Customers
+            .Include(c => c.Contacts)
+            .FirstOrDefaultAsync(c => c.Id == customerId, ct);
+        if (customer is not null)
+        {
+            db.CustomerContacts.RemoveRange(customer.Contacts);
+            db.Customers.Remove(customer);
+        }
+
+        // Revert lead status
+        lead.Status = LeadStatus.Contacted;
+        lead.ConvertedAt = null;
+        lead.ConvertedCustomerId = null;
+        lead.ConvertedOpportunityId = null;
+        lead.UpdatedAt = now;
+        lead.UpdatedByUserId = callerUserId;
+
+        // Add activity note
+        db.LeadActivities.Add(new LeadActivity
+        {
+            LeadId = lead.Id,
+            Type = LeadActivityType.Note,
+            Content = "[Revert] Lead reverted from Converted to Contacted. Auto-created customer was deleted.",
+            CreatedByUserId = callerUserId,
+            CreatedAt = now,
+        });
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Reverted lead {LeadId}, deleted customer {CustomerId}", lead.Id, customerId);
+
+        return MapLead(lead, lead.Owner?.FullName, activities: null);
+    }
+
     // ---------- helpers ----------
 
     private static void ValidateContact(string? phone, string? email)

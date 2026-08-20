@@ -3097,6 +3097,8 @@ export const adminApi = {
   deleteLead: (id: number) => api.delete(`/leads/${id}`),
   convertLead: (id: number, body: ConvertLeadRequest = {}) =>
     api.post<LeadResponse>(`/leads/${id}/convert`, body),
+  revertLead: (id: number) =>
+    api.post<LeadResponse>(`/leads/${id}/revert`, {}),
   addLeadActivity: (id: number, body: CreateLeadActivityRequest) =>
     api.post<LeadActivityResponse>(`/leads/${id}/activities`, body),
 

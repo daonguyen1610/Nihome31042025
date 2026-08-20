@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,7 @@ const AdminLeads = () => {
   const [addingActivity, setAddingActivity] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [converting, setConverting] = useState(false);
+  const [reverting, setReverting] = useState(false);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -135,7 +137,7 @@ const AdminLeads = () => {
       setLeads(data.items);
       setTotal(data.total);
     } catch (err) {
-      setError((err as Error).message);
+      setError(extractApiError(err));
     } finally {
       setLoading(false);
     }
@@ -168,7 +170,7 @@ const AdminLeads = () => {
       const { data } = await adminApi.getLead(id);
       setDetail(data);
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setDetailLoading(false);
     }
@@ -204,7 +206,7 @@ const AdminLeads = () => {
       setCreateForm(emptyCreate);
       await fetchList();
     } catch (err) {
-      setCreateError((err as Error).message);
+      setCreateError(extractApiError(err));
     } finally {
       setSaving(false);
     }
@@ -218,7 +220,7 @@ const AdminLeads = () => {
       await fetchList();
       if (detail?.id === id) closeDetail();
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     }
   };
 
@@ -253,7 +255,7 @@ const AdminLeads = () => {
       setActivityContent("");
       await openDetail(detail.id);
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setAddingActivity(false);
     }
@@ -269,9 +271,24 @@ const AdminLeads = () => {
       await openDetail(detail.id);
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: (err as Error).message, variant: "destructive" });
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
       setConverting(false);
+    }
+  };
+
+  const handleRevert = async () => {
+    if (!detail) return;
+    setReverting(true);
+    try {
+      await adminApi.revertLead(detail.id);
+      toast({ title: t("leads.revert.done") });
+      await openDetail(detail.id);
+      await fetchList();
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+    } finally {
+      setReverting(false);
     }
   };
 
@@ -778,10 +795,22 @@ const AdminLeads = () => {
                   </div>
                 )}
                 {detail.status === "Converted" && (
-                  <div className="col-span-2 rounded bg-muted p-2 text-xs text-muted-foreground">
-                    {t("leads.convert.locked")}
-                    {detail.convertedCustomerId != null && ` · customerId=${detail.convertedCustomerId}`}
-                    {detail.convertedOpportunityId != null && ` · opportunityId=${detail.convertedOpportunityId}`}
+                  <div className="col-span-2 space-y-2">
+                    <div className="rounded bg-muted p-2 text-xs text-muted-foreground">
+                      {t("leads.convert.locked")}
+                      {detail.convertedCustomerId != null && ` · customerId=${detail.convertedCustomerId}`}
+                      {detail.convertedOpportunityId != null && ` · opportunityId=${detail.convertedOpportunityId}`}
+                    </div>
+                    {canConvert && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleRevert()}
+                        disabled={reverting}
+                      >
+                        {reverting ? "…" : t("leads.revert.button")}
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
