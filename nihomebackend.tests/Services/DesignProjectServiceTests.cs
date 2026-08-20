@@ -129,6 +129,30 @@ public class DesignProjectServiceTests : IDisposable
         Assert.EndsWith("-0002", b.ProjectCode);
     }
 
+    [Fact]
+    public async Task CreateAsync_AfterSequenceGap_AllocatesAfterHighestCode()
+    {
+        var year = DateTime.UtcNow.Year;
+        _db.DesignProjects.AddRange(
+            new DesignProject
+            {
+                ProjectCode = $"DP-{year}-0001",
+                Name = "Existing first project",
+                CustomerId = _customerId,
+            },
+            new DesignProject
+            {
+                ProjectCode = $"DP-{year}-0003",
+                Name = "Existing third project",
+                CustomerId = _customerId,
+            });
+        await _db.SaveChangesAsync();
+
+        var created = await _sut.CreateAsync(ValidCreate(name: "Project after gap"), _userId);
+
+        Assert.EndsWith("-0004", created.ProjectCode);
+    }
+
     // ---------------- Get / List ----------------
 
     [Fact]

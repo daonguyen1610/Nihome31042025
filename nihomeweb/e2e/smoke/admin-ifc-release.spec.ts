@@ -114,9 +114,17 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     await expect(page.getByTestId("ifc-releases-tab")).toBeVisible();
 
     // ---------- 3. Create a new release ----------
+    const releaseTitle = `E2E release ${uid()}`;
     await page.getByTestId("ifc-new").click();
-    await page.getByTestId("ifc-form-title").fill(`E2E release ${uid()}`);
+    await page.getByTestId("ifc-form-title").fill(releaseTitle);
+    const createReleaseResponsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === "/api/ifc-releases"
+        && response.request().method() === "POST",
+    );
     await page.getByTestId("ifc-form-save").click();
+    const createReleaseResponse = await createReleaseResponsePromise;
+    expect(createReleaseResponse.status(), await createReleaseResponse.text()).toBe(201);
+    const releaseId = ((await createReleaseResponse.json()) as { id: number }).id;
 
     // Detail dialog opens for the new draft.
     await expect(page.getByTestId("ifc-detail")).toBeVisible();
@@ -125,20 +133,22 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     // Expand the picker + tick the drawing we created.
     await page.getByText(/Th\u00eam b\u1ea3n v\u1ebd|Add drawing/i).first().click();
     await page.getByTestId(`ifc-picker-${shopId}`).click();
+    const addItemsResponsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === `/api/ifc-releases/${releaseId}/items`
+        && response.request().method() === "POST",
+    );
     await page.getByTestId("ifc-picker-add").click();
+    const addItemsResponse = await addItemsResponsePromise;
+    expect(addItemsResponse.status(), await addItemsResponse.text()).toBe(200);
 
-    // Confirm the item landed via the API (deterministic — DOM refetches).
+    // Confirm the item landed via the exact release ID, avoiding stale drafts from retries.
     await expect
       .poll(async () => {
-        const list = await api.get(
-          `/api/ifc-releases?designProjectId=${projectId}&status=Draft&pageSize=20`,
-          { headers: authHeader },
-        );
-        if (!list.ok()) return 0;
-        const drafts = (await list.json()).items as Array<{ title: string; items: Array<{ shopDrawingId: number }> }>;
-        const match = drafts.find((r) => r.title.startsWith("E2E release"));
-        return match?.items.some((i) => i.shopDrawingId === shopId) ? 1 : 0;
-      }, { timeout: 5_000 })
+        const release = await api.get(`/api/ifc-releases/${releaseId}`, { headers: authHeader });
+        if (!release.ok()) return 0;
+        const body = await release.json() as { title: string; items: Array<{ shopDrawingId: number }> };
+        return body.title === releaseTitle && body.items.some((item) => item.shopDrawingId === shopId) ? 1 : 0;
+      }, { timeout: 10_000 })
       .toBe(1);
 
     await page.getByTestId("ifc-recipient-name").fill("E2E ABC Corp");
