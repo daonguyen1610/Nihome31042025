@@ -93,20 +93,23 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
     await page.getByTestId("construction-new").click();
     const taskName = `E2E Task ${uid()}`;
     await page.getByTestId("construction-new-name").fill(taskName);
-    await Promise.all([
-      page.waitForResponse(
-        (r) =>
-          r.url().endsWith("/api/construction-tasks") &&
-          r.request().method() === "POST" &&
-          r.status() === 201,
-      ),
-      page.getByTestId("construction-new-save").click({ force: true }),
-    ]);
-    await page.waitForResponse(
+    // Set up both response waiters before clicking to avoid race conditions in CI
+    const postResponse = page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/construction-tasks") &&
+        r.request().method() === "POST" &&
+        r.status() === 201,
+      { timeout: 15_000 },
+    );
+    const getResponse = page.waitForResponse(
       (r) =>
         r.url().includes("/api/construction-tasks?") &&
         r.request().method() === "GET",
+      { timeout: 15_000 },
     );
+    await page.getByTestId("construction-new-save").click({ force: true });
+    await postResponse;
+    await getResponse;
     // The row itself is clickable now (no dedicated "Xem chi tiết"
     // button), so we assert the row exists by scoping to its testid.
     const createdRow = page.locator('[data-testid^="construction-row-"]').filter({
