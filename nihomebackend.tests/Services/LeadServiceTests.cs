@@ -593,6 +593,35 @@ public class LeadServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ConvertAsync_WithoutCustomerId_AutoCreatesCustomer()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(ownerId: sales.Id);
+
+        var response = await _sut.ConvertAsync(
+            lead.Id,
+            new ConvertLeadRequest { Note = "auto-create" },
+            sales.Id,
+            canConvert: true);
+
+        Assert.NotNull(response);
+        Assert.Equal(LeadStatus.Converted, response!.Status);
+        Assert.NotNull(response.ConvertedCustomerId);
+        Assert.True(response.ConvertedCustomerId > 0);
+
+        // Verify customer was created
+        var customer = await _db.Customers
+            .Include(c => c.Contacts)
+            .FirstOrDefaultAsync(c => c.Id == response.ConvertedCustomerId);
+        Assert.NotNull(customer);
+        Assert.Equal(lead.Name, customer!.Contacts.First().FullName);
+        Assert.Equal(lead.Phone, customer.Contacts.First().Phone);
+        Assert.Equal(lead.Email, customer.Contacts.First().Email);
+        Assert.Equal(lead.SourceCode, customer.SourceCode);
+    }
+
+    [Fact]
     public async Task ConvertAsync_SetsStatusAndStamps()
     {
         var sales = await SeedUserAsync(UserRole.USER);

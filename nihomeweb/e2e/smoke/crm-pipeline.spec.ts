@@ -246,6 +246,59 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
     }
   });
 
+  test("convert lead auto-creates customer when not provided", async ({ api, loginAs }) => {
+    const token = await loginAs(TEST_USERS.salesManager);
+    const c = authed(api, token);
+    const unique = Date.now().toString();
+
+    let leadId = 0;
+    let autoCreatedCustomerId = 0;
+
+    try {
+      // Create lead with contact info
+      const leadRes = await c.post("/api/leads", {
+        name: `Auto-Convert Lead ${unique}`,
+        companyName: `Auto Corp ${unique}`,
+        phone: `08${unique.slice(-8)}`,
+        email: `auto-${unique}@test.example`,
+        sourceCode: "marketing",
+      });
+      expect(leadRes.status()).toBe(201);
+      const lead = await leadRes.json();
+      leadId = lead.id as number;
+
+      // Convert without providing customerId - should auto-create
+      const convertRes = await c.post(`/api/leads/${leadId}/convert`, {
+        note: "Auto-create customer test",
+      });
+      expect(convertRes.status(), await convertRes.text()).toBe(200);
+      const convertedLead = await convertRes.json();
+      expect(convertedLead.status).toBe("Converted");
+      expect(convertedLead.convertedCustomerId).toBeTruthy();
+      autoCreatedCustomerId = convertedLead.convertedCustomerId as number;
+
+      // Verify customer was created with lead data
+      const customerRes = await c.get(`/api/customers/${autoCreatedCustomerId}`);
+      expect(customerRes.status()).toBe(200);
+      const customer = await customerRes.json();
+      expect(customer.name).toBe(`Auto Corp ${unique}`); // Uses companyName
+      expect(customer.sourceCode).toBe("marketing");
+
+      // Verify primary contact has lead info
+      const primaryContact = customer.contacts?.find((c: { isPrimary: boolean }) => c.isPrimary);
+      expect(primaryContact).toBeTruthy();
+      expect(primaryContact.fullName).toBe(`Auto-Convert Lead ${unique}`);
+      expect(primaryContact.phone).toBe(`08${unique.slice(-8)}`);
+      expect(primaryContact.email).toBe(`auto-${unique}@test.example`);
+
+      console.log("✓ Auto-create customer from lead test passed!");
+
+    } finally {
+      if (autoCreatedCustomerId) await c.del(`/api/customers/${autoCreatedCustomerId}`).catch(() => {});
+      if (leadId) await c.del(`/api/leads/${leadId}`).catch(() => {});
+    }
+  });
+
   test("lost opportunity flow with required reason", async ({ api, loginAs }) => {
     const token = await loginAs(TEST_USERS.salesManager);
     const c = authed(api, token);

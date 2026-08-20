@@ -310,9 +310,43 @@ public class LeadService(
         }
 
         var now = DateTime.UtcNow;
+
+        // If no existing customer provided, auto-create one from lead data
+        int? finalCustomerId = request.CustomerId;
+        if (finalCustomerId is null || finalCustomerId == 0)
+        {
+            var newCustomer = new Customer
+            {
+                Type = string.IsNullOrWhiteSpace(lead.CompanyName) ? CustomerType.Individual : CustomerType.Company,
+                Name = lead.CompanyName ?? lead.Name,
+                SourceCode = lead.SourceCode,
+                TaxId = null, // Company customers will need to add this later
+                Note = $"Auto-created from lead: {lead.Name}",
+                CreatedAt = now,
+                CreatedByUserId = callerUserId,
+                UpdatedAt = now,
+                UpdatedByUserId = callerUserId,
+                Contacts = new List<CustomerContact>
+                {
+                    new()
+                    {
+                        FullName = lead.Name,
+                        Phone = lead.Phone,
+                        Email = lead.Email,
+                        IsPrimary = true,
+                        CreatedAt = now,
+                    }
+                }
+            };
+            db.Customers.Add(newCustomer);
+            await db.SaveChangesAsync(ct);
+            finalCustomerId = newCustomer.Id;
+            logger.LogInformation("Auto-created customer {CustomerId} from lead {LeadId}", newCustomer.Id, lead.Id);
+        }
+
         lead.Status = LeadStatus.Converted;
         lead.ConvertedAt = now;
-        lead.ConvertedCustomerId = request.CustomerId;
+        lead.ConvertedCustomerId = finalCustomerId;
         lead.ConvertedOpportunityId = request.OpportunityId;
         lead.UpdatedAt = now;
         lead.UpdatedByUserId = callerUserId;
