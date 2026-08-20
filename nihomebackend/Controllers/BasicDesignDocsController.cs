@@ -157,6 +157,40 @@ public class BasicDesignDocsController(
     }
 
     /// <summary>
+    /// Upload a file and attach it to an existing basic design doc.
+    /// </summary>
+    [HttpPost("{id:int}/upload")]
+    [RequirePermission("design.basic", "manage")]
+    public async Task<ActionResult<BasicDesignDocResponse>> UploadFile(
+        int id, IFormFile file, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        if (file.Length == 0 || file.Length > 100 * 1024 * 1024) // 100 MB limit
+            return BadRequest(new { message = "File size must be between 1 byte and 100 MB." });
+
+        try
+        {
+            var response = await svc.UploadFileAsync(id, file, userId.Value, ct);
+            if (response is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "basic-design.upload",
+                ResourceType = EntityTypes.BasicDesignDoc,
+                ResourceId = id.ToString(),
+                Message = $"File uploaded to basic-design doc #{id}: {file.FileName}",
+                NewValue = response,
+            });
+            return Ok(response);
+        }
+        catch (BasicDesignDocOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Push the parent design project from BasicDesign to ShopDrawing.
     /// Blocked when the 3-discipline readiness gate is not met.
     /// </summary>

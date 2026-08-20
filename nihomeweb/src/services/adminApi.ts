@@ -3451,6 +3451,13 @@ export const adminApi = {
     api.delete(`/basic-design-docs/${id}`),
   transitionBasicDesignDoc: (id: number, body: TransitionBasicDesignDocStatusRequest) =>
     api.post<BasicDesignDocResponse>(`/basic-design-docs/${id}/status`, body),
+  uploadBasicDesignDocFile: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<BasicDesignDocResponse>(`/basic-design-docs/${id}/upload`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
   unlockShopDrawing: (designProjectId: number) =>
     api.post<DesignProjectResponse>(`/basic-design-docs/design-project/${designProjectId}/unlock-shop-drawing`),
 
@@ -3479,6 +3486,13 @@ export const adminApi = {
     api.post<ShopDrawingBulkDeleteResponse>("/shop-drawings/bulk-delete", body),
   transitionShopDrawing: (id: number, body: TransitionShopDrawingStatusRequest) =>
     api.post<ShopDrawingResponse>(`/shop-drawings/${id}/status`, body),
+  uploadShopDrawingFile: (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<ShopDrawingResponse>(`/shop-drawings/${id}/upload`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
 
   // Drawing Revisions (NIH-117)
   listDrawingRevisions: (params: DrawingRevisionListParams = {}) => {

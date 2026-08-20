@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -429,6 +430,39 @@ public class ShopDrawingService(
     }
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    public async Task<ShopDrawingResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default)
+    {
+        var entity = await db.ShopDrawings.FirstOrDefaultAsync(d => d.Id == id, ct);
+        if (entity is null) return null;
+
+        var now = DateTime.UtcNow;
+        var relativeDir = Path.Combine("design", "shop");
+        var uploadDir = Path.Combine("wwwroot", relativeDir);
+        Directory.CreateDirectory(uploadDir);
+
+        var ext = Path.GetExtension(file.FileName);
+        var fileName = $"{id}_{now:yyyyMMddHHmmss}{ext}";
+        var diskPath = Path.Combine(uploadDir, fileName);
+
+        await using (var stream = new FileStream(diskPath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream, ct);
+        }
+
+        // Store as host-relative path for frontend access
+        entity.FilePath = $"/{relativeDir.Replace('\\', '/')}/{fileName}";
+        entity.OriginalFileName = file.FileName;
+        entity.FileSize = file.Length;
+        entity.ContentType = file.ContentType;
+        entity.UpdatedAt = now;
+        entity.UpdatedByUserId = callerUserId;
+
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("File uploaded to ShopDrawing {Id}: {FileName}", id, file.FileName);
+
+        return await GetAsync(id, ct);
+    }
 
     private static ShopDrawingResponse Map(ShopDrawing d, IReadOnlyDictionary<string, string> labelByCode) => new()
     {
