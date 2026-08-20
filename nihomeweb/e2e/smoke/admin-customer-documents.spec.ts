@@ -1,5 +1,11 @@
 /// <reference types="node" />
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 test("customer related records, documents, and contract owner inheritance work in the deployed UI", async ({
   api,
@@ -103,10 +109,13 @@ test("customer related records, documents, and contract owner inheritance work i
     await customerDialog.getByRole("tab", { name: /Tài liệu|Documents|文档|資料/i }).click();
     await expect(customerDialog.getByText(/Chưa có tài liệu|No documents|尚未关联|まだありません/i)).toBeVisible();
 
+    // Use a real PDF file with actual content for proper preview testing
+    const realPdfPath = path.resolve(__dirname, "../../../nihomebackend/wwwroot/process-assets/files/501e798356d44d8792986b936ac2d100.pdf");
+    const pdfBuffer = fs.readFileSync(realPdfPath);
     await customerDialog.locator("#customer-document-file").setInputFiles({
       name: fileName,
       mimeType: "application/pdf",
-      buffer: Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF"),
+      buffer: pdfBuffer,
     });
     await customerDialog.locator("#customer-document-label").fill("NIH-428 browser evidence");
     await customerDialog.getByRole("button", { name: /Tải lên|Upload|上传|アップロード/i }).click();
