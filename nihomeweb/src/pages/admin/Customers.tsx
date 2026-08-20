@@ -1175,9 +1175,6 @@ const AdminCustomers = () => {
                   <TabsTrigger value="documents">
                     {t("customers.tab.documents")} ({documents.length})
                   </TabsTrigger>
-                  <TabsTrigger value="timeline">
-                    {t("customers.tab.timeline")} ({detail.activities.length})
-                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-3 pt-3">
@@ -1250,6 +1247,64 @@ const AdminCustomers = () => {
                           </div>
                         );
                       })()}
+
+                      {/* Timeline / Care history section */}
+                      <div className="rounded-md border p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs font-medium text-muted-foreground">
+                            {t("customers.tab.timeline")} ({detail.activities.length})
+                          </div>
+                        </div>
+                        {detail.activities.length === 0 ? (
+                          <p className="rounded border border-dashed p-3 text-center text-xs text-muted-foreground">
+                            {t("customers.activity.empty")}
+                          </p>
+                        ) : (
+                          <ol className="space-y-2 border-l pl-4 max-h-48 overflow-y-auto">
+                            {detail.activities.map((a) => (
+                              <li key={a.id} className="relative">
+                                <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
+                                <div className="text-xs text-muted-foreground">
+                                  {t(`customers.activity.${a.type}`)} · {new Date(a.occurredAt).toLocaleString()}
+                                  {a.createdByName ? ` · ${a.createdByName}` : ""}
+                                </div>
+                                <div className="whitespace-pre-wrap text-sm">{a.content}</div>
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                        {detail.relationshipStatus !== "Suspended" && canManage && (
+                          <div className="flex flex-col gap-2 rounded border bg-muted/30 p-3">
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <Select
+                                value={activityType}
+                                onValueChange={(v) => setActivityType(v as CustomerActivityType)}
+                              >
+                                <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {ACTIVITY_TYPES.map((tp) => (
+                                    <SelectItem key={tp} value={tp}>{t(`customers.activity.${tp}`)}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Textarea
+                                value={activityContent}
+                                onChange={(e) => setActivityContent(e.target.value)}
+                                placeholder={t("customers.activity.title")}
+                                rows={2}
+                                className="flex-1"
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => void handleAddActivity()}
+                              disabled={!activityContent.trim() || addingActivity}
+                            >
+                              {addingActivity ? "…" : t("customers.activity.add")}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </>
                   ) : editForm && (
                     <div className="space-y-3">
@@ -1659,58 +1714,6 @@ const AdminCustomers = () => {
                         </li>
                       ))}
                     </ul>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="timeline" className="space-y-3 pt-3">
-                  {detail.activities.length === 0 ? (
-                    <p className="rounded border border-dashed p-4 text-center text-xs text-muted-foreground">
-                      {t("customers.activity.empty")}
-                    </p>
-                  ) : (
-                    <ol className="space-y-2 border-l pl-4">
-                      {detail.activities.map((a) => (
-                        <li key={a.id} className="relative">
-                          <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
-                          <div className="text-xs text-muted-foreground">
-                            {t(`customers.activity.${a.type}`)} · {new Date(a.occurredAt).toLocaleString()}
-                            {a.createdByName ? ` · ${a.createdByName}` : ""}
-                          </div>
-                          <div className="whitespace-pre-wrap text-sm">{a.content}</div>
-                        </li>
-                      ))}
-                    </ol>
-                  )}
-                  {detail.relationshipStatus !== "Suspended" && canManage && (
-                    <div className="flex flex-col gap-2 rounded border p-3">
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Select
-                          value={activityType}
-                          onValueChange={(v) => setActivityType(v as CustomerActivityType)}
-                        >
-                          <SelectTrigger className="w-full sm:w-[140px]"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {ACTIVITY_TYPES.map((tp) => (
-                              <SelectItem key={tp} value={tp}>{t(`customers.activity.${tp}`)}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Textarea
-                          value={activityContent}
-                          onChange={(e) => setActivityContent(e.target.value)}
-                          placeholder={t("customers.activity.title")}
-                          rows={2}
-                          className="flex-1"
-                        />
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => void handleAddActivity()}
-                        disabled={!activityContent.trim() || addingActivity}
-                      >
-                        {addingActivity ? "…" : t("customers.activity.add")}
-                      </Button>
-                    </div>
                   )}
                 </TabsContent>
               </Tabs>
