@@ -160,9 +160,10 @@ public class BasicDesignDocsController(
     /// Upload a file and attach it to an existing basic design doc.
     /// </summary>
     [HttpPost("{id:int}/upload")]
+    [Consumes("multipart/form-data")]
     [RequirePermission("design.basic", "manage")]
     public async Task<ActionResult<BasicDesignDocResponse>> UploadFile(
-        int id, IFormFile file, CancellationToken ct)
+        int id, [FromForm] IFormFile file, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();

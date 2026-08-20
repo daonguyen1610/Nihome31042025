@@ -57,6 +57,16 @@ public class UnauthorizedMutationProbeTests : IntegrationTestBase
             .Should().HaveCountGreaterThan(20, "scanner must keep discovering controller routes");
     }
 
+    [Theory]
+    [InlineData("/api/basic-design-docs/1/upload")]
+    [InlineData("/api/shop-drawings/1/upload")]
+    public void Inventory_MarksFileUploadEndpointsAsMultipart(string url)
+    {
+        Infrastructure.ProtectedEndpointInventory.Discover()
+            .Single(endpoint => endpoint.HttpMethod == HttpMethod.Post.Method && endpoint.Url == url)
+            .ExpectsMultipart.Should().BeTrue();
+    }
+
     private static HttpRequestMessage BuildRequest(string method, string url, bool multipart)
     {
         var req = new HttpRequestMessage(new HttpMethod(method), url);
