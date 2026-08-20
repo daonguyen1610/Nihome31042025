@@ -128,7 +128,9 @@ public class ProcessesController(ProcessService svc, IWebHostEnvironment env, IA
 
         try
         {
-            var relativeDir = Path.Combine("processes", safeGroup);
+            // Images go to wwwroot/images/processes, files go to wwwroot/files/processes
+            var baseFolder = kind == "image" ? "images" : "files";
+            var relativeDir = Path.Combine(baseFolder, "processes", safeGroup);
             var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", relativeDir);
             Directory.CreateDirectory(uploadDir);
 
