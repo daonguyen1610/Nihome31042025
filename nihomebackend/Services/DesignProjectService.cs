@@ -1,4 +1,6 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -94,10 +96,12 @@ public class DesignProjectService(
         }
 
         await EnsureRelationsAsync(request, ct);
+        var allocationYear = DateTime.UtcNow.Year;
+        await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
 
         var entity = new DesignProject
         {
-            ProjectCode = await NextCodeAsync(ct),
+            ProjectCode = await NextCodeAsync(allocationYear, ct),
             Name = name,
             CustomerId = request.CustomerId,
             ContractId = request.ContractId,
@@ -115,6 +119,10 @@ public class DesignProjectService(
         };
         db.DesignProjects.Add(entity);
         await db.SaveChangesAsync(ct);
+        if (allocationTransaction is not null)
+        {
+            await allocationTransaction.CommitAsync(ct);
+        }
 
         logger.LogInformation("DesignProject {Id} ({Code}) created by user {UserId}",
             entity.Id, entity.ProjectCode, callerUserId);
@@ -185,6 +193,8 @@ public class DesignProjectService(
 
     public async Task<DesignProjectResponse> EnsureForContractAsync(Contract contract, int? callerUserId, CancellationToken ct = default)
     {
+        var allocationYear = DateTime.UtcNow.Year;
+        await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
         var existing = await db.DesignProjects
             .FirstOrDefaultAsync(dp => dp.ContractId == contract.Id, ct);
         if (existing is not null)
@@ -194,7 +204,7 @@ public class DesignProjectService(
 
         var entity = new DesignProject
         {
-            ProjectCode = await NextCodeAsync(ct),
+            ProjectCode = await NextCodeAsync(allocationYear, ct),
             // Auto-created rows get a predictable, human-friendly name
             // derived from the contract number so the operator can find
             // it in the list without opening the contract. They can
@@ -216,6 +226,10 @@ public class DesignProjectService(
         };
         db.DesignProjects.Add(entity);
         await db.SaveChangesAsync(ct);
+        if (allocationTransaction is not null)
+        {
+            await allocationTransaction.CommitAsync(ct);
+        }
         logger.LogInformation(
             "DesignProject {Id} ({Code}) auto-created for contract {ContractId} ({ContractNumber})",
             entity.Id, entity.ProjectCode, contract.Id, contract.ContractNumber);
@@ -274,14 +288,57 @@ public class DesignProjectService(
         }
     }
 
-    private async Task<string> NextCodeAsync(CancellationToken ct)
+    private async Task<string> NextCodeAsync(int year, CancellationToken ct)
     {
-        var year = DateTime.UtcNow.Year;
         var prefix = $"DP-{year}-";
-        var next = 1 + await db.DesignProjects
+        var existingCodes = await db.DesignProjects
             .Where(dp => dp.ProjectCode.StartsWith(prefix))
-            .CountAsync(ct);
+            .Select(dp => dp.ProjectCode)
+            .ToListAsync(ct);
+        var next = existingCodes
+            .Select(code => code.Length > prefix.Length
+                && int.TryParse(code[prefix.Length..], out var sequence)
+                    ? sequence
+                    : 0)
+            .DefaultIfEmpty()
+            .Max() + 1;
         return $"{prefix}{next:D4}";
+    }
+
+    private async Task<IDbContextTransaction?> BeginCodeAllocationAsync(int year, CancellationToken ct)
+    {
+        if (!db.Database.IsRelational()) return null;
+
+        var isSqlServer = string.Equals(
+            db.Database.ProviderName,
+            "Microsoft.EntityFrameworkCore.SqlServer",
+            StringComparison.Ordinal);
+        var transaction = await db.Database.BeginTransactionAsync(
+            isSqlServer ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable,
+            ct);
+
+        if (!isSqlServer) return transaction;
+
+        try
+        {
+            var resource = $"design-project-code-{year}";
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DECLARE @result int;
+                EXEC @result = sys.sp_getapplock
+                    @Resource = {resource},
+                    @LockMode = 'Exclusive',
+                    @LockOwner = 'Transaction',
+                    @LockTimeout = 15000;
+                IF @result < 0
+                    THROW 51000, 'Unable to acquire the design project code allocation lock.', 1;
+                """, ct);
+            return transaction;
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
     }
 
     private static List<TEnum> ParseEnumCsv<TEnum>(string csv) where TEnum : struct, Enum

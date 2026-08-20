@@ -43,6 +43,8 @@ test.describe("NIH-144 — Project handover", () => {
       },
     });
     expect(created.ok(), await created.text()).toBeTruthy();
+    const handoverId = (await created.json()).id as number;
+    expect(handoverId).toBeGreaterThan(0);
 
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/construction/handover`, { waitUntil: "networkidle" });
@@ -62,8 +64,9 @@ test.describe("NIH-144 — Project handover", () => {
       ),
       page.getByTestId("handover-search").fill(title),
     ]);
-    const row = page.locator('[data-testid^="handover-row-"]').filter({ hasText: title });
-    await expect(row).toBeVisible();
+    const row = page.getByTestId(`handover-row-${handoverId}`);
+    await expect(row).toBeVisible({ timeout: 10_000 });
+    await expect(row).toContainText(title);
     await expect(row.locator('[data-testid^="handover-row-view-"]')).toBeVisible();
     await expect(row.locator('[data-testid^="handover-row-edit-"]')).toBeVisible();
     await expect(row.locator('[data-testid^="handover-row-delete-"]')).toBeVisible();
@@ -90,25 +93,29 @@ test.describe("NIH-144 — Project handover", () => {
     const updatedTitle = `${title} updated`;
     await page.getByTestId("handover-form-title").fill(updatedTitle);
     // Set up response waiter before clicking to avoid race conditions in CI
-    const updateResponse = page.waitForResponse(
-      (r) => /\/api\/handover-records\/\d+$/.test(r.url()) && r.request().method() === "PUT" && r.status() === 200,
+    const updateResponsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === `/api/handover-records/${handoverId}`
+        && response.request().method() === "PUT",
       { timeout: 15_000 },
     );
     await page.getByTestId("handover-form-save").click();
-    await updateResponse;
+    const updateResponse = await updateResponsePromise;
+    expect(updateResponse.status(), await updateResponse.text()).toBe(200);
 
-    const updatedRow = page.locator('[data-testid^="handover-row-"]').filter({ hasText: updatedTitle });
-    await expect(updatedRow).toBeVisible();
+    const updatedRow = page.getByTestId(`handover-row-${handoverId}`);
+    await expect(updatedRow).toContainText(updatedTitle, { timeout: 10_000 });
     await expect(page.locator('[data-radix-collection-item][data-state="open"]')).toHaveCount(0, {
       timeout: 10_000,
     });
     await page.getByTestId("handover-detail-delete").click();
-    await Promise.all([
-      page.waitForResponse(
-        (r) => /\/api\/handover-records\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
-      ),
-      page.getByTestId("handover-delete-confirm").click(),
-    ]);
+    const deleteResponsePromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === `/api/handover-records/${handoverId}`
+        && response.request().method() === "DELETE",
+      { timeout: 15_000 },
+    );
+    await page.getByTestId("handover-delete-confirm").click();
+    const deleteResponse = await deleteResponsePromise;
+    expect(deleteResponse.status(), await deleteResponse.text()).toBe(204);
     await expect(updatedRow).toHaveCount(0);
   });
 });
