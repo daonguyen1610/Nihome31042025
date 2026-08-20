@@ -1,9 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
 using NihomeBackend.Controllers;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -36,9 +34,7 @@ public class UsersControllerTests : IDisposable
         };
         _refreshTokenService = new RefreshTokenService(_db, Options.Create(jwtOptions));
         var service = new UserService(_db, new PasswordService(), _notificationSvc, _refreshTokenService);
-        var idempotency = new IdempotencyService(_db, Mock.Of<ILogger<IdempotencyService>>());
-        var fingerprint = new FingerprintService();
-        _sut = new UsersController(service, idempotency, fingerprint)
+        _sut = new UsersController(service)
         {
             ControllerContext = new ControllerContext
             {
@@ -78,7 +74,7 @@ public class UsersControllerTests : IDisposable
             Email = "dup@example.com",
             Password = "Secret123",
             Role = "USER",
-        }, idempotencyKey: null, CancellationToken.None));
+        }));
 
         Assert.Equal(UserServiceError.DuplicatePhoneNumber, ex.Error);
     }
@@ -93,7 +89,7 @@ public class UsersControllerTests : IDisposable
             Email = "created@example.com",
             Password = "Secret123",
             Role = "ADMIN",
-        }, idempotencyKey: null, CancellationToken.None);
+        });
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var response = Assert.IsType<UserDetailResponse>(created.Value);
@@ -112,7 +108,7 @@ public class UsersControllerTests : IDisposable
             Email = "SHARED@Example.com",
             Password = "Secret123",
             Role = "USER",
-        }, idempotencyKey: null, CancellationToken.None));
+        }));
 
         Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
     }
@@ -125,9 +121,7 @@ public class UsersControllerTests : IDisposable
 
         var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Update(
             current.Id,
-            new UpdateUserRequest { Role = "ADMIN" },
-            idempotencyKey: null,
-            CancellationToken.None));
+            new UpdateUserRequest { Role = "ADMIN" }));
 
         Assert.Equal(UserServiceError.SelfActionNotAllowed, ex.Error);
     }
@@ -140,32 +134,9 @@ public class UsersControllerTests : IDisposable
 
         var ex = await Assert.ThrowsAsync<UserServiceException>(() => _sut.Update(
             target.Id,
-            new UpdateUserRequest { Email = "unique@example.com" },
-            idempotencyKey: null,
-            CancellationToken.None));
+            new UpdateUserRequest { Email = "unique@example.com" }));
 
         Assert.Equal(UserServiceError.DuplicateEmail, ex.Error);
-    }
-
-    [Fact]
-    public async Task Create_StoresIdempotencyRecord_WhenKeyProvided()
-    {
-        const string key = "create-key-1";
-
-        var result = await _sut.Create(new CreateUserRequest
-        {
-            PhoneNumber = "0910009201",
-            FullName = "Once",
-            Email = "once@example.com",
-            Password = "Secret123",
-            Role = "USER",
-        }, key, CancellationToken.None);
-
-        Assert.IsType<CreatedAtActionResult>(result.Result);
-
-        var record = _db.IdempotencyRecords.Single(r => r.Key == key);
-        Assert.Equal("users.admin.create", record.Scope);
-        Assert.Equal(201, record.StatusCode);
     }
 
     [Fact]
@@ -205,7 +176,7 @@ public class UsersControllerTests : IDisposable
             Email = "new@example.com",
             Password = "Secret123",
             Role = "USER",
-        }, idempotencyKey: null, CancellationToken.None);
+        });
 
         Assert.Equal(1, _db.Notifications.Count());
         var notification = _db.Notifications.Single();

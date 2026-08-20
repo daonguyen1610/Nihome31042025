@@ -58,11 +58,14 @@ public class LeadsController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.leads.view.all", ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
-        return found is null ? NotFound() : Ok(found);
+        if (found is null) return NotFound();
+        CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
+        return Ok(found);
     }
 
     [HttpPost]
     [RequirePermission("crm.leads", "manage")]
+    [Idempotency("crm.leads.create")]
     public async Task<ActionResult<LeadResponse>> Create(
         [FromBody] CreateLeadRequest request,
         [FromHeader(Name = "Accept-Language")] string? languageHeader,
@@ -87,6 +90,7 @@ public class LeadsController(
                 Message = $"Lead #{response.Id} '{response.Name}' created.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (LeadOperationException ex)
@@ -105,6 +109,7 @@ public class LeadsController(
 
     [HttpPut("{id:int}")]
     [RequirePermission("crm.leads", "manage")]
+    [Idempotency("crm.leads.update")]
     public async Task<ActionResult<LeadResponse>> Update(
         int id,
         [FromBody] UpdateLeadRequest request,
@@ -116,6 +121,7 @@ public class LeadsController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.leads.view.all", ct);
         var canManage = await permissions.HasAsync(userId.Value, "crm.leads.manage", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
 
         try
         {
@@ -130,6 +136,7 @@ public class LeadsController(
                 Message = $"Lead #{id} updated.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (LeadOperationException ex)
@@ -159,7 +166,9 @@ public class LeadsController(
 
         try
         {
-            var removed = await svc.DeleteAsync(id, userId.Value, canManage, canSeeAll, ct);
+            var removed = await svc.DeleteAsync(
+                id, userId.Value, canManage, canSeeAll, ct,
+                CrmConcurrency.ResolveRequestToken(Request, null));
             if (!removed) return NotFound();
 
             audit.Log(new AuditEvent
@@ -179,6 +188,7 @@ public class LeadsController(
 
     [HttpPost("{id:int}/convert")]
     [RequirePermission("crm.leads", "convert")]
+    [Idempotency("crm.leads.convert")]
     public async Task<ActionResult<LeadResponse>> Convert(
         int id,
         [FromBody] ConvertLeadRequest request,
@@ -188,6 +198,7 @@ public class LeadsController(
         if (userId is null) return Unauthorized();
 
         var canConvert = await permissions.HasAsync(userId.Value, "crm.leads.convert", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
 
         try
         {
@@ -202,6 +213,7 @@ public class LeadsController(
                 Message = $"Lead #{id} converted (customerId={request.CustomerId}, opportunityId={request.OpportunityId}).",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (LeadOperationException ex)
@@ -249,6 +261,7 @@ public class LeadsController(
     /// </summary>
     [HttpPost("{id:int}/revert")]
     [RequirePermission("crm.leads", "convert")]
+    [Idempotency("crm.leads.revert")]
     public async Task<ActionResult<LeadResponse>> Revert(int id, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -258,7 +271,9 @@ public class LeadsController(
 
         try
         {
-            var response = await svc.RevertAsync(id, userId.Value, canRevert, ct);
+            var response = await svc.RevertAsync(
+                id, userId.Value, canRevert, ct,
+                CrmConcurrency.ResolveRequestToken(Request, null));
             if (response is null) return NotFound();
 
             audit.Log(new AuditEvent
@@ -269,6 +284,7 @@ public class LeadsController(
                 Message = $"Lead #{id} reverted from Converted to Contacted.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (LeadOperationException ex)

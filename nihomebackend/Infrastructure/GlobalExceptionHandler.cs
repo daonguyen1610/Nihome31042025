@@ -62,6 +62,18 @@ public sealed class GlobalExceptionHandler(
             Instance = httpContext.Request.Path,
         };
         problem.Extensions["traceId"] = traceId;
+        if (exception is CrmConcurrencyException)
+        {
+            problem.Extensions["code"] = "crm_concurrency_conflict";
+        }
+        else if (exception is CrmConcurrencyTokenException)
+        {
+            problem.Extensions["code"] = "crm_concurrency_token_invalid";
+        }
+        else if (exception is IdempotencyConflictException)
+        {
+            problem.Extensions["code"] = "idempotency_key_conflict";
+        }
 
         // Only echo the raw exception message in Development to avoid leaking
         // internals (e.g. SQL fragments) to clients in production.
@@ -85,6 +97,21 @@ public sealed class GlobalExceptionHandler(
     private static (int Status, string Title, string Detail) MapException(Exception exception) =>
         exception switch
         {
+            IdempotencyConflictException idempotencyEx => (
+                StatusCodes.Status409Conflict,
+                "Idempotency key conflict.",
+                idempotencyEx.Message),
+
+            CrmConcurrencyException concurrencyEx => (
+                StatusCodes.Status409Conflict,
+                "Concurrent update conflict.",
+                concurrencyEx.Message),
+
+            CrmConcurrencyTokenException tokenEx => (
+                StatusCodes.Status400BadRequest,
+                "Invalid concurrency token.",
+                tokenEx.Message),
+
             UserServiceException userEx => (
                 userEx.Error switch
                 {

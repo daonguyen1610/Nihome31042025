@@ -58,6 +58,109 @@ public class CustomersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_SameIdempotencyKeyAndPayload_ReplaysOriginalResponse()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var key = $"customer-{Guid.NewGuid():N}";
+        var payload = new
+        {
+            type = "Individual",
+            name = "Idempotent " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+        };
+
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/customers")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        firstRequest.Headers.Add("Idempotency-Key", key);
+        using var first = await Client.SendAsync(firstRequest);
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        first.Headers.ETag.Should().NotBeNull();
+        var firstId = (await ReadJsonAsync(first)).GetProperty("id").GetInt32();
+
+        using var replayRequest = new HttpRequestMessage(HttpMethod.Post, "/api/customers")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        replayRequest.Headers.Add("Idempotency-Key", key);
+        using var replay = await Client.SendAsync(replayRequest);
+
+        replay.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.Headers.GetValues("Idempotency-Replayed").Should().ContainSingle("true");
+        replay.Headers.ETag.Should().Be(first.Headers.ETag);
+        (await ReadJsonAsync(replay)).GetProperty("id").GetInt32().Should().Be(firstId);
+    }
+
+    [Fact]
+    public async Task Create_SameIdempotencyKeyWithDifferentPayload_ReturnsConflict()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var key = $"customer-{Guid.NewGuid():N}";
+
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/customers")
+        {
+            Content = JsonContent.Create(new
+            {
+                type = "Individual",
+                name = "First payload",
+                sourceCode = "marketing",
+                primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            }),
+        };
+        firstRequest.Headers.Add("Idempotency-Key", key);
+        (await Client.SendAsync(firstRequest)).EnsureSuccessStatusCode();
+
+        using var secondRequest = new HttpRequestMessage(HttpMethod.Post, "/api/customers")
+        {
+            Content = JsonContent.Create(new
+            {
+                type = "Individual",
+                name = "Different payload",
+                sourceCode = "marketing",
+                primaryContact = new { fullName = "Contact", phone = "0900" + Guid.NewGuid().ToString("N")[..6] },
+            }),
+        };
+        secondRequest.Headers.Add("Idempotency-Key", key);
+        using var second = await Client.SendAsync(secondRequest);
+
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Create_SameIdempotencyKeyAndPayloadFromDifferentActor_ReturnsConflict()
+    {
+        var key = $"customer-{Guid.NewGuid():N}";
+        var payload = new
+        {
+            type = "Individual",
+            name = "Actor bound " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+        };
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/customers")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        firstRequest.Headers.Add("Idempotency-Key", key);
+        (await Client.SendAsync(firstRequest)).EnsureSuccessStatusCode();
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        using var secondRequest = new HttpRequestMessage(HttpMethod.Post, "/api/customers")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        secondRequest.Headers.Add("Idempotency-Key", key);
+        using var second = await Client.SendAsync(secondRequest);
+
+        second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
     public async Task Create_CompanyWithoutTaxId_IsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
@@ -216,6 +319,95 @@ public class CustomersControllerTests : IntegrationTestBase
 
         res.EnsureSuccessStatusCode();
         (await ReadJsonAsync(res)).GetProperty("relationshipStatus").GetString().Should().Be("Suspended");
+    }
+
+    [Fact]
+    public async Task Update_WithStaleRowVersion_ReturnsConflictWithoutOverwritingLatestData()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var created = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Individual",
+            name = "Concurrency " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+        });
+        created.EnsureSuccessStatusCode();
+        var original = await ReadJsonAsync(created);
+        var id = original.GetProperty("id").GetInt32();
+        var staleRowVersion = original.GetProperty("rowVersion").GetString();
+        staleRowVersion.Should().NotBeNullOrWhiteSpace();
+        created.Headers.ETag?.Tag.Should().Be($"\"{staleRowVersion}\"");
+
+        var latest = await Client.PutAsJsonAsync($"/api/customers/{id}", new
+        {
+            rowVersion = staleRowVersion,
+            type = "Individual",
+            name = "Latest value",
+            sourceCode = "marketing",
+            relationshipStatus = "InProgress",
+        });
+        latest.EnsureSuccessStatusCode();
+
+        var stale = await Client.PutAsJsonAsync($"/api/customers/{id}", new
+        {
+            rowVersion = staleRowVersion,
+            type = "Individual",
+            name = "Stale overwrite",
+            sourceCode = "marketing",
+            relationshipStatus = "InProgress",
+        });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(stale)).GetProperty("code").GetString()
+            .Should().Be("crm_concurrency_conflict");
+
+        var current = await Client.GetAsync($"/api/customers/{id}");
+        current.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(current)).GetProperty("name").GetString().Should().Be("Latest value");
+    }
+
+    [Fact]
+    public async Task Update_WithMalformedOrConflictingToken_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var created = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Individual",
+            name = "Token validation " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+        });
+        created.EnsureSuccessStatusCode();
+        var body = await ReadJsonAsync(created);
+        var id = body.GetProperty("id").GetInt32();
+        var rowVersion = body.GetProperty("rowVersion").GetString();
+
+        var malformed = await Client.PutAsJsonAsync($"/api/customers/{id}", new
+        {
+            rowVersion = "not-base64",
+            type = "Individual",
+            name = "Malformed",
+            sourceCode = "marketing",
+            relationshipStatus = "Prospect",
+        });
+        malformed.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(malformed)).GetProperty("code").GetString()
+            .Should().Be("crm_concurrency_token_invalid");
+
+        using var conflictingRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/customers/{id}")
+        {
+            Content = JsonContent.Create(new
+            {
+                rowVersion,
+                type = "Individual",
+                name = "Conflicting",
+                sourceCode = "marketing",
+                relationshipStatus = "Prospect",
+            }),
+        };
+        conflictingRequest.Headers.TryAddWithoutValidation("If-Match", "\"AAAAAAAAAAA=\"");
+        using var conflicting = await Client.SendAsync(conflictingRequest);
+        conflicting.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

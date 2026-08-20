@@ -20,9 +20,10 @@ public class IdempotencyServiceTests : IDisposable
         var sut = BuildSut();
         var payload = new { Hello = "world" };
 
+        await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
         await sut.SaveAsync("scope1", "key-1", "fp", userId: 42, statusCode: 200, payload);
 
-        var cached = await sut.TryGetCachedAsync("scope1", "key-1");
+        var cached = await sut.TryGetCachedAsync("scope1", "key-1", "fp", userId: 42);
         Assert.NotNull(cached);
         Assert.Equal(200, cached!.Value.StatusCode);
         Assert.Contains("world", cached.Value.ResponseJson);
@@ -64,6 +65,80 @@ public class IdempotencyServiceTests : IDisposable
 
         var cached = await sut.TryGetCachedAsync("scope1", "old-key");
         Assert.Null(cached);
+    }
+
+    [Fact]
+    public async Task TryBeginAsync_ReserveThenSave_ReplaysCompletedResponse()
+    {
+        var sut = BuildSut();
+
+        var first = await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+        await sut.SaveAsync("scope1", "key-1", "fp", userId: 42, 201, new { Id = 7 });
+        var second = await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+
+        Assert.Equal(IdempotencyService.BeginResult.Execute, first);
+        Assert.Equal(IdempotencyService.BeginResult.Replay, second);
+        var cached = await sut.TryGetCachedAsync("scope1", "key-1", "fp", userId: 42);
+        Assert.Equal(201, cached!.Value.StatusCode);
+        Assert.Contains("\"id\":7", cached.Value.ResponseJson);
+    }
+
+    [Fact]
+    public async Task TryBeginAsync_SamePendingRequest_ReturnsInProgress()
+    {
+        var sut = BuildSut();
+
+        await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+        var result = await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+
+        Assert.Equal(IdempotencyService.BeginResult.InProgress, result);
+    }
+
+    [Theory]
+    [InlineData("different-fingerprint", 42)]
+    [InlineData("fp", 43)]
+    public async Task TryBeginAsync_ReusedForDifferentRequestOrActor_ThrowsConflict(
+        string fingerprint,
+        int userId)
+    {
+        var sut = BuildSut();
+        await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+
+        await Assert.ThrowsAsync<IdempotencyConflictException>(() =>
+            sut.TryBeginAsync("scope1", "key-1", fingerprint, userId));
+    }
+
+    [Fact]
+    public async Task AbandonAsync_RemovesPendingReservation()
+    {
+        var sut = BuildSut();
+        await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+
+        await sut.AbandonAsync("scope1", "key-1", "fp", userId: 42);
+
+        var retry = await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+        Assert.Equal(IdempotencyService.BeginResult.Execute, retry);
+    }
+
+    [Fact]
+    public async Task SaveAsync_PreservesStringEnumsAndReplayHeaders()
+    {
+        var sut = BuildSut();
+        await sut.TryBeginAsync("scope1", "key-1", "fp", userId: 42);
+
+        await sut.SaveAsync(
+            "scope1",
+            "key-1",
+            "fp",
+            userId: 42,
+            statusCode: 200,
+            new { Status = DayOfWeek.Monday },
+            new Dictionary<string, string> { ["ETag"] = "\"token\"" });
+
+        var cached = await sut.TryGetCachedAsync("scope1", "key-1", "fp", userId: 42);
+        Assert.NotNull(cached);
+        Assert.Contains("\"status\":\"Monday\"", cached.Value.ResponseJson);
+        Assert.Equal("\"token\"", cached.Value.Headers["ETag"]);
     }
 
     [Theory]

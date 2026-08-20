@@ -160,6 +160,14 @@ public class ContractService(
 
     public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
     {
+        if (req.PaymentMilestones is not null)
+        {
+            ValidatePaymentMilestones(req.PaymentMilestones);
+        }
+
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
 
         var number = string.IsNullOrWhiteSpace(req.ContractNumber)
@@ -201,8 +209,12 @@ public class ContractService(
 
         if (req.PaymentMilestones != null)
         {
-            ValidatePaymentMilestones(req.PaymentMilestones);
             await ReplaceMilestonesAsync(entity.Id, req.PaymentMilestones, ct);
+        }
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(ct);
         }
 
         logger.LogInformation("Created contract {Id} ({Number})", entity.Id, entity.ContractNumber);
@@ -217,6 +229,16 @@ public class ContractService(
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
+
+        CrmConcurrency.Apply(db, entity, req.RowVersion);
+        if (req.PaymentMilestones is not null)
+        {
+            ValidatePaymentMilestones(req.PaymentMilestones);
+        }
+
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
 
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
 
@@ -261,38 +283,46 @@ public class ContractService(
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
 
         // Milestone list is only replaced when the caller sent a value.
         // Null == leave alone, empty == wipe the schedule.
         if (req.PaymentMilestones != null)
         {
-            ValidatePaymentMilestones(req.PaymentMilestones);
             await ReplaceMilestonesAsync(entity.Id, req.PaymentMilestones, ct);
+        }
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(ct);
         }
 
         logger.LogInformation("Updated contract {Id} ({Number})", entity.Id, entity.ContractNumber);
         return await GetAsync(entity.Id, callerUserId, canSeeAll: true, ct);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return false;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return false;
 
+        CrmConcurrency.Apply(db, entity, rowVersion);
+
         db.Contracts.Remove(entity);
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         logger.LogInformation("Deleted contract {Id} ({Number})", entity.Id, entity.ContractNumber);
         return true;
     }
 
     public async Task<ContractResponse?> TransitionStatusAsync(
-        int id, ContractStatus newStatus, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+        int id, ContractStatus newStatus, int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
+
+        CrmConcurrency.Apply(db, entity, rowVersion);
 
         if (entity.Status == newStatus)
         {
@@ -315,7 +345,7 @@ public class ContractService(
         entity.Status = newStatus;
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         logger.LogInformation("Transitioned contract {Id} to {Status}", entity.Id, newStatus);
 
         // NIH-113 AC #1: opening execution of a contract seeds a design
@@ -341,11 +371,13 @@ public class ContractService(
 
     public async Task<ContractResponse?> UpdateMilestoneStatusAsync(
         int contractId, int milestoneId, PaymentMilestoneStatus newStatus,
-        int callerUserId, bool canSeeAll, CancellationToken ct = default)
+        int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
         var contract = await db.Contracts.FindAsync(new object?[] { contractId }, ct);
         if (contract == null) return null;
         if (!canSeeAll && contract.OwnerUserId != callerUserId) return null;
+
+        CrmConcurrency.Apply(db, contract, rowVersion);
 
         var milestone = await db.ContractPaymentMilestones
             .FirstOrDefaultAsync(m => m.Id == milestoneId && m.ContractId == contractId, ct);
@@ -353,7 +385,9 @@ public class ContractService(
 
         milestone.Status = newStatus;
         milestone.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        contract.UpdatedAt = DateTime.UtcNow;
+        contract.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         logger.LogInformation(
             "Milestone {Milestone} of contract {Contract} → {Status}",
             milestoneId, contractId, newStatus);
@@ -619,6 +653,7 @@ public class ContractService(
             Note = entity.Note,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
+            RowVersion = CrmConcurrency.Encode(entity.RowVersion),
             PaymentMilestones = (milestones ?? Array.Empty<ContractPaymentMilestone>())
                 .OrderBy(m => m.Order)
                 .Select(m => new ContractPaymentMilestoneResponse

@@ -26,6 +26,8 @@ public class IdempotencyRecord
 
     public string? ResponseJson { get; set; }
 
+    public string? ResponseHeadersJson { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime ExpiresAt { get; set; }

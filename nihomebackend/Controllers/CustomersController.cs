@@ -64,11 +64,14 @@ public class CustomersController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
-        return found is null ? NotFound() : Ok(found);
+        if (found is null) return NotFound();
+        CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
+        return Ok(found);
     }
 
     [HttpPost]
     [RequirePermission("crm.customers", "manage")]
+    [Idempotency("crm.customers.create")]
     public async Task<ActionResult<CustomerResponse>> Create(
         [FromBody] CreateCustomerRequest request,
         CancellationToken ct)
@@ -88,6 +91,7 @@ public class CustomersController(
                 Message = $"Customer #{response.Id} '{response.Name}' created.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (CustomerDuplicateException ex)
@@ -118,6 +122,7 @@ public class CustomersController(
 
     [HttpPut("{id:int}")]
     [RequirePermission("crm.customers", "manage")]
+    [Idempotency("crm.customers.update")]
     public async Task<ActionResult<CustomerResponse>> Update(
         int id,
         [FromBody] UpdateCustomerRequest request,
@@ -128,6 +133,7 @@ public class CustomersController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         var canManage = await permissions.HasAsync(userId.Value, "crm.customers.manage", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, canManage, canSeeAll, ct);
@@ -141,6 +147,7 @@ public class CustomersController(
                 Message = $"Customer #{id} updated.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (CustomerDuplicateException ex)
@@ -173,7 +180,9 @@ public class CustomersController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         try
         {
-            var removed = await svc.DeleteAsync(id, userId.Value, canManage, canSeeAll, ct);
+            var removed = await svc.DeleteAsync(
+                id, userId.Value, canManage, canSeeAll, ct,
+                CrmConcurrency.ResolveRequestToken(Request, null));
             if (!removed) return NotFound();
 
             audit.Log(new AuditEvent

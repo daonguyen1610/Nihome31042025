@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { extractApiError } from "@/lib/apiError";
+import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -277,6 +277,7 @@ const AdminCustomers = () => {
       setDetail(data);
       if (options.startEditing && canManage) {
         setEditForm({
+          rowVersion: data.rowVersion,
           type: data.type,
           name: data.name,
           taxId: data.taxId,
@@ -386,6 +387,7 @@ const AdminCustomers = () => {
       await fetchList();
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      if (isConcurrencyConflict(err)) await openDetail(detail.id, { startEditing: true });
     } finally {
       setSavingEdit(false);
     }
@@ -394,7 +396,9 @@ const AdminCustomers = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm(t("customers.deleteConfirm"))) return;
     try {
-      await adminApi.deleteCustomer(id);
+      await adminApi.deleteCustomer(id, detail?.id === id
+        ? detail.rowVersion
+        : rows.find((row) => row.id === id)?.rowVersion);
       toast({ title: t("customers.deleted") });
       if (detail?.id === id) closeDetail();
       await fetchList();
@@ -415,7 +419,7 @@ const AdminCustomers = () => {
     handleBulkDelete,
   } = useBulkSelection<number>({
     visibleIds,
-    deleteOne: (id) => adminApi.deleteCustomer(id),
+    deleteOne: (id) => adminApi.deleteCustomer(id, rows.find((row) => row.id === id)?.rowVersion),
     onAfter: async ({ success }) => {
       if (success > 0 && detail && selectedIds.has(detail.id)) closeDetail();
       await fetchList();

@@ -24,8 +24,6 @@ public class AuthController : ControllerBase
     private readonly JwtService _jwtService;
     private readonly RefreshTokenService _refreshTokenService;
     private readonly OtpService _otpService;
-    private readonly IdempotencyService _idempotency;
-    private readonly FingerprintService _fingerprint;
     private readonly IMapper _mapper;
     private readonly JwtOptions _jwtOptions;
     private readonly IAuditLogger _audit;
@@ -37,8 +35,6 @@ public class AuthController : ControllerBase
         JwtService jwtService,
         RefreshTokenService refreshTokenService,
         OtpService otpService,
-        IdempotencyService idempotency,
-        FingerprintService fingerprint,
         IMapper mapper,
         IOptions<JwtOptions> jwtOptions,
         IAuditLogger audit,
@@ -49,8 +45,6 @@ public class AuthController : ControllerBase
         _jwtService = jwtService;
         _refreshTokenService = refreshTokenService;
         _otpService = otpService;
-        _idempotency = idempotency;
-        _fingerprint = fingerprint;
         _mapper = mapper;
         _jwtOptions = jwtOptions.Value;
         _audit = audit;
@@ -61,11 +55,8 @@ public class AuthController : ControllerBase
     [Idempotency(RegisterStartScope)]
     public async Task<IActionResult> StartRegister(
         RegisterStartRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         CancellationToken ct)
     {
-        var fingerprint = _fingerprint.Compute(HttpContext);
-
         var phone = (request.PhoneNumber ?? string.Empty).Trim();
         var normalizedEmail = EmailUniqueness.Normalize(request.Email);
 
@@ -106,8 +97,6 @@ public class AuthController : ControllerBase
 
             var response = await BuildAuthResponseAsync(user);
             response.OtpRequired = false;
-            await _idempotency.SaveAsync(
-                RegisterStartScope, idempotencyKey, fingerprint, user.Id, StatusCodes.Status200OK, response, ct);
             return Ok(response);
         }
 
@@ -119,8 +108,6 @@ public class AuthController : ControllerBase
             email = normalizedEmail,
             otpRequired = true,
         };
-        await _idempotency.SaveAsync(
-            RegisterStartScope, idempotencyKey, fingerprint, userId: null, StatusCodes.Status200OK, otpPayload, ct);
         return Ok(otpPayload);
     }
 
@@ -140,11 +127,8 @@ public class AuthController : ControllerBase
     [Idempotency(RegisterCompleteScope)]
     public async Task<IActionResult> CompleteRegister(
         RegistrationCompleteRequest request,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         CancellationToken ct)
     {
-        var fingerprint = _fingerprint.Compute(HttpContext);
-
         var phone = (request.PhoneNumber ?? string.Empty).Trim();
 
         if (await _db.Users.AsNoTracking().AnyAsync(u => u.PhoneNumber == phone, ct))
@@ -188,8 +172,6 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync(ct);
 
         var response = await BuildAuthResponseAsync(user);
-        await _idempotency.SaveAsync(
-            RegisterCompleteScope, idempotencyKey, fingerprint, user.Id, StatusCodes.Status200OK, response, ct);
         return Ok(response);
     }
 

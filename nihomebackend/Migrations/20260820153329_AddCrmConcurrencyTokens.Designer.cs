@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NihomeBackend.Data;
 
@@ -11,9 +12,11 @@ using NihomeBackend.Data;
 namespace nihomebackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260820153329_AddCrmConcurrencyTokens")]
+    partial class AddCrmConcurrencyTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1915,9 +1918,6 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
-
-                    b.Property<string>("ResponseHeadersJson")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ResponseJson")
                         .HasColumnType("nvarchar(max)");

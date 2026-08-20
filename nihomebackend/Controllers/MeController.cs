@@ -18,8 +18,6 @@ namespace NihomeBackend.Controllers;
 public class MeController(
     AppDbContext db,
     PasswordService passwordService,
-    IdempotencyService idempotency,
-    FingerprintService fingerprint,
     IPermissionService permissionService,
     IWebHostEnvironment env,
     ILogger<MeController> logger) : ControllerBase
@@ -75,10 +73,8 @@ public class MeController(
     [Idempotency(UpdateMeScope)]
     public async Task<ActionResult<MeResponse>> UpdateMe(
         [FromBody] UpdateMeRequest req,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         CancellationToken ct)
     {
-        var fp = fingerprint.Compute(HttpContext);
         var userId = GetCurrentUserId();
 
         var user = await db.Users
@@ -111,7 +107,6 @@ public class MeController(
         await db.SaveChangesAsync(ct);
 
         var response = MapMe(user);
-        await idempotency.SaveAsync(UpdateMeScope, idempotencyKey, fp, user.Id, StatusCodes.Status200OK, response, ct);
         return Ok(response);
     }
 

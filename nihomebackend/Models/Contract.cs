@@ -10,7 +10,7 @@ namespace NihomeBackend.Models;
 /// (NIH-103, NIH-104). Runtime routing of the seeded <c>contracts/sign</c>
 /// approval workflow is out of scope here as well.
 /// </summary>
-public class Contract
+public class Contract : IConcurrencyTracked
 {
     public int Id { get; set; }
 
@@ -54,6 +54,8 @@ public class Contract
     public int? CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+
+    public byte[] RowVersion { get; set; } = [];
 }
 
 public enum ContractStatus

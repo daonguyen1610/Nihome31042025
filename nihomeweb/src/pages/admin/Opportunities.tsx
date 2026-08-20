@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { extractApiError } from "@/lib/apiError";
+import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { isOpportunityOverdue } from "@/lib/opportunityDates";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -290,6 +290,7 @@ const AdminOpportunities = () => {
       setDetail(data);
       if (options.startEditing && canManage) {
         setEditForm({
+          rowVersion: data.rowVersion,
           name: data.name,
           customerId: data.customerId,
           ownerUserId: data.ownerUserId,
@@ -352,6 +353,7 @@ const AdminOpportunities = () => {
       await fetchList();
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      if (isConcurrencyConflict(err)) await openDetail(detail.id, { startEditing: true });
     } finally {
       setSavingEdit(false);
     }
@@ -360,7 +362,9 @@ const AdminOpportunities = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm(t("opportunities.deleteConfirm"))) return;
     try {
-      await adminApi.deleteOpportunity(id);
+      await adminApi.deleteOpportunity(id, detail?.id === id
+        ? detail.rowVersion
+        : rows.find((row) => row.id === id)?.rowVersion);
       toast({ title: t("opportunities.deleted") });
       if (detail?.id === id) closeDetail();
       await fetchList();
@@ -399,6 +403,7 @@ const AdminOpportunities = () => {
     setChangingStage(true);
     try {
       const { data } = await adminApi.changeOpportunityStage(detail.id, {
+        rowVersion: detail.rowVersion,
         targetStage: stageTarget,
         wonQuoteId: stageTarget === "Won" && wonQuote ? Number(wonQuote) : undefined,
         lostReasonCode: stageTarget === "Lost" ? lostReason : undefined,
@@ -410,6 +415,7 @@ const AdminOpportunities = () => {
       await fetchList();
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setChangingStage(false);
     }
@@ -428,7 +434,7 @@ const AdminOpportunities = () => {
     handleBulkDelete,
   } = useBulkSelection<number>({
     visibleIds,
-    deleteOne: (id) => adminApi.deleteOpportunity(id),
+    deleteOne: (id) => adminApi.deleteOpportunity(id, rows.find((row) => row.id === id)?.rowVersion),
     onAfter: async ({ success }) => {
       if (success > 0 && detail && selectedIds.has(detail.id)) closeDetail();
       await fetchList();
@@ -1198,7 +1204,10 @@ const AdminOpportunities = () => {
                                 void (async () => {
                                   setChangingStage(true);
                                   try {
-                                    const { data } = await adminApi.changeOpportunityStage(detail.id, { targetStage: s });
+                                    const { data } = await adminApi.changeOpportunityStage(detail.id, {
+                                      rowVersion: detail.rowVersion,
+                                      targetStage: s,
+                                    });
                                     setDetail(data);
                                     setStageTarget(null);
                                     toast({ title: t("opportunities.updated") });

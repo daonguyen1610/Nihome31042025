@@ -245,21 +245,25 @@ const AdminQuotes = () => {
     }
   };
 
+  const rowVersionFor = (id: number) => rows.find((row) => row.id === id)?.rowVersion;
   const handleSubmit = (id: number) =>
-    runAction(id, () => adminApi.submitQuote(id, {}), "quotes.updated");
+    runAction(id, () => adminApi.submitQuote(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
   const handleApprove = (id: number) =>
-    runAction(id, () => adminApi.approveQuote(id, {}), "quotes.updated");
+    runAction(id, () => adminApi.approveQuote(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
   const handleSend = (id: number) =>
-    runAction(id, () => adminApi.sendQuoteToCustomer(id, {}), "quotes.updated");
+    runAction(id, () => adminApi.sendQuoteToCustomer(id, { rowVersion: rowVersionFor(id) }), "quotes.updated");
   const handleCancel = (id: number) =>
     runAction(
       id,
-      () => adminApi.cancelQuote(id, { note: t("quotes.action.cancel") }),
+      () => adminApi.cancelQuote(id, {
+        note: t("quotes.action.cancel"),
+        rowVersion: rowVersionFor(id),
+      }),
       "quotes.updated",
     );
   const handleDelete = async (id: number) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
-    await runAction(id, () => adminApi.deleteQuote(id), "quotes.updated");
+    await runAction(id, () => adminApi.deleteQuote(id, rowVersionFor(id)), "quotes.updated");
   };
 
   // ---------- bulk selection ----------
@@ -278,7 +282,7 @@ const AdminQuotes = () => {
     handleBulkDelete,
   } = useBulkSelection<number>({
     visibleIds: deletableIds,
-    deleteOne: (id) => adminApi.deleteQuote(id),
+    deleteOne: (id) => adminApi.deleteQuote(id, rowVersionFor(id)),
     onAfter: fetchList,
   });
 

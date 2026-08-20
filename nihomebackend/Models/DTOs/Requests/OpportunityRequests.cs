@@ -29,8 +29,10 @@ public class CreateOpportunityRequest
     public string? Note { get; set; }
 }
 
-public class UpdateOpportunityRequest
+public class UpdateOpportunityRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     [Required]
     [StringLength(200, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;
@@ -57,8 +59,10 @@ public class UpdateOpportunityRequest
 /// <c>PATCH /api/opportunities/{id}/stage</c>. Won requires at least one of
 /// WonQuoteId / WonTenderId; Lost requires LostReasonCode + LostNote.
 /// </summary>
-public class ChangeOpportunityStageRequest
+public class ChangeOpportunityStageRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     [Required]
     public OpportunityStage TargetStage { get; set; }
 

@@ -52,6 +52,7 @@ public class CustomerResponse
     public string? Note { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
     public List<CustomerContactResponse> Contacts { get; set; } = new();
     public List<CustomerActivityResponse> Activities { get; set; } = new();
 }

@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { extractApiError } from "@/lib/apiError";
+import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -215,7 +215,9 @@ const AdminLeads = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm(t("leads.deleteConfirm"))) return;
     try {
-      await adminApi.deleteLead(id);
+      await adminApi.deleteLead(id, detail?.id === id
+        ? detail.rowVersion
+        : leads.find((lead) => lead.id === id)?.rowVersion);
       toast({ title: t("leads.deleted") });
       await fetchList();
       if (detail?.id === id) closeDetail();
@@ -236,7 +238,7 @@ const AdminLeads = () => {
     handleBulkDelete,
   } = useBulkSelection<number>({
     visibleIds,
-    deleteOne: (id) => adminApi.deleteLead(id),
+    deleteOne: (id) => adminApi.deleteLead(id, leads.find((lead) => lead.id === id)?.rowVersion),
     onAfter: async ({ success }) => {
       if (success > 0 && detail && selectedIds.has(detail.id)) closeDetail();
       await fetchList();
@@ -265,13 +267,14 @@ const AdminLeads = () => {
     if (!detail) return;
     setConverting(true);
     try {
-      await adminApi.convertLead(detail.id);
+      await adminApi.convertLead(detail.id, { rowVersion: detail.rowVersion });
       toast({ title: t("leads.convert.done") });
       setConvertOpen(false);
       await openDetail(detail.id);
       await fetchList();
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setConverting(false);
     }
@@ -281,12 +284,13 @@ const AdminLeads = () => {
     if (!detail) return;
     setReverting(true);
     try {
-      await adminApi.revertLead(detail.id);
+      await adminApi.revertLead(detail.id, detail.rowVersion);
       toast({ title: t("leads.revert.done") });
       await openDetail(detail.id);
       await fetchList();
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setReverting(false);
     }

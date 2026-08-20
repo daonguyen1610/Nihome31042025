@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Data;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Infrastructure;
 
@@ -42,7 +44,8 @@ public class NihomeWebApplicationFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseInMemoryDatabase(_databaseName);
+                options.UseInMemoryDatabase(_databaseName)
+                    .AddInterceptors(new TestRowVersionInterceptor());
             });
 
             var sp = services.BuildServiceProvider();
@@ -51,6 +54,39 @@ public class NihomeWebApplicationFactory : WebApplicationFactory<Program>
             db.Database.EnsureCreated();
             TestDataSeeder.Seed(db);
         });
+    }
+}
+
+internal sealed class TestRowVersionInterceptor : SaveChangesInterceptor
+{
+    private static long _version;
+
+    public override InterceptionResult<int> SavingChanges(
+        DbContextEventData eventData,
+        InterceptionResult<int> result)
+    {
+        AssignRowVersions(eventData.Context);
+        return base.SavingChanges(eventData, result);
+    }
+
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        AssignRowVersions(eventData.Context);
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+
+    private static void AssignRowVersions(DbContext? context)
+    {
+        if (context is null) return;
+
+        foreach (var entry in context.ChangeTracker.Entries<IConcurrencyTracked>()
+                     .Where(entry => entry.State is EntityState.Added or EntityState.Modified))
+        {
+            entry.Entity.RowVersion = BitConverter.GetBytes(Interlocked.Increment(ref _version));
+        }
     }
 }
 

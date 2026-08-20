@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using NihomeBackend.Services;
+using System.Text;
 
 namespace nihomebackend.tests.Services;
 
@@ -8,51 +9,58 @@ public class FingerprintServiceTests
     private readonly FingerprintService _sut = new();
 
     [Fact]
-    public void Compute_SameInputs_ProducesSameHash()
+    public async Task ComputeAsync_SameRequest_ProducesSameHash()
     {
-        var first = _sut.Compute(BuildContext("Mozilla/5.0", "1.2.3.4", "vi-VN"));
-        var second = _sut.Compute(BuildContext("Mozilla/5.0", "1.2.3.4", "vi-VN"));
+        var first = await _sut.ComputeAsync(BuildRequest("POST", "/api/customers", "?source=web", "{\"name\":\"A\"}"));
+        var second = await _sut.ComputeAsync(BuildRequest("POST", "/api/customers", "?source=web", "{\"name\":\"A\"}"));
 
         Assert.Equal(first, second);
         Assert.Equal(64, first.Length);
     }
 
     [Fact]
-    public void Compute_DifferentUserAgent_DifferentHash()
+    public async Task ComputeAsync_DifferentBody_ProducesDifferentHash()
     {
-        var a = _sut.Compute(BuildContext("Mozilla/5.0", "1.2.3.4", "vi-VN"));
-        var b = _sut.Compute(BuildContext("curl/8.0", "1.2.3.4", "vi-VN"));
+        var first = await _sut.ComputeAsync(BuildRequest("POST", "/api/customers", body: "{\"name\":\"A\"}"));
+        var second = await _sut.ComputeAsync(BuildRequest("POST", "/api/customers", body: "{\"name\":\"B\"}"));
 
-        Assert.NotEqual(a, b);
+        Assert.NotEqual(first, second);
     }
 
     [Fact]
-    public void Compute_DifferentIp_DifferentHash()
+    public async Task ComputeAsync_DifferentOperation_ProducesDifferentHash()
     {
-        var a = _sut.Compute(BuildContext("Mozilla/5.0", "1.2.3.4", "vi-VN"));
-        var b = _sut.Compute(BuildContext("Mozilla/5.0", "9.9.9.9", "vi-VN"));
+        var first = await _sut.ComputeAsync(BuildRequest("POST", "/api/customers", body: "{}"));
+        var second = await _sut.ComputeAsync(BuildRequest("PUT", "/api/customers/1", body: "{}"));
 
-        Assert.NotEqual(a, b);
+        Assert.NotEqual(first, second);
     }
 
     [Fact]
-    public void Compute_PrefersXForwardedForOverRemoteIp()
+    public async Task ComputeAsync_RestoresRequestBodyPosition()
     {
-        var ctx = BuildContext("Mozilla/5.0", "10.0.0.1", "vi-VN");
-        ctx.Request.Headers["X-Forwarded-For"] = "203.0.113.5, 10.0.0.1";
+        var request = BuildRequest("POST", "/api/customers", body: "{\"name\":\"A\"}");
 
-        var withProxy = _sut.Compute(ctx);
-        var direct = _sut.Compute(BuildContext("Mozilla/5.0", "203.0.113.5", "vi-VN"));
+        await _sut.ComputeAsync(request);
+        using var reader = new StreamReader(request.Body, Encoding.UTF8, leaveOpen: true);
+        var body = await reader.ReadToEndAsync();
 
-        Assert.Equal(direct, withProxy);
+        Assert.Equal("{\"name\":\"A\"}", body);
     }
 
-    private static DefaultHttpContext BuildContext(string ua, string ip, string lang)
+    private static HttpRequest BuildRequest(
+        string method,
+        string path,
+        string query = "",
+        string body = "")
     {
-        var ctx = new DefaultHttpContext();
-        ctx.Request.Headers.UserAgent = ua;
-        ctx.Request.Headers.AcceptLanguage = lang;
-        ctx.Connection.RemoteIpAddress = System.Net.IPAddress.Parse(ip);
-        return ctx;
+        var context = new DefaultHttpContext();
+        context.Request.Method = method;
+        context.Request.Path = path;
+        context.Request.QueryString = new QueryString(query);
+        context.Request.ContentType = "application/json";
+        context.Request.Headers.AcceptLanguage = "vi-VN";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+        return context.Request;
     }
 }

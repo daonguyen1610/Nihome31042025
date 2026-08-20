@@ -31,6 +31,7 @@ public class OpportunityResponse
     public string? Note { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
     public List<OpportunityActivityResponse> Activities { get; set; } = new();
 }
 

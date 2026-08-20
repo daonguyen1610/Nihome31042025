@@ -8,8 +8,10 @@ namespace NihomeBackend.Models.DTOs.Requests;
 /// are optional — the endpoint still transitions the lead to
 /// <see cref="LeadStatus.Converted"/> so downstream reporting works.
 /// </summary>
-public class ConvertLeadRequest
+public class ConvertLeadRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     /// <summary>Id of an already-existing customer to link the lead to.</summary>
     public int? CustomerId { get; set; }
 

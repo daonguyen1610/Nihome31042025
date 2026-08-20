@@ -70,8 +70,10 @@ public class CreateCustomerRequest
     public string? DuplicateOverrideReason { get; set; }
 }
 
-public class UpdateCustomerRequest
+public class UpdateCustomerRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     [Required]
     public CustomerType Type { get; set; } = CustomerType.Individual;
 

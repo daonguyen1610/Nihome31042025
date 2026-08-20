@@ -26,6 +26,19 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  const method = config.method?.toLowerCase();
+  const isMutation = method === "post" || method === "put" || method === "patch" || method === "delete";
+  const isMultipart = typeof FormData !== "undefined" && config.data instanceof FormData;
+  if (isMutation && !isMultipart && !config.headers["Idempotency-Key"]) {
+    config.headers["Idempotency-Key"] = newIdempotencyKey();
+  }
+  const rowVersion = !isMultipart && config.data && typeof config.data === "object"
+    ? (config.data as { rowVersion?: string }).rowVersion
+    : undefined;
+  if (rowVersion && !config.headers["If-Match"]) {
+    config.headers["If-Match"] = `"${rowVersion}"`;
+  }
   return config;
 });
 
@@ -35,6 +48,9 @@ api.interceptors.request.use((config) => {
  */
 export const withIdempotencyKey = (key?: string | null) =>
   key ? { headers: { "Idempotency-Key": key } } : {};
+
+export const withIfMatch = (rowVersion?: string | null) =>
+  rowVersion ? { headers: { "If-Match": `"${rowVersion}"` } } : {};
 
 /**
  * UUID v4 generator that prefers the browser-native crypto API and falls back

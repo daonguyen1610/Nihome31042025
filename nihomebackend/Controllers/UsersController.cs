@@ -13,10 +13,7 @@ namespace NihomeBackend.Controllers;
 [Route("api/v1/users")]
 [Authorize]
 [RequirePermission("users", "view")]
-public class UsersController(
-    UserService svc,
-    IdempotencyService idempotency,
-    FingerprintService fingerprint) : ControllerBase
+public class UsersController(UserService svc) : ControllerBase
 {
     private const string CreateScope = "users.admin.create";
     private const string UpdateScope = "users.admin.update";
@@ -40,14 +37,9 @@ public class UsersController(
     [RequirePermission("users", "manage")]
     [Idempotency(CreateScope)]
     public async Task<ActionResult<UserDetailResponse>> Create(
-        [FromBody] CreateUserRequest req,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
-        CancellationToken ct)
+        [FromBody] CreateUserRequest req)
     {
         var created = await svc.CreateAsync(req);
-        await idempotency.SaveAsync(
-            CreateScope, idempotencyKey, fingerprint.Compute(HttpContext),
-            created.Id, StatusCodes.Status201Created, created, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -56,15 +48,10 @@ public class UsersController(
     [Idempotency(UpdateScope)]
     public async Task<ActionResult<UserDetailResponse>> Update(
         int id,
-        [FromBody] UpdateUserRequest req,
-        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
-        CancellationToken ct)
+        [FromBody] UpdateUserRequest req)
     {
         var updated = await svc.UpdateAsync(id, req, GetCurrentUserId());
         if (updated == null) return NotFound();
-        await idempotency.SaveAsync(
-            UpdateScope, idempotencyKey, fingerprint.Compute(HttpContext),
-            updated.Id, StatusCodes.Status200OK, updated, ct);
         return Ok(updated);
     }
 

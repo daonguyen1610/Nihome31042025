@@ -5,8 +5,10 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 /// <summary>Payload used by both create and update. Number is optional on
 /// create (server auto-generates) but must round-trip on update.</summary>
-public class UpsertContractRequest
+public class UpsertContractRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     /// <summary>Human-friendly contract number. Optional on create — the
     /// server generates <c>HD-YYYY-NNNN</c> when empty.</summary>
     [StringLength(40)]

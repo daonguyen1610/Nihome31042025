@@ -1,4 +1,4 @@
-import api, { withIdempotencyKey } from "@/lib/api";
+import api, { withIdempotencyKey, withIfMatch } from "@/lib/api";
 import type { ContentItem, ServiceResponse } from "@/services/contentApi";
 
 const uploadBusinessDocument = (area: "vendors" | "acceptance" | "as-built" | "handover", file: File) => {
@@ -381,6 +381,7 @@ export interface LeadResponse {
   convertedOpportunityId?: number;
   createdAt: string;
   updatedAt: string;
+  rowVersion: string;
   activities: LeadActivityResponse[];
 }
 
@@ -402,6 +403,7 @@ export interface CreateLeadRequest {
 }
 
 export interface UpdateLeadRequest {
+  rowVersion?: string;
   name: string;
   companyName?: string;
   phone?: string;
@@ -413,6 +415,7 @@ export interface UpdateLeadRequest {
 }
 
 export interface ConvertLeadRequest {
+  rowVersion?: string;
   customerId?: number | null;
   opportunityId?: number | null;
   note?: string;
@@ -548,6 +551,7 @@ export interface CustomerResponse {
   note?: string;
   createdAt: string;
   updatedAt: string;
+  rowVersion: string;
   contacts: CustomerContactResponse[];
   activities: CustomerActivityResponse[];
 }
@@ -582,6 +586,7 @@ export interface CreateCustomerRequest {
 }
 
 export interface UpdateCustomerRequest {
+  rowVersion?: string;
   type: CustomerType;
   name: string;
   taxId?: string;
@@ -757,6 +762,7 @@ export interface ContractResponse {
   note?: string | null;
   createdAt: string;
   updatedAt: string;
+  rowVersion: string;
   paymentMilestones: ContractPaymentMilestoneResponse[];
 }
 
@@ -811,6 +817,7 @@ export interface ContractListParams {
 }
 
 export interface UpsertContractRequest {
+  rowVersion?: string;
   contractNumber?: string | null;
   customerId: number;
   opportunityId?: number | null;
@@ -952,6 +959,7 @@ export interface OpportunityResponse {
   note?: string;
   createdAt: string;
   updatedAt: string;
+  rowVersion: string;
   activities: OpportunityActivityResponse[];
 }
 
@@ -985,6 +993,7 @@ export interface CreateOpportunityRequest {
 }
 
 export interface UpdateOpportunityRequest {
+  rowVersion?: string;
   name: string;
   customerId: number;
   ownerUserId?: number | null;
@@ -995,6 +1004,7 @@ export interface UpdateOpportunityRequest {
 }
 
 export interface ChangeOpportunityStageRequest {
+  rowVersion?: string;
   targetStage: OpportunityStage;
   wonQuoteId?: number;
   wonTenderId?: number;
@@ -1132,6 +1142,7 @@ export interface QuoteResponse {
   closedAt?: string;
   createdAt: string;
   updatedAt: string;
+  rowVersion: string;
   items: QuoteItemResponse[];
   approvalLogs: QuoteApprovalLogResponse[];
 }
@@ -1164,6 +1175,7 @@ export interface QuoteListItemResponse {
   validUntil: string;
   isExpiringSoon: boolean;
   updatedAt: string;
+  rowVersion: string;
 }
 
 export interface QuoteListResponse {
@@ -1193,6 +1205,7 @@ export interface CreateQuoteRequest {
 }
 
 export interface UpdateQuoteRequest {
+  rowVersion?: string;
   ownerUserId?: number | null;
   areaSqm?: number | null;
   unitPricePerSqm?: number | null;
@@ -1205,10 +1218,12 @@ export interface UpdateQuoteRequest {
 }
 
 export interface QuoteWorkflowRequest {
+  rowVersion?: string;
   note?: string;
 }
 
 export interface ExtendQuoteValidityRequest {
+  rowVersion?: string;
   newValidUntil: string;
   note?: string;
 }
@@ -3094,11 +3109,12 @@ export const adminApi = {
     api.post<LeadResponse>("/leads", body),
   updateLead: (id: number, body: UpdateLeadRequest) =>
     api.put<LeadResponse>(`/leads/${id}`, body),
-  deleteLead: (id: number) => api.delete(`/leads/${id}`),
+  deleteLead: (id: number, rowVersion?: string) =>
+    api.delete(`/leads/${id}`, withIfMatch(rowVersion)),
   convertLead: (id: number, body: ConvertLeadRequest = {}) =>
     api.post<LeadResponse>(`/leads/${id}/convert`, body),
-  revertLead: (id: number) =>
-    api.post<LeadResponse>(`/leads/${id}/revert`, {}),
+  revertLead: (id: number, rowVersion?: string) =>
+    api.post<LeadResponse>(`/leads/${id}/revert`, {}, withIfMatch(rowVersion)),
   addLeadActivity: (id: number, body: CreateLeadActivityRequest) =>
     api.post<LeadActivityResponse>(`/leads/${id}/activities`, body),
 
@@ -3120,7 +3136,8 @@ export const adminApi = {
   getCustomer: (id: number) => api.get<CustomerResponse>(`/customers/${id}`),
   createCustomer: (body: CreateCustomerRequest) => api.post<CustomerResponse>("/customers", body),
   updateCustomer: (id: number, body: UpdateCustomerRequest) => api.put<CustomerResponse>(`/customers/${id}`, body),
-  deleteCustomer: (id: number) => api.delete(`/customers/${id}`),
+  deleteCustomer: (id: number, rowVersion?: string) =>
+    api.delete(`/customers/${id}`, withIfMatch(rowVersion)),
   upsertCustomerContact: (id: number, body: UpsertCustomerContactRequest) =>
     api.post<CustomerContactResponse>(`/customers/${id}/contacts`, body),
   deleteCustomerContact: (id: number, contactId: number) =>
@@ -3191,7 +3208,8 @@ export const adminApi = {
     api.put<OpportunityResponse>(`/opportunities/${id}`, body),
   changeOpportunityStage: (id: number, body: ChangeOpportunityStageRequest) =>
     api.patch<OpportunityResponse>(`/opportunities/${id}/stage`, body),
-  deleteOpportunity: (id: number) => api.delete(`/opportunities/${id}`),
+  deleteOpportunity: (id: number, rowVersion?: string) =>
+    api.delete(`/opportunities/${id}`, withIfMatch(rowVersion)),
   addOpportunityActivity: (id: number, body: AddOpportunityActivityRequest) =>
     api.post<OpportunityActivityResponse>(`/opportunities/${id}/activities`, body),
 
@@ -3246,7 +3264,8 @@ export const adminApi = {
   },
   deleteQuoteDocument: (id: number, documentId: number) =>
     api.delete(`/quotes/${id}/documents/${documentId}`),
-  deleteQuote: (id: number) => api.delete(`/quotes/${id}`),
+  deleteQuote: (id: number, rowVersion?: string) =>
+    api.delete(`/quotes/${id}`, withIfMatch(rowVersion)),
 
   // Capability documents (NIH-98)
   listCapabilityDocuments: (params: CapabilityDocumentListParams = {}) => {
@@ -3799,20 +3818,21 @@ export const adminApi = {
     api.post<ContractResponse>("/contracts", body),
   updateContract: (id: number, body: UpsertContractRequest) =>
     api.put<ContractResponse>(`/contracts/${id}`, body),
-  deleteContract: (id: number) =>
-    api.delete(`/contracts/${id}`),
+  deleteContract: (id: number, rowVersion?: string) =>
+    api.delete(`/contracts/${id}`, withIfMatch(rowVersion)),
 
   // Contract state / milestones / VO / attachments / timeline (NIH-104)
-  transitionContract: (id: number, newStatus: ContractStatus) =>
-    api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus }),
+  transitionContract: (id: number, newStatus: ContractStatus, rowVersion?: string) =>
+    api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus, rowVersion }),
   updateMilestoneStatus: (
     contractId: number,
     milestoneId: number,
     status: PaymentMilestoneStatus,
+    rowVersion?: string,
   ) =>
     api.patch<ContractResponse>(
       `/contracts/${contractId}/milestones/${milestoneId}/status`,
-      { status },
+      { status, rowVersion },
     ),
   listContractAppendices: (contractId: number) =>
     api.get<ContractAppendixResponse[]>(`/contracts/${contractId}/appendices`),

@@ -210,6 +210,8 @@ public class OpportunityService(
         if (op is null) return null;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return null;
 
+        CrmConcurrency.Apply(db, op, request.RowVersion);
+
         var customer = await db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
@@ -232,7 +234,7 @@ public class OpportunityService(
         op.UpdatedAt = DateTime.UtcNow;
         op.UpdatedByUserId = callerUserId;
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
 
         if (op.OwnerUserId.HasValue
             && op.OwnerUserId.Value != previousOwnerId
@@ -259,6 +261,8 @@ public class OpportunityService(
         var op = await db.Opportunities.FirstOrDefaultAsync(o => o.Id == id, ct);
         if (op is null) return null;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return null;
+
+        CrmConcurrency.Apply(db, op, request.RowVersion);
 
         var from = op.Stage;
         var to = request.TargetStage;
@@ -343,7 +347,7 @@ public class OpportunityService(
             CreatedAt = now,
         });
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
 
         if (to is OpportunityStage.Won or OpportunityStage.Lost && op.OwnerUserId.HasValue)
         {
@@ -364,7 +368,8 @@ public class OpportunityService(
         int callerUserId,
         bool canManage,
         bool canSeeAll,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? rowVersion = null)
     {
         if (!canManage) return false;
 
@@ -372,8 +377,10 @@ public class OpportunityService(
         if (op is null) return false;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return false;
 
+        CrmConcurrency.Apply(db, op, rowVersion);
+
         var quoteIds = await AggregateDeletionService.DeleteOpportunitiesAsync(db, new[] { id }, ct);
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         foreach (var quoteId in quoteIds) quoteDocumentService.DeleteQuoteFiles(quoteId);
         logger.LogInformation("Deleted opportunity {Id} and its dependent quote aggregates", id);
         return true;
@@ -585,6 +592,7 @@ public class OpportunityService(
             Note = op.Note,
             CreatedAt = op.CreatedAt,
             UpdatedAt = op.UpdatedAt,
+            RowVersion = CrmConcurrency.Encode(op.RowVersion),
             Activities = activities is null
                 ? new()
                 : activities
