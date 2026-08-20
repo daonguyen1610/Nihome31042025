@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Loader2, Save } from "lucide-react";
+import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { CreateVendorRequest, UpdateVendorRequest, VendorResponse, VendorType } from "@/services/adminApi";
+import { adminApi, type CreateVendorRequest, type UpdateVendorRequest, type VendorResponse, type VendorType } from "@/services/adminApi";
 
 type VendorFormValue = CreateVendorRequest & { isActive: boolean };
 
@@ -117,6 +118,12 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
         {field("address", "proc.vendors.field.address", { maxLength: 500 })}
         <div className="space-y-2">
           <Label htmlFor="vendor-capabilityFileUrl">{t("proc.vendors.field.capabilityFileUrl")}</Label>
+          <AdminDocumentUpload
+            uploadFile={async (file) => (await adminApi.uploadVendorDocument(file)).data.path}
+            onUploaded={([path]) => update("capabilityFileUrl", path)}
+            disabled={saving}
+            testId="vendor-capability-file-upload"
+          />
           <div className="flex items-center gap-2">
             <Input id="vendor-capabilityFileUrl" value={form.capabilityFileUrl ?? ""} onChange={(event) => update("capabilityFileUrl", event.target.value)} disabled={saving} maxLength={1000} />
             {form.capabilityFileUrl?.trim() && <AdminFilePreview url={form.capabilityFileUrl} />}

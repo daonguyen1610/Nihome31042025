@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -1189,6 +1190,17 @@ export default function AcceptanceRecordsPage() {
               <Label htmlFor="acceptance-form-documents">
                 {t("acceptance.field.documents")}
               </Label>
+              <AdminDocumentUpload
+                multiple
+                maxFiles={Math.max(0, 20 - documentPaths(form.documents).length)}
+                uploadFile={async (file) => (await adminApi.uploadAcceptanceDocument(file)).data.path}
+                onUploaded={(paths) => setForm((current) => ({
+                  ...current,
+                  documents: [...documentPaths(current.documents), ...paths].join("\n"),
+                }))}
+                disabled={saving}
+                testId="acceptance-document-upload"
+              />
               <Textarea
                 id="acceptance-form-documents"
                 rows={3}

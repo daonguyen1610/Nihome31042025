@@ -107,6 +107,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITenderService, TenderService>();
         services.AddScoped<ISurveyService, SurveyService>();
         services.AddScoped<IDesignProjectService, DesignProjectService>();
+        services.AddScoped<IBusinessDocumentStorageService, BusinessDocumentStorageService>();
         services.AddScoped<IPermitChecklistService, PermitChecklistService>();
         services.AddScoped<IConceptOptionService, ConceptOptionService>();
         services.AddScoped<IBasicDesignDocService, BasicDesignDocService>();

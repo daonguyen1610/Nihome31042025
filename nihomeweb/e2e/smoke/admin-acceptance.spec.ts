@@ -63,12 +63,6 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       },
     });
     expect(taskResponse.ok(), await taskResponse.text()).toBeTruthy();
-    const documentPath = "/process-assets/files/501e798356d44d8792986b936ac2d100.pdf";
-    const documentResponse = await api.get(documentPath);
-    expect(documentResponse.ok()).toBeTruthy();
-    expect(documentResponse.headers()["content-type"]).toContain("application/pdf");
-    expect((await documentResponse.body()).subarray(0, 5).toString()).toBe("%PDF-");
-
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/construction/acceptance`, { waitUntil: "networkidle" });
     await page.evaluate(() => {
@@ -98,7 +92,22 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await page.getByTestId("acceptance-form-title").fill(titleText);
     await page.getByTestId("acceptance-form-task").getByRole("combobox").click();
     await page.getByRole("option", { name: new RegExp(taskName) }).click();
-    await page.getByTestId("acceptance-form-documents").fill(documentPath);
+    await page.getByTestId("acceptance-document-upload").setInputFiles([
+      {
+        name: "acceptance-report.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.4 acceptance report"),
+      },
+      {
+        name: "acceptance-evidence.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("%PDF-1.4 acceptance evidence"),
+      },
+    ]);
+    await expect(page.getByTestId("acceptance-form-documents")).toHaveValue(
+      /\/files\/business-documents\/acceptance\/[^\n]+\.pdf\n\/files\/business-documents\/acceptance\/[^\n]+\.pdf/,
+    );
+    const [documentPath] = (await page.getByTestId("acceptance-form-documents").inputValue()).split("\n");
     await Promise.all([
       page.waitForResponse(
         (r) =>

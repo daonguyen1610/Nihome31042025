@@ -621,6 +621,22 @@ Quote document metadata is stored in `quote_documents`; physical files are store
 
 Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
 
+### 7.9 Operational Business Documents
+
+Permit, procurement vendor, partial acceptance, as-built dossier, and project handover forms support local document selection in addition to their existing external URL fields. Managed files are stored under `wwwroot/files/business-documents/{area}/` with generated names. Each file is limited to 20 MB and must use `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.png`, `.jpg`, or `.jpeg`.
+
+| Method | Route | Permission | Purpose |
+|--------|-------|------------|---------|
+| `POST` | `/api/business-documents/vendors` | `proc.vendors.manage` | Upload a vendor capability document |
+| `POST` | `/api/business-documents/acceptance` | `construction.acceptance.manage` | Upload a partial-acceptance document |
+| `POST` | `/api/business-documents/as-built` | `construction.asbuilt.manage` | Upload an as-built dossier document |
+| `POST` | `/api/business-documents/handover` | `construction.handover.manage` | Upload a project-handover document |
+| `POST` | `/api/permits/{id}/documents/{kind}` | `permit.checklists.manage` | Upload and assign `SubmittedPackage` or `IssuedPermit` to a permit |
+
+The existing field cardinality remains authoritative: vendor and as-built records store one path, acceptance and handover records store up to 20 paths, and permits store one submitted-package path plus one issued-permit path. Uploading before saving a new or edited form can leave an unreferenced physical file when the user cancels; deletion and reconciliation are not part of this contract.
+
+Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries, punch lists, and surveys are excluded because they do not currently expose a complete persisted document contract.
+
 ---
 
 ## 8. Frontend Development

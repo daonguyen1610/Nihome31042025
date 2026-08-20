@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 
@@ -15,6 +18,7 @@ namespace nihomebackend.tests.Services;
 public class PermitChecklistServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
+    private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
     private readonly PermitChecklistService _sut;
     private readonly int _userId;
     private readonly int _designProjectId;
@@ -22,7 +26,10 @@ public class PermitChecklistServiceTests : IDisposable
     public PermitChecklistServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new PermitChecklistService(_db, NullLogger<PermitChecklistService>.Instance);
+        _sut = new PermitChecklistService(
+            _db,
+            _documentStorage.Object,
+            NullLogger<PermitChecklistService>.Instance);
 
         var user = new ApplicationUser
         {
@@ -209,6 +216,24 @@ public class PermitChecklistServiceTests : IDisposable
         var resp = await _sut.UpdateAsync(id, new UpdatePermitChecklistItemRequest { ClearOwner = true }, _userId);
         Assert.NotNull(resp);
         Assert.Null(resp!.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task UploadDocumentAsync_StoresAndAssignsRequestedDocumentKind()
+    {
+        await _sut.EnsureForProjectAsync(_designProjectId, _userId);
+        var id = _db.PermitChecklistItems.First().Id;
+        var file = new FormFile(new MemoryStream("permit"u8.ToArray()), 0, 6, "file", "permit.pdf");
+        _documentStorage
+            .Setup(storage => storage.StoreAsync(file, BusinessDocumentArea.Permits, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BusinessDocumentUploadResponse { Path = "/files/business-documents/permits/permit.pdf" });
+
+        var response = await _sut.UploadDocumentAsync(
+            id, PermitDocumentKind.SubmittedPackage, file, _userId);
+
+        Assert.NotNull(response);
+        Assert.Equal("/files/business-documents/permits/permit.pdf", response!.SubmittedFilePath);
+        Assert.Null(response.IssuedFilePath);
     }
 
     // ---------------- Risk flags ----------------

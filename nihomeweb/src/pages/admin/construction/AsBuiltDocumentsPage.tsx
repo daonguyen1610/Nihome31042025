@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -979,6 +980,12 @@ export default function AsBuiltDocumentsPage() {
             </div>
             <div>
               <Label>{t("asbuilt.field.fileUrl")}</Label>
+              <AdminDocumentUpload
+                uploadFile={async (file) => (await adminApi.uploadAsBuiltDocumentFile(file)).data.path}
+                onUploaded={([path]) => setForm((current) => ({ ...current, fileUrl: path }))}
+                disabled={saving}
+                testId="asbuilt-document-upload"
+              />
               <div className="flex items-center gap-2">
                 <Input
                   value={form.fileUrl}

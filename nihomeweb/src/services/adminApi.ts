@@ -1,6 +1,12 @@
 import api, { withIdempotencyKey } from "@/lib/api";
 import type { ContentItem, ServiceResponse } from "@/services/contentApi";
 
+const uploadBusinessDocument = (area: "vendors" | "acceptance" | "as-built" | "handover", file: File) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post<BusinessDocumentUploadResponse>(`/business-documents/${area}`, formData);
+};
+
 // ─── Request types ───────────────────────────────────────────
 
 export interface UpsertActivityRequest {
@@ -675,6 +681,15 @@ export interface VendorListParams {
   page?: number;
   pageSize?: number;
 }
+
+export interface BusinessDocumentUploadResponse {
+  path: string;
+  originalFileName: string;
+  fileSize: number;
+  contentType: string;
+}
+
+export type PermitDocumentKind = "SubmittedPackage" | "IssuedPermit";
 
 // ─── CRM Opportunity (NIH-83) ────────────────────────────────────────
 
@@ -3138,6 +3153,7 @@ export const adminApi = {
   createVendor: (body: CreateVendorRequest) => api.post<VendorResponse>("/vendors", body),
   updateVendor: (id: number, body: UpdateVendorRequest) => api.put<VendorResponse>(`/vendors/${id}`, body),
   deleteVendor: (id: number) => api.delete(`/vendors/${id}`),
+  uploadVendorDocument: (file: File) => uploadBusinessDocument("vendors", file),
 
   // CRM opportunities (NIH-83)
   listOpportunities: (params: OpportunityListParams = {}) => {
@@ -3382,6 +3398,11 @@ export const adminApi = {
   updatePermit: (id: number, body: UpdatePermitChecklistItemRequest) =>
     api.patch<PermitChecklistItemResponse>(`/permits/${id}`, body),
   deletePermit: (id: number) => api.delete(`/permits/${id}`),
+  uploadPermitDocument: (id: number, kind: PermitDocumentKind, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<PermitChecklistItemResponse>(`/permits/${id}/documents/${kind}`, formData);
+  },
   ensurePermitsForProject: (designProjectId: number) =>
     api.post<PermitChecklistListResponse>(`/permits/design-project/${designProjectId}/ensure`),
 
@@ -3633,6 +3654,7 @@ export const adminApi = {
     api.delete(`/acceptance-records/${id}`),
   bulkDeleteAcceptanceRecords: (body: BulkDeleteAcceptanceRecordsRequest) =>
     api.post<AcceptanceRecordBulkDeleteResponse>("/acceptance-records/bulk-delete", body),
+  uploadAcceptanceDocument: (file: File) => uploadBusinessDocument("acceptance", file),
 
   // As-built dossier (NIH-145)
   listAsBuiltDocuments: (params: AsBuiltDocumentListParams = {}) => {
@@ -3675,6 +3697,7 @@ export const adminApi = {
     api.delete(`/as-built-documents/${id}`),
   bulkDeleteAsBuiltDocuments: (body: BulkDeleteAsBuiltDocumentsRequest) =>
     api.post<AsBuiltDocumentBulkDeleteResponse>("/as-built-documents/bulk-delete", body),
+  uploadAsBuiltDocumentFile: (file: File) => uploadBusinessDocument("as-built", file),
 
   // Project handover (NIH-144)
   listHandoverRecords: (params: HandoverRecordListParams = {}) => {
@@ -3711,6 +3734,7 @@ export const adminApi = {
     api.get<HandoverRecordResponse>(`/handover-records/${id}`),
   createHandoverRecord: (body: CreateHandoverRecordRequest) =>
     api.post<HandoverRecordResponse>("/handover-records", body),
+  uploadHandoverDocument: (file: File) => uploadBusinessDocument("handover", file),
   updateHandoverRecord: (id: number, body: UpdateHandoverRecordRequest) =>
     api.put<HandoverRecordResponse>(`/handover-records/${id}`, body),
   transitionHandoverStatus: (id: number, body: TransitionHandoverStatusRequest) =>

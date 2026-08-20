@@ -15,13 +15,18 @@ public class PermitChecklistDuplicateException(string message) : Exception(messa
 {
 }
 
+public enum PermitDocumentKind
+{
+    SubmittedPackage,
+    IssuedPermit,
+}
+
 /// <summary>
 /// NIH-137 M3 Permitting service. Owns the checklist that lives against a
 /// <see cref="Models.DesignProject"/>: idempotent auto-generation from the
 /// master template + patch-style updates + a company-wide risk view.
 ///
-/// Slice 2 (deferred) layers file uploads (submitted package + issued
-/// permit scans), <c>PermitActivity</c> timeline entries, the daily
+/// Future slices may add <c>PermitActivity</c> timeline entries, the daily
 /// expiry cron, and the attach-from-basic-design bridge to NIH-115.
 /// </summary>
 public interface IPermitChecklistService
@@ -47,6 +52,13 @@ public interface IPermitChecklistService
     /// rule.
     /// </summary>
     Task<PermitChecklistItemResponse?> UpdateAsync(int id, UpdatePermitChecklistItemRequest request, int callerUserId, CancellationToken ct = default);
+
+    Task<PermitChecklistItemResponse?> UploadDocumentAsync(
+        int id,
+        PermitDocumentKind kind,
+        IFormFile? file,
+        int callerUserId,
+        CancellationToken ct = default);
 
     Task<PermitChecklistItemResponse?> DeleteAsync(int id, CancellationToken ct = default);
 }

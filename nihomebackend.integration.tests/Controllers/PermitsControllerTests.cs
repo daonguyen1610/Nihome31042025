@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
@@ -157,6 +158,24 @@ public class PermitsControllerTests : IntegrationTestBase
         body.GetProperty("items").GetArrayLength().Should().BeGreaterThan(0);
     }
 
+    [Fact]
+    public async Task UploadDocument_AssignsManagedPath_AndRequiresManagePermission()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var id = await CreatePermitRowAsync();
+
+        var uploaded = await UploadDocumentAsync(id, "SubmittedPackage", "submission.pdf");
+
+        uploaded.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(uploaded);
+        body.GetProperty("submittedFilePath").GetString()
+            .Should().StartWith("/files/business-documents/permits/");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await UploadDocumentAsync(id, "IssuedPermit", "issued.pdf")).StatusCode
+            .Should().Be(HttpStatusCode.Forbidden);
+    }
+
     // -------- helpers --------
 
     private async Task<int> CreateDesignProjectAsync()
@@ -169,6 +188,15 @@ public class PermitsControllerTests : IntegrationTestBase
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<HttpResponseMessage> UploadDocumentAsync(int id, string kind, string fileName)
+    {
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent("permit document"u8.ToArray());
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        content.Add(fileContent, "file", fileName);
+        return await Client.PostAsync($"/api/permits/{id}/documents/{kind}", content);
     }
 
     private async Task<int> CreatePermitRowAsync()
