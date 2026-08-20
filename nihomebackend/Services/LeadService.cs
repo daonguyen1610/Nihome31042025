@@ -324,6 +324,7 @@ public class LeadService(
                 SourceCode = lead.SourceCode,
                 TaxId = null, // Company customers will need to add this later
                 Note = $"Auto-created from lead: {lead.Name}",
+                OwnerUserId = lead.OwnerUserId, // Preserve sales owner from lead
                 CreatedAt = now,
                 CreatedByUserId = callerUserId,
                 UpdatedAt = now,

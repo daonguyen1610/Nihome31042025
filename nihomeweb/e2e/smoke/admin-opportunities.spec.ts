@@ -29,6 +29,7 @@ async function createCustomer(api: APIRequestContext, token: string): Promise<nu
         primaryContact: {
             fullName: `E2E Contact ${suffix}`,
             phone: `0987${Math.floor(1_000_000 + Math.random() * 8_000_000)}`,
+            email: `opp-${suffix}@test.example`,
             isPrimary: true,
         },
     });
