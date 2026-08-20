@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 
@@ -35,6 +36,9 @@ public interface IBasicDesignDocService
 
     /// <summary>Transition to the next status, enforcing the state machine.</summary>
     Task<BasicDesignDocResponse?> TransitionStatusAsync(int id, TransitionBasicDesignDocStatusRequest request, int callerUserId, CancellationToken ct = default);
+
+    /// <summary>Upload a file and attach it to an existing basic design document.</summary>
+    Task<BasicDesignDocResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default);
 
     /// <summary>
     /// Push the parent design project from BasicDesign to ShopDrawing.

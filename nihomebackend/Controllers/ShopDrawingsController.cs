@@ -185,6 +185,40 @@ public class ShopDrawingsController(
         }
     }
 
+    /// <summary>
+    /// Upload a file and attach it to an existing shop drawing.
+    /// </summary>
+    [HttpPost("{id:int}/upload")]
+    [RequirePermission("design.shop", "manage")]
+    public async Task<ActionResult<ShopDrawingResponse>> UploadFile(
+        int id, IFormFile file, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        if (file.Length == 0 || file.Length > 100 * 1024 * 1024) // 100 MB limit
+            return BadRequest(new { message = "File size must be between 1 byte and 100 MB." });
+
+        try
+        {
+            var response = await svc.UploadFileAsync(id, file, userId.Value, ct);
+            if (response is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "shop-drawing.upload",
+                ResourceType = EntityTypes.ShopDrawing,
+                ResourceId = id.ToString(),
+                Message = $"File uploaded to shop-drawing #{id}: {file.FileName}",
+                NewValue = response,
+            });
+            return Ok(response);
+        }
+        catch (ShopDrawingOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     private int? GetUserId()
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");

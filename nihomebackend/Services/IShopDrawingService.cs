@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 
@@ -17,6 +18,9 @@ public interface IShopDrawingService
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
     Task<ShopDrawingBulkDeleteResponse> BulkDeleteAsync(IReadOnlyList<int> ids, CancellationToken ct = default);
     Task<ShopDrawingResponse?> TransitionStatusAsync(int id, TransitionShopDrawingStatusRequest request, int callerUserId, CancellationToken ct = default);
+
+    /// <summary>Upload a file and attach it to an existing shop drawing.</summary>
+    Task<ShopDrawingResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default);
 }
 
 /// <summary>
