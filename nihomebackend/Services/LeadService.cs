@@ -315,10 +315,12 @@ public class LeadService(
         int? finalCustomerId = request.CustomerId;
         if (finalCustomerId is null || finalCustomerId == 0)
         {
+            // Use companyName for Company type, or lead name for Individual
+            var hasCompanyName = !string.IsNullOrWhiteSpace(lead.CompanyName);
             var newCustomer = new Customer
             {
-                Type = string.IsNullOrWhiteSpace(lead.CompanyName) ? CustomerType.Individual : CustomerType.Company,
-                Name = lead.CompanyName ?? lead.Name,
+                Type = hasCompanyName ? CustomerType.Company : CustomerType.Individual,
+                Name = hasCompanyName ? lead.CompanyName!.Trim() : lead.Name,
                 SourceCode = lead.SourceCode,
                 TaxId = null, // Company customers will need to add this later
                 Note = $"Auto-created from lead: {lead.Name}",
