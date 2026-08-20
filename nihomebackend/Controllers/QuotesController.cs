@@ -61,7 +61,9 @@ public class QuotesController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
-        return found is null ? NotFound() : Ok(found);
+        if (found is null) return NotFound();
+        CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
+        return Ok(found);
     }
 
     [HttpGet("{id:int}/versions")]
@@ -159,6 +161,7 @@ public class QuotesController(
 
     [HttpPost]
     [RequirePermission("crm.quotes", "manage")]
+    [Idempotency("crm.quotes.create")]
     public async Task<ActionResult<QuoteResponse>> Create([FromBody] CreateQuoteRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -175,6 +178,7 @@ public class QuotesController(
                 Message = $"Quote #{response.Id} ({response.Code}) created.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (QuoteOperationException ex)
@@ -185,10 +189,12 @@ public class QuotesController(
 
     [HttpPut("{id:int}")]
     [RequirePermission("crm.quotes", "manage")]
+    [Idempotency("crm.quotes.update")]
     public async Task<ActionResult<QuoteResponse>> Update(int id, [FromBody] UpdateQuoteRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
             var canManage = await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct);
@@ -203,6 +209,7 @@ public class QuotesController(
                 Message = $"Quote #{id} updated (V{response.Version}).",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (QuoteOperationException ex)
@@ -213,6 +220,7 @@ public class QuotesController(
 
     [HttpPost("{id:int}/submit")]
     [RequirePermission("crm.quotes", "manage")]
+    [Idempotency("crm.quotes.submit")]
     public Task<ActionResult<QuoteResponse>> Submit(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "submit",
             async (uid, sa) => await svc.SubmitAsync(id, body, uid,
@@ -220,6 +228,7 @@ public class QuotesController(
 
     [HttpPost("{id:int}/approve")]
     [RequirePermission("crm.quotes", "approve")]
+    [Idempotency("crm.quotes.approve")]
     public Task<ActionResult<QuoteResponse>> Approve(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "approve",
             async (uid, _) => await svc.ApproveAsync(id, body, uid,
@@ -227,6 +236,7 @@ public class QuotesController(
 
     [HttpPost("{id:int}/reject-internal")]
     [RequirePermission("crm.quotes", "approve")]
+    [Idempotency("crm.quotes.reject-internal")]
     public Task<ActionResult<QuoteResponse>> RejectInternal(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "reject-internal",
             async (uid, _) => await svc.RejectInternalAsync(id, body, uid,
@@ -234,6 +244,7 @@ public class QuotesController(
 
     [HttpPost("{id:int}/send")]
     [RequirePermission("crm.quotes", "send")]
+    [Idempotency("crm.quotes.send")]
     public Task<ActionResult<QuoteResponse>> Send(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "send",
             async (uid, sa) => await svc.SendToCustomerAsync(id, body, uid,
@@ -241,6 +252,7 @@ public class QuotesController(
 
     [HttpPost("{id:int}/customer-approve")]
     [RequirePermission("crm.quotes", "manage")]
+    [Idempotency("crm.quotes.customer-approve")]
     public Task<ActionResult<QuoteResponse>> CustomerApprove(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "customer-approve",
             async (uid, sa) => await svc.MarkCustomerApprovedAsync(id, body, uid,
@@ -248,6 +260,7 @@ public class QuotesController(
 
     [HttpPost("{id:int}/customer-reject")]
     [RequirePermission("crm.quotes", "manage")]
+    [Idempotency("crm.quotes.customer-reject")]
     public Task<ActionResult<QuoteResponse>> CustomerReject(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "customer-reject",
             async (uid, sa) => await svc.MarkCustomerRejectedAsync(id, body, uid,
@@ -255,6 +268,7 @@ public class QuotesController(
 
     [HttpPost("{id:int}/cancel")]
     [RequirePermission("crm.quotes", "manage")]
+    [Idempotency("crm.quotes.cancel")]
     public Task<ActionResult<QuoteResponse>> Cancel(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
         Workflow(id, body, ct, "cancel",
             async (uid, sa) => await svc.CancelAsync(id, body, uid,
@@ -262,10 +276,12 @@ public class QuotesController(
 
     [HttpPost("{id:int}/extend-validity")]
     [RequirePermission("crm.quotes", "approve")]
+    [Idempotency("crm.quotes.extend-validity")]
     public async Task<ActionResult<QuoteResponse>> ExtendValidity(int id, [FromBody] ExtendQuoteValidityRequest body, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        body.RowVersion = CrmConcurrency.ResolveRequestToken(Request, body.RowVersion);
         try
         {
             var canApprove = await permissions.HasAsync(userId.Value, "crm.quotes.approve", ct);
@@ -279,6 +295,7 @@ public class QuotesController(
                 Message = $"Quote #{id} valid-until extended to {body.NewValidUntil:o}.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (QuoteOperationException ex)
@@ -297,7 +314,9 @@ public class QuotesController(
         {
             var canManage = await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct);
             var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
-            var ok = await svc.DeleteAsync(id, userId.Value, canManage, canSeeAll, ct);
+            var ok = await svc.DeleteAsync(
+                id, userId.Value, canManage, canSeeAll, ct,
+                CrmConcurrency.ResolveRequestToken(Request, null));
             if (!ok) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -325,6 +344,7 @@ public class QuotesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        body.RowVersion = CrmConcurrency.ResolveRequestToken(Request, body.RowVersion);
         try
         {
             var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
@@ -338,6 +358,7 @@ public class QuotesController(
                 Message = $"Quote #{id} {action} — status={response.Status}.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (QuoteOperationException ex)

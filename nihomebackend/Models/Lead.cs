@@ -5,7 +5,7 @@ namespace NihomeBackend.Models;
 /// A lead is captured from marketing/website/referral/event/cold-call and either
 /// converted into a Customer + Opportunity or discarded (NotInterested / Junk).
 /// </summary>
-public class Lead
+public class Lead : IConcurrencyTracked
 {
     public int Id { get; set; }
 
@@ -45,6 +45,8 @@ public class Lead
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+
+    public byte[] RowVersion { get; set; } = [];
 
     public List<LeadActivity> Activities { get; set; } = new();
 }

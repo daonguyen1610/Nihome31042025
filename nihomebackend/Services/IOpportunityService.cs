@@ -71,7 +71,8 @@ public interface IOpportunityService
         int callerUserId,
         bool canManage,
         bool canSeeAll,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        string? rowVersion = null);
 
     Task<OpportunityActivityResponse?> AddActivityAsync(
         int opportunityId,

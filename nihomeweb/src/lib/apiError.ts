@@ -14,7 +14,7 @@ export function extractApiError(err: unknown): string {
     if (typeof err !== "object" || err === null) return String(err);
 
     const anyErr = err as {
-        response?: { data?: unknown };
+        response?: { status?: number; data?: unknown };
         message?: string;
     };
     const data = anyErr.response?.data;
@@ -28,7 +28,19 @@ export function extractApiError(err: unknown): string {
         if ("message" in data && typeof (data as { message?: unknown }).message === "string") {
             return (data as { message: string }).message;
         }
+        if ("detail" in data && typeof (data as { detail?: unknown }).detail === "string") {
+            return (data as { detail: string }).detail;
+        }
     }
 
     return anyErr.message ?? String(err);
+}
+
+export function isConcurrencyConflict(err: unknown): boolean {
+    if (typeof err !== "object" || err === null) return false;
+    const response = (err as { response?: { status?: number; data?: unknown } }).response;
+    if (response?.status !== 409 || typeof response.data !== "object" || response.data === null) {
+        return false;
+    }
+    return (response.data as { code?: unknown }).code === "crm_concurrency_conflict";
 }

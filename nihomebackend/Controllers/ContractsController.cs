@@ -78,11 +78,14 @@ public class ContractsController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
-        return found == null ? NotFound() : Ok(found);
+        if (found is null) return NotFound();
+        CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
+        return Ok(found);
     }
 
     [HttpPost]
     [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.create")]
     public async Task<ActionResult<ContractResponse>> Create(
         [FromBody] UpsertContractRequest req, CancellationToken ct)
     {
@@ -104,6 +107,7 @@ public class ContractsController(
                 Message = $"Contract #{created.Id} created ({created.ContractNumber}).",
                 NewValue = created,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, created.RowVersion);
             return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
         }
         catch (ContractDuplicateNumberException ex)
@@ -118,6 +122,7 @@ public class ContractsController(
 
     [HttpPut("{id:int}")]
     [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.update")]
     public async Task<ActionResult<ContractResponse>> Update(
         int id, [FromBody] UpsertContractRequest req, CancellationToken ct)
     {
@@ -125,6 +130,7 @@ public class ContractsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        req.RowVersion = CrmConcurrency.ResolveRequestToken(Request, req.RowVersion);
         // Sales cannot reassign owner — only manager-tier callers can.
         var canReassignOwner = canSeeAll;
         try
@@ -140,6 +146,7 @@ public class ContractsController(
                 Message = $"Contract #{id} updated.",
                 NewValue = updated,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
             return Ok(updated);
         }
         catch (ContractDuplicateNumberException ex)
@@ -160,7 +167,9 @@ public class ContractsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
-        var removed = await svc.DeleteAsync(id, userId.Value, canSeeAll, ct);
+        var removed = await svc.DeleteAsync(
+            id, userId.Value, canSeeAll, ct,
+            CrmConcurrency.ResolveRequestToken(Request, null));
         if (!removed) return NotFound();
 
         audit.Log(new AuditEvent
@@ -177,6 +186,7 @@ public class ContractsController(
 
     [HttpPost("{id:int}/transition")]
     [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.transition")]
     public async Task<ActionResult<ContractResponse>> Transition(
         int id, [FromBody] ContractStatusTransitionRequest req, CancellationToken ct)
     {
@@ -184,9 +194,10 @@ public class ContractsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        req.RowVersion = CrmConcurrency.ResolveRequestToken(Request, req.RowVersion);
         try
         {
-            var updated = await svc.TransitionStatusAsync(id, req.NewStatus, userId.Value, canSeeAll, ct);
+            var updated = await svc.TransitionStatusAsync(id, req.NewStatus, userId.Value, canSeeAll, ct, req.RowVersion);
             if (updated == null) return NotFound();
 
             audit.Log(new AuditEvent
@@ -196,6 +207,7 @@ public class ContractsController(
                 ResourceId = id.ToString(),
                 Message = $"Contract #{id} → {req.NewStatus}.",
             });
+            CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
             return Ok(updated);
         }
         catch (ContractValidationException ex)
@@ -208,6 +220,7 @@ public class ContractsController(
 
     [HttpPatch("{id:int}/milestones/{milestoneId:int}/status")]
     [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.milestone-status")]
     public async Task<ActionResult<ContractResponse>> UpdateMilestoneStatus(
         int id, int milestoneId, [FromBody] UpdateMilestoneStatusRequest req, CancellationToken ct)
     {
@@ -215,7 +228,9 @@ public class ContractsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
-        var updated = await svc.UpdateMilestoneStatusAsync(id, milestoneId, req.Status, userId.Value, canSeeAll, ct);
+        req.RowVersion = CrmConcurrency.ResolveRequestToken(Request, req.RowVersion);
+        var updated = await svc.UpdateMilestoneStatusAsync(
+            id, milestoneId, req.Status, userId.Value, canSeeAll, ct, req.RowVersion);
         if (updated == null) return NotFound();
 
         audit.Log(new AuditEvent
@@ -225,6 +240,7 @@ public class ContractsController(
             ResourceId = id.ToString(),
             Message = $"Contract #{id} milestone #{milestoneId} → {req.Status}.",
         });
+        CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
         return Ok(updated);
     }
 

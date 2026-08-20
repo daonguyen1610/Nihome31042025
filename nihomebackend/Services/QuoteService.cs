@@ -108,6 +108,7 @@ public class QuoteService(
                 IsExpiringSoon = IsNonTerminal(r.Quote.Status)
                     && (r.Quote.ValidUntil - now).TotalDays <= ExpiringSoonDays,
                 UpdatedAt = r.Quote.UpdatedAt,
+                RowVersion = CrmConcurrency.Encode(r.Quote.RowVersion),
             }).ToList(),
         };
     }
@@ -205,6 +206,8 @@ public class QuoteService(
         if (quote is null) return null;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
 
+        CrmConcurrency.Apply(db, quote, request.RowVersion);
+
         if (quote.Status is QuoteStatus.Cancelled
             or QuoteStatus.Rejected
             or QuoteStatus.CustomerApproved)
@@ -279,7 +282,7 @@ public class QuoteService(
             ByUserId = callerUserId,
             CreatedAt = now,
         });
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
 
         return await GetAsync(quote.Id, callerUserId, canSeeAll: true, ct);
     }
@@ -293,6 +296,7 @@ public class QuoteService(
             action: QuoteWorkflowAction.Submit,
             permitted: canManage,
             note: req.Note,
+            rowVersion: req.RowVersion,
             beforeSave: q =>
             {
                 if (q.Items.Count == 0 && q.Method == QuoteMethod.Boq)
@@ -312,6 +316,7 @@ public class QuoteService(
             action: QuoteWorkflowAction.Approve,
             permitted: canApprove,
             note: req.Note,
+            rowVersion: req.RowVersion,
             beforeSave: q => { q.ApprovedAt = DateTime.UtcNow; q.ApprovedByUserId = caller; },
             ct: ct);
 
@@ -322,6 +327,7 @@ public class QuoteService(
             action: QuoteWorkflowAction.RejectInternal,
             permitted: canApprove,
             note: req.Note,
+            rowVersion: req.RowVersion,
             beforeSave: q =>
             {
                 if (string.IsNullOrWhiteSpace(req.Note))
@@ -337,6 +343,7 @@ public class QuoteService(
             action: QuoteWorkflowAction.Send,
             permitted: canSend,
             note: req.Note,
+            rowVersion: req.RowVersion,
             beforeSave: q => { q.SentAt = DateTime.UtcNow; q.SentByUserId = caller; }, ct);
 
     public Task<QuoteResponse?> MarkCustomerApprovedAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default) =>
@@ -346,6 +353,7 @@ public class QuoteService(
             action: QuoteWorkflowAction.CustomerApprove,
             permitted: canManage,
             note: req.Note,
+            rowVersion: req.RowVersion,
             beforeSave: q => { q.ClosedAt = DateTime.UtcNow; }, ct);
 
     public Task<QuoteResponse?> MarkCustomerRejectedAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default) =>
@@ -355,6 +363,7 @@ public class QuoteService(
             action: QuoteWorkflowAction.CustomerReject,
             permitted: canManage,
             note: req.Note,
+            rowVersion: req.RowVersion,
             beforeSave: q =>
             {
                 if (string.IsNullOrWhiteSpace(req.Note))
@@ -373,6 +382,7 @@ public class QuoteService(
             action: QuoteWorkflowAction.Cancel,
             permitted: canManage,
             note: req.Note,
+            rowVersion: req.RowVersion,
             beforeSave: q => { q.ClosedAt = DateTime.UtcNow; }, ct);
 
     public async Task<QuoteResponse?> ExtendValidityAsync(
@@ -382,6 +392,8 @@ public class QuoteService(
 
         var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
+
+        CrmConcurrency.Apply(db, quote, request.RowVersion);
 
         if (quote.Status is not QuoteStatus.Expired and not QuoteStatus.Approved and not QuoteStatus.SentToCustomer)
         {
@@ -409,19 +421,21 @@ public class QuoteService(
             Note = request.Note,
             CreatedAt = now,
         });
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetAsync(quote.Id, callerUserId, canSeeAll: true, ct);
     }
 
     // ------------------------------ Delete ------------------------------
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
         if (!canManage) return false;
 
         var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return false;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return false;
+
+        CrmConcurrency.Apply(db, quote, rowVersion);
 
         var winningOpportunities = await db.Opportunities
             .Where(opportunity => opportunity.WonQuoteId == id)
@@ -432,7 +446,7 @@ public class QuoteService(
         }
 
         db.Quotes.Remove(quote);
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         quoteDocuments.DeleteQuoteFiles(id);
         return true;
     }
@@ -496,6 +510,7 @@ public class QuoteService(
         QuoteWorkflowAction action,
         bool permitted,
         string? note,
+        string? rowVersion,
         Action<Quote> beforeSave,
         CancellationToken ct)
     {
@@ -511,6 +526,8 @@ public class QuoteService(
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
+
+        CrmConcurrency.Apply(db, quote, rowVersion);
 
         // Auto-expire before evaluating allowed-from.
         AutoExpireIfNeeded(quote);
@@ -539,7 +556,7 @@ public class QuoteService(
             Note = note,
             CreatedAt = now,
         });
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
 
         // Best-effort notification hooks. Failures are logged, never bubble up.
         try
@@ -771,6 +788,7 @@ public class QuoteService(
         ClosedAt = q.ClosedAt,
         CreatedAt = q.CreatedAt,
         UpdatedAt = q.UpdatedAt,
+        RowVersion = CrmConcurrency.Encode(q.RowVersion),
         Items = q.Items?.OrderBy(i => i.SortOrder).Select(MapItem).ToList() ?? new(),
         ApprovalLogs = q.ApprovalLogs?
             .OrderBy(l => l.CreatedAt)

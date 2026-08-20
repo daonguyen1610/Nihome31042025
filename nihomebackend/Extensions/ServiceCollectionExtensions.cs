@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using NihomeBackend.Authorization;
 using NihomeBackend.Data;
+using NihomeBackend.Infrastructure.OpenApi;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 
@@ -27,7 +28,8 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(options =>
+            options.OperationFilter<IdempotencyHeaderOperationFilter>());
 
         return services;
     }

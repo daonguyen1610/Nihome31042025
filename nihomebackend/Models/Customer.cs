@@ -5,7 +5,7 @@ namespace NihomeBackend.Models;
 /// (Opportunity, Quote, Contract, Project, Invoice). A customer is either
 /// an individual (personal buyer) or a company (with tax id + representative).
 /// </summary>
-public class Customer
+public class Customer : IConcurrencyTracked
 {
     public int Id { get; set; }
 
@@ -39,6 +39,8 @@ public class Customer
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+
+    public byte[] RowVersion { get; set; } = [];
 
     public List<CustomerContact> Contacts { get; set; } = new();
     public List<CustomerActivity> Activities { get; set; } = new();

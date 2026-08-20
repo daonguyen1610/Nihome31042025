@@ -202,6 +202,8 @@ public class LeadService(
             throw new LeadOperationException("Caller does not have permission to modify leads.");
         }
 
+        CrmConcurrency.Apply(db, lead, request.RowVersion);
+
         if (lead.Status == LeadStatus.Converted)
         {
             throw new LeadOperationException("Converted leads cannot be edited.");
@@ -250,7 +252,7 @@ public class LeadService(
         lead.UpdatedAt = DateTime.UtcNow;
         lead.UpdatedByUserId = callerUserId;
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
 
         if (newOwnerId.HasValue && newOwnerId != previousOwnerId)
         {
@@ -264,7 +266,7 @@ public class LeadService(
         return MapLead(lead, ownerName, activities: null);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
         if (!canManage)
         {
@@ -279,8 +281,10 @@ public class LeadService(
         // lead's existence is not leaked to unauthorised callers.
         if (!canSeeAll && lead.OwnerUserId != callerUserId) return false;
 
+        CrmConcurrency.Apply(db, lead, rowVersion);
+
         db.Leads.Remove(lead);
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return true;
     }
 
@@ -302,6 +306,8 @@ public class LeadService(
             .FirstOrDefaultAsync(l => l.Id == id, ct);
         if (lead is null) return null;
 
+        CrmConcurrency.Apply(db, lead, request.RowVersion);
+
         if (lead.Status == LeadStatus.Converted)
         {
             throw new LeadOperationException("Lead is already converted.");
@@ -312,6 +318,9 @@ public class LeadService(
             throw new LeadOperationException("Discarded leads (Junk / NotInterested) cannot be converted.");
         }
 
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
         var now = DateTime.UtcNow;
 
         // If no existing customer provided, auto-create one from lead data
@@ -383,7 +392,11 @@ public class LeadService(
             });
         }
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(ct);
+        }
 
         return MapLead(lead, lead.Owner?.FullName, activities: null);
     }
@@ -434,7 +447,8 @@ public class LeadService(
         int id,
         int callerUserId,
         bool canRevert,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? rowVersion = null)
     {
         if (!canRevert)
         {
@@ -443,6 +457,8 @@ public class LeadService(
 
         var lead = await db.Leads.Include(l => l.Owner).FirstOrDefaultAsync(l => l.Id == id, ct);
         if (lead is null) return null;
+
+        CrmConcurrency.Apply(db, lead, rowVersion);
 
         if (lead.Status != LeadStatus.Converted)
         {
@@ -500,7 +516,7 @@ public class LeadService(
         lead.UpdatedAt = now;
         lead.UpdatedByUserId = callerUserId;
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         logger.LogInformation("Reverted lead {LeadId}, deleted customer {CustomerId}", lead.Id, customerId);
 
         return MapLead(lead, lead.Owner?.FullName, activities: null);
@@ -646,6 +662,7 @@ public class LeadService(
             ConvertedOpportunityId = lead.ConvertedOpportunityId,
             CreatedAt = lead.CreatedAt,
             UpdatedAt = lead.UpdatedAt,
+            RowVersion = CrmConcurrency.Encode(lead.RowVersion),
             Activities = activities is null
                 ? new List<LeadActivityResponse>()
                 : activities

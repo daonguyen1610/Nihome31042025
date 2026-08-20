@@ -47,7 +47,7 @@ public interface IQuoteService
     Task<QuoteResponse?> CancelAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
     Task<QuoteResponse?> ExtendValidityAsync(int id, ExtendQuoteValidityRequest request, int callerUserId, bool canApprove, CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
 
     Task<QuoteVersionsResponse?> GetVersionsAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 }

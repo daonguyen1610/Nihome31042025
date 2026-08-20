@@ -5,7 +5,7 @@ namespace NihomeBackend.Models;
 /// <see cref="Customer"/>. Sits between Customer and Quote/Contract in the
 /// sales funnel (Lead → Customer → Opportunity → Quote/Bid → Contract).
 /// </summary>
-public class Opportunity
+public class Opportunity : IConcurrencyTracked
 {
     public int Id { get; set; }
 
@@ -53,6 +53,8 @@ public class Opportunity
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+
+    public byte[] RowVersion { get; set; } = [];
 
     public List<OpportunityActivity> Activities { get; set; } = new();
 }

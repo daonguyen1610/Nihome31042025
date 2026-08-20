@@ -7,7 +7,7 @@ namespace NihomeBackend.Models;
 /// (suất đầu tư: area × unit price) and <see cref="QuoteMethod.Boq"/>
 /// (bill of quantities: itemised lines).
 /// </summary>
-public class Quote
+public class Quote : IConcurrencyTracked
 {
     public int Id { get; set; }
 
@@ -59,6 +59,8 @@ public class Quote
     public int? CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+
+    public byte[] RowVersion { get; set; } = [];
 
     public List<QuoteItem> Items { get; set; } = new();
     public List<QuoteApprovalLog> ApprovalLogs { get; set; } = new();

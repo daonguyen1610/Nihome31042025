@@ -81,11 +81,14 @@ public class OpportunitiesController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
-        return found is null ? NotFound() : Ok(found);
+        if (found is null) return NotFound();
+        CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
+        return Ok(found);
     }
 
     [HttpPost]
     [RequirePermission("crm.opportunities", "manage")]
+    [Idempotency("crm.opportunities.create")]
     public async Task<ActionResult<OpportunityResponse>> Create(
         [FromBody] CreateOpportunityRequest request,
         CancellationToken ct)
@@ -105,6 +108,7 @@ public class OpportunitiesController(
                 Message = $"Opportunity #{response.Id} '{response.Name}' created.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
         }
         catch (OpportunityOperationException ex)
@@ -123,6 +127,7 @@ public class OpportunitiesController(
 
     [HttpPut("{id:int}")]
     [RequirePermission("crm.opportunities", "manage")]
+    [Idempotency("crm.opportunities.update")]
     public async Task<ActionResult<OpportunityResponse>> Update(
         int id,
         [FromBody] UpdateOpportunityRequest request,
@@ -133,6 +138,7 @@ public class OpportunitiesController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         var canManage = await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, canManage, canSeeAll, ct);
@@ -146,6 +152,7 @@ public class OpportunitiesController(
                 Message = $"Opportunity #{id} updated.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (OpportunityOperationException ex)
@@ -165,6 +172,7 @@ public class OpportunitiesController(
 
     [HttpPatch("{id:int}/stage")]
     [RequirePermission("crm.opportunities", "manage")]
+    [Idempotency("crm.opportunities.stage")]
     public async Task<ActionResult<OpportunityResponse>> ChangeStage(
         int id,
         [FromBody] ChangeOpportunityStageRequest request,
@@ -175,6 +183,7 @@ public class OpportunitiesController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         var canManage = await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
             var response = await svc.ChangeStageAsync(id, request, userId.Value, canManage, canSeeAll, ct);
@@ -188,6 +197,7 @@ public class OpportunitiesController(
                 Message = $"Opportunity #{id} stage → {response.Stage}.",
                 NewValue = response,
             });
+            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
         catch (OpportunityOperationException ex)
@@ -216,7 +226,9 @@ public class OpportunitiesController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         try
         {
-            var removed = await svc.DeleteAsync(id, userId.Value, canManage, canSeeAll, ct);
+            var removed = await svc.DeleteAsync(
+                id, userId.Value, canManage, canSeeAll, ct,
+                CrmConcurrency.ResolveRequestToken(Request, null));
             if (!removed) return NotFound();
 
             audit.Log(new AuditEvent

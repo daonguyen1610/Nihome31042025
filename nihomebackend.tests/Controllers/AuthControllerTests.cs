@@ -23,8 +23,6 @@ public class AuthControllerTests : IDisposable
     private readonly JwtService _jwtService;
     private readonly RefreshTokenService _refreshTokenService;
     private readonly OtpService _otpService;
-    private readonly IdempotencyService _idempotency;
-    private readonly FingerprintService _fingerprint;
     private readonly IMapper _mapper;
     private readonly JwtOptions _jwtOptions;
     private readonly AuthController _sut;
@@ -58,9 +56,6 @@ public class AuthControllerTests : IDisposable
         _otpService = new OtpService(
             _db, Mock.Of<ILogger<OtpService>>(), emailServiceMock.Object);
 
-        _idempotency = new IdempotencyService(_db, Mock.Of<ILogger<IdempotencyService>>());
-        _fingerprint = new FingerprintService();
-
         var mapperConfig = new MapperConfiguration(
             cfg => cfg.AddProfile<AutoMapperProfile>(),
             Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
@@ -72,8 +67,6 @@ public class AuthControllerTests : IDisposable
             _jwtService,
             _refreshTokenService,
             _otpService,
-            _idempotency,
-            _fingerprint,
             _mapper,
             Options.Create(_jwtOptions),
             new NoOpAuditLogger(),
@@ -100,7 +93,7 @@ public class AuthControllerTests : IDisposable
             FullName = "New User",
             Email = "new@test.com",
             Password = "SecurePass1!"
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var response = Assert.IsType<AuthResponse>(ok.Value);
@@ -121,7 +114,7 @@ public class AuthControllerTests : IDisposable
             FullName = "Dup User",
             Email = "dupphone@test.com",
             Password = "Pass1!"
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -137,7 +130,7 @@ public class AuthControllerTests : IDisposable
             FullName = "New User",
             Email = "new@test.com",
             Password = "SecurePass1!"
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         var json = ok.Value;
@@ -156,7 +149,7 @@ public class AuthControllerTests : IDisposable
         {
             PhoneNumber = "0123456789",
             Password = "Pass1!"
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -171,7 +164,7 @@ public class AuthControllerTests : IDisposable
         {
             PhoneNumber = "0123456789",
             Password = "SecurePass1!"
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         var ok = Assert.IsType<OkObjectResult>(result);
         Assert.IsType<AuthResponse>(ok.Value);
@@ -188,7 +181,7 @@ public class AuthControllerTests : IDisposable
         {
             PhoneNumber = "0123456789",
             Password = "Pass1!"
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         Assert.IsType<BadRequestObjectResult>(result);
     }
@@ -506,7 +499,7 @@ public class AuthControllerTests : IDisposable
             FullName = "Other",
             Email = "TAKEN@nihome.vn",
             Password = "Secret123",
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         Assert.IsType<ConflictObjectResult>(result);
     }
@@ -522,33 +515,10 @@ public class AuthControllerTests : IDisposable
             FullName = "Mixed Case",
             Email = "Mixed.Case@Example.COM",
             Password = "Secret123",
-        }, idempotencyKey: null, CancellationToken.None);
+        }, CancellationToken.None);
 
         var saved = _db.Users.Single(u => u.PhoneNumber == "0900000333");
         Assert.Equal("mixed.case@example.com", saved.Email);
     }
 
-    [Fact]
-    public async Task StartRegister_StoresIdempotencyRecord_WhenKeyProvided()
-    {
-        await SeedSettings(enableOtpForRegistration: false);
-        const string key = "test-key-123";
-
-        var first = await _sut.StartRegister(new RegisterStartRequest
-        {
-            PhoneNumber = "0900000444",
-            FullName = "Idem User",
-            Email = "idem@nihome.vn",
-            Password = "Secret123",
-        }, idempotencyKey: key, CancellationToken.None);
-
-        Assert.IsType<OkObjectResult>(first);
-
-        // The resource filter (not exercised in direct controller unit tests)
-        // will replay this stored record on a real HTTP retry.
-        var record = _db.IdempotencyRecords.Single(r => r.Key == key);
-        Assert.Equal("auth.register.start", record.Scope);
-        Assert.Equal(200, record.StatusCode);
-        Assert.False(string.IsNullOrEmpty(record.ResponseJson));
-    }
 }

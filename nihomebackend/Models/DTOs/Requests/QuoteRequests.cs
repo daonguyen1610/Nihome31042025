@@ -60,8 +60,10 @@ public class CreateQuoteRequest
     public string? Note { get; set; }
 }
 
-public class UpdateQuoteRequest
+public class UpdateQuoteRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     public int? OwnerUserId { get; set; }
 
     // Method is immutable after create — spec NIH-93 step 1.
@@ -85,14 +87,18 @@ public class UpdateQuoteRequest
     public string? Note { get; set; }
 }
 
-public class QuoteWorkflowRequest
+public class QuoteWorkflowRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     [StringLength(2000)]
     public string? Note { get; set; }
 }
 
-public class ExtendQuoteValidityRequest
+public class ExtendQuoteValidityRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     [Required]
     public DateTime NewValidUntil { get; set; }
 

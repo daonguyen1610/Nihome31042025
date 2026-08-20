@@ -2,8 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
-public class UpdateLeadRequest
+public class UpdateLeadRequest : IConcurrencyRequest
 {
+    public string? RowVersion { get; set; }
+
     [Required]
     [StringLength(200, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;

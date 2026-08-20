@@ -427,6 +427,22 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_InvalidMilestones_DoesNotMutateContractHeader()
+    {
+        var contract = await _sut.CreateAsync(Req(value: 100m), 1, canReassignOwner: true);
+        var update = Req(value: 999m);
+        update.PaymentMilestones = new() { Milestone(1, 40m), Milestone(2, 40m) };
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true));
+
+        _db.ChangeTracker.Clear();
+        var persisted = await _db.Contracts.FindAsync(contract.Id);
+        Assert.NotNull(persisted);
+        Assert.Equal(100m, persisted!.Value);
+    }
+
+    [Fact]
     public async Task Delete_ContractCascadesToMilestones()
     {
         var req = Req();

@@ -185,6 +185,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasDatabaseName("IX_idempotency_records_Scope_Key");
         modelBuilder.Entity<IdempotencyRecord>().HasIndex(r => r.ExpiresAt);
         modelBuilder.Entity<IdempotencyRecord>().Property(r => r.ResponseJson).HasColumnType("nvarchar(max)");
+        modelBuilder.Entity<IdempotencyRecord>().Property(r => r.ResponseHeadersJson).HasColumnType("nvarchar(max)");
 
         modelBuilder.Entity<SiteSettings>().ToTable("site_settings");
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);
@@ -371,6 +372,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(l => l.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.Property(l => l.RowVersion).IsRowVersion();
         });
 
         modelBuilder.Entity<LeadActivity>(b =>
@@ -412,6 +414,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(c => c.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.Property(c => c.RowVersion).IsRowVersion();
         });
 
         modelBuilder.Entity<CustomerContact>(b =>
@@ -516,6 +519,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(o => o.Stage);
             b.HasIndex(o => o.ExpectedCloseDate);
             b.HasIndex(o => o.CreatedAt);
+            b.Property(o => o.RowVersion).IsRowVersion();
         });
 
         modelBuilder.Entity<OpportunityActivity>(b =>
@@ -565,6 +569,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(q => q.Status);
             b.HasIndex(q => q.ValidUntil);
             b.HasIndex(q => q.CreatedAt);
+            b.Property(q => q.RowVersion).IsRowVersion();
         });
 
         modelBuilder.Entity<QuoteDocument>(b =>
@@ -675,6 +680,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(c => c.Status);
             b.HasIndex(c => c.SignedDate);
             b.HasIndex(c => c.EndDate);
+            b.Property(c => c.RowVersion).IsRowVersion();
         });
 
         modelBuilder.Entity<ContractPaymentMilestone>(b =>

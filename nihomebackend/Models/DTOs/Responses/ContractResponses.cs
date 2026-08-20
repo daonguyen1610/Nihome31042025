@@ -50,6 +50,7 @@ public class ContractResponse
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
 
     public List<ContractPaymentMilestoneResponse> PaymentMilestones { get; set; } = new();
 }

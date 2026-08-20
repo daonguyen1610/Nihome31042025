@@ -26,7 +26,7 @@ import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { extractApiError } from "@/lib/apiError";
+import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -120,8 +120,7 @@ const formatBytes = (bytes: number | undefined | null): string => {
 };
 
 const getErrorMessage = (err: unknown): string | undefined => {
-  const parsed = extractApiError(err);
-  return parsed?.message;
+  return extractApiError(err);
 };
 
 interface MilestoneDraft {
@@ -1400,10 +1399,11 @@ const ContractDetail = () => {
       }
       setTransitionBusy(next);
       try {
-        await adminApi.transitionContract(contract.id, next);
+        await adminApi.transitionContract(contract.id, next, contract.rowVersion);
         await refreshContract();
       } catch (err) {
         toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
+        if (isConcurrencyConflict(err)) await refreshContract();
       } finally {
         setTransitionBusy(null);
       }
@@ -1416,10 +1416,11 @@ const ContractDetail = () => {
       if (!contract) return;
       setBusyMilestoneId(milestoneId);
       try {
-        await adminApi.updateMilestoneStatus(contract.id, milestoneId, nextStatus);
+        await adminApi.updateMilestoneStatus(contract.id, milestoneId, nextStatus, contract.rowVersion);
         await refreshContract();
       } catch (err) {
         toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
+        if (isConcurrencyConflict(err)) await refreshContract();
       } finally {
         setBusyMilestoneId(null);
       }
@@ -1491,6 +1492,7 @@ const ContractDetail = () => {
       note: milestone.note.trim() || null,
     }));
     const payload: UpsertContractRequest = {
+      rowVersion: contract.rowVersion,
       contractNumber: form.contractNumber.trim() || null,
       customerId: form.customerId,
       opportunityId: contract.opportunityId,
@@ -1514,6 +1516,7 @@ const ContractDetail = () => {
       await refreshContract();
     } catch (err) {
       setFormError(getErrorMessage(err) ?? t("common.error"));
+      if (isConcurrencyConflict(err)) await refreshContract();
     } finally {
       setSaving(false);
     }

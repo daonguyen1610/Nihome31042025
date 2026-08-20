@@ -261,7 +261,10 @@ const Contracts = () => {
     handleBulkDelete,
   } = useBulkSelection<number>({
     visibleIds,
-    deleteOne: (id) => adminApi.deleteContract(id),
+    deleteOne: (id) => adminApi.deleteContract(
+      id,
+      contracts.find((contract) => contract.id === id)?.rowVersion,
+    ),
     onAfter: async () => {
       await load();
     },
@@ -396,7 +399,7 @@ const Contracts = () => {
   const remove = async (row: ContractResponse) => {
     if (!window.confirm(t("form.confirmDelete"))) return;
     try {
-      await adminApi.deleteContract(row.id);
+      await adminApi.deleteContract(row.id, row.rowVersion);
       toast({ title: t("form.deleted") });
       await load();
     } catch (err) {

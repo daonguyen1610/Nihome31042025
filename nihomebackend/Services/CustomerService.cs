@@ -200,6 +200,8 @@ public class CustomerService(
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return null;
         if (!canManage) throw new CustomerOperationException("Caller does not have permission to modify customers.");
 
+        CrmConcurrency.Apply(db, customer, request.RowVersion);
+
         // Suspended is a dead-end status — Sales cannot suspend, only manager/BOD.
         if (request.RelationshipStatus == CustomerRelationshipStatus.Suspended &&
             customer.RelationshipStatus != CustomerRelationshipStatus.Suspended &&
@@ -239,7 +241,7 @@ public class CustomerService(
         customer.UpdatedAt = DateTime.UtcNow;
         customer.UpdatedByUserId = callerUserId;
 
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
 
         var ownerName = customer.OwnerUserId.HasValue
             ? await db.Users.AsNoTracking().Where(u => u.Id == customer.OwnerUserId.Value)
@@ -249,7 +251,7 @@ public class CustomerService(
         return MapCustomer(customer, ownerName, customer.Contacts, activities: null);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
         if (!canManage) throw new CustomerOperationException("Caller does not have permission to delete customers.");
 
@@ -262,10 +264,12 @@ public class CustomerService(
         // we never leak the customer's existence to unauthorised callers.
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return false;
 
+        CrmConcurrency.Apply(db, customer, rowVersion);
+
         var quoteIds = await AggregateDeletionService.DeleteCustomerAsync(db, customer, ct);
         try
         {
-            await db.SaveChangesAsync(ct);
+            await CrmConcurrency.SaveChangesAsync(db, ct);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -550,6 +554,7 @@ public class CustomerService(
             Note = customer.Note,
             CreatedAt = customer.CreatedAt,
             UpdatedAt = customer.UpdatedAt,
+            RowVersion = CrmConcurrency.Encode(customer.RowVersion),
             Contacts = contacts is null
                 ? new List<CustomerContactResponse>()
                 : contacts

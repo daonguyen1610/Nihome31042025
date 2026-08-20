@@ -91,6 +91,7 @@ public class QuoteResponse
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
 
     public List<QuoteItemResponse> Items { get; set; } = new();
     public List<QuoteApprovalLogResponse> ApprovalLogs { get; set; } = new();
@@ -112,6 +113,7 @@ public class QuoteListItemResponse
     public DateTime ValidUntil { get; set; }
     public bool IsExpiringSoon { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
 }
 
 public class QuoteListResponse

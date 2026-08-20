@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { extractApiError } from "@/lib/apiError";
+import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize, formatVnd, parseVnd } from "@/lib/numberFormat";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,7 @@ const WORKFLOW_BY_STATUS: Record<QuoteStatus, WorkflowKind[]> = {
  */
 function toFormState(q: QuoteResponse): UpdateQuoteRequest {
   return {
+    rowVersion: q.rowVersion,
     ownerUserId: q.ownerUserId ?? null,
     areaSqm: q.areaSqm ?? null,
     unitPricePerSqm: q.unitPricePerSqm ?? null,
@@ -304,6 +305,7 @@ const AdminQuoteDetail = () => {
         description: extractApiError(err),
         variant: "destructive",
       });
+      if (isConcurrencyConflict(err)) await load();
     } finally {
       setSaving(false);
     }
@@ -313,7 +315,7 @@ const AdminQuoteDetail = () => {
     if (!workflow || !quote) return;
     setWorkflowBusy(true);
     try {
-      const body = { note: workflowNote.trim() || undefined };
+      const body = { note: workflowNote.trim() || undefined, rowVersion: quote.rowVersion };
       const fn: Record<WorkflowKind, () => Promise<{ data: QuoteResponse }>> = {
         submit: () => adminApi.submitQuote(quote.id, body),
         approve: () => adminApi.approveQuote(quote.id, body),
@@ -335,6 +337,7 @@ const AdminQuoteDetail = () => {
         description: extractApiError(err),
         variant: "destructive",
       });
+      if (isConcurrencyConflict(err)) await load();
     } finally {
       setWorkflowBusy(false);
     }
@@ -344,7 +347,7 @@ const AdminQuoteDetail = () => {
     if (!quote) return;
     if (!window.confirm(t("form.confirmDelete"))) return;
     try {
-      await adminApi.deleteQuote(quote.id);
+      await adminApi.deleteQuote(quote.id, quote.rowVersion);
       toast({ title: t("quotes.updated") });
       navigate("/admin/quotes");
     } catch (err) {

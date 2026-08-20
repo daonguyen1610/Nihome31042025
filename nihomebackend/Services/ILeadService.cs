@@ -45,7 +45,7 @@ public interface ILeadService
         string languageCode = "vi",
         CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
 
     Task<LeadResponse?> ConvertAsync(
         int id,
@@ -69,7 +69,8 @@ public interface ILeadService
         int id,
         int callerUserId,
         bool canRevert,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        string? rowVersion = null);
 }
 
 /// <summary>Thrown when a business rule is violated (e.g. converted lead is edited).</summary>
