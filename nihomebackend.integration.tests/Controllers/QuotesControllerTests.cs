@@ -216,7 +216,9 @@ public class QuotesControllerTests : IntegrationTestBase
         var uploaded = await ReadJsonAsync(upload);
         uploaded.GetProperty("originalFileName").GetString().Should().Be("proposal.pdf");
         uploaded.GetProperty("label").GetString().Should().Be("Customer proposal");
-        uploaded.GetProperty("filePath").GetString().Should().StartWith($"/files/quotes/{quoteId}/");
+        var filePath = uploaded.GetProperty("filePath").GetString();
+        filePath.Should().StartWith($"/files/quotes/{quoteId}/");
+        (await Client.GetAsync(filePath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var list = await Client.GetAsync($"/api/quotes/{quoteId}/documents");
         list.EnsureSuccessStatusCode();

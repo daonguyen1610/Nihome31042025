@@ -187,7 +187,7 @@ public class QuoteDocumentService(
     }
 
     private string GetQuoteDirectory(int quoteId) =>
-        Path.Combine(env.ContentRootPath, "storage", "quotes", quoteId.ToString());
+        Path.Combine(env.ContentRootPath, "wwwroot", "files", "quotes", quoteId.ToString());
 
     private static void DeleteManagedFile(string? fullPath)
     {

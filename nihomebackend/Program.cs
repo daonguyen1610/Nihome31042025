@@ -87,6 +87,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseDefaultFiles();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/files/quotes", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    await next();
+});
 app.UseStaticFiles();
 
 var uploadImagesPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "images", "upload");

@@ -33,6 +33,9 @@ nihomebackend/wwwroot/files/capability/
 # commit them into the repo. The dev seeder points at a placeholder path
 # but doesn't drop physical files.
 nihomebackend/wwwroot/files/contracts/
+
+# Quote documents are user uploads at runtime.
+nihomebackend/wwwroot/files/quotes/
 .DS_Store
 deployment-config/.DS_Store
 test-results
