@@ -52,7 +52,8 @@ public class QuoteDocumentServiceTests : IDisposable
         Assert.Equal("Signed quote", result.Label);
         Assert.True(File.Exists(Path.Combine(
             _contentRoot,
-            "storage",
+            "wwwroot",
+            "files",
             "quotes",
             _quoteId.ToString(),
             Path.GetFileName(result.FilePath))));
@@ -95,7 +96,8 @@ public class QuoteDocumentServiceTests : IDisposable
             _quoteId, CreateFile("quote.pdf"), null, 100, canSeeAll: false);
         var fullPath = Path.Combine(
             _contentRoot,
-            "storage",
+            "wwwroot",
+            "files",
             "quotes",
             _quoteId.ToString(),
             Path.GetFileName(uploaded!.FilePath));
@@ -106,6 +108,19 @@ public class QuoteDocumentServiceTests : IDisposable
         Assert.True(removed);
         Assert.Empty(_db.QuoteDocuments);
         Assert.False(File.Exists(fullPath));
+    }
+
+    [Fact]
+    public async Task DeleteQuoteFiles_RemovesQuoteDirectory()
+    {
+        var quoteDirectory = Path.Combine(
+            _contentRoot, "wwwroot", "files", "quotes", _quoteId.ToString());
+        Directory.CreateDirectory(quoteDirectory);
+        await File.WriteAllTextAsync(Path.Combine(quoteDirectory, "quote.pdf"), "quote");
+
+        _sut.DeleteQuoteFiles(_quoteId);
+
+        Assert.False(Directory.Exists(quoteDirectory));
     }
 
     private static FormFile CreateFile(string fileName)
