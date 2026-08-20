@@ -296,7 +296,10 @@ public class LeadService(
             throw new LeadOperationException("Caller does not have permission to convert leads.");
         }
 
-        var lead = await db.Leads.Include(l => l.Owner).FirstOrDefaultAsync(l => l.Id == id, ct);
+        var lead = await db.Leads
+            .Include(l => l.Owner)
+            .Include(l => l.Activities)
+            .FirstOrDefaultAsync(l => l.Id == id, ct);
         if (lead is null) return null;
 
         if (lead.Status == LeadStatus.Converted)
@@ -362,6 +365,20 @@ public class LeadService(
                 Type = LeadActivityType.Note,
                 Content = $"[Convert] {request.Note.Trim()}",
                 CreatedByUserId = callerUserId,
+                CreatedAt = now,
+            });
+        }
+
+        // Migrate lead activities to customer activities
+        foreach (var leadActivity in lead.Activities)
+        {
+            db.CustomerActivities.Add(new CustomerActivity
+            {
+                CustomerId = finalCustomerId.Value,
+                Type = (CustomerActivityType)leadActivity.Type, // Same enum values
+                Content = leadActivity.Content,
+                OccurredAt = leadActivity.CreatedAt,
+                CreatedByUserId = leadActivity.CreatedByUserId,
                 CreatedAt = now,
             });
         }
