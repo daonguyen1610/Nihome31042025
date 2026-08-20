@@ -500,16 +500,6 @@ public class LeadService(
         lead.UpdatedAt = now;
         lead.UpdatedByUserId = callerUserId;
 
-        // Add activity note
-        db.LeadActivities.Add(new LeadActivity
-        {
-            LeadId = lead.Id,
-            Type = LeadActivityType.Note,
-            Content = "[Revert] Lead reverted from Converted to Contacted. Auto-created customer was deleted.",
-            CreatedByUserId = callerUserId,
-            CreatedAt = now,
-        });
-
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Reverted lead {LeadId}, deleted customer {CustomerId}", lead.Id, customerId);
 
