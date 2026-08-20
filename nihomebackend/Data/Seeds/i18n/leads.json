@@ -50,6 +50,9 @@
   { "key": "leads.convert.done", "category": "leads", "vi": "Đã chuyển đổi Lead.", "en": "Lead converted.", "zh": "线索已转换。", "ja": "リードを変換しました。" },
   { "key": "leads.convert.locked", "category": "leads", "vi": "Lead đã bị khoá vì đã chuyển đổi.", "en": "This lead is locked because it has already been converted.", "zh": "该线索已转换并被锁定。", "ja": "このリードは既に変換済みでロックされています。" },
 
+  { "key": "leads.revert.button", "category": "leads", "vi": "Hoàn tác chuyển đổi", "en": "Revert conversion", "zh": "撤销转换", "ja": "変換を元に戻す" },
+  { "key": "leads.revert.done", "category": "leads", "vi": "Đã hoàn tác chuyển đổi Lead.", "en": "Lead conversion reverted.", "zh": "线索转换已撤销。", "ja": "リードの変換を元に戻しました。" },
+
   { "key": "leads.save", "category": "leads", "vi": "Lưu", "en": "Save", "zh": "保存", "ja": "保存" },
   { "key": "leads.created", "category": "leads", "vi": "Đã tạo Lead.", "en": "Lead created.", "zh": "线索已创建。", "ja": "リードを作成しました。" },
   { "key": "leads.updated", "category": "leads", "vi": "Đã cập nhật.", "en": "Updated.", "zh": "已更新。", "ja": "更新しました。" },

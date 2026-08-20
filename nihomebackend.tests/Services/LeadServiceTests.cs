@@ -668,6 +668,76 @@ public class LeadServiceTests : IDisposable
             _sut.ConvertAsync(junk.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
     }
 
+    // ---------------- Revert ----------------
+
+    [Fact]
+    public async Task RevertAsync_RevertsConvertedLead()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(ownerId: sales.Id);
+
+        // First convert the lead
+        await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest { Note = "test convert" }, sales.Id, canConvert: true);
+        var convertedLead = await _db.Leads.FindAsync(lead.Id);
+        Assert.Equal(LeadStatus.Converted, convertedLead!.Status);
+        var customerId = convertedLead.ConvertedCustomerId;
+        Assert.NotNull(customerId);
+
+        // Now revert
+        var response = await _sut.RevertAsync(lead.Id, sales.Id, canRevert: true);
+
+        Assert.NotNull(response);
+        Assert.Equal(LeadStatus.Contacted, response!.Status);
+        Assert.Null(response.ConvertedCustomerId);
+        Assert.Null(response.ConvertedAt);
+
+        // Customer should be deleted
+        var customer = await _db.Customers.FindAsync(customerId);
+        Assert.Null(customer);
+    }
+
+    [Fact]
+    public async Task RevertAsync_NonConverted_Throws()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(status: LeadStatus.Contacted);
+
+        await Assert.ThrowsAsync<LeadOperationException>(() =>
+            _sut.RevertAsync(lead.Id, sales.Id, canRevert: true));
+    }
+
+    [Fact]
+    public async Task RevertAsync_WithOpportunity_Throws()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(ownerId: sales.Id);
+
+        // Convert and create customer
+        await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+        var convertedLead = await _db.Leads.FindAsync(lead.Id);
+        var customerId = convertedLead!.ConvertedCustomerId!.Value;
+
+        // Create an opportunity for the customer
+        _db.Opportunities.Add(new Opportunity
+        {
+            Name = "Test Opp",
+            CustomerId = customerId,
+            Stage = OpportunityStage.Prospecting,
+            WinProbability = 50,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        // Revert should fail
+        var ex = await Assert.ThrowsAsync<LeadOperationException>(() =>
+            _sut.RevertAsync(lead.Id, sales.Id, canRevert: true));
+        Assert.Contains("opportunities", ex.Message);
+    }
+
     // ---------------- Delete ----------------
 
     [Theory]

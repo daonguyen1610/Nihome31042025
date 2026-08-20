@@ -60,6 +60,16 @@ public interface ILeadService
         int callerUserId,
         bool canSeeAll,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Reverts a converted lead back to Contacted status.
+    /// Only allowed if the auto-created customer has no opportunities, quotes, or contracts.
+    /// </summary>
+    Task<LeadResponse?> RevertAsync(
+        int id,
+        int callerUserId,
+        bool canRevert,
+        CancellationToken ct = default);
 }
 
 /// <summary>Thrown when a business rule is violated (e.g. converted lead is edited).</summary>

@@ -290,6 +290,18 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       expect(primaryContact.phone).toBe(`08${unique.slice(-8)}`);
       expect(primaryContact.email).toBe(`auto-${unique}@test.example`);
 
+      // Test revert - should work since customer has no opportunities
+      const revertRes = await c.post(`/api/leads/${leadId}/revert`, {});
+      expect(revertRes.status(), await revertRes.text()).toBe(200);
+      const revertedLead = await revertRes.json();
+      expect(revertedLead.status).toBe("Contacted");
+      expect(revertedLead.convertedCustomerId).toBeNull();
+
+      // Customer should be deleted
+      const deletedCustomerRes = await c.get(`/api/customers/${autoCreatedCustomerId}`);
+      expect(deletedCustomerRes.status()).toBe(404);
+      autoCreatedCustomerId = 0; // Mark as already deleted
+
       console.log("✓ Auto-create customer from lead test passed!");
 
     } finally {
