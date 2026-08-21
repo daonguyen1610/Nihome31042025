@@ -191,11 +191,28 @@ public class ContractService(
             : null;
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
 
-        var number = string.IsNullOrWhiteSpace(req.ContractNumber)
-            ? await GenerateNumberAsync(ct)
-            : req.ContractNumber.Trim();
+        // A supplied number is the caller's to own; a generated one is ours to
+        // make stick. Generation reads the current maximum and adds one, so two
+        // people creating a contract at the same moment derive the same number
+        // and one of them loses on the unique index. Rather than hand that back
+        // as a conflict the caller has to resolve by retrying, take the next one.
+        var callerSupplied = !string.IsNullOrWhiteSpace(req.ContractNumber);
+        var number = callerSupplied ? req.ContractNumber!.Trim() : await GenerateNumberAsync(ct);
 
-        if (await NumberExistsAsync(number, excludeId: null, ct))
+        if (!callerSupplied)
+        {
+            const int maxAttempts = 5;
+            for (var attempt = 1; await NumberExistsAsync(number, excludeId: null, ct); attempt++)
+            {
+                if (attempt >= maxAttempts)
+                {
+                    throw new ContractDuplicateNumberException(number);
+                }
+
+                number = await GenerateNumberAsync(ct);
+            }
+        }
+        else if (await NumberExistsAsync(number, excludeId: null, ct))
         {
             throw new ContractDuplicateNumberException(number);
         }

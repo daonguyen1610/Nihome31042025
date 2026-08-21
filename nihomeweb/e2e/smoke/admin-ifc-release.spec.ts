@@ -34,22 +34,31 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
 
-    const customersResp = await api.get("/api/customers?pageSize=1", { headers: authHeader });
-    let customerId = 0;
-    if (customersResp.ok()) customerId = (await customersResp.json()).items?.[0]?.id ?? 0;
-    if (!customerId) {
-      const created = await api.post("/api/customers", {
-        headers: authHeader,
-        data: {
-          name: `E2E IFC customer ${uid()}`,
-          type: "Company",
-          sourceCode: "referral",
-          relationshipStatus: "InProgress",
+    // Own customer, never the newest one from the list. Customers are ordered
+    // newest first, so borrowing index 0 picks up whatever another spec just
+    // created — and when that spec deletes it on the way out, the cascade takes
+    // this project with it and the release fails with "project does not exist".
+    const unique = uid();
+    const created = await api.post("/api/customers", {
+      headers: authHeader,
+      data: {
+        name: `E2E IFC customer ${unique}`,
+        type: "Company",
+        sourceCode: "referral",
+        relationshipStatus: "InProgress",
+        taxId: `03${Date.now().toString().slice(-8)}`,
+        address: "56 Trần Hưng Đạo, Hà Nội",
+        representativeName: `IFC Rep ${unique}`,
+        primaryContact: {
+          fullName: `IFC Rep ${unique}`,
+          phone: `097${Math.floor(1000000 + Math.random() * 8999999)}`,
+          email: `ifc-${unique}@nihome.test`,
+          isPrimary: true,
         },
-      });
-      expect(created.ok(), await created.text()).toBeTruthy();
-      customerId = (await created.json()).id;
-    }
+      },
+    });
+    expect(created.ok(), await created.text()).toBeTruthy();
+    const customerId: number = (await created.json()).id;
 
     const projectId = await createDesignProject(api, {
       headers: authHeader,
@@ -154,10 +163,22 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
     await page.getByTestId("ifc-recipient-name").fill("E2E ABC Corp");
     await page.getByTestId("ifc-recipient-type").click();
     await page.getByRole("option", { name: /Nh\u00e0 th\u1ea7u ch\u00ednh|Main contractor/i }).click();
+
+    // Wait for the recipient to actually land, the way the drawing step above
+    // already does. Releasing needs at least one item and one recipient, so
+    // asserting straight after the click raced the request under load and found
+    // the button still disabled.
+    const addRecipientResponsePromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `/api/ifc-releases/${releaseId}/recipients` &&
+        response.request().method() === "POST",
+    );
     await page.getByTestId("ifc-recipient-add").click();
+    const addRecipientResponse = await addRecipientResponsePromise;
+    expect(addRecipientResponse.status(), await addRecipientResponse.text()).toBeLessThan(300);
 
     // ---------- 5. Fire the atomic Release action ----------
-    await expect(page.getByTestId("ifc-release")).toBeEnabled();
+    await expect(page.getByTestId("ifc-release")).toBeEnabled({ timeout: 15_000 });
     await page.getByTestId("ifc-release").click();
     await page.getByTestId("ifc-release-confirm").click();
 
