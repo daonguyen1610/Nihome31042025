@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { AlertTriangle, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -15,6 +15,7 @@ import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -54,6 +55,11 @@ import {
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
 
 // Soft-colored pills so every stage looks equally weighted in the table + Kanban.
+// A native date input takes any year unless bounded — a hand-typed 0202 would
+// otherwise sail through.
+const DATE_MIN = "2000-01-01";
+const DATE_MAX = "2099-12-31";
+
 const OPPORTUNITY_STAGE_STYLES: Record<OpportunityStage, string> = {
   Prospecting: "border-sky-200 bg-sky-50 text-sky-700",
   Qualification: "border-violet-200 bg-violet-50 text-violet-700",
@@ -85,6 +91,7 @@ const AdminOpportunities = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { id: routeId } = useParams();
   const [handledOpenId, setHandledOpenId] = useState<number | null>(null);
 
   const canManage = has(ADMIN_PERMS.opportunitiesManage);
@@ -310,13 +317,18 @@ const AdminOpportunities = () => {
     }
   }, [canManage, loadAuditForOpportunity, t, toast]);
 
+  // Two ways in: the /admin/opportunities/:id route that notifications link to
+  // (OpportunityService.cs:524, :553), and the ?open= query other pages already
+  // use (Customers.tsx:1524). The route wins when both are present.
   useEffect(() => {
-    const openId = Number(searchParams.get("open"));
+    const fromRoute = Number(routeId);
+    const fromQuery = Number(searchParams.get("open"));
+    const openId = Number.isInteger(fromRoute) && fromRoute > 0 ? fromRoute : fromQuery;
     if (Number.isInteger(openId) && openId > 0 && handledOpenId !== openId) {
       setHandledOpenId(openId);
       void openDetail(openId);
     }
-  }, [handledOpenId, openDetail, searchParams]);
+  }, [handledOpenId, openDetail, searchParams, routeId]);
 
   const closeDetail = () => {
     setDetail(null);
@@ -883,13 +895,13 @@ const AdminOpportunities = () => {
               <div>
                 <Label>{t("opportunities.field.winProbability")}</Label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="range"
+                  <Slider
                     min={0}
                     max={100}
-                    value={createForm.winProbability}
-                    onChange={(e) => setCreateForm({ ...createForm, winProbability: Number(e.target.value) })}
-                    className="flex-1 accent-primary"
+                    step={5}
+                    value={[createForm.winProbability]}
+                    onValueChange={([next]) => setCreateForm({ ...createForm, winProbability: next })}
+                    className="flex-1"
                     aria-label={t("opportunities.field.winProbability")}
                   />
                   <Input
@@ -926,6 +938,8 @@ const AdminOpportunities = () => {
                 <Label>{t("opportunities.field.expectedCloseDate")}</Label>
                 <Input
                   type="date"
+                  min={DATE_MIN}
+                  max={DATE_MAX}
                   value={createForm.expectedCloseDate?.slice(0, 10) ?? ""}
                   onChange={(e) => setCreateForm({ ...createForm, expectedCloseDate: e.target.value || null })}
                 />
@@ -1130,13 +1144,13 @@ const AdminOpportunities = () => {
                         <div>
                           <Label>{t("opportunities.field.winProbability")}</Label>
                           <div className="flex items-center gap-2">
-                            <input
-                              type="range"
+                            <Slider
                               min={0}
                               max={100}
-                              value={editForm.winProbability}
-                              onChange={(e) => setEditForm({ ...editForm, winProbability: Number(e.target.value) })}
-                              className="flex-1 accent-primary"
+                              step={5}
+                              value={[editForm.winProbability]}
+                              onValueChange={([next]) => setEditForm({ ...editForm, winProbability: next })}
+                              className="flex-1"
                               aria-label={t("opportunities.field.winProbability")}
                             />
                             <Input
@@ -1150,31 +1164,39 @@ const AdminOpportunities = () => {
                           </div>
                         </div>
                       </div>
-                      {canSeeAll && (
+                      {/* Owner and close date share a row, the way the create
+                          form already lays them out. A full-width date field
+                          strands its browser-drawn calendar icon far from the
+                          value. */}
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {canSeeAll && (
+                          <div>
+                            <Label>{t("opportunities.field.owner")}</Label>
+                            <Select
+                              value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
+                              onValueChange={(v) => setEditForm({ ...editForm, ownerUserId: Number(v) })}
+                            >
+                              <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                              <SelectContent>
+                                {salesUsers.map((u) => (
+                                  <SelectItem key={u.id} value={String(u.id)}>
+                                    {u.fullName ?? u.phoneNumber}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                         <div>
-                          <Label>{t("opportunities.field.owner")}</Label>
-                          <Select
-                            value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
-                            onValueChange={(v) => setEditForm({ ...editForm, ownerUserId: Number(v) })}
-                          >
-                            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                            <SelectContent>
-                              {salesUsers.map((u) => (
-                                <SelectItem key={u.id} value={String(u.id)}>
-                                  {u.fullName ?? u.phoneNumber}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label>{t("opportunities.field.expectedCloseDate")}</Label>
+                          <Input
+                            type="date"
+                            min={DATE_MIN}
+                            max={DATE_MAX}
+                            value={editForm.expectedCloseDate?.slice(0, 10) ?? ""}
+                            onChange={(e) => setEditForm({ ...editForm, expectedCloseDate: e.target.value || null })}
+                          />
                         </div>
-                      )}
-                      <div>
-                        <Label>{t("opportunities.field.expectedCloseDate")}</Label>
-                        <Input
-                          type="date"
-                          value={editForm.expectedCloseDate?.slice(0, 10) ?? ""}
-                          onChange={(e) => setEditForm({ ...editForm, expectedCloseDate: e.target.value || null })}
-                        />
                       </div>
                       <div>
                         <Label>{t("opportunities.field.note")}</Label>

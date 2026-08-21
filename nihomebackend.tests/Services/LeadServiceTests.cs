@@ -4,6 +4,7 @@ using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 
@@ -43,7 +44,7 @@ public class LeadServiceTests : IDisposable
             sales.Id,
             canManage: true));
 
-        Assert.Contains("at least one", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ít nhất một", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(_db.Leads);
     }
 
@@ -131,7 +132,7 @@ public class LeadServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var response = await _sut.CreateAsync(
-            new CreateLeadRequest { Name = "Ms. Nga", Phone = "090", SourceCode = "marketing" },
+            new CreateLeadRequest { Name = "Ms. Nga", Phone = "0987654321", SourceCode = "marketing" },
             creator.Id,
             canManage: true);
 
@@ -159,7 +160,7 @@ public class LeadServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         var response = await _sut.CreateAsync(
-            new CreateLeadRequest { Name = "Fresh", Phone = "090", SourceCode = "marketing" },
+            new CreateLeadRequest { Name = "Fresh", Phone = "0987654321", SourceCode = "marketing" },
             creator.Id,
             canManage: true);
 
@@ -174,7 +175,7 @@ public class LeadServiceTests : IDisposable
         // No user has crm.leads.manage — permissions.HasAsync stays false by default.
 
         var response = await _sut.CreateAsync(
-            new CreateLeadRequest { Name = "Ms. Nga", Phone = "090", SourceCode = "marketing" },
+            new CreateLeadRequest { Name = "Ms. Nga", Phone = "0987654321", SourceCode = "marketing" },
             creator.Id,
             canManage: true);
 
@@ -190,7 +191,7 @@ public class LeadServiceTests : IDisposable
         AllowManageLeads(owner.Id); // has permission but user inactive
 
         await Assert.ThrowsAsync<LeadOperationException>(() => _sut.CreateAsync(
-            new CreateLeadRequest { Name = "N", Phone = "1", SourceCode = "marketing", OwnerUserId = owner.Id },
+            new CreateLeadRequest { Name = "N", Phone = "0987654321", SourceCode = "marketing", OwnerUserId = owner.Id },
             creator.Id,
             canManage: true));
     }
@@ -204,7 +205,7 @@ public class LeadServiceTests : IDisposable
         AllowManageLeads(owner.Id);
 
         await _sut.CreateAsync(
-            new CreateLeadRequest { Name = "Ms. Nga", Phone = "0900", SourceCode = "marketing", OwnerUserId = owner.Id },
+            new CreateLeadRequest { Name = "Ms. Nga", Phone = "0987654321", SourceCode = "marketing", OwnerUserId = owner.Id },
             creator.Id,
             canManage: true,
             languageCode: "en");
@@ -238,7 +239,7 @@ public class LeadServiceTests : IDisposable
             .ThrowsAsync(new InvalidOperationException("smtp down"));
 
         var response = await _sut.CreateAsync(
-            new CreateLeadRequest { Name = "Ms. Nga", Phone = "090", SourceCode = "marketing", OwnerUserId = owner.Id },
+            new CreateLeadRequest { Name = "Ms. Nga", Phone = "0987654321", SourceCode = "marketing", OwnerUserId = owner.Id },
             creator.Id,
             canManage: true);
 
@@ -630,20 +631,228 @@ public class LeadServiceTests : IDisposable
         SeedSource("marketing");
         var lead = await SeedLeadAsync(ownerId: sales.Id);
 
+        // Convert now verifies the ids it is handed, so this test seeds the real
+        // rows instead of the arbitrary numbers it used to pass.
+        var customer = new Customer
+        {
+            Type = CustomerType.Individual,
+            Name = "Existing customer",
+            SourceCode = "marketing",
+        };
+        _db.Customers.Add(customer);
+        await _db.SaveChangesAsync();
+
+        var opportunity = new Opportunity { Name = "Existing opportunity", CustomerId = customer.Id };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+
         var response = await _sut.ConvertAsync(
             lead.Id,
-            new ConvertLeadRequest { CustomerId = 700, OpportunityId = 701, Note = "signed" },
+            new ConvertLeadRequest
+            {
+                CustomerId = customer.Id,
+                OpportunityId = opportunity.Id,
+                Note = "signed",
+            },
             sales.Id,
             canConvert: true);
 
         Assert.NotNull(response);
         Assert.Equal(LeadStatus.Converted, response!.Status);
-        Assert.Equal(700, response.ConvertedCustomerId);
-        Assert.Equal(701, response.ConvertedOpportunityId);
+        Assert.Equal(customer.Id, response.ConvertedCustomerId);
+        Assert.Equal(opportunity.Id, response.ConvertedOpportunityId);
         Assert.NotNull(response.ConvertedAt);
 
         var savedActivity = Assert.Single(_db.LeadActivities);
         Assert.Contains("signed", savedActivity.Content);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_CreatesCustomerAndOpportunity_WhenNoIdsGiven()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var response = await _sut.ConvertAsync(
+            lead.Id,
+            new ConvertLeadRequest(),
+            sales.Id,
+            canConvert: true);
+
+        Assert.NotNull(response);
+        Assert.NotNull(response!.ConvertedCustomerId);
+        Assert.NotNull(response.ConvertedOpportunityId);
+
+        var customer = await _db.Customers
+            .Include(c => c.Contacts)
+            .SingleAsync(c => c.Id == response.ConvertedCustomerId);
+        Assert.Equal(CustomerType.Individual, customer.Type);
+        Assert.Equal("Ms. Nga", customer.Name);
+        Assert.Equal("marketing", customer.SourceCode);
+        Assert.Equal(CustomerRelationshipStatus.Prospect, customer.RelationshipStatus);
+        Assert.Equal(sales.Id, customer.OwnerUserId);
+
+        var contact = Assert.Single(customer.Contacts);
+        Assert.True(contact.IsPrimary);
+        Assert.Equal("0900000000", contact.Phone);
+
+        var opportunity = await _db.Opportunities
+            .SingleAsync(o => o.Id == response.ConvertedOpportunityId);
+        Assert.Equal(customer.Id, opportunity.CustomerId);
+        Assert.Equal(OpportunityStage.Prospecting, opportunity.Stage);
+        Assert.Equal(sales.Id, opportunity.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_StampsIdenticalTimestampOnAllThreeRows()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var response = await _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+
+        var saved = await _db.Leads.SingleAsync(l => l.Id == lead.Id);
+        var customer = await _db.Customers.SingleAsync(c => c.Id == response!.ConvertedCustomerId);
+        var opportunity = await _db.Opportunities.SingleAsync(o => o.Id == response!.ConvertedOpportunityId);
+
+        // UnconvertAsync recognises auto-created rows by exactly this match. If this
+        // test goes red, unconvert stops deleting and always falls back to unlinking.
+        Assert.Equal(saved.ConvertedAt, customer.CreatedAt);
+        Assert.Equal(saved.ConvertedAt, opportunity.CreatedAt);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_RejectsCompanyLeadWithoutTaxIdAddressRepresentative()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+        lead.CompanyName = "Công ty Alpha";
+        await _db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<LeadOperationException>(() => _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
+
+        Assert.Contains("TaxId", ex.Message);
+        Assert.Empty(_db.Customers);
+        Assert.Empty(_db.Opportunities);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_CreatesCompanyCustomer_WhenCompanyFieldsSupplied()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+        lead.CompanyName = "Công ty Alpha";
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.ConvertAsync(
+            lead.Id,
+            new ConvertLeadRequest
+            {
+                TaxId = "0101234567",
+                Address = "12 Nguyễn Trãi, Hà Nội",
+                RepresentativeName = "Ms. Nga",
+            },
+            sales.Id,
+            canConvert: true);
+
+        var customer = await _db.Customers.SingleAsync(c => c.Id == response!.ConvertedCustomerId);
+        Assert.Equal(CustomerType.Company, customer.Type);
+        Assert.Equal("Công ty Alpha", customer.Name);
+        Assert.Equal("0101234567", customer.TaxId);
+        Assert.Equal("Ms. Nga", customer.RepresentativeName);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_RejectsNewCustomerLinkedToExistingOpportunity()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var otherCustomer = new Customer
+        {
+            Type = CustomerType.Individual,
+            Name = "Khách cũ",
+            SourceCode = "marketing",
+        };
+        _db.Customers.Add(otherCustomer);
+        await _db.SaveChangesAsync();
+
+        var opportunity = new Opportunity { Name = "Cơ hội cũ", CustomerId = otherCustomer.Id };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<LeadOperationException>(() => _sut.ConvertAsync(
+            lead.Id,
+            new ConvertLeadRequest { OpportunityId = opportunity.Id, CustomerId = 999999 },
+            sales.Id,
+            canConvert: true));
+
+        Assert.Contains("must match", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_ReusesExistingCustomer_AndCreatesOpportunityOnly()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var existing = new Customer
+        {
+            Type = CustomerType.Individual,
+            Name = "Khách cũ",
+            SourceCode = "marketing",
+        };
+        _db.Customers.Add(existing);
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.ConvertAsync(
+            lead.Id,
+            new ConvertLeadRequest { CustomerId = existing.Id },
+            sales.Id,
+            canConvert: true);
+
+        Assert.Equal(existing.Id, response!.ConvertedCustomerId);
+        Assert.Single(_db.Customers);
+        var opportunity = await _db.Opportunities.SingleAsync();
+        Assert.Equal(existing.Id, opportunity.CustomerId);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_RejectsDuplicateIndividualByPrimaryPhone()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        _db.Customers.Add(new Customer
+        {
+            Type = CustomerType.Individual,
+            Name = "Trùng số",
+            SourceCode = "marketing",
+            Contacts = new List<CustomerContact>
+            {
+                new() { FullName = "Trùng số", Phone = "0900000000", IsPrimary = true },
+            },
+        });
+        await _db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<CustomerDuplicateException>(() => _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
+
+        Assert.Equal("Phone", ex.Detail.Field);
+        Assert.Single(_db.Customers);
+        Assert.Empty(_db.Opportunities);
+
+        var saved = await _db.Leads.SingleAsync(l => l.Id == lead.Id);
+        Assert.NotEqual(LeadStatus.Converted, saved.Status);
     }
 
     [Fact]
@@ -668,74 +877,176 @@ public class LeadServiceTests : IDisposable
             _sut.ConvertAsync(junk.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
     }
 
-    // ---------------- Revert ----------------
+    // ---------------- Unconvert ----------------
 
     [Fact]
-    public async Task RevertAsync_RevertsConvertedLead()
+    public async Task UnconvertAsync_DeletesBoth_WhenBothAutoCreatedAndClean()
     {
         var sales = await SeedUserAsync(UserRole.USER);
         SeedSource("marketing");
-        var lead = await SeedLeadAsync(ownerId: sales.Id);
-
-        // First convert the lead
-        await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest { Note = "test convert" }, sales.Id, canConvert: true);
-        var convertedLead = await _db.Leads.FindAsync(lead.Id);
-        Assert.Equal(LeadStatus.Converted, convertedLead!.Status);
-        var customerId = convertedLead.ConvertedCustomerId;
-        Assert.NotNull(customerId);
-
-        // Now revert
-        var response = await _sut.RevertAsync(lead.Id, sales.Id, canRevert: true);
-
-        Assert.NotNull(response);
-        Assert.Equal(LeadStatus.Contacted, response!.Status);
-        Assert.Null(response.ConvertedCustomerId);
-        Assert.Null(response.ConvertedAt);
-
-        // Customer should be deleted
-        var customer = await _db.Customers.FindAsync(customerId);
-        Assert.Null(customer);
-    }
-
-    [Fact]
-    public async Task RevertAsync_NonConverted_Throws()
-    {
-        var sales = await SeedUserAsync(UserRole.USER);
-        SeedSource("marketing");
-        var lead = await SeedLeadAsync(status: LeadStatus.Contacted);
-
-        await Assert.ThrowsAsync<LeadOperationException>(() =>
-            _sut.RevertAsync(lead.Id, sales.Id, canRevert: true));
-    }
-
-    [Fact]
-    public async Task RevertAsync_WithOpportunity_Throws()
-    {
-        var sales = await SeedUserAsync(UserRole.USER);
-        SeedSource("marketing");
-        var lead = await SeedLeadAsync(ownerId: sales.Id);
-
-        // Convert and create customer
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
         await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
-        var convertedLead = await _db.Leads.FindAsync(lead.Id);
-        var customerId = convertedLead!.ConvertedCustomerId!.Value;
 
-        // Create an opportunity for the customer
-        _db.Opportunities.Add(new Opportunity
+        var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
+
+        Assert.NotNull(result);
+        Assert.Equal(UnconvertOutcome.DeletedBoth, result!.Outcome);
+        Assert.Empty(_db.Customers);
+        Assert.Empty(_db.Opportunities);
+
+        var saved = await _db.Leads.SingleAsync(l => l.Id == lead.Id);
+        Assert.Equal(LeadStatus.Interested, saved.Status);
+        Assert.Null(saved.ConvertedAt);
+        Assert.Null(saved.ConvertedCustomerId);
+        Assert.Null(saved.ConvertedOpportunityId);
+    }
+
+    [Fact]
+    public async Task UnconvertAsync_KeepsExistingCustomer_DeletesOpportunityOnly()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var existing = new Customer
         {
-            Name = "Test Opp",
-            CustomerId = customerId,
-            Stage = OpportunityStage.Prospecting,
-            WinProbability = 50,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            Type = CustomerType.Individual,
+            Name = "Khách cũ",
+            SourceCode = "marketing",
+        };
+        _db.Customers.Add(existing);
+        await _db.SaveChangesAsync();
+
+        await _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest { CustomerId = existing.Id }, sales.Id, canConvert: true);
+
+        var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
+
+        Assert.Equal(UnconvertOutcome.DeletedOpportunity, result!.Outcome);
+        Assert.Equal(existing.Id, result.KeptCustomerId);
+        Assert.Single(_db.Customers);
+        Assert.Empty(_db.Opportunities);
+    }
+
+    [Fact]
+    public async Task UnconvertAsync_OnlyUnlinks_WhenOpportunityHasQuote()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var converted = await _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+
+        _db.Quotes.Add(new Quote
+        {
+            Code = "QT-2026-0001",
+            OpportunityId = converted!.ConvertedOpportunityId!.Value,
         });
         await _db.SaveChangesAsync();
 
-        // Revert should fail
-        var ex = await Assert.ThrowsAsync<LeadOperationException>(() =>
-            _sut.RevertAsync(lead.Id, sales.Id, canRevert: true));
-        Assert.Contains("opportunities", ex.Message);
+        var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
+
+        Assert.Equal(UnconvertOutcome.UnlinkedOnly, result!.Outcome);
+        Assert.Single(_db.Customers);
+        Assert.Single(_db.Opportunities);
+        Assert.NotNull(result.KeptCustomerId);
+        Assert.NotNull(result.KeptOpportunityId);
+    }
+
+    [Fact]
+    public async Task UnconvertAsync_OnlyUnlinks_WhenPastTwentyFourHours()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+        await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+
+        // Move all three stamps back together so the auto-created marker survives
+        // and only the window lapses.
+        var stale = DateTime.UtcNow.AddHours(-25);
+        var saved = await _db.Leads.SingleAsync(l => l.Id == lead.Id);
+        var customer = await _db.Customers.SingleAsync();
+        var opportunity = await _db.Opportunities.SingleAsync();
+        saved.ConvertedAt = stale;
+        customer.CreatedAt = stale;
+        opportunity.CreatedAt = stale;
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
+
+        Assert.Equal(UnconvertOutcome.UnlinkedOnly, result!.Outcome);
+        Assert.Single(_db.Customers);
+        Assert.Single(_db.Opportunities);
+    }
+
+    [Fact]
+    public async Task UnconvertAsync_StillDeletesBoth_WhenTheOnlyActivitiesCameFromTheConvert()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        // Convert migrates the lead's care history onto the new customer. Those
+        // rows must not read as somebody else's work, or nothing is deletable.
+        _db.LeadActivities.Add(new LeadActivity
+        {
+            LeadId = lead.Id,
+            Type = LeadActivityType.Call,
+            Content = "Gọi trước khi chuyển đổi",
+            CreatedByUserId = sales.Id,
+        });
+        await _db.SaveChangesAsync();
+
+        await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+        Assert.NotEmpty(_db.CustomerActivities);
+
+        var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
+
+        Assert.Equal(UnconvertOutcome.DeletedBoth, result!.Outcome);
+        Assert.Empty(_db.Customers);
+    }
+
+    [Fact]
+    public async Task UnconvertAsync_KeepsCustomer_WhenItHasActivitiesOrDocuments()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var converted = await _sut.ConvertAsync(
+            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
+
+        // Cascade delete would take this row without a word — that is what the
+        // guard exists to prevent.
+        _db.CustomerActivities.Add(new CustomerActivity
+        {
+            CustomerId = converted!.ConvertedCustomerId!.Value,
+            Type = CustomerActivityType.Note,
+            Content = "Đã gọi điện chăm sóc",
+            CreatedByUserId = sales.Id,
+        });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
+
+        Assert.Equal(UnconvertOutcome.DeletedOpportunity, result!.Outcome);
+        Assert.Single(_db.Customers);
+        Assert.Single(_db.CustomerActivities);
+        Assert.Empty(_db.Opportunities);
+    }
+
+    [Fact]
+    public async Task UnconvertAsync_RejectsLeadThatWasNeverConverted()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+
+        var ex = await Assert.ThrowsAsync<LeadOperationException>(
+            () => _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true));
+
+        Assert.Contains("converted", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     // ---------------- Delete ----------------

@@ -77,6 +77,23 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_AutoNumberSkipsManuallyEnteredSuffixes()
+    {
+        // A hand-entered number can carry any suffix, and a non-numeric one sorts
+        // above the generated ones: "HD-2026-MUS" beats "HD-2026-0005" as a string.
+        // The generator used to take that top row, fail to parse it, reset to 1 and
+        // collide with the contract already holding 0001.
+        var year = DateTime.UtcNow.Year;
+        await _sut.CreateAsync(Req(number: $"HD-{year}-0001"), 1, canReassignOwner: true);
+        await _sut.CreateAsync(Req(number: $"HD-{year}-0005"), 1, canReassignOwner: true);
+        await _sut.CreateAsync(Req(number: $"HD-{year}-MUS"), 1, canReassignOwner: true);
+
+        var generated = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+
+        Assert.Equal($"HD-{year}-0006", generated.ContractNumber);
+    }
+
+    [Fact]
     public async Task Create_IncrementsNumberSequenceInSameYear()
     {
         await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
@@ -687,6 +704,72 @@ public class ContractServiceTests : IDisposable
     /// + integration; here we just want ContractService to not blow up
     /// when it transitions a contract to InProgress.
     /// </summary>
+    // ---------------- Design project link ----------------
+
+    [Fact]
+    public async Task GetAsync_ExposesLinkedDesignProject()
+    {
+        var contract = await _sut.CreateAsync(Req(customerId: _customerA), 1, canReassignOwner: true);
+
+        _db.DesignProjects.Add(new DesignProject
+        {
+            ProjectCode = "DP-2026-0001",
+            Name = "Dự án hợp đồng HD-001",
+            CustomerId = _customerA,
+            ContractId = contract.Id,
+            CurrentStage = DesignProjectStage.BasicDesign,
+            Status = DesignProjectStatus.Active,
+        });
+        _db.SaveChanges();
+
+        var response = await _sut.GetAsync(contract.Id, 1, canSeeAll: true);
+
+        Assert.NotNull(response!.DesignProjectId);
+        Assert.Equal("DP-2026-0001", response.DesignProjectCode);
+        Assert.Equal("Dự án hợp đồng HD-001", response.DesignProjectName);
+        Assert.Equal("BasicDesign", response.DesignProjectCurrentStage);
+    }
+
+    [Fact]
+    public async Task GetAsync_LeavesDesignProjectFieldsNull_WhenNoneLinked()
+    {
+        var contract = await _sut.CreateAsync(Req(customerId: _customerB), 1, canReassignOwner: true);
+
+        var response = await _sut.GetAsync(contract.Id, 1, canSeeAll: true);
+
+        Assert.Null(response!.DesignProjectId);
+        Assert.Null(response.DesignProjectCode);
+        Assert.Null(response.DesignProjectName);
+        Assert.Null(response.DesignProjectCurrentStage);
+    }
+
+    [Fact]
+    public async Task ListAsync_CarriesTheDesignProjectLink()
+    {
+        var linked = await _sut.CreateAsync(Req(customerId: _customerA), 1, canReassignOwner: true);
+        var bare = await _sut.CreateAsync(Req(customerId: _customerB), 1, canReassignOwner: true);
+
+        _db.DesignProjects.Add(new DesignProject
+        {
+            ProjectCode = "DP-2026-0002",
+            Name = "Dự án hợp đồng HD-002",
+            CustomerId = _customerA,
+            ContractId = linked.Id,
+            CurrentStage = DesignProjectStage.Concept,
+            Status = DesignProjectStatus.Active,
+        });
+        _db.SaveChanges();
+
+        var list = await _sut.ListAsync(callerUserId: 1, canSeeAll: true);
+
+        var linkedRow = list.Items.Single(i => i.Id == linked.Id);
+        Assert.Equal("DP-2026-0002", linkedRow.DesignProjectCode);
+        Assert.Equal("Concept", linkedRow.DesignProjectCurrentStage);
+
+        var bareRow = list.Items.Single(i => i.Id == bare.Id);
+        Assert.Null(bareRow.DesignProjectId);
+    }
+
     private sealed class NoopDesignProjectService : IDesignProjectService
     {
         public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectListResponse> ListAsync(

@@ -224,27 +224,44 @@ public class LeadsControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
 
+        // A phone unique to this run: convert now refuses to create a second
+        // individual customer holding a phone that already belongs to one.
+        var phone = "09" + Random.Shared.Next(10_000_000, 99_999_999);
+
         var created = await Client.PostAsJsonAsync("/api/leads", new
         {
             name = "Convert-me " + Guid.NewGuid().ToString("N")[..6],
-            phone = "0900000000",
+            phone,
             sourceCode = "marketing",
         });
         created.EnsureSuccessStatusCode();
         var leadId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
 
+        // No ids supplied — convert builds the customer and the opportunity. It
+        // used to just stamp whatever numbers the caller passed, so this asked for
+        // 4242 and 4243 and got them back without either record existing.
         var res = await Client.PostAsJsonAsync($"/api/leads/{leadId}/convert", new
         {
-            customerId = 4242,
-            opportunityId = 4243,
             note = "Signed",
         });
 
         res.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(res);
         body.GetProperty("status").GetString().Should().Be("Converted");
-        body.GetProperty("convertedCustomerId").GetInt32().Should().Be(4242);
-        body.GetProperty("convertedOpportunityId").GetInt32().Should().Be(4243);
+
+        var customerId = body.GetProperty("convertedCustomerId").GetInt32();
+        var opportunityId = body.GetProperty("convertedOpportunityId").GetInt32();
+        customerId.Should().BeGreaterThan(0);
+        opportunityId.Should().BeGreaterThan(0);
+
+        // Both must be real rows, not just numbers on the lead.
+        var customer = await Client.GetAsync($"/api/customers/{customerId}");
+        customer.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(customer)).GetProperty("sourceCode").GetString().Should().Be("marketing");
+
+        var opportunity = await Client.GetAsync($"/api/opportunities/{opportunityId}");
+        opportunity.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(opportunity)).GetProperty("customerId").GetInt32().Should().Be(customerId);
 
         // Follow-up edit must fail.
         var edit = await Client.PutAsJsonAsync($"/api/leads/{leadId}", new

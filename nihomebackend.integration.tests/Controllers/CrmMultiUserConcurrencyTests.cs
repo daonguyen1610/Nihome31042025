@@ -15,7 +15,7 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
         using var created = await manager.PostAsJsonAsync("/api/leads", new
         {
             name = "Concurrent lead",
-            phone = "0901" + Guid.NewGuid().ToString("N")[..6],
+            phone = "0901" + Random.Shared.Next(100000, 999999),
             sourceCode = "marketing",
         });
         created.EnsureSuccessStatusCode();
@@ -242,7 +242,7 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
             primaryContact = new
             {
                 fullName = "Contact",
-                phone = "0911" + Guid.NewGuid().ToString("N")[..6],
+                phone = "0911" + Random.Shared.Next(100000, 999999),
                 isPrimary = true,
             },
         });

@@ -141,6 +141,15 @@ public class QuoteService(
             .FirstOrDefaultAsync(o => o.Id == request.OpportunityId, ct)
             ?? throw new QuoteOperationException($"Không tìm thấy cơ hội #{request.OpportunityId}.");
 
+        // A closed opportunity takes no new quotes. The guard sits here and not in
+        // UpdateAsync on purpose: an old quote on a lost deal still has to be
+        // readable and its note editable for reconciliation.
+        if (opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
+        {
+            throw new QuoteOperationException(
+                $"Cơ hội #{opportunity.Id} đang ở trạng thái {opportunity.Stage} — không thể tạo báo giá mới.");
+        }
+
         ValidateMethodPayload(request.Method, request.AreaSqm, request.UnitPricePerSqm, request.Items);
 
         var now = DateTime.UtcNow;
@@ -222,13 +231,23 @@ public class QuoteService(
 
         ValidateMethodPayload(quote.Method, request.AreaSqm, request.UnitPricePerSqm, request.Items);
 
+        var changes = DetectChanges(quote, request);
+
+        // Return before touching the entity at all. Not merely to avoid a stray log:
+        // the write path below calls QuoteItems.RemoveRange and rebuilds every BOQ
+        // line, so an unchanged save would hand them all fresh ids and break
+        // anything holding a reference to them.
+        if (!changes.Any)
+        {
+            return await GetAsync(quote.Id, callerUserId, canSeeAll: true, ct);
+        }
+
         var now = DateTime.UtcNow;
 
         // Spec NIH-84 & NIH-93: editing after Approved/Sent/... spawns a new version.
         // Snapshot the current row before mutating, then bump Version.
-        var isPostApproval = quote.Status is QuoteStatus.Approved
-            or QuoteStatus.SentToCustomer
-            or QuoteStatus.Expired;
+        var isPostApproval = changes.Material &&
+            quote.Status is (QuoteStatus.Approved or QuoteStatus.SentToCustomer or QuoteStatus.Expired);
         if (isPostApproval)
         {
             var previousStatus = quote.Status;
@@ -267,10 +286,16 @@ public class QuoteService(
         quote.UpdatedAt = now;
         quote.UpdatedByUserId = callerUserId;
 
-        // Rebuild items only for BOQ. UnitCost mode never has line items.
-        db.QuoteItems.RemoveRange(quote.Items);
-        quote.Items = new List<QuoteItem>();
-        ApplyItems(quote, quote.Method, request.Items);
+        // Rebuild items only for BOQ, and only when the set actually differs —
+        // rebuilding for nothing reissues every line's id.
+        if (quote.Method == QuoteMethod.Boq && !BoqItemsEqual(quote.Items, request.Items))
+        {
+            db.QuoteItems.RemoveRange(quote.Items);
+            quote.Items = new List<QuoteItem>();
+            ApplyItems(quote, quote.Method, request.Items);
+        }
+
+        // Always recompute: discount or VAT can move while the lines stand still.
         RecomputeTotals(quote);
 
         db.QuoteApprovalLogs.Add(new QuoteApprovalLog
@@ -307,7 +332,7 @@ public class QuoteService(
                     throw new QuoteOperationException("Hạn hiệu lực đã qua — cập nhật trước khi submit.");
                 q.SubmittedAt = DateTime.UtcNow;
                 q.SubmittedByUserId = caller;
-            }, ct);
+            }, ct, requireOpenOpportunity: true);
 
     public Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default) =>
         TransitionAsync(id, caller, canSeeAll: true,
@@ -344,7 +369,8 @@ public class QuoteService(
             permitted: canSend,
             note: req.Note,
             rowVersion: req.RowVersion,
-            beforeSave: q => { q.SentAt = DateTime.UtcNow; q.SentByUserId = caller; }, ct);
+            beforeSave: q => { q.SentAt = DateTime.UtcNow; q.SentByUserId = caller; },
+            ct, requireOpenOpportunity: true);
 
     public Task<QuoteResponse?> MarkCustomerApprovedAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default) =>
         TransitionAsync(id, caller, canSeeAll,
@@ -512,7 +538,8 @@ public class QuoteService(
         string? note,
         string? rowVersion,
         Action<Quote> beforeSave,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool requireOpenOpportunity = false)
     {
         if (!permitted)
         {
@@ -523,9 +550,20 @@ public class QuoteService(
         // the true row count instead of the default-empty navigation collection.
         var quote = await db.Quotes
             .Include(q => q.Items)
+            .Include(q => q.Opportunity)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
+
+        // An opportunity can go Lost after its quote was drafted, so guarding at
+        // create is not enough. This sits after the ownership check so a caller
+        // without rights hears about the permission, never about the deal's state.
+        if (requireOpenOpportunity &&
+            quote.Opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
+        {
+            throw new QuoteOperationException(
+                $"Cơ hội của báo giá đang ở trạng thái {quote.Opportunity.Stage} — không thể chuyển tiếp báo giá.");
+        }
 
         CrmConcurrency.Apply(db, quote, rowVersion);
 
@@ -663,6 +701,100 @@ public class QuoteService(
             next = parsed + 1;
         }
         return $"{prefix}{next:D4}";
+    }
+
+    /// <summary>
+    /// Whether the payload differs from the stored quote at all, and whether it
+    /// differs in a way that affects price.
+    ///
+    /// <c>Material</c> decides the version bump; <c>Any</c> decides whether an
+    /// Update log is written. Separating the two matters: "nothing changed" and
+    /// "something changed that does not move the price" are different events.
+    /// </summary>
+    private readonly record struct QuoteChangeSet(bool Any, bool Material);
+
+    private static QuoteChangeSet DetectChanges(Quote quote, UpdateQuoteRequest request)
+    {
+        // Normalise null to zero before comparing: the frontend sends 0 for a blank
+        // field, and without this every save would look like a change.
+        static decimal N(decimal? value) => value ?? 0m;
+        static string? S(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        var material = false;
+
+        if (quote.Method == QuoteMethod.UnitCost)
+        {
+            material |= N(quote.AreaSqm) != N(request.AreaSqm);
+            material |= N(quote.UnitPricePerSqm) != N(request.UnitPricePerSqm);
+            material |= S(quote.PackageDescription) != S(request.PackageDescription);
+        }
+        else
+        {
+            material |= !BoqItemsEqual(quote.Items, request.Items);
+        }
+
+        material |= quote.DiscountPercent != request.DiscountPercent;
+        material |= quote.VatPercent != request.VatPercent;
+
+        if (request.ValidUntil.HasValue)
+        {
+            material |= quote.ValidUntil != request.ValidUntil.Value;
+        }
+
+        // Not price-affecting, but still worth a trace.
+        var cosmetic = S(quote.Note) != S(request.Note)
+            || (request.OwnerUserId.HasValue && request.OwnerUserId.Value != quote.OwnerUserId);
+
+        return new QuoteChangeSet(Any: material || cosmetic, Material: material);
+    }
+
+    private static bool BoqItemsEqual(
+        IReadOnlyCollection<QuoteItem> current,
+        IReadOnlyCollection<QuoteItemInput> incoming)
+    {
+        if (current.Count != incoming.Count) return false;
+
+        // SortOrder takes part in the comparison — reordering lines is a real
+        // change, the customer sees it on the printed quote.
+        //
+        // But it has to be normalised first. ApplyItems assigns
+        // `SortOrder = i.SortOrder == 0 ? ++sort : i.SortOrder`, so the frontend may
+        // send all zeroes and let the backend number them. Comparing those zeroes
+        // against the stored 1..n would make every save look changed — the very bug
+        // this guard exists to fix.
+        var normalised = new List<(string? Code, string Name, string Unit, decimal Qty, decimal Price, int Sort)>();
+        var running = 0;
+        foreach (var item in incoming)
+        {
+            running++;
+            normalised.Add((
+                string.IsNullOrWhiteSpace(item.ItemCode) ? null : item.ItemCode.Trim(),
+                item.Name?.Trim() ?? string.Empty,
+                item.Unit?.Trim() ?? string.Empty,
+                item.Quantity,
+                item.UnitPrice,
+                item.SortOrder == 0 ? running : item.SortOrder));
+        }
+
+        var left = current.OrderBy(i => i.SortOrder).ToList();
+        var right = normalised.OrderBy(i => i.Sort).ToList();
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            var a = left[i];
+            var b = right[i];
+            if (a.SortOrder != b.Sort) return false;
+            if (!string.Equals(a.Name?.Trim(), b.Name, StringComparison.Ordinal)) return false;
+            if (!string.Equals(a.Unit?.Trim(), b.Unit, StringComparison.Ordinal)) return false;
+            if (!string.Equals(
+                    string.IsNullOrWhiteSpace(a.ItemCode) ? null : a.ItemCode.Trim(),
+                    b.Code,
+                    StringComparison.Ordinal)) return false;
+            if (a.Quantity != b.Qty) return false;
+            if (a.UnitPrice != b.Price) return false;
+        }
+
+        return true;
     }
 
     private static void ApplyItems(Quote quote, QuoteMethod method, List<QuoteItemInput> inputs)

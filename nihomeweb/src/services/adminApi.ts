@@ -423,7 +423,20 @@ export interface ConvertLeadRequest {
   rowVersion?: string;
   customerId?: number | null;
   opportunityId?: number | null;
+  /** Required when the lead has a company name and no customerId is supplied. */
+  taxId?: string | null;
+  address?: string | null;
+  representativeName?: string | null;
   note?: string;
+}
+
+export type UnconvertOutcome = "DeletedBoth" | "DeletedOpportunity" | "UnlinkedOnly";
+
+export interface UnconvertLeadResponse {
+  outcome: UnconvertOutcome;
+  keptCustomerId: number | null;
+  keptOpportunityId: number | null;
+  lead: LeadResponse;
 }
 
 export interface CreateLeadActivityRequest {
@@ -747,6 +760,11 @@ export interface ContractResponse {
   opportunityId?: number | null;
   opportunityTitle?: string | null;
   quoteId?: number | null;
+  /** Derived from design_projects; present when a design project is attached. */
+  designProjectId?: number | null;
+  designProjectCode?: string | null;
+  designProjectName?: string | null;
+  designProjectCurrentStage?: string | null;
   quoteCode?: string | null;
   ownerUserId?: number | null;
   ownerName?: string | null;
@@ -3118,8 +3136,8 @@ export const adminApi = {
     api.delete(`/leads/${id}`, withIfMatch(rowVersion)),
   convertLead: (id: number, body: ConvertLeadRequest = {}) =>
     api.post<LeadResponse>(`/leads/${id}/convert`, body),
-  revertLead: (id: number, rowVersion?: string) =>
-    api.post<LeadResponse>(`/leads/${id}/revert`, {}, withIfMatch(rowVersion)),
+  unconvertLead: (id: number, rowVersion?: string) =>
+    api.post<UnconvertLeadResponse>(`/leads/${id}/unconvert`, {}, withIfMatch(rowVersion)),
   addLeadActivity: (id: number, body: CreateLeadActivityRequest) =>
     api.post<LeadActivityResponse>(`/leads/${id}/activities`, body),
 
@@ -3839,6 +3857,8 @@ export const adminApi = {
     api.delete(`/contracts/${id}`, withIfMatch(rowVersion)),
 
   // Contract state / milestones / VO / attachments / timeline (NIH-104)
+  ensureContractDesignProject: (contractId: number) =>
+    api.post<DesignProjectResponse>(`/contracts/${contractId}/design-project`, {}),
   transitionContract: (id: number, newStatus: ContractStatus, rowVersion?: string) =>
     api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus, rowVersion }),
   updateMilestoneStatus: (

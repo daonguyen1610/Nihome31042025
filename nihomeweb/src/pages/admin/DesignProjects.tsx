@@ -222,14 +222,6 @@ const AdminDesignProjects = () => {
     () => customers.map((c) => ({ value: String(c.id), label: c.name })),
     [customers],
   );
-  const contractOptions = useMemo(
-    () =>
-      contracts.map((c) => ({
-        value: String(c.id),
-        label: `${c.contractNumber}${c.customerName ? ` — ${c.customerName}` : ""}`,
-      })),
-    [contracts],
-  );
   const userOptions = useMemo(
     () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
     [users],
@@ -254,6 +246,30 @@ const AdminDesignProjects = () => {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const isEdit = !!editingDetail;
+
+  // A filtered unique index on DesignProject.ContractId allows exactly one design
+  // project per contract, and a contract spawns its own when it moves to
+  // InProgress. So a contract that already has one must drop out of the picker —
+  // whatever its status, since the index does not care about status.
+  //
+  // The currently selected contract is kept so editing an existing project does
+  // not silently clear its own contract.
+  //
+  // Declared after `form` on purpose: the dependency array reads form.contractId
+  // during render, so sitting above the useState threw before initialisation and
+  // blanked the page.
+  const selectableContracts = useMemo(
+    () => contracts.filter((c) => c.designProjectId == null || c.id === form.contractId),
+    [contracts, form.contractId],
+  );
+  const contractOptions = useMemo(
+    () =>
+      selectableContracts.map((c) => ({
+        value: String(c.id),
+        label: `${c.contractNumber}${c.customerName ? ` — ${c.customerName}` : ""}`,
+      })),
+    [selectableContracts],
+  );
 
   const openCreate = () => {
     setEditingDetail(null);
@@ -341,6 +357,22 @@ const AdminDesignProjects = () => {
       setEditingDetail(null);
       await fetchList();
     } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      if (status === 409) {
+        // Two people can still race past the filtered picker. Point at the project
+        // that won instead of surfacing a raw conflict.
+        const taken = contracts.find((c) => c.id === form.contractId);
+        toast({
+          title: t("designProjects.error.contractTaken"),
+          description: taken?.designProjectCode ?? undefined,
+          variant: "destructive",
+        });
+        if (taken?.designProjectId != null) {
+          setDialogOpen(false);
+          navigate(`/admin/design-projects/${taken.designProjectId}`);
+        }
+        return;
+      }
       setFormError(extractApiError(err));
     } finally {
       setSaving(false);

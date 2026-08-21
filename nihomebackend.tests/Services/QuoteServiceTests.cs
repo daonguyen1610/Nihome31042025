@@ -4,6 +4,7 @@ using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 
@@ -29,6 +30,67 @@ public class QuoteServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     // ---------------- Create ----------------
+
+    [Fact]
+    public async Task CreateAsync_RejectsQuoteOnLostOpportunity()
+    {
+        var (user, opp) = await SeedOpportunityAsync(OpportunityStage.Lost);
+
+        var ex = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
+            NewUnitCostRequest(opp.Id), user.Id, canManage: true));
+
+        Assert.Contains("Lost", ex.Message);
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsQuoteOnWonOpportunity()
+    {
+        var (user, opp) = await SeedOpportunityAsync(OpportunityStage.Won);
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
+            NewUnitCostRequest(opp.Id), user.Id, canManage: true));
+
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_RejectsWhenOpportunityWentLostAfterQuoteWasDrafted()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var quote = await _sut.CreateAsync(NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+
+        var tracked = await _db.Opportunities.SingleAsync(o => o.Id == opp.Id);
+        tracked.Stage = OpportunityStage.Lost;
+        await _db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SubmitAsync(
+            quote.Id, new QuoteWorkflowRequest(), user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Contains("Lost", ex.Message);
+
+        var saved = await _db.Quotes.SingleAsync(q => q.Id == quote.Id);
+        Assert.Equal(QuoteStatus.Draft, saved.Status);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_ReportsPermissionFailure_BeforeOpportunityStage()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var quote = await _sut.CreateAsync(NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+
+        var tracked = await _db.Opportunities.SingleAsync(o => o.Id == opp.Id);
+        tracked.Stage = OpportunityStage.Lost;
+        await _db.SaveChangesAsync();
+
+        // Without the permission the caller must hear about the permission, not
+        // about the opportunity — otherwise the stage of a record they may not even
+        // be allowed to see leaks out.
+        var ex = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SubmitAsync(
+            quote.Id, new QuoteWorkflowRequest(), user.Id, canManage: false, canSeeAll: true));
+
+        Assert.DoesNotContain("Lost", ex.Message);
+    }
 
     [Fact]
     public async Task CreateAsync_WithoutManagePermission_Throws()
@@ -317,6 +379,143 @@ public class QuoteServiceTests : IDisposable
         VatPercent = 8m,
     };
 
+    // ---------------- Dirty check on update ----------------
+
+    [Fact]
+    public async Task UpdateAsync_NoOp_KeepsVersionStatusLogsAndItemIds()
+    {
+        var (user, created) = await SeedApprovedBoqQuoteAsync();
+
+        var itemIdsBefore = await _db.QuoteItems
+            .Where(i => i.QuoteId == created.Id)
+            .OrderBy(i => i.Id)
+            .Select(i => i.Id)
+            .ToListAsync();
+        var logCountBefore = await _db.QuoteApprovalLogs.CountAsync(l => l.QuoteId == created.Id);
+
+        // Send back exactly what is already stored.
+        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            DiscountPercent = created.DiscountPercent,
+            VatPercent = created.VatPercent,
+            ValidUntil = created.ValidUntil,
+            Note = created.Note,
+            Items =
+            [
+                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m, SortOrder = 1 },
+                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m, SortOrder = 2 },
+            ],
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        Assert.Equal(1, after.Version);
+        Assert.Equal(QuoteStatus.Approved, after.Status);
+
+        Assert.Equal(logCountBefore, await _db.QuoteApprovalLogs.CountAsync(l => l.QuoteId == created.Id));
+
+        var itemIdsAfter = await _db.QuoteItems
+            .Where(i => i.QuoteId == created.Id)
+            .OrderBy(i => i.Id)
+            .Select(i => i.Id)
+            .ToListAsync();
+        Assert.Equal(itemIdsBefore, itemIdsAfter);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NoteOnly_LogsUpdateWithoutBumpingVersion()
+    {
+        var (user, created) = await SeedApprovedUnitCostQuoteAsync();
+
+        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            AreaSqm = created.AreaSqm,
+            UnitPricePerSqm = created.UnitPricePerSqm,
+            DiscountPercent = created.DiscountPercent,
+            VatPercent = created.VatPercent,
+            ValidUntil = created.ValidUntil,
+            Note = "Ghi chú nội bộ mới",
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        Assert.Equal(1, after.Version);
+        Assert.Equal(QuoteStatus.Approved, after.Status);
+
+        var logs = await _db.QuoteApprovalLogs.Where(l => l.QuoteId == created.Id).ToListAsync();
+        Assert.Contains(logs, l => l.Action == QuoteWorkflowAction.Update);
+        Assert.DoesNotContain(logs, l => l.Action == QuoteWorkflowAction.NewVersion);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DiscountChange_BumpsVersionAndReturnsToDraft()
+    {
+        var (user, created) = await SeedApprovedUnitCostQuoteAsync();
+
+        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            AreaSqm = created.AreaSqm,
+            UnitPricePerSqm = created.UnitPricePerSqm,
+            DiscountPercent = created.DiscountPercent + 5m,
+            VatPercent = created.VatPercent,
+            ValidUntil = created.ValidUntil,
+            Note = created.Note,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        Assert.Equal(2, after.Version);
+        Assert.Equal(QuoteStatus.Draft, after.Status);
+
+        var logs = await _db.QuoteApprovalLogs.Where(l => l.QuoteId == created.Id).ToListAsync();
+        Assert.Contains(logs, l => l.Action == QuoteWorkflowAction.NewVersion);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReorderingBoqLines_BumpsVersion()
+    {
+        var (user, created) = await SeedApprovedBoqQuoteAsync();
+
+        // Same lines, swapped order. The customer sees that on the printed quote,
+        // so it counts as a real change.
+        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            DiscountPercent = created.DiscountPercent,
+            VatPercent = created.VatPercent,
+            ValidUntil = created.ValidUntil,
+            Note = created.Note,
+            Items =
+            [
+                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m, SortOrder = 1 },
+                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m, SortOrder = 2 },
+            ],
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        Assert.Equal(2, after.Version);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AddingBoqLine_BumpsVersion()
+    {
+        var (user, created) = await SeedApprovedBoqQuoteAsync();
+
+        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            DiscountPercent = created.DiscountPercent,
+            VatPercent = created.VatPercent,
+            ValidUntil = created.ValidUntil,
+            Note = created.Note,
+            Items =
+            [
+                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m, SortOrder = 1 },
+                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m, SortOrder = 2 },
+                new QuoteItemInput { Name = "Gạch", Unit = "viên", Quantity = 2000m, UnitPrice = 3_000m, SortOrder = 3 },
+            ],
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        Assert.Equal(2, after.Version);
+        Assert.Equal(3, await _db.QuoteItems.CountAsync(i => i.QuoteId == created.Id));
+    }
+
     private async Task<ApplicationUser> SeedUserAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
@@ -334,7 +533,8 @@ public class QuoteServiceTests : IDisposable
         return user;
     }
 
-    private async Task<(ApplicationUser owner, Opportunity opp)> SeedOpportunityAsync()
+    private async Task<(ApplicationUser owner, Opportunity opp)> SeedOpportunityAsync(
+        OpportunityStage stage = OpportunityStage.Proposal)
     {
         var user = await SeedUserAsync();
         var cust = new Customer
@@ -355,13 +555,49 @@ public class QuoteServiceTests : IDisposable
             OwnerUserId = user.Id,
             EstimatedValue = 1_000_000_000m,
             WinProbability = 30,
-            Stage = OpportunityStage.Proposal,
+            Stage = stage,
             CreatedByUserId = user.Id,
             UpdatedByUserId = user.Id,
         };
         _db.Opportunities.Add(opp);
         await _db.SaveChangesAsync();
         return (user, opp);
+    }
+
+    /// <summary>Unit-cost quote pushed straight to Approved, the state where the
+    /// version-bump bug lived.</summary>
+    private async Task<(ApplicationUser owner, QuoteResponse quote)> SeedApprovedUnitCostQuoteAsync()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var created = await _sut.CreateAsync(NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+        var tracked = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        tracked.Status = QuoteStatus.Approved;
+        await _db.SaveChangesAsync();
+        return (user, created);
+    }
+
+    /// <summary>BOQ quote at Approved with two lines — two are needed so the
+    /// reorder test has something to reorder.</summary>
+    private async Task<(ApplicationUser owner, QuoteResponse quote)> SeedApprovedBoqQuoteAsync()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opp.Id,
+            Method = QuoteMethod.Boq,
+            DiscountPercent = 0m,
+            VatPercent = 8m,
+            Items =
+            [
+                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m },
+                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m },
+            ],
+        }, user.Id, canManage: true);
+
+        var tracked = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        tracked.Status = QuoteStatus.Approved;
+        await _db.SaveChangesAsync();
+        return (user, created);
     }
 
     private async Task<(ApplicationUser owner, Quote quote)> SeedApprovedReadyQuoteAsync()

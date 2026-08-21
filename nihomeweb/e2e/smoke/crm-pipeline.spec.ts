@@ -68,6 +68,9 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       console.log("Step 3: Converting lead (auto-creates customer)...");
       const convertRes = await c.post(`/api/leads/${leadId}/convert`, {
         note: "Customer interested in full package",
+        taxId: `01${unique.slice(-8)}`,
+        address: "12 Nguyễn Trãi, Hà Nội",
+        representativeName: `Pipeline Contact ${unique}`,
       });
       expect(convertRes.status(), await convertRes.text()).toBe(200);
       const convertedLead = await convertRes.json();
@@ -267,6 +270,9 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       // Convert without providing customerId - should auto-create
       const convertRes = await c.post(`/api/leads/${leadId}/convert`, {
         note: "Auto-create customer test",
+        taxId: `02${unique.slice(-8)}`,
+        address: "34 Lê Lợi, Hồ Chí Minh",
+        representativeName: `Auto Contact ${unique}`,
       });
       expect(convertRes.status(), await convertRes.text()).toBe(200);
       const convertedLead = await convertRes.json();
@@ -290,11 +296,15 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       expect(primaryContact.phone).toBe(`08${unique.slice(-8)}`);
       expect(primaryContact.email).toBe(`auto-${unique}@test.example`);
 
-      // Test revert - should work since customer has no opportunities
-      const revertRes = await c.post(`/api/leads/${leadId}/revert`, {});
+      // Unconvert replaced revert: it reports which of three outcomes ran, and
+      // nests the lead rather than returning it directly. Nothing has touched
+      // the pair yet, so both records go.
+      const revertRes = await c.post(`/api/leads/${leadId}/unconvert`, {});
       expect(revertRes.status(), await revertRes.text()).toBe(200);
-      const revertedLead = await revertRes.json();
-      expect(revertedLead.status).toBe("Contacted");
+      const revertBody = await revertRes.json();
+      expect(revertBody.outcome).toBe("DeletedBoth");
+      const revertedLead = revertBody.lead;
+      expect(revertedLead.status).toBe("Interested");
       expect(revertedLead.convertedCustomerId).toBeNull();
 
       // Customer should be deleted

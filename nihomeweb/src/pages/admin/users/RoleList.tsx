@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { useParams } from "react-router-dom";
 import { ChevronDown, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
@@ -207,11 +208,69 @@ export default function RoleList() {
   const loading = rolesQuery.isLoading || permsQuery.isLoading;
   const error = rolesQuery.error ?? permsQuery.error;
 
-  const roles: RoleResponse[] = rolesQuery.data ?? [];
-  const perms: PermissionResponse[] = useMemo(
+  // The matrix is long enough that people lose track of which column they are
+  // ticking, and most of it is irrelevant to any one question.
+  const [permSearch, setPermSearch] = useState("");
+  const [moduleFilter, setModuleFilter] = useState<string>("");
+  const [hiddenRoleIds, setHiddenRoleIds] = useState<Set<number>>(new Set());
+
+  // Memoised so the fallback does not hand out a fresh array on every render —
+  // anything depending on it would then recompute forever.
+  const roles: RoleResponse[] = useMemo(() => rolesQuery.data ?? [], [rolesQuery.data]);
+
+  // RoleService emits /admin/roles/{id} in three places (lines 177, 284, 372).
+  // This page has no per-role dialog — roles are matrix columns on desktop and
+  // cards on mobile — so "opening" one means scrolling to it and lighting it up.
+  // Depends on the query data, not the `roles` fallback array: that expression
+  // builds a fresh array every render and would re-run this on every one.
+  const { id: routeRoleId } = useParams();
+  useEffect(() => {
+    const parsed = Number(routeRoleId);
+    if (!Number.isInteger(parsed) || parsed <= 0) return;
+    const node = document.querySelector<HTMLElement>(`[data-role-id="${parsed}"]`);
+    if (!node) return;
+    node.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    node.classList.add("ring-2", "ring-primary");
+    const timer = window.setTimeout(() => node.classList.remove("ring-2", "ring-primary"), 2000);
+    return () => window.clearTimeout(timer);
+  }, [routeRoleId, roles]);
+  const allPerms: PermissionResponse[] = useMemo(
     () => (permsQuery.data ?? []).slice().sort((a, b) => a.code.localeCompare(b.code)),
     [permsQuery.data],
   );
+
+  // Permission codes are dotted paths — "construction.punch.view" — so the first
+  // segment is the module and makes a natural way to cut the list down.
+  const modules = useMemo(
+    () => Array.from(new Set(allPerms.map((p) => p.code.split(".")[0]))).sort(),
+    [allPerms],
+  );
+
+  const perms = useMemo(() => {
+    const term = permSearch.trim().toLowerCase();
+    return allPerms.filter((p) => {
+      if (moduleFilter && !p.code.startsWith(`${moduleFilter}.`)) return false;
+      if (!term) return true;
+      // Match the code and the translated label, since people search by either.
+      return (
+        p.code.toLowerCase().includes(term) ||
+        t(`rbac.perm.${p.code}.label`).toLowerCase().includes(term)
+      );
+    });
+  }, [allPerms, permSearch, moduleFilter, t]);
+
+  const visibleRoles = useMemo(
+    () => roles.filter((r) => !hiddenRoleIds.has(r.id)),
+    [roles, hiddenRoleIds],
+  );
+
+  const toggleRoleVisible = (id: number) =>
+    setHiddenRoleIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
     <AdminLayout>
@@ -245,18 +304,69 @@ export default function RoleList() {
                 that generic text locators (e.g. Playwright's
                 getByText('dashboard.view').first()) resolve to the visible
                 table cell on desktop viewports, not the hidden mobile card. */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[2fr_1fr]">
+              <div className="min-w-0 space-y-1">
+                <Label className="text-xs" htmlFor="rbac-search">{t("adminRbac.filter.search")}</Label>
+                <Input
+                  id="rbac-search"
+                  className="h-9"
+                  value={permSearch}
+                  onChange={(e) => setPermSearch(e.target.value)}
+                  placeholder={t("adminRbac.filter.searchPlaceholder")}
+                />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <Label className="text-xs" htmlFor="rbac-module">{t("adminRbac.filter.module")}</Label>
+                <select
+                  id="rbac-module"
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={moduleFilter}
+                  onChange={(e) => setModuleFilter(e.target.value)}
+                >
+                  <option value="">{t("adminRbac.filter.allModules")}</option>
+                  {modules.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1 sm:col-span-2 lg:col-span-2">
+                <Label className="text-xs">{t("adminRbac.filter.roles")}</Label>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                  {roles.map((role) => (
+                    <label key={role.id} className="flex items-center gap-1.5 text-xs">
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5"
+                        checked={!hiddenRoleIds.has(role.id)}
+                        onChange={() => toggleRoleVisible(role.id)}
+                      />
+                      <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-2">
+                {t("adminRbac.filter.showing")
+                  .replace("{shown}", String(perms.length))
+                  .replace("{total}", String(allPerms.length))}
+              </p>
+            </section>
+
+            {/* The container scrolls itself, which is what lets the header row
+                stick: a page-level scroll would carry it away. */}
+            <div className="hidden max-h-[calc(100vh-22rem)] overflow-auto rounded-lg border lg:block">
               <table className="w-full text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="sticky left-0 z-10 min-w-[260px] bg-muted/50 px-4 py-3 text-left font-medium">
+                  <th className="sticky left-0 top-0 z-30 min-w-[260px] bg-muted px-4 py-3 text-left font-medium">
                     {t("adminRbac.permissionColumn")}
                   </th>
-                  {roles.map((role) => (
+                  {visibleRoles.map((role) => (
                     <th
                       key={role.id}
-                      className="min-w-[160px] px-3 py-3 text-center font-medium"
+                      className="sticky top-0 z-20 min-w-[160px] bg-muted px-3 py-3 text-center font-medium"
                       data-testid={`rbac-col-${role.code}`}
+                      data-role-id={role.id}
                     >
                       <div className="flex items-center justify-center gap-1.5 normal-case">
                         <ShieldCheck className="h-4 w-4 text-muted-foreground" />
@@ -318,7 +428,7 @@ export default function RoleList() {
                       <div>{t(`rbac.perm.${perm.code}.label`)}</div>
                       <div className="text-xs font-normal text-muted-foreground">{perm.code}</div>
                     </td>
-                    {roles.map((role) => {
+                    {visibleRoles.map((role) => {
                       const set = draft[role.id] ?? serverMap[role.id];
                       const checked = set?.has(perm.code) ?? false;
                       const disabled = role.isSystem || !canManage;
@@ -356,6 +466,7 @@ export default function RoleList() {
                     key={role.id}
                     className="rounded-lg border bg-card shadow-sm"
                     data-testid={`rbac-card-${role.code}`}
+                    data-role-id={role.id}
                   >
                     <header className="flex flex-wrap items-start justify-between gap-2 border-b p-3">
                       <div className="min-w-0">

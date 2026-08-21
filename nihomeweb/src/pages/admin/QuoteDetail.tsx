@@ -416,6 +416,22 @@ const AdminQuoteDetail = () => {
     quote.status === "Rejected" ||
     quote.status === "Cancelled";
   const showEditToggle = canManage && !editing && !isTerminal;
+
+  // A quote the customer or an approver has signed off on is the point where a
+  // contract can be raised from it.
+  const canRaiseContract =
+    canManage && !editing && (quote.status === "Approved" || quote.status === "CustomerApproved");
+
+  // QuoteResponse.customerId is optional, so older quotes may not carry one.
+  // Build with URLSearchParams so empty parameters drop out entirely rather than
+  // reaching the contract form as the string "undefined".
+  const goToContractForm = () => {
+    const params = new URLSearchParams({ fromQuote: String(quote.id) });
+    if (quote.opportunityId) params.set("opportunityId", String(quote.opportunityId));
+    if (quote.customerId) params.set("customerId", String(quote.customerId));
+    if (quote.grandTotal > 0) params.set("value", String(quote.grandTotal));
+    navigate(`/admin/contracts?${params.toString()}`);
+  };
   const canDelete = canManage;
 
   return (
@@ -483,6 +499,12 @@ const AdminQuoteDetail = () => {
                 {t(`quotes.action.${k}`)}
               </Button>
             ))}
+          {canRaiseContract && (
+            <Button variant="outline" onClick={goToContractForm}>
+              <FileText className="mr-1.5 h-4 w-4" />
+              {t("quotes.createContract.action")}
+            </Button>
+          )}
           {!editing && canDelete && (
             <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => void handleDelete()}>
               <Trash2 className="mr-1.5 h-4 w-4" />

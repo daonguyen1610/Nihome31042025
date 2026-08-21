@@ -4,9 +4,14 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 /// <summary>
 /// Payload for POST /api/leads/{id}/convert.
-/// While Customer and Opportunity entities are not yet implemented the ids
-/// are optional — the endpoint still transitions the lead to
-/// <see cref="LeadStatus.Converted"/> so downstream reporting works.
+///
+/// <see cref="CustomerId"/> and <see cref="OpportunityId"/> mean "link to this
+/// existing record"; leaving them empty means "create a new one".
+///
+/// The three company fields are required only when the lead carries a
+/// CompanyName and <see cref="CustomerId"/> is empty, because
+/// <c>CustomerService.ValidateForType</c> demands a tax id, address and legal
+/// representative for Company customers and the Lead model holds none of them.
 /// </summary>
 public class ConvertLeadRequest : IConcurrencyRequest
 {
@@ -17,6 +22,15 @@ public class ConvertLeadRequest : IConcurrencyRequest
 
     /// <summary>Id of an already-created opportunity spawned from this lead.</summary>
     public int? OpportunityId { get; set; }
+
+    [StringLength(50)]
+    public string? TaxId { get; set; }
+
+    [StringLength(500)]
+    public string? Address { get; set; }
+
+    [StringLength(200)]
+    public string? RepresentativeName { get; set; }
 
     [StringLength(500)]
     public string? Note { get; set; }

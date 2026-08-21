@@ -54,6 +54,19 @@ public interface ILeadService
         bool canConvert,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Undoes a conversion. Three branches — see spec A2. Only rows the convert
+    /// itself created are deleted, recognised by a CreatedAt matching the lead's
+    /// ConvertedAt. Failing to recognise them degrades to unlinking, never to a
+    /// wrong delete.
+    /// </summary>
+    Task<UnconvertLeadResponse?> UnconvertAsync(
+        int id,
+        int callerUserId,
+        bool canConvert,
+        CancellationToken ct = default,
+        string? rowVersion = null);
+
     Task<LeadActivityResponse?> AddActivityAsync(
         int leadId,
         CreateLeadActivityRequest request,
@@ -61,16 +74,6 @@ public interface ILeadService
         bool canSeeAll,
         CancellationToken ct = default);
 
-    /// <summary>
-    /// Reverts a converted lead back to Contacted status.
-    /// Only allowed if the auto-created customer has no opportunities, quotes, or contracts.
-    /// </summary>
-    Task<LeadResponse?> RevertAsync(
-        int id,
-        int callerUserId,
-        bool canRevert,
-        CancellationToken ct = default,
-        string? rowVersion = null);
 }
 
 /// <summary>Thrown when a business rule is violated (e.g. converted lead is edited).</summary>

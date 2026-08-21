@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Pencil, Trash2, Search as SearchIcon, Download, AlertTriangle, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
 import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
@@ -24,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -68,6 +70,9 @@ type MilestoneDraft = {
 type FormData = {
   contractNumber: string;
   customerId: number | null;
+  /** Set when the contract is raised from an approved quote; null otherwise. */
+  opportunityId: number | null;
+  quoteId: number | null;
   ownerUserId: number | null;
   ownerName: string;
   status: ContractStatus;
@@ -80,9 +85,17 @@ type FormData = {
   milestones: MilestoneDraft[];
 };
 
+// Native date inputs accept any year unless bounded — typing 0202 by hand
+// otherwise sails straight through. Relational checks between the three contract
+// dates already live in the submit handler.
+const DATE_MIN = "2000-01-01";
+const DATE_MAX = "2099-12-31";
+
 const emptyForm: FormData = {
   contractNumber: "",
   customerId: null,
+  opportunityId: null,
+  quoteId: null,
   ownerUserId: null,
   ownerName: "",
   status: "Draft",
@@ -116,14 +129,6 @@ const toIsoTimestamp = (value: string): string | null => {
   if (!value) return null;
   const d = new Date(value + "T00:00:00Z");
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
-};
-
-const formatCurrency = (value: number, lang: string): string => {
-  try {
-    return new Intl.NumberFormat(lang === "vi" ? "vi-VN" : "en-US").format(value);
-  } catch {
-    return value.toString();
-  }
 };
 
 const formatDate = (value?: string | null): string => {
@@ -166,12 +171,28 @@ const getErrorMessage = (error: unknown): string | undefined => {
 };
 
 const Contracts = () => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const navigate = useNavigate();
   const canManage = has(ADMIN_PERMS.contractsManage);
   const [searchParams] = useSearchParams();
+
+  // Number(null) is 0 and Number.isFinite(0) is true, so parsing straight from
+  // searchParams turns a missing parameter into id zero. Read the raw string and
+  // accept positive numbers only.
+  const readPositiveParam = (name: string): number | null => {
+    const raw = searchParams.get(name);
+    if (raw === null || raw.trim() === "") return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  };
+
+  const fromQuoteId = readPositiveParam("fromQuote");
+  const prefillOpportunityId = readPositiveParam("opportunityId");
+  const prefillCustomerId = readPositiveParam("customerId");
+  const prefillValue = readPositiveParam("value");
+
   const customerIdParam = Number(searchParams.get("customerId"));
 
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
@@ -179,6 +200,10 @@ const Contracts = () => {
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [hoveredContractId, setHoveredContractId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  // Only the very first load may replace the whole page. Every later refresh
+  // shows its busy state inside the table, otherwise the filter panel unmounts
+  // and steals focus from the search box being typed into.
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
@@ -190,6 +215,14 @@ const Contracts = () => {
   const [valueMin, setValueMin] = useState("");
   const [valueMax, setValueMax] = useState("");
   const [search, setSearch] = useState("");
+  // The input stays bound to `search` for instant feedback; only this debounced
+  // copy drives the query, so typing no longer fires a request per keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -204,7 +237,7 @@ const Contracts = () => {
       if (valueMin && !Number.isNaN(minNum)) params.valueMin = minNum;
       const maxNum = Number(valueMax);
       if (valueMax && !Number.isNaN(maxNum)) params.valueMax = maxNum;
-      if (search.trim()) params.search = search.trim();
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
 
       const [contractsRes, customersRes] = await Promise.all([
         adminApi.listContracts(params),
@@ -221,9 +254,10 @@ const Contracts = () => {
       setError(getErrorMessage(err) ?? t("common.error"));
     } finally {
       setLoading(false);
+      setInitialLoaded(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, search, t]);
+  }, [statusFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, t]);
 
   useEffect(() => {
     void load();
@@ -273,7 +307,7 @@ const Contracts = () => {
     clearSelection();
     // Clear the bulk selection whenever the filter set changes so a stale
     // selection cannot silently outlive its visible row.
-  }, [statusFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, search, clearSelection]);
+  }, [statusFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, clearSelection]);
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -286,6 +320,24 @@ const Contracts = () => {
     setFormError(null);
     setDialogOpen(true);
   };
+
+  // Arriving from an approved quote opens the form already filled in. customerId
+  // may legitimately be null on older quotes; the form's own validation then asks
+  // the user to pick one, which beats writing a contract against customer zero.
+  useEffect(() => {
+    if (fromQuoteId === null) return;
+    setForm({
+      ...emptyForm,
+      customerId: prefillCustomerId,
+      opportunityId: prefillOpportunityId,
+      quoteId: fromQuoteId,
+      value: prefillValue ?? 0,
+    });
+    setFormError(null);
+    setDialogOpen(true);
+    // Runs once per navigation carrying the parameters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromQuoteId]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,
@@ -371,6 +423,8 @@ const Contracts = () => {
     const payload: UpsertContractRequest = {
       contractNumber: form.contractNumber.trim() || null,
       customerId: form.customerId,
+      opportunityId: form.opportunityId,
+      quoteId: form.quoteId,
       status: form.status,
       signedDate: toIsoTimestamp(form.signedDate),
       startDate: toIsoTimestamp(form.startDate),
@@ -428,7 +482,7 @@ const Contracts = () => {
     });
   };
 
-  if (loading && contracts.length === 0) {
+  if (!initialLoaded && loading) {
     return (
       <AdminLayout>
         <div className="p-4 sm:p-6"><PageLoading /></div>
@@ -537,6 +591,11 @@ const Contracts = () => {
           </div>
         </section>
 
+        {/* Refreshes announce themselves here rather than replacing the page. */}
+        {loading && initialLoaded ? (
+          <p className="px-1 text-xs text-muted-foreground">{t("common.loading")}</p>
+        ) : null}
+
         {/* List */}
         {contracts.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
@@ -622,7 +681,7 @@ const Contracts = () => {
                     </div>
                     <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                       <dt className="text-muted-foreground">{t("contracts.field.value")}</dt>
-                      <dd className="font-semibold">{formatCurrency(row.value, lang)}</dd>
+                      <dd className="font-semibold">{formatVnd(row.value)}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.signedDate")}</dt>
                       <dd>{formatDate(row.signedDate)}</dd>
                       <dt className="text-muted-foreground">{t("contracts.field.endDate")}</dt>
@@ -734,7 +793,7 @@ const Contracts = () => {
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-right font-semibold">
-                          {formatCurrency(row.value, lang)}
+                          {formatVnd(row.value)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3">
                           <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
@@ -852,29 +911,30 @@ const Contracts = () => {
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="c-signed" className="text-xs">{t("contracts.field.signedDate")}</Label>
-                <Input id="c-signed" type="date" value={form.signedDate}
+                <Input id="c-signed" type="date" min={DATE_MIN} max={DATE_MAX} value={form.signedDate}
                   onChange={(e) => setForm({ ...form, signedDate: e.target.value })} className="h-9" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="c-start" className="text-xs">{t("contracts.field.startDate")}</Label>
-                <Input id="c-start" type="date" value={form.startDate}
+                <Input id="c-start" type="date" min={DATE_MIN} max={DATE_MAX} value={form.startDate}
                   onChange={(e) => setForm({ ...form, startDate: e.target.value })} className="h-9" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="c-end" className="text-xs">{t("contracts.field.endDate")}</Label>
-                <Input id="c-end" type="date" value={form.endDate}
+                <Input id="c-end" type="date" min={DATE_MIN} max={DATE_MAX} value={form.endDate}
                   onChange={(e) => setForm({ ...form, endDate: e.target.value })} className="h-9" />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <Label htmlFor="c-value" className="text-xs">{t("contracts.field.value")} *</Label>
-              <Input
-                id="c-value" type="number" min={0} value={form.value}
-                onChange={(e) => setForm({ ...form, value: Number(e.target.value) || 0 })}
+              <MoneyInput
+                id="c-value"
+                value={form.value}
+                onChange={(next) => setForm({ ...form, value: next })}
                 className="h-9"
               />
-              <p className="text-xs text-muted-foreground">{formatCurrency(form.value, lang)} ₫</p>
+              <p className="text-xs text-muted-foreground">{formatVndWithSymbol(form.value)}</p>
             </div>
 
             <div className="space-y-1.5">
@@ -970,7 +1030,7 @@ const Contracts = () => {
                                 className="h-8"
                               />
                               <span className="whitespace-nowrap text-xs text-muted-foreground">
-                                ≈ {formatCurrency(amount, lang)} ₫
+                                ≈ {formatVndWithSymbol(amount)}
                               </span>
                             </div>
                           </div>

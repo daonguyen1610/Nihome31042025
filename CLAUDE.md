@@ -13,6 +13,14 @@ Read `AGENTS.md` before any non-trivial work in this repository.
 - Provide all four languages: `vi`, `en`, `zh`, `ja`.
 - Restart the backend so `TranslationSeeder` upserts the new keys into the DB.
 
+### Input validation
+- **Every user-writable field needs a rule, enforced on both layers.** Frontend-only validation is not validation — the API can be called directly.
+- Check format, not just presence. "Has a value" and "has a usable value" are different rules.
+- `[EmailAddress]` accepts `345@434` and `[Phone]` is looser still; where shape matters, write the rule explicitly.
+- Reuse `nihomebackend/Services/ContactValidation.cs` and its mirror `nihomeweb/src/lib/validation.ts` rather than adding another regex. Keep the two in step.
+- Validation messages are user-facing: Vietnamese, name the field, show an accepted example, and add frontend copy as an i18n key in all four languages.
+- When a new validator turns fixtures red, fix the fixtures — that red is the validator working.
+
 ### Backend ↔ Frontend alignment
 - If the backend response shape changes, update the TypeScript types in `nihomeweb/src/services/`.
 - No hardcoded category values, group keys, or option lists in React — fetch from the API.

@@ -216,6 +216,21 @@ public class LeadsController(
             CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
             return Ok(response);
         }
+        catch (CustomerDuplicateException ex)
+        {
+            // Convert reuses CustomerService's duplicate rule, so it answers 409
+            // with the conflicting record exactly like the create-customer path.
+            audit.Log(new AuditEvent
+            {
+                Action = "lead.convert",
+                ResourceType = EntityTypes.Lead,
+                ResourceId = id.ToString(),
+                Message = ex.Detail.Message,
+                Status = AuditStatus.Failure,
+                FailureReason = ex.Detail.Message,
+            });
+            return Conflict(ex.Detail);
+        }
         catch (LeadOperationException ex)
         {
             audit.Log(new AuditEvent
@@ -256,42 +271,42 @@ public class LeadsController(
     }
 
     /// <summary>
-    /// Reverts a converted lead back to Contacted status.
-    /// Only allowed if the auto-created customer has no opportunities, quotes, or contracts.
+    /// Undoes a conversion. Three outcomes — see spec A2: both records deleted,
+    /// only the opportunity deleted, or the link removed with both kept.
     /// </summary>
-    [HttpPost("{id:int}/revert")]
+    [HttpPost("{id:int}/unconvert")]
     [RequirePermission("crm.leads", "convert")]
-    [Idempotency("crm.leads.revert")]
-    public async Task<ActionResult<LeadResponse>> Revert(int id, CancellationToken ct)
+    [Idempotency("crm.leads.unconvert")]
+    public async Task<ActionResult<UnconvertLeadResponse>> Unconvert(int id, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canRevert = await permissions.HasAsync(userId.Value, "crm.leads.convert", ct);
+        var canConvert = await permissions.HasAsync(userId.Value, "crm.leads.convert", ct);
 
         try
         {
-            var response = await svc.RevertAsync(
-                id, userId.Value, canRevert, ct,
+            var response = await svc.UnconvertAsync(
+                id, userId.Value, canConvert, ct,
                 CrmConcurrency.ResolveRequestToken(Request, null));
             if (response is null) return NotFound();
 
             audit.Log(new AuditEvent
             {
-                Action = "lead.revert",
+                Action = "lead.unconvert",
                 ResourceType = EntityTypes.Lead,
                 ResourceId = id.ToString(),
-                Message = $"Lead #{id} reverted from Converted to Contacted.",
+                Message = $"Lead #{id} unconverted (outcome={response.Outcome}).",
                 NewValue = response,
             });
-            CrmConcurrency.SetResponseEntityTag(Response, response.RowVersion);
+            CrmConcurrency.SetResponseEntityTag(Response, response.Lead.RowVersion);
             return Ok(response);
         }
         catch (LeadOperationException ex)
         {
             audit.Log(new AuditEvent
             {
-                Action = "lead.revert",
+                Action = "lead.unconvert",
                 ResourceType = EntityTypes.Lead,
                 ResourceId = id.ToString(),
                 Message = ex.Message,
@@ -301,6 +316,7 @@ public class LeadsController(
             return BadRequest(new { message = ex.Message });
         }
     }
+
 
     private int? GetUserId()
     {

@@ -96,6 +96,10 @@ public class ContractService(
                     .Any(a => a.ContractId == c.Id && a.Kind == ContractAttachmentKind.SignedScan),
                 AttachmentCount = db.ContractAttachments.Count(a => a.ContractId == c.Id),
                 AppendixCount = db.ContractAppendices.Count(v => v.ContractId == c.Id),
+                DesignProject = db.DesignProjects
+                    .Where(dp => dp.ContractId == c.Id)
+                    .Select(dp => new { dp.Id, dp.ProjectCode, dp.Name, dp.CurrentStage })
+                    .FirstOrDefault(),
             })
             .ToListAsync(ct);
 
@@ -110,7 +114,11 @@ public class ContractService(
                 approvedVoTotal: r.ApprovedVoTotal,
                 hasSignedScan: r.HasSignedScan,
                 attachmentCount: r.AttachmentCount,
-                appendixCount: r.AppendixCount)).ToList(),
+                appendixCount: r.AppendixCount,
+                designProjectId: r.DesignProject?.Id,
+                designProjectCode: r.DesignProject?.ProjectCode,
+                designProjectName: r.DesignProject?.Name,
+                designProjectStage: r.DesignProject?.CurrentStage)).ToList(),
         };
     }
 
@@ -126,6 +134,13 @@ public class ContractService(
                 OpportunityTitle = c.Opportunity != null ? c.Opportunity.Name : null,
                 QuoteCode = c.Quote != null ? c.Quote.Code : null,
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
+                // Contract has no navigation to DesignProject — the foreign key
+                // lives on the other side — so this reads as a correlated subquery,
+                // the same shape the list projection already uses.
+                DesignProject = db.DesignProjects
+                    .Where(dp => dp.ContractId == c.Id)
+                    .Select(dp => new { dp.Id, dp.ProjectCode, dp.Name, dp.CurrentStage })
+                    .FirstOrDefault(),
             })
             .FirstOrDefaultAsync(ct);
 
@@ -157,7 +172,11 @@ public class ContractService(
 
         return MapToResponse(
             row.Contract, row.CustomerName, row.OpportunityTitle, row.QuoteCode, row.OwnerName,
-            milestones, approvedVoTotal, hasSignedScan, attachmentCount, appendixCount);
+            milestones, approvedVoTotal, hasSignedScan, attachmentCount, appendixCount,
+            designProjectId: row.DesignProject?.Id,
+            designProjectCode: row.DesignProject?.ProjectCode,
+            designProjectName: row.DesignProject?.Name,
+            designProjectStage: row.DesignProject?.CurrentStage);
     }
 
     public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
@@ -561,22 +580,25 @@ public class ContractService(
     {
         var year = DateTime.UtcNow.Year;
         var prefix = $"HD-{year}-";
-        var lastNumber = await db.Contracts
+
+        // Numbers can also be typed by hand with any suffix, and a non-numeric one
+        // sorts above the generated ones — "HD-2026-MUS" beats "HD-2026-0005" as a
+        // string. Taking only the top row meant a single such contract made the
+        // parse fail, reset the sequence to 1, and collide with whoever already
+        // held 0001. So read every candidate and pick the highest that parses.
+        var numbers = await db.Contracts
             .AsNoTracking()
             .Where(c => c.ContractNumber.StartsWith(prefix))
-            .OrderByDescending(c => c.ContractNumber)
             .Select(c => c.ContractNumber)
-            .FirstOrDefaultAsync(ct);
-        var nextSeq = 1;
-        if (lastNumber != null)
-        {
-            var tail = lastNumber.Substring(prefix.Length);
-            if (int.TryParse(tail, out var seq))
-            {
-                nextSeq = seq + 1;
-            }
-        }
-        return $"{prefix}{nextSeq:0000}";
+            .ToListAsync(ct);
+
+        var highestSeq = numbers
+            .Select(number => number[prefix.Length..])
+            .Select(tail => int.TryParse(tail, out var seq) ? seq : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        return $"{prefix}{highestSeq + 1:0000}";
     }
 
     private static void ValidatePaymentMilestones(List<ContractPaymentMilestoneRequest> milestones)
@@ -650,7 +672,11 @@ public class ContractService(
         decimal approvedVoTotal = 0m,
         bool hasSignedScan = false,
         int attachmentCount = 0,
-        int appendixCount = 0)
+        int appendixCount = 0,
+        int? designProjectId = null,
+        string? designProjectCode = null,
+        string? designProjectName = null,
+        DesignProjectStage? designProjectStage = null)
     {
         // CurrentValue = base value + approved VO deltas. Milestone Amount
         // still divides the base <c>entity.Value</c> — % refer to the
@@ -667,6 +693,12 @@ public class ContractService(
             OpportunityTitle = opportunityTitle,
             QuoteId = entity.QuoteId,
             QuoteCode = quoteCode,
+            DesignProjectId = designProjectId,
+            DesignProjectCode = designProjectCode,
+            DesignProjectName = designProjectName,
+            // Converted here rather than in the query: the enum is stored via a
+            // string conversion and ToString() does not translate to SQL.
+            DesignProjectCurrentStage = designProjectStage?.ToString(),
             OwnerUserId = entity.OwnerUserId,
             OwnerName = ownerName,
             Status = entity.Status,
