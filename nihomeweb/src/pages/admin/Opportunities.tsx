@@ -974,7 +974,10 @@ const AdminOpportunities = () => {
 
       {/* ---------- Detail dialog ---------- */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(o) => !o && closeDetail()}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent
+          className="grid h-[90dvh] w-[95vw] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:h-[min(90dvh,44rem)] sm:max-w-2xl"
+          data-testid="opportunity-detail-dialog"
+        >
           {detailLoading && !detail ? (
             <>
               <DialogHeader className="sr-only">
@@ -1032,18 +1035,18 @@ const AdminOpportunities = () => {
                 )}
               </DialogHeader>
 
-              <Tabs defaultValue="general">
-                <TabsList>
-                  <TabsTrigger value="general">{t("opportunities.tab.general")}</TabsTrigger>
-                  <TabsTrigger value="timeline">
+              <Tabs defaultValue="general" className="flex min-h-0 flex-col">
+                <TabsList className="h-auto w-full shrink-0 justify-start overflow-x-auto">
+                  <TabsTrigger className="h-12 shrink-0" value="general">{t("opportunities.tab.general")}</TabsTrigger>
+                  <TabsTrigger className="h-12 shrink-0" value="timeline">
                     {t("opportunities.tab.timeline")} ({detail.activities.length})
                   </TabsTrigger>
-                  <TabsTrigger value="audit">
+                  <TabsTrigger className="h-12 shrink-0" value="audit">
                     {t("opportunities.tab.audit")} ({auditItems.length})
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="general" className="space-y-4 pt-3">
+                <TabsContent value="general" className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pr-1 pt-3">
                   {!editing ? (
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
@@ -1252,7 +1255,7 @@ const AdminOpportunities = () => {
                   )}
                 </TabsContent>
 
-                <TabsContent value="timeline" className="space-y-3 pt-3">
+                <TabsContent value="timeline" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
                   {canManage && (
                     <div className="rounded-md border p-3 space-y-2">
                       <div className="text-sm font-medium">{t("opportunities.activity.new")}</div>
@@ -1292,7 +1295,7 @@ const AdminOpportunities = () => {
                   )}
                 </TabsContent>
 
-                <TabsContent value="audit" className="space-y-2 pt-3">
+                <TabsContent value="audit" className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pt-3">
                   {auditLoading ? (
                     <div className="text-xs text-muted-foreground py-4 text-center">…</div>
                   ) : auditItems.length === 0 ? (

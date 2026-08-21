@@ -71,6 +71,16 @@ test("customer related records, documents, and contract owner inheritance work i
     });
     expect(opportunityResponse.status(), await opportunityResponse.text()).toBe(201);
     opportunityId = ((await opportunityResponse.json()).id as number);
+    for (let index = 0; index < 12; index += 1) {
+      const activityResponse = await api.post(`/api/opportunities/${opportunityId}/activities`, {
+        headers,
+        data: {
+          type: "Note",
+          content: `Opportunity dialog scroll evidence ${index + 1} ${unique}`,
+        },
+      });
+      expect(activityResponse.status(), await activityResponse.text()).toBe(200);
+    }
 
     const quoteResponse = await api.post("/api/quotes", {
       headers,
@@ -180,10 +190,39 @@ test("customer related records, documents, and contract owner inheritance work i
     const relatedDialog = page.getByRole("dialog").filter({ hasText: customerName });
     await relatedDialog.getByRole("tab", { name: /Cơ hội.*Báo giá.*Hợp đồng|Opportunities.*Quotes.*Contracts|商机.*报价.*合同|案件.*見積.*契約/i }).click();
     await expect(relatedDialog.getByRole("link", { name: new RegExp(contract.contractNumber as string) })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
     await relatedDialog.getByRole("link", { name: new RegExp(opportunityName) }).click();
     await expect(page).toHaveURL(new RegExp(`/admin/opportunities\\?open=${opportunityId}$`));
-    const opportunityDialog = page.getByRole("dialog").filter({ hasText: opportunityName });
+    const opportunityDialog = page.getByTestId("opportunity-detail-dialog");
     await expect(opportunityDialog).toBeVisible();
+    const opportunityDialogHeight = await opportunityDialog.evaluate((element) => element.clientHeight);
+    const opportunityTabs = opportunityDialog.getByRole("tab");
+    await expect(opportunityTabs).toHaveCount(3);
+    for (let index = 0; index < 3; index += 1) {
+      await opportunityTabs.nth(index).scrollIntoViewIfNeeded();
+      await opportunityTabs.nth(index).click();
+      await expect(opportunityTabs.nth(index)).toHaveAttribute("aria-selected", "true");
+      expect((await opportunityTabs.nth(index).boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      expect(await opportunityDialog.evaluate((element) => element.clientHeight)).toBe(opportunityDialogHeight);
+      const activePanel = opportunityDialog.getByRole("tabpanel");
+      await expect(activePanel).toBeVisible();
+      expect(await activePanel.evaluate((element) => getComputedStyle(element).overflowY)).toBe("auto");
+      if (index === 1) {
+        const panelSize = await activePanel.evaluate((element) => ({
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+        }));
+        expect(panelSize.scrollHeight).toBeGreaterThan(panelSize.clientHeight);
+        const closeButton = opportunityDialog.getByRole("button", { name: /Đóng|Close|关闭|閉じる/i }).last();
+        const closeButtonTop = await closeButton.evaluate((element) => element.getBoundingClientRect().top);
+        expect(await activePanel.evaluate((element) => {
+          element.scrollTop = element.scrollHeight;
+          return element.scrollTop;
+        })).toBeGreaterThan(0);
+        await expect(closeButton).toBeVisible();
+        expect(await closeButton.evaluate((element) => element.getBoundingClientRect().top)).toBe(closeButtonTop);
+      }
+    }
 
     expect(jsErrors, `Unexpected JavaScript errors:\n${jsErrors.join("\n")}`).toHaveLength(0);
     expect(failedResponses, `Unexpected 5xx responses:\n${failedResponses.join("\n")}`).toHaveLength(0);
