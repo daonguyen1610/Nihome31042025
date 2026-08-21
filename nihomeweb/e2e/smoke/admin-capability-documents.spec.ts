@@ -24,3 +24,20 @@ test("SPA renders /admin/capability-documents without console errors for SALES_M
 
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
+
+test("mobile capability upload control remains visible and touch-sized", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.goto(`${baseURL}/admin/capability-documents`, { waitUntil: "networkidle" });
+
+    const selectFile = page.getByTestId("capability-select-file");
+    await expect(selectFile).toBeVisible();
+    await page.getByRole("combobox").first().click();
+    await page.getByRole("option").first().click();
+    await expect(selectFile).toBeEnabled();
+    expect((await selectFile.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+});

@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -12,6 +14,8 @@ public class ContractAttachmentServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly ContractAttachmentService _sut;
     private readonly Contract _contract;
+    private readonly string _contentRoot = Path.Combine(
+        Path.GetTempPath(), $"nihome-contract-attachments-{Guid.NewGuid():N}");
 
     public ContractAttachmentServiceTests()
     {
@@ -30,10 +34,19 @@ public class ContractAttachmentServiceTests : IDisposable
         _db.Contracts.Add(_contract);
         _db.SaveChanges();
 
-        _sut = new ContractAttachmentService(_db, NullLogger<ContractAttachmentService>.Instance);
+        Directory.CreateDirectory(_contentRoot);
+        var environment = Mock.Of<IWebHostEnvironment>(item => item.ContentRootPath == _contentRoot);
+        _sut = new ContractAttachmentService(
+            _db,
+            environment,
+            NullLogger<ContractAttachmentService>.Instance);
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        if (Directory.Exists(_contentRoot)) Directory.Delete(_contentRoot, recursive: true);
+    }
 
     private CreateContractAttachmentRequest Req(ContractAttachmentKind kind = ContractAttachmentKind.Supporting) =>
         new()
@@ -69,9 +82,14 @@ public class ContractAttachmentServiceTests : IDisposable
     [Fact]
     public async Task Delete_RemovesRow()
     {
+        var directory = Path.Combine(_contentRoot, "wwwroot", "files", "contracts");
+        Directory.CreateDirectory(directory);
+        var fullPath = Path.Combine(directory, "x.pdf");
+        await File.WriteAllTextAsync(fullPath, "contract");
         var created = await _sut.CreateAsync(_contract.Id, Req(), 100, true);
         Assert.True(await _sut.DeleteAsync(_contract.Id, created!.Id, 100, true));
         Assert.Empty(_db.ContractAttachments);
+        Assert.False(File.Exists(fullPath));
     }
 
     [Fact]

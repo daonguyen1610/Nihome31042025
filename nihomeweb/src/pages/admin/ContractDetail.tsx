@@ -901,7 +901,16 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
                     ) : null}
                     {vo.filePath ? (
                       <div className="mt-2">
-                        <AdminFilePreview url={vo.filePath} fileName={vo.originalFileName} showLabel label={vo.originalFileName ?? t("common.previewFile")} variant="ghost" />
+                        <AdminFilePreview
+                          url={vo.filePath}
+                          fileName={vo.originalFileName}
+                          showLabel
+                          label={vo.originalFileName ?? t("common.previewFile")}
+                          variant="ghost"
+                          fetchFile={async () => (
+                            await adminApi.getContractAppendixContent(contract.id, vo.filePath!)
+                          ).data}
+                        />
                       </div>
                     ) : null}
                     </div>
@@ -1086,10 +1095,12 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
 interface DocumentsTabProps {
   contract: ContractResponse;
   rows: ContractAttachmentResponse[];
+  canManage: boolean;
+  error: string | null;
   refresh: () => Promise<void>;
 }
 
-const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
+const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTabProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [uploadKind, setUploadKind] = useState<ContractAttachmentKind>("Supporting");
@@ -1149,7 +1160,7 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      {canManage ? <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3 md:grid-cols-3">
           <div>
             <Label>{t("contracts.documents.typeLabel")}</Label>
@@ -1190,15 +1201,22 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
             </Button>
           </div>
         </div>
-      </div>
+      </div> : null}
 
-      {rows.length === 0 ? (
+      {error ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive/40 p-6 text-center text-sm text-destructive">
+          <p>{error}</p>
+          <Button type="button" variant="outline" size="sm" onClick={() => void refresh()}>
+            {t("common.retry")}
+          </Button>
+        </div>
+      ) : rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
           {t("contracts.documents.empty")}
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-3">
+          {canManage ? <div className="flex items-center gap-3">
             <label className="inline-flex items-center gap-2 text-xs text-slate-600">
               <Checkbox
                 checked={bulk.allVisibleSelected ? true : bulk.someVisibleSelected ? "indeterminate" : false}
@@ -1207,24 +1225,24 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
               />
               {t("common.selectAll")}
             </label>
-          </div>
-          <BulkActionBar
+          </div> : null}
+          {canManage ? <BulkActionBar
             selectedCount={bulk.selectedIds.size}
             bulkDeleting={bulk.bulkDeleting}
             onClear={bulk.clearSelection}
             onBulkDelete={bulk.handleBulkDelete}
-          />
+          /> : null}
           <div className="space-y-2">
             {rows.map((att) => (
               <div key={att.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
                 <div className="flex min-w-0 gap-3">
-                  <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                  {canManage ? <div className="pt-1" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={bulk.selectedIds.has(att.id)}
                       onCheckedChange={(v) => bulk.toggleOne(att.id, v === true)}
                       aria-label={`${t("common.selectAll")} · ${att.originalFileName}`}
                     />
-                  </div>
+                  </div> : null}
                   <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
@@ -1248,16 +1266,25 @@ const DocumentsTab = ({ contract, rows, refresh }: DocumentsTabProps) => {
                   </div>
                 </div>
               <div className="flex gap-2">
-                  <AdminFilePreview url={att.filePath} fileName={att.originalFileName} contentType={att.contentType} showLabel />
-                <Button
+                  <AdminFilePreview
+                    url={att.filePath}
+                    fileName={att.originalFileName}
+                    contentType={att.contentType}
+                    showLabel
+                    fetchFile={async () => (
+                      await adminApi.getContractAttachmentContent(contract.id, att.id)
+                    ).data}
+                  />
+                {canManage ? <Button
                   size="sm"
                   variant="ghost"
                   disabled={deletingId === att.id}
                   onClick={() => handleDelete(att.id)}
                   className="text-rose-700 hover:bg-rose-50"
+                  aria-label={`${t("common.delete")} · ${att.originalFileName}`}
                 >
                   {deletingId === att.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                </Button>
+                </Button> : null}
               </div>
             </div>
           ))}
@@ -1320,6 +1347,7 @@ const ContractDetail = () => {
   const [contract, setContract] = useState<ContractResponse | null>(null);
   const [appendices, setAppendices] = useState<ContractAppendixResponse[]>([]);
   const [attachments, setAttachments] = useState<ContractAttachmentResponse[]>([]);
+  const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<ContractTimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -1336,11 +1364,15 @@ const ContractDetail = () => {
     if (!Number.isFinite(idNum)) return;
     setLoading(true);
     setLoadError(null);
+    setAttachmentsError(null);
     try {
       const [c, vos, atts, tl] = await Promise.all([
         adminApi.getContract(idNum),
         adminApi.listContractAppendices(idNum).catch(() => ({ data: [] as ContractAppendixResponse[] })),
-        adminApi.listContractAttachments(idNum).catch(() => ({ data: [] as ContractAttachmentResponse[] })),
+        adminApi.listContractAttachments(idNum).catch((error) => {
+          setAttachmentsError(getErrorMessage(error) ?? String(error));
+          return { data: [] as ContractAttachmentResponse[] };
+        }),
         adminApi.getContractTimeline(idNum).catch(() => ({ data: [] as ContractTimelineEvent[] })),
       ]);
       setContract(c.data);
@@ -1361,16 +1393,21 @@ const ContractDetail = () => {
 
   const refreshContract = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
-    const [c, vos, atts, tl] = await Promise.all([
+    setAttachmentsError(null);
+    const [c, vos, tl] = await Promise.all([
       adminApi.getContract(idNum),
       adminApi.listContractAppendices(idNum),
-      adminApi.listContractAttachments(idNum),
       adminApi.getContractTimeline(idNum),
     ]);
     setContract(c.data);
     setAppendices(vos.data);
-    setAttachments(atts.data);
     setTimeline(tl.data);
+    try {
+      const atts = await adminApi.listContractAttachments(idNum);
+      setAttachments(atts.data);
+    } catch (error) {
+      setAttachmentsError(getErrorMessage(error) ?? String(error));
+    }
   }, [idNum]);
 
   const handleTransition = useCallback(
@@ -1612,7 +1649,13 @@ const ContractDetail = () => {
             <VoTab contract={contract} rows={appendices} refresh={refreshContract} />
           </TabsContent>
           <TabsContent value="documents" className="mt-4">
-            <DocumentsTab contract={contract} rows={attachments} refresh={refreshContract} />
+            <DocumentsTab
+              contract={contract}
+              rows={attachments}
+              canManage={canManage}
+              error={attachmentsError}
+              refresh={refreshContract}
+            />
           </TabsContent>
           <TabsContent value="timeline" className="mt-4">
             <TimelineTab events={timeline} />

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
@@ -24,6 +25,7 @@ namespace NihomeBackend.Controllers;
 public class AcceptanceRecordsController(
     IAcceptanceRecordService svc,
     IPermissionService permissions,
+    IBusinessDocumentStorageService documentStorage,
     IAuditLogger audit,
     INotificationService notifications) : ControllerBase
 {
@@ -47,6 +49,37 @@ public class AcceptanceRecordsController(
         if (userId is null) return Unauthorized();
         var found = await svc.GetAsync(id, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("{id:int}/documents/{fileName}/content")]
+    [RequirePermission("construction.acceptance", "view")]
+    public async Task<IActionResult> GetDocumentContent(int id, string fileName, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var record = await svc.GetAsync(id, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
+        if (record is null || !ReferencesFile(record.Documents, fileName)) return NotFound();
+        var content = documentStorage.GetContent(BusinessDocumentArea.Acceptance, fileName);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
+    }
+
+    private static bool ReferencesFile(string? documents, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(documents)) return false;
+        try
+        {
+            return (JsonSerializer.Deserialize<List<string>>(documents) ?? [])
+                .Any(path => string.Equals(
+                    path,
+                    $"/files/business-documents/acceptance/{fileName}",
+                    StringComparison.Ordinal));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     [HttpPost]

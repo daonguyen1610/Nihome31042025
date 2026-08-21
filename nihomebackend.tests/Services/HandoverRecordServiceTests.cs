@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -11,6 +12,7 @@ namespace nihomebackend.tests.Services;
 public class HandoverRecordServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
+    private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
     private readonly HandoverRecordService _sut;
     private readonly int _userId;
     private readonly int _projectId;
@@ -18,7 +20,10 @@ public class HandoverRecordServiceTests : IDisposable
     public HandoverRecordServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new HandoverRecordService(_db, NullLogger<HandoverRecordService>.Instance);
+        _sut = new HandoverRecordService(
+            _db,
+            NullLogger<HandoverRecordService>.Instance,
+            _documentStorage.Object);
         var user = new ApplicationUser
         {
             PhoneNumber = "0900000144",
@@ -224,7 +229,9 @@ public class HandoverRecordServiceTests : IDisposable
     [Fact]
     public async Task DeleteAsync_removes_any_status_with_history_and_preserves_scope_and_principals()
     {
-        var created = await _sut.CreateAsync(Request(), _userId, false);
+        var request = Request();
+        request.Documents = ["/files/business-documents/handover/handover.pdf"];
+        var created = await _sut.CreateAsync(request, _userId, false);
         var outsider = AddUser("0900000149", "delete.outsider@example.com");
         Assert.False(await _sut.DeleteAsync(created.Id, outsider.Id, false));
 
@@ -237,6 +244,8 @@ public class HandoverRecordServiceTests : IDisposable
         Assert.False(await _db.HandoverStatusHistory.AnyAsync(history => history.HandoverRecordId == created.Id));
         Assert.True(await _db.DesignProjects.AnyAsync(project => project.Id == _projectId));
         Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
+        _documentStorage.Verify(storage => storage.Delete(
+            request.Documents[0], BusinessDocumentArea.Handover), Times.Once);
     }
 
     [Fact]

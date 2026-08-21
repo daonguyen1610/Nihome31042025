@@ -1,4 +1,5 @@
 using System.Text;
+using System.Net.Http.Headers;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -184,6 +185,36 @@ public class HandoverRecordsControllerTests : IntegrationTestBase
         csv.Should().Contain($"'{uniqueTerm}");
     }
 
+    [Fact]
+    public async Task DocumentContent_RequiresPersistedReferenceAndProjectScope()
+    {
+        var pmUserId = await UserIdForRoleAsync("PM");
+        var projectId = await CreateProjectAsync();
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes("handover evidence"));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "handover.pdf");
+        var upload = await Client.PostAsync("/api/business-documents/handover", form);
+        upload.EnsureSuccessStatusCode();
+        var path = (await ReadJsonAsync(upload)).GetProperty("path").GetString()!;
+
+        var created = await CreateHandoverAsync(
+            projectId,
+            pmUserId,
+            $"Document handover {Guid.NewGuid():N}",
+            documents: new[] { path });
+        var id = created.GetProperty("id").GetInt32();
+        var fileName = Path.GetFileName(path);
+        var content = await Client.GetAsync($"/api/handover-records/{id}/documents/{fileName}/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("handover evidence");
+
+        await AuthenticateAsAsync("DESIGN");
+        (await Client.GetAsync($"/api/handover-records/{id}/documents/{fileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     private Task AuthenticateAsAsync(string roleCode) =>
         AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, roleCode));
 
@@ -237,7 +268,8 @@ public class HandoverRecordsControllerTests : IntegrationTestBase
         string title,
         bool commissioningCompleted = false,
         bool checklistCompleted = false,
-        bool includeSignatory = false)
+        bool includeSignatory = false,
+        string[]? documents = null)
     {
         var response = await Client.PostAsJsonAsync("/api/handover-records", new
         {
@@ -247,7 +279,7 @@ public class HandoverRecordsControllerTests : IntegrationTestBase
             responsibleUserId,
             commissioningCompleted,
             checklistItems = new[] { new { name = "Final inspection", isCompleted = checklistCompleted } },
-            documents = Array.Empty<string>(),
+            documents = documents ?? Array.Empty<string>(),
             signatories = includeSignatory ? new[] { "Client representative" } : Array.Empty<string>(),
         });
         response.EnsureSuccessStatusCode();

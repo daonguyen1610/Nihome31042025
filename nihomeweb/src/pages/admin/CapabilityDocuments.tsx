@@ -422,7 +422,13 @@ const CapabilityDocuments = () => {
 
   const renderRowActions = (r: CapabilityDocumentResponse) => (
     <>
-      <AdminFilePreview url={r.filePath} fileName={r.originalFileName} contentType={r.contentType} variant="ghost" />
+      <AdminFilePreview
+        url={r.filePath}
+        fileName={r.originalFileName}
+        contentType={r.contentType}
+        variant="ghost"
+        fetchFile={async () => (await adminApi.getCapabilityDocumentContent(r.filePath)).data}
+      />
       {canManage && (
         <>
           <Button
@@ -514,7 +520,7 @@ const CapabilityDocuments = () => {
                 <Upload className="mt-0.5 h-5 w-5 shrink-0 md:mt-0" />
                 <span className="text-left">{t("capDocs.form.dropHint")}</span>
               </div>
-              <div className="flex items-center gap-2 md:shrink-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center md:shrink-0">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t("capDocs.field.tag")}
                 </Label>
@@ -530,6 +536,17 @@ const CapabilityDocuments = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  data-testid="capability-select-file"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={busy || !uploadTag}
+                  className="min-h-11"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t("capDocs.create.selectFile")}
+                </Button>
               </div>
             </div>
             {busy && (
@@ -625,8 +642,7 @@ const CapabilityDocuments = () => {
               {rows.map((r) => (
                 <article
                   key={r.id}
-                  className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
-                  onClick={() => setPreviewRow(r)}
+                  className="rounded-lg border bg-white p-3 shadow-sm"
                 >
                   <header className="flex items-start gap-2">
                     <span onClick={(e) => e.stopPropagation()} className="mt-1 shrink-0">
@@ -636,7 +652,13 @@ const CapabilityDocuments = () => {
                       />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
+                      <button
+                        type="button"
+                        className="min-h-11 break-words text-left text-sm font-semibold leading-tight text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => setPreviewRow(r)}
+                      >
+                        {r.name}
+                      </button>
                       <p className="mt-0.5 break-all text-xs text-muted-foreground">{r.originalFileName}</p>
                     </div>
                     <Badge variant="secondary" className="shrink-0 whitespace-nowrap">V{r.currentVersion}</Badge>
@@ -702,14 +724,19 @@ const CapabilityDocuments = () => {
                   {rows.map((r) => (
                     <tr
                       key={r.id}
-                      className="cursor-pointer border-t align-top hover:bg-slate-50/50"
-                      onClick={() => setPreviewRow(r)}
+                      className="border-t align-top hover:bg-slate-50/50"
                     >
                       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={(v) => toggleOne(r.id, Boolean(v))} />
                       </td>
                       <td className="min-w-[240px] px-3 py-2">
-                        <div className="font-medium">{r.name}</div>
+                        <button
+                          type="button"
+                          className="min-h-11 text-left font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => setPreviewRow(r)}
+                        >
+                          {r.name}
+                        </button>
                         <div className="break-all text-xs text-muted-foreground">{r.originalFileName}</div>
                       </td>
                       <td className="px-3 py-2">
@@ -847,7 +874,13 @@ const CapabilityDocuments = () => {
                             {formatDate(v.createdAt, lang)} · {formatBytes(v.fileSize)}
                           </div>
                         </div>
-                        <AdminFilePreview url={v.filePath} fileName={v.originalFileName} contentType={v.contentType} variant="ghost" />
+                        <AdminFilePreview
+                          url={v.filePath}
+                          fileName={v.originalFileName}
+                          contentType={v.contentType}
+                          variant="ghost"
+                          fetchFile={async () => (await adminApi.getCapabilityDocumentContent(v.filePath)).data}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -999,6 +1032,9 @@ const CapabilityDocuments = () => {
                 url={previewRow.filePath}
                 fileName={previewRow.originalFileName}
                 contentType={previewRow.contentType}
+                fetchFile={async () => (
+                  await adminApi.getCapabilityDocumentContent(previewRow.filePath)
+                ).data}
                 showLabel
                 className="w-full sm:w-auto"
               />

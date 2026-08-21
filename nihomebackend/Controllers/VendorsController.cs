@@ -15,7 +15,10 @@ namespace NihomeBackend.Controllers;
 [Route("api/vendors")]
 [Route("api/v1/vendors")]
 [Authorize]
-public class VendorsController(IVendorService service, IAuditLogger audit) : ControllerBase
+public class VendorsController(
+    IVendorService service,
+    IBusinessDocumentStorageService documentStorage,
+    IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("proc.vendors", "view")]
@@ -36,6 +39,25 @@ public class VendorsController(IVendorService service, IAuditLogger audit) : Con
     {
         var vendor = await service.GetAsync(id, ct);
         return vendor is null ? NotFound() : Ok(vendor);
+    }
+
+    [HttpGet("{id:int}/capability-file/content")]
+    [RequirePermission("proc.vendors", "view")]
+    public async Task<IActionResult> GetCapabilityFile(int id, CancellationToken ct)
+    {
+        var vendor = await service.GetAsync(id, ct);
+        var content = GetReferencedContent(vendor?.CapabilityFileUrl, BusinessDocumentArea.Vendors);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
+    }
+
+    private ManagedDocumentContent? GetReferencedContent(string? path, BusinessDocumentArea area)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        var fileName = Path.GetFileName(path);
+        if (!string.Equals(path, $"/files/business-documents/vendors/{fileName}", StringComparison.Ordinal)) return null;
+        return documentStorage.GetContent(area, fileName);
     }
 
     [HttpPost]

@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Headers;
+using System.Text;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -207,6 +209,74 @@ public class ContractsControllerTests : IntegrationTestBase
         var res = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId, status, value));
         res.StatusCode.Should().Be(HttpStatusCode.Created);
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    [Fact]
+    public async Task PrivateFiles_RequireAuthenticatedContentRoutesAndBlockStaticPaths()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+
+        using var attachmentForm = CreateFileForm("contract attachment", "contract.pdf");
+        attachmentForm.Add(new StringContent("Supporting"), "kind");
+        attachmentForm.Add(new StringContent("Contract attachment"), "label");
+        var attachmentUpload = await Client.PostAsync($"/api/contracts/{contractId}/attachments", attachmentForm);
+        attachmentUpload.StatusCode.Should().Be(HttpStatusCode.Created);
+        var attachment = await ReadJsonAsync(attachmentUpload);
+        var attachmentId = attachment.GetProperty("id").GetInt32();
+        var attachmentPath = attachment.GetProperty("filePath").GetString();
+
+        (await Client.GetAsync(attachmentPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var attachmentContent = await Client.GetAsync($"/api/contracts/{contractId}/attachments/{attachmentId}/content");
+        attachmentContent.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await attachmentContent.Content.ReadAsStringAsync()).Should().Be("contract attachment");
+
+        using var appendixForm = CreateFileForm("contract appendix", "appendix.pdf");
+        var appendixUpload = await Client.PostAsync($"/api/contracts/{contractId}/appendices/files", appendixForm);
+        appendixUpload.StatusCode.Should().Be(HttpStatusCode.OK);
+        var appendix = await ReadJsonAsync(appendixUpload);
+        var appendixPath = appendix.GetProperty("filePath").GetString();
+        var appendixFileName = Path.GetFileName(appendixPath);
+
+        (await Client.GetAsync(appendixPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/contracts/{contractId}/appendices/files/{appendixFileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var appendixCreate = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/appendices", new
+        {
+            title = "Private appendix",
+            reason = "Content authorization regression",
+            valueDelta = 1m,
+            filePath = appendixPath,
+            originalFileName = "appendix.pdf",
+            fileSize = Encoding.UTF8.GetByteCount("contract appendix"),
+            contentType = "application/pdf",
+        });
+        appendixCreate.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var appendixContent = await Client.GetAsync($"/api/contracts/{contractId}/appendices/files/{appendixFileName}/content");
+        appendixContent.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await appendixContent.Content.ReadAsStringAsync()).Should().Be("contract appendix");
+
+        var otherContractId = await CreateContractAsync(customerId);
+        (await Client.GetAsync($"/api/contracts/{otherContractId}/appendices/files/{appendixFileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        using var anonymousClient = Factory.CreateClient();
+        (await anonymousClient.GetAsync($"/api/contracts/{contractId}/attachments/{attachmentId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await anonymousClient.GetAsync($"/api/contracts/{contractId}/appendices/files/{appendixFileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private static MultipartFormDataContent CreateFileForm(string content, string fileName)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", fileName);
+        return form;
     }
 
     [Fact]

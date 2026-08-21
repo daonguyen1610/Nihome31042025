@@ -96,6 +96,27 @@ public class CustomerDocumentService(
         return Map(entity, uploaderName);
     }
 
+    public async Task<ManagedDocumentContent?> GetContentAsync(
+        int customerId,
+        int documentId,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        if (!await CustomerExistsForCallerAsync(customerId, callerUserId, canSeeAll, ct)) return null;
+
+        var document = await db.CustomerDocuments.AsNoTracking()
+            .Where(item => item.Id == documentId && item.CustomerId == customerId)
+            .Select(item => new { item.FilePath, item.OriginalFileName, item.ContentType })
+            .SingleOrDefaultAsync(ct);
+        if (document is null) return null;
+
+        var fullPath = ToManagedFullPath(document.FilePath, customerId);
+        return fullPath is not null && File.Exists(fullPath)
+            ? new ManagedDocumentContent(fullPath, document.OriginalFileName, document.ContentType)
+            : null;
+    }
+
     public async Task<bool> DeleteAsync(
         int customerId,
         int documentId,

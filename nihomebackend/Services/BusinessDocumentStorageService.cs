@@ -21,6 +21,10 @@ public interface IBusinessDocumentStorageService
         IFormFile? file,
         BusinessDocumentArea area,
         CancellationToken ct = default);
+
+    ManagedDocumentContent? GetContent(BusinessDocumentArea area, string fileName);
+
+    void Delete(string? path, BusinessDocumentArea area);
 }
 
 public class BusinessDocumentStorageService(IWebHostEnvironment env) : IBusinessDocumentStorageService
@@ -102,4 +106,50 @@ public class BusinessDocumentStorageService(IWebHostEnvironment env) : IBusiness
             ContentType = file.ContentType,
         };
     }
+
+    public ManagedDocumentContent? GetContent(BusinessDocumentArea area, string fileName)
+    {
+        if (!AreaFolders.TryGetValue(area, out var areaFolder)) return null;
+        var safeFileName = Path.GetFileName(fileName);
+        if (!string.Equals(safeFileName, fileName, StringComparison.Ordinal)) return null;
+        var extension = Path.GetExtension(safeFileName);
+        if (!AllowedExtensions.Contains(extension)) return null;
+
+        var fullPath = Path.Combine(
+            env.ContentRootPath, "wwwroot", "files", "business-documents", areaFolder, safeFileName);
+        if (!File.Exists(fullPath)) return null;
+        return new ManagedDocumentContent(fullPath, safeFileName, GetContentType(extension));
+    }
+
+    public void Delete(string? path, BusinessDocumentArea area)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !AreaFolders.TryGetValue(area, out var areaFolder)) return;
+        var expectedPrefix = $"/files/business-documents/{areaFolder}/";
+        if (!path.StartsWith(expectedPrefix, StringComparison.Ordinal)) return;
+        var fileName = Path.GetFileName(path);
+        var fullPath = Path.Combine(
+            env.ContentRootPath, "wwwroot", "files", "business-documents", areaFolder, fileName);
+        try
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static string GetContentType(string extension) => extension.ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".doc" => "application/msword",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xls" => "application/vnd.ms-excel",
+        ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        _ => "application/octet-stream",
+    };
 }

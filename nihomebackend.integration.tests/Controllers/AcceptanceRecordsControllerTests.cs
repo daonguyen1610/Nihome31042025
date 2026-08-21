@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
@@ -249,6 +250,45 @@ public class AcceptanceRecordsControllerTests : IntegrationTestBase
         update.EnsureSuccessStatusCode();
         (await ReadJsonAsync(update)).GetProperty("documents").GetString()
             .Should().Be("[\"/files/acceptance/minutes.pdf\"]");
+    }
+
+    [Fact]
+    public async Task DocumentContent_RequiresPersistedReferenceAndRecordScope()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        using var form = FileForm("acceptance evidence", "acceptance.pdf");
+        var upload = await Client.PostAsync("/api/business-documents/acceptance", form);
+        upload.EnsureSuccessStatusCode();
+        var path = (await ReadJsonAsync(upload)).GetProperty("path").GetString()!;
+        var fileName = Path.GetFileName(path);
+        var projectId = await CreateProjectAsync();
+
+        var create = await Client.PostAsJsonAsync("/api/acceptance-records", new
+        {
+            designProjectId = projectId,
+            title = $"Scoped document {Guid.NewGuid():N}",
+            acceptanceDate = "2026-06-15",
+            documents = System.Text.Json.JsonSerializer.Serialize(new[] { path }),
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var content = await Client.GetAsync($"/api/acceptance-records/{id}/documents/{fileName}/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("acceptance evidence");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
+        (await Client.GetAsync($"/api/acceptance-records/{id}/documents/{fileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private static MultipartFormDataContent FileForm(string content, string fileName)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", fileName);
+        return form;
     }
 
     // -------- helpers --------

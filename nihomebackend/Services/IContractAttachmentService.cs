@@ -9,6 +9,8 @@ public interface IContractAttachmentService
         int contractId, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<ContractAttachmentResponse?> CreateAsync(
         int contractId, CreateContractAttachmentRequest req, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+    Task<ManagedDocumentContent?> GetContentAsync(
+        int contractId, int attachmentId, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<bool> DeleteAsync(
         int contractId, int attachmentId, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 }

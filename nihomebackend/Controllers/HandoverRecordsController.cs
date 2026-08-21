@@ -18,6 +18,7 @@ namespace NihomeBackend.Controllers;
 public class HandoverRecordsController(
     IHandoverRecordService service,
     IPermissionService permissions,
+    IBusinessDocumentStorageService documentStorage,
     IAuditLogger audit,
     INotificationService notifications) : ControllerBase
 {
@@ -58,6 +59,23 @@ public class HandoverRecordsController(
         if (userId is null) return Unauthorized();
         var response = await service.GetAsync(id, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
         return response is null ? NotFound() : Ok(response);
+    }
+
+    [HttpGet("{id:int}/documents/{fileName}/content")]
+    [RequirePermission("construction.handover", "view")]
+    public async Task<IActionResult> GetDocumentContent(int id, string fileName, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var record = await service.GetAsync(id, userId.Value, await CanSeeAllAsync(userId.Value, ct), ct);
+        if (record is null || !record.Documents.Any(path => string.Equals(
+            path,
+            $"/files/business-documents/handover/{fileName}",
+            StringComparison.Ordinal))) return NotFound();
+        var content = documentStorage.GetContent(BusinessDocumentArea.Handover, fileName);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
     }
 
     [HttpPost]

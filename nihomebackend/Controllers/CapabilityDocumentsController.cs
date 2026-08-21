@@ -4,8 +4,10 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
+using NihomeBackend.Data;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
@@ -30,6 +32,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class CapabilityDocumentsController(
     ICapabilityDocumentService svc,
+    AppDbContext db,
     IWebHostEnvironment env,
     IAuditLogger audit,
     ILogger<CapabilityDocumentsController> logger) : ControllerBase
@@ -65,6 +68,29 @@ public class CapabilityDocumentsController(
     {
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("files/{fileName}/content")]
+    [RequirePermission("crm.capability-docs", "view")]
+    public async Task<IActionResult> GetFileContent(string fileName, CancellationToken ct)
+    {
+        var safeFileName = Path.GetFileName(fileName);
+        if (!string.Equals(safeFileName, fileName, StringComparison.Ordinal)) return NotFound();
+        var extension = Path.GetExtension(safeFileName);
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension)) return NotFound();
+        var managedPath = $"/files/{StorageSubfolder}/{safeFileName}";
+        var isReferenced = await db.CapabilityDocuments.AsNoTracking()
+            .AnyAsync(document => document.FilePath == managedPath, ct)
+            || await db.CapabilityDocumentVersions.AsNoTracking()
+                .AnyAsync(version => version.FilePath == managedPath, ct);
+        if (!isReferenced) return NotFound();
+        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder, safeFileName);
+        if (!System.IO.File.Exists(fullPath)) return NotFound();
+        return PhysicalFile(
+            fullPath,
+            GetContentType(extension),
+            safeFileName,
+            enableRangeProcessing: true);
     }
 
     /// <summary>
@@ -316,6 +342,18 @@ public class CapabilityDocumentsController(
         }
         return candidate;
     }
+
+    private static string GetContentType(string extension) => extension.ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".doc" => "application/msword",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xls" => "application/vnd.ms-excel",
+        ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        _ => "application/octet-stream",
+    };
 
     private ActionResult<CapabilityDocumentResponse> LogAndBadRequest(
         string action, CapabilityDocumentOperationException ex, int? id = null)

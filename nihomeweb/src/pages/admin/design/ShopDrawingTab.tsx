@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronUp, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
@@ -252,10 +252,10 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const [revisionsFor, setRevisionsFor] = useState<ShopDrawingResponse | null>(null);
 
   // -------- file upload --------
-  const [uploading, setUploading] = useState(false);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
 
   const handleUploadFile = async (docId: number, file: File) => {
-    setUploading(true);
+    setUploadingId(docId);
     try {
       await adminApi.uploadShopDrawingFile(docId, file);
       toast({ title: t("shopDrawing.fileUploaded") });
@@ -263,7 +263,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
-      setUploading(false);
+      setUploadingId(null);
     }
   };
 
@@ -498,7 +498,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
           </SelectContent>
         </Select>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canManage && selectedIds.size > 0 ? (
+          {canManage && isShopStage && selectedIds.size > 0 ? (
             <>
               <span className="text-xs text-slate-500">{selectedIds.size} selected</span>
               <Button
@@ -541,7 +541,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
               selectedIds={selectedIds}
               draftableIds={draftableIds}
               transitioningId={transitioning}
-              uploading={uploading}
+              uploadingId={uploadingId}
               onToggle={toggleOne}
               onEdit={openEdit}
               onDelete={setDeleting}
@@ -753,7 +753,7 @@ const DisciplineSection = ({
   selectedIds,
   draftableIds,
   transitioningId,
-  uploading,
+  uploadingId,
   onToggle,
   onEdit,
   onDelete,
@@ -773,7 +773,7 @@ const DisciplineSection = ({
   selectedIds: Set<number>;
   draftableIds: Set<number>;
   transitioningId: number | null;
-  uploading: boolean;
+  uploadingId: number | null;
   onToggle: (id: number, checked: boolean) => void;
   onEdit: (row: ShopDrawingResponse) => void;
   onDelete: (row: ShopDrawingResponse) => void;
@@ -809,7 +809,7 @@ const DisciplineSection = ({
                   <li key={row.id} className="rounded-md border border-slate-100 bg-slate-50/40 p-2">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
-                        {canManage && draftableIds.has(row.id) ? (
+                        {canManage && isShopStage && draftableIds.has(row.id) ? (
                           <Checkbox
                             checked={selectedIds.has(row.id)}
                             onCheckedChange={(v) => onToggle(row.id, v === true)}
@@ -827,33 +827,29 @@ const DisciplineSection = ({
                           ) : null}
                           {/* File preview/upload */}
                           {row.filePath ? (
-                            <div className="mt-2">
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
                               <AdminFilePreview
-                                filePath={row.filePath}
+                                url={row.filePath}
                                 fileName={row.originalFileName}
+                                contentType={row.contentType}
+                                fetchFile={async () => (await adminApi.getShopDrawingContent(row.id)).data}
                                 className="max-w-xs"
                               />
+                              {canManage && isShopStage ? (
+                                <FileUploadButton
+                                  label={t("shopDrawing.replaceFile")}
+                                  busy={uploadingId === row.id}
+                                  onFile={(file) => onUploadFile(row.id, file)}
+                                />
+                              ) : null}
                             </div>
-                          ) : canManage ? (
+                          ) : canManage && isShopStage ? (
                             <div className="mt-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1 text-xs"
-                                disabled={uploading}
-                                onClick={() => {
-                                  const input = document.createElement("input");
-                                  input.type = "file";
-                                  input.onchange = (e) => {
-                                    const file = (e.target as HTMLInputElement).files?.[0];
-                                    if (file) void onUploadFile(row.id, file);
-                                  };
-                                  input.click();
-                                }}
-                              >
-                                <FileUp className="h-3.5 w-3.5" />
-                                {t("shopDrawing.uploadFile")}
-                              </Button>
+                              <FileUploadButton
+                                label={t("shopDrawing.uploadFile")}
+                                busy={uploadingId === row.id}
+                                onFile={(file) => onUploadFile(row.id, file)}
+                              />
                             </div>
                           ) : null}
                         </div>
@@ -881,7 +877,7 @@ const DisciplineSection = ({
                         ) : null}
                       </div>
                     </div>
-                    {canManage ? (
+                    {canManage && isShopStage ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <RowActions
                           row={row}
@@ -902,6 +898,44 @@ const DisciplineSection = ({
         </div>
       ) : null}
     </section>
+  );
+};
+
+const FileUploadButton = ({
+  label,
+  busy,
+  onFile,
+}: {
+  label: string;
+  busy: boolean;
+  onFile: (file: File) => void;
+}) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="gap-1 text-xs"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+        {label}
+      </Button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onFile(file);
+          event.target.value = "";
+        }}
+      />
+    </>
   );
 };
 

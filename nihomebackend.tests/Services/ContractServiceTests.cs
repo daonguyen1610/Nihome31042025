@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -11,13 +13,22 @@ public class ContractServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly ContractService _sut;
+    private readonly string _contentRoot;
     private int _customerA;
     private int _customerB;
 
     public ContractServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new ContractService(_db, new NoopDesignProjectService(), NullLogger<ContractService>.Instance);
+        _contentRoot = Path.Combine(Path.GetTempPath(), $"nihome-contract-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(_contentRoot, "wwwroot", "files", "contracts"));
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.SetupGet(item => item.ContentRootPath).Returns(_contentRoot);
+        _sut = new ContractService(
+            _db,
+            new NoopDesignProjectService(),
+            NullLogger<ContractService>.Instance,
+            environment.Object);
 
         _db.Customers.AddRange(
             new Customer { Name = "Customer A", Type = CustomerType.Company },
@@ -27,7 +38,11 @@ public class ContractServiceTests : IDisposable
         _customerB = _db.Customers.Single(c => c.Name == "Customer B").Id;
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        if (Directory.Exists(_contentRoot)) Directory.Delete(_contentRoot, recursive: true);
+    }
 
     private UpsertContractRequest Req(
         int? customerId = null,
@@ -315,9 +330,42 @@ public class ContractServiceTests : IDisposable
     public async Task Delete_SalesCanOnlyDeleteOwnRows()
     {
         var owned = await _sut.CreateAsync(Req(owner: 100), 100, canReassignOwner: true);
+        var attachmentPath = CreateManagedFile("attachment.pdf");
+        var appendixPath = CreateManagedFile("appendix.pdf");
+        _db.ContractAttachments.Add(new ContractAttachment
+        {
+            ContractId = owned.Id,
+            FilePath = attachmentPath,
+            OriginalFileName = "attachment.pdf",
+        });
+        _db.ContractAppendices.Add(new ContractAppendix
+        {
+            ContractId = owned.Id,
+            VoNumber = 1,
+            Title = "Appendix",
+            Reason = "Test cleanup",
+            ValueDelta = 1,
+            FilePath = appendixPath,
+        });
+        await _db.SaveChangesAsync();
+
         Assert.False(await _sut.DeleteAsync(owned.Id, callerUserId: 200, canSeeAll: false));
+        Assert.True(File.Exists(FullPath(attachmentPath)));
+        Assert.True(File.Exists(FullPath(appendixPath)));
         Assert.True(await _sut.DeleteAsync(owned.Id, callerUserId: 100, canSeeAll: false));
+        Assert.False(File.Exists(FullPath(attachmentPath)));
+        Assert.False(File.Exists(FullPath(appendixPath)));
     }
+
+    private string CreateManagedFile(string fileName)
+    {
+        var relativePath = $"/files/contracts/{fileName}";
+        File.WriteAllText(FullPath(relativePath), "contract file");
+        return relativePath;
+    }
+
+    private string FullPath(string relativePath) =>
+        Path.Combine(_contentRoot, "wwwroot", relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
     // ---------------- Payment milestones (NIH-103) ----------------
 

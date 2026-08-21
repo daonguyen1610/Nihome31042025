@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -111,5 +112,41 @@ public class VendorsControllerTests : IntegrationTestBase
         (await Client.DeleteAsync($"/api/vendors/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/vendors/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await Client.DeleteAsync($"/api/vendors/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CapabilityFile_IsReadableOnlyAfterVendorReferencesUpload()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "ADMIN"));
+        using var uploadForm = FileForm("vendor capability", "vendor.pdf");
+        var upload = await Client.PostAsync("/api/business-documents/vendors", uploadForm);
+        upload.EnsureSuccessStatusCode();
+        var path = (await ReadJsonAsync(upload)).GetProperty("path").GetString()!;
+
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var create = await Client.PostAsJsonAsync("/api/vendors", new
+        {
+            vendorCode = $"DOC-{suffix}",
+            companyName = $"Document vendor {suffix}",
+            vendorType = "Supplier",
+            capabilityFileUrl = path,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var content = await Client.GetAsync($"/api/vendors/{id}/capability-file/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("vendor capability");
+        (await Client.GetAsync("/api/vendors/2147483647/capability-file/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private static MultipartFormDataContent FileForm(string content, string fileName)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", fileName);
+        return form;
     }
 }

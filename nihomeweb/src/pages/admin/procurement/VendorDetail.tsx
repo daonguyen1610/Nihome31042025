@@ -12,7 +12,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
-import { resolveSafeLinkUrl } from "@/lib/url";
+import { isManagedDocumentPath, resolveSafeLinkUrl } from "@/lib/url";
 import { adminApi, type UpdateVendorRequest, type VendorResponse } from "@/services/adminApi";
 import VendorForm from "./VendorForm";
 
@@ -82,7 +82,7 @@ export default function VendorDetail() {
             {!vendor.isActive && <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">{t("proc.vendors.inactiveWarning")}</div>}
             <section className="space-y-3"><h2 className="text-lg font-semibold">{t("proc.vendors.section.company")}</h2><dl className="grid gap-5 rounded-md border bg-card p-5 sm:grid-cols-2 lg:grid-cols-3">{value(t("proc.vendors.field.taxCode"), vendor.taxCode)}{value(t("proc.vendors.field.tradeCategory"), vendor.tradeCategory)}{value(t("proc.vendors.field.licenseNo"), vendor.licenseNo)}{value(t("proc.vendors.field.address"), vendor.address)}</dl></section>
             <section className="space-y-3"><h2 className="text-lg font-semibold">{t("proc.vendors.section.contact")}</h2><dl className="grid gap-5 rounded-md border bg-card p-5 sm:grid-cols-2 lg:grid-cols-3">{value(t("proc.vendors.field.contactPerson"), vendor.contactPerson)}{value(t("proc.vendors.field.phone"), vendor.phone)}{value(t("proc.vendors.field.email"), vendor.email)}</dl></section>
-            <section className="space-y-3"><h2 className="text-lg font-semibold">{t("proc.vendors.section.documents")}</h2><div className="flex flex-wrap gap-2 rounded-md border bg-card p-5">{capabilityUrl ? <AdminFilePreview url={vendor.capabilityFileUrl} showLabel label={t("proc.vendors.openCapability")} /> : <p className="text-sm text-muted-foreground">{t("proc.vendors.noDocuments")}</p>}{folderUrl && <Button asChild variant="outline"><Link to={folderUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" />{t("proc.vendors.openFolder")}</Link></Button>}</div></section>
+            <section className="space-y-3"><h2 className="text-lg font-semibold">{t("proc.vendors.section.documents")}</h2><div className="flex flex-wrap gap-2 rounded-md border bg-card p-5">{capabilityUrl ? <AdminFilePreview url={vendor.capabilityFileUrl} showLabel label={t("proc.vendors.openCapability")} fetchFile={isManagedDocumentPath(vendor.capabilityFileUrl ?? "", "/files/business-documents/vendors") ? async () => (await adminApi.getVendorDocumentContent(vendor.id)).data : undefined} /> : <p className="text-sm text-muted-foreground">{t("proc.vendors.noDocuments")}</p>}{folderUrl && <Button asChild variant="outline"><Link to={folderUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-2 h-4 w-4" />{t("proc.vendors.openFolder")}</Link></Button>}</div></section>
             <section className="space-y-3"><h2 className="text-lg font-semibold">{t("proc.vendors.section.history")}</h2><dl className="grid gap-5 rounded-md border bg-card p-5 sm:grid-cols-2 lg:grid-cols-3">{value(t("proc.vendors.field.createdBy"), vendor.createdByName)}{value(t("proc.vendors.field.createdAt"), new Date(vendor.createdAt).toLocaleString())}{value(t("proc.vendors.field.updatedAt"), new Date(vendor.updatedAt).toLocaleString())}</dl></section>
           </>
         )}

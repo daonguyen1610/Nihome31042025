@@ -183,6 +183,38 @@ public class CapabilityDocumentsControllerTests : IntegrationTestBase
             .Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task UploadedFile_UsesAuthenticatedContentRouteAndBlocksStaticPath()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var upload = await UploadPdfAsync("private-capability.pdf");
+        upload.EnsureSuccessStatusCode();
+        var path = (await ReadJsonAsync(upload)).GetProperty("filePath").GetString()!;
+        var fileName = Path.GetFileName(path);
+
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/capability-documents/files/{fileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var create = await Client.PostAsJsonAsync("/api/capability-documents", new
+        {
+            name = "Private capability",
+            tagCode = "iso",
+            filePath = path,
+            originalFileName = "private-capability.pdf",
+            fileSize = Convert.FromBase64String(PdfBytesBase64).LongLength,
+            contentType = "application/pdf",
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        (await Client.GetAsync($"/api/capability-documents/files/{fileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        (await Client.GetAsync($"/api/capability-documents/files/{fileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     // ---------- helpers ----------
 
     private async Task<HttpResponseMessage> UploadPdfAsync(string fileName)

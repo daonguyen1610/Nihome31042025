@@ -303,6 +303,20 @@ public class CustomersController(
         return documents is null ? NotFound() : Ok(documents);
     }
 
+    [HttpGet("{id:int}/documents/{documentId:int}/content")]
+    [RequirePermission("crm.customers", "view")]
+    public async Task<IActionResult> GetDocumentContent(int id, int documentId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
+        var content = await documentSvc.GetContentAsync(id, documentId, userId.Value, canSeeAll, ct);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
+    }
+
     [HttpPost("{id:int}/documents")]
     [Consumes("multipart/form-data")]
     [RequirePermission("crm.customers", "manage")]

@@ -1,6 +1,6 @@
 # Decisions And Open Questions
 
-Last reviewed: 2026-08-18
+Last reviewed: 2026-08-21
 
 ## Decisions
 
@@ -115,6 +115,10 @@ Rationale: Customer-related files need shared multi-user persistence, owner-scop
 ### 2026-08-19 - Authenticated DOCX files render client-side
 
 Rationale: Private operational documents cannot be exposed through a public URL for third-party Office viewers, and browsers do not natively render DOCX. `AdminFilePreview` therefore loads `docx-preview` on demand and renders the authenticated blob locally while preserving the existing open and download actions.
+
+### 2026-08-21 - Private managed documents use persisted resource-bound content routes
+
+Rationale: Authentication, unguessable filenames, and module-level permissions do not by themselves prove that a caller may read a specific file. Managed static prefixes are blocked before ASP.NET static middleware, generic area-and-filename reads are not exposed, and the frontend requests authenticated Blobs through the persisted Customer, Contract, Capability, Vendor, Acceptance, As-Built, Handover, Permit, Basic Design, or Shop Drawing resource. Two-step staged uploads remain unreadable until metadata persistence, while external HTTP(S) links retain their safe-link behavior. Replaced and removed managed files are deleted after successful persistence; abandoned staged-file reconciliation and malware/signature hardening remain explicit follow-up risks.
 
 ## Open Questions
 

@@ -286,6 +286,9 @@ public class PermitChecklistService(
         if (entity is null) return null;
 
         var uploaded = await documentStorage.StoreAsync(file, BusinessDocumentArea.Permits, ct);
+        var previousPath = kind == PermitDocumentKind.SubmittedPackage
+            ? entity.SubmittedFilePath
+            : entity.IssuedFilePath;
         if (kind == PermitDocumentKind.SubmittedPackage)
         {
             entity.SubmittedFilePath = uploaded.Path;
@@ -297,6 +300,7 @@ public class PermitChecklistService(
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
         await db.SaveChangesAsync(ct);
+        documentStorage.Delete(previousPath, BusinessDocumentArea.Permits);
 
         logger.LogInformation(
             "Permit checklist item {Id} {Kind} document uploaded by user {UserId}",
@@ -312,8 +316,12 @@ public class PermitChecklistService(
         if (response is null) return null;
 
         var entity = await db.PermitChecklistItems.FirstAsync(x => x.Id == id, ct);
+        var submittedFilePath = entity.SubmittedFilePath;
+        var issuedFilePath = entity.IssuedFilePath;
         db.PermitChecklistItems.Remove(entity);
         await db.SaveChangesAsync(ct);
+        documentStorage.Delete(submittedFilePath, BusinessDocumentArea.Permits);
+        documentStorage.Delete(issuedFilePath, BusinessDocumentArea.Permits);
         logger.LogInformation("Permit checklist item {Id} deleted", id);
         return response;
     }

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
@@ -237,6 +238,41 @@ public class AsBuiltDocumentsControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         (await Client.GetAsync("/api/as-built-documents/999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Content_IsReadableOnlyThroughPersistedDocumentResource()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        using var form = FileForm("as-built evidence", "as-built.pdf");
+        var upload = await Client.PostAsync("/api/business-documents/as-built", form);
+        upload.EnsureSuccessStatusCode();
+        var path = (await ReadJsonAsync(upload)).GetProperty("path").GetString()!;
+        var projectId = await CreateProjectAsync();
+        var create = await Client.PostAsJsonAsync("/api/as-built-documents", new
+        {
+            designProjectId = projectId,
+            title = $"As-built content {Guid.NewGuid():N}",
+            category = "Drawing",
+            fileUrl = path,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var content = await Client.GetAsync($"/api/as-built-documents/{id}/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("as-built evidence");
+        (await Client.GetAsync("/api/as-built-documents/2147483647/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private static MultipartFormDataContent FileForm(string content, string fileName)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", fileName);
+        return form;
     }
 
     [Fact]

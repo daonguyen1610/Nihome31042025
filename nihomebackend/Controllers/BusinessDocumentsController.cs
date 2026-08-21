@@ -50,4 +50,5 @@ public class BusinessDocumentsController(IBusinessDocumentStorageService storage
             return BadRequest(new { message = ex.Message });
         }
     }
+
 }

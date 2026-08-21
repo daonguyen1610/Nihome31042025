@@ -21,6 +21,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class PermitsController(
     IPermitChecklistService svc,
+    IBusinessDocumentStorageService documentStorage,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -38,6 +39,21 @@ public class PermitsController(
     {
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("{id:int}/documents/{fileName}/content")]
+    [RequirePermission("permit.checklists", "view")]
+    public async Task<IActionResult> GetDocumentContent(int id, string fileName, CancellationToken ct)
+    {
+        var permit = await svc.GetAsync(id, ct);
+        if (permit is null || !new[] { permit.SubmittedFilePath, permit.IssuedFilePath }.Any(path => string.Equals(
+            path,
+            $"/files/business-documents/permits/{fileName}",
+            StringComparison.Ordinal))) return NotFound();
+        var content = documentStorage.GetContent(BusinessDocumentArea.Permits, fileName);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
     }
 
     [HttpPost]

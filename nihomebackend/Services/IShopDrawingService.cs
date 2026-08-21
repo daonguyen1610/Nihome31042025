@@ -21,6 +21,8 @@ public interface IShopDrawingService
 
     /// <summary>Upload a file and attach it to an existing shop drawing.</summary>
     Task<ShopDrawingResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default);
+
+    Task<ManagedDocumentContent?> GetContentAsync(int id, CancellationToken ct = default);
 }
 
 /// <summary>

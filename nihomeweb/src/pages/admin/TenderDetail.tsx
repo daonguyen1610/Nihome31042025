@@ -383,7 +383,16 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
                 </td>
                 <td className="px-3 py-2">
                   {item.filePath ? (
-                    <AdminFilePreview url={item.filePath} fileName={item.originalFileName} showLabel label={item.originalFileName ?? t("common.previewFile")} variant="ghost" />
+                    <AdminFilePreview
+                      url={item.filePath}
+                      fileName={item.originalFileName}
+                      showLabel
+                      label={item.originalFileName ?? t("common.previewFile")}
+                      variant="ghost"
+                      fetchFile={async () => (
+                        await adminApi.getCapabilityDocumentContent(item.filePath)
+                      ).data}
+                    />
                   ) : (
                     <span className="text-xs text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
                   )}
@@ -458,7 +467,16 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
             </div>
             <div className="mt-2 flex items-center justify-between gap-2 text-xs">
               {item.filePath ? (
-                <AdminFilePreview url={item.filePath} fileName={item.originalFileName} showLabel label={item.originalFileName ?? t("common.previewFile")} variant="ghost" />
+                <AdminFilePreview
+                  url={item.filePath}
+                  fileName={item.originalFileName}
+                  showLabel
+                  label={item.originalFileName ?? t("common.previewFile")}
+                  variant="ghost"
+                  fetchFile={async () => (
+                    await adminApi.getCapabilityDocumentContent(item.filePath)
+                  ).data}
+                />
               ) : (
                 <span className="text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
               )}

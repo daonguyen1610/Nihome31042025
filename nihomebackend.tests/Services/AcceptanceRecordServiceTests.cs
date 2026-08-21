@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -17,6 +18,7 @@ namespace nihomebackend.tests.Services;
 public class AcceptanceRecordServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
+    private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
     private readonly AcceptanceRecordService _sut;
     private readonly int _userId;
     private readonly int _projectId;
@@ -25,7 +27,10 @@ public class AcceptanceRecordServiceTests : IDisposable
     public AcceptanceRecordServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new AcceptanceRecordService(_db, NullLogger<AcceptanceRecordService>.Instance);
+        _sut = new AcceptanceRecordService(
+            _db,
+            NullLogger<AcceptanceRecordService>.Instance,
+            _documentStorage.Object);
 
         var user = new ApplicationUser
         {
@@ -397,7 +402,7 @@ public class AcceptanceRecordServiceTests : IDisposable
     public async Task UpdateAsync_clears_documents_when_empty_array_is_supplied()
     {
         var request = Req("With documents");
-        request.Documents = "[\"/files/acceptance/minutes.pdf\"]";
+        request.Documents = "[\"/files/business-documents/acceptance/minutes.pdf\"]";
         var created = await _sut.CreateAsync(request, _userId);
 
         var updated = await _sut.UpdateAsync(created.Id, new UpdateAcceptanceRecordRequest
@@ -408,6 +413,9 @@ public class AcceptanceRecordServiceTests : IDisposable
         }, _userId);
 
         Assert.Equal("[]", updated!.Documents);
+        _documentStorage.Verify(storage => storage.Delete(
+            "/files/business-documents/acceptance/minutes.pdf",
+            BusinessDocumentArea.Acceptance), Times.Once);
     }
 
     public void Dispose() => _db.Dispose();

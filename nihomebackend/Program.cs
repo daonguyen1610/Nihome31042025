@@ -89,7 +89,17 @@ if (app.Environment.IsDevelopment())
 app.UseDefaultFiles();
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/files/quotes", StringComparison.OrdinalIgnoreCase))
+    string[] privateDocumentPrefixes =
+    [
+        "/files/quotes",
+        "/files/customers",
+        "/files/contracts",
+        "/files/capability",
+        "/files/business-documents",
+        "/files/design",
+    ];
+    if (privateDocumentPrefixes.Any(prefix =>
+        context.Request.Path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase)))
     {
         context.Response.StatusCode = StatusCodes.Status404NotFound;
         return;
@@ -113,14 +123,6 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadCvPath),
     RequestPath = "/files/cv"
-});
-
-var uploadCapabilityPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "files", "capability");
-Directory.CreateDirectory(uploadCapabilityPath);
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(uploadCapabilityPath),
-    RequestPath = "/files/capability"
 });
 
 app.Use(async (context, next) =>
