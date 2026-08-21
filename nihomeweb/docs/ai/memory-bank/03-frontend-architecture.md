@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-Last reviewed: 2026-08-10
+Last reviewed: 2026-08-21
 
 ## Core Direction
 
@@ -41,6 +41,14 @@ Last reviewed: 2026-08-10
 - Do not hardcode backend base URLs in presentational UI.
 - Store backend-served media as host-relative paths such as `/images/...`; frontend helpers may resolve relative paths against the current API origin, but must not special-case fixed development hosts.
 - If the frontend depends on backend proxying or Vite dev-server configuration, commit that configuration and document it in the same task.
+
+## Private Document Integration
+
+- Treat managed paths under `/files/quotes`, `/files/customers`, `/files/contracts`, `/files/capability`, `/files/business-documents`, and `/files/design` as metadata, not public browser URLs.
+- Fetch private bytes through the typed resource-bound functions in `src/services/adminApi.ts` and pass the authenticated Blob loader to `AdminFilePreview`.
+- Keep external HTTP(S) document URLs on the existing safe-link path; do not send them through managed-content APIs.
+- A two-step upload is not previewable through the server until the owning resource metadata is persisted. Create/edit forms must suppress the managed preview while a staged path differs from the persisted record, rather than showing stale content or a predictable `404`.
+- Keep permission-aware mutation controls, error/retry states, keyboard operation, horizontal mobile reachability, and at least 44px touch targets for changed document journeys.
 
 ## Runtime Direction
 

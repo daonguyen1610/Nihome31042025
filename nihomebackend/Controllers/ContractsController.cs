@@ -458,6 +458,41 @@ public class ContractsController(
         return rows == null ? NotFound() : Ok(rows);
     }
 
+    [HttpGet("{id:int}/attachments/{attachmentId:int}/content")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<IActionResult> GetAttachmentContent(int id, int attachmentId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var content = await attSvc.GetContentAsync(id, attachmentId, userId.Value, canSeeAll, ct);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
+    }
+
+    [HttpGet("{id:int}/appendices/files/{fileName}/content")]
+    [RequirePermission("crm.contracts", "view")]
+    public async Task<IActionResult> GetAppendixFileContent(int id, string fileName, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
+
+        var safeFileName = Path.GetFileName(fileName);
+        if (!string.Equals(safeFileName, fileName, StringComparison.Ordinal)) return NotFound();
+        var managedPath = $"/files/{StorageSubfolder}/{safeFileName}";
+        var isAttachedToContract = await db.ContractAppendices.AsNoTracking()
+            .AnyAsync(appendix => appendix.ContractId == id && appendix.FilePath == managedPath, ct);
+        if (!isAttachedToContract) return NotFound();
+        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder, safeFileName);
+        return System.IO.File.Exists(fullPath)
+            ? PhysicalFile(fullPath, "application/octet-stream", safeFileName, enableRangeProcessing: true)
+            : NotFound();
+    }
+
     /// <summary>
     /// Upload + register a single attachment in one multipart call. The
     /// file kind and optional label ride on the form body.

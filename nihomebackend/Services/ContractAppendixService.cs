@@ -16,9 +16,13 @@ namespace NihomeBackend.Services;
 ///     caller has the manager permission.</item>
 ///   <item>An Approved VO becomes read-only. Reject to unlock it.</item>
 /// </list></summary>
-public class ContractAppendixService(AppDbContext db, ILogger<ContractAppendixService> logger)
+public class ContractAppendixService(
+    AppDbContext db,
+    ILogger<ContractAppendixService> logger,
+    IWebHostEnvironment? env = null)
     : IContractAppendixService
 {
+    private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
     public async Task<List<ContractAppendixResponse>?> ListAsync(
         int contractId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
@@ -115,6 +119,7 @@ public class ContractAppendixService(AppDbContext db, ILogger<ContractAppendixSe
 
         ValidatePayload(req);
 
+        var previousFilePath = vo.FilePath;
         vo.Title = req.Title.Trim();
         vo.Reason = req.Reason.Trim();
         vo.ValueDelta = req.ValueDelta;
@@ -138,6 +143,8 @@ public class ContractAppendixService(AppDbContext db, ILogger<ContractAppendixSe
         }
 
         await db.SaveChangesAsync(ct);
+        if (!string.Equals(previousFilePath, vo.FilePath, StringComparison.Ordinal))
+            DeleteManagedFile(previousFilePath);
         return await GetAsync(contractId, voId, callerUserId, canSeeAll: true, ct);
     }
 
@@ -224,12 +231,34 @@ public class ContractAppendixService(AppDbContext db, ILogger<ContractAppendixSe
             .FirstOrDefaultAsync(v => v.Id == voId && v.ContractId == contractId, ct);
         if (vo == null) return false;
 
+        var filePath = vo.FilePath;
         db.ContractAppendices.Remove(vo);
         await db.SaveChangesAsync(ct);
+        DeleteManagedFile(filePath);
         return true;
     }
 
     // -------- helpers --------
+
+    private void DeleteManagedFile(string? filePath)
+    {
+        const string expectedPrefix = "/files/contracts/";
+        if (string.IsNullOrWhiteSpace(filePath)
+            || !filePath.StartsWith(expectedPrefix, StringComparison.Ordinal)) return;
+        var fileName = Path.GetFileName(filePath);
+        if (!string.Equals(filePath, $"{expectedPrefix}{fileName}", StringComparison.Ordinal)) return;
+        var fullPath = Path.Combine(_contentRoot, "wwwroot", "files", "contracts", fileName);
+        try
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
 
     private static void ValidatePayload(UpsertContractAppendixRequest req)
     {

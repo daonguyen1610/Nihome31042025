@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -37,6 +39,32 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(res);
         body.GetProperty("items").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
         body.GetProperty("readiness").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Object);
+    }
+
+    [Fact]
+    public async Task Upload_UsesAuthenticatedContentRouteAndRejectsUnsupportedFiles()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        var documentId = await CreateDocAsync(projectId, "architecture");
+
+        using var invalidForm = CreateFileForm("invalid", "malware.exe", "application/octet-stream");
+        (await Client.PostAsync($"/api/basic-design-docs/{documentId}/upload", invalidForm))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var validForm = CreateFileForm("basic design content", "basic-design.pdf", "application/pdf");
+        var upload = await Client.PostAsync($"/api/basic-design-docs/{documentId}/upload", validForm);
+        upload.StatusCode.Should().Be(HttpStatusCode.OK);
+        var filePath = (await ReadJsonAsync(upload)).GetProperty("filePath").GetString();
+
+        (await Client.GetAsync(filePath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var content = await Client.GetAsync($"/api/basic-design-docs/{documentId}/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("basic design content");
+
+        using var anonymousClient = Factory.CreateClient();
+        (await anonymousClient.GetAsync($"/api/basic-design-docs/{documentId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -238,6 +266,15 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private static MultipartFormDataContent CreateFileForm(string content, string fileName, string contentType)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
+        file.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        form.Add(file, "file", fileName);
+        return form;
     }
 
     private async Task<int> FirstCustomerIdAsync()

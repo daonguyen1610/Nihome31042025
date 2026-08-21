@@ -604,13 +604,23 @@ public class CustomersControllerTests : IntegrationTestBase
         upload.StatusCode.Should().Be(HttpStatusCode.Created);
         var uploaded = await ReadJsonAsync(upload);
         var documentId = uploaded.GetProperty("id").GetInt32();
-        uploaded.GetProperty("filePath").GetString().Should()
-            .StartWith($"/files/customers/{customerId}/");
+        var filePath = uploaded.GetProperty("filePath").GetString();
+        filePath.Should().StartWith($"/files/customers/{customerId}/");
+        (await Client.GetAsync(filePath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var list = await Client.GetAsync($"/api/customers/{customerId}/documents");
         list.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(list)).EnumerateArray()
             .Should().ContainSingle(document => document.GetProperty("id").GetInt32() == documentId);
+
+        var content = await Client.GetAsync($"/api/customers/{customerId}/documents/{documentId}/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("customer document");
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        (await Client.GetAsync($"/api/customers/{customerId}/documents/{documentId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
 
         (await Client.DeleteAsync($"/api/customers/{customerId}/documents/{documentId}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);

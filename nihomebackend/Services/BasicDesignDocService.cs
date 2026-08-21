@@ -12,8 +12,10 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class BasicDesignDocService(
     AppDbContext db,
-    ILogger<BasicDesignDocService> logger) : IBasicDesignDocService
+    ILogger<BasicDesignDocService> logger,
+    IWebHostEnvironment? env = null) : IBasicDesignDocService
 {
+    private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
     private const int MaxPageSize = 200;
     private const string DisciplineCategory = "design_discipline";
 
@@ -251,9 +253,11 @@ public class BasicDesignDocService(
             .Where(revision => revision.TargetType == DrawingRevisionTargetType.BasicDesignDoc
                 && revision.TargetId == id)
             .ToListAsync(ct);
+        var managedFile = ToManagedFullPath(entity.FilePath);
         db.DrawingRevisions.RemoveRange(revisions);
         db.BasicDesignDocs.Remove(entity);
         await db.SaveChangesAsync(ct);
+        DeleteManagedFile(managedFile);
         logger.LogInformation("BasicDesignDoc {Id} deleted", id);
         return true;
     }
@@ -282,35 +286,94 @@ public class BasicDesignDocService(
 
     public async Task<BasicDesignDocResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default)
     {
-        var entity = await db.BasicDesignDocs.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.BasicDesignDocs
+            .Include(document => document.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return null;
+        if (entity.DesignProject.CurrentStage != DesignProjectStage.BasicDesign)
+        {
+            throw new BasicDesignDocOperationException(
+                "Chỉ tải file Basic Design khi dự án đang ở giai đoạn Basic Design.");
+        }
 
         var now = DateTime.UtcNow;
+        var previousFile = ToManagedFullPath(entity.FilePath);
         var relativeDir = Path.Combine("files", "design", "basic");
-        var uploadDir = Path.Combine("wwwroot", relativeDir);
+        var uploadDir = Path.Combine(_contentRoot, "wwwroot", relativeDir);
         Directory.CreateDirectory(uploadDir);
 
-        var ext = Path.GetExtension(file.FileName);
-        var fileName = $"{id}_{now:yyyyMMddHHmmss}{ext}";
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var fileName = $"{id}_{Guid.NewGuid():N}{ext}";
         var diskPath = Path.Combine(uploadDir, fileName);
 
-        await using (var stream = new FileStream(diskPath, FileMode.Create))
+        await using (var stream = new FileStream(diskPath, FileMode.CreateNew))
         {
             await file.CopyToAsync(stream, ct);
         }
 
         // Store as host-relative path for frontend access
         entity.FilePath = $"/{relativeDir.Replace('\\', '/')}/{fileName}";
-        entity.OriginalFileName = file.FileName;
+        entity.OriginalFileName = Path.GetFileName(file.FileName);
         entity.FileSize = file.Length;
-        entity.ContentType = file.ContentType;
+        entity.ContentType = string.IsNullOrWhiteSpace(file.ContentType)
+            ? "application/octet-stream"
+            : file.ContentType.Trim();
         entity.UpdatedAt = now;
         entity.UpdatedByUserId = callerUserId;
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            DeleteManagedFile(diskPath);
+            throw;
+        }
+        DeleteManagedFile(previousFile);
         logger.LogInformation("File uploaded to BasicDesignDoc {Id}: {FileName}", id, file.FileName);
 
         return await GetAsync(id, ct);
+    }
+
+    public async Task<ManagedDocumentContent?> GetContentAsync(int id, CancellationToken ct = default)
+    {
+        var document = await db.BasicDesignDocs.AsNoTracking()
+            .Where(item => item.Id == id)
+            .Select(item => new { item.FilePath, item.OriginalFileName, item.ContentType })
+            .SingleOrDefaultAsync(ct);
+        if (document is null || string.IsNullOrWhiteSpace(document.FilePath)) return null;
+        var fullPath = ToManagedFullPath(document.FilePath);
+        return fullPath is not null && File.Exists(fullPath)
+            ? new ManagedDocumentContent(
+                fullPath,
+                document.OriginalFileName ?? Path.GetFileName(fullPath),
+                document.ContentType ?? "application/octet-stream")
+            : null;
+    }
+
+    private string? ToManagedFullPath(string? filePath)
+    {
+        const string prefix = "/files/design/basic/";
+        if (string.IsNullOrWhiteSpace(filePath) ||
+            !filePath.StartsWith(prefix, StringComparison.Ordinal)) return null;
+        var fileName = Path.GetFileName(filePath);
+        return string.IsNullOrWhiteSpace(fileName)
+            ? null
+            : Path.Combine(_contentRoot, "wwwroot", "files", "design", "basic", fileName);
+    }
+
+    private void DeleteManagedFile(string? fullPath)
+    {
+        if (string.IsNullOrWhiteSpace(fullPath)) return;
+        try
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(ex, "Could not delete Basic Design file {Path}", fullPath);
+        }
     }
 
     public async Task<DesignProjectResponse> UnlockShopDrawingAsync(int designProjectId, int callerUserId, CancellationToken ct = default)

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -16,6 +17,7 @@ namespace nihomebackend.tests.Services;
 public class AsBuiltDocumentServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
+    private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
     private readonly AsBuiltDocumentService _sut;
     private readonly int _userId;
     private readonly int _projectId;
@@ -23,7 +25,10 @@ public class AsBuiltDocumentServiceTests : IDisposable
     public AsBuiltDocumentServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new AsBuiltDocumentService(_db, NullLogger<AsBuiltDocumentService>.Instance);
+        _sut = new AsBuiltDocumentService(
+            _db,
+            NullLogger<AsBuiltDocumentService>.Instance,
+            _documentStorage.Object);
 
         var user = new ApplicationUser
         {
@@ -200,13 +205,17 @@ public class AsBuiltDocumentServiceTests : IDisposable
     [Fact]
     public async Task DeleteAsync_removes_submitted_and_preserves_shared_principals()
     {
-        var a = await _sut.CreateAsync(Req("Del"), _userId);
+        var request = Req("Del");
+        request.FileUrl = "/files/business-documents/as-built/del.pdf";
+        var a = await _sut.CreateAsync(request, _userId);
         await _sut.TransitionAsync(a.Id, new TransitionAsBuiltStatusRequest { Status = "Submitted" }, _userId);
 
         Assert.True(await _sut.DeleteAsync(a.Id));
         Assert.False(await _db.AsBuiltDocuments.AnyAsync(document => document.Id == a.Id));
         Assert.True(await _db.DesignProjects.AnyAsync(project => project.Id == _projectId));
         Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
+        _documentStorage.Verify(storage => storage.Delete(
+            request.FileUrl, BusinessDocumentArea.AsBuilt), Times.Once);
     }
 
     [Fact]

@@ -170,6 +170,12 @@ public class PermitsControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(uploaded);
         body.GetProperty("submittedFilePath").GetString()
             .Should().StartWith("/files/business-documents/permits/");
+        var path = body.GetProperty("submittedFilePath").GetString()!;
+        var content = await Client.GetAsync($"/api/permits/{id}/documents/{Path.GetFileName(path)}/content");
+        content.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await content.Content.ReadAsStringAsync()).Should().Be("permit document");
+        (await Client.GetAsync($"/api/permits/2147483647/documents/{Path.GetFileName(path)}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
         (await UploadDocumentAsync(id, "IssuedPermit", "issued.pdf")).StatusCode

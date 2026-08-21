@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { resolveSafeLinkUrl } from "@/lib/url";
+import { isManagedDocumentPath, resolveSafeLinkUrl } from "@/lib/url";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -830,7 +830,13 @@ export default function AsBuiltDocumentsPage() {
                       <dt className="text-muted-foreground">{t("asbuilt.field.fileUrl")}</dt>
                       <dd className="flex min-w-0 items-center gap-2">
                         <span className="min-w-0 flex-1 break-all">{detail.fileUrl}</span>
-                        <AdminFilePreview url={detail.fileUrl} testId="asbuilt-detail-file-preview" />
+                        <AdminFilePreview
+                          url={detail.fileUrl}
+                          fetchFile={isManagedDocumentPath(detail.fileUrl, "/files/business-documents/as-built")
+                            ? async () => (await adminApi.getAsBuiltDocumentContent(detail.id)).data
+                            : undefined}
+                          testId="asbuilt-detail-file-preview"
+                        />
                       </dd>
                     </>
                   )}
@@ -993,7 +999,17 @@ export default function AsBuiltDocumentsPage() {
                   placeholder="/files/asbuilt/…"
                   data-testid="asbuilt-form-file-url"
                 />
-                {form.fileUrl.trim() && <AdminFilePreview url={form.fileUrl} />}
+                {form.fileUrl.trim() && (
+                  !isManagedDocumentPath(form.fileUrl, "/files/business-documents/as-built")
+                  || rows.find((row) => row.id === editingId)?.fileUrl === form.fileUrl
+                ) && (
+                  <AdminFilePreview
+                    url={form.fileUrl}
+                    fetchFile={isManagedDocumentPath(form.fileUrl, "/files/business-documents/as-built")
+                      ? async () => (await adminApi.getAsBuiltDocumentContent(editingId!)).data
+                      : undefined}
+                  />
+                )}
               </div>
             </div>
             <div>

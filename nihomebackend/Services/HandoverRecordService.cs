@@ -9,7 +9,8 @@ namespace NihomeBackend.Services;
 
 public class HandoverRecordService(
     AppDbContext db,
-    ILogger<HandoverRecordService> logger) : IHandoverRecordService
+    ILogger<HandoverRecordService> logger,
+    IBusinessDocumentStorageService? documentStorage = null) : IHandoverRecordService
 {
     private const int MaxPageSize = 200;
     private static readonly HandoverStatus[] EditableStatuses =
@@ -178,6 +179,7 @@ public class HandoverRecordService(
             throw new HandoverRecordOperationException("Chỉ quản lý dự án hoặc trưởng nhóm thiết kế mới được thay đổi người phụ trách.");
         }
 
+        var previousDocuments = DeserializeStrings(entity.Documents);
         entity.Title = request.Title.Trim();
         entity.Description = TrimOrNull(request.Description);
         entity.PlannedHandoverDate = request.PlannedHandoverDate;
@@ -192,6 +194,7 @@ public class HandoverRecordService(
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
         await SaveWithConcurrencyAsync(ct);
+        DeleteRemovedDocuments(previousDocuments, request.Documents);
         return await GetAsync(id, callerUserId, true, ct);
     }
 
@@ -248,9 +251,11 @@ public class HandoverRecordService(
             .Include(row => row.StatusHistory)
             .FirstOrDefaultAsync(row => row.Id == id, ct);
         if (entity is null) return false;
+        var documents = DeserializeStrings(entity.Documents);
         db.HandoverStatusHistory.RemoveRange(entity.StatusHistory);
         db.HandoverRecords.Remove(entity);
         await SaveWithConcurrencyAsync(ct);
+        DeleteRemovedDocuments(documents, []);
         return true;
     }
 
@@ -261,6 +266,13 @@ public class HandoverRecordService(
         .Include(row => row.HandedOverBy)
         .Include(row => row.StatusHistory)
             .ThenInclude(history => history.ChangedByUser);
+
+    private void DeleteRemovedDocuments(IEnumerable<string> previous, IEnumerable<string> current)
+    {
+        var retained = current.ToHashSet(StringComparer.Ordinal);
+        foreach (var path in previous.Where(path => !retained.Contains(path)))
+            documentStorage?.Delete(path, BusinessDocumentArea.Handover);
+    }
 
     private static IQueryable<HandoverRecord> ApplyScope(
         IQueryable<HandoverRecord> query, int callerUserId, bool canSeeAll)

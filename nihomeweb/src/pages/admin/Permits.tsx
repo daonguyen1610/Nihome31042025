@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
+import { isManagedDocumentPath } from "@/lib/url";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -878,6 +879,7 @@ const AdminPermits = () => {
               {dialogMode === "edit" && editing ? (
                 <div className="space-y-4 md:col-span-2">
                   <PermitDocumentField
+                    permitId={editing.id}
                     label={t("permits.document.submittedPackage")}
                     path={editing.submittedFilePath}
                     uploadFile={(file) => uploadPermitFile(editing.id, "SubmittedPackage", file)}
@@ -886,6 +888,7 @@ const AdminPermits = () => {
                     testId="permit-submitted-package-upload"
                   />
                   <PermitDocumentField
+                    permitId={editing.id}
                     label={t("permits.document.issuedPermit")}
                     path={editing.issuedFilePath}
                     uploadFile={(file) => uploadPermitFile(editing.id, "IssuedPermit", file)}
@@ -932,6 +935,7 @@ const AdminPermits = () => {
               <div className="sm:col-span-2"><DetailValue label={t("permits.field.note")} value={viewing.note} /></div>
               <div className="space-y-2 sm:col-span-2">
                 <PermitDocumentField
+                  permitId={viewing.id}
                   label={t("permits.document.submittedPackage")}
                   path={viewing.submittedFilePath}
                   uploadFile={(file) => uploadPermitFile(viewing.id, "SubmittedPackage", file)}
@@ -941,6 +945,7 @@ const AdminPermits = () => {
                   hideUpload={!canManage}
                 />
                 <PermitDocumentField
+                  permitId={viewing.id}
                   label={t("permits.document.issuedPermit")}
                   path={viewing.issuedFilePath}
                   uploadFile={(file) => uploadPermitFile(viewing.id, "IssuedPermit", file)}
@@ -989,6 +994,7 @@ const DetailValue = ({ label, value }: { label: string; value?: string | null })
 );
 
 const PermitDocumentField = ({
+  permitId,
   label,
   path,
   uploadFile,
@@ -997,6 +1003,7 @@ const PermitDocumentField = ({
   testId,
   hideUpload = false,
 }: {
+  permitId: number;
   label: string;
   path?: string | null;
   uploadFile: (file: File) => Promise<string>;
@@ -1008,7 +1015,15 @@ const PermitDocumentField = ({
   <div className="space-y-2 rounded-md border p-3">
     <div className="flex items-center justify-between gap-2">
       <Label>{label}</Label>
-      {path ? <AdminFilePreview url={path} fileName={path.split("/").pop()} /> : null}
+      {path ? (
+        <AdminFilePreview
+          url={path}
+          fileName={path.split("/").pop()}
+          fetchFile={isManagedDocumentPath(path, "/files/business-documents/permits")
+            ? async () => (await adminApi.getPermitDocumentContent(permitId, path)).data
+            : undefined}
+        />
+      ) : null}
     </div>
     <p className="break-all text-xs text-muted-foreground">{path ?? "—"}</p>
     {!hideUpload ? (

@@ -16,9 +16,11 @@ namespace NihomeBackend.Services;
 public class ContractService(
     AppDbContext db,
     IDesignProjectService designProjectService,
-    ILogger<ContractService> logger) : IContractService
+    ILogger<ContractService> logger,
+    IWebHostEnvironment? env = null) : IContractService
 {
     private const int MaxPageSize = 100;
+    private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
 
     public async Task<ContractListResponse> ListAsync(
         int callerUserId,
@@ -308,11 +310,39 @@ public class ContractService(
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return false;
 
         CrmConcurrency.Apply(db, entity, rowVersion);
+        var managedFiles = await db.ContractAttachments
+            .Where(attachment => attachment.ContractId == id)
+            .Select(attachment => attachment.FilePath)
+            .Concat(db.ContractAppendices
+                .Where(appendix => appendix.ContractId == id && appendix.FilePath != null)
+                .Select(appendix => appendix.FilePath!))
+            .ToListAsync(ct);
 
         db.Contracts.Remove(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        foreach (var filePath in managedFiles) DeleteManagedFile(filePath);
         logger.LogInformation("Deleted contract {Id} ({Number})", entity.Id, entity.ContractNumber);
         return true;
+    }
+
+    private void DeleteManagedFile(string? filePath)
+    {
+        const string expectedPrefix = "/files/contracts/";
+        if (string.IsNullOrWhiteSpace(filePath)
+            || !filePath.StartsWith(expectedPrefix, StringComparison.Ordinal)) return;
+        var fileName = Path.GetFileName(filePath);
+        if (!string.Equals(filePath, $"{expectedPrefix}{fileName}", StringComparison.Ordinal)) return;
+        var fullPath = Path.Combine(_contentRoot, "wwwroot", "files", "contracts", fileName);
+        try
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     public async Task<ContractResponse?> TransitionStatusAsync(

@@ -158,6 +158,10 @@ public class PermitChecklistServiceTests : IDisposable
             DesignProjectId = _designProjectId,
             PermitTypeCode = "pccc",
         }, _userId);
+        var entity = await _db.PermitChecklistItems.FindAsync(created.Id);
+        entity!.SubmittedFilePath = "/files/business-documents/permits/submitted.pdf";
+        entity.IssuedFilePath = "/files/business-documents/permits/issued.pdf";
+        await _db.SaveChangesAsync();
 
         var deleted = await _sut.DeleteAsync(created.Id);
 
@@ -165,6 +169,10 @@ public class PermitChecklistServiceTests : IDisposable
         Assert.Equal(created.Id, deleted!.Id);
         Assert.Null(await _db.PermitChecklistItems.FindAsync(created.Id));
         Assert.Null(await _sut.DeleteAsync(created.Id));
+        _documentStorage.Verify(storage => storage.Delete(
+            "/files/business-documents/permits/submitted.pdf", BusinessDocumentArea.Permits), Times.Once);
+        _documentStorage.Verify(storage => storage.Delete(
+            "/files/business-documents/permits/issued.pdf", BusinessDocumentArea.Permits), Times.Once);
     }
 
     // ---------------- Update ----------------
@@ -223,6 +231,9 @@ public class PermitChecklistServiceTests : IDisposable
     {
         await _sut.EnsureForProjectAsync(_designProjectId, _userId);
         var id = _db.PermitChecklistItems.First().Id;
+        var entity = await _db.PermitChecklistItems.FindAsync(id);
+        entity!.SubmittedFilePath = "/files/business-documents/permits/old.pdf";
+        await _db.SaveChangesAsync();
         var file = new FormFile(new MemoryStream("permit"u8.ToArray()), 0, 6, "file", "permit.pdf");
         _documentStorage
             .Setup(storage => storage.StoreAsync(file, BusinessDocumentArea.Permits, It.IsAny<CancellationToken>()))
@@ -234,6 +245,8 @@ public class PermitChecklistServiceTests : IDisposable
         Assert.NotNull(response);
         Assert.Equal("/files/business-documents/permits/permit.pdf", response!.SubmittedFilePath);
         Assert.Null(response.IssuedFilePath);
+        _documentStorage.Verify(storage => storage.Delete(
+            "/files/business-documents/permits/old.pdf", BusinessDocumentArea.Permits), Times.Once);
     }
 
     // ---------------- Risk flags ----------------

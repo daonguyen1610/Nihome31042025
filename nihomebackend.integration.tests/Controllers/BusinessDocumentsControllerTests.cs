@@ -52,6 +52,20 @@ public class BusinessDocumentsControllerTests : IntegrationTestBase
             .Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task StagedManagedContent_IsNotAvailableThroughStaticOrGenericRoutes()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var upload = await UploadAsync("acceptance", "evidence.pdf");
+        var path = (await ReadJsonAsync(upload)).GetProperty("path").GetString()!;
+        var fileName = Path.GetFileName(path);
+
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/business-documents/acceptance/{fileName}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     private async Task<HttpResponseMessage> UploadAsync(string area, string fileName)
     {
         using var content = new MultipartFormDataContent();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronsRight, Circle, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
@@ -203,10 +203,10 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
   const [revisionsFor, setRevisionsFor] = useState<BasicDesignDocResponse | null>(null);
 
   // -------- file upload --------
-  const [uploading, setUploading] = useState(false);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
 
   const handleUploadFile = async (docId: number, file: File) => {
-    setUploading(true);
+    setUploadingId(docId);
     try {
       await adminApi.uploadBasicDesignDocFile(docId, file);
       toast({ title: t("basicDesign.fileUploaded") });
@@ -214,7 +214,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
-      setUploading(false);
+      setUploadingId(null);
     }
   };
 
@@ -476,33 +476,29 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                         ) : null}
                         {/* File preview/upload */}
                         {row.filePath ? (
-                          <div className="mt-2">
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
                             <AdminFilePreview
-                              filePath={row.filePath}
+                              url={row.filePath}
                               fileName={row.originalFileName}
+                              contentType={row.contentType}
+                              fetchFile={async () => (await adminApi.getBasicDesignDocContent(row.id)).data}
                               className="max-w-xs"
                             />
+                            {canManage && isBasicStage ? (
+                              <FileUploadButton
+                                label={t("basicDesign.replaceFile")}
+                                busy={uploadingId === row.id}
+                                onFile={(file) => void handleUploadFile(row.id, file)}
+                              />
+                            ) : null}
                           </div>
                         ) : canManage && isBasicStage ? (
                           <div className="mt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1 text-xs"
-                              disabled={uploading}
-                              onClick={() => {
-                                const input = document.createElement("input");
-                                input.type = "file";
-                                input.onchange = (e) => {
-                                  const file = (e.target as HTMLInputElement).files?.[0];
-                                  if (file) void handleUploadFile(row.id, file);
-                                };
-                                input.click();
-                              }}
-                            >
-                              <FileUp className="h-3.5 w-3.5" />
-                              {t("basicDesign.uploadFile")}
-                            </Button>
+                            <FileUploadButton
+                              label={t("basicDesign.uploadFile")}
+                              busy={uploadingId === row.id}
+                              onFile={(file) => void handleUploadFile(row.id, file)}
+                            />
                           </div>
                         ) : null}
                       </div>
@@ -662,6 +658,44 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
         />
       ) : null}
     </div>
+  );
+};
+
+const FileUploadButton = ({
+  label,
+  busy,
+  onFile,
+}: {
+  label: string;
+  busy: boolean;
+  onFile: (file: File) => void;
+}) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="gap-1 text-xs"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+        {label}
+      </Button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onFile(file);
+          event.target.value = "";
+        }}
+      />
+    </>
   );
 };
 

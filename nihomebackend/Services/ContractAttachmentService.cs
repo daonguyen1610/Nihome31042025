@@ -9,7 +9,10 @@ namespace NihomeBackend.Services;
 /// <summary>Metadata store for contract attachments. Physical files are
 /// written by the controller (multipart upload → wwwroot/files/contracts)
 /// then registered here with the metadata.</summary>
-public class ContractAttachmentService(AppDbContext db, ILogger<ContractAttachmentService> logger)
+public class ContractAttachmentService(
+    AppDbContext db,
+    IWebHostEnvironment env,
+    ILogger<ContractAttachmentService> logger)
     : IContractAttachmentService
 {
     public async Task<List<ContractAttachmentResponse>?> ListAsync(
@@ -59,6 +62,28 @@ public class ContractAttachmentService(AppDbContext db, ILogger<ContractAttachme
         return Map(entity, uploader);
     }
 
+    public async Task<ManagedDocumentContent?> GetContentAsync(
+        int contractId,
+        int attachmentId,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var contract = await FetchContractAsync(contractId, callerUserId, canSeeAll, ct);
+        if (contract is null) return null;
+
+        var attachment = await db.ContractAttachments.AsNoTracking()
+            .Where(item => item.Id == attachmentId && item.ContractId == contractId)
+            .Select(item => new { item.FilePath, item.OriginalFileName, item.ContentType })
+            .SingleOrDefaultAsync(ct);
+        if (attachment is null) return null;
+
+        var fullPath = ToManagedFullPath(attachment.FilePath);
+        return fullPath is not null && File.Exists(fullPath)
+            ? new ManagedDocumentContent(fullPath, attachment.OriginalFileName, attachment.ContentType)
+            : null;
+    }
+
     public async Task<bool> DeleteAsync(
         int contractId, int attachmentId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
@@ -69,10 +94,34 @@ public class ContractAttachmentService(AppDbContext db, ILogger<ContractAttachme
             .FirstOrDefaultAsync(a => a.Id == attachmentId && a.ContractId == contractId, ct);
         if (entity == null) return false;
 
+        var fullPath = ToManagedFullPath(entity.FilePath);
         db.ContractAttachments.Remove(entity);
         await db.SaveChangesAsync(ct);
+        DeleteManagedFile(fullPath);
         logger.LogInformation("Deleted attachment {Id} for contract {Contract}", attachmentId, contractId);
         return true;
+    }
+
+    private string? ToManagedFullPath(string filePath)
+    {
+        const string expectedPrefix = "/files/contracts/";
+        if (!filePath.StartsWith(expectedPrefix, StringComparison.Ordinal)) return null;
+        var fileName = Path.GetFileName(filePath);
+        if (string.IsNullOrWhiteSpace(fileName)) return null;
+        return Path.Combine(env.ContentRootPath, "wwwroot", "files", "contracts", fileName);
+    }
+
+    private void DeleteManagedFile(string? fullPath)
+    {
+        if (string.IsNullOrWhiteSpace(fullPath)) return;
+        try
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(ex, "Could not delete contract attachment file {Path}", fullPath);
+        }
     }
 
     private async Task<Contract?> FetchContractAsync(int contractId, int callerUserId, bool canSeeAll, CancellationToken ct)

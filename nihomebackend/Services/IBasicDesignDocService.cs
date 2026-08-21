@@ -40,6 +40,8 @@ public interface IBasicDesignDocService
     /// <summary>Upload a file and attach it to an existing basic design document.</summary>
     Task<BasicDesignDocResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default);
 
+    Task<ManagedDocumentContent?> GetContentAsync(int id, CancellationToken ct = default);
+
     /// <summary>
     /// Push the parent design project from BasicDesign to ShopDrawing.
     /// Blocked when the readiness gate (≥1 InternallyApproved per required

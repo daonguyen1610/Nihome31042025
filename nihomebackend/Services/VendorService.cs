@@ -6,7 +6,9 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class VendorService(AppDbContext db) : IVendorService
+public class VendorService(
+    AppDbContext db,
+    IBusinessDocumentStorageService? documentStorage = null) : IVendorService
 {
     private const int MaxPageSize = 100;
 
@@ -124,6 +126,7 @@ public class VendorService(AppDbContext db) : IVendorService
         ValidateRequiredText(code, request.CompanyName);
         await EnsureCodeAvailableAsync(code, id, ct);
 
+        var previousCapabilityFileUrl = vendor.CapabilityFileUrl;
         vendor.VendorCode = code;
         vendor.CompanyName = request.CompanyName.Trim();
         vendor.VendorType = request.VendorType!.Value;
@@ -141,6 +144,8 @@ public class VendorService(AppDbContext db) : IVendorService
         vendor.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
+        if (!string.Equals(previousCapabilityFileUrl, vendor.CapabilityFileUrl, StringComparison.Ordinal))
+            documentStorage?.Delete(previousCapabilityFileUrl, BusinessDocumentArea.Vendors);
         return Map(vendor, vendor.CreatedBy?.FullName);
     }
 
@@ -152,8 +157,10 @@ public class VendorService(AppDbContext db) : IVendorService
         if (vendor is null) return null;
 
         var deleted = Map(vendor, vendor.CreatedBy?.FullName);
+        var capabilityFileUrl = vendor.CapabilityFileUrl;
         db.Vendors.Remove(vendor);
         await db.SaveChangesAsync(ct);
+        documentStorage?.Delete(capabilityFileUrl, BusinessDocumentArea.Vendors);
         return deleted;
     }
 

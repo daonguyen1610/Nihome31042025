@@ -196,3 +196,49 @@ test("customer related records, documents, and contract owner inheritance work i
     }
   }
 });
+
+test("mobile customer detail keeps every tab reachable without shrinking touch targets", async ({
+  api,
+  page,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const token = await loginAs(TEST_USERS.salesManager);
+  const headers = { Authorization: `Bearer ${token}` };
+  const unique = Date.now().toString();
+  const customerName = `Mobile tabs ${unique}`;
+  let customerId = 0;
+
+  try {
+    const create = await api.post("/api/customers", {
+      headers,
+      data: {
+        type: "Individual",
+        name: customerName,
+        sourceCode: "marketing",
+        primaryContact: { fullName: "Mobile contact", phone: `08${unique.slice(-8)}`, isPrimary: true },
+      },
+    });
+    expect(create.status(), await create.text()).toBe(201);
+    customerId = (await create.json()).id as number;
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.goto("/admin/customers", { waitUntil: "networkidle" });
+    await page.locator("#customer-search").fill(customerName);
+    await page.locator("article").filter({ hasText: customerName }).click();
+
+    const tabs = page.getByTestId("customer-detail-tabs");
+    await expect(tabs).toBeVisible();
+    const tabButtons = tabs.getByRole("tab");
+    await expect(tabButtons).toHaveCount(4);
+    for (let index = 0; index < 4; index += 1) {
+      expect((await tabButtons.nth(index).boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    }
+    await tabButtons.last().scrollIntoViewIfNeeded();
+    await tabButtons.last().click();
+    await expect(tabButtons.last()).toHaveAttribute("aria-selected", "true");
+  } finally {
+    if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
+  }
+});

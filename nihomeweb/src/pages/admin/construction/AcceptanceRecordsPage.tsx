@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { resolveSafeLinkUrl } from "@/lib/url";
+import { isManagedDocumentPath, resolveSafeLinkUrl } from "@/lib/url";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,8 +92,8 @@ const parseDocuments = (value: string | null | undefined): string[] => {
   }
 };
 
-const documentPaths = (value: string) =>
-  value.split("\n").map((path) => path.trim()).filter(Boolean);
+const documentPaths = (value?: string | null) =>
+  (value ?? "").split("\n").map((path) => path.trim()).filter(Boolean);
 
 const serializeDocuments = (paths: string[]) => JSON.stringify(paths);
 
@@ -1054,6 +1054,9 @@ export default function AcceptanceRecordsPage() {
                             <AdminFilePreview
                               url={path}
                               fileName={label}
+                              fetchFile={isManagedDocumentPath(path, "/files/business-documents/acceptance")
+                                ? async () => (await adminApi.getAcceptanceDocumentContent(detail.id, path)).data
+                                : undefined}
                               testId={`acceptance-document-preview-${index}`}
                             />
                           </li>
@@ -1215,13 +1218,20 @@ export default function AcceptanceRecordsPage() {
               </p>
               {documentPaths(form.documents).length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {documentPaths(form.documents).map((path) => (
+                  {documentPaths(form.documents).filter((path) =>
+                    !isManagedDocumentPath(path, "/files/business-documents/acceptance")
+                    || parseDocuments(rows.find((row) => row.id === editingId)?.documents).includes(path),
+                  ).map((path) => (
                     <AdminFilePreview
                       key={path}
                       url={path}
                       fileName={path.split("/").pop() || path}
                       showLabel
                       label={path.split("/").pop() || t("common.previewFile")}
+                      testId={`acceptance-form-document-preview-${path.split("/").pop()}`}
+                      fetchFile={isManagedDocumentPath(path, "/files/business-documents/acceptance")
+                        ? async () => (await adminApi.getAcceptanceDocumentContent(editingId!, path)).data
+                        : undefined}
                     />
                   ))}
                 </div>

@@ -108,6 +108,8 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       /\/files\/business-documents\/acceptance\/[^\n]+\.pdf\n\/files\/business-documents\/acceptance\/[^\n]+\.pdf/,
     );
     const [documentPath] = (await page.getByTestId("acceptance-form-documents").inputValue()).split("\n");
+    const documentFileName = documentPath.split("/").pop()!;
+    await expect(page.getByTestId(`acceptance-form-document-preview-${documentFileName}`)).toHaveCount(0);
     await Promise.all([
       page.waitForResponse(
         (r) =>
@@ -129,19 +131,16 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await row.locator('[data-testid^="acceptance-row-view-"]').click();
     await expect(page.getByText(taskName, { exact: true })).toBeVisible();
     await page.getByTestId("acceptance-document-preview-0").click();
-    await expect(page.getByTestId("acceptance-document-preview-0-frame")).toHaveAttribute(
-      "src",
-      new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
-    );
-    await expect(page.getByTestId("acceptance-document-preview-0-dialog").getByRole("link", { name: /tab|thẻ/i })).toHaveAttribute(
-      "href",
-      new RegExp(documentPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
-    );
+    await expect(page.getByTestId("acceptance-document-preview-0-frame"))
+      .toHaveAttribute("src", /^blob:http:\/\/localhost:5043\//);
+    await expect(page.getByTestId("acceptance-document-preview-0-dialog").getByRole("link", { name: /tab|thẻ/i }))
+      .toHaveAttribute("href", /^blob:http:\/\/localhost:5043\//);
     await page.getByTestId("acceptance-document-preview-0-close").click();
     await expect(page.getByTestId("acceptance-document-preview-0-dialog")).toHaveCount(0);
 
     const updatedTitle = `${titleText} updated`;
     await page.getByTestId("acceptance-edit").click();
+    await expect(page.getByTestId(`acceptance-form-document-preview-${documentFileName}`)).toBeVisible();
     await page.getByTestId("acceptance-form-title").fill(updatedTitle);
     await Promise.all([
       page.waitForResponse(

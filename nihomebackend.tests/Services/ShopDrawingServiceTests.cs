@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -19,13 +22,21 @@ public class ShopDrawingServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly ShopDrawingService _sut;
+    private readonly string _contentRoot;
     private readonly int _userId;
     private readonly int _projectId;
 
     public ShopDrawingServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new ShopDrawingService(_db, NullLogger<ShopDrawingService>.Instance);
+        _contentRoot = Path.Combine(Path.GetTempPath(), $"nihome-shop-drawing-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_contentRoot);
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.SetupGet(item => item.ContentRootPath).Returns(_contentRoot);
+        _sut = new ShopDrawingService(
+            _db,
+            NullLogger<ShopDrawingService>.Instance,
+            environment.Object);
 
         var user = new ApplicationUser
         {
@@ -63,7 +74,11 @@ public class ShopDrawingServiceTests : IDisposable
         _projectId = project.Id;
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        if (Directory.Exists(_contentRoot)) Directory.Delete(_contentRoot, recursive: true);
+    }
 
     private CreateShopDrawingRequest ValidCreate(
         string? title = null,
@@ -200,6 +215,35 @@ public class ShopDrawingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadFileAsync_ReplacementAndDelete_CleanManagedFiles()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var first = await _sut.UploadFileAsync(created.Id, FormFile("first", "first.pdf"), _userId);
+        var firstPath = ManagedPath(first!.FilePath!);
+        Assert.True(File.Exists(firstPath));
+
+        var replacement = await _sut.UploadFileAsync(created.Id, FormFile("second", "second.pdf"), _userId);
+        var replacementPath = ManagedPath(replacement!.FilePath!);
+        Assert.False(File.Exists(firstPath));
+        Assert.True(File.Exists(replacementPath));
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.False(File.Exists(replacementPath));
+    }
+
+    [Fact]
+    public async Task UploadFileAsync_ProjectOutsideShopStage_IsRejected()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.Completed;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ShopDrawingOperationException>(() =>
+            _sut.UploadFileAsync(created.Id, FormFile("blocked", "blocked.pdf"), _userId));
+    }
+
+    [Fact]
     public async Task DeleteAsync_AfterReview_RemovesRevisionsAndIfcReferences()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
@@ -314,6 +358,19 @@ public class ShopDrawingServiceTests : IDisposable
                 ConstructionItem = created.ConstructionItem,
                 Title = created.Title,
             }, _userId));
+    }
+
+    private string ManagedPath(string relativePath) =>
+        Path.Combine(_contentRoot, "wwwroot", relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+    private static FormFile FormFile(string content, string fileName)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        return new FormFile(new MemoryStream(bytes), 0, bytes.Length, "file", fileName)
+        {
+            Headers = new HeaderDictionary(),
+            ContentType = "application/pdf",
+        };
     }
 
     [Fact]

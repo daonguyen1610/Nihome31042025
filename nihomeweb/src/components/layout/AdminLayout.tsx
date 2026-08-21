@@ -288,6 +288,20 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   }, [groups, location.pathname]);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initialOpen);
+  useEffect(() => {
+    setOpenGroups((current) => {
+      const next = { ...current };
+      groups.forEach((group) => {
+        if (group.items.some((item) =>
+          location.pathname === item.to || location.pathname.startsWith(`${item.to}/`),
+        )) {
+          next[group.id] = true;
+        }
+      });
+      return next;
+    });
+  }, [groups, location.pathname]);
+
   const toggleGroup = (id: string) =>
     setOpenGroups((s) => ({ ...s, [id]: !s[id] }));
 
@@ -387,7 +401,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           {/* Groups */}
           {groups.map((g) => {
             const groupActive = g.items.some((it) =>
-              location.pathname.startsWith(it.to),
+              location.pathname === it.to || location.pathname.startsWith(`${it.to}/`),
             );
             const isOpen = openGroups[g.id] ?? false;
             if (effectiveCollapsed) {

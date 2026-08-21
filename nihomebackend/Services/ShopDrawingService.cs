@@ -13,8 +13,10 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class ShopDrawingService(
     AppDbContext db,
-    ILogger<ShopDrawingService> logger) : IShopDrawingService
+    ILogger<ShopDrawingService> logger,
+    IWebHostEnvironment? env = null) : IShopDrawingService
 {
+    private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
     private const int MaxPageSize = 200;
     private const int MaxBulkDelete = 100;
     private const string DisciplineCategory = "design_discipline";
@@ -285,10 +287,12 @@ public class ShopDrawingService(
             .Where(revision => revision.TargetType == DrawingRevisionTargetType.ShopDrawing
                 && revision.TargetId == id)
             .ToListAsync(ct);
+        var managedFile = ToManagedFullPath(entity.FilePath);
         db.IfcReleaseItems.RemoveRange(releaseItems);
         db.DrawingRevisions.RemoveRange(revisions);
         db.ShopDrawings.Remove(entity);
         await db.SaveChangesAsync(ct);
+        DeleteManagedFile(managedFile);
         logger.LogInformation("ShopDrawing {Id} deleted", id);
         return true;
     }
@@ -323,6 +327,7 @@ public class ShopDrawingService(
 
         if (rows.Count > 0)
         {
+            var managedFiles = rows.Select(row => ToManagedFullPath(row.FilePath)).ToList();
             var drawingIds = rows.Select(row => row.Id).ToList();
             var releaseItems = await db.IfcReleaseItems
                 .Where(item => drawingIds.Contains(item.ShopDrawingId))
@@ -336,6 +341,7 @@ public class ShopDrawingService(
             db.DrawingRevisions.RemoveRange(revisions);
             db.ShopDrawings.RemoveRange(rows);
             await db.SaveChangesAsync(ct);
+            foreach (var managedFile in managedFiles) DeleteManagedFile(managedFile);
             response.Deleted = rows.Count;
             logger.LogInformation("ShopDrawing bulk-deleted {Count} rows ({Ids})",
                 rows.Count, string.Join(",", drawingIds));
@@ -433,35 +439,94 @@ public class ShopDrawingService(
 
     public async Task<ShopDrawingResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default)
     {
-        var entity = await db.ShopDrawings.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.ShopDrawings
+            .Include(drawing => drawing.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return null;
+        if (entity.DesignProject.CurrentStage != DesignProjectStage.ShopDrawing)
+        {
+            throw new ShopDrawingOperationException(
+                "Chỉ tải file Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
+        }
 
         var now = DateTime.UtcNow;
+        var previousFile = ToManagedFullPath(entity.FilePath);
         var relativeDir = Path.Combine("files", "design", "shop");
-        var uploadDir = Path.Combine("wwwroot", relativeDir);
+        var uploadDir = Path.Combine(_contentRoot, "wwwroot", relativeDir);
         Directory.CreateDirectory(uploadDir);
 
-        var ext = Path.GetExtension(file.FileName);
-        var fileName = $"{id}_{now:yyyyMMddHHmmss}{ext}";
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var fileName = $"{id}_{Guid.NewGuid():N}{ext}";
         var diskPath = Path.Combine(uploadDir, fileName);
 
-        await using (var stream = new FileStream(diskPath, FileMode.Create))
+        await using (var stream = new FileStream(diskPath, FileMode.CreateNew))
         {
             await file.CopyToAsync(stream, ct);
         }
 
         // Store as host-relative path for frontend access
         entity.FilePath = $"/{relativeDir.Replace('\\', '/')}/{fileName}";
-        entity.OriginalFileName = file.FileName;
+        entity.OriginalFileName = Path.GetFileName(file.FileName);
         entity.FileSize = file.Length;
-        entity.ContentType = file.ContentType;
+        entity.ContentType = string.IsNullOrWhiteSpace(file.ContentType)
+            ? "application/octet-stream"
+            : file.ContentType.Trim();
         entity.UpdatedAt = now;
         entity.UpdatedByUserId = callerUserId;
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            DeleteManagedFile(diskPath);
+            throw;
+        }
+        DeleteManagedFile(previousFile);
         logger.LogInformation("File uploaded to ShopDrawing {Id}: {FileName}", id, file.FileName);
 
         return await GetAsync(id, ct);
+    }
+
+    public async Task<ManagedDocumentContent?> GetContentAsync(int id, CancellationToken ct = default)
+    {
+        var document = await db.ShopDrawings.AsNoTracking()
+            .Where(item => item.Id == id)
+            .Select(item => new { item.FilePath, item.OriginalFileName, item.ContentType })
+            .SingleOrDefaultAsync(ct);
+        if (document is null || string.IsNullOrWhiteSpace(document.FilePath)) return null;
+        var fullPath = ToManagedFullPath(document.FilePath);
+        return fullPath is not null && File.Exists(fullPath)
+            ? new ManagedDocumentContent(
+                fullPath,
+                document.OriginalFileName ?? Path.GetFileName(fullPath),
+                document.ContentType ?? "application/octet-stream")
+            : null;
+    }
+
+    private string? ToManagedFullPath(string? filePath)
+    {
+        const string prefix = "/files/design/shop/";
+        if (string.IsNullOrWhiteSpace(filePath) ||
+            !filePath.StartsWith(prefix, StringComparison.Ordinal)) return null;
+        var fileName = Path.GetFileName(filePath);
+        return string.IsNullOrWhiteSpace(fileName)
+            ? null
+            : Path.Combine(_contentRoot, "wwwroot", "files", "design", "shop", fileName);
+    }
+
+    private void DeleteManagedFile(string? fullPath)
+    {
+        if (string.IsNullOrWhiteSpace(fullPath)) return;
+        try
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogWarning(ex, "Could not delete Shop Drawing file {Path}", fullPath);
+        }
     }
 
     private static ShopDrawingResponse Map(ShopDrawing d, IReadOnlyDictionary<string, string> labelByCode) => new()

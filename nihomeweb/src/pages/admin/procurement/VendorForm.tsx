@@ -4,6 +4,7 @@ import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
+import { isManagedDocumentPath } from "@/lib/url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,7 +127,17 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
           />
           <div className="flex items-center gap-2">
             <Input id="vendor-capabilityFileUrl" value={form.capabilityFileUrl ?? ""} onChange={(event) => update("capabilityFileUrl", event.target.value)} disabled={saving} maxLength={1000} />
-            {form.capabilityFileUrl?.trim() && <AdminFilePreview url={form.capabilityFileUrl} />}
+            {form.capabilityFileUrl?.trim() && (
+              !isManagedDocumentPath(form.capabilityFileUrl, "/files/business-documents/vendors")
+              || vendor?.capabilityFileUrl === form.capabilityFileUrl
+            ) && (
+              <AdminFilePreview
+                url={form.capabilityFileUrl}
+                fetchFile={isManagedDocumentPath(form.capabilityFileUrl, "/files/business-documents/vendors")
+                  ? async () => (await adminApi.getVendorDocumentContent(vendor!.id)).data
+                  : undefined}
+              />
+            )}
           </div>
         </div>
         {field("driveFolder", "proc.vendors.field.driveFolder", { maxLength: 1000 })}

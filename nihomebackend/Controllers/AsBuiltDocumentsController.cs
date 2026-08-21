@@ -24,6 +24,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class AsBuiltDocumentsController(
     IAsBuiltDocumentService svc,
+    IBusinessDocumentStorageService documentStorage,
     IAuditLogger audit,
     INotificationService notifications) : ControllerBase
 {
@@ -41,6 +42,23 @@ public class AsBuiltDocumentsController(
     {
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("{id:int}/content")]
+    [RequirePermission("construction.asbuilt", "view")]
+    public async Task<IActionResult> GetContent(int id, CancellationToken ct)
+    {
+        var document = await svc.GetAsync(id, ct);
+        if (document?.FileUrl is null) return NotFound();
+        var fileName = Path.GetFileName(document.FileUrl);
+        if (!string.Equals(
+            document.FileUrl,
+            $"/files/business-documents/as-built/{fileName}",
+            StringComparison.Ordinal)) return NotFound();
+        var content = documentStorage.GetContent(BusinessDocumentArea.AsBuilt, fileName);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
     }
 
     [HttpGet("export")]

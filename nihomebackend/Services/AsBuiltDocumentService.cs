@@ -12,7 +12,8 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class AsBuiltDocumentService(
     AppDbContext db,
-    ILogger<AsBuiltDocumentService> logger) : IAsBuiltDocumentService
+    ILogger<AsBuiltDocumentService> logger,
+    IBusinessDocumentStorageService? documentStorage = null) : IAsBuiltDocumentService
 {
     private const int MaxPageSize = 200;
     private const int MaxBulkDelete = 100;
@@ -159,6 +160,7 @@ public class AsBuiltDocumentService(
         }
         await EnsureUniqueTitleAsync(entity.DesignProjectId, title, entity.Id, ct);
 
+        var previousFileUrl = entity.FileUrl;
         entity.Title = title;
         entity.Category = category;
         entity.Description = TrimOrNull(request.Description);
@@ -167,6 +169,8 @@ public class AsBuiltDocumentService(
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        if (!string.Equals(previousFileUrl, entity.FileUrl, StringComparison.Ordinal))
+            documentStorage?.Delete(previousFileUrl, BusinessDocumentArea.AsBuilt);
         return await GetAsync(id, ct);
     }
 
@@ -208,8 +212,10 @@ public class AsBuiltDocumentService(
     {
         var entity = await db.AsBuiltDocuments.FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return false;
+        var fileUrl = entity.FileUrl;
         db.AsBuiltDocuments.Remove(entity);
         await db.SaveChangesAsync(ct);
+        documentStorage?.Delete(fileUrl, BusinessDocumentArea.AsBuilt);
         return true;
     }
 
@@ -235,6 +241,8 @@ public class AsBuiltDocumentService(
         }
         response.SkippedIds.AddRange(ids.Except(rows.Select(r => r.Id)));
         if (response.DeletedIds.Count > 0) await db.SaveChangesAsync(ct);
+        foreach (var row in rows)
+            documentStorage?.Delete(row.FileUrl, BusinessDocumentArea.AsBuilt);
         return response;
     }
 

@@ -16,7 +16,8 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class AcceptanceRecordService(
     AppDbContext db,
-    ILogger<AcceptanceRecordService> logger) : IAcceptanceRecordService
+    ILogger<AcceptanceRecordService> logger,
+    IBusinessDocumentStorageService? documentStorage = null) : IAcceptanceRecordService
 {
     private const int MaxPageSize = 200;
     private const int MaxBulkDelete = 100;
@@ -227,6 +228,7 @@ public class AcceptanceRecordService(
             }
         }
 
+        var previousDocuments = DeserializeDocuments(entity.Documents);
         entity.Title = title;
         entity.Description = TrimOrNull(request.Description);
         entity.ConstructionTaskId = request.ConstructionTaskId;
@@ -238,6 +240,7 @@ public class AcceptanceRecordService(
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        DeleteRemovedDocuments(previousDocuments, DeserializeDocuments(entity.Documents));
         return await GetAsync(id, callerUserId, true, ct);
     }
 
@@ -287,8 +290,10 @@ public class AcceptanceRecordService(
         var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return false;
+        var documents = DeserializeDocuments(entity.Documents);
         db.AcceptanceRecords.Remove(entity);
         await db.SaveChangesAsync(ct);
+        DeleteRemovedDocuments(documents, []);
         return true;
     }
 
@@ -316,12 +321,34 @@ public class AcceptanceRecordService(
         }
         response.SkippedIds.AddRange(ids.Except(rows.Select(r => r.Id)));
         if (response.DeletedIds.Count > 0) await db.SaveChangesAsync(ct);
+        foreach (var row in rows)
+            DeleteRemovedDocuments(DeserializeDocuments(row.Documents), []);
         return response;
     }
 
     // --------------------------------------------------------------------
     //  Helpers
     // --------------------------------------------------------------------
+
+    private static List<string> DeserializeDocuments(string? documents)
+    {
+        if (string.IsNullOrWhiteSpace(documents)) return [];
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(documents) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private void DeleteRemovedDocuments(IEnumerable<string> previous, IEnumerable<string> current)
+    {
+        var retained = current.ToHashSet(StringComparer.Ordinal);
+        foreach (var path in previous.Where(path => !retained.Contains(path)))
+            documentStorage?.Delete(path, BusinessDocumentArea.Acceptance);
+    }
 
     private static IQueryable<AcceptanceRecord> ApplyScope(
         IQueryable<AcceptanceRecord> query, int callerUserId, bool canSeeAll)

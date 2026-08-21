@@ -11,6 +11,7 @@
   { "key": "basicDesign.deleted", "category": "basicDesign", "vi": "Đã xoá bản vẽ", "en": "Document deleted", "zh": "已删除文档", "ja": "ドキュメントを削除しました" },
   { "key": "basicDesign.transitioned", "category": "basicDesign", "vi": "Đã cập nhật trạng thái bản vẽ", "en": "Document status updated", "zh": "已更新文档状态", "ja": "ドキュメントの状態を更新しました" },
   { "key": "basicDesign.uploadFile", "category": "basicDesign", "vi": "Tải file lên", "en": "Upload file", "zh": "上传文件", "ja": "ファイルをアップロード" },
+  { "key": "basicDesign.replaceFile", "category": "basicDesign", "vi": "Thay file", "en": "Replace file", "zh": "替换文件", "ja": "ファイルを置き換える" },
   { "key": "basicDesign.fileUploaded", "category": "basicDesign", "vi": "Đã tải file lên", "en": "File uploaded", "zh": "文件已上传", "ja": "ファイルがアップロードされました" },
 
   { "key": "basicDesign.field.discipline", "category": "basicDesign", "vi": "Bộ môn", "en": "Discipline", "zh": "专业", "ja": "分野" },

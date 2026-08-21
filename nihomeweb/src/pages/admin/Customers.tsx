@@ -1170,13 +1170,16 @@ const AdminCustomers = () => {
               </DialogHeader>
 
               <Tabs defaultValue="general">
-                <TabsList className="w-full flex-wrap justify-start">
-                  <TabsTrigger value="general">{t("customers.tab.general")}</TabsTrigger>
-                  <TabsTrigger value="contacts">
+                <TabsList
+                  className="h-auto w-full justify-start overflow-x-auto"
+                  data-testid="customer-detail-tabs"
+                >
+                  <TabsTrigger className="h-12 shrink-0" value="general">{t("customers.tab.general")}</TabsTrigger>
+                  <TabsTrigger className="h-12 shrink-0" value="contacts">
                     {t("customers.tab.contacts")} ({detail.contacts.length})
                   </TabsTrigger>
-                  <TabsTrigger value="related">{t("customers.tab.related")}</TabsTrigger>
-                  <TabsTrigger value="documents">
+                  <TabsTrigger className="h-12 shrink-0" value="related">{t("customers.tab.related")}</TabsTrigger>
+                  <TabsTrigger className="h-12 shrink-0" value="documents">
                     {t("customers.tab.documents")} ({documents.length})
                   </TabsTrigger>
                 </TabsList>
@@ -1700,6 +1703,9 @@ const AdminCustomers = () => {
                               url={document.filePath}
                               fileName={document.originalFileName}
                               contentType={document.contentType}
+                              fetchFile={async () => (
+                                await adminApi.getCustomerDocumentContent(detail.id, document.id)
+                              ).data}
                             />
                             {canManage && (
                               <Button

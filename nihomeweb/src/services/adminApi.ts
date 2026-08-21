@@ -7,6 +7,11 @@ const uploadBusinessDocument = (area: "vendors" | "acceptance" | "as-built" | "h
   return api.post<BusinessDocumentUploadResponse>(`/business-documents/${area}`, formData);
 };
 
+const managedFileName = (path: string) => {
+  const normalizedPath = path.split(/[?#]/, 1)[0];
+  return encodeURIComponent(decodeURIComponent(normalizedPath.split("/").pop() ?? ""));
+};
+
 // ─── Request types ───────────────────────────────────────────
 
 export interface UpsertActivityRequest {
@@ -3146,6 +3151,10 @@ export const adminApi = {
     api.post<CustomerActivityResponse>(`/customers/${id}/activities`, body),
   listCustomerDocuments: (id: number) =>
     api.get<CustomerDocumentResponse[]>(`/customers/${id}/documents`),
+  getCustomerDocumentContent: (id: number, documentId: number) =>
+    api.get<Blob>(`/customers/${id}/documents/${documentId}/content`, {
+      responseType: "blob",
+    }),
   uploadCustomerDocument: (id: number, file: File, label?: string) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -3281,6 +3290,10 @@ export const adminApi = {
   },
   getCapabilityDocument: (id: number) =>
     api.get<CapabilityDocumentDetailResponse>(`/capability-documents/${id}`),
+  getCapabilityDocumentContent: (path: string) =>
+    api.get<Blob>(`/capability-documents/files/${managedFileName(path)}/content`, {
+      responseType: "blob",
+    }),
   uploadCapabilityDocument: (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -3462,6 +3475,8 @@ export const adminApi = {
   },
   getBasicDesignDoc: (id: number) =>
     api.get<BasicDesignDocResponse>(`/basic-design-docs/${id}`),
+  getBasicDesignDocContent: (id: number) =>
+    api.get<Blob>(`/basic-design-docs/${id}/content`, { responseType: "blob" }),
   createBasicDesignDoc: (body: CreateBasicDesignDocRequest) =>
     api.post<BasicDesignDocResponse>("/basic-design-docs", body),
   updateBasicDesignDoc: (id: number, body: UpdateBasicDesignDocRequest) =>
@@ -3495,6 +3510,8 @@ export const adminApi = {
   },
   getShopDrawing: (id: number) =>
     api.get<ShopDrawingResponse>(`/shop-drawings/${id}`),
+  getShopDrawingContent: (id: number) =>
+    api.get<Blob>(`/shop-drawings/${id}/content`, { responseType: "blob" }),
   createShopDrawing: (body: CreateShopDrawingRequest) =>
     api.post<ShopDrawingResponse>("/shop-drawings", body),
   updateShopDrawing: (id: number, body: UpdateShopDrawingRequest) =>
@@ -3869,6 +3886,15 @@ export const adminApi = {
   },
   listContractAttachments: (contractId: number) =>
     api.get<ContractAttachmentResponse[]>(`/contracts/${contractId}/attachments`),
+  getContractAttachmentContent: (contractId: number, attachmentId: number) =>
+    api.get<Blob>(`/contracts/${contractId}/attachments/${attachmentId}/content`, {
+      responseType: "blob",
+    }),
+  getContractAppendixContent: (contractId: number, path: string) =>
+    api.get<Blob>(
+      `/contracts/${contractId}/appendices/files/${managedFileName(path)}/content`,
+      { responseType: "blob" },
+    ),
   uploadContractAttachment: (
     contractId: number,
     file: File,
@@ -3890,6 +3916,23 @@ export const adminApi = {
   getContractTimeline: (contractId: number, limit = 100) =>
     api.get<ContractTimelineEvent[]>(`/contracts/${contractId}/timeline`, {
       params: { limit },
+    }),
+
+  getVendorDocumentContent: (vendorId: number) =>
+    api.get<Blob>(`/vendors/${vendorId}/capability-file/content`, { responseType: "blob" }),
+  getAcceptanceDocumentContent: (recordId: number, path: string) =>
+    api.get<Blob>(`/acceptance-records/${recordId}/documents/${managedFileName(path)}/content`, {
+      responseType: "blob",
+    }),
+  getAsBuiltDocumentContent: (documentId: number) =>
+    api.get<Blob>(`/as-built-documents/${documentId}/content`, { responseType: "blob" }),
+  getHandoverDocumentContent: (recordId: number, path: string) =>
+    api.get<Blob>(`/handover-records/${recordId}/documents/${managedFileName(path)}/content`, {
+      responseType: "blob",
+    }),
+  getPermitDocumentContent: (permitId: number, path: string) =>
+    api.get<Blob>(`/permits/${permitId}/documents/${managedFileName(path)}/content`, {
+      responseType: "blob",
     }),
 
   // Users / RBAC

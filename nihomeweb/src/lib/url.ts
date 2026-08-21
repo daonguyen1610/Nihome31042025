@@ -58,3 +58,9 @@ export function resolveSafeLinkUrl(value: string) {
     return undefined;
   }
 }
+
+export function isManagedDocumentPath(value: string, prefix: string) {
+  const normalized = toHostRelativeUrl(value.trim()).split(/[?#]/, 1)[0];
+  const normalizedPrefix = prefix.endsWith("/") ? prefix : `${prefix}/`;
+  return normalized.startsWith(normalizedPrefix) && !normalized.slice(normalizedPrefix.length).includes("/");
+}

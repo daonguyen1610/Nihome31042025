@@ -607,6 +607,7 @@ Customer document metadata is stored in `customer_documents`; files are stored u
 | Method | Route | Permission | Purpose |
 |--------|-------|------------|---------|
 | `GET` | `/api/customers/{id}/documents` | `crm.customers.view` | List documents for an accessible customer |
+| `GET` | `/api/customers/{id}/documents/{documentId}/content` | `crm.customers.view` | Preview or download an accessible document |
 | `POST` | `/api/customers/{id}/documents` | `crm.customers.manage` | Upload PDF, Word, Excel, or image files up to 20 MB |
 | `DELETE` | `/api/customers/{id}/documents/{documentId}` | `crm.customers.manage` | Delete document metadata and its managed file |
 
@@ -632,8 +633,17 @@ Permit, procurement vendor, partial acceptance, as-built dossier, and project ha
 | `POST` | `/api/business-documents/as-built` | `construction.asbuilt.manage` | Upload an as-built dossier document |
 | `POST` | `/api/business-documents/handover` | `construction.handover.manage` | Upload a project-handover document |
 | `POST` | `/api/permits/{id}/documents/{kind}` | `permit.checklists.manage` | Upload and assign `SubmittedPackage` or `IssuedPermit` to a permit |
+| `GET` | `/api/vendors/{id}/capability-file/content` | `proc.vendors.view` | Read the managed file referenced by a persisted vendor |
+| `GET` | `/api/acceptance-records/{id}/documents/{fileName}/content` | `construction.acceptance.view` | Read a referenced document within the record's project scope |
+| `GET` | `/api/as-built-documents/{id}/content` | `construction.asbuilt.view` | Read the managed file referenced by a persisted dossier |
+| `GET` | `/api/handover-records/{id}/documents/{fileName}/content` | `construction.handover.view` | Read a referenced document within the record's project scope |
+| `GET` | `/api/permits/{id}/documents/{fileName}/content` | `permit.checklists.view` | Read a managed submitted or issued permit document |
 
-The existing field cardinality remains authoritative: vendor and as-built records store one path, acceptance and handover records store up to 20 paths, and permits store one submitted-package path plus one issued-permit path. Uploading before saving a new or edited form can leave an unreferenced physical file when the user cancels; deletion and reconciliation are not part of this contract.
+The existing field cardinality remains authoritative: vendor and as-built records store one path, acceptance and handover records store up to 20 paths, and permits store one submitted-package path plus one issued-permit path. Managed content is never served by a generic area-and-filename endpoint. A content request must identify a persisted resource whose metadata exactly references the managed host-relative path; Acceptance and Handover additionally reuse their established caller/project visibility rules. External HTTP(S) document URLs remain supported and are never treated as managed files.
+
+Direct static requests under `/files/quotes`, `/files/customers`, `/files/contracts`, `/files/capability`, `/files/business-documents`, and `/files/design` return `404` before static-file middleware. The React client obtains private bytes through authenticated resource routes and Blob responses. Newly staged two-step uploads are therefore unavailable until their metadata is saved; edit forms do not offer a managed preview until the current record references that path.
+
+Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Shop Drawing uploads also enforce the parent project's active stage in the backend service. Uploading before saving a two-step form can still leave an inaccessible, unreferenced physical file when the user cancels, because staged-file expiry/reconciliation is not yet implemented. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
 
 Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries, punch lists, and surveys are excluded because they do not currently expose a complete persisted document contract.
 

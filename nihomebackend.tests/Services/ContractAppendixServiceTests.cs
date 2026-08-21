@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -12,6 +14,7 @@ public class ContractAppendixServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly ContractAppendixService _sut;
     private readonly Contract _contract;
+    private readonly string _contentRoot;
 
     public ContractAppendixServiceTests()
     {
@@ -30,10 +33,21 @@ public class ContractAppendixServiceTests : IDisposable
         _db.Contracts.Add(_contract);
         _db.SaveChanges();
 
-        _sut = new ContractAppendixService(_db, NullLogger<ContractAppendixService>.Instance);
+        _contentRoot = Path.Combine(Path.GetTempPath(), $"nihome-contract-appendix-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(_contentRoot, "wwwroot", "files", "contracts"));
+        var environment = new Mock<IWebHostEnvironment>();
+        environment.SetupGet(item => item.ContentRootPath).Returns(_contentRoot);
+        _sut = new ContractAppendixService(
+            _db,
+            NullLogger<ContractAppendixService>.Instance,
+            environment.Object);
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        if (Directory.Exists(_contentRoot)) Directory.Delete(_contentRoot, recursive: true);
+    }
 
     private UpsertContractAppendixRequest Req(decimal delta = 50_000m, string title = "T", string reason = "R") =>
         new() { Title = title, Reason = reason, ValueDelta = delta };
@@ -101,6 +115,22 @@ public class ContractAppendixServiceTests : IDisposable
         Assert.Null(edited.DecidedAt);
     }
 
+    [Fact]
+    public async Task Update_ReplacingManagedFile_DeletesPreviousFile()
+    {
+        var previousPath = CreateManagedFile("previous.pdf");
+        var request = Req();
+        request.FilePath = previousPath;
+        var vo = await _sut.CreateAsync(_contract.Id, request, 100, true);
+
+        var replacement = Req(title: "Updated");
+        replacement.FilePath = CreateManagedFile("replacement.pdf");
+        await _sut.UpdateAsync(_contract.Id, vo!.Id, replacement, 100, true);
+
+        Assert.False(File.Exists(FullPath(previousPath)));
+        Assert.True(File.Exists(FullPath(replacement.FilePath)));
+    }
+
     [Theory]
     [InlineData(ContractAppendixStatus.Draft)]
     [InlineData(ContractAppendixStatus.Submitted)]
@@ -108,7 +138,9 @@ public class ContractAppendixServiceTests : IDisposable
     [InlineData(ContractAppendixStatus.Rejected)]
     public async Task Delete_AnyStatus_RemovesAppendixAndPreservesContract(ContractAppendixStatus status)
     {
-        var vo = await _sut.CreateAsync(_contract.Id, Req(), 100, true);
+        var request = Req();
+        request.FilePath = CreateManagedFile($"delete-{status}.pdf");
+        var vo = await _sut.CreateAsync(_contract.Id, request, 100, true);
         var row = _db.ContractAppendices.Single(v => v.Id == vo!.Id);
         row.Status = status;
         await _db.SaveChangesAsync();
@@ -118,6 +150,7 @@ public class ContractAppendixServiceTests : IDisposable
         Assert.Empty(_db.ContractAppendices);
         Assert.True(_db.Contracts.Any(c => c.Id == _contract.Id));
         Assert.True(_db.Customers.Any(c => c.Id == customerId));
+        Assert.False(File.Exists(FullPath(request.FilePath)));
     }
 
     [Fact]
@@ -141,4 +174,14 @@ public class ContractAppendixServiceTests : IDisposable
         var rows = await _sut.ListAsync(_contract.Id, callerUserId: 999, canSeeAll: false);
         Assert.Null(rows);
     }
+
+    private string CreateManagedFile(string fileName)
+    {
+        var relativePath = $"/files/contracts/{fileName}";
+        File.WriteAllText(FullPath(relativePath), "contract appendix");
+        return relativePath;
+    }
+
+    private string FullPath(string? relativePath) =>
+        Path.Combine(_contentRoot, "wwwroot", relativePath!.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 }

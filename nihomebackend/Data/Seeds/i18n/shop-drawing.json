@@ -11,6 +11,7 @@
   { "key": "shopDrawing.deleted", "category": "shopDrawing", "vi": "Đã xoá bản vẽ", "en": "Drawing deleted", "zh": "已删除施工图", "ja": "施工図を削除しました" },
   { "key": "shopDrawing.transitioned", "category": "shopDrawing", "vi": "Đã cập nhật trạng thái bản vẽ", "en": "Drawing status updated", "zh": "已更新施工图状态", "ja": "施工図の状態を更新しました" },
   { "key": "shopDrawing.uploadFile", "category": "shopDrawing", "vi": "Tải file lên", "en": "Upload file", "zh": "上传文件", "ja": "ファイルをアップロード" },
+  { "key": "shopDrawing.replaceFile", "category": "shopDrawing", "vi": "Thay file", "en": "Replace file", "zh": "替换文件", "ja": "ファイルを置き換える" },
   { "key": "shopDrawing.fileUploaded", "category": "shopDrawing", "vi": "Đã tải file lên", "en": "File uploaded", "zh": "文件已上传", "ja": "ファイルがアップロードされました" },
 
   { "key": "shopDrawing.field.discipline", "category": "shopDrawing", "vi": "Bộ môn", "en": "Discipline", "zh": "专业", "ja": "分野" },

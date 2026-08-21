@@ -24,6 +24,11 @@ public class BasicDesignDocsController(
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
+    private const long MaxFileSizeBytes = 20L * 1024 * 1024;
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg",
+    };
     [HttpGet]
     [RequirePermission("design.basic", "view")]
     public async Task<ActionResult<BasicDesignDocListResponse>> List(
@@ -39,6 +44,16 @@ public class BasicDesignDocsController(
     {
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
+    }
+
+    [HttpGet("{id:int}/content")]
+    [RequirePermission("design.basic", "view")]
+    public async Task<IActionResult> GetContent(int id, CancellationToken ct)
+    {
+        var content = await svc.GetContentAsync(id, ct);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
     }
 
     [HttpPost]
@@ -168,8 +183,11 @@ public class BasicDesignDocsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        if (file.Length == 0 || file.Length > 100 * 1024 * 1024) // 100 MB limit
-            return BadRequest(new { message = "File size must be between 1 byte and 100 MB." });
+        if (file.Length == 0 || file.Length > MaxFileSizeBytes)
+            return BadRequest(new { message = "File size must be between 1 byte and 20 MB." });
+        var extension = Path.GetExtension(file.FileName);
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
+            return BadRequest(new { message = "Unsupported file type. Allowed types: PDF, Word, Excel, PNG, JPG, JPEG." });
 
         try
         {
