@@ -230,6 +230,9 @@ test("mobile customer detail keeps every tab reachable without shrinking touch t
 
     const tabs = page.getByTestId("customer-detail-tabs");
     await expect(tabs).toBeVisible();
+    const dialog = page.getByTestId("customer-detail-dialog");
+    const initialDialogHeight = await dialog.evaluate((element) => element.clientHeight);
+    expect(initialDialogHeight).toBeGreaterThan(0);
     const tabButtons = tabs.getByRole("tab");
     await expect(tabButtons).toHaveCount(4);
     for (let index = 0; index < 4; index += 1) {
@@ -238,6 +241,17 @@ test("mobile customer detail keeps every tab reachable without shrinking touch t
     await tabButtons.last().scrollIntoViewIfNeeded();
     await tabButtons.last().click();
     await expect(tabButtons.last()).toHaveAttribute("aria-selected", "true");
+    expect(await dialog.evaluate((element) => element.clientHeight)).toBe(initialDialogHeight);
+
+    await tabButtons.first().scrollIntoViewIfNeeded();
+    await tabButtons.first().click();
+    const generalPanel = dialog.getByRole("tabpanel");
+    await expect(generalPanel).toBeVisible();
+    const panelSize = await generalPanel.evaluate((panel) => ({
+      clientHeight: panel.clientHeight,
+      scrollHeight: panel.scrollHeight,
+    }));
+    expect(panelSize.scrollHeight).toBeGreaterThan(panelSize.clientHeight);
   } finally {
     if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
   }
