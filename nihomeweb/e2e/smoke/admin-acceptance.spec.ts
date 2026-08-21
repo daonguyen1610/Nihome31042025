@@ -15,6 +15,7 @@ import { createDesignProject } from "../fixtures/designProjects";
  */
 
 const uid = () => Math.random().toString(36).slice(2, 8);
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
   test("SUPER_ADMIN drafts, submits and approves an acceptance record", async ({
@@ -131,10 +132,13 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
     await row.locator('[data-testid^="acceptance-row-view-"]').click();
     await expect(page.getByText(taskName, { exact: true })).toBeVisible();
     await page.getByTestId("acceptance-document-preview-0").click();
+    const blobUrlPattern = new RegExp(
+      `^${escapeRegExp(`blob:${new URL(page.url()).origin}/`)}`,
+    );
     await expect(page.getByTestId("acceptance-document-preview-0-frame"))
-      .toHaveAttribute("src", /^blob:http:\/\/localhost:5043\//);
+      .toHaveAttribute("src", blobUrlPattern);
     await expect(page.getByTestId("acceptance-document-preview-0-dialog").getByRole("link", { name: /tab|thẻ/i }))
-      .toHaveAttribute("href", /^blob:http:\/\/localhost:5043\//);
+      .toHaveAttribute("href", blobUrlPattern);
     await page.getByTestId("acceptance-document-preview-0-close").click();
     await expect(page.getByTestId("acceptance-document-preview-0-dialog")).toHaveCount(0);
 
