@@ -1,5 +1,5 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject } from "../fixtures/designProjects";
+import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -13,9 +13,7 @@ test.describe("NIH-144 — Project handover", () => {
   }) => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
-    const customers = await api.get("/api/customers?pageSize=1", { headers: authHeader });
-    const customerId = customers.ok() ? (await customers.json()).items?.[0]?.id ?? 0 : 0;
-    expect(customerId).toBeGreaterThan(0);
+    const customerId = await createOwnCustomer(api, authHeader, "HO");
     const projectName = `E2E-HO ${uid()}`;
     const projectId = await createDesignProject(api, { headers: authHeader, name: projectName, customerId });
     const users = await api.get("/api/users?take=1", { headers: authHeader });

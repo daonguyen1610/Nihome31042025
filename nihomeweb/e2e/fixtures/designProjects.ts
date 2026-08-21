@@ -32,3 +32,44 @@ export async function createDesignProject(
 
   throw new Error(`Design project creation still conflicted after 5 attempts: ${lastError}`);
 }
+
+/**
+ * Creates a customer this spec alone owns.
+ *
+ * Specs used to take the newest customer from the list instead. Customers come
+ * back newest first, so that picked up whatever another spec had just created,
+ * and deleting a customer cascades through AggregateDeletionService to its
+ * design projects — so the other spec's cleanup silently removed the project
+ * this one was working on, and the failure surfaced far from its cause.
+ */
+export async function createOwnCustomer(
+  api: APIRequestContext,
+  headers: Record<string, string>,
+  label: string,
+): Promise<number> {
+  const unique = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
+  const response = await api.post("/api/customers", {
+    headers,
+    data: {
+      name: `E2E ${label} customer ${unique}`,
+      type: "Company",
+      sourceCode: "referral",
+      relationshipStatus: "InProgress",
+      taxId: `04${Math.floor(10_000_000 + Math.random() * 89_999_999)}`,
+      address: "88 Lý Thường Kiệt, Hà Nội",
+      representativeName: `${label} Rep ${unique}`,
+      primaryContact: {
+        fullName: `${label} Rep ${unique}`,
+        phone: `098${Math.floor(1_000_000 + Math.random() * 8_999_999)}`,
+        email: `e2e-${unique}@nihome.test`,
+        isPrimary: true,
+      },
+    },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Customer creation failed (${response.status()}): ${await response.text()}`);
+  }
+
+  return (await response.json()).id as number;
+}

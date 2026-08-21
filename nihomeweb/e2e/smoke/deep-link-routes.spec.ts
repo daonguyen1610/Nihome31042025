@@ -1,5 +1,6 @@
 import { expect } from "@playwright/test";
 import { test, TEST_USERS } from "../fixtures/auth";
+import { createOwnCustomer } from "../fixtures/designProjects";
 
 /**
  * Notification links use path form — /admin/leads/{id}, /admin/opportunities/{id},
@@ -60,11 +61,13 @@ test.describe("notification deep links", () => {
     const authHeader = { Authorization: `Bearer ${token}` };
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
 
-    const listed = await api.get("/api/customers?pageSize=1", { headers: authHeader });
-    const customer = (await listed.json()).items[0];
-    test.skip(!customer, "no seeded customer to open");
+    // Own customer rather than the newest in the list: another spec's cleanup
+    // can delete that one out from under this test mid-run.
+    const customerId = await createOwnCustomer(api, authHeader, "DeepLink");
+    const detail = await api.get(`/api/customers/${customerId}`, { headers: authHeader });
+    const customer = await detail.json();
 
-    await page.goto(`/admin/customers?open=${customer.id}`);
+    await page.goto(`/admin/customers?open=${customerId}`);
 
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("dialog")).toContainText(customer.name, { timeout: 15_000 });
