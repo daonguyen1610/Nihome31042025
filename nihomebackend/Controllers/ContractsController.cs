@@ -30,6 +30,7 @@ public class ContractsController(
     IContractService svc,
     IContractAppendixService voSvc,
     IContractAttachmentService attSvc,
+    IDesignProjectService designProjects,
     IPermissionService permissions,
     IWebHostEnvironment env,
     AppDbContext db,
@@ -217,6 +218,38 @@ public class ContractsController(
     }
 
     // -------- milestone status --------
+
+    /// <summary>
+    /// Creates, or returns, this contract's design project. A contract normally
+    /// spawns one when it moves to InProgress, but that path is best-effort and
+    /// swallows its own failures — this is the manual way back when it did fail.
+    /// Idempotent: repeated calls return the same project.
+    /// </summary>
+    [HttpPost("{id:int}/design-project")]
+    [RequirePermission("design.projects", "manage")]
+    public async Task<ActionResult<DesignProjectResponse>> EnsureDesignProject(
+        int id,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var contract = await db.Contracts.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (contract is null) return NotFound();
+
+        var response = await designProjects.EnsureForContractAsync(contract, userId.Value, ct);
+
+        audit.Log(new AuditEvent
+        {
+            Action = "contract.designProject.ensure",
+            ResourceType = EntityTypes.Contract,
+            ResourceId = id.ToString(),
+            Message = $"Design project ensured for contract #{id}.",
+            NewValue = response,
+        });
+
+        return Ok(response);
+    }
 
     [HttpPatch("{id:int}/milestones/{milestoneId:int}/status")]
     [RequirePermission("crm.contracts", "manage")]

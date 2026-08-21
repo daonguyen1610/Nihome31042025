@@ -1126,5 +1126,37 @@
     "en": "The file could not be uploaded.",
     "zh": "无法上传文件。",
     "ja": "ファイルをアップロードできませんでした。"
+  },
+  {
+    "key": "common.today",
+    "category": "common",
+    "vi": "Hôm nay",
+    "en": "Today",
+    "zh": "今天",
+    "ja": "今日"
+  },
+  {
+    "key": "validation.contact.missing",
+    "category": "common",
+    "vi": "Cần ít nhất một trong hai: số điện thoại hoặc email.",
+    "en": "Enter at least one of phone or email.",
+    "zh": "请至少填写电话或邮箱之一。",
+    "ja": "電話またはメールを少なくとも一つ入力してください。"
+  },
+  {
+    "key": "validation.phone.invalid",
+    "category": "common",
+    "vi": "Số điện thoại không hợp lệ. Ví dụ: 0987654321 hoặc +84987654321.",
+    "en": "That phone number is not valid. For example: 0987654321 or +84987654321.",
+    "zh": "电话号码无效。例如：0987654321 或 +84987654321。",
+    "ja": "電話番号が正しくありません。例: 0987654321 または +84987654321。"
+  },
+  {
+    "key": "validation.email.invalid",
+    "category": "common",
+    "vi": "Email không hợp lệ. Ví dụ: ten@congty.vn.",
+    "en": "That email address is not valid. For example: name@company.com.",
+    "zh": "邮箱地址无效。例如：name@company.com。",
+    "ja": "メールアドレスが正しくありません。例: name@company.com。"
   }
 ]

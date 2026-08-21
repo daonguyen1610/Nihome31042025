@@ -461,9 +461,12 @@ public class CustomerService(
 
     private static void ValidateContactContact(string? phone, string? email)
     {
-        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(email))
+        // Shape as well as presence — see ContactValidation for why the DTO
+        // attributes were not enough on their own.
+        var error = ContactValidation.Validate(phone, email);
+        if (error is not null)
         {
-            throw new CustomerOperationException("A customer contact must have at least one of Phone or Email.");
+            throw new CustomerOperationException(error);
         }
     }
 

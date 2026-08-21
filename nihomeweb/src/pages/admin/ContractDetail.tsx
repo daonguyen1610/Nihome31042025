@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowDown,
   ArrowLeft,
@@ -24,6 +24,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
+import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
@@ -102,14 +103,6 @@ const formatDate = (value?: string | null): string => {
   if (parts.length !== 3) return iso;
   const [yyyy, mm, dd] = parts;
   return `${dd}/${mm}/${yyyy}`;
-};
-
-const formatCurrency = (value: number, lang: string): string => {
-  try {
-    return new Intl.NumberFormat(lang === "vi" ? "vi-VN" : "en-US").format(value);
-  } catch {
-    return value.toString();
-  }
 };
 
 const formatBytes = (bytes: number | undefined | null): string => {
@@ -227,7 +220,7 @@ const ContractHeader = ({
   onTransition,
   transitionBusy,
 }: HeaderProps) => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
 
   const transitions = AVAILABLE_TRANSITIONS[contract.status] ?? [];
   const label = (target: ContractStatus): string => {
@@ -289,7 +282,7 @@ const ContractHeader = ({
         <div className="rounded-lg bg-slate-50 p-3">
           <div className="text-xs text-slate-500">{t("contracts.detail.header.baseValue")}</div>
           <div className="mt-1 text-lg font-semibold text-slate-800">
-            {formatCurrency(contract.value, lang)} ₫
+            {formatVndWithSymbol(contract.value)}
           </div>
         </div>
         <div className="rounded-lg bg-slate-50 p-3">
@@ -301,13 +294,13 @@ const ContractHeader = ({
             )}
           >
             {contract.approvedVoTotal > 0 ? "+" : ""}
-            {formatCurrency(contract.approvedVoTotal, lang)} ₫
+            {formatVndWithSymbol(contract.approvedVoTotal)}
           </div>
         </div>
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
           <div className="text-xs text-emerald-700">{t("contracts.detail.header.currentValue")}</div>
           <div className="mt-1 text-lg font-bold text-emerald-900">
-            {formatCurrency(contract.currentValue, lang)} ₫
+            {formatVndWithSymbol(contract.currentValue)}
           </div>
         </div>
       </div>
@@ -341,8 +334,14 @@ const ContractHeader = ({
 
 // -------- Info tab (read-only) --------
 
-const InfoTab = ({ contract }: { contract: ContractResponse }) => {
-  const { t, lang } = useI18n();
+interface InfoTabProps {
+  contract: ContractResponse;
+  onEnsureDesignProject: () => void;
+  ensuringDesignProject: boolean;
+}
+
+const InfoTab = ({ contract, onEnsureDesignProject, ensuringDesignProject }: InfoTabProps) => {
+  const { t } = useI18n();
 
   const rows: [string, React.ReactNode][] = [
     [t("contracts.field.number"), contract.contractNumber],
@@ -352,7 +351,7 @@ const InfoTab = ({ contract }: { contract: ContractResponse }) => {
     [t("contracts.field.signedDate"), formatDate(contract.signedDate)],
     [t("contracts.field.startDate"), formatDate(contract.startDate)],
     [t("contracts.field.endDate"), formatDate(contract.endDate)],
-    [t("contracts.field.value"), `${formatCurrency(contract.value, lang)} ₫`],
+    [t("contracts.field.value"), `${formatVndWithSymbol(contract.value)}`],
   ];
 
   return (
@@ -367,6 +366,75 @@ const InfoTab = ({ contract }: { contract: ContractResponse }) => {
           ))}
         </dl>
       </div>
+
+      {contract.quoteId != null || contract.opportunityId != null ? (
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            {t("contracts.source.title")}
+          </div>
+          <dl className="mt-2 grid gap-3 sm:grid-cols-2">
+            {contract.quoteId != null ? (
+              <div>
+                <dt className="text-xs text-slate-500">{t("contracts.field.sourceQuote")}</dt>
+                <dd className="mt-0.5 text-sm">
+                  <Link className="underline" to={`/admin/quotes/${contract.quoteId}`}>
+                    {contract.quoteCode ?? `#${contract.quoteId}`}
+                  </Link>
+                </dd>
+              </div>
+            ) : null}
+            {contract.opportunityId != null ? (
+              <div>
+                <dt className="text-xs text-slate-500">
+                  {t("contracts.field.sourceOpportunity")}
+                </dt>
+                <dd className="mt-0.5 text-sm">
+                  {/* Route added by plan two task three; until then this lands on 404. */}
+                  <Link
+                    className="underline"
+                    to={`/admin/opportunities/${contract.opportunityId}`}
+                  >
+                    {contract.opportunityTitle ?? `#${contract.opportunityId}`}
+                  </Link>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        </div>
+      ) : null}
+
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          {t("contracts.designProject.title")}
+        </div>
+        {contract.designProjectId != null ? (
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Link
+              className="text-sm font-medium text-slate-900 underline"
+              to={`/admin/design-projects/${contract.designProjectId}`}
+            >
+              {contract.designProjectCode} — {contract.designProjectName}
+            </Link>
+            {contract.designProjectCurrentStage ? (
+              <Badge variant="outline">
+                {t(`designProjects.stage.${contract.designProjectCurrentStage}`)}
+              </Badge>
+            ) : null}
+          </div>
+        ) : contract.status === "InProgress" ? (
+          <div className="mt-2 space-y-2">
+            {/* Auto-create runs on the InProgress transition but is best-effort
+                and swallows its own errors, so this is the way back. */}
+            <p className="text-sm text-slate-600">{t("contracts.designProject.missing")}</p>
+            <Button size="sm" onClick={onEnsureDesignProject} disabled={ensuringDesignProject}>
+              {ensuringDesignProject ? "…" : t("contracts.designProject.create")}
+            </Button>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-slate-600">{t("contracts.designProject.pending")}</p>
+        )}
+      </div>
+
       {contract.scopeOfWork ? (
         <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -395,7 +463,7 @@ interface EditInfoTabProps {
 }
 
 const EditInfoTab = ({ form, customers, error, onChange }: EditInfoTabProps) => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
 
   return (
     <div className="space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -453,7 +521,7 @@ const EditInfoTab = ({ form, customers, error, onChange }: EditInfoTabProps) => 
       <div className="space-y-1.5">
         <Label htmlFor="contract-detail-value">{t("contracts.field.value")} *</Label>
         <Input id="contract-detail-value" type="number" min={0} value={form.value} onChange={(event) => onChange({ ...form, value: Number(event.target.value) || 0 })} />
-        <p className="text-xs text-slate-500">{formatCurrency(form.value, lang)} ₫</p>
+        <p className="text-xs text-slate-500">{formatVndWithSymbol(form.value)}</p>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="contract-detail-scope">{t("contracts.field.scope")}</Label>
@@ -487,7 +555,7 @@ const isOverdue = (
 };
 
 const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleTabProps) => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const milestones = contract.paymentMilestones;
 
   if (milestones.length === 0) {
@@ -519,7 +587,7 @@ const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleT
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   <span>
-                    {m.percentValue}% • {formatCurrency(m.amount, lang)} ₫
+                    {m.percentValue}% • {formatVndWithSymbol(m.amount)}
                   </span>
                   <span>• {t("contracts.milestone.dueDate")}: {formatDate(m.dueDate)}</span>
                   <Badge className={cn("border", MILESTONE_STATUS_STYLES[m.status])}>
@@ -566,7 +634,7 @@ interface EditScheduleTabProps {
 }
 
 const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const total = milestones.reduce((sum, milestone) => sum + milestone.percentValue, 0);
   const totalValid = milestones.length === 0 || Math.abs(total - 100) <= 0.01;
   const patch = (index: number, next: Partial<MilestoneDraft>) =>
@@ -616,7 +684,7 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>{t("contracts.milestone.name")} *</Label><Input value={milestone.name} onChange={(event) => patch(index, { name: event.target.value })} /></div>
-              <div className="space-y-1.5"><Label>{t("contracts.milestone.percent")} *</Label><Input type="number" min={0} max={100} step="0.01" value={milestone.percentValue} onChange={(event) => patch(index, { percentValue: Number(event.target.value) || 0 })} /><p className="text-xs text-slate-500">≈ {formatCurrency(amount, lang)} ₫</p></div>
+              <div className="space-y-1.5"><Label>{t("contracts.milestone.percent")} *</Label><Input type="number" min={0} max={100} step="0.01" value={milestone.percentValue} onChange={(event) => patch(index, { percentValue: Number(event.target.value) || 0 })} /><p className="text-xs text-slate-500">≈ {formatVndWithSymbol(amount)}</p></div>
               <div className="space-y-1.5"><Label>{t("contracts.milestone.dueDate")}</Label><Input type="date" value={milestone.dueDate} onChange={(event) => patch(index, { dueDate: event.target.value })} /></div>
               <div className="space-y-1.5">
                 <Label>{t("contracts.milestone.status")}</Label>
@@ -673,7 +741,7 @@ interface VoTabProps {
 }
 
 const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { toast } = useToast();
   const [draft, setDraft] = useState<VoDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -879,7 +947,7 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
                         )}
                       >
                         {vo.valueDelta > 0 ? "+" : ""}
-                        {formatCurrency(vo.valueDelta, lang)} ₫
+                        {formatVndWithSymbol(vo.valueDelta)}
                         {" "}
                         ({t(vo.valueDelta > 0 ? "contracts.appendix.deltaPositive" : "contracts.appendix.deltaNegative")})
                       </span>
@@ -1340,11 +1408,13 @@ const ContractDetail = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const params = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const idNum = Number(params.id);
   const canManage = has(ADMIN_PERMS.contractsManage);
 
   const [contract, setContract] = useState<ContractResponse | null>(null);
+  const [ensuringDesignProject, setEnsuringDesignProject] = useState(false);
   const [appendices, setAppendices] = useState<ContractAppendixResponse[]>([]);
   const [attachments, setAttachments] = useState<ContractAttachmentResponse[]>([]);
   const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
@@ -1359,6 +1429,24 @@ const ContractDetail = () => {
   const [form, setForm] = useState<ContractEditForm | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+
+  const handleEnsureDesignProject = async () => {
+    if (!contract) return;
+    setEnsuringDesignProject(true);
+    try {
+      const { data } = await adminApi.ensureContractDesignProject(contract.id);
+      toast({ title: t("contracts.designProject.created") });
+      navigate(`/admin/design-projects/${data.id}`);
+    } catch (err) {
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
+    } finally {
+      setEnsuringDesignProject(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!Number.isFinite(idNum)) return;
@@ -1633,7 +1721,13 @@ const ContractDetail = () => {
               <div data-testid="contract-inline-edit-form">
                 <EditInfoTab form={form} customers={customers} error={formError} onChange={setForm} />
               </div>
-            ) : <InfoTab contract={contract} />}
+            ) : (
+              <InfoTab
+                contract={contract}
+                onEnsureDesignProject={() => void handleEnsureDesignProject()}
+                ensuringDesignProject={ensuringDesignProject}
+              />
+            )}
           </TabsContent>
           <TabsContent value="schedule" className="mt-4">
             {editing && form ? (

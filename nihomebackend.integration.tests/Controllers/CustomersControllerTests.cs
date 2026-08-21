@@ -42,7 +42,7 @@ public class CustomersControllerTests : IntegrationTestBase
             primaryContact = new
             {
                 fullName = "Ms. Nga",
-                phone = "0911" + Guid.NewGuid().ToString("N")[..6],
+                phone = "0911" + Random.Shared.Next(100000, 999999),
                 isPrimary = true,
             },
         };
@@ -67,7 +67,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Idempotent " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "Contact", phone = "0911" + Random.Shared.Next(100000, 999999) },
         };
 
         using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/customers")
@@ -106,7 +106,7 @@ public class CustomersControllerTests : IntegrationTestBase
                 type = "Individual",
                 name = "First payload",
                 sourceCode = "marketing",
-                primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+                primaryContact = new { fullName = "Contact", phone = "0911" + Random.Shared.Next(100000, 999999) },
             }),
         };
         firstRequest.Headers.Add("Idempotency-Key", key);
@@ -119,7 +119,7 @@ public class CustomersControllerTests : IntegrationTestBase
                 type = "Individual",
                 name = "Different payload",
                 sourceCode = "marketing",
-                primaryContact = new { fullName = "Contact", phone = "0900" + Guid.NewGuid().ToString("N")[..6] },
+                primaryContact = new { fullName = "Contact", phone = "0900" + Random.Shared.Next(100000, 999999) },
             }),
         };
         secondRequest.Headers.Add("Idempotency-Key", key);
@@ -137,7 +137,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Actor bound " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "Contact", phone = "0911" + Random.Shared.Next(100000, 999999) },
         };
 
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -170,7 +170,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Company",
             name = "ACME " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "CEO", phone = "0900" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "CEO", phone = "0900" + Random.Shared.Next(100000, 999999) },
         });
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -190,7 +190,7 @@ public class CustomersControllerTests : IntegrationTestBase
             address = "1 Nguyễn Trãi",
             representativeName = "CEO",
             sourceCode = "marketing",
-            primaryContact = new { fullName = "CEO", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "CEO", phone = "0911" + Random.Shared.Next(100000, 999999) },
         };
 
         var first = await Client.PostAsJsonAsync("/api/customers", basePayload);
@@ -218,7 +218,7 @@ public class CustomersControllerTests : IntegrationTestBase
             address = "1 Nguyễn Trãi",
             representativeName = "CEO",
             sourceCode = "marketing",
-            primaryContact = new { fullName = "CEO", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "CEO", phone = "0911" + Random.Shared.Next(100000, 999999) },
         };
 
         (await Client.PostAsJsonAsync("/api/customers", basePayload)).EnsureSuccessStatusCode();
@@ -231,7 +231,7 @@ public class CustomersControllerTests : IntegrationTestBase
             address = "1 Nguyễn Trãi",
             representativeName = "CEO",
             sourceCode = "marketing",
-            primaryContact = new { fullName = "CEO 2", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "CEO 2", phone = "0911" + Random.Shared.Next(100000, 999999) },
             duplicateOverrideReason = "Cùng tập đoàn, khác pháp nhân",
         });
 
@@ -248,7 +248,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Manager owned " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "N", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "N", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
@@ -275,7 +275,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Suspend me " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "N", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "N", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(created);
@@ -304,7 +304,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Suspend me " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "N", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "N", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
@@ -330,7 +330,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Concurrency " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "Contact", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var original = await ReadJsonAsync(created);
@@ -375,7 +375,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Token validation " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "Contact", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "Contact", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(created);
@@ -420,7 +420,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Multi contact " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "Original", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "Original", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
@@ -428,7 +428,7 @@ public class CustomersControllerTests : IntegrationTestBase
         var newContact = await Client.PostAsJsonAsync($"/api/customers/{id}/contacts", new
         {
             fullName = "Anh Backup",
-            phone = "0900" + Guid.NewGuid().ToString("N")[..6],
+            phone = "0900" + Random.Shared.Next(100000, 999999),
             isPrimary = true,
         });
         newContact.EnsureSuccessStatusCode();
@@ -453,7 +453,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Delete-last " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "Only", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "Only", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(created);
@@ -476,7 +476,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Manager-owned " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "N", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "N", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
@@ -501,7 +501,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Aggregate delete " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "Owner", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "Owner", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var customerId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
@@ -573,7 +573,7 @@ public class CustomersControllerTests : IntegrationTestBase
             type = "Individual",
             name = "Activity-owner " + Guid.NewGuid().ToString("N")[..6],
             sourceCode = "marketing",
-            primaryContact = new { fullName = "X", phone = "0911" + Guid.NewGuid().ToString("N")[..6] },
+            primaryContact = new { fullName = "X", phone = "0911" + Random.Shared.Next(100000, 999999) },
         });
         created.EnsureSuccessStatusCode();
         var id = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
@@ -650,7 +650,7 @@ public class CustomersControllerTests : IntegrationTestBase
             primaryContact = new
             {
                 fullName = "Owner",
-                phone = "0911" + Guid.NewGuid().ToString("N")[..6],
+                phone = "0911" + Random.Shared.Next(100000, 999999),
             },
         });
         response.EnsureSuccessStatusCode();

@@ -126,6 +126,7 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.rbacRoles} />}>
                 <Route path="/admin/roles" element={<AdminRoles />} />
+                <Route path="/admin/roles/:id" element={<AdminRoles />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.activities} />}>
                 <Route path="/admin/activities" element={<AdminActivities />} />
@@ -157,6 +158,9 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.leads} />}>
                 <Route path="/admin/leads" element={<AdminLeads />} />
+                {/* Lead notifications link to /admin/leads/{id} (LeadService.cs:490).
+                    The list page reads the id and opens that record itself. */}
+                <Route path="/admin/leads/:id" element={<AdminLeads />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.customers} />}>
                 <Route path="/admin/customers" element={<AdminCustomers />} />
@@ -167,6 +171,7 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.opportunities} />}>
                 <Route path="/admin/opportunities" element={<AdminOpportunities />} />
+                <Route path="/admin/opportunities/:id" element={<AdminOpportunities />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.quotes} />}>
                 <Route path="/admin/quotes" element={<AdminQuotes />} />

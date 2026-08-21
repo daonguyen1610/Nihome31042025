@@ -39,6 +39,13 @@ nihomebackend/wwwroot/files/quotes/
 
 # Managed operational business documents are user uploads at runtime.
 nihomebackend/wwwroot/files/business-documents/
+
+# Tender documents are user uploads at runtime, same as the rest above.
+nihomebackend/wwwroot/files/tenders/
+
+# Customer documents, likewise. (files/design/ is deliberately tracked — it
+# holds committed sample assets, not runtime uploads.)
+nihomebackend/wwwroot/files/customers/
 .DS_Store
 deployment-config/.DS_Store
 test-results

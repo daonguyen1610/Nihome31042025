@@ -173,7 +173,7 @@ public class TendersControllerTests : IntegrationTestBase
             primaryContact = new
             {
                 fullName = "Contact",
-                phone = "0922" + Guid.NewGuid().ToString("N")[..6],
+                phone = "0922" + Random.Shared.Next(100000, 999999),
                 isPrimary = true,
             },
         });

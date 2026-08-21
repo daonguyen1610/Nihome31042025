@@ -16,6 +16,17 @@ public class ContractResponse
     public int? QuoteId { get; set; }
     public string? QuoteCode { get; set; }
 
+    /// <summary>
+    /// Design project attached to this contract, when one exists. These four are
+    /// derived — read from design_projects, not columns on contracts. The relation
+    /// is one-to-one thanks to the filtered unique index on
+    /// DesignProject.ContractId.
+    /// </summary>
+    public int? DesignProjectId { get; set; }
+    public string? DesignProjectCode { get; set; }
+    public string? DesignProjectName { get; set; }
+    public string? DesignProjectCurrentStage { get; set; }
+
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
 

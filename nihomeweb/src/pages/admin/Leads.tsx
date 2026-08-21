@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { Plus, Search, Trash2, ArrowRight, RefreshCw } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -9,7 +10,9 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
+import { extractApiError } from "@/lib/apiError";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +42,7 @@ import {
   type LeadStatus,
   type LeadActivityType,
   type MasterDataOption,
+  type CustomerDuplicateDetail,
 } from "@/services/adminApi";
 
 const STATUSES: LeadStatus[] = [
@@ -81,7 +85,7 @@ const emptyCreate: CreateLeadRequest = {
 };
 
 const AdminLeads = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
 
@@ -123,7 +127,19 @@ const AdminLeads = () => {
   const [addingActivity, setAddingActivity] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [converting, setConverting] = useState(false);
-  const [reverting, setReverting] = useState(false);
+  const [convertTaxId, setConvertTaxId] = useState("");
+  const [convertAddress, setConvertAddress] = useState("");
+  const [convertRepresentative, setConvertRepresentative] = useState("");
+  // Convert answers 409 with the clashing customer when the tax code or phone is
+  // already taken. Without handling it the user is stuck: the convert errors out
+  // with no way forward.
+  const [duplicate, setDuplicate] = useState<CustomerDuplicateDetail | null>(null);
+  const [unconverting, setUnconverting] = useState(false);
+
+  // Lead notifications carry /admin/leads/{id} (LeadService.cs:490). Without this
+  // the link landed on the 404 page.
+  const { id: routeId } = useParams();
+  const [handledRouteId, setHandledRouteId] = useState<number | null>(null);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -175,6 +191,18 @@ const AdminLeads = () => {
       setDetailLoading(false);
     }
   };
+
+  useEffect(() => {
+    const parsed = Number(routeId);
+    if (!Number.isInteger(parsed) || parsed <= 0) return;
+    if (handledRouteId === parsed) return;
+    setHandledRouteId(parsed);
+    void openDetail(parsed);
+    // openDetail is a plain function declared in the component body, so its
+    // identity changes every render — listing it here would loop. handledRouteId
+    // already stops the same record reopening.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeId, handledRouteId]);
 
   const closeDetail = () => {
     setDetail(null);
@@ -263,37 +291,76 @@ const AdminLeads = () => {
     }
   };
 
-  const handleConvert = async () => {
+  const handleConvert = async (linkToCustomerId?: number) => {
     if (!detail) return;
     setConverting(true);
+    setDuplicate(null);
     try {
-      await adminApi.convertLead(detail.id, { rowVersion: detail.rowVersion });
+      await adminApi.convertLead(detail.id, {
+        customerId: linkToCustomerId ?? null,
+        taxId: convertTaxId.trim() || null,
+        address: convertAddress.trim() || null,
+        representativeName: convertRepresentative.trim() || null,
+        rowVersion: detail.rowVersion,
+      });
       toast({ title: t("leads.convert.done") });
       setConvertOpen(false);
       await openDetail(detail.id);
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      const response = (err as {
+        response?: { status?: number; data?: CustomerDuplicateDetail };
+      }).response;
+      if (response?.status === 409 && response.data) {
+        setDuplicate(response.data);
+        return;
+      }
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setConverting(false);
     }
   };
 
-  const handleRevert = async () => {
+  const handleUnconvert = async () => {
     if (!detail) return;
-    setReverting(true);
+    if (!window.confirm(t("leads.unconvert.confirm"))) return;
+    setUnconverting(true);
     try {
-      await adminApi.revertLead(detail.id, detail.rowVersion);
-      toast({ title: t("leads.revert.done") });
-      await openDetail(detail.id);
+      const { data } = await adminApi.unconvertLead(detail.id, detail.rowVersion);
+      toast({ title: t(`leads.unconvert.done.${data.outcome}`) });
+      closeDetail();
       await fetchList();
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      toast({
+        title: t("common.error"),
+        description: extractApiError(err),
+        variant: "destructive",
+      });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
-      setReverting(false);
+      setUnconverting(false);
     }
+  };
+
+  // A lead carrying a company name produces a Company customer, and the backend
+  // requires a tax code, address and representative for those.
+  const convertNeedsCompanyFields = Boolean(detail?.companyName?.trim());
+  const convertCompanyFieldsMissing =
+    convertNeedsCompanyFields &&
+    (!convertTaxId.trim() || !convertAddress.trim() || !convertRepresentative.trim());
+
+  const openConvertDialog = () => {
+    if (!detail) return;
+    setConvertTaxId("");
+    setConvertAddress("");
+    setConvertRepresentative(detail.name ?? "");
+    setDuplicate(null);
+    setConvertOpen(true);
   };
 
   const sourceLabelByCode = useMemo(() => {
@@ -799,20 +866,40 @@ const AdminLeads = () => {
                   </div>
                 )}
                 {detail.status === "Converted" && (
-                  <div className="col-span-2 space-y-2">
-                    <div className="rounded bg-muted p-2 text-xs text-muted-foreground">
+                  <div className="col-span-2 space-y-2 rounded bg-muted p-2 text-xs text-muted-foreground">
+                    <div>
                       {t("leads.convert.locked")}
-                      {detail.convertedCustomerId != null && ` · customerId=${detail.convertedCustomerId}`}
-                      {detail.convertedOpportunityId != null && ` · opportunityId=${detail.convertedOpportunityId}`}
+                      {detail.convertedCustomerId != null && (
+                        <>
+                          {" · "}
+                          <Link
+                            className="underline"
+                            to={`/admin/customers?open=${detail.convertedCustomerId}`}
+                          >
+                            {t("leads.convert.viewCustomer")}
+                          </Link>
+                        </>
+                      )}
+                      {detail.convertedOpportunityId != null && (
+                        <>
+                          {" · "}
+                          <Link
+                            className="underline"
+                            to={`/admin/opportunities/${detail.convertedOpportunityId}`}
+                          >
+                            {t("leads.convert.viewOpportunity")}
+                          </Link>
+                        </>
+                      )}
                     </div>
                     {canConvert && (
                       <Button
-                        variant="outline"
                         size="sm"
-                        onClick={() => void handleRevert()}
-                        disabled={reverting}
+                        variant="outline"
+                        onClick={() => void handleUnconvert()}
+                        disabled={unconverting}
                       >
-                        {reverting ? "…" : t("leads.revert.button")}
+                        {unconverting ? "…" : t("leads.unconvert.action")}
                       </Button>
                     )}
                   </div>
@@ -827,18 +914,17 @@ const AdminLeads = () => {
                     {t("leads.detail.noActivities")}
                   </p>
                 ) : (
-                  <ol className="space-y-2 border-l pl-4">
-                    {detail.activities.map((a) => (
-                      <li key={a.id} className="relative">
-                        <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
-                        <div className="text-xs text-muted-foreground">
-                          {t(`leads.activity.${a.type}`)} · {new Date(a.createdAt).toLocaleString()}
-                          {a.createdByName ? ` · ${a.createdByName}` : ""}
-                        </div>
-                        <div className="whitespace-pre-wrap text-sm">{a.content}</div>
-                      </li>
-                    ))}
-                  </ol>
+                  <ActivityTimeline
+                    locale={lang}
+                    todayLabel={t("common.today")}
+                    entries={detail.activities.map((a) => ({
+                      id: a.id,
+                      typeLabel: t(`leads.activity.${a.type}`),
+                      content: a.content,
+                      createdByName: a.createdByName,
+                      at: a.createdAt,
+                    }))}
+                  />
                 )}
 
                 {detail.status !== "Converted" && (
@@ -878,9 +964,9 @@ const AdminLeads = () => {
                 )}
               </div>
 
-              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row-reverse sm:justify-start">
                 {canConvert && detail.status !== "Converted" && detail.status !== "Junk" && detail.status !== "NotInterested" && (
-                  <Button onClick={() => setConvertOpen(true)}>
+                  <Button onClick={openConvertDialog}>
                     <ArrowRight className="mr-1.5 h-4 w-4" /> {t("leads.convert.button")}
                   </Button>
                 )}
@@ -900,11 +986,76 @@ const AdminLeads = () => {
             <DialogTitle>{t("leads.convert.confirmTitle")}</DialogTitle>
             <DialogDescription>{t("leads.convert.confirmBody")}</DialogDescription>
           </DialogHeader>
+
+          {convertNeedsCompanyFields && (
+            <div className="space-y-3 py-2">
+              <p className="rounded bg-muted p-2 text-xs text-muted-foreground">
+                {t("leads.convert.companyNotice")}
+              </p>
+              <div className="space-y-1">
+                <Label className="text-xs" htmlFor="convert-taxid">
+                  {t("leads.convert.field.taxId")}
+                </Label>
+                <Input
+                  id="convert-taxid"
+                  value={convertTaxId}
+                  onChange={(e) => setConvertTaxId(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs" htmlFor="convert-address">
+                  {t("leads.convert.field.address")}
+                </Label>
+                <Input
+                  id="convert-address"
+                  value={convertAddress}
+                  onChange={(e) => setConvertAddress(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs" htmlFor="convert-representative">
+                  {t("leads.convert.field.representative")}
+                </Label>
+                <Input
+                  id="convert-representative"
+                  value={convertRepresentative}
+                  onChange={(e) => setConvertRepresentative(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {duplicate && (
+            <div className="space-y-2 rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+              <p className="text-amber-900">
+                {t("leads.convert.duplicate.found")}{" "}
+                <span className="font-medium">
+                  {duplicate.existingCustomerName} (#{duplicate.existingCustomerId})
+                </span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => void handleConvert(duplicate.existingCustomerId)}
+                  disabled={converting}
+                >
+                  {t("leads.convert.duplicate.linkExisting")}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setDuplicate(null)}>
+                  {t("common.cancel")}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button variant="outline" onClick={() => setConvertOpen(false)} disabled={converting}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void handleConvert()} disabled={converting}>
+            <Button
+              onClick={() => void handleConvert()}
+              disabled={converting || convertCompanyFieldsMissing || duplicate !== null}
+            >
               {converting ? "…" : t("leads.convert.button")}
             </Button>
           </DialogFooter>

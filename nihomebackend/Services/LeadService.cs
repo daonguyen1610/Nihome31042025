@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -306,8 +307,6 @@ public class LeadService(
             .FirstOrDefaultAsync(l => l.Id == id, ct);
         if (lead is null) return null;
 
-        CrmConcurrency.Apply(db, lead, request.RowVersion);
-
         if (lead.Status == LeadStatus.Converted)
         {
             throw new LeadOperationException("Lead is already converted.");
@@ -318,81 +317,151 @@ public class LeadService(
             throw new LeadOperationException("Discarded leads (Junk / NotInterested) cannot be converted.");
         }
 
-        await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct)
-            : null;
+        // One timestamp for all three rows. UnconvertAsync identifies the rows this
+        // convert created by matching CreatedAt against the lead's ConvertedAt, so
+        // do not replace this with several DateTime.UtcNow calls.
         var now = DateTime.UtcNow;
 
-        // If no existing customer provided, auto-create one from lead data
-        int? finalCustomerId = request.CustomerId;
-        if (finalCustomerId is null || finalCustomerId == 0)
+        // Convert writes two aggregates before stamping the lead, so it has to be
+        // atomic. The in-memory provider used by unit tests rejects transactions,
+        // hence the provider guard: SQL Server gets one, tests skip it.
+        //
+        // `await using` matters here: the validation below throws for a missing
+        // opportunity, a customer mismatch, a duplicate customer or a company lead
+        // without its required fields, and the controller turns those into 400 or
+        // 409. Disposal rolls the transaction back on every one of those paths.
+        await using IDbContextTransaction? transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+
+        // An existing opportunity already belongs to a customer, so creating a new
+        // customer and attaching it to that opportunity is incoherent.
+        int? customerIdFromOpportunity = null;
+        if (request.OpportunityId.HasValue)
         {
-            // Use companyName for Company type, or lead name for Individual
-            var hasCompanyName = !string.IsNullOrWhiteSpace(lead.CompanyName);
-            var newCustomer = new Customer
+            var existingOpportunity = await db.Opportunities.AsNoTracking()
+                .Where(o => o.Id == request.OpportunityId.Value)
+                .Select(o => new { o.Id, o.CustomerId })
+                .FirstOrDefaultAsync(ct);
+
+            if (existingOpportunity is null)
             {
-                Type = hasCompanyName ? CustomerType.Company : CustomerType.Individual,
-                Name = hasCompanyName ? lead.CompanyName!.Trim() : lead.Name,
-                SourceCode = lead.SourceCode,
-                TaxId = null, // Company customers will need to add this later
-                Note = $"Auto-created from lead: {lead.Name}",
-                OwnerUserId = lead.OwnerUserId, // Preserve sales owner from lead
+                throw new LeadOperationException($"Opportunity #{request.OpportunityId} not found.");
+            }
+
+            if (request.CustomerId.HasValue && request.CustomerId.Value != existingOpportunity.CustomerId)
+            {
+                throw new LeadOperationException(
+                    "CustomerId must match the opportunity's customer, or be omitted.");
+            }
+
+            customerIdFromOpportunity = existingOpportunity.CustomerId;
+        }
+
+        var linkedCustomerId = request.CustomerId ?? customerIdFromOpportunity;
+
+        Customer? createdCustomer = null;
+        Opportunity? createdOpportunity = null;
+
+        if (linkedCustomerId.HasValue)
+        {
+            var customerExists = await db.Customers
+                .AnyAsync(c => c.Id == linkedCustomerId.Value, ct);
+            if (!customerExists)
+            {
+                throw new LeadOperationException($"Customer #{linkedCustomerId} not found.");
+            }
+        }
+        else
+        {
+            await EnsureNoDuplicateCustomerAsync(lead, request, ct);
+            createdCustomer = BuildCustomerFromLead(lead, request, callerUserId, now);
+            db.Customers.Add(createdCustomer);
+        }
+
+        if (!request.OpportunityId.HasValue)
+        {
+            createdOpportunity = new Opportunity
+            {
+                Name = string.IsNullOrWhiteSpace(lead.CompanyName)
+                    ? $"Cơ hội từ lead {lead.Name}"
+                    : $"Cơ hội từ lead {lead.CompanyName}",
+                Stage = OpportunityStage.Prospecting,
+                OwnerUserId = lead.OwnerUserId,
+                EstimatedValue = 0m,
+                WinProbability = 0,
                 CreatedAt = now,
                 CreatedByUserId = callerUserId,
                 UpdatedAt = now,
                 UpdatedByUserId = callerUserId,
-                Contacts = new List<CustomerContact>
-                {
-                    new()
-                    {
-                        FullName = lead.Name,
-                        Phone = lead.Phone,
-                        Email = lead.Email,
-                        IsPrimary = true,
-                        CreatedAt = now,
-                    }
-                }
             };
-            db.Customers.Add(newCustomer);
+
+            // Assign through the navigation property when the customer is new too,
+            // so EF inserts the customer first within the same SaveChanges.
+            if (createdCustomer is not null)
+            {
+                createdOpportunity.Customer = createdCustomer;
+            }
+            else
+            {
+                createdOpportunity.CustomerId = linkedCustomerId!.Value;
+            }
+
+            db.Opportunities.Add(createdOpportunity);
+        }
+
+        // Save #1 — customer and opportunity. The lead is stamped afterwards, never
+        // before, so a failure cannot leave it pointing at rows that never landed.
+        if (createdCustomer is not null || createdOpportunity is not null)
+        {
             await db.SaveChangesAsync(ct);
-            finalCustomerId = newCustomer.Id;
-            logger.LogInformation("Auto-created customer {CustomerId} from lead {LeadId}", newCustomer.Id, lead.Id);
+        }
+
+        // Carried over from main: the care history recorded against the lead
+        // belongs to the customer it became, otherwise it is stranded.
+        if (createdCustomer is not null)
+        {
+            foreach (var leadActivity in lead.Activities)
+            {
+                db.CustomerActivities.Add(new CustomerActivity
+                {
+                    CustomerId = createdCustomer.Id,
+                    Type = (CustomerActivityType)leadActivity.Type, // same enum values
+                    Content = leadActivity.Content,
+                    OccurredAt = leadActivity.CreatedAt,
+                    CreatedByUserId = leadActivity.CreatedByUserId,
+                    CreatedAt = now,
+                });
+            }
         }
 
         lead.Status = LeadStatus.Converted;
         lead.ConvertedAt = now;
-        lead.ConvertedCustomerId = finalCustomerId;
-        lead.ConvertedOpportunityId = request.OpportunityId;
+        lead.ConvertedCustomerId = createdCustomer?.Id ?? linkedCustomerId;
+        lead.ConvertedOpportunityId = createdOpportunity?.Id ?? request.OpportunityId;
         lead.UpdatedAt = now;
         lead.UpdatedByUserId = callerUserId;
 
+        var summary =
+            $"[Convert] customerId={lead.ConvertedCustomerId}, " +
+            $"opportunityId={lead.ConvertedOpportunityId}";
         if (!string.IsNullOrWhiteSpace(request.Note))
         {
-            db.LeadActivities.Add(new LeadActivity
-            {
-                LeadId = lead.Id,
-                Type = LeadActivityType.Note,
-                Content = $"[Convert] {request.Note.Trim()}",
-                CreatedByUserId = callerUserId,
-                CreatedAt = now,
-            });
+            summary += $" — {request.Note.Trim()}";
         }
 
-        // Migrate lead activities to customer activities
-        foreach (var leadActivity in lead.Activities)
+        db.LeadActivities.Add(new LeadActivity
         {
-            db.CustomerActivities.Add(new CustomerActivity
-            {
-                CustomerId = finalCustomerId.Value,
-                Type = (CustomerActivityType)leadActivity.Type, // Same enum values
-                Content = leadActivity.Content,
-                OccurredAt = leadActivity.CreatedAt,
-                CreatedByUserId = leadActivity.CreatedByUserId,
-                CreatedAt = now,
-            });
-        }
+            LeadId = lead.Id,
+            Type = LeadActivityType.Note,
+            Content = summary,
+            CreatedByUserId = callerUserId,
+            CreatedAt = now,
+        });
 
+        // Save #2 — the lead only.
         await CrmConcurrency.SaveChangesAsync(db, ct);
+
         if (transaction is not null)
         {
             await transaction.CommitAsync(ct);
@@ -443,92 +512,237 @@ public class LeadService(
         };
     }
 
-    public async Task<LeadResponse?> RevertAsync(
+    private const int UnconvertWindowHours = 24;
+
+    public async Task<UnconvertLeadResponse?> UnconvertAsync(
         int id,
         int callerUserId,
-        bool canRevert,
+        bool canConvert,
         CancellationToken ct = default,
         string? rowVersion = null)
     {
-        if (!canRevert)
+        if (!canConvert)
         {
-            throw new LeadOperationException("Caller does not have permission to revert leads.");
+            throw new LeadOperationException("Caller does not have permission to convert leads.");
         }
 
         var lead = await db.Leads.Include(l => l.Owner).FirstOrDefaultAsync(l => l.Id == id, ct);
         if (lead is null) return null;
 
-        CrmConcurrency.Apply(db, lead, rowVersion);
-
-        if (lead.Status != LeadStatus.Converted)
+        if (lead.Status != LeadStatus.Converted || lead.ConvertedAt is null)
         {
-            throw new LeadOperationException("Only converted leads can be reverted.");
+            throw new LeadOperationException("Only a converted lead can be unconverted.");
         }
 
-        var customerId = lead.ConvertedCustomerId;
-        if (customerId is null)
-        {
-            throw new LeadOperationException("Lead has no linked customer to revert.");
-        }
-
-        // Check if customer has any related data (opportunities, quotes, contracts, design projects)
-        var hasOpportunities = await db.Opportunities.AnyAsync(o => o.CustomerId == customerId, ct);
-        if (hasOpportunities)
-        {
-            throw new LeadOperationException("Cannot revert: customer already has opportunities.");
-        }
-
-        var hasQuotes = await db.Quotes.AnyAsync(q => q.Opportunity!.CustomerId == customerId, ct);
-        if (hasQuotes)
-        {
-            throw new LeadOperationException("Cannot revert: customer already has quotes.");
-        }
-
-        var hasContracts = await db.Contracts.AnyAsync(c => c.CustomerId == customerId, ct);
-        if (hasContracts)
-        {
-            throw new LeadOperationException("Cannot revert: customer already has contracts.");
-        }
-
-        var hasDesignProjects = await db.DesignProjects.AnyAsync(dp => dp.CustomerId == customerId, ct);
-        if (hasDesignProjects)
-        {
-            throw new LeadOperationException("Cannot revert: customer already has design projects.");
-        }
-
+        var convertedAt = lead.ConvertedAt.Value;
         var now = DateTime.UtcNow;
+        var withinWindow = (now - convertedAt).TotalHours < UnconvertWindowHours;
 
-        // Delete the auto-created customer and its contacts
-        var customer = await db.Customers
-            .Include(c => c.Contacts)
-            .FirstOrDefaultAsync(c => c.Id == customerId, ct);
-        if (customer is not null)
+        var customer = lead.ConvertedCustomerId is null
+            ? null
+            : await db.Customers
+                .Include(c => c.Contacts)
+                .FirstOrDefaultAsync(c => c.Id == lead.ConvertedCustomerId, ct);
+
+        var opportunity = lead.ConvertedOpportunityId is null
+            ? null
+            : await db.Opportunities
+                .FirstOrDefaultAsync(o => o.Id == lead.ConvertedOpportunityId, ct);
+
+        // Auto-created rows are recognised by a CreatedAt matching the convert
+        // stamp exactly. ConvertAsync writes all three from one timestamp for
+        // precisely this reason; a unit test pins that contract.
+        var customerAutoCreated = customer is not null && customer.CreatedAt == convertedAt;
+        var opportunityAutoCreated = opportunity is not null && opportunity.CreatedAt == convertedAt;
+
+        var opportunityClean = opportunity is not null
+            && withinWindow
+            && opportunity.Stage == OpportunityStage.Prospecting
+            && !await db.Quotes.AnyAsync(q => q.OpportunityId == opportunity.Id, ct)
+            && !await db.Surveys.AnyAsync(sv => sv.LinkedOpportunityId == opportunity.Id, ct)
+            && !await db.Contracts.AnyAsync(c => c.OpportunityId == opportunity.Id, ct)
+            && !await db.Tenders.AnyAsync(tn => tn.WonOpportunityId == opportunity.Id, ct);
+
+        // Customer activities and documents both cascade on delete, so removing the
+        // customer would take them silently — and for documents the row goes while
+        // the file on disk stays. One child record is enough to stop.
+        var customerHasOtherWork = customer is not null
+            && (await db.Opportunities.AnyAsync(
+                    o => o.CustomerId == customer.Id && o.Id != lead.ConvertedOpportunityId, ct)
+                || await db.Contracts.AnyAsync(c => c.CustomerId == customer.Id, ct)
+                // Convert itself migrates the lead's activities onto the customer,
+                // so those carry the convert stamp and must not count as work
+                // somebody else did — otherwise nothing is ever deletable.
+                || await db.CustomerActivities.AnyAsync(
+                    a => a.CustomerId == customer.Id && a.CreatedAt != convertedAt, ct)
+                || await db.CustomerDocuments.AnyAsync(d => d.CustomerId == customer.Id, ct));
+
+        var outcome = UnconvertOutcome.UnlinkedOnly;
+
+        if (opportunityAutoCreated && opportunityClean)
         {
-            db.CustomerContacts.RemoveRange(customer.Contacts);
-            db.Customers.Remove(customer);
+            if (customerAutoCreated && !customerHasOtherWork)
+            {
+                db.Opportunities.Remove(opportunity!);
+                db.CustomerContacts.RemoveRange(customer!.Contacts);
+                db.Customers.Remove(customer);
+                outcome = UnconvertOutcome.DeletedBoth;
+            }
+            else
+            {
+                db.Opportunities.Remove(opportunity!);
+                outcome = UnconvertOutcome.DeletedOpportunity;
+            }
         }
 
-        // Revert lead status
-        lead.Status = LeadStatus.Contacted;
+        var keptCustomerId = outcome == UnconvertOutcome.DeletedBoth ? null : lead.ConvertedCustomerId;
+        var keptOpportunityId = outcome == UnconvertOutcome.UnlinkedOnly ? lead.ConvertedOpportunityId : null;
+
+        db.LeadActivities.Add(new LeadActivity
+        {
+            LeadId = lead.Id,
+            Type = LeadActivityType.Note,
+            Content = $"[Unconvert] outcome={outcome}",
+            CreatedByUserId = callerUserId,
+            CreatedAt = now,
+        });
+
+        lead.Status = LeadStatus.Interested;
         lead.ConvertedAt = null;
         lead.ConvertedCustomerId = null;
         lead.ConvertedOpportunityId = null;
         lead.UpdatedAt = now;
         lead.UpdatedByUserId = callerUserId;
 
+        CrmConcurrency.Apply(db, lead, rowVersion);
         await CrmConcurrency.SaveChangesAsync(db, ct);
-        logger.LogInformation("Reverted lead {LeadId}, deleted customer {CustomerId}", lead.Id, customerId);
 
-        return MapLead(lead, lead.Owner?.FullName, activities: null);
+        return new UnconvertLeadResponse
+        {
+            Outcome = outcome,
+            KeptCustomerId = keptCustomerId,
+            KeptOpportunityId = keptOpportunityId,
+            Lead = MapLead(lead, lead.Owner?.FullName, activities: null),
+        };
     }
 
     // ---------- helpers ----------
 
+    /// <summary>
+    /// Builds the customer a convert creates. A lead with a company name yields a
+    /// Company customer, and <c>CustomerService.ValidateForType</c> requires a tax
+    /// id, address and representative for those — none of which the Lead model
+    /// carries, so the caller has to supply them on the request.
+    /// </summary>
+    private static Customer BuildCustomerFromLead(
+        Lead lead,
+        ConvertLeadRequest request,
+        int callerUserId,
+        DateTime now)
+    {
+        var isCompany = !string.IsNullOrWhiteSpace(lead.CompanyName);
+
+        if (isCompany &&
+            (string.IsNullOrWhiteSpace(request.TaxId)
+             || string.IsNullOrWhiteSpace(request.Address)
+             || string.IsNullOrWhiteSpace(request.RepresentativeName)))
+        {
+            throw new LeadOperationException(
+                "Company leads require TaxId, Address and RepresentativeName to convert.");
+        }
+
+        return new Customer
+        {
+            Type = isCompany ? CustomerType.Company : CustomerType.Individual,
+            Name = isCompany ? lead.CompanyName!.Trim() : lead.Name.Trim(),
+            TaxId = string.IsNullOrWhiteSpace(request.TaxId) ? null : request.TaxId.Trim(),
+            Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
+            RepresentativeName = isCompany ? request.RepresentativeName!.Trim() : null,
+            SourceCode = lead.SourceCode,
+            RelationshipStatus = CustomerRelationshipStatus.Prospect,
+            OwnerUserId = lead.OwnerUserId,
+            CreatedAt = now,
+            CreatedByUserId = callerUserId,
+            UpdatedAt = now,
+            UpdatedByUserId = callerUserId,
+            Contacts = new List<CustomerContact>
+            {
+                new()
+                {
+                    FullName = lead.Name.Trim(),
+                    Phone = lead.Phone,
+                    Email = lead.Email,
+                    IsPrimary = true,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                },
+            },
+        };
+    }
+
+    /// <summary>
+    /// Mirrors <c>CustomerService.EnsureNoDuplicateAsync</c>: Company matches on
+    /// TaxId, Individual on the primary contact phone. Throws the same
+    /// <see cref="CustomerDuplicateException"/> so the controller can answer 409
+    /// with the conflicting record and let the caller link to it instead.
+    /// </summary>
+    private async Task EnsureNoDuplicateCustomerAsync(
+        Lead lead,
+        ConvertLeadRequest request,
+        CancellationToken ct)
+    {
+        var isCompany = !string.IsNullOrWhiteSpace(lead.CompanyName);
+        Customer? conflict = null;
+        var field = string.Empty;
+        var value = string.Empty;
+
+        if (isCompany && !string.IsNullOrWhiteSpace(request.TaxId))
+        {
+            var taxId = request.TaxId.Trim();
+            conflict = await db.Customers.AsNoTracking()
+                .FirstOrDefaultAsync(c => c.TaxId == taxId, ct);
+            if (conflict is not null)
+            {
+                field = "TaxId";
+                value = taxId;
+            }
+        }
+        else if (!isCompany && !string.IsNullOrWhiteSpace(lead.Phone))
+        {
+            var phone = lead.Phone.Trim();
+            conflict = await db.Customers.AsNoTracking()
+                .Include(c => c.Contacts)
+                .Where(c => c.Type == CustomerType.Individual)
+                .FirstOrDefaultAsync(c => c.Contacts.Any(x => x.IsPrimary && x.Phone == phone), ct);
+            if (conflict is not null)
+            {
+                field = "Phone";
+                value = phone;
+            }
+        }
+
+        if (conflict is null) return;
+
+        throw new CustomerDuplicateException(new CustomerDuplicateResponse
+        {
+            Field = field,
+            Value = value,
+            ExistingCustomerId = conflict.Id,
+            ExistingCustomerName = conflict.Name,
+            Message =
+                $"Khách hàng có {field} '{value}' đã tồn tại (#{conflict.Id} — {conflict.Name}). "
+                + "Hãy chuyển đổi bằng cách gắn vào khách hàng này.",
+        });
+    }
+
     private static void ValidateContact(string? phone, string? email)
     {
-        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(email))
+        // Shared with customers, so a lead cannot carry a phone that its own
+        // converted customer would later reject.
+        var error = ContactValidation.Validate(phone, email);
+        if (error is not null)
         {
-            throw new LeadOperationException("A lead must have at least one of Phone or Email.");
+            throw new LeadOperationException(error);
         }
     }
 

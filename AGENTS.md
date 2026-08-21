@@ -106,6 +106,38 @@ Use a separate agent or clean review context for BA and QA validation when avail
 
 ---
 
+## Input Validation Rules
+
+A field that accepts anything is a field that will be filled with anything. Every
+user-writable field needs its rules decided once and enforced on both sides.
+
+**The check to perform before finishing any form or write endpoint:** for each
+field the user can type into, name the rule that rejects a bad value, and point
+at where it runs on the server. If either answer is missing, the field is not
+done.
+
+* **Validate on both layers.** The frontend tells the user before the request
+  leaves; the server is what actually protects the data, because the API can be
+  called directly. Frontend-only validation is not validation.
+* **Format, not just presence.** "Has a value" and "has a usable value" are
+  different rules. Requiring one of phone or email says nothing about whether
+  either can be dialled or delivered to.
+* **Do not trust `[EmailAddress]` or `[Phone]` to mean what they say.**
+  `[EmailAddress]` accepts `345@434`; `[Phone]` is looser still. Where the shape
+  matters, write the rule explicitly.
+* **Reuse the shared validators; do not write a fourth regex.** Contact rules
+  live in `nihomebackend/Services/ContactValidation.cs` and its mirror
+  `nihomeweb/src/lib/validation.ts`. Extend those when the rule changes, and keep
+  the two in step — the comment at the top of each says so.
+* **Validation messages are user-facing.** Write them in Vietnamese, name the
+  offending field, and show an example of an accepted value. Add the frontend
+  copy as an i18n key in all four languages, like any other display string.
+* **Test data has to satisfy the rules.** A fixture that generates
+  `"0911" + Guid` is producing letters where digits belong. When a validator
+  turns fixtures red, fix the fixtures — that red is the validator working.
+
+---
+
 ## Docker Development
 
 * This project runs in Docker. Do not run `dotnet` or database commands directly on the host.

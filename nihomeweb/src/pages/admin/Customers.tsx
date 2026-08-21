@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { BriefcaseBusiness, ExternalLink, FileSignature, FileText, Plus, ReceiptText, Search, Trash2, RefreshCw, Star, Upload, X, Pencil } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
+import { validateContact, type ContactIssue } from "@/lib/validation";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
@@ -101,7 +103,7 @@ const formatFileSize = (bytes: number) => {
 };
 
 const AdminCustomers = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canSeeAll = has(ADMIN_PERMS.customersViewAll);
@@ -255,6 +257,11 @@ const AdminCustomers = () => {
     setRelatedLoading(false);
   };
 
+  // The lead conversion links point here with ?open={id}; this page read no
+  // search params at all before, so those links only opened the list.
+  const [searchParams] = useSearchParams();
+  const [handledOpenId, setHandledOpenId] = useState<number | null>(null);
+
   const openDetail = async (id: number, options: { startEditing?: boolean } = {}) => {
     setDetailLoading(true);
     setDetail(null);
@@ -297,6 +304,17 @@ const AdminCustomers = () => {
     }
   };
 
+  useEffect(() => {
+    const openId = Number(searchParams.get("open"));
+    if (Number.isInteger(openId) && openId > 0 && handledOpenId !== openId) {
+      setHandledOpenId(openId);
+      void openDetail(openId);
+    }
+    // Same reason as Leads: openDetail here is a plain function, not a callback,
+    // so deps hold only the values that actually drive the effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handledOpenId, searchParams]);
+
   const closeDetail = () => {
     setDetail(null);
     setEditing(false);
@@ -328,9 +346,12 @@ const AdminCustomers = () => {
       setCreateError(t("customers.validation.companyFieldsMissing"));
       return;
     }
-    if (!createForm.primaryContact.fullName?.trim() ||
-        (!createForm.primaryContact.phone?.trim() && !createForm.primaryContact.email?.trim())) {
-      setCreateError(t("customers.validation.primaryContact"));
+    const createContactIssue = validateContact(
+      createForm.primaryContact.phone,
+      createForm.primaryContact.email,
+    );
+    if (createContactIssue) {
+      setCreateError(contactIssueMessage(createContactIssue));
       return;
     }
 
@@ -345,7 +366,12 @@ const AdminCustomers = () => {
         representativeName: createForm.representativeName?.trim() || undefined,
         note: createForm.note?.trim() || undefined,
         primaryContact: {
-          fullName: primary.fullName.trim(),
+          // Required by the backend but no longer asked for: a company's contact
+          // is its representative, and an individual is their own contact.
+          fullName:
+            (type === "Company"
+              ? createForm.representativeName?.trim()
+              : createForm.name.trim()) || createForm.name.trim(),
           position: primary.position?.trim() || undefined,
           phone: primary.phone?.trim() || undefined,
           email: primary.email?.trim() || undefined,
@@ -384,7 +410,11 @@ const AdminCustomers = () => {
       setDetail(data);
       setEditing(false);
       toast({ title: t("customers.updated") });
-      await fetchList();
+      // Patch the row in place. Refetching the whole list here swapped the table
+      // for a loading state and rebuilt it, which is the flicker people noticed
+      // when changing a customer's status. The save response already carries the
+      // updated row, so nothing needs re-reading.
+      setRows((prev) => prev.map((row) => (row.id === data.id ? data : row)));
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
       if (isConcurrencyConflict(err)) await openDetail(detail.id, { startEditing: true });
@@ -430,11 +460,22 @@ const AdminCustomers = () => {
     clearSelection();
   }, [page, typeFilter, statusFilter, sourceFilter, search, clearSelection]);
 
+  const contactIssueMessage = (issue: Exclude<ContactIssue, null>) =>
+    issue === "missing"
+      ? t("validation.contact.missing")
+      : issue === "phone"
+        ? t("validation.phone.invalid")
+        : t("validation.email.invalid");
+
   const handleSaveContact = async () => {
     if (!detail || !contactForm) return;
-    if (!contactForm.fullName.trim() ||
-        (!contactForm.phone?.trim() && !contactForm.email?.trim())) {
+    if (!contactForm.fullName.trim()) {
       toast({ title: t("customers.validation.primaryContact"), variant: "destructive" });
+      return;
+    }
+    const contactIssue = validateContact(contactForm.phone, contactForm.email);
+    if (contactIssue) {
+      toast({ title: contactIssueMessage(contactIssue), variant: "destructive" });
       return;
     }
     setSavingContact(true);
@@ -1018,39 +1059,30 @@ const AdminCustomers = () => {
             )}
             <div className="rounded border p-3 space-y-3">
               <h4 className="text-sm font-medium">{t("customers.field.primaryContact")} *</h4>
-              <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                {t("customers.contact.nameDerived")}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>{t("customers.contact.fullName")} *</Label>
+                  <Label>{t("customers.contact.phone")}</Label>
                   <Input
-                    value={createForm.primaryContact.fullName}
+                    value={createForm.primaryContact.phone ?? ""}
                     onChange={(e) => setCreateForm({
                       ...createForm,
-                      primaryContact: { ...createForm.primaryContact, fullName: e.target.value },
+                      primaryContact: { ...createForm.primaryContact, phone: e.target.value },
                     })}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>{t("customers.contact.phone")}</Label>
-                    <Input
-                      value={createForm.primaryContact.phone ?? ""}
-                      onChange={(e) => setCreateForm({
-                        ...createForm,
-                        primaryContact: { ...createForm.primaryContact, phone: e.target.value },
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <Label>{t("customers.contact.email")}</Label>
-                    <Input
-                      type="email"
-                      value={createForm.primaryContact.email ?? ""}
-                      onChange={(e) => setCreateForm({
-                        ...createForm,
-                        primaryContact: { ...createForm.primaryContact, email: e.target.value },
-                      })}
-                    />
-                  </div>
+                <div>
+                  <Label>{t("customers.contact.email")}</Label>
+                  <Input
+                    type="email"
+                    value={createForm.primaryContact.email ?? ""}
+                    onChange={(e) => setCreateForm({
+                      ...createForm,
+                      primaryContact: { ...createForm.primaryContact, email: e.target.value },
+                    })}
+                  />
                 </div>
               </div>
             </div>
@@ -1169,7 +1201,10 @@ const AdminCustomers = () => {
                 </DialogDescription>
               </DialogHeader>
 
-              <Tabs defaultValue="general">
+              {/* The panels differ a lot in height, so the dialog used to
+                  jump every time a tab was picked. A floor on the panel area
+                  keeps it still for all but the longest content. */}
+              <Tabs defaultValue="general" className="[&>[role=tabpanel]]:min-h-[22rem]">
                 <TabsList
                   className="h-auto w-full justify-start overflow-x-auto"
                   data-testid="customer-detail-tabs"
@@ -1267,18 +1302,18 @@ const AdminCustomers = () => {
                             {t("customers.activity.empty")}
                           </p>
                         ) : (
-                          <ol className="space-y-2 border-l pl-4 max-h-48 overflow-y-auto">
-                            {detail.activities.map((a) => (
-                              <li key={a.id} className="relative">
-                                <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
-                                <div className="text-xs text-muted-foreground">
-                                  {t(`customers.activity.${a.type}`)} · {new Date(a.occurredAt).toLocaleString()}
-                                  {a.createdByName ? ` · ${a.createdByName}` : ""}
-                                </div>
-                                <div className="whitespace-pre-wrap text-sm">{a.content}</div>
-                              </li>
-                            ))}
-                          </ol>
+                          <ActivityTimeline
+                            locale={lang}
+                            todayLabel={t("common.today")}
+                            className="max-h-48"
+                            entries={detail.activities.map((a) => ({
+                              id: a.id,
+                              typeLabel: t(`customers.activity.${a.type}`),
+                              content: a.content,
+                              createdByName: a.createdByName,
+                              at: a.occurredAt,
+                            }))}
+                          />
                         )}
                         {detail.relationshipStatus !== "Suspended" && canManage && (
                           <div className="flex flex-col gap-2 rounded border bg-muted/30 p-3">

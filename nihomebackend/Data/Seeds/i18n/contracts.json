@@ -878,5 +878,69 @@
     "en": "by",
     "zh": "由",
     "ja": "実行者"
+  },
+  {
+    "key": "contracts.designProject.title",
+    "category": "contracts",
+    "vi": "Dự án thiết kế",
+    "en": "Design project",
+    "zh": "设计项目",
+    "ja": "設計プロジェクト"
+  },
+  {
+    "key": "contracts.designProject.pending",
+    "category": "contracts",
+    "vi": "Dự án thiết kế sẽ được tạo tự động khi hợp đồng chuyển sang Đang thực hiện.",
+    "en": "A design project is created automatically once the contract moves to In Progress.",
+    "zh": "合同转为执行中后将自动创建设计项目。",
+    "ja": "契約が進行中になると設計プロジェクトが自動作成されます。"
+  },
+  {
+    "key": "contracts.designProject.missing",
+    "category": "contracts",
+    "vi": "Hợp đồng đang thực hiện nhưng chưa có dự án thiết kế. Có thể tạo lại thủ công.",
+    "en": "This contract is in progress but has no design project yet. You can create it manually.",
+    "zh": "该合同已在执行但尚无设计项目，可手动创建。",
+    "ja": "この契約は進行中ですが設計プロジェクトがありません。手動で作成できます。"
+  },
+  {
+    "key": "contracts.designProject.create",
+    "category": "contracts",
+    "vi": "Tạo dự án thiết kế",
+    "en": "Create design project",
+    "zh": "创建设计项目",
+    "ja": "設計プロジェクトを作成"
+  },
+  {
+    "key": "contracts.designProject.created",
+    "category": "contracts",
+    "vi": "Đã tạo dự án thiết kế.",
+    "en": "Design project created.",
+    "zh": "设计项目已创建。",
+    "ja": "設計プロジェクトを作成しました。"
+  },
+  {
+    "key": "contracts.source.title",
+    "category": "contracts",
+    "vi": "Nguồn",
+    "en": "Source",
+    "zh": "来源",
+    "ja": "出所"
+  },
+  {
+    "key": "contracts.field.sourceQuote",
+    "category": "contracts",
+    "vi": "Báo giá nguồn",
+    "en": "Source quote",
+    "zh": "来源报价",
+    "ja": "元の見積"
+  },
+  {
+    "key": "contracts.field.sourceOpportunity",
+    "category": "contracts",
+    "vi": "Cơ hội nguồn",
+    "en": "Source opportunity",
+    "zh": "来源商机",
+    "ja": "元の商談"
   }
 ]

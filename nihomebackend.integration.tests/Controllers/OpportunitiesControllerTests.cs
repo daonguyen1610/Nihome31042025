@@ -421,7 +421,7 @@ public class OpportunitiesControllerTests : IntegrationTestBase
             primaryContact = new
             {
                 fullName = "Contact",
-                phone = "0911" + Guid.NewGuid().ToString("N")[..6],
+                phone = "0911" + Random.Shared.Next(100000, 999999),
                 isPrimary = true,
             },
         });

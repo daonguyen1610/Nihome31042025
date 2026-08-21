@@ -2366,5 +2366,11 @@
     "en": "Export the current filtered vendor list to CSV.",
     "zh": "将当前筛选的供应商列表导出为 CSV。",
     "ja": "現在絞り込まれている仕入先一覧をCSVに出力します。"
-  }
+  },
+  { "key": "adminRbac.filter.search", "category": "adminRbac", "vi": "Tìm quyền", "en": "Search permissions", "zh": "搜索权限", "ja": "権限を検索" },
+  { "key": "adminRbac.filter.searchPlaceholder", "category": "adminRbac", "vi": "Tìm theo tên hoặc mã quyền…", "en": "Search by name or code…", "zh": "按名称或代码搜索…", "ja": "名称またはコードで検索…" },
+  { "key": "adminRbac.filter.module", "category": "adminRbac", "vi": "Nhóm chức năng", "en": "Module", "zh": "功能模块", "ja": "モジュール" },
+  { "key": "adminRbac.filter.allModules", "category": "adminRbac", "vi": "Tất cả", "en": "All", "zh": "全部", "ja": "すべて" },
+  { "key": "adminRbac.filter.roles", "category": "adminRbac", "vi": "Vai trò hiển thị", "en": "Visible roles", "zh": "显示的角色", "ja": "表示する役割" },
+  { "key": "adminRbac.filter.showing", "category": "adminRbac", "vi": "Đang hiện {shown}/{total} quyền.", "en": "Showing {shown} of {total} permissions.", "zh": "显示 {shown}/{total} 项权限。", "ja": "{total} 件中 {shown} 件の権限を表示中。" }
 ]
