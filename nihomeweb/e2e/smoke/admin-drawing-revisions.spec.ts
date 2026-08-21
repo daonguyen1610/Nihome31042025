@@ -94,6 +94,12 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
 
     // ---------- 2. Open the Shop Drawing tab in the browser ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    const shopDrawingListPromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/shop-drawings"
+        && url.searchParams.get("designProjectId") === String(projectId)
+        && response.request().method() === "GET";
+    });
     await page.goto(`${baseURL}/admin/design-projects/${projectId}`, {
       waitUntil: "networkidle",
     });
@@ -105,10 +111,14 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
       hasText: /^Shop Drawing$|^Shop drawing$/i,
     });
     await shopTab.click({ force: true });
+    const shopDrawingListResponse = await shopDrawingListPromise;
+    expect(shopDrawingListResponse.ok(), await shopDrawingListResponse.text()).toBeTruthy();
     await expect(page.getByTestId("shop-drawing-tab")).toBeVisible();
 
     // ---------- 3. Open the Revisions panel ----------
-    await page.getByTestId(`shop-drawing-revisions-${shopId}`).click();
+    const revisionsButton = page.getByTestId(`shop-drawing-revisions-${shopId}`);
+    await expect(revisionsButton).toBeVisible();
+    await revisionsButton.click();
     await expect(page.getByTestId("revisions-panel")).toBeVisible();
 
     // ---------- 4. Append R1 via the dialog ----------
@@ -151,7 +161,16 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     await page.getByRole("option", { name: "R1" }).click();
     await page.getByTestId("revisions-diff-to").click();
     await page.getByRole("option", { name: "R2" }).click();
+    const diffResponsePromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/drawing-revisions/diff"
+        && url.searchParams.get("fromId") === String(r1.id)
+        && url.searchParams.get("toId") === String(r2.id)
+        && response.request().method() === "GET";
+    });
     await page.getByTestId("revisions-diff-run").click();
+    const diffResponse = await diffResponsePromise;
+    expect(diffResponse.ok(), await diffResponse.text()).toBeTruthy();
     await expect(page.getByTestId("revisions-diff-output")).toBeVisible();
     await expect(page.getByTestId("revisions-diff-output")).toContainText(/L\u00fd do|Reason/i);
 

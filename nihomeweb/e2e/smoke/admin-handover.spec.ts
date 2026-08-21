@@ -98,15 +98,20 @@ test.describe("NIH-144 — Project handover", () => {
         && response.request().method() === "PUT",
       { timeout: 15_000 },
     );
+    const refreshedDetailPromise = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === `/api/handover-records/${handoverId}`
+        && response.request().method() === "GET",
+      { timeout: 15_000 },
+    );
     await page.getByTestId("handover-form-save").click();
     const updateResponse = await updateResponsePromise;
     expect(updateResponse.status(), await updateResponse.text()).toBe(200);
+    const refreshedDetail = await refreshedDetailPromise;
+    expect(refreshedDetail.status(), await refreshedDetail.text()).toBe(200);
 
     const updatedRow = page.getByTestId(`handover-row-${handoverId}`);
     await expect(updatedRow).toContainText(updatedTitle, { timeout: 10_000 });
-    await expect(page.locator('[data-radix-collection-item][data-state="open"]')).toHaveCount(0, {
-      timeout: 10_000,
-    });
+    await expect(detail.getByText(updatedTitle, { exact: true })).toBeVisible();
     await page.getByTestId("handover-detail-delete").click();
     const deleteResponsePromise = page.waitForResponse(
       (response) => new URL(response.url()).pathname === `/api/handover-records/${handoverId}`
