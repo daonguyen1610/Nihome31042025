@@ -17,7 +17,11 @@ export const TEST_USERS = {
   bgd: { phoneNumber: "0911000009", password: "Admin@123", role: "BGD" },
 } as const;
 
-export type TestUser = (typeof TEST_USERS)[keyof typeof TEST_USERS];
+export interface TestUser {
+  phoneNumber: string;
+  password: string;
+  role: string;
+}
 
 export interface AuthFixtures {
   api: APIRequestContext;
