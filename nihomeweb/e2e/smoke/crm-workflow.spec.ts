@@ -49,6 +49,31 @@ test.describe("CRM workflow navigation", () => {
     expect(jsErrors).toHaveLength(0);
   });
 
+  test("Lead notification deep link opens the matching detail", async ({ page }) => {
+    const leadsResponsePromise = page.waitForResponse((response) =>
+      response.request().method() === "GET" && /\/api\/leads\?/.test(response.url()),
+    );
+    await page.goto("/admin/leads", { waitUntil: "networkidle" });
+    const leadsResponse = await leadsResponsePromise;
+    const body = await leadsResponse.json() as { items: Array<{ id: number }> };
+    expect(body.items.length).toBeGreaterThan(0);
+
+    const leadId = body.items[0].id;
+    await page.goto(`/admin/leads?leadId=${leadId}`, { waitUntil: "networkidle" });
+
+    await expect(page).toHaveURL(new RegExp(`/admin/leads\\?leadId=${leadId}$`));
+    await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("Customer create form exposes contact position", async ({ page }) => {
+    await page.goto("/admin/customers", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /thêm|add|tạo|create/i }).first().click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(/chức vụ|position|职位|役職/i, { exact: true })).toBeVisible();
+  });
+
   test("Opportunities page shows kanban or list view", async ({ page }) => {
     const jsErrors: string[] = [];
     page.on("pageerror", (err) => jsErrors.push(err.message));

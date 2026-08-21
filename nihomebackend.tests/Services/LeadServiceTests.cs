@@ -215,7 +215,7 @@ public class LeadServiceTests : IDisposable
             It.Is<IDictionary<string, string>>(d => d["leadName"].Contains("Ms. Nga")),
             "Lead",
             It.IsAny<int?>(),
-            It.IsAny<string?>(),
+            It.Is<string?>(url => url != null && url.StartsWith("/admin/leads?leadId=")),
             "en"), Times.Once);
     }
 

@@ -54,5 +54,12 @@ test("matrix page renders dynamic roles and permissions for SUPER_ADMIN", async 
   // should be rendered with its delete button visible.
   await expect(page.getByTestId("rbac-delete-SALE")).toBeVisible();
 
+  const roleFilter = page.getByTestId("rbac-role-filter");
+  await roleFilter.fill("SUPER_ADMIN");
+  await expect(page.getByTestId("rbac-col-SUPER_ADMIN")).toBeVisible();
+  await expect(page.getByTestId("rbac-col-ADMIN")).toHaveCount(0);
+  await roleFilter.clear();
+  await expect(page.getByTestId("rbac-col-ADMIN")).toBeVisible();
+
   expect(errors, "no console errors on /admin/roles").toEqual([]);
 });

@@ -166,7 +166,7 @@ const AdminQuotes = () => {
     (async () => {
       try {
         const { data } = await adminApi.listOpportunities({ pageSize: 100 });
-        if (!cancelled) setOpportunities(data.items);
+        if (!cancelled) setOpportunities(data.items.filter((opportunity) => opportunity.stage !== "Lost"));
       } catch {
         /* non-fatal — dropdown will just be empty */
       }

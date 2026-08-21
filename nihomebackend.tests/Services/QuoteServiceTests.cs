@@ -102,6 +102,23 @@ public class QuoteServiceTests : IDisposable
         }, user.Id, canManage: true));
     }
 
+    [Fact]
+    public async Task CreateAsync_LostOpportunity_Throws()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        opportunity.Stage = OpportunityStage.Lost;
+        opportunity.LostReasonCode = "other";
+        opportunity.LostNote = "Not proceeding";
+        opportunity.ClosedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() =>
+            _sut.CreateAsync(NewUnitCostRequest(opportunity.Id), user.Id, canManage: true));
+
+        Assert.Contains("thất bại", exception.Message);
+        Assert.Empty(_db.Quotes);
+    }
+
     // ---------------- Workflow state machine ----------------
 
     [Fact]
@@ -226,6 +243,41 @@ public class QuoteServiceTests : IDisposable
             .SingleAsync(entry => entry.Action == QuoteWorkflowAction.NewVersion);
         Assert.Equal(sourceStatus, log.FromStatus);
         Assert.Equal(QuoteStatus.Draft, log.ToStatus);
+    }
+
+    [Theory]
+    [InlineData(QuoteStatus.Approved)]
+    [InlineData(QuoteStatus.SentToCustomer)]
+    [InlineData(QuoteStatus.Expired)]
+    public async Task UpdateAsync_UnchangedPostApprovalQuote_IsNoOp(QuoteStatus sourceStatus)
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.Status = sourceStatus;
+        quote.PackageDescription = string.Empty;
+        quote.Note = string.Empty;
+        quote.UpdatedAt = DateTime.UtcNow.AddDays(-1);
+        await _db.SaveChangesAsync();
+        var originalUpdatedAt = quote.UpdatedAt;
+        var originalLogCount = await _db.QuoteApprovalLogs.CountAsync();
+
+        var response = await _sut.UpdateAsync(quote.Id, new UpdateQuoteRequest
+        {
+            OwnerUserId = quote.OwnerUserId,
+            AreaSqm = quote.AreaSqm,
+            UnitPricePerSqm = quote.UnitPricePerSqm,
+            PackageDescription = "   ",
+            DiscountPercent = quote.DiscountPercent,
+            VatPercent = quote.VatPercent,
+            ValidUntil = quote.ValidUntil,
+            Note = "   ",
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.NotNull(response);
+        Assert.Equal(1, response!.Version);
+        Assert.Equal(sourceStatus.ToString(), response.Status);
+        Assert.Equal(originalUpdatedAt, response.UpdatedAt);
+        Assert.Equal(originalLogCount, await _db.QuoteApprovalLogs.CountAsync());
+        Assert.Empty(_db.QuoteVersionSnapshots);
     }
 
     // ---------------- Ownership scoping ----------------

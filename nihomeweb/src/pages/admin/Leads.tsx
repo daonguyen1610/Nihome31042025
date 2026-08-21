@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Trash2, ArrowRight, RefreshCw } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -84,6 +85,7 @@ const AdminLeads = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const canConvert = has(ADMIN_PERMS.leadsConvert);
   const canSeeAll = has(ADMIN_PERMS.leadsViewAll);
@@ -163,7 +165,7 @@ const AdminLeads = () => {
     };
   }, []);
 
-  const openDetail = async (id: number) => {
+  const openDetail = useCallback(async (id: number) => {
     setDetailLoading(true);
     setDetail(null);
     try {
@@ -174,11 +176,21 @@ const AdminLeads = () => {
     } finally {
       setDetailLoading(false);
     }
-  };
+  }, [t, toast]);
+
+  useEffect(() => {
+    const leadId = Number(searchParams.get("leadId"));
+    if (Number.isInteger(leadId) && leadId > 0) void openDetail(leadId);
+  }, [openDetail, searchParams]);
 
   const closeDetail = () => {
     setDetail(null);
     setActivityContent("");
+    if (searchParams.has("leadId")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("leadId");
+      setSearchParams(next, { replace: true });
+    }
   };
 
   const handleCreate = async () => {

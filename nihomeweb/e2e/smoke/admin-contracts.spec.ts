@@ -60,6 +60,32 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 
+test("contract search remains editable after a list request fails", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`${baseURL}/admin/contracts`, { waitUntil: "networkidle" });
+    await page.route("**/api/contracts?*", async (route) => {
+        await route.fulfill({ status: 500, contentType: "application/json", body: "{}" });
+    });
+
+    const search = page.locator("#c-search");
+    await search.fill("request failure");
+    const failedResponse = await page.waitForResponse((response) =>
+        response.request().method() === "GET"
+        && response.url().includes("/api/contracts?")
+        && response.status() === 500,
+    );
+    expect(failedResponse.status()).toBe(500);
+    await expect(search).toBeVisible();
+    await expect(search).toHaveValue("request failure");
+
+    await search.fill("still editable");
+    await expect(search).toHaveValue("still editable");
+});
+
 test("mobile contract card opens the complete contract detail", async ({
     page,
     loginInBrowserAs,

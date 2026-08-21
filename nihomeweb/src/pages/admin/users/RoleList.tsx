@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
-import { ChevronDown, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -203,11 +203,21 @@ export default function RoleList() {
   });
 
   const [deleteTarget, setDeleteTarget] = useState<RoleResponse | null>(null);
+  const [roleFilter, setRoleFilter] = useState("");
 
   const loading = rolesQuery.isLoading || permsQuery.isLoading;
   const error = rolesQuery.error ?? permsQuery.error;
 
-  const roles: RoleResponse[] = rolesQuery.data ?? [];
+  const roles = useMemo<RoleResponse[]>(() => rolesQuery.data ?? [], [rolesQuery.data]);
+  const visibleRoles = useMemo(() => {
+    const query = roleFilter.trim().toLocaleLowerCase();
+    if (!query) return roles;
+    return roles.filter((role) => {
+      const label = role.labelKey ? t(role.labelKey) : role.name;
+      return role.code.toLocaleLowerCase().includes(query)
+        || label.toLocaleLowerCase().includes(query);
+    });
+  }, [roleFilter, roles, t]);
   const perms: PermissionResponse[] = useMemo(
     () => (permsQuery.data ?? []).slice().sort((a, b) => a.code.localeCompare(b.code)),
     [permsQuery.data],
@@ -229,6 +239,19 @@ export default function RoleList() {
           </Can>
         </header>
 
+        {!loading && !error && (
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={roleFilter}
+              onChange={(event) => setRoleFilter(event.target.value)}
+              placeholder={t("adminRbac.filterRoles")}
+              className="pl-9"
+              data-testid="rbac-role-filter"
+            />
+          </div>
+        )}
+
         {loading ? (
           <PageLoading />
         ) : error ? (
@@ -245,14 +268,14 @@ export default function RoleList() {
                 that generic text locators (e.g. Playwright's
                 getByText('dashboard.view').first()) resolve to the visible
                 table cell on desktop viewports, not the hidden mobile card. */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <div className="hidden max-h-[calc(100vh-14rem)] overflow-auto rounded-lg border lg:block">
               <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+              <thead className="sticky top-0 z-20 bg-muted text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="sticky left-0 z-10 min-w-[260px] bg-muted/50 px-4 py-3 text-left font-medium">
+                  <th className="sticky left-0 top-0 z-30 min-w-[260px] bg-muted px-4 py-3 text-left font-medium">
                     {t("adminRbac.permissionColumn")}
                   </th>
-                  {roles.map((role) => (
+                  {visibleRoles.map((role) => (
                     <th
                       key={role.id}
                       className="min-w-[160px] px-3 py-3 text-center font-medium"
@@ -318,7 +341,7 @@ export default function RoleList() {
                       <div>{t(`rbac.perm.${perm.code}.label`)}</div>
                       <div className="text-xs font-normal text-muted-foreground">{perm.code}</div>
                     </td>
-                    {roles.map((role) => {
+                    {visibleRoles.map((role) => {
                       const set = draft[role.id] ?? serverMap[role.id];
                       const checked = set?.has(perm.code) ?? false;
                       const disabled = role.isSystem || !canManage;
@@ -347,7 +370,7 @@ export default function RoleList() {
                 draft state as the desktop matrix so edits made in either
                 view sync. */}
             <div className="space-y-3 lg:hidden">
-              {roles.map((role) => {
+              {visibleRoles.map((role) => {
                 const set = draft[role.id] ?? serverMap[role.id];
                 const dirty = isDirty(role.id);
                 const grantedCount = set?.size ?? 0;

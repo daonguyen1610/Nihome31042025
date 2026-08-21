@@ -189,7 +189,13 @@ const Contracts = () => {
   const [signedTo, setSignedTo] = useState("");
   const [valueMin, setValueMin] = useState("");
   const [valueMax, setValueMax] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => setSearch(searchInput), 350);
+    return () => window.clearTimeout(handle);
+  }, [searchInput]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -236,6 +242,7 @@ const Contracts = () => {
     setSignedTo("");
     setValueMin("");
     setValueMax("");
+    setSearchInput("");
     setSearch("");
   };
 
@@ -428,21 +435,13 @@ const Contracts = () => {
     });
   };
 
-  if (loading && contracts.length === 0) {
+  if (loading && contracts.length === 0 && !searchInput && !filtersActive) {
     return (
       <AdminLayout>
         <div className="p-4 sm:p-6"><PageLoading /></div>
       </AdminLayout>
     );
   }
-  if (error) {
-    return (
-      <AdminLayout>
-        <div className="p-4 sm:p-6"><PageError message={error} onRetry={() => void load()} /></div>
-      </AdminLayout>
-    );
-  }
-
   return (
     <AdminLayout>
       <div className="space-y-4 p-4 sm:p-6">
@@ -471,8 +470,8 @@ const Contracts = () => {
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="c-search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={t("contracts.searchPlaceholder")}
                 className="h-9 pl-9"
               />
@@ -537,8 +536,10 @@ const Contracts = () => {
           </div>
         </section>
 
+        {error && <PageError message={error} onRetry={() => void load()} />}
+
         {/* List */}
-        {contracts.length === 0 ? (
+        {!error && contracts.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
             <div className="rounded-full bg-muted p-3">
               <SearchIcon className="h-5 w-5" aria-hidden />

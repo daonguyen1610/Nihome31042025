@@ -56,6 +56,11 @@ public static class CrmConcurrency
             throw new CrmConcurrencyTokenException("Phiên bản dữ liệu không hợp lệ. Vui lòng tải lại dữ liệu.");
         }
 
+        if (!entity.RowVersion.SequenceEqual(expectedVersion))
+        {
+            throw new CrmConcurrencyException("Dữ liệu đã được người khác cập nhật. Vui lòng tải lại trước khi thử lại.");
+        }
+
         db.Entry(entity).Property(item => item.RowVersion).OriginalValue = expectedVersion;
     }
 

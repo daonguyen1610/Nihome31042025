@@ -633,7 +633,7 @@ public class LeadService(
                 },
                 refEntityType: EntityTypes.Lead,
                 refEntityId: lead.Id,
-                linkUrl: $"/admin/leads/{lead.Id}",
+                linkUrl: $"/admin/leads?leadId={lead.Id}",
                 languageCode: languageCode);
         }
         catch (Exception ex)

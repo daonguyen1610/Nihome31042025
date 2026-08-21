@@ -2366,5 +2366,13 @@
     "en": "Export the current filtered vendor list to CSV.",
     "zh": "将当前筛选的供应商列表导出为 CSV。",
     "ja": "現在絞り込まれている仕入先一覧をCSVに出力します。"
+  },
+  {
+    "key": "adminRbac.filterRoles",
+    "category": "adminRbac",
+    "vi": "Lọc cột vai trò...",
+    "en": "Filter role columns...",
+    "zh": "筛选角色列...",
+    "ja": "ロール列を絞り込む..."
   }
 ]

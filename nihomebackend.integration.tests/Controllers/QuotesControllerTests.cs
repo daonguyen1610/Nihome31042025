@@ -68,6 +68,30 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_LostOpportunity_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var lost = await Client.PatchAsJsonAsync($"/api/opportunities/{opportunityId}/stage", new
+        {
+            targetStage = "Lost",
+            lostReasonCode = "price",
+            lostNote = "Not proceeding",
+        });
+        lost.EnsureSuccessStatusCode();
+
+        var response = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "UnitCost",
+            areaSqm = 10m,
+            unitPricePerSqm = 1_000_000m,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Submit_Approve_Send_HappyPath()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -122,6 +146,57 @@ public class QuotesControllerTests : IntegrationTestBase
         versionsRes.EnsureSuccessStatusCode();
         var versionsBody = await ReadJsonAsync(versionsRes);
         versionsBody.GetProperty("versions").GetArrayLength().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Update_UnchangedApprovedQuote_IsNoOpAndStillEnforcesConcurrency()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new { }))
+            .EnsureSuccessStatusCode();
+        var approveResponse = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { });
+        approveResponse.EnsureSuccessStatusCode();
+        var approved = await ReadJsonAsync(approveResponse);
+        var approvedRowVersion = approved.GetProperty("rowVersion").GetString();
+
+        var unchangedResponse = await Client.PutAsJsonAsync($"/api/quotes/{quoteId}", new
+        {
+            rowVersion = approvedRowVersion,
+            areaSqm = approved.GetProperty("areaSqm").GetDecimal(),
+            unitPricePerSqm = approved.GetProperty("unitPricePerSqm").GetDecimal(),
+            discountPercent = approved.GetProperty("discountPercent").GetDecimal(),
+            vatPercent = approved.GetProperty("vatPercent").GetDecimal(),
+            validUntil = approved.GetProperty("validUntil").GetDateTime(),
+        });
+        unchangedResponse.EnsureSuccessStatusCode();
+        var unchanged = await ReadJsonAsync(unchangedResponse);
+        unchanged.GetProperty("version").GetInt32().Should().Be(1);
+        unchanged.GetProperty("status").GetString().Should().Be("Approved");
+        unchanged.GetProperty("rowVersion").GetString().Should().Be(approvedRowVersion);
+
+        var versionsResponse = await Client.GetAsync($"/api/quotes/{quoteId}/versions");
+        versionsResponse.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(versionsResponse)).GetProperty("versions").GetArrayLength().Should().Be(1);
+
+        var sendResponse = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/send", new
+        {
+            rowVersion = approvedRowVersion,
+        });
+        sendResponse.EnsureSuccessStatusCode();
+
+        var staleResponse = await Client.PutAsJsonAsync($"/api/quotes/{quoteId}", new
+        {
+            rowVersion = approvedRowVersion,
+            areaSqm = approved.GetProperty("areaSqm").GetDecimal(),
+            unitPricePerSqm = approved.GetProperty("unitPricePerSqm").GetDecimal(),
+            discountPercent = approved.GetProperty("discountPercent").GetDecimal(),
+            vatPercent = approved.GetProperty("vatPercent").GetDecimal(),
+            validUntil = approved.GetProperty("validUntil").GetDateTime(),
+        });
+        staleResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(staleResponse)).GetProperty("code").GetString()
+            .Should().Be("crm_concurrency_conflict");
     }
 
     [Fact]

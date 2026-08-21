@@ -140,6 +140,10 @@ public class QuoteService(
         var opportunity = await db.Opportunities.AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == request.OpportunityId, ct)
             ?? throw new QuoteOperationException($"Không tìm thấy cơ hội #{request.OpportunityId}.");
+        if (opportunity.Stage == OpportunityStage.Lost)
+        {
+            throw new QuoteOperationException("Không thể tạo báo giá cho cơ hội đã thất bại.");
+        }
 
         ValidateMethodPayload(request.Method, request.AreaSqm, request.UnitPricePerSqm, request.Items);
 
@@ -161,12 +165,12 @@ public class QuoteService(
             AreaSqm = request.Method == QuoteMethod.UnitCost ? request.AreaSqm : null,
             UnitPricePerSqm = request.Method == QuoteMethod.UnitCost ? request.UnitPricePerSqm : null,
             PackageDescription = request.Method == QuoteMethod.UnitCost
-                ? request.PackageDescription?.Trim()
+                ? NormalizeOptional(request.PackageDescription)
                 : null,
             DiscountPercent = request.DiscountPercent,
             VatPercent = request.VatPercent,
             ValidUntil = validUntil,
-            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
+            Note = NormalizeOptional(request.Note),
             Status = QuoteStatus.Draft,
             CreatedAt = now,
             UpdatedAt = now,
@@ -222,6 +226,11 @@ public class QuoteService(
 
         ValidateMethodPayload(quote.Method, request.AreaSqm, request.UnitPricePerSqm, request.Items);
 
+        if (IsUnchanged(quote, request))
+        {
+            return await GetAsync(quote.Id, callerUserId, canSeeAll: true, ct);
+        }
+
         var now = DateTime.UtcNow;
 
         // Spec NIH-84 & NIH-93: editing after Approved/Sent/... spawns a new version.
@@ -258,12 +267,12 @@ public class QuoteService(
         quote.AreaSqm = quote.Method == QuoteMethod.UnitCost ? request.AreaSqm : null;
         quote.UnitPricePerSqm = quote.Method == QuoteMethod.UnitCost ? request.UnitPricePerSqm : null;
         quote.PackageDescription = quote.Method == QuoteMethod.UnitCost
-            ? request.PackageDescription?.Trim()
+            ? NormalizeOptional(request.PackageDescription)
             : null;
         quote.DiscountPercent = request.DiscountPercent;
         quote.VatPercent = request.VatPercent;
         if (request.ValidUntil.HasValue) quote.ValidUntil = request.ValidUntil.Value;
-        quote.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        quote.Note = NormalizeOptional(request.Note);
         quote.UpdatedAt = now;
         quote.UpdatedByUserId = callerUserId;
 
@@ -684,6 +693,53 @@ public class QuoteService(
             });
         }
     }
+
+    private static bool IsUnchanged(Quote quote, UpdateQuoteRequest request)
+    {
+        var ownerUserId = request.OwnerUserId ?? quote.OwnerUserId;
+        var packageDescription = quote.Method == QuoteMethod.UnitCost
+            ? NormalizeOptional(request.PackageDescription)
+            : null;
+        var note = NormalizeOptional(request.Note);
+        var validUntil = request.ValidUntil ?? quote.ValidUntil;
+
+        if (quote.OwnerUserId != ownerUserId
+            || quote.AreaSqm != (quote.Method == QuoteMethod.UnitCost ? request.AreaSqm : null)
+            || quote.UnitPricePerSqm != (quote.Method == QuoteMethod.UnitCost ? request.UnitPricePerSqm : null)
+            || NormalizeOptional(quote.PackageDescription) != packageDescription
+            || quote.DiscountPercent != request.DiscountPercent
+            || quote.VatPercent != request.VatPercent
+            || quote.ValidUntil != validUntil
+            || NormalizeOptional(quote.Note) != note)
+        {
+            return false;
+        }
+
+        if (quote.Method != QuoteMethod.Boq) return true;
+        if (quote.Items.Count != request.Items.Count) return false;
+
+        var currentItems = quote.Items.OrderBy(item => item.SortOrder).ToList();
+        var nextDefaultSortOrder = 0;
+        for (var index = 0; index < request.Items.Count; index++)
+        {
+            var current = currentItems[index];
+            var requested = request.Items[index];
+            var requestedSortOrder = requested.SortOrder == 0 ? ++nextDefaultSortOrder : requested.SortOrder;
+            if (current.ItemCode != NormalizeOptional(requested.ItemCode)
+                || current.Name != requested.Name.Trim()
+                || current.Unit != requested.Unit.Trim()
+                || current.Quantity != requested.Quantity
+                || current.UnitPrice != requested.UnitPrice
+                || current.SortOrder != requestedSortOrder)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static string? NormalizeOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void RecomputeTotals(Quote quote)
     {
