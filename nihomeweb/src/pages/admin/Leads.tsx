@@ -10,7 +10,6 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
-import { extractApiError } from "@/lib/apiError";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { Button } from "@/components/ui/button";
