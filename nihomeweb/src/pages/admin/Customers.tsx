@@ -1160,7 +1160,10 @@ const AdminCustomers = () => {
 
       {/* Detail dialog */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(o) => !o && closeDetail()}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto sm:w-full">
+        <DialogContent
+          className="grid h-[90dvh] w-[95vw] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:h-[min(90dvh,44rem)] sm:w-full"
+          data-testid="customer-detail-dialog"
+        >
           {detailLoading ? (
             <>
               <DialogHeader>
@@ -1201,12 +1204,9 @@ const AdminCustomers = () => {
                 </DialogDescription>
               </DialogHeader>
 
-              {/* The panels differ a lot in height, so the dialog used to
-                  jump every time a tab was picked. A floor on the panel area
-                  keeps it still for all but the longest content. */}
-              <Tabs defaultValue="general" className="[&>[role=tabpanel]]:min-h-[22rem]">
+              <Tabs defaultValue="general" className="flex min-h-0 flex-col">
                 <TabsList
-                  className="h-auto w-full justify-start overflow-x-auto"
+                  className="h-auto w-full shrink-0 justify-start overflow-x-auto"
                   data-testid="customer-detail-tabs"
                 >
                   <TabsTrigger className="h-12 shrink-0" value="general">{t("customers.tab.general")}</TabsTrigger>
@@ -1219,7 +1219,7 @@ const AdminCustomers = () => {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="general" className="space-y-3 pt-3">
+                <TabsContent value="general" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
                   {!editing ? (
                     <>
                       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -1459,7 +1459,7 @@ const AdminCustomers = () => {
                   )}
                 </TabsContent>
 
-                <TabsContent value="contacts" className="space-y-2 pt-3">
+                <TabsContent value="contacts" className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pt-3">
                   <ul className="space-y-2">
                     {detail.contacts.map((c) => (
                       <li key={c.id} className="flex items-start justify-between rounded border p-2 text-sm">
@@ -1567,7 +1567,7 @@ const AdminCustomers = () => {
                   )}
                 </TabsContent>
 
-                <TabsContent value="related" className="pt-3">
+                <TabsContent value="related" className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 pt-3">
                   {relatedLoading ? (
                     <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
                       <RefreshCw className="h-4 w-4 animate-spin" aria-hidden />
@@ -1657,7 +1657,7 @@ const AdminCustomers = () => {
                   )}
                 </TabsContent>
 
-                <TabsContent value="documents" className="space-y-3 pt-3">
+                <TabsContent value="documents" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1 pt-3">
                   {canManage && (
                     <div className="grid gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
                       <div className="space-y-1.5">
