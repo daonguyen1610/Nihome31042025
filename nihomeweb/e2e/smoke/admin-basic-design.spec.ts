@@ -1,5 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject } from "../fixtures/designProjects";
+import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
 
 /**
  * NIH-115 M2 Basic Design end-to-end flow. Real-user path through the
@@ -35,27 +35,7 @@ test.describe("NIH-115 — Basic Design + Shop Drawing unlock (real-user flow)",
     const authHeader = { Authorization: `Bearer ${token}` };
 
     // Pick or create a customer.
-    const customersResp = await api.get("/api/customers?pageSize=1", { headers: authHeader });
-    let customerId: number;
-    if (customersResp.ok()) {
-      const body = await customersResp.json();
-      customerId = body.items?.[0]?.id ?? 0;
-    } else {
-      customerId = 0;
-    }
-    if (!customerId) {
-      const created = await api.post("/api/customers", {
-        headers: authHeader,
-        data: {
-          name: `E2E BD customer ${uid()}`,
-          type: "Company",
-          sourceCode: "referral",
-          relationshipStatus: "InProgress",
-        },
-      });
-      expect(created.ok(), await created.text()).toBeTruthy();
-      customerId = (await created.json()).id;
-    }
+    const customerId = await createOwnCustomer(api, authHeader, "BD");
 
     // Create the design project.
     const projectName = `E2E-BD ${uid()}`;

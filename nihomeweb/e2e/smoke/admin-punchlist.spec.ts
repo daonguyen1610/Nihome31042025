@@ -1,5 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject } from "../fixtures/designProjects";
+import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
 
 /**
  * NIH-146 M4 Punch list end-to-end. Real-user path through the running
@@ -31,22 +31,7 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const authHeader = { Authorization: `Bearer ${token}` };
 
-    const customersResp = await api.get("/api/customers?pageSize=1", { headers: authHeader });
-    let customerId = 0;
-    if (customersResp.ok()) customerId = (await customersResp.json()).items?.[0]?.id ?? 0;
-    if (!customerId) {
-      const created = await api.post("/api/customers", {
-        headers: authHeader,
-        data: {
-          name: `E2E Punch customer ${uid()}`,
-          type: "Company",
-          sourceCode: "referral",
-          relationshipStatus: "InProgress",
-        },
-      });
-      expect(created.ok(), await created.text()).toBeTruthy();
-      customerId = (await created.json()).id;
-    }
+    const customerId = await createOwnCustomer(api, authHeader, "Punch");
 
     const projSuffix = uid();
     const projectId = await createDesignProject(api, {
