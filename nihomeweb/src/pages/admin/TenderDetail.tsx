@@ -31,7 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -248,7 +248,7 @@ interface ChecklistTabProps {
   canManage: boolean;
   onPatch: (itemId: number, body: Parameters<typeof adminApi.updateTenderChecklistItem>[2]) => Promise<void>;
   onUpload: (itemId: number, file: File) => Promise<void>;
-  onOpenLibrary: () => void;
+  onOpenLibrary: (itemId: number) => void;
   isTerminal: boolean;
 }
 
@@ -306,24 +306,16 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold text-slate-800">
-            {t("tenders.detail.checklist.title")}
-          </h2>
-          <div className="mt-0.5 text-xs text-slate-500">
-            {t("tenders.detail.checklist.percentDone").replace(
-              "{percent}",
-              String(tender.checklistCompletionPercent),
-            )}
-          </div>
+      <div>
+        <h2 className="text-base font-semibold text-slate-800">
+          {t("tenders.detail.checklist.title")}
+        </h2>
+        <div className="mt-0.5 text-xs text-slate-500">
+          {t("tenders.detail.checklist.percentDone").replace(
+            "{percent}",
+            String(tender.checklistCompletionPercent),
+          )}
         </div>
-        {!disabled ? (
-          <Button variant="outline" size="sm" onClick={onOpenLibrary}>
-            <Library className="mr-1 h-4 w-4" />
-            {t("tenders.detail.checklist.pickFromLibrary")}
-          </Button>
-        ) : null}
       </div>
 
       <input
@@ -349,7 +341,11 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
           </thead>
           <tbody>
             {tender.checklistItems.map((item) => (
-              <tr key={item.id} className="border-t align-top">
+              <tr
+                key={item.id}
+                className="border-t align-top"
+                data-testid={`tender-checklist-row-${item.templateCode ?? item.id}-desktop`}
+              >
                 <td className="px-3 py-2 font-medium text-slate-800">{item.title}</td>
                 <td className="px-3 py-2">
                   <Select
@@ -389,8 +385,9 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
                       showLabel
                       label={item.originalFileName ?? t("common.previewFile")}
                       variant="ghost"
+                      testId={`tender-checklist-preview-${item.templateCode ?? item.id}-desktop`}
                       fetchFile={async () => (
-                        await adminApi.getCapabilityDocumentContent(item.filePath)
+                        await adminApi.getTenderChecklistFileContent(tender.id, item.id)
                       ).data}
                     />
                   ) : (
@@ -399,23 +396,36 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
                 </td>
                 <td className="px-3 py-2 text-right">
                   {!disabled ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={savingId === item.id}
-                      onClick={() => triggerUpload(item.id)}
-                    >
-                      {savingId === item.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Upload className="h-3.5 w-3.5" />
-                      )}
-                      <span className="ml-1 text-xs">
-                        {item.filePath
-                          ? t("tenders.detail.checklist.replace")
-                          : t("tenders.detail.checklist.upload")}
-                      </span>
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={savingId === item.id}
+                        onClick={() => onOpenLibrary(item.id)}
+                        data-testid={`tender-checklist-library-${item.templateCode ?? item.id}-desktop`}
+                      >
+                        <Library className="h-3.5 w-3.5" />
+                        <span className="ml-1 text-xs">{t("tenders.detail.checklist.pickFromLibrary")}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={savingId === item.id}
+                        onClick={() => triggerUpload(item.id)}
+                        data-testid={`tender-checklist-upload-${item.templateCode ?? item.id}-desktop`}
+                      >
+                        {savingId === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5" />
+                        )}
+                        <span className="ml-1 text-xs">
+                          {item.filePath
+                            ? t("tenders.detail.checklist.replace")
+                            : t("tenders.detail.checklist.upload")}
+                        </span>
+                      </Button>
+                    </div>
                   ) : null}
                 </td>
               </tr>
@@ -427,7 +437,11 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
       {/* Mobile cards */}
       <div className="grid gap-2 md:hidden">
         {tender.checklistItems.map((item) => (
-          <div key={item.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+          <div
+            key={item.id}
+            className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+            data-testid={`tender-checklist-row-${item.templateCode ?? item.id}-mobile`}
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="break-words text-sm font-medium text-slate-800">{item.title}</div>
@@ -465,7 +479,7 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
                 onChange={(e) => void handleDeadline(item, e.target.value)}
               />
             </div>
-            <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+            <div className="mt-2 text-xs">
               {item.filePath ? (
                 <AdminFilePreview
                   url={item.filePath}
@@ -473,31 +487,45 @@ const ChecklistTab = ({ tender, canManage, onPatch, onUpload, onOpenLibrary, isT
                   showLabel
                   label={item.originalFileName ?? t("common.previewFile")}
                   variant="ghost"
+                  testId={`tender-checklist-preview-${item.templateCode ?? item.id}-mobile`}
                   fetchFile={async () => (
-                    await adminApi.getCapabilityDocumentContent(item.filePath)
+                    await adminApi.getTenderChecklistFileContent(tender.id, item.id)
                   ).data}
                 />
               ) : (
                 <span className="text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
               )}
               {!disabled ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={savingId === item.id}
-                  onClick={() => triggerUpload(item.id)}
-                >
-                  {savingId === item.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Upload className="h-3.5 w-3.5" />
-                  )}
-                  <span className="ml-1">
-                    {item.filePath
-                      ? t("tenders.detail.checklist.replace")
-                      : t("tenders.detail.checklist.upload")}
-                  </span>
-                </Button>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={savingId === item.id}
+                    onClick={() => onOpenLibrary(item.id)}
+                    data-testid={`tender-checklist-library-${item.templateCode ?? item.id}-mobile`}
+                  >
+                    <Library className="h-3.5 w-3.5" />
+                    <span className="ml-1">{t("tenders.detail.checklist.pickFromLibrary")}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={savingId === item.id}
+                    onClick={() => triggerUpload(item.id)}
+                    data-testid={`tender-checklist-upload-${item.templateCode ?? item.id}-mobile`}
+                  >
+                    {savingId === item.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Upload className="h-3.5 w-3.5" />
+                    )}
+                    <span className="ml-1">
+                      {item.filePath
+                        ? t("tenders.detail.checklist.replace")
+                        : t("tenders.detail.checklist.upload")}
+                    </span>
+                  </Button>
+                </div>
               ) : null}
             </div>
           </div>
@@ -513,20 +541,19 @@ interface LibraryPickerProps {
   open: boolean;
   onClose: () => void;
   tender: TenderResponse;
+  targetItemId: number | null;
   onSubmit: (assignments: { checklistItemId: number; capabilityDocumentId: number }[]) => Promise<void>;
 }
 
-const LibraryPicker = ({ open, onClose, tender, onSubmit }: LibraryPickerProps) => {
+const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: LibraryPickerProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [docs, setDocs] = useState<CapabilityDocumentResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [targetItemId, setTargetItemId] = useState<number | null>(
-    tender.checklistItems[0]?.id ?? null,
-  );
-  const [selectedDocIds, setSelectedDocIds] = useState<Set<number>>(new Set());
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const targetItem = tender.checklistItems.find((item) => item.id === targetItemId);
 
   useEffect(() => {
     if (!open) return;
@@ -550,30 +577,16 @@ const LibraryPicker = ({ open, onClose, tender, onSubmit }: LibraryPickerProps) 
 
   useEffect(() => {
     if (open) {
-      setSelectedDocIds(new Set());
-      setTargetItemId(tender.checklistItems[0]?.id ?? null);
+      setSelectedDocId(null);
     }
-  }, [open, tender.checklistItems]);
-
-  const toggleDoc = (id: number) => {
-    setSelectedDocIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+  }, [open, targetItemId]);
 
   const confirm = async () => {
     if (targetItemId == null) return;
-    if (selectedDocIds.size === 0) return;
-    const assignments = Array.from(selectedDocIds).map((docId) => ({
-      checklistItemId: targetItemId,
-      capabilityDocumentId: docId,
-    }));
+    if (selectedDocId == null) return;
     setSubmitting(true);
     try {
-      await onSubmit(assignments);
+      await onSubmit([{ checklistItemId: targetItemId, capabilityDocumentId: selectedDocId }]);
       onClose();
     } catch (err) {
       toast({
@@ -597,21 +610,12 @@ const LibraryPicker = ({ open, onClose, tender, onSubmit }: LibraryPickerProps) 
         <div className="mt-2 space-y-3">
           <div>
             <Label className="text-xs">{t("tenders.detail.library.pickTarget")}</Label>
-            <Select
-              value={targetItemId != null ? String(targetItemId) : ""}
-              onValueChange={(v) => setTargetItemId(Number(v))}
+            <div
+              className="mt-1 rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium"
+              data-testid="tender-library-target"
             >
-              <SelectTrigger className="mt-1 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {tender.checklistItems.map((it) => (
-                  <SelectItem key={it.id} value={String(it.id)}>
-                    {it.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {targetItem?.title ?? "—"}
+            </div>
           </div>
 
           {loading ? (
@@ -624,18 +628,21 @@ const LibraryPicker = ({ open, onClose, tender, onSubmit }: LibraryPickerProps) 
           ) : docs.length === 0 ? (
             <p className="text-sm text-slate-500">{t("tenders.detail.library.empty")}</p>
           ) : (
-            <div className="grid max-h-80 gap-2 overflow-y-auto">
+            <RadioGroup
+              className="grid max-h-80 gap-2 overflow-y-auto"
+              value={selectedDocId != null ? String(selectedDocId) : ""}
+              onValueChange={(value) => setSelectedDocId(Number(value))}
+            >
               {docs.map((d) => (
                 <label
                   key={d.id}
                   className={cn(
                     "flex cursor-pointer items-start gap-3 rounded-md border p-2.5 text-sm hover:bg-slate-50",
-                    selectedDocIds.has(d.id) && "border-sky-200 bg-sky-50",
+                    selectedDocId === d.id && "border-sky-200 bg-sky-50",
                   )}
                 >
-                  <Checkbox
-                    checked={selectedDocIds.has(d.id)}
-                    onCheckedChange={() => toggleDoc(d.id)}
+                  <RadioGroupItem
+                    value={String(d.id)}
                     className="mt-0.5"
                   />
                   <div className="min-w-0 flex-1">
@@ -647,7 +654,7 @@ const LibraryPicker = ({ open, onClose, tender, onSubmit }: LibraryPickerProps) 
                   </div>
                 </label>
               ))}
-            </div>
+            </RadioGroup>
           )}
         </div>
 
@@ -657,7 +664,7 @@ const LibraryPicker = ({ open, onClose, tender, onSubmit }: LibraryPickerProps) 
           </Button>
           <Button
             onClick={() => void confirm()}
-            disabled={submitting || targetItemId == null || selectedDocIds.size === 0}
+            disabled={submitting || targetItemId == null || selectedDocId == null}
           >
             {submitting ? (
               <Loader2 className="mr-1 h-4 w-4 animate-spin" />
@@ -1093,7 +1100,7 @@ const AdminTenderDetail = () => {
   const [timeline, setTimeline] = useState<TenderTimelineEvent[] | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
 
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryTargetItemId, setLibraryTargetItemId] = useState<number | null>(null);
   const [markWonOpen, setMarkWonOpen] = useState(false);
   const [markLostOpen, setMarkLostOpen] = useState(false);
 
@@ -1267,7 +1274,7 @@ const AdminTenderDetail = () => {
                   canManage={canManage}
                   onPatch={handleChecklistPatch}
                   onUpload={handleUpload}
-                  onOpenLibrary={() => setLibraryOpen(true)}
+                  onOpenLibrary={setLibraryTargetItemId}
                   isTerminal={!!isTerminal}
                 />
               </TabsContent>
@@ -1286,9 +1293,10 @@ const AdminTenderDetail = () => {
             </Tabs>
 
             <LibraryPicker
-              open={libraryOpen}
-              onClose={() => setLibraryOpen(false)}
+              open={libraryTargetItemId != null}
+              onClose={() => setLibraryTargetItemId(null)}
               tender={tender}
+              targetItemId={libraryTargetItemId}
               onSubmit={handleAttachFromLibrary}
             />
             <MarkWonDialog

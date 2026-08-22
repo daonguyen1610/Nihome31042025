@@ -349,6 +349,14 @@ public class CapabilityDocumentService(
         var paths = new List<string> { entity.FilePath };
         paths.AddRange(entity.Versions.Select(v => v.FilePath));
 
+        if (await db.TenderChecklistItems.AnyAsync(
+            item => item.CapabilityDocumentId == id
+                || (item.FilePath != null && paths.Contains(item.FilePath)), ct))
+        {
+            throw new CapabilityDocumentOperationException(
+                "Tài liệu đang được sử dụng trong checklist gói thầu, không thể xoá.");
+        }
+
         db.CapabilityDocuments.Remove(entity);
         await db.SaveChangesAsync(ct);
 

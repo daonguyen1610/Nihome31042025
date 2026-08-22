@@ -12,6 +12,10 @@ public class TenderOperationException(string message) : Exception(message)
 {
 }
 
+public sealed record TenderChecklistFileReference(
+    string FilePath,
+    string OriginalFileName);
+
 /// <summary>
 /// Tender (Gói thầu) service — CRUD, auto-generated preparation checklist
 /// on create, and status-aware edit rules. Result-transition workflow
@@ -51,6 +55,16 @@ public interface ITenderService
     /// </summary>
     Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,
         string filePath, string originalFileName, int callerUserId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the file metadata for one checklist row, or null when the
+    /// tender, row, or file reference is missing.
+    /// </summary>
+    Task<TenderChecklistFileReference?> GetChecklistFileAsync(
+        int tenderId, int itemId, CancellationToken ct = default);
+
+    Task<bool> IsChecklistFileAttachedAsync(
+        int tenderId, int itemId, string filePath, CancellationToken ct = default);
 
     /// <summary>
     /// Bulk-attach one or more checklist rows to <c>capability_documents</c>

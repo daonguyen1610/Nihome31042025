@@ -95,6 +95,7 @@ app.Use(async (context, next) =>
         "/files/customers",
         "/files/contracts",
         "/files/capability",
+        "/files/tenders",
         "/files/business-documents",
         "/files/design",
     ];

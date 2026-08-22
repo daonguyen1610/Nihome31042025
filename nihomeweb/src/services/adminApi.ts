@@ -3365,6 +3365,10 @@ export const adminApi = {
       { headers: { "Content-Type": "multipart/form-data" } },
     );
   },
+  getTenderChecklistFileContent: (tenderId: number, itemId: number) =>
+    api.get<Blob>(`/tenders/${tenderId}/checklist/${itemId}/content`, {
+      responseType: "blob",
+    }),
   attachTenderChecklistFromLibrary: (
     tenderId: number,
     body: AttachTenderChecklistFromLibraryRequest,
