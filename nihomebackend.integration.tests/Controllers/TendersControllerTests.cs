@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
+using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -235,6 +238,121 @@ public class TendersControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task UploadChecklist_ContentIsResourceBoundAndStaticPathIsPrivate()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        string? storedPath = null;
+
+        try
+        {
+            using var form = new MultipartFormDataContent();
+            var file = new ByteArrayContent(Encoding.UTF8.GetBytes("tender checklist content"));
+            file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+            form.Add(file, "file", "checklist.pdf");
+
+            var upload = await Client.PostAsync(
+                $"/api/tenders/{tenderId}/checklist/{itemId}/upload", form);
+            upload.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = await ReadJsonAsync(upload);
+            var item = body.GetProperty("checklistItems").EnumerateArray()
+                .First(value => value.GetProperty("id").GetInt32() == itemId);
+            storedPath = item.GetProperty("filePath").GetString();
+
+            var content = await Client.GetAsync(
+                $"/api/tenders/{tenderId}/checklist/{itemId}/content");
+            content.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await content.Content.ReadAsStringAsync()).Should().Be("tender checklist content");
+
+            (await Client.GetAsync(storedPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+            (await Client.GetAsync($"/api/tenders/{tenderId}/checklist/999999/content"))
+                .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+            using var anonymousClient = Factory.CreateClient();
+            (await anonymousClient.GetAsync($"/api/tenders/{tenderId}/checklist/{itemId}/content"))
+                .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+            using var forbiddenClient = Factory.CreateClient();
+            await AuthTestHelper.AuthenticateAsync(
+                forbiddenClient, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+            (await forbiddenClient.GetAsync($"/api/tenders/{tenderId}/checklist/{itemId}/content"))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+        finally
+        {
+            if (storedPath is not null)
+            {
+                var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+                var fullPath = Path.Combine(
+                    environment.ContentRootPath,
+                    "wwwroot",
+                    storedPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(fullPath)) File.Delete(fullPath);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("patch")]
+    [InlineData("upload")]
+    [InlineData("library")]
+    public async Task ChecklistMutation_WonTender_IsBadRequestAndPreservesItem(string operation)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var docId = await CreateCapabilityDocumentAsync();
+        await WithDbAsync(async db =>
+        {
+            var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
+            tender.Status = TenderStatus.Won;
+            await db.SaveChangesAsync();
+        });
+
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var uploadDirectory = Path.Combine(environment.ContentRootPath, "wwwroot", "files", "tenders");
+        var filesBefore = Directory.Exists(uploadDirectory)
+            ? Directory.GetFiles(uploadDirectory).ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+
+        HttpResponseMessage response;
+        if (operation == "patch")
+        {
+            response = await Client.PatchAsJsonAsync(
+                $"/api/tenders/{tenderId}/checklist/{itemId}", new { status = "Done" });
+        }
+        else if (operation == "library")
+        {
+            response = await Client.PostAsJsonAsync(
+                $"/api/tenders/{tenderId}/checklist/attach-from-library",
+                new { items = new[] { new { checklistItemId = itemId, capabilityDocumentId = docId } } });
+        }
+        else
+        {
+            using var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("blocked")), "file", "blocked.pdf");
+            response = await Client.PostAsync(
+                $"/api/tenders/{tenderId}/checklist/{itemId}/upload", form);
+        }
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var unchanged = await WithDbAsync(db => db.TenderChecklistItems.AsNoTracking()
+            .SingleAsync(item => item.Id == itemId));
+        unchanged.Status.Should().Be(TenderChecklistItemStatus.NotStarted);
+        unchanged.FilePath.Should().BeNull();
+        unchanged.OriginalFileName.Should().BeNull();
+
+        if (operation == "upload")
+        {
+            var filesAfter = Directory.Exists(uploadDirectory)
+                ? Directory.GetFiles(uploadDirectory).ToHashSet(StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+            filesAfter.Should().BeEquivalentTo(filesBefore);
+        }
+    }
+
     // ---------- NIH-97 library attach ----------
 
     [Fact]
@@ -259,6 +377,48 @@ public class TendersControllerTests : IntegrationTestBase
         var target = enumerator.First(i => i.GetProperty("id").GetInt32() == itemId);
         target.GetProperty("originalFileName").GetString().Should().NotBeNullOrEmpty();
         target.GetProperty("status").GetString().Should().Be("Done");
+    }
+
+    [Fact]
+    public async Task AttachFromLibrary_ContentRemainsAvailableBecauseReferencedDocumentCannotBeDeleted()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId);
+        var documentId = await CreateCapabilityDocumentAsync();
+        var filePath = await WithDbAsync(db => db.CapabilityDocuments.AsNoTracking()
+            .Where(document => document.Id == documentId)
+            .Select(document => document.FilePath)
+            .SingleAsync());
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var fullPath = Path.Combine(
+            environment.ContentRootPath,
+            "wwwroot",
+            filePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "shared capability content");
+
+        try
+        {
+            var attach = await Client.PostAsJsonAsync(
+                $"/api/tenders/{tenderId}/checklist/attach-from-library",
+                new { items = new[] { new { checklistItemId = itemId, capabilityDocumentId = documentId } } });
+            attach.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var content = await Client.GetAsync(
+                $"/api/tenders/{tenderId}/checklist/{itemId}/content");
+            content.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await content.Content.ReadAsStringAsync()).Should().Be("shared capability content");
+
+            var delete = await Client.DeleteAsync($"/api/capability-documents/{documentId}");
+            delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await Client.GetAsync($"/api/tenders/{tenderId}/checklist/{itemId}/content"))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
     }
 
     [Fact]

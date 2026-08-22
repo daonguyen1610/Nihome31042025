@@ -283,8 +283,10 @@ public class TenderService(
         UpdateTenderChecklistItemRequest request, int callerUserId, CancellationToken ct = default)
     {
         var item = await db.TenderChecklistItems
+            .Include(i => i.Tender)
             .FirstOrDefaultAsync(i => i.Id == itemId && i.TenderId == tenderId, ct);
         if (item is null) return null;
+        GuardChecklistMutable(item.Tender);
 
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
@@ -322,7 +324,7 @@ public class TenderService(
 
         // Bump parent tender's UpdatedAt so list views + optimistic-UI
         // detect the change without a targeted reload.
-        var tender = await db.Tenders.FirstAsync(t => t.Id == tenderId, ct);
+        var tender = item.Tender;
         tender.UpdatedAt = now;
         tender.UpdatedByUserId = callerUserId;
 
@@ -336,22 +338,50 @@ public class TenderService(
     public async Task<TenderResponse?> AttachChecklistFileAsync(int tenderId, int itemId,
         string filePath, string originalFileName, int callerUserId, CancellationToken ct = default)
     {
-        var item = await db.TenderChecklistItems
-            .FirstOrDefaultAsync(i => i.Id == itemId && i.TenderId == tenderId, ct);
-        if (item is null) return null;
+        var tender = await db.Tenders
+            .Include(t => t.Customer)
+            .Include(t => t.Preparer)
+            .Include(t => t.ChecklistItems).ThenInclude(i => i.Owner)
+            .FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        var item = tender?.ChecklistItems.FirstOrDefault(i => i.Id == itemId);
+        if (tender is null || item is null) return null;
+        GuardChecklistMutable(tender);
 
         item.FilePath = filePath;
         item.OriginalFileName = originalFileName;
+        item.CapabilityDocumentId = null;
         AutoAdvanceIfUnfinished(item);
         var now = DateTime.UtcNow;
         item.UpdatedAt = now;
 
-        var tender = await db.Tenders.FirstAsync(t => t.Id == tenderId, ct);
         tender.UpdatedAt = now;
         tender.UpdatedByUserId = callerUserId;
 
         await db.SaveChangesAsync(ct);
-        return await GetAsync(tenderId, ct);
+        return MapDetail(tender);
+    }
+
+    public async Task<TenderChecklistFileReference?> GetChecklistFileAsync(
+        int tenderId, int itemId, CancellationToken ct = default)
+    {
+        return await db.TenderChecklistItems
+            .AsNoTracking()
+            .Where(item => item.Id == itemId
+                && item.TenderId == tenderId
+                && item.FilePath != null
+                && item.OriginalFileName != null)
+            .Select(item => new TenderChecklistFileReference(item.FilePath!, item.OriginalFileName!))
+            .SingleOrDefaultAsync(ct);
+    }
+
+    public Task<bool> IsChecklistFileAttachedAsync(
+        int tenderId, int itemId, string filePath, CancellationToken ct = default)
+    {
+        return db.TenderChecklistItems.AsNoTracking().AnyAsync(
+            item => item.TenderId == tenderId
+                && item.Id == itemId
+                && item.FilePath == filePath,
+            ct);
     }
 
     public async Task<TenderResponse?> AttachChecklistFromLibraryAsync(int tenderId,
@@ -359,6 +389,7 @@ public class TenderService(
     {
         var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
         if (tender is null) return null;
+        GuardChecklistMutable(tender);
 
         if (request.Items is null || request.Items.Count == 0)
         {
@@ -392,6 +423,7 @@ public class TenderService(
             var doc = docs[pair.CapabilityDocumentId];
             item.FilePath = doc.FilePath;
             item.OriginalFileName = doc.OriginalFileName;
+            item.CapabilityDocumentId = doc.Id;
             AutoAdvanceIfUnfinished(item);
             item.UpdatedAt = now;
         }
@@ -527,6 +559,15 @@ public class TenderService(
         if (tender.Status is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled)
         {
             throw new TenderOperationException("Gói thầu đã ở trạng thái kết thúc, không thể đánh dấu lại.");
+        }
+    }
+
+    private static void GuardChecklistMutable(Tender tender)
+    {
+        if (tender.Status is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled)
+        {
+            throw new TenderOperationException(
+                "Gói thầu đã ở trạng thái kết thúc, không thể chỉnh sửa checklist.");
         }
     }
 

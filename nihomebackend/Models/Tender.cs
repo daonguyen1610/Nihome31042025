@@ -96,6 +96,10 @@ public class TenderChecklistItem
     /// <summary>Original client-provided filename (preserved for downloads).</summary>
     public string? OriginalFileName { get; set; }
 
+    /// <summary>Shared capability source when this row references a library document.</summary>
+    public int? CapabilityDocumentId { get; set; }
+    public CapabilityDocument? CapabilityDocument { get; set; }
+
     public int SortOrder { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

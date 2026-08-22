@@ -184,7 +184,7 @@ Create quotations using investment rate or preliminary BOQ. Calculate discounts,
 
 #### 3.1.5 Tender Management
 
-Manage tender packages with deadlines and preparation status. Maintain a capability document repository. Track tender results (won, lost, in preparation).
+Manage tender packages with deadlines and preparation status. Every document checklist item can use one existing document from the shared capability-document library or accept a new direct upload. The selected file is previewed securely inside the Tender detail page. Checklist status, ownership, deadlines, and files become read-only after the tender is Won, Lost, or Cancelled. Track tender results across preparation, submission, win, loss, and cancellation.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

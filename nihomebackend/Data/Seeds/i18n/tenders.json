@@ -60,7 +60,7 @@
   { "key": "tenders.detail.tab.result", "category": "tenders", "vi": "Kết quả & Lịch sử", "en": "Result & history", "zh": "结果与历史", "ja": "結果と履歴" },
 
   { "key": "tenders.detail.checklist.title", "category": "tenders", "vi": "Danh mục hồ sơ cần chuẩn bị", "en": "Documents to prepare", "zh": "需准备的资料", "ja": "準備する資料" },
-  { "key": "tenders.detail.checklist.pickFromLibrary", "category": "tenders", "vi": "Chọn từ Hồ sơ năng lực", "en": "Pick from library", "zh": "从资料库选择", "ja": "資料庫から選択" },
+  { "key": "tenders.detail.checklist.pickFromLibrary", "category": "tenders", "vi": "Thư viện", "en": "Library", "zh": "资料库", "ja": "資料庫" },
   { "key": "tenders.detail.checklist.upload", "category": "tenders", "vi": "Tải file lên", "en": "Upload file", "zh": "上传文件", "ja": "ファイルをアップロード" },
   { "key": "tenders.detail.checklist.replace", "category": "tenders", "vi": "Thay file", "en": "Replace file", "zh": "替换文件", "ja": "ファイル差し替え" },
   { "key": "tenders.detail.checklist.download", "category": "tenders", "vi": "Tải xuống", "en": "Download", "zh": "下载", "ja": "ダウンロード" },
@@ -81,11 +81,11 @@
   { "key": "tenders.detail.checklist.itemStatus.Done", "category": "tenders", "vi": "Đã xong", "en": "Done", "zh": "已完成", "ja": "完了" },
   { "key": "tenders.detail.checklist.itemStatus.Submitted", "category": "tenders", "vi": "Đã nộp", "en": "Submitted", "zh": "已提交", "ja": "提出済み" },
 
-  { "key": "tenders.detail.library.title", "category": "tenders", "vi": "Chọn hồ sơ năng lực để đính kèm", "en": "Pick capability documents to attach", "zh": "选择要附加的资质文件", "ja": "添付する資格文書を選択" },
-  { "key": "tenders.detail.library.subtitle", "category": "tenders", "vi": "Mỗi mục checklist chỉ giữ một file – chọn nguồn từ thư viện dùng chung.", "en": "Each checklist row keeps one file — pick the source from the shared library.", "zh": "每个清单项仅保留一个文件，请从共享资料库中选择来源。", "ja": "各チェックリストは 1 ファイルまで。共有ライブラリから選択します。" },
-  { "key": "tenders.detail.library.pickTarget", "category": "tenders", "vi": "Chọn mục checklist", "en": "Pick checklist row", "zh": "选择清单项", "ja": "チェックリスト行を選択" },
+  { "key": "tenders.detail.library.title", "category": "tenders", "vi": "Chọn tài liệu từ thư viện dùng chung", "en": "Pick from the shared document library", "zh": "从共享文档库选择", "ja": "共有文書ライブラリから選択" },
+  { "key": "tenders.detail.library.subtitle", "category": "tenders", "vi": "Chọn một tài liệu có sẵn cho mục hồ sơ này hoặc quay lại để tải file mới lên.", "en": "Pick one existing document for this checklist item, or go back to upload a new file.", "zh": "为此清单项选择一个现有文档，或返回上传新文件。", "ja": "このチェック項目に既存文書を1件選ぶか、戻って新しいファイルをアップロードしてください。" },
+  { "key": "tenders.detail.library.pickTarget", "category": "tenders", "vi": "Đính kèm vào mục", "en": "Attach to item", "zh": "附加到项目", "ja": "添付先の項目" },
   { "key": "tenders.detail.library.confirm", "category": "tenders", "vi": "Đính kèm", "en": "Attach", "zh": "附加", "ja": "添付" },
-  { "key": "tenders.detail.library.empty", "category": "tenders", "vi": "Chưa có tài liệu trong Hồ sơ năng lực. Vui lòng bổ sung trước.", "en": "The capability library is empty. Please add documents first.", "zh": "资质资料库为空，请先添加。", "ja": "資格資料庫が空です。先に登録してください。" },
+  { "key": "tenders.detail.library.empty", "category": "tenders", "vi": "Thư viện dùng chung chưa có tài liệu. Vui lòng bổ sung tại Hồ sơ năng lực hoặc tải file mới trực tiếp cho mục này.", "en": "The shared library is empty. Add a document under Capability documents or upload a new file directly to this item.", "zh": "共享资料库暂无文档。请在资质文档中添加，或直接为此项目上传新文件。", "ja": "共有ライブラリに文書がありません。資格文書で追加するか、この項目へ直接新規ファイルをアップロードしてください。" },
 
   { "key": "tenders.detail.result.summaryOpen", "category": "tenders", "vi": "Chưa có kết quả — cập nhật khi có phản hồi chính thức.", "en": "No result yet — update once the outcome is confirmed.", "zh": "尚无结果 — 一旦确认请更新。", "ja": "結果未定 — 確定次第更新してください。" },
   { "key": "tenders.detail.result.wonBadge", "category": "tenders", "vi": "Trúng thầu", "en": "Won the bid", "zh": "中标", "ja": "落札" },

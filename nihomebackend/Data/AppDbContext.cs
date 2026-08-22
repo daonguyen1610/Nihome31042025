@@ -831,7 +831,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(i => i.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(i => i.CapabilityDocument)
+                .WithMany()
+                .HasForeignKey(i => i.CapabilityDocumentId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(i => i.TenderId);
+            b.HasIndex(i => i.CapabilityDocumentId);
             b.HasIndex(i => new { i.TenderId, i.SortOrder });
         });
 

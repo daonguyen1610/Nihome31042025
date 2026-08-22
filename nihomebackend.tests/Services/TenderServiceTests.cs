@@ -364,6 +364,8 @@ public class TenderServiceTests : IDisposable
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var itemId = created.ChecklistItems[0].Id;
+        var storedItem = await _db.TenderChecklistItems.SingleAsync(item => item.Id == itemId);
+        storedItem.CapabilityDocumentId = 123;
 
         var updated = await _sut.AttachChecklistFileAsync(created.Id, itemId,
             "/files/tenders/cl-abc.pdf", "hs-nang-luc.pdf", _userId);
@@ -373,6 +375,8 @@ public class TenderServiceTests : IDisposable
         Assert.Equal("/files/tenders/cl-abc.pdf", it.FilePath);
         Assert.Equal("hs-nang-luc.pdf", it.OriginalFileName);
         Assert.Equal("Done", it.Status);
+        Assert.Null((await _db.TenderChecklistItems.AsNoTracking()
+            .SingleAsync(item => item.Id == itemId)).CapabilityDocumentId);
     }
 
     [Fact]
@@ -410,6 +414,8 @@ public class TenderServiceTests : IDisposable
         Assert.Equal("/files/capability/abc.pdf", it.FilePath);
         Assert.Equal("iso-9001.pdf", it.OriginalFileName);
         Assert.Equal("Done", it.Status);
+        Assert.Equal(doc.Id, (await _db.TenderChecklistItems.AsNoTracking()
+            .SingleAsync(item => item.Id == it.Id)).CapabilityDocumentId);
     }
 
     [Fact]
@@ -459,6 +465,87 @@ public class TenderServiceTests : IDisposable
                     }
                 ],
             }, _userId));
+    }
+
+    public static IEnumerable<object[]> TerminalChecklistMutations()
+    {
+        var statuses = new[] { TenderStatus.Won, TenderStatus.Lost, TenderStatus.Cancelled };
+        var operations = new[] { "patch", "upload", "library" };
+        return statuses.SelectMany(status => operations.Select(operation => new object[] { status, operation }));
+    }
+
+    [Theory]
+    [MemberData(nameof(TerminalChecklistMutations))]
+    public async Task ChecklistMutation_TerminalTender_ThrowsAndPreservesItem(
+        TenderStatus status, string operation)
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = created.ChecklistItems[0].Id;
+        var tender = await _db.Tenders.FirstAsync(item => item.Id == created.Id);
+        tender.Status = status;
+
+        var doc = new CapabilityDocument
+        {
+            Name = "Terminal test document",
+            TagCode = "capability",
+            FilePath = "/files/capability/terminal.pdf",
+            OriginalFileName = "terminal.pdf",
+            FileSize = 1,
+            ContentType = "application/pdf",
+        };
+        _db.CapabilityDocuments.Add(doc);
+        await _db.SaveChangesAsync();
+
+        Task Act() => operation switch
+        {
+            "patch" => _sut.UpdateChecklistItemAsync(created.Id, itemId,
+                new UpdateTenderChecklistItemRequest { Status = "Done" }, _userId),
+            "upload" => _sut.AttachChecklistFileAsync(created.Id, itemId,
+                "/files/tenders/blocked.pdf", "blocked.pdf", _userId),
+            "library" => _sut.AttachChecklistFromLibraryAsync(created.Id,
+                new AttachTenderChecklistFromLibraryRequest
+                {
+                    Items =
+                    [
+                        new AttachTenderChecklistFromLibraryItem
+                        {
+                            ChecklistItemId = itemId,
+                            CapabilityDocumentId = doc.Id,
+                        }
+                    ],
+                }, _userId),
+            _ => throw new InvalidOperationException($"Unknown operation {operation}"),
+        };
+
+        await Assert.ThrowsAsync<TenderOperationException>(Act);
+
+        var unchanged = await _db.TenderChecklistItems.AsNoTracking()
+            .SingleAsync(item => item.Id == itemId);
+        Assert.Equal(TenderChecklistItemStatus.NotStarted, unchanged.Status);
+        Assert.Null(unchanged.FilePath);
+        Assert.Null(unchanged.OriginalFileName);
+    }
+
+    [Fact]
+    public async Task GetChecklistFileAsync_RequiresMatchingTenderAndItem()
+    {
+        var first = await _sut.CreateAsync(ValidCreate(), _userId);
+        var second = await _sut.CreateAsync(ValidCreate(), _userId);
+        var itemId = first.ChecklistItems[0].Id;
+        await _sut.AttachChecklistFileAsync(first.Id, itemId,
+            "/files/tenders/cl-owned.pdf", "owned.pdf", _userId);
+
+        var file = await _sut.GetChecklistFileAsync(first.Id, itemId);
+
+        Assert.NotNull(file);
+        Assert.Equal("/files/tenders/cl-owned.pdf", file!.FilePath);
+        Assert.Equal("owned.pdf", file.OriginalFileName);
+        Assert.True(await _sut.IsChecklistFileAttachedAsync(
+            first.Id, itemId, "/files/tenders/cl-owned.pdf"));
+        Assert.False(await _sut.IsChecklistFileAttachedAsync(
+            first.Id, itemId, "/files/tenders/other.pdf"));
+        Assert.Null(await _sut.GetChecklistFileAsync(second.Id, itemId));
+        Assert.Null(await _sut.GetChecklistFileAsync(first.Id, 999_999));
     }
 
     // ---------------- NIH-97 Mark Won / Lost ----------------

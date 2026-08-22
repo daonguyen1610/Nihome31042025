@@ -26,8 +26,8 @@ public class TendersController(
     IAuditLogger audit) : ControllerBase
 {
     // Upload limits mirror ContractsController — 20 MB, same extension
-    // whitelist. Physical files land under wwwroot/files/tenders so they
-    // can be served directly by the static file middleware.
+    // whitelist. Physical files land under wwwroot/files/tenders and are
+    // served only through the resource-bound content endpoint below.
     private const long MaxFileSizeBytes = 20L * 1024 * 1024;
     private const string StorageSubfolder = "tenders";
 
@@ -180,6 +180,24 @@ public class TendersController(
         }
     }
 
+    [HttpGet("{id:int}/checklist/{itemId:int}/content")]
+    [RequirePermission("crm.tenders", "view")]
+    public async Task<IActionResult> GetChecklistFileContent(
+        int id, int itemId, CancellationToken ct)
+    {
+        var file = await svc.GetChecklistFileAsync(id, itemId, ct);
+        if (file is null) return NotFound();
+
+        var fullPath = ResolveManagedChecklistFile(file.FilePath);
+        if (fullPath is null || !System.IO.File.Exists(fullPath)) return NotFound();
+
+        return PhysicalFile(
+            fullPath,
+            GetContentType(Path.GetExtension(fullPath)),
+            file.OriginalFileName,
+            enableRangeProcessing: true);
+    }
+
     [HttpPost("{id:int}/checklist/{itemId:int}/upload")]
     [Consumes("multipart/form-data")]
     [RequirePermission("crm.tenders", "manage")]
@@ -193,18 +211,43 @@ public class TendersController(
         if (stored.Result is BadRequestObjectResult bad) return bad;
         if (stored.Payload is null) return BadRequest(new { message = "Không upload được file." });
 
-        var updated = await svc.AttachChecklistFileAsync(id, itemId,
-            stored.Payload.filePath, stored.Payload.originalFileName, userId.Value, ct);
-        if (updated is null) return NotFound();
-
-        audit.Log(new AuditEvent
+        try
         {
-            Action = "tender.checklist.upload",
-            ResourceType = EntityTypes.Tender,
-            ResourceId = id.ToString(),
-            Message = $"Tender #{id} checklist #{itemId} — {stored.Payload.originalFileName}",
-        });
-        return Ok(updated);
+            var updated = await svc.AttachChecklistFileAsync(id, itemId,
+                stored.Payload.filePath, stored.Payload.originalFileName, userId.Value, ct);
+            if (updated is null)
+            {
+                DeleteStoredFile(stored.Payload.fullPath);
+                return NotFound();
+            }
+
+            audit.Log(new AuditEvent
+            {
+                Action = "tender.checklist.upload",
+                ResourceType = EntityTypes.Tender,
+                ResourceId = id.ToString(),
+                Message = $"Tender #{id} checklist #{itemId} — {stored.Payload.originalFileName}",
+            });
+            return Ok(updated);
+        }
+        catch (TenderOperationException ex)
+        {
+            DeleteStoredFile(stored.Payload.fullPath);
+            return LogAndBadRequest("tender.checklist.upload", ex, id);
+        }
+        catch
+        {
+            try
+            {
+                var attached = await svc.IsChecklistFileAttachedAsync(
+                    id, itemId, stored.Payload.filePath, CancellationToken.None);
+                if (!attached) DeleteStoredFile(stored.Payload.fullPath);
+            }
+            catch
+            {
+            }
+            throw;
+        }
     }
 
     [HttpPost("{id:int}/checklist/attach-from-library")]
@@ -296,7 +339,12 @@ public class TendersController(
 
     // -------- upload helpers --------
 
-    private sealed record UploadedPayload(string filePath, string originalFileName, long fileSize, string contentType);
+    private sealed record UploadedPayload(
+        string filePath,
+        string originalFileName,
+        long fileSize,
+        string contentType,
+        string fullPath);
 
     private struct StoredFile
     {
@@ -327,9 +375,15 @@ public class TendersController(
         Directory.CreateDirectory(uploadDir);
         var storedName = $"{kindTag}-{Guid.NewGuid():N}{extension}";
         var storedPath = Path.Combine(uploadDir, storedName);
-        await using (var stream = new FileStream(storedPath, FileMode.Create))
+        try
         {
+            await using var stream = new FileStream(storedPath, FileMode.CreateNew);
             await file.CopyToAsync(stream, ct);
+        }
+        catch
+        {
+            DeleteStoredFile(storedPath);
+            throw;
         }
         return new StoredFile
         {
@@ -337,9 +391,58 @@ public class TendersController(
                 $"/files/{StorageSubfolder}/{storedName}",
                 file.FileName,
                 file.Length,
-                string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType),
+                string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                storedPath),
         };
     }
+
+    private string? ResolveManagedChecklistFile(string filePath)
+    {
+        string? subfolder = filePath switch
+        {
+            var path when path.StartsWith("/files/tenders/", StringComparison.Ordinal) => "tenders",
+            var path when path.StartsWith("/files/capability/", StringComparison.Ordinal) => "capability",
+            _ => null,
+        };
+        if (subfolder is null) return null;
+
+        var fileName = Path.GetFileName(filePath);
+        if (string.IsNullOrWhiteSpace(fileName)
+            || !string.Equals(filePath, $"/files/{subfolder}/{fileName}", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var extension = Path.GetExtension(fileName);
+        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension)) return null;
+        return Path.Combine(env.ContentRootPath, "wwwroot", "files", subfolder, fileName);
+    }
+
+    private static void DeleteStoredFile(string fullPath)
+    {
+        try
+        {
+            if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
+    }
+
+    private static string GetContentType(string extension) => extension.ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".doc" => "application/msword",
+        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xls" => "application/vnd.ms-excel",
+        ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        _ => "application/octet-stream",
+    };
 
     private int? GetUserId()
     {
