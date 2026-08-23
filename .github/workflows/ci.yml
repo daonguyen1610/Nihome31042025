@@ -32,6 +32,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Install PDF fonts
+        run: sudo apt-get update && sudo apt-get install -y fontconfig fonts-noto-core fonts-noto-cjk
+
       - name: Restore
         run: dotnet restore
 
