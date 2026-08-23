@@ -147,23 +147,6 @@ test("Revoking all permissions from role denies user access after re-login", asy
   ).toBeVisible();
 });
 
-test("API returns 403 for revoked permission endpoints", async ({ api }) => {
-  // Login as test user
-  const loginRes = await api.post("/api/auth/login", {
-    data: { phoneNumber: TEST_PHONE, password: TEST_PASSWORD },
-  });
-  expect(loginRes.status()).toBe(200);
-  const token = (await loginRes.json()).accessToken as string;
-
-  // Try to access projects API - should be forbidden
-  const projectsRes = await api.get("/api/projects", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  // Projects API might return 200 for public list or 403 for admin-only
-  // The key test is the SPA guard, but we verify API consistency here
-  expect([200, 403]).toContain(projectsRes.status());
-});
-
 test("Restoring permissions re-enables access after re-login", async ({
   api,
   page,

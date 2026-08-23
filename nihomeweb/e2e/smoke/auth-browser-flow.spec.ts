@@ -72,9 +72,13 @@ test.describe("Browser authentication flow", () => {
     await passwordInput.fill("wrongpassword");
     await loginButton.click();
 
-    // Should show error message (toast or inline)
     await expect(
       page.getByText(/invalid|sai|không đúng|lỗi|error|failed/i).first()
     ).toBeVisible({ timeout: 5000 });
+    await expect(page).toHaveURL(/\/login(?:\?|$)/);
+    await expect(page.getByRole("heading", { name: /bảng điều khiển|dashboard|tổng quan/i }))
+      .toHaveCount(0);
+    expect(await page.context().cookies()).toEqual([]);
+    expect(await page.evaluate(() => localStorage.getItem("token"))).toBeNull();
   });
 });

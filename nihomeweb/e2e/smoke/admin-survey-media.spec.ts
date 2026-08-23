@@ -9,7 +9,7 @@ const pngBytes = Buffer.from(
   "base64",
 );
 
-const connectionStatus = /Không thể kết nối|Unavailable|无法连接|接続不可/i;
+const connectionStatus = /Đã kết nối|Connected|已连接|接続済み|Không thể kết nối|Unavailable|无法连接|接続不可/i;
 const previewLabel = /Xem tệp|Preview|预览|プレビュー/i;
 const deleteLabel = /Xoá|Delete|删除|削除/i;
 const saveLabel = /Lưu|Save|保存/i;

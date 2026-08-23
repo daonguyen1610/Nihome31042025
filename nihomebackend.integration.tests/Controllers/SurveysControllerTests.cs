@@ -358,6 +358,19 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         syncEntry.GetProperty("attemptCount").GetInt32().Should().Be(0);
         syncEntry.GetProperty("maxAttempts").GetInt32().Should().Be(3);
 
+    }
+
+    [Fact]
+    public async Task ExportPdf_ValidSurvey_ReturnsLocalizedPdfWithMediaNote()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("PDF export");
+        const string note = "Ảnh hiện trạng móng";
+        using (var form = CreateUploadForm("foundation.jpg", JpegBytes, note))
+        {
+            (await Client.PostAsync($"/api/surveys/{surveyId}/media", form))
+                .StatusCode.Should().Be(HttpStatusCode.Created);
+        }
         await WithDbAsync(async db =>
         {
             await UpsertTranslationAsync(db, "surveys.pdf.title", "en", "SURVEY REPORT");
@@ -366,10 +379,12 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
             await db.SaveChangesAsync();
         });
 
-        var pdfResponse = await Client.GetAsync($"/api/surveys/{surveyId}/export.pdf?lang=en");
-        pdfResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        pdfResponse.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
-        var pdf = await pdfResponse.Content.ReadAsByteArrayAsync();
+        var response = await Client.GetAsync($"/api/surveys/{surveyId}/export.pdf?lang=en");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+        response.Content.Headers.ContentDisposition!.FileNameStar.Should().Be($"survey-{surveyId}.pdf");
+        var pdf = await response.Content.ReadAsByteArrayAsync();
         Encoding.ASCII.GetString(pdf, 0, 5).Should().Be("%PDF-");
         using var pdfDocument = PdfDocument.Open(pdf);
         var pdfText = string.Join(
@@ -378,9 +393,39 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         pdfText.Should().Contain("SURVEY REPORT");
         pdfText.Should().Contain("Geology");
         pdfText.Should().Contain(note);
+    }
 
-        var invalidLanguage = await Client.GetAsync($"/api/surveys/{surveyId}/export.pdf?lang=fr");
-        invalidLanguage.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    [Fact]
+    public async Task ExportPdf_WithoutAuthenticationOrPermission_IsRejected()
+    {
+        (await Client.GetAsync("/api/surveys/9999999/export.pdf"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync("/api/surveys/9999999/export.pdf"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task ExportPdf_UnknownSurvey_ReturnsNotFound()
+    {
+        await AuthenticateAsSalesManagerAsync();
+
+        (await Client.GetAsync("/api/surveys/9999999/export.pdf"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task ExportPdf_UnsupportedLanguage_ReturnsActionableBadRequest()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("Invalid PDF language");
+
+        var response = await Client.GetAsync($"/api/surveys/{surveyId}/export.pdf?lang=fr");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("message").GetString()
+            .Should().Contain("vi, en, zh hoặc ja");
     }
 
     [Fact]

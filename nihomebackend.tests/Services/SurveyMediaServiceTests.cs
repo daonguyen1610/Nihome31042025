@@ -213,6 +213,14 @@ public sealed class SurveyMediaServiceTests : IDisposable
         Assert.Contains("photo-60.jpg", pages[^1]);
     }
 
+    [Fact]
+    public async Task ExportPdfAsync_UnknownSurvey_ReturnsNull()
+    {
+        var pdf = await service.ExportPdfAsync(9999999, "en");
+
+        Assert.Null(pdf);
+    }
+
     [Theory]
     [InlineData("vi", "BÁO CÁO KHẢO SÁT", "Địa chất", "Cần chú ý")]
     [InlineData("en", "SURVEY REPORT", "Geology", "Needs attention")]
@@ -256,6 +264,19 @@ public sealed class SurveyMediaServiceTests : IDisposable
             service.ExportPdfAsync(survey.Id, language));
 
         Assert.Contains("vi, en, zh hoặc ja", exception.Message);
+    }
+
+    [Fact]
+    public async Task ExportPdfAsync_LanguageIsCaseInsensitiveAndTrimmed()
+    {
+        var survey = await AddSurveyAsync();
+        AddTranslation("surveys.pdf.title", "en", "SURVEY REPORT");
+        await db.SaveChangesAsync();
+
+        var pdf = await service.ExportPdfAsync(survey.Id, " EN ");
+        var document = string.Join('\n', ExtractPdfPages(pdf!));
+
+        Assert.Contains("SURVEY REPORT", document);
     }
 
     [Fact]

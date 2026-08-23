@@ -462,12 +462,23 @@ public class TendersControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
         var tenderId = await CreateTenderAsync();
         var oppId = await CreateOpportunityAsync();
+        var before = await WithDbAsync(db => db.Tenders.AsNoTracking()
+            .SingleAsync(tender => tender.Id == tenderId));
 
         var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new
         {
             opportunityId = oppId,
         });
         res.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var after = await WithDbAsync(db => db.Tenders.AsNoTracking()
+            .SingleAsync(tender => tender.Id == tenderId));
+        after.Status.Should().Be(before.Status);
+        after.WonOpportunityId.Should().Be(before.WonOpportunityId);
+        after.LostReasonCode.Should().Be(before.LostReasonCode);
+        after.LostNote.Should().Be(before.LostNote);
+        after.ClosedAt.Should().Be(before.ClosedAt);
+        after.UpdatedAt.Should().Be(before.UpdatedAt);
+        after.UpdatedByUserId.Should().Be(before.UpdatedByUserId);
     }
 
     [Fact]

@@ -200,8 +200,22 @@ public class HandoverRecordServiceTests : IDisposable
             () => _sut.TransitionAsync(created.Id,
                 new TransitionHandoverStatusRequest { Status = "HandedOver" }, _userId, false));
         Assert.Contains("/complete", endpointException.Message);
+        var historyCountBefore = await _db.Set<HandoverStatusHistory>()
+            .CountAsync(history => history.HandoverRecordId == created.Id);
         await Assert.ThrowsAsync<HandoverRecordOperationException>(
             () => _sut.CompleteAsync(created.Id, new TransitionHandoverStatusRequest(), _userId, false));
+
+        _db.ChangeTracker.Clear();
+        var unchanged = await _db.HandoverRecords.AsNoTracking()
+            .SingleAsync(record => record.Id == created.Id);
+        Assert.Equal(HandoverStatus.ReadyForHandover, unchanged.Status);
+        Assert.Null(unchanged.ActualHandoverDate);
+        Assert.Null(unchanged.HandedOverAt);
+        Assert.Null(unchanged.HandedOverByUserId);
+        Assert.Equal(0, unchanged.ReopenCount);
+        Assert.Equal("[]", unchanged.Signatories);
+        Assert.Equal(historyCountBefore, await _db.Set<HandoverStatusHistory>()
+            .CountAsync(history => history.HandoverRecordId == created.Id));
     }
 
     [Fact]
