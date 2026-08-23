@@ -1,6 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using NihomeBackend.Models;
+using NihomeBackend.Services.GoogleDrive;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -256,5 +263,378 @@ public class SurveysControllerTests : IntegrationTestBase
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+}
+
+public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
+{
+    private static readonly byte[] JpegBytes = [0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0xff, 0xd9];
+    private readonly HashSet<int> createdSurveyIds = [];
+
+    public SurveyMediaControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
+
+    [Fact]
+    public async Task Upload_WithoutAuthenticationOrPermission_IsRejected()
+    {
+        using (var anonymousForm = CreateUploadForm("anonymous.jpg", JpegBytes))
+        {
+            var anonymousResponse = await Client.PostAsync("/api/surveys/9999999/media", anonymousForm);
+            anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        using var forbiddenForm = CreateUploadForm("forbidden.jpg", JpegBytes);
+        var forbiddenResponse = await Client.PostAsync("/api/surveys/9999999/media", forbiddenForm);
+        forbiddenResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task DriveConnection_WhenOAuthIsUnavailable_ReportsPushOnlyWithoutExposingSecrets()
+    {
+        await AuthenticateAsSalesManagerAsync();
+
+        var response = await Client.GetAsync("/api/surveys/drive-connection");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var status = await ReadJsonAsync(response);
+        status.GetProperty("status").GetString().Should().Be("Unavailable");
+        status.GetProperty("syncMode").GetString().Should().Be("PushOnly");
+        status.ToString().Should().NotContain("ClientSecret")
+            .And.NotContain("refresh_token")
+            .And.NotContain("client_secret");
+    }
+
+    [Fact]
+    public async Task Upload_Jpg_RemainsPending_AndIsAvailableThroughParentBoundReadEndpoints()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("Media detail");
+        var otherSurveyId = await CreateSurveyAsync("Wrong media parent");
+        const string note = "Ảnh hiện trạng móng";
+        const decimal latitude = 10.7769m;
+        const decimal longitude = 106.7009m;
+
+        using var form = CreateUploadForm("foundation.jpg", JpegBytes, note, latitude, longitude);
+        var uploadResponse = await Client.PostAsync($"/api/surveys/{surveyId}/media", form);
+
+        uploadResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var uploaded = await ReadJsonAsync(uploadResponse);
+        var mediaId = uploaded.GetProperty("id").GetInt64();
+        uploaded.GetProperty("originalFileName").GetString().Should().Be("foundation.jpg");
+        uploaded.GetProperty("contentType").GetString().Should().Be("image/jpeg");
+        uploaded.GetProperty("note").GetString().Should().Be(note);
+        uploaded.GetProperty("latitude").GetDecimal().Should().Be(latitude);
+        uploaded.GetProperty("longitude").GetDecimal().Should().Be(longitude);
+        uploaded.GetProperty("syncStatus").GetString().Should().Be("Pending");
+        uploaded.GetProperty("syncAttemptCount").GetInt32().Should().Be(0);
+        uploaded.GetProperty("contentUrl").GetString().Should()
+            .Be($"/api/surveys/{surveyId}/media/{mediaId}/content");
+
+        var persisted = await WithDbAsync(db => db.SurveyMedia.AsNoTracking().SingleAsync(media => media.Id == mediaId));
+        persisted.SyncStatus.Should().Be(SurveyMediaSyncStatus.Pending);
+        persisted.SyncAttemptCount.Should().Be(0);
+        persisted.DriveFileId.Should().BeNull();
+
+        var detailResponse = await Client.GetAsync($"/api/surveys/{surveyId}");
+        detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var detail = await ReadJsonAsync(detailResponse);
+        detail.GetProperty("media").EnumerateArray().Should()
+            .ContainSingle(media => media.GetProperty("id").GetInt64() == mediaId);
+        detail.GetProperty("checklistResults").GetArrayLength().Should().BeGreaterThan(0);
+
+        var contentResponse = await Client.GetAsync($"/api/surveys/{surveyId}/media/{mediaId}/content");
+        contentResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        contentResponse.Content.Headers.ContentType!.MediaType.Should().Be("image/jpeg");
+        (await contentResponse.Content.ReadAsByteArrayAsync()).Should().Equal(JpegBytes);
+        (await Client.GetAsync($"/api/surveys/{otherSurveyId}/media/{mediaId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var syncLogResponse = await Client.GetAsync($"/api/surveys/{surveyId}/sync-log");
+        syncLogResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var syncEntry = (await ReadJsonAsync(syncLogResponse)).EnumerateArray().Single();
+        syncEntry.GetProperty("mediaId").GetInt64().Should().Be(mediaId);
+        syncEntry.GetProperty("fileName").GetString().Should().Be("foundation.jpg");
+        syncEntry.GetProperty("status").GetString().Should().Be("Pending");
+        syncEntry.GetProperty("attemptCount").GetInt32().Should().Be(0);
+        syncEntry.GetProperty("maxAttempts").GetInt32().Should().Be(3);
+
+        await WithDbAsync(async db =>
+        {
+            await UpsertTranslationAsync(db, "surveys.pdf.title", "en", "SURVEY REPORT");
+            await UpsertTranslationAsync(
+                db, "masterData.survey_checklist_default.geology.label", "en", "Geology");
+            await db.SaveChangesAsync();
+        });
+
+        var pdfResponse = await Client.GetAsync($"/api/surveys/{surveyId}/export.pdf?lang=en");
+        pdfResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        pdfResponse.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+        var pdf = await pdfResponse.Content.ReadAsByteArrayAsync();
+        Encoding.ASCII.GetString(pdf, 0, 5).Should().Be("%PDF-");
+        using var pdfDocument = PdfDocument.Open(pdf);
+        var pdfText = string.Join(
+            '\n',
+            pdfDocument.GetPages().Select(page => ContentOrderTextExtractor.GetText(page)));
+        pdfText.Should().Contain("SURVEY REPORT");
+        pdfText.Should().Contain("Geology");
+        pdfText.Should().Contain(note);
+
+        var invalidLanguage = await Client.GetAsync($"/api/surveys/{surveyId}/export.pdf?lang=fr");
+        invalidLanguage.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Upload_UnsupportedExtension_ReturnsBadRequestWithMessage()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("Unsupported media");
+        using var form = CreateUploadForm("malware.exe", [0x4d, 0x5a]);
+
+        var response = await Client.PostAsync($"/api/surveys/{surveyId}/media", form);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var message = (await ReadJsonAsync(response)).GetProperty("message").GetString();
+        message.Should().Contain("không được hỗ trợ").And.Contain("JPG");
+        (await WithDbAsync(db => db.SurveyMedia.CountAsync(media => media.SurveyId == surveyId))).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Retry_PendingAndFailedMedia_RequeuesUntilThirdAttemptIsTerminal()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("Retry media");
+        var mediaId = await UploadJpegAsync(surveyId, "retry.jpg");
+
+        var pendingResponse = await Client.PostAsync(
+            $"/api/surveys/{surveyId}/media/{mediaId}/retry-sync", null);
+        pendingResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(pendingResponse)).GetProperty("syncStatus").GetString().Should().Be("Pending");
+
+        await SetSyncFailureAsync(mediaId, 2, "Drive unavailable");
+        var failedResponse = await Client.PostAsync(
+            $"/api/surveys/{surveyId}/media/{mediaId}/retry-sync", null);
+        failedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var retried = await ReadJsonAsync(failedResponse);
+        retried.GetProperty("syncStatus").GetString().Should().Be("Pending");
+        retried.GetProperty("syncAttemptCount").GetInt32().Should().Be(2);
+        retried.GetProperty("syncError").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+
+        await SetSyncFailureAsync(mediaId, 3, "Final Drive failure");
+        var terminalResponse = await Client.PostAsync(
+            $"/api/surveys/{surveyId}/media/{mediaId}/retry-sync", null);
+        terminalResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(terminalResponse)).GetProperty("message").GetString().Should().Contain("3 lần");
+
+        var terminal = await WithDbAsync(db => db.SurveyMedia.AsNoTracking().SingleAsync(media => media.Id == mediaId));
+        terminal.SyncStatus.Should().Be(SurveyMediaSyncStatus.Failed);
+        terminal.SyncAttemptCount.Should().Be(3);
+        terminal.SyncError.Should().Be("Final Drive failure");
+    }
+
+    [Fact]
+    public async Task Checklist_UpdateSucceeds_AndWrongSurveyParentReturnsNotFound()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("Checklist media");
+        var otherSurveyId = await CreateSurveyAsync("Wrong checklist parent");
+        var resultId = await WithDbAsync(db => db.SurveyChecklistResults.AsNoTracking()
+            .Where(result => result.SurveyId == surveyId)
+            .OrderBy(result => result.SortOrder)
+            .Select(result => result.Id)
+            .FirstAsync());
+
+        var updateResponse = await Client.PutAsJsonAsync($"/api/surveys/{surveyId}/checklist/{resultId}", new
+        {
+            status = "NeedsAttention",
+            note = "Cần đo lại cao độ",
+            sortOrder = 42,
+        });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await ReadJsonAsync(updateResponse);
+        updated.GetProperty("status").GetString().Should().Be("NeedsAttention");
+        updated.GetProperty("note").GetString().Should().Be("Cần đo lại cao độ");
+        updated.GetProperty("sortOrder").GetInt32().Should().Be(42);
+
+        var wrongParentResponse = await Client.PutAsJsonAsync(
+            $"/api/surveys/{otherSurveyId}/checklist/{resultId}", new
+            {
+                status = "Failed",
+                note = "Must not be applied",
+                sortOrder = 1,
+            });
+        wrongParentResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var persisted = await WithDbAsync(db => db.SurveyChecklistResults.AsNoTracking()
+            .SingleAsync(result => result.Id == resultId));
+        persisted.Status.Should().Be(SurveyChecklistStatus.NeedsAttention);
+        persisted.Note.Should().Be("Cần đo lại cao độ");
+        persisted.SortOrder.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task Delete_SurveyWithMediaIsRejected_ThenDeletingMediaAllowsSurveyDeletion()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("Delete guarded media");
+        var mediaId = await UploadJpegAsync(surveyId, "delete.jpg");
+        var storedPath = await WithDbAsync(db => db.SurveyMedia.AsNoTracking()
+            .Where(media => media.Id == mediaId)
+            .Select(media => media.RelativePath)
+            .SingleAsync());
+
+        var guardedDelete = await Client.DeleteAsync($"/api/surveys/{surveyId}");
+        guardedDelete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(guardedDelete)).GetProperty("message").GetString().Should().Contain("còn tệp");
+        (await WithDbAsync(db => db.Surveys.AnyAsync(survey => survey.Id == surveyId))).Should().BeTrue();
+        (await WithDbAsync(db => db.SurveyMedia.AnyAsync(media => media.Id == mediaId))).Should().BeTrue();
+        File.Exists(ResolveStoredPath(storedPath)).Should().BeTrue();
+
+        (await Client.DeleteAsync($"/api/surveys/{surveyId}/media/{mediaId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        File.Exists(ResolveStoredPath(storedPath)).Should().BeFalse();
+        (await Client.DeleteAsync($"/api/surveys/{surveyId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/surveys/{surveyId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_ProcessingMedia_ReturnsConflictAndPreservesClaim()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var surveyId = await CreateSurveyAsync("Delete processing media");
+        var mediaId = await UploadJpegAsync(surveyId, "processing.jpg");
+        var claimToken = Guid.NewGuid();
+        var claimExpiresAt = DateTime.UtcNow.AddMinutes(15);
+        await WithDbAsync(async db =>
+        {
+            var media = await db.SurveyMedia.SingleAsync(item => item.Id == mediaId);
+            media.SyncStatus = SurveyMediaSyncStatus.Processing;
+            media.SyncAttemptCount = 1;
+            media.ClaimToken = claimToken;
+            media.ClaimExpiresAt = claimExpiresAt;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await Client.DeleteAsync($"/api/surveys/{surveyId}/media/{mediaId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(response)).GetProperty("message").GetString().Should().Contain("đang được đồng bộ");
+        var persisted = await WithDbAsync(db => db.SurveyMedia.AsNoTracking().SingleAsync(item => item.Id == mediaId));
+        persisted.SyncStatus.Should().Be(SurveyMediaSyncStatus.Processing);
+        persisted.SyncAttemptCount.Should().Be(1);
+        persisted.ClaimToken.Should().Be(claimToken);
+        persisted.ClaimExpiresAt.Should().Be(claimExpiresAt);
+    }
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync()
+    {
+        if (createdSurveyIds.Count == 0) return;
+
+        await WithDbAsync(async db =>
+        {
+            db.SurveyMedia.RemoveRange(db.SurveyMedia.Where(media => createdSurveyIds.Contains(media.SurveyId)));
+            db.SurveyChecklistResults.RemoveRange(
+                db.SurveyChecklistResults.Where(result => createdSurveyIds.Contains(result.SurveyId)));
+            db.Surveys.RemoveRange(db.Surveys.Where(survey => createdSurveyIds.Contains(survey.Id)));
+            await db.SaveChangesAsync();
+        });
+
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        foreach (var surveyId in createdSurveyIds)
+        {
+            var directory = Path.Combine(
+                environment.ContentRootPath, "wwwroot", "files", "survey-media", surveyId.ToString());
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private Task AuthenticateAsSalesManagerAsync() =>
+        AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+
+    private async Task<int> CreateSurveyAsync(string prefix)
+    {
+        var response = await Client.PostAsJsonAsync("/api/surveys", new
+        {
+            location = $"{prefix} {Guid.NewGuid():N}"[..Math.Min(60, prefix.Length + 33)],
+            constructionTypeCode = "industrial",
+            surveyDate = DateTime.UtcNow.AddDays(-1),
+        });
+        response.EnsureSuccessStatusCode();
+        var surveyId = (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
+        createdSurveyIds.Add(surveyId);
+        return surveyId;
+    }
+
+    private async Task<long> UploadJpegAsync(int surveyId, string fileName)
+    {
+        using var form = CreateUploadForm(fileName, JpegBytes);
+        var response = await Client.PostAsync($"/api/surveys/{surveyId}/media", form);
+        response.EnsureSuccessStatusCode();
+        return (await ReadJsonAsync(response)).GetProperty("id").GetInt64();
+    }
+
+    private async Task SetSyncFailureAsync(long mediaId, int attemptCount, string error)
+    {
+        await WithDbAsync(async db =>
+        {
+            var media = await db.SurveyMedia.SingleAsync(item => item.Id == mediaId);
+            media.SyncStatus = SurveyMediaSyncStatus.Failed;
+            media.SyncAttemptCount = attemptCount;
+            media.SyncError = error;
+            media.LastSyncAttemptAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private string ResolveStoredPath(string relativePath)
+    {
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        return Path.Combine(
+            environment.ContentRootPath,
+            "wwwroot",
+            relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+    }
+
+    private static MultipartFormDataContent CreateUploadForm(
+        string fileName,
+        byte[] bytes,
+        string? note = null,
+        decimal? latitude = null,
+        decimal? longitude = null)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        form.Add(file, "file", fileName);
+        if (note is not null) form.Add(new StringContent(note), "note");
+        if (latitude.HasValue) form.Add(new StringContent(latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)), "latitude");
+        if (longitude.HasValue) form.Add(new StringContent(longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)), "longitude");
+        return form;
+    }
+
+    private static async Task UpsertTranslationAsync(
+        NihomeBackend.Data.AppDbContext db,
+        string key,
+        string language,
+        string value)
+    {
+        var translation = await db.Translations.SingleOrDefaultAsync(item =>
+            item.Key == key && item.LanguageCode == language);
+        if (translation is null)
+        {
+            db.Translations.Add(new Translation
+            {
+                Key = key,
+                LanguageCode = language,
+                Value = value,
+                Category = "surveys",
+            });
+            return;
+        }
+
+        translation.Value = value;
     }
 }

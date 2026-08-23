@@ -9,6 +9,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Infrastructure.OpenApi;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
+using NihomeBackend.Services.GoogleDrive;
 
 namespace NihomeBackend.Extensions;
 
@@ -51,6 +52,13 @@ public static class ServiceCollectionExtensions
 
         services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+        services.AddOptions<GoogleDriveOptions>()
+            .Bind(configuration.GetSection(GoogleDriveOptions.SectionName))
+            .Validate(options => options.PollIntervalSeconds is >= 5 and <= 300,
+                "GoogleDrive:PollIntervalSeconds phải nằm trong khoảng 5 đến 300 giây.")
+            .ValidateOnStart();
+        services.AddSingleton(serviceProvider =>
+            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleDriveOptions>>().Value);
 
         var jwtSection = configuration.GetSection("Jwt");
         var activeKeyId = jwtSection["ActiveKeyId"];
@@ -108,6 +116,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICapabilityDocumentService, CapabilityDocumentService>();
         services.AddScoped<ITenderService, TenderService>();
         services.AddScoped<ISurveyService, SurveyService>();
+        services.AddScoped<ISurveyMediaService, SurveyMediaService>();
+        services.AddScoped<ISurveyMediaStorageService, SurveyMediaStorageService>();
+        services.AddScoped<ISurveyDriveSyncProcessor, SurveyDriveSyncProcessor>();
+        services.AddSingleton<IGoogleDriveAdapter, GoogleDriveAdapter>();
         services.AddScoped<IDesignProjectService, DesignProjectService>();
         services.AddScoped<IBusinessDocumentStorageService, BusinessDocumentStorageService>();
         services.AddScoped<IPermitChecklistService, PermitChecklistService>();
@@ -148,6 +160,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EntityTranslationService>();
 
         services.AddHostedService<UploadedImageCleanupService>();
+        services.AddHostedService<SurveyDriveSyncService>();
 
         // Audit logging (non-blocking queue + background writer + retention sweeper)
         services.AddHttpContextAccessor();

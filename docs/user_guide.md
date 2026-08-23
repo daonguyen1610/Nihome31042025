@@ -116,7 +116,7 @@ The platform is being developed incrementally. The following components are curr
 | In-app admin notifications | Implemented |
 | CRM module (customers, leads, opportunities) | Implemented |
 | Quotations, capability documents, and tenders | Implemented |
-| Site survey digitization | Partially implemented — records and timeline are live; survey media UI remains pending |
+| Site survey digitization | Implemented — private media upload, geolocation, checklist, Drive sync status, and PDF export are available |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management (projects, concept, basic, shop drawing, revisions, IFC) | Implemented |
 | Permitting checklists | Implemented |
@@ -126,7 +126,7 @@ The platform is being developed incrementally. The following components are curr
 | Procurement vendor management | Implemented |
 | Procurement BOQ, material requests, and warehouse | Not yet implemented |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
-| Google Drive integration | Not yet implemented |
+| Google Drive integration | Partially implemented — Survey media push is available through Google user OAuth |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
 
 ---
@@ -195,7 +195,17 @@ Manage tender packages with deadlines and preparation status. Every document che
 
 #### 3.1.6 Site Survey Digitization
 
-Record site surveys linked to leads, opportunities, or projects. Capture photos and videos directly from the application. Upload drawings and survey documents. Record technical notes on site conditions. Synchronize data automatically to Google Drive (folder 01_Khao_sat). Manage survey folders by project. Support role-based access (Sales, Engineering, Management).
+Record site surveys linked to leads, opportunities, or projects. Capture photos and videos directly from the application. Upload drawings and survey documents. Record technical notes on site conditions. Synchronize data automatically to Google Drive (folder 01_Khao_sat). Manage survey folders by project. Access is controlled by `crm.surveys.view` and `crm.surveys.manage`; the default roles grant Sales both permissions and PM view-only access, while administrators can assign them to other roles.
+
+**Connecting the current Survey integration to Google Drive:**
+
+1. Ask the system administrator to authorize Google Drive as `kudung053@gmail.com` using OAuth 2.0. Do not provide or store the Gmail password in Nihome.
+2. While signed in as that account, create the target folder in **My Drive** and provide its folder URL to the administrator. The ID is the value after `/folders/` in the URL.
+3. The administrator places the OAuth client ID, client secret, refresh token, and folder ID in the protected deployed configuration, then restarts the application pool. Synchronization is always enabled; invalid configuration is shown as **Unavailable** and logged without stopping Nihome.
+4. Open a Survey detail page and select **Media**. In **Google Drive connection**, confirm that **Authenticated account** shows `kudung053@gmail.com`, storage shows **My Drive**, and status shows **Connected**.
+5. Upload a small test image. The media card changes from Pending/Processing to Synced and displays a Drive link. Use **Check connection** if it remains pending.
+
+The Survey integration is **push-only**. Files uploaded through Nihome are copied to Drive; files manually added or changed in Drive are not imported into Nihome. Deleting synchronized media through Nihome attempts to remove its Drive counterpart. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. Administrators should verify the displayed authenticated account against the deployment setup. The worker uploads only while the connection is `Connected`. It makes at most three claims per file; during retry backoff, **Retry** makes the next remaining claim eligible immediately, while a third failure is terminal. Retry and deletion are temporarily rejected while a file is actively synchronizing so the current upload cannot become untracked.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -503,6 +513,8 @@ Aggregate revenue by project. Aggregate material and subcontractor costs. Calcul
 ### 3.7 Module 7: Digital Assets (Google Drive Integration)
 
 **Objective**: Organize, secure, and provide rapid access to all project files.
+
+**Current delivered scope:** Google Drive synchronization is implemented for Survey media only. It pushes Nihome-managed files to the configured Drive root and exposes connection/sync status. Drive-to-Nihome pull, the general document repository, automatic eight-tier project folders, and cross-module synchronization described below remain planned capabilities unless separately marked as implemented.
 
 #### 3.7.1 Automated Project Folder Structure
 

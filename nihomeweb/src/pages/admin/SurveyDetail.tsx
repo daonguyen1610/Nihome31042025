@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -32,6 +32,8 @@ import {
   type SurveyTimelineEvent,
 } from "@/services/adminApi";
 import { extractApiError } from "@/lib/apiError";
+import { usePermissions } from "@/hooks/usePermissions";
+import SurveyMediaPanel from "./SurveyMediaPanel";
 
 // ---------------------------- shared ----------------------------
 
@@ -92,10 +94,13 @@ const AdminSurveyDetail = () => {
   const surveyId = Number(id);
   const isValidId = Number.isFinite(surveyId) && surveyId > 0;
   const { t, lang } = useI18n();
+  const { has } = usePermissions();
+  const canManage = has("crm.surveys.manage");
 
   const [survey, setSurvey] = useState<SurveyResponse | null>(null);
   const [loading, setLoading] = useState(isValidId);
   const [error, setError] = useState<string | null>(null);
+  const surveyLoadedRef = useRef(false);
 
   const [timeline, setTimeline] = useState<SurveyTimelineEvent[] | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
@@ -126,11 +131,12 @@ const AdminSurveyDetail = () => {
 
   const fetchSurvey = useCallback(async () => {
     if (!isValidId) return;
-    setLoading(true);
+    if (!surveyLoadedRef.current) setLoading(true);
     setError(null);
     try {
       const { data } = await adminApi.getSurvey(surveyId);
       setSurvey(data);
+      surveyLoadedRef.current = true;
     } catch (err) {
       // 404 falls through to the not-found branch via a null survey; other
       // errors surface through PageError.
@@ -273,10 +279,12 @@ const AdminSurveyDetail = () => {
               </TabsContent>
 
               <TabsContent value="media" className="mt-3">
-                <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600 shadow-sm">
-                  <ImageIcon className="mx-auto mb-2 h-6 w-6 text-slate-400" />
-                  {t("surveys.detail.mediaComingSoon")}
-                </div>
+                <SurveyMediaPanel
+                  survey={survey}
+                  canManage={canManage}
+                  onRefresh={fetchSurvey}
+                  formatDateTime={formatDateTime}
+                />
               </TabsContent>
 
               <TabsContent value="timeline" className="mt-3">

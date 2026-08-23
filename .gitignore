@@ -46,6 +46,10 @@ nihomebackend/wwwroot/files/tenders/
 # Customer documents, likewise. (files/design/ is deliberately tracked — it
 # holds committed sample assets, not runtime uploads.)
 nihomebackend/wwwroot/files/customers/
+
+# Private survey media staging; files are retained locally after Drive sync.
+nihomebackend/wwwroot/files/survey-media/
+
 .DS_Store
 deployment-config/.DS_Store
 test-results

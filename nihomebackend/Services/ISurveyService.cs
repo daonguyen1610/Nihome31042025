@@ -12,9 +12,7 @@ public class SurveyOperationException(string message) : Exception(message)
 }
 
 /// <summary>
-/// Survey (Phiếu khảo sát) service. NIH-99 ships the list + get slice;
-/// NIH-100 layers full CRUD (this file) on top. Detail-page workflow
-/// (media, drive-sync polling) lands with NIH-101.
+/// Survey CRUD, filtering, detail projection, and timeline service.
 /// </summary>
 public interface ISurveyService
 {
@@ -33,11 +31,8 @@ public interface ISurveyService
     Task<SurveyResponse?> UpdateAsync(int id, UpdateSurveyRequest request, int callerUserId, CancellationToken ct = default);
 
     /// <summary>
-    /// Delete a survey. Guarded once the row has hit Drive so the audit
-    /// trail is preserved — the service throws
-    /// <see cref="SurveyOperationException"/> when
-    /// <c>DriveSyncStatus != NotSynced</c>. Returns <c>false</c> when the
-    /// row does not exist.
+    /// Deletes a survey after all managed media has been removed through its
+    /// resource-bound endpoint. Returns <c>false</c> when the row does not exist.
     /// </summary>
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
 

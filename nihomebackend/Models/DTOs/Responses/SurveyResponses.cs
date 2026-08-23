@@ -26,6 +26,9 @@ public class SurveyResponse
     public string DriveSyncStatus { get; set; } = string.Empty;
     public string? DriveSyncError { get; set; }
     public DateTime? LastSyncedAt { get; set; }
+    public string? DriveFolderLink { get; set; }
+    public List<SurveyMediaResponse> Media { get; set; } = new();
+    public List<SurveyChecklistResultResponse> ChecklistResults { get; set; } = new();
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -80,4 +83,61 @@ public class SurveyTimelineEvent
     public string? Message { get; set; }
     public int? UserId { get; set; }
     public string? UserName { get; set; }
+}
+
+public class SurveyMediaResponse
+{
+    public long Id { get; set; }
+    public string OriginalFileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = string.Empty;
+    public string Extension { get; set; } = string.Empty;
+    public long Size { get; set; }
+    public string? Note { get; set; }
+    public DateTime? CapturedAt { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+    public string SyncStatus { get; set; } = string.Empty;
+    public int SyncAttemptCount { get; set; }
+    public int MaxSyncAttempts { get; set; }
+    public string? SyncError { get; set; }
+    public DateTime? NextSyncAttemptAt { get; set; }
+    public DateTime? LastSyncAttemptAt { get; set; }
+    public DateTime? SyncedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string ContentUrl { get; set; } = string.Empty;
+}
+
+public class SurveyChecklistResultResponse
+{
+    public long Id { get; set; }
+    public string TemplateCode { get; set; } = string.Empty;
+    public string TemplateTitle { get; set; } = string.Empty;
+    public string? Status { get; set; }
+    public string? Note { get; set; }
+    public int SortOrder { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public class SurveySyncLogResponse
+{
+    public long MediaId { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int AttemptCount { get; set; }
+    public int MaxAttempts { get; set; }
+    public string? Error { get; set; }
+    public DateTime? LastAttemptAt { get; set; }
+    public DateTime? NextAttemptAt { get; set; }
+    public DateTime? SyncedAt { get; set; }
+}
+
+public class SurveyDriveConnectionStatusResponse
+{
+    public string Status { get; set; } = string.Empty;
+    public string SyncMode { get; set; } = "PushOnly";
+    public string? AccountEmail { get; set; }
+    public string? StorageType { get; set; }
+    public string? RootFolderName { get; set; }
+    public string? RootFolderLink { get; set; }
+    public string? Error { get; set; }
 }

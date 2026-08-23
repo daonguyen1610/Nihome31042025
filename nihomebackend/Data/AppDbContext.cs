@@ -73,6 +73,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TenderChecklistItem> TenderChecklistItems => Set<TenderChecklistItem>();
 
     public DbSet<Survey> Surveys => Set<Survey>();
+    public DbSet<SurveyMedia> SurveyMedia => Set<SurveyMedia>();
+    public DbSet<SurveyChecklistResult> SurveyChecklistResults => Set<SurveyChecklistResult>();
 
     // Procurement
     public DbSet<Vendor> Vendors => Set<Vendor>();
@@ -851,6 +853,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(s => s.Note).HasMaxLength(4000);
             b.Property(s => s.DriveSyncStatus).HasConversion<string>().HasMaxLength(20);
             b.Property(s => s.DriveSyncError).HasMaxLength(1000);
+            b.Property(s => s.DriveFolderId).HasMaxLength(200);
+            b.Property(s => s.DriveFolderLink).HasMaxLength(500);
             b.HasOne(s => s.Surveyor)
                 .WithMany()
                 .HasForeignKey(s => s.SurveyorUserId)
@@ -868,6 +872,48 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(s => s.LinkedOpportunityId);
             b.HasIndex(s => s.SurveyDate);
             b.HasIndex(s => s.DriveSyncStatus);
+        });
+
+        modelBuilder.Entity<SurveyMedia>(b =>
+        {
+            b.ToTable("survey_media");
+            b.HasKey(m => m.Id);
+            b.Property(m => m.OriginalFileName).HasMaxLength(300).IsRequired();
+            b.Property(m => m.StoredFileName).HasMaxLength(100).IsRequired();
+            b.Property(m => m.ContentType).HasMaxLength(150).IsRequired();
+            b.Property(m => m.Extension).HasMaxLength(10).IsRequired();
+            b.Property(m => m.Note).HasMaxLength(2000);
+            b.Property(m => m.Latitude).HasPrecision(9, 6);
+            b.Property(m => m.Longitude).HasPrecision(9, 6);
+            b.Property(m => m.RelativePath).HasMaxLength(500).IsRequired();
+            b.Property(m => m.DriveFileId).HasMaxLength(200);
+            b.Property(m => m.DriveFolderId).HasMaxLength(200);
+            b.Property(m => m.DriveFolderLink).HasMaxLength(500);
+            b.Property(m => m.SyncStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(m => m.SyncError).HasMaxLength(2000);
+            b.HasOne(m => m.Survey)
+                .WithMany(s => s.Media)
+                .HasForeignKey(m => m.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(m => new { m.SurveyId, m.CreatedAt });
+            b.HasIndex(m => new { m.SyncStatus, m.NextSyncAttemptAt });
+            b.HasIndex(m => m.ClaimToken);
+        });
+
+        modelBuilder.Entity<SurveyChecklistResult>(b =>
+        {
+            b.ToTable("survey_checklist_results");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.TemplateCode).HasMaxLength(80).IsRequired();
+            b.Property(r => r.TemplateTitle).HasMaxLength(300).IsRequired();
+            b.Property(r => r.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(r => r.Note).HasMaxLength(2000);
+            b.HasOne(r => r.Survey)
+                .WithMany(s => s.ChecklistResults)
+                .HasForeignKey(r => r.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(r => new { r.SurveyId, r.TemplateCode }).IsUnique();
+            b.HasIndex(r => new { r.SurveyId, r.SortOrder });
         });
 
         modelBuilder.Entity<DesignProject>(b =>

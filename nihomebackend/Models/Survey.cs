@@ -47,6 +47,12 @@ public class Survey
     /// <summary>Timestamp of the last successful/failed sync attempt.</summary>
     public DateTime? LastSyncedAt { get; set; }
 
+    public string? DriveFolderId { get; set; }
+    public string? DriveFolderLink { get; set; }
+
+    public List<SurveyMedia> Media { get; set; } = new();
+    public List<SurveyChecklistResult> ChecklistResults { get; set; } = new();
+
     // --- Audit ---
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedByUserId { get; set; }

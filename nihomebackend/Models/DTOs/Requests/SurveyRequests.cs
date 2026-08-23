@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
@@ -53,4 +54,33 @@ public class SurveyListParams
 
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
+}
+
+public class SurveyMediaUploadRequest
+{
+    [Required]
+    public IFormFile? File { get; set; }
+
+    [StringLength(2000)]
+    public string? Note { get; set; }
+
+    public DateTime? CapturedAt { get; set; }
+
+    [Range(-90, 90)]
+    public decimal? Latitude { get; set; }
+
+    [Range(-180, 180)]
+    public decimal? Longitude { get; set; }
+}
+
+public class UpdateSurveyChecklistResultRequest
+{
+    [Required]
+    public SurveyChecklistStatus? Status { get; set; }
+
+    [StringLength(2000)]
+    public string? Note { get; set; }
+
+    [Range(0, 10000)]
+    public int SortOrder { get; set; }
 }

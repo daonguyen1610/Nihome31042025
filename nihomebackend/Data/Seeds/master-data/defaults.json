@@ -130,6 +130,19 @@
     },
 
     {
+      "category": "survey_checklist_default",
+      "options": [
+        { "code": "geology",          "name": "Địa chất",                    "sortOrder": 1 },
+        { "code": "electricity",      "name": "Cấp điện",                   "sortOrder": 2 },
+        { "code": "water-supply",     "name": "Cấp nước",                   "sortOrder": 3 },
+        { "code": "drainage",         "name": "Thoát nước",                 "sortOrder": 4 },
+        { "code": "site-access",      "name": "Giao thông tiếp cận",        "sortOrder": 5 },
+        { "code": "surroundings",     "name": "Xung quanh",                 "sortOrder": 6 },
+        { "code": "preliminary-legal", "name": "Vướng mắc pháp lý sơ bộ",   "sortOrder": 7 }
+      ]
+    },
+
+    {
       "category": "contract_status",
       "options": [
         { "code": "draft",       "name": "Bản nháp", "sortOrder": 1 },

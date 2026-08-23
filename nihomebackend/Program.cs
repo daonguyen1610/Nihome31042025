@@ -98,6 +98,7 @@ app.Use(async (context, next) =>
         "/files/tenders",
         "/files/business-documents",
         "/files/design",
+        "/files/survey-media",
     ];
     if (privateDocumentPrefixes.Any(prefix =>
         context.Request.Path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase)))
