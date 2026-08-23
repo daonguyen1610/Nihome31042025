@@ -1517,6 +1517,82 @@ export const SURVEY_DRIVE_STATUSES: SurveyDriveSyncStatus[] = [
   "Failed",
 ];
 
+export type SurveyMediaSyncStatus = "Pending" | "Processing" | "Synced" | "Failed";
+export type SurveyChecklistStatus = "Ok" | "NeedsAttention" | "Failed";
+
+export interface SurveyMediaResponse {
+  id: number;
+  originalFileName: string;
+  contentType: string;
+  extension: string;
+  size: number;
+  note?: string | null;
+  capturedAt?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  syncStatus: SurveyMediaSyncStatus;
+  syncAttemptCount: number;
+  maxSyncAttempts: number;
+  syncError?: string | null;
+  nextSyncAttemptAt?: string | null;
+  lastSyncAttemptAt?: string | null;
+  syncedAt?: string | null;
+  createdAt: string;
+  contentUrl: string;
+}
+
+export interface SurveyChecklistResultResponse {
+  id: number;
+  templateCode: string;
+  templateTitle: string;
+  status?: SurveyChecklistStatus | null;
+  note?: string | null;
+  sortOrder: number;
+  updatedAt: string;
+}
+
+export interface SurveySyncLogResponse {
+  mediaId: number;
+  fileName: string;
+  status: SurveyMediaSyncStatus;
+  attemptCount: number;
+  maxAttempts: number;
+  error?: string | null;
+  lastAttemptAt?: string | null;
+  nextAttemptAt?: string | null;
+  syncedAt?: string | null;
+}
+
+export type SurveyDriveConnectionStatus =
+  | "Connected"
+  | "ReadOnly"
+  | "InvalidRoot"
+  | "Unavailable";
+
+export interface SurveyDriveConnectionStatusResponse {
+  status: SurveyDriveConnectionStatus;
+  syncMode: "PushOnly";
+  accountEmail?: string | null;
+  storageType?: "MyDrive" | "SharedDrive" | null;
+  rootFolderName?: string | null;
+  rootFolderLink?: string | null;
+  error?: string | null;
+}
+
+export interface SurveyMediaUploadRequest {
+  file: File;
+  note?: string;
+  capturedAt?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface UpdateSurveyChecklistRequest {
+  status: SurveyChecklistStatus;
+  note?: string | null;
+  sortOrder: number;
+}
+
 export interface SurveyResponse {
   id: number;
   code: string;
@@ -1534,6 +1610,9 @@ export interface SurveyResponse {
   driveSyncStatus: SurveyDriveSyncStatus;
   driveSyncError?: string | null;
   lastSyncedAt?: string | null;
+  driveFolderLink?: string | null;
+  media: SurveyMediaResponse[];
+  checklistResults: SurveyChecklistResultResponse[];
   createdAt: string;
   updatedAt: string;
 }
@@ -3402,6 +3481,32 @@ export const adminApi = {
   deleteSurvey: (id: number) => api.delete(`/surveys/${id}`),
   getSurveyTimeline: (id: number, limit = 100) =>
     api.get<SurveyTimelineEvent[]>(`/surveys/${id}/timeline`, { params: { limit } }),
+  uploadSurveyMedia: (id: number, request: SurveyMediaUploadRequest) => {
+    const form = new FormData();
+    form.append("file", request.file);
+    if (request.note) form.append("note", request.note);
+    if (request.capturedAt) form.append("capturedAt", request.capturedAt);
+    if (request.latitude != null) form.append("latitude", String(request.latitude));
+    if (request.longitude != null) form.append("longitude", String(request.longitude));
+    return api.post<SurveyMediaResponse>(`/surveys/${id}/media`, form);
+  },
+  getSurveyMediaContent: (surveyId: number, mediaId: number) =>
+    api.get<Blob>(`/surveys/${surveyId}/media/${mediaId}/content`, { responseType: "blob" }),
+  deleteSurveyMedia: (surveyId: number, mediaId: number) =>
+    api.delete(`/surveys/${surveyId}/media/${mediaId}`),
+  retrySurveyMediaSync: (surveyId: number, mediaId: number) =>
+    api.post<SurveyMediaResponse>(`/surveys/${surveyId}/media/${mediaId}/retry-sync`),
+  updateSurveyChecklist: (
+    surveyId: number,
+    resultId: number,
+    request: UpdateSurveyChecklistRequest,
+  ) => api.put<SurveyChecklistResultResponse>(`/surveys/${surveyId}/checklist/${resultId}`, request),
+  getSurveySyncLog: (id: number) =>
+    api.get<SurveySyncLogResponse[]>(`/surveys/${id}/sync-log`),
+  getSurveyDriveConnection: () =>
+    api.get<SurveyDriveConnectionStatusResponse>("/surveys/drive-connection"),
+  exportSurveyPdf: (id: number, lang: "vi" | "en" | "zh" | "ja") =>
+    api.get<Blob>(`/surveys/${id}/export.pdf`, { params: { lang }, responseType: "blob" }),
 
   // Design projects (NIH-113)
   listDesignProjects: (params: DesignProjectListParams = {}) => {

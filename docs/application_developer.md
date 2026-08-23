@@ -870,6 +870,81 @@ Before deploying to production:
 
 The production artifact includes `web.config` for the ASP.NET Core Module and serves the compiled SPA from `wwwroot`. `NIHOMEWEB_DIST_PATH` can override the frontend distribution directory at runtime; startup fails if the configured directory does not exist. Swagger is Development-only and should not be enabled by switching production to the Development environment.
 
+### 10.3 Google Drive credentials on IIS
+
+Survey synchronization uses Google Drive API v3 with OAuth user authorization. The backend reads `ClientId`, `ClientSecret`, and `RefreshToken` directly from the `GoogleDrive` configuration section and does not read a runtime credential file. Never put Google passwords or OAuth values in source-controlled configuration, logs, screenshots, or support messages.
+
+#### Create the OAuth credential
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), select the Nihome project and enable **Google Drive API**.
+2. Configure Google Auth Platform with an External audience. While the app is in Testing, add the Google account that owns the target Drive folder as a test user.
+3. Add only the `https://www.googleapis.com/auth/drive` scope.
+4. Create a **Desktop app** OAuth client and download its client configuration to a temporary protected location as `oauth-client.json`.
+5. On a trusted administrator machine, obtain a refresh token by running:
+
+   ```bash
+   gcloud auth application-default login \
+     --client-id-file=/secure/path/oauth-client.json \
+     --scopes=https://www.googleapis.com/auth/drive
+   ```
+
+6. Sign in as the Google account that owns the target folder and approve access. Read `client_id`, `client_secret`, and `refresh_token` from the generated Application Default Credentials only on that trusted machine; place those values into the protected deployed configuration described below.
+7. Delete the generated credential file and temporary client download when they are no longer required. If a client secret or refresh token is exposed, revoke it and create a replacement before deployment.
+8. Copy `<FOLDER_ID>` from `https://drive.google.com/drive/folders/<FOLDER_ID>` for the folder that will contain Nihome survey media.
+
+The repository and release ZIP deliberately contain empty OAuth values. After extracting `publish-release.zip` on IIS:
+
+1. Restrict the deployed `appsettings.json` so it is readable only by the IIS application-pool identity and responsible administrators.
+2. Populate the following values only in that deployed file, never in the repository copy:
+
+   ```json
+   "GoogleDrive": {
+     "ClientId": "<OAUTH_CLIENT_ID>",
+     "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+     "RefreshToken": "<OAUTH_REFRESH_TOKEN>",
+     "RootFolderId": "<FOLDER_ID>",
+     "ApplicationName": "Nihome Survey Media",
+     "SurveyFolderName": "01_Khao_sat",
+     "SupportsAllDrives": true,
+     "PollIntervalSeconds": 15
+   }
+   ```
+
+3. Recycle the IIS application pool and check the Survey Media connection status and application logs. Drive is always enabled; missing/invalid OAuth values or folder ID are reported as `Unavailable` without stopping the application or consuming a media sync attempt.
+
+As a safer alternative to storing secrets in the deployed JSON, IIS can provide `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, and `GoogleDrive__RootFolderId` as protected environment variables; ASP.NET Core maps them to the same options. Never commit real OAuth values or add them to `deployment-config`.
+
+Survey synchronization is push-only: Nihome uploads managed survey media to Drive and deletes its corresponding Drive file when the media is deleted through Nihome. It does not import files created or changed directly in Drive. The Survey Media tab calls `GET /api/surveys/drive-connection`, which uses Drive `about.get` to identify the authenticated account and `files.get` with `supportsAllDrives=true` to check the root MIME type, trash state, storage model, and `capabilities.canAddChildren`.
+
+The background worker performs the same validation before claiming a pending row. It uploads only while the result is `Connected`; a read-only folder, an invalid root, or an unavailable connection leaves the row pending without consuming an attempt. The connection response displays the authenticated account for administrators to verify against the deployment setup.
+
+Connection statuses have the following meanings:
+
+- `Connected`: a Google account is authenticated through OAuth, the root is a live folder, and Drive reports permission to add children.
+- `ReadOnly`: the folder is visible but Drive reports no permission to add children.
+- `InvalidRoot`: `RootFolderId` points to a non-folder item or an item in trash.
+- `Unavailable`: authentication or folder access failed.
+
+Each media row permits at most three worker claims. During backoff after a failed claim, an authorized user can select **Retry** to make the next remaining claim eligible immediately. After the third failed claim the row is terminal; correct the Drive configuration and upload a replacement file if another three-attempt lifecycle is required.
+
+If the application stops during an active claim, the expired lease resumes the same numbered attempt instead of consuming another one. This includes attempt three; the Drive idempotency property lets recovery reconcile a remote file that may already have been created.
+
+Retry and deletion are rejected while a row is `Processing`. This preserves the active SQL lease and prevents an in-flight upload from creating an untracked Drive file; users can retry or delete after the worker completes or its lease is recovered.
+
+The response includes only safe identity/folder metadata and never includes the credential path, client secret, refresh token, or private key.
+
+For Docker development, populate the four empty `GoogleDrive` OAuth/folder values in the local ignored secret configuration or provide `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, and `GoogleDrive__RootFolderId` to the backend container, then recreate it:
+
+```bash
+docker compose up -d --build --force-recreate nihomeBackend
+```
+
+Until all OAuth values and `RootFolderId` are valid, the worker logs a safe connection warning and leaves pending rows unclaimed at their current attempt count.
+
+OAuth apps left in Testing can issue refresh tokens with a limited lifetime. Before production use, move the app to Production and complete any Google verification required for the Drive scope. Store the resulting credential as an operational secret with an owner and rotation procedure.
+
+Official references: [Drive API v3](https://developers.google.com/workspace/drive/api/reference/rest/v3), [files.get](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get), [OAuth scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth), [Shared Drives](https://developers.google.com/workspace/drive/api/guides/about-shareddrives), and [Drive API errors](https://developers.google.com/workspace/drive/api/guides/handle-errors#storageQuotaExceeded).
+
 ### 10.1 Deterministic demonstration data
 
 `DbSeeder` creates a deterministic demonstration dataset covering the CRM funnel, all contract statuses, design stages, permitting, construction, acceptance, as-built, and handover workflows. Seeder-owned rows use stable markers such as `[SAMPLE]`, `[SAMPLE_CONTRACT]`, and `[SAMPLE_DP]`; downstream records are attached only to marker-owned sample projects rather than arbitrary database rows.

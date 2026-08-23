@@ -1351,7 +1351,11 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedSurveys(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        if (db.Surveys.Any(s => s.Note != null && s.Note.StartsWith(SampleSurveyMarker))) return;
+        if (db.Surveys.Any(s => s.Note != null && s.Note.StartsWith(SampleSurveyMarker)))
+        {
+            EnsureSampleSurveyChecklists(db, owner.Id, now);
+            return;
+        }
 
         var sampleOpportunities = db.Opportunities
             .Where(o => o.Name.StartsWith(SampleTag))
@@ -1406,6 +1410,42 @@ public static class SampleCrmDataSeeder
             };
             db.Surveys.Add(survey);
             i++;
+        }
+        db.SaveChanges();
+        EnsureSampleSurveyChecklists(db, owner.Id, now);
+    }
+
+    private static void EnsureSampleSurveyChecklists(AppDbContext db, int userId, DateTime now)
+    {
+        var templates = db.MasterDataOptions
+            .Where(option => option.Category == "survey_checklist_default" && option.IsActive)
+            .OrderBy(option => option.SortOrder)
+            .ToList();
+        var surveys = db.Surveys
+            .Where(survey => survey.Note != null && survey.Note.StartsWith(SampleSurveyMarker))
+            .Select(survey => survey.Id)
+            .ToList();
+        var existing = db.SurveyChecklistResults
+            .Where(result => surveys.Contains(result.SurveyId))
+            .Select(result => result.SurveyId + "|" + result.TemplateCode)
+            .ToHashSet();
+
+        foreach (var surveyId in surveys)
+        {
+            foreach (var template in templates.Where(template => !existing.Contains(surveyId + "|" + template.Code)))
+            {
+                db.SurveyChecklistResults.Add(new SurveyChecklistResult
+                {
+                    SurveyId = surveyId,
+                    TemplateCode = template.Code,
+                    TemplateTitle = template.Name,
+                    SortOrder = template.SortOrder,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    CreatedByUserId = userId,
+                    UpdatedByUserId = userId,
+                });
+            }
         }
         db.SaveChanges();
     }

@@ -8,10 +8,8 @@ using NihomeBackend.Models.DTOs.Responses;
 namespace NihomeBackend.Services;
 
 /// <summary>
-/// Survey service — see <see cref="ISurveyService"/>.
-/// NIH-99 slice: list + get + a minimal create used by tests and the
-/// sample seeder. Later slices (NIH-100/101) will layer update, delete,
-/// media, and drive-sync workflows on top.
+/// Survey CRUD and detail projection. Media and Drive mutations are delegated
+/// to <see cref="ISurveyMediaService"/>.
 /// </summary>
 public class SurveyService(
     AppDbContext db,
@@ -19,6 +17,7 @@ public class SurveyService(
 {
     private const int MaxPageSize = 100;
     private const string ConstructionTypeCategory = "construction_type";
+    private const string ChecklistCategory = "survey_checklist_default";
 
     public async Task<SurveyListResponse> ListAsync(SurveyListParams p, CancellationToken ct = default)
     {
@@ -120,6 +119,8 @@ public class SurveyService(
             .Include(s => s.Surveyor)
             .Include(s => s.LinkedProject)
             .Include(s => s.LinkedOpportunity)
+            .Include(s => s.Media)
+            .Include(s => s.ChecklistResults)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
         if (entity is null) return null;
 
@@ -198,6 +199,23 @@ public class SurveyService(
         db.Surveys.Add(entity);
         await db.SaveChangesAsync(ct);
 
+        var checklistTemplates = await db.MasterDataOptions.AsNoTracking()
+            .Where(option => option.Category == ChecklistCategory && option.IsActive)
+            .OrderBy(option => option.SortOrder)
+            .ToListAsync(ct);
+        db.SurveyChecklistResults.AddRange(checklistTemplates.Select(template => new SurveyChecklistResult
+        {
+            SurveyId = entity.Id,
+            TemplateCode = template.Code,
+            TemplateTitle = template.Name,
+            SortOrder = template.SortOrder,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.CreatedAt,
+            CreatedByUserId = callerUserId,
+            UpdatedByUserId = callerUserId,
+        }));
+        await db.SaveChangesAsync(ct);
+
         logger.LogInformation("Survey {Id} ({Code}) created by user {UserId}",
             entity.Id, entity.Code, callerUserId);
         return (await GetAsync(entity.Id, ct))!;
@@ -270,6 +288,12 @@ public class SurveyService(
         var entity = await db.Surveys.FirstOrDefaultAsync(s => s.Id == id, ct);
         if (entity is null) return false;
 
+        if (await db.SurveyMedia.AnyAsync(media => media.SurveyId == id, ct))
+        {
+            throw new SurveyOperationException(
+                "Phiếu khảo sát còn tệp phương tiện. Vui lòng xoá từng tệp để hệ thống dọn dữ liệu Google Drive và vùng lưu trữ riêng tư trước.");
+        }
+
         db.Surveys.Remove(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Survey {Id} deleted", id);
@@ -338,6 +362,9 @@ public class SurveyService(
         DriveSyncStatus = s.DriveSyncStatus.ToString(),
         DriveSyncError = s.DriveSyncError,
         LastSyncedAt = s.LastSyncedAt,
+        DriveFolderLink = s.DriveFolderLink,
+        Media = s.Media.OrderByDescending(m => m.CreatedAt).Select(SurveyMediaService.Map).ToList(),
+        ChecklistResults = s.ChecklistResults.OrderBy(r => r.SortOrder).Select(SurveyMediaService.Map).ToList(),
         CreatedAt = s.CreatedAt,
         UpdatedAt = s.UpdatedAt,
     };
