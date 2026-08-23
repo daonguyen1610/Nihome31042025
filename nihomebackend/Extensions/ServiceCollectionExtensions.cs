@@ -56,6 +56,9 @@ public static class ServiceCollectionExtensions
             .Bind(configuration.GetSection(GoogleDriveOptions.SectionName))
             .Validate(options => options.PollIntervalSeconds is >= 5 and <= 300,
                 "GoogleDrive:PollIntervalSeconds phải nằm trong khoảng 5 đến 300 giây.")
+            .Validate(options => options.Folders is not null &&
+                                 !string.IsNullOrWhiteSpace(options.Folders.SurveyMedia),
+                "GoogleDrive:Folders:SurveyMedia không được để trống.")
             .ValidateOnStart();
         services.AddSingleton(serviceProvider =>
             serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleDriveOptions>>().Value);

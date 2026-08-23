@@ -903,16 +903,23 @@ The repository and release ZIP deliberately contain empty OAuth values. After ex
      "ClientSecret": "<OAUTH_CLIENT_SECRET>",
      "RefreshToken": "<OAUTH_REFRESH_TOKEN>",
      "RootFolderId": "<FOLDER_ID>",
-     "ApplicationName": "Nihome Survey Media",
-     "SurveyFolderName": "01_Khao_sat",
+     "ApplicationName": "Nihome Google Drive Integration",
+     "Folders": {
+       "SurveyMedia": "01_Khao_sat"
+     },
      "SupportsAllDrives": true,
      "PollIntervalSeconds": 15
    }
    ```
 
+  `Folders` is the centralized registry for module-specific paths beneath `RootFolderId`.
+  Each Drive-backed module must own a distinct key (for example `SurveyMedia`, `Contracts`,
+  or `DesignDocuments`) instead of embedding folder names in service code or adding unrelated
+  module settings directly to the shared OAuth options.
+
 3. Recycle the IIS application pool and check the Survey Media connection status and application logs. Drive is always enabled; missing/invalid OAuth values or folder ID are reported as `Unavailable` without stopping the application or consuming a media sync attempt.
 
-As a safer alternative to storing secrets in the deployed JSON, IIS can provide `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, and `GoogleDrive__RootFolderId` as protected environment variables; ASP.NET Core maps them to the same options. Never commit real OAuth values or add them to `deployment-config`.
+As a safer alternative to storing secrets in the deployed JSON, IIS can provide `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, and `GoogleDrive__RootFolderId` as protected environment variables; module folders use the same hierarchy, for example `GoogleDrive__Folders__SurveyMedia`. ASP.NET Core maps them to the same options. Never commit real OAuth values or add them to `deployment-config`.
 
 Survey synchronization is push-only: Nihome uploads managed survey media to Drive and deletes its corresponding Drive file when the media is deleted through Nihome. It does not import files created or changed directly in Drive. The Survey Media tab calls `GET /api/surveys/drive-connection`, which uses Drive `about.get` to identify the authenticated account and `files.get` with `supportsAllDrives=true` to check the root MIME type, trash state, storage model, and `capabilities.canAddChildren`.
 
