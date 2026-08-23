@@ -142,7 +142,8 @@ public class RbacControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
         var roleId = await WithDbAsync(db => Task.FromResult(db.Roles.Single(r => r.Code == roleCode).Id));
         var before = await WithDbAsync(db => Task.FromResult(
-            db.RolePermissions.Count(rp => rp.RoleId == roleId)));
+            db.RolePermissions.Where(rp => rp.RoleId == roleId)
+                .Select(rp => rp.PermissionId).OrderBy(id => id).ToArray()));
 
         var res = await Client.PutAsJsonAsync(
             $"/api/admin/rbac/roles/{roleId}/permissions",
@@ -153,8 +154,9 @@ public class RbacControllerTests : IntegrationTestBase
         body.GetProperty("error").GetString().Should().Be("system_role_immutable");
 
         var after = await WithDbAsync(db => Task.FromResult(
-            db.RolePermissions.Count(rp => rp.RoleId == roleId)));
-        after.Should().Be(before);
+            db.RolePermissions.Where(rp => rp.RoleId == roleId)
+                .Select(rp => rp.PermissionId).OrderBy(id => id).ToArray()));
+        after.Should().Equal(before);
     }
 
     [Fact]
@@ -182,6 +184,9 @@ public class RbacControllerTests : IntegrationTestBase
         // matrix would be privilege escalation and must be blocked.
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var bizId = await WithDbAsync(db => Task.FromResult(db.Roles.First(r => !r.IsSystem).Id));
+        var before = await WithDbAsync(db => Task.FromResult(
+            db.RolePermissions.Where(rp => rp.RoleId == bizId)
+                .Select(rp => rp.PermissionId).OrderBy(id => id).ToArray()));
 
         var res = await Client.PutAsJsonAsync(
             $"/api/admin/rbac/roles/{bizId}/permissions",
@@ -193,6 +198,10 @@ public class RbacControllerTests : IntegrationTestBase
         body.GetProperty("offending").EnumerateArray()
             .Select(e => e.GetString())
             .Should().Contain("users.manage");
+        var after = await WithDbAsync(db => Task.FromResult(
+            db.RolePermissions.Where(rp => rp.RoleId == bizId)
+                .Select(rp => rp.PermissionId).OrderBy(id => id).ToArray()));
+        after.Should().Equal(before);
     }
 
     [Fact]

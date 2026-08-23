@@ -190,16 +190,37 @@ public class AsBuiltDocumentServiceTests : IDisposable
     [Fact]
     public async Task UpdateAsync_locked_after_approved()
     {
-        var a = await _sut.CreateAsync(Req("Lock"), _userId);
+        const string originalFileUrl = "/files/business-documents/as-built/approved.pdf";
+        var request = Req("Lock");
+        request.Description = "Original description";
+        request.FileUrl = originalFileUrl;
+        var a = await _sut.CreateAsync(request, _userId);
         await _sut.TransitionAsync(a.Id, new TransitionAsBuiltStatusRequest { Status = "Submitted" }, _userId);
         await _sut.ApproveAsync(a.Id, new TransitionAsBuiltStatusRequest { Status = "Approved" }, _userId);
+        var before = await _db.AsBuiltDocuments.AsNoTracking().SingleAsync(document => document.Id == a.Id);
 
         await Assert.ThrowsAsync<AsBuiltDocumentOperationException>(
             () => _sut.UpdateAsync(a.Id, new UpdateAsBuiltDocumentRequest
             {
                 Title = "New",
-                Category = "Drawing",
+                Description = "Changed description",
+                Category = "Other",
+                FileUrl = "/files/business-documents/as-built/replacement.pdf",
             }, _userId));
+
+        _db.ChangeTracker.Clear();
+        var after = await _db.AsBuiltDocuments.AsNoTracking().SingleAsync(document => document.Id == a.Id);
+        Assert.Equal(before.Title, after.Title);
+        Assert.Equal(before.Description, after.Description);
+        Assert.Equal(before.Category, after.Category);
+        Assert.Equal(before.FileUrl, after.FileUrl);
+        Assert.Equal(before.Status, after.Status);
+        Assert.Equal(before.ApprovedAt, after.ApprovedAt);
+        Assert.Equal(before.ApprovedByUserId, after.ApprovedByUserId);
+        Assert.Equal(before.UpdatedAt, after.UpdatedAt);
+        Assert.Equal(before.UpdatedByUserId, after.UpdatedByUserId);
+        _documentStorage.Verify(storage => storage.Delete(
+            It.IsAny<string>(), BusinessDocumentArea.AsBuilt), Times.Never);
     }
 
     [Fact]

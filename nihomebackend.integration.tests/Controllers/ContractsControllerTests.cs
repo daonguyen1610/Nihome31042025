@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -297,9 +298,22 @@ public class ContractsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
         var contractId = await CreateContractAsync(customerId, status: "Signed");
+        var before = await WithDbAsync(db => db.Contracts.AsNoTracking()
+            .SingleAsync(contract => contract.Id == contractId));
+        var projectCountBefore = await WithDbAsync(db => db.DesignProjects
+            .CountAsync(project => project.ContractId == contractId));
 
         var res = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "InProgress" });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var after = await WithDbAsync(db => db.Contracts.AsNoTracking()
+            .SingleAsync(contract => contract.Id == contractId));
+        after.Status.Should().Be(before.Status);
+        after.SignedDate.Should().Be(before.SignedDate);
+        after.UpdatedAt.Should().Be(before.UpdatedAt);
+        after.UpdatedByUserId.Should().Be(before.UpdatedByUserId);
+        after.RowVersion.Should().Equal(before.RowVersion);
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(project => project.ContractId == contractId)))
+            .Should().Be(projectCountBefore);
     }
 
     [Fact]
