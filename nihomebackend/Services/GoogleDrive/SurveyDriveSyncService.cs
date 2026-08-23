@@ -98,7 +98,7 @@ public sealed class SurveyDriveSyncProcessor(
             businessCode ??= media.Survey.Code;
 
             var folder = await drive.EnsureFolderPathAsync(
-                [options.SurveyFolderName, SafeFolderName(businessCode), SafeFolderName(media.Survey.Code)], ct);
+                [options.Folders.SurveyMedia, SafeFolderName(businessCode), SafeFolderName(media.Survey.Code)], ct);
             await using var content = storage.OpenRead(media.SurveyId, media.RelativePath);
             var uploaded = await drive.UploadAsync(
                 folder.Id, media.Id, media.OriginalFileName, media.ContentType, content, ct);
