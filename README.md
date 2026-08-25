@@ -32,6 +32,148 @@ We need to declare the `appsettings.json` like
 }
 ```
 
+## Connect Google Drive with OAuth
+
+Survey Media uploads files to Google Drive by using an OAuth user credential. The backend reads `ClientId`, `ClientSecret`, `RefreshToken`, and `RootFolderId` directly from the `GoogleDrive` configuration section; it does not use a runtime credential file.
+
+> **Security:** `ClientSecret` and `RefreshToken` are secrets. Generate them only on a trusted administrator machine. Never commit real values, paste them into tickets or logs, or add them to `deployment-config`.
+
+### 1. Create or select a Google Cloud project
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create a project or select the project dedicated to Nihome.
+3. Record the project name so the OAuth client and Drive API are created in the same project.
+
+### 2. Enable Google Drive API
+
+1. Open **APIs & Services > Library**.
+2. Search for **Google Drive API**.
+3. Select it and click **Enable**.
+
+### 3. Configure Google Auth Platform
+
+1. Open **Google Auth Platform** in the selected project.
+2. Under **Branding**, enter the application name and required support/developer contact details.
+3. Under **Audience**, select:
+    - **Internal** when only users in one Google Workspace organization will connect; or
+    - **External** for other Google accounts.
+4. If the app is **External** and in **Testing**, add the Google account that owns or can edit the target Drive folder as a test user.
+5. Under **Data Access**, add exactly this scope:
+
+    ```text
+    https://www.googleapis.com/auth/drive
+    ```
+
+This project currently requires the full Drive scope because the worker finds, creates, uploads, reconciles, and deletes managed files beneath the configured root folder. Google classifies this as a restricted scope. An external production application may require Google OAuth verification and, depending on how restricted data is stored or transmitted, a security assessment.
+
+### 4. Create a Desktop OAuth client
+
+1. Open **Google Auth Platform > Clients**.
+2. Click **Create client**.
+3. Select **Desktop app** as the application type.
+4. Name it, for example, `Nihome Drive Administrator`.
+5. Create the client and download its JSON file to a temporary protected location, for example:
+
+    ```text
+    /secure/path/oauth-client.json
+    ```
+
+The downloaded file contains the `client_id` and `client_secret`. Do not place this file inside the repository.
+
+### 5. Generate the refresh token
+
+Install and initialize the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) on the trusted administrator machine. Then run:
+
+```bash
+gcloud auth application-default login \
+  --client-id-file=/secure/path/oauth-client.json \
+  --scopes=https://www.googleapis.com/auth/drive
+```
+
+1. A browser opens. Sign in with the same Google account that owns or can edit the target Drive folder.
+2. Approve the requested Drive access.
+3. If the OAuth app is in Testing, Google may show an unverified-app warning; continue only when the displayed project and client are the ones created above.
+4. After authorization, Application Default Credentials are written locally to:
+    - macOS/Linux: `~/.config/gcloud/application_default_credentials.json`
+    - Windows: `%APPDATA%\gcloud\application_default_credentials.json`
+5. Open that file locally and copy these values to a secure temporary note:
+    - `client_id` → `GoogleDrive:ClientId`
+    - `client_secret` → `GoogleDrive:ClientSecret`
+    - `refresh_token` → `GoogleDrive:RefreshToken`
+
+This generated file is only a temporary source for the three values. Nihome does not read it at runtime. Delete it when it is no longer needed if the machine does not use Application Default Credentials for other work:
+
+```bash
+gcloud auth application-default revoke
+```
+
+### 6. Create and authorize the root Drive folder
+
+1. In Google Drive, sign in with the account authorized in the previous step.
+2. Create or select the folder that will contain Nihome-managed content.
+3. Ensure the authorized account is the owner or has permission to add and delete files:
+    - **Editor** for a folder in My Drive; or
+    - **Contributor**, **Content manager**, or **Manager** as permitted by the Shared Drive policy.
+4. Open the folder. For a URL in this form:
+
+    ```text
+    https://drive.google.com/drive/folders/<FOLDER_ID>
+    ```
+
+    copy only `<FOLDER_ID>` into `GoogleDrive:RootFolderId`.
+
+### 7. Configure Nihome
+
+For local development, put the values in a local, uncommitted configuration source. The expected JSON shape is:
+
+```json
+"GoogleDrive": {
+  "ClientId": "<OAUTH_CLIENT_ID>",
+  "ClientSecret": "<OAUTH_CLIENT_SECRET>",
+  "RefreshToken": "<OAUTH_REFRESH_TOKEN>",
+  "RootFolderId": "<FOLDER_ID>",
+  "ApplicationName": "Nihome Google Drive Integration",
+  "Folders": {
+     "SurveyMedia": "01_Khao_sat"
+  },
+  "SupportsAllDrives": true,
+  "PollIntervalSeconds": 15
+}
+```
+
+ASP.NET Core environment variables are preferred when the configuration file is source-controlled:
+
+```text
+GoogleDrive__ClientId=<OAUTH_CLIENT_ID>
+GoogleDrive__ClientSecret=<OAUTH_CLIENT_SECRET>
+GoogleDrive__RefreshToken=<OAUTH_REFRESH_TOKEN>
+GoogleDrive__RootFolderId=<FOLDER_ID>
+GoogleDrive__Folders__SurveyMedia=01_Khao_sat
+```
+
+For IIS, place the values only in the protected deployed configuration or protected application-pool environment variables. Restrict access to the application-pool identity and responsible administrators.
+
+### 8. Restart and verify the connection
+
+Recreate the backend after changing Docker configuration:
+
+```bash
+docker compose up -d --build --force-recreate nihomeBackend
+```
+
+Then sign in to Nihome as an authorized administrator, open an Admin Survey detail page, select the **Media** tab, and click **Check connection**. The expected status is **Connected**, with the authenticated account and root folder displayed.
+
+Connection status troubleshooting:
+
+| Status | Check |
+|--------|-------|
+| `Unavailable` | Confirm all four values are present, Drive API is enabled, the refresh token was issued with the Drive scope, and the test user still has access. |
+| `ReadOnly` | Grant the authenticated account permission to add and delete files in the root folder. |
+| `InvalidRoot` | Confirm `RootFolderId` identifies a live folder rather than a file or a trashed folder. |
+| `invalid_grant` in logs | The refresh token was expired, revoked, or issued for a different client. Repeat step 5 with the same OAuth client and account. |
+
+OAuth apps left in **Testing** can issue refresh tokens with a limited lifetime. Before production use, publish the app and complete any Google verification required for the Drive scope. See the [Google installed-app OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app) and [Drive scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) for current requirements.
+
 ## Backend commands
 
 ```bash
