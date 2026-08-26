@@ -275,6 +275,53 @@ public class LeadsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Convert_CompanyLeadWithoutTaxId_PreservesCustomerAndOpportunityLinks()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        var created = await Client.PostAsJsonAsync("/api/leads", new
+        {
+            name = "Đại diện " + Guid.NewGuid().ToString("N")[..6],
+            companyName = "Công ty chưa có MST " + Guid.NewGuid().ToString("N")[..6],
+            phone = "09" + Random.Shared.Next(10_000_000, 99_999_999),
+            sourceCode = "marketing",
+        });
+        created.EnsureSuccessStatusCode();
+        var createdBody = await ReadJsonAsync(created);
+        var leadId = createdBody.GetProperty("id").GetInt32();
+        var ownerId = createdBody.GetProperty("ownerUserId").GetInt32();
+
+        var converted = await Client.PostAsJsonAsync($"/api/leads/{leadId}/convert", new
+        {
+            address = "12 Nguyễn Trãi, Hà Nội",
+            representativeName = "Ms. Nga",
+        });
+
+        converted.EnsureSuccessStatusCode();
+        var body = await ReadJsonAsync(converted);
+        var customerId = body.GetProperty("convertedCustomerId").GetInt32();
+        var opportunityId = body.GetProperty("convertedOpportunityId").GetInt32();
+
+        var links = await WithDbAsync(async db =>
+        {
+            var customer = await db.Customers.FirstAsync(c => c.Id == customerId);
+            var opportunity = await db.Opportunities.FirstAsync(o => o.Id == opportunityId);
+            return new
+            {
+                customer.TaxId,
+                CustomerOwnerUserId = customer.OwnerUserId,
+                opportunity.CustomerId,
+                OpportunityOwnerUserId = opportunity.OwnerUserId,
+            };
+        });
+
+        links.TaxId.Should().BeNull();
+        links.CustomerOwnerUserId.Should().Be(ownerId);
+        links.CustomerId.Should().Be(customerId);
+        links.OpportunityOwnerUserId.Should().Be(ownerId);
+    }
+
+    [Fact]
     public async Task Convert_WithoutConvertPermission_IsForbidden()
     {
         // ADMIN role has ** with deny of users.manage/system.audit.manage —

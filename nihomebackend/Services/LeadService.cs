@@ -630,9 +630,9 @@ public class LeadService(
 
     /// <summary>
     /// Builds the customer a convert creates. A lead with a company name yields a
-    /// Company customer, and <c>CustomerService.ValidateForType</c> requires a tax
-    /// id, address and representative for those — none of which the Lead model
-    /// carries, so the caller has to supply them on the request.
+    /// Company customer, and <c>CustomerService.ValidateForType</c> requires an
+    /// address and representative for those. Tax id is deliberately optional:
+    /// a prospect may not have supplied one at conversion time (NIH-448).
     /// </summary>
     private static Customer BuildCustomerFromLead(
         Lead lead,
@@ -643,12 +643,11 @@ public class LeadService(
         var isCompany = !string.IsNullOrWhiteSpace(lead.CompanyName);
 
         if (isCompany &&
-            (string.IsNullOrWhiteSpace(request.TaxId)
-             || string.IsNullOrWhiteSpace(request.Address)
+            (string.IsNullOrWhiteSpace(request.Address)
              || string.IsNullOrWhiteSpace(request.RepresentativeName)))
         {
             throw new LeadOperationException(
-                "Company leads require TaxId, Address and RepresentativeName to convert.");
+                "Company leads require Address and RepresentativeName to convert.");
         }
 
         return new Customer
