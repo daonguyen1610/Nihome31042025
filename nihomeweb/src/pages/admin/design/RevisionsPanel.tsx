@@ -280,12 +280,12 @@ export const RevisionsPanel = ({
               <section className="rounded-md border border-slate-200 bg-slate-50/40 p-3">
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <GitCompareArrows className="h-3.5 w-3.5" />
-                  Diff
+                  {t("drawingRevision.diff.title")}
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <Select value={diffFrom != null ? String(diffFrom) : ""} onValueChange={(v) => setDiffFrom(v ? Number(v) : null)}>
                     <SelectTrigger className="h-9 w-[140px]" data-testid="revisions-diff-from">
-                      <SelectValue placeholder="From" />
+                      <SelectValue placeholder={t("drawingRevision.diff.from")} />
                     </SelectTrigger>
                     <SelectContent>
                       {rows.map((r) => (
@@ -296,7 +296,7 @@ export const RevisionsPanel = ({
                   <span className="text-xs text-slate-400">→</span>
                   <Select value={diffTo != null ? String(diffTo) : ""} onValueChange={(v) => setDiffTo(v ? Number(v) : null)}>
                     <SelectTrigger className="h-9 w-[140px]" data-testid="revisions-diff-to">
-                      <SelectValue placeholder="To" />
+                      <SelectValue placeholder={t("drawingRevision.diff.to")} />
                     </SelectTrigger>
                     <SelectContent>
                       {rows.map((r) => (
@@ -311,7 +311,7 @@ export const RevisionsPanel = ({
                     disabled={diffFrom == null || diffTo == null || diffFrom === diffTo || diffLoading}
                     data-testid="revisions-diff-run"
                   >
-                    {diffLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Diff"}
+                    {diffLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("drawingRevision.diff.run")}
                   </Button>
                 </div>
                 {diff ? (

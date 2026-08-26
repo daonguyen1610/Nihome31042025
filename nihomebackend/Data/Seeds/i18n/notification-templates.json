@@ -114,7 +114,7 @@
   {
     "key": "notification.design.revision.created.title",
     "category": "notification",
-    "vi": "Revision mới cho bản vẽ {{drawingCode}}",
+    "vi": "Phiên bản mới cho bản vẽ {{drawingCode}}",
     "en": "New revision for drawing {{drawingCode}}",
     "zh": "图纸 {{drawingCode}} 有新修订",
     "ja": "図面 {{drawingCode}} の新しいリビジョン"
@@ -122,7 +122,7 @@
   {
     "key": "notification.design.revision.created.body",
     "category": "notification",
-    "vi": "Bản vẽ {{drawingCode}} vừa có revision {{revision}} ({{reason}}). Bản cũ đã bị thu hồi, vui lòng dùng phiên bản mới.",
+    "vi": "Bản vẽ {{drawingCode}} vừa có phiên bản {{revision}} ({{reason}}). Bản cũ đã bị thu hồi, vui lòng dùng phiên bản mới.",
     "en": "Drawing {{drawingCode}} has a new revision {{revision}} ({{reason}}). The previous version was superseded — please use the new one.",
     "zh": "图纸 {{drawingCode}} 有新修订 {{revision}}（{{reason}}）。旧版已作废，请使用新版本。",
     "ja": "図面 {{drawingCode}} に新しいリビジョン {{revision}}（{{reason}}）が発行され、旧版は失効しました。新版をご使用ください。"

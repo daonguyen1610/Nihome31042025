@@ -70,7 +70,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
 
     // Sanity check the header switched to Basic Design.
     await expect(page.getByRole("heading", { name: new RegExp(`DP-\\d+-\\d+`) })).toBeVisible();
-    await expect(page.locator("main").getByText(/Basic Design/).first()).toBeVisible();
+    await expect(page.locator("main").getByText(/Thiết kế cơ sở|Basic design|基本设计|基本設計/i).first()).toBeVisible();
 
     // ---------- 3. Switch to the Basic Design tab ----------
     // The notifications overlay can sit above the tab in some viewports;
@@ -79,7 +79,9 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
       const region = document.querySelector('[aria-label*="Notifications ("]');
       region?.remove();
     });
-    const basicTab = page.locator('button[role="tab"]').filter({ hasText: /^Basic Design$/i });
+    const basicTab = page.locator('button[role="tab"]').filter({
+      hasText: /^(Thiết kế cơ sở|Basic design|基本设计|基本設計)$/i,
+    });
     await basicTab.click({ force: true });
     // The readiness card + "Tạo bản vẽ" button should be visible.
     await expect(page.getByRole("button", { name: /T\u1ea1o b\u1ea3n v\u1ebd|New document/i })).toBeVisible();
@@ -128,7 +130,9 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     }
 
     // Team and Documents are real API-backed rollups, not follow-up placeholders.
-    await page.locator('button[role="tab"]').filter({ hasText: /^Team$/i }).click({ force: true });
+    await page.locator('button[role="tab"]').filter({
+      hasText: /^(Đội ngũ|Team|团队|チーム)$/i,
+    }).click({ force: true });
     await expect(page.getByTestId("design-project-team-tab")).toBeVisible();
     await page.locator('button[role="tab"]').filter({ hasText: /^Tài liệu$|^Documents$/i }).click({ force: true });
     await expect(page.getByTestId("design-project-documents-tab")).toBeVisible();
