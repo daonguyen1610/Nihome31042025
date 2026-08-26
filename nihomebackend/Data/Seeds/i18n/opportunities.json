@@ -14,6 +14,7 @@
   { "key": "opportunities.updated", "category": "opportunities", "vi": "Đã cập nhật cơ hội.", "en": "Opportunity updated.", "zh": "商机已更新。", "ja": "商談を更新しました。" },
   { "key": "opportunities.deleted", "category": "opportunities", "vi": "Đã xoá cơ hội.", "en": "Opportunity deleted.", "zh": "商机已删除。", "ja": "商談を削除しました。" },
   { "key": "opportunities.deleteConfirm", "category": "opportunities", "vi": "Bạn có chắc muốn xoá cơ hội này?", "en": "Delete this opportunity?", "zh": "确认删除该商机？", "ja": "この商談を削除しますか？" },
+  { "key": "opportunities.action.createQuote", "category": "opportunities", "vi": "Tạo Báo giá", "en": "Create quote", "zh": "创建报价", "ja": "見積を作成" },
 
   { "key": "opportunities.field.name", "category": "opportunities", "vi": "Tên cơ hội", "en": "Opportunity name", "zh": "商机名称", "ja": "商談名" },
   { "key": "opportunities.field.customer", "category": "opportunities", "vi": "Khách hàng", "en": "Customer", "zh": "客户", "ja": "顧客" },
