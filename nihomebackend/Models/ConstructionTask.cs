@@ -70,6 +70,10 @@ public enum ConstructionTaskStatus
     Completed = 2,
     /// <summary>Aborted — not part of the delivered scope any more.</summary>
     Cancelled = 3,
+    /// <summary>Temporarily paused while remaining in scope.</summary>
+    OnHold = 4,
+    /// <summary>Blocked pending input or delivery from another department.</summary>
+    WaitingForDepartment = 5,
 }
 
 /// <summary>

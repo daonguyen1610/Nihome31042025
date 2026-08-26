@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, Fragment } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -67,6 +68,8 @@ const CONSTRUCTION_STATUSES: ConstructionTaskStatus[] = [
   "InProgress",
   "Completed",
   "Cancelled",
+  "OnHold",
+  "WaitingForDepartment",
 ];
 
 const STATUS_BADGE: Record<ConstructionTaskStatus, string> = {
@@ -74,6 +77,8 @@ const STATUS_BADGE: Record<ConstructionTaskStatus, string> = {
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
   Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  OnHold: "border-amber-200 bg-amber-50 text-amber-800",
+  WaitingForDepartment: "border-violet-200 bg-violet-50 text-violet-700",
 };
 
 const OVERDUE_BADGE = "border-amber-300 bg-amber-50 text-amber-800";
@@ -188,6 +193,7 @@ const AdminConstructionTasks = () => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const [searchParams] = useSearchParams();
   const canManage = has(ADMIN_PERMS.constructionTasksManage);
   const canListUsers = has(ADMIN_PERMS.users);
 
@@ -200,7 +206,9 @@ const AdminConstructionTasks = () => {
   const [error, setError] = useState<string | null>(null);
 
   // filters
-  const [projectId, setProjectId] = useState<number | null>(null);
+  const projectIdParam = Number(searchParams.get("projectId"));
+  const initialProjectId = Number.isInteger(projectIdParam) && projectIdParam > 0 ? projectIdParam : null;
+  const [projectId, setProjectId] = useState<number | null>(initialProjectId);
   const [status, setStatus] = useState<ConstructionTaskStatus | "">("");
   const [ownerUserId, setOwnerUserId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -216,7 +224,7 @@ const AdminConstructionTasks = () => {
 
   // dialog / sheet
   const [creating, setCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateForm>(() => emptyCreateForm(null));
+  const [createForm, setCreateForm] = useState<CreateForm>(() => emptyCreateForm(initialProjectId));
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
