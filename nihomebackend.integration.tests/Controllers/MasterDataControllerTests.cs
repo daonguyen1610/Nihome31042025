@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -138,6 +139,46 @@ public class MasterDataControllerTests : IntegrationTestBase
 
         (await Client.DeleteAsync($"/api/master-data/options/{id}")).StatusCode
             .Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_ReferencedDocumentCategory_ReturnsConflictAndPreservesReference()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var code = "doc-" + Guid.NewGuid().ToString("N")[..8];
+        var created = await Client.PostAsJsonAsync("/api/master-data/capability_document_tag", new
+        {
+            code,
+            name = "Referenced document category",
+            isActive = true,
+            sortOrder = 99,
+        });
+        created.EnsureSuccessStatusCode();
+        var optionId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        var documentId = await WithDbAsync(async db =>
+        {
+            var document = new NihomeBackend.Models.CapabilityDocument
+            {
+                Name = "Referenced capability document",
+                TagCode = code,
+                FilePath = "/files/capability/reference.pdf",
+                OriginalFileName = "reference.pdf",
+                ContentType = "application/pdf",
+                FileSize = 1,
+            };
+            db.CapabilityDocuments.Add(document);
+            await db.SaveChangesAsync();
+            return document.Id;
+        });
+
+        (await Client.DeleteAsync($"/api/master-data/options/{optionId}"))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var referencePreserved = await WithDbAsync(async db =>
+            await db.MasterDataOptions.AnyAsync(o => o.Id == optionId)
+            && await db.CapabilityDocuments.AnyAsync(d => d.Id == documentId && d.TagCode == code));
+        referencePreserved.Should().BeTrue();
     }
 
     [Fact]

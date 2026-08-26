@@ -157,6 +157,12 @@ public class MasterDataService(
             return false;
         }
 
+        if (entity.Category == "capability_document_tag" &&
+            await db.CapabilityDocuments.AsNoTracking().AnyAsync(d => d.TagCode == entity.Code, ct))
+        {
+            throw new MasterDataInUseException(entity.Category, entity.Code);
+        }
+
         db.MasterDataOptions.Remove(entity);
         await db.SaveChangesAsync(ct);
         InvalidateCache(entity.Category);

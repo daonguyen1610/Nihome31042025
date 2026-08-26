@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
+using NihomeBackend.Constants;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
+using NihomeBackend.Services.Audit;
 
 namespace NihomeBackend.Controllers;
 
@@ -16,7 +18,7 @@ namespace NihomeBackend.Controllers;
 [Route("api/master-data")]
 [Route("api/v1/master-data")]
 [Authorize]
-public class MasterDataController(IMasterDataService svc) : ControllerBase
+public class MasterDataController(IMasterDataService svc, IAuditLogger audit) : ControllerBase
 {
     [HttpGet("categories")]
     [RequirePermission("master-data", "view")]
@@ -49,6 +51,14 @@ public class MasterDataController(IMasterDataService svc) : ControllerBase
         try
         {
             var created = await svc.CreateAsync(category, req, ct);
+            audit.Log(new AuditEvent
+            {
+                Action = "masterData.create",
+                ResourceType = EntityTypes.MasterDataOption,
+                ResourceId = created.Id.ToString(),
+                Message = $"Master-data option {created.Category}/{created.Code} created.",
+                NewValue = created,
+            });
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
         catch (MasterDataDuplicateCodeException ex)
@@ -66,7 +76,20 @@ public class MasterDataController(IMasterDataService svc) : ControllerBase
     {
         try
         {
+            var previous = await svc.GetByIdAsync(id, ct);
             var updated = await svc.UpdateAsync(id, req, ct);
+            if (updated is not null)
+            {
+                audit.Log(new AuditEvent
+                {
+                    Action = "masterData.update",
+                    ResourceType = EntityTypes.MasterDataOption,
+                    ResourceId = id.ToString(),
+                    Message = $"Master-data option {updated.Category}/{updated.Code} updated.",
+                    OldValue = previous,
+                    NewValue = updated,
+                });
+            }
             return updated == null ? NotFound() : Ok(updated);
         }
         catch (MasterDataDuplicateCodeException ex)
@@ -78,5 +101,24 @@ public class MasterDataController(IMasterDataService svc) : ControllerBase
     [HttpDelete("options/{id:int}")]
     [RequirePermission("master-data", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
-        => await svc.DeleteAsync(id, ct) ? NoContent() : NotFound();
+    {
+        var previous = await svc.GetByIdAsync(id, ct);
+        try
+        {
+            if (!await svc.DeleteAsync(id, ct)) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "masterData.delete",
+                ResourceType = EntityTypes.MasterDataOption,
+                ResourceId = id.ToString(),
+                Message = $"Master-data option {previous?.Category}/{previous?.Code} deleted.",
+                OldValue = previous,
+            });
+            return NoContent();
+        }
+        catch (MasterDataInUseException ex)
+        {
+            return Conflict(new { message = ex.Message, category = ex.Category, code = ex.Code });
+        }
+    }
 }
