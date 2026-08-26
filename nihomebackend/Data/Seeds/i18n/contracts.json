@@ -616,6 +616,22 @@
     "ja": "変更契約はまだありません。"
   },
   {
+    "key": "contracts.appendix.guide.title", "category": "contracts",
+    "vi": "VO trong hệ thống", "en": "VO in the system", "zh": "系统中的 VO", "ja": "システム上のVO"
+  },
+  {
+    "key": "contracts.appendix.guide.purpose", "category": "contracts",
+    "vi": "Dùng VO để ghi nhận thay đổi có lý do làm tăng hoặc giảm giá trị hợp đồng.", "en": "Use a VO to record a reasoned change that increases or decreases the contract value.", "zh": "使用 VO 记录有明确原因、会增加或减少合同金额的变更。", "ja": "VOは、理由を伴う契約金額の増額または減額を記録するために使用します。"
+  },
+  {
+    "key": "contracts.appendix.guide.workflow", "category": "contracts",
+    "vi": "Luồng hệ thống: Nháp → Gửi duyệt → Đã duyệt hoặc Từ chối. VO bị từ chối có thể sửa và gửi lại.", "en": "System flow: Draft → Submitted → Approved or Rejected. A rejected VO can be edited and resubmitted.", "zh": "系统流程：草稿 → 已提交 → 已批准或已拒绝。被拒绝的 VO 可编辑后重新提交。", "ja": "システムフロー：下書き → 申請済み → 承認または却下。却下されたVOは編集して再申請できます。"
+  },
+  {
+    "key": "contracts.appendix.guide.impact", "category": "contracts",
+    "vi": "Chỉ VO đã duyệt được cộng vào Giá trị hiện tại; VO nháp, đang duyệt hoặc bị từ chối không làm thay đổi giá trị.", "en": "Only approved VOs affect Current value; draft, submitted, or rejected VOs do not change it.", "zh": "只有已批准的 VO 会影响当前金额；草稿、已提交或已拒绝的 VO 不会改变该金额。", "ja": "現在金額に反映されるのは承認済みVOのみです。下書き・申請済み・却下のVOは金額を変更しません。"
+  },
+  {
     "key": "contracts.appendix.new",
     "category": "contracts",
     "vi": "Tạo VO mới",

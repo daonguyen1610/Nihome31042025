@@ -878,6 +878,17 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+        <div className="flex items-start gap-2">
+          <FileText className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <p className="font-semibold">{t("contracts.appendix.guide.title")}</p>
+            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.purpose")}</p>
+            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.workflow")}</p>
+            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.impact")}</p>
+          </div>
+        </div>
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         {deletableIds.length > 0 ? (
           <label className="inline-flex items-center gap-2 text-xs text-slate-600">
