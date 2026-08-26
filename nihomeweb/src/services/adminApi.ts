@@ -2266,7 +2266,13 @@ export interface AcknowledgeIfcReleaseRecipientRequest {
 
 // --- Construction schedule (NIH-141) -----------------------------------
 
-export type ConstructionTaskStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
+export type ConstructionTaskStatus =
+  | "Planned"
+  | "InProgress"
+  | "Completed"
+  | "Cancelled"
+  | "OnHold"
+  | "WaitingForDepartment";
 
 export interface ConstructionTaskDependencyResponse {
   id: number;

@@ -35,6 +35,8 @@
   { "key": "constructionTasks.status.InProgress", "category": "constructionTasks", "vi": "Đang thi công", "en": "In progress", "zh": "进行中", "ja": "進行中" },
   { "key": "constructionTasks.status.Completed", "category": "constructionTasks", "vi": "Hoàn thành", "en": "Completed", "zh": "已完成", "ja": "完了" },
   { "key": "constructionTasks.status.Cancelled", "category": "constructionTasks", "vi": "Đã huỷ", "en": "Cancelled", "zh": "已取消", "ja": "取消" },
+  { "key": "constructionTasks.status.OnHold", "category": "constructionTasks", "vi": "Tạm dừng", "en": "On hold", "zh": "暂停", "ja": "保留" },
+  { "key": "constructionTasks.status.WaitingForDepartment", "category": "constructionTasks", "vi": "Chờ bộ phận khác", "en": "Waiting for another department", "zh": "等待其他部门", "ja": "他部署待ち" },
   { "key": "constructionTasks.status.Overdue", "category": "constructionTasks", "vi": "Trễ tiến độ", "en": "Overdue", "zh": "延期", "ja": "遅延" },
 
   { "key": "constructionTasks.filter.allStatuses", "category": "constructionTasks", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべての状態" },

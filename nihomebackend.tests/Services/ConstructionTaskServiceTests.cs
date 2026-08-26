@@ -224,6 +224,29 @@ public class ConstructionTaskServiceTests : IDisposable
             _sut.UpdateAsync(a.Id, body, _userId));
     }
 
+    [Theory]
+    [InlineData("OnHold", ConstructionTaskStatus.OnHold)]
+    [InlineData("WaitingForDepartment", ConstructionTaskStatus.WaitingForDepartment)]
+    public async Task UpdateAsync_preserves_supported_paused_statuses(
+        string requestedStatus,
+        ConstructionTaskStatus expectedStatus)
+    {
+        var task = await _sut.CreateAsync(Req("Paused task"), _userId);
+        var body = new UpdateConstructionTaskRequest
+        {
+            Name = task.Name,
+            PlannedStart = task.PlannedStart,
+            PlannedEnd = task.PlannedEnd,
+            ProgressPercent = 25,
+            Status = requestedStatus,
+        };
+
+        var updated = await _sut.UpdateAsync(task.Id, body, _userId);
+
+        Assert.NotNull(updated);
+        Assert.Equal(expectedStatus.ToString(), updated!.Status);
+    }
+
     [Fact]
     public async Task UpdateAsync_auto_completes_when_progress_100_and_actual_end_set()
     {
