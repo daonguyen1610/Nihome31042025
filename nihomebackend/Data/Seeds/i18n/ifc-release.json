@@ -35,12 +35,13 @@
 
   { "key": "ifcRelease.form.hint", "category": "ifcRelease", "vi": "Đặt tên phiếu và ghi chú. Sau khi tạo, hãy thêm bản vẽ + nơi nhận trước khi phát hành.", "en": "Set the title + note. After creating, add drawings + recipients before releasing.", "zh": "填写标题和备注。创建后请在发布前添加图纸和接收方。", "ja": "タイトルとメモを入力。作成後、発行前に図面と受取先を追加してください。" },
   { "key": "ifcRelease.form.titleRequired", "category": "ifcRelease", "vi": "Tên phiếu là bắt buộc.", "en": "Title is required.", "zh": "标题为必填项。", "ja": "タイトルは必須です。" },
-  { "key": "ifcRelease.recipient.namePlaceholder", "category": "ifcRelease", "vi": "VD: Công ty CP xây dựng ABC", "en": "e.g. ABC Construction Ltd", "zh": "例如：ABC建筑公司", "ja": "例：ABC建設株式会社" },
+  { "key": "ifcRelease.recipient.namePlaceholder", "category": "ifcRelease", "vi": "Ví dụ: Công ty CP xây dựng ABC", "en": "e.g. ABC Construction Ltd", "zh": "例如：ABC建筑公司", "ja": "例：ABC建設株式会社" },
   { "key": "ifcRelease.recipient.typePlaceholder", "category": "ifcRelease", "vi": "Loại nơi nhận", "en": "Recipient type", "zh": "接收方类型", "ja": "受取先種別" },
 
   { "key": "ifcRelease.confirmRelease", "category": "ifcRelease", "vi": "Phát hành phiếu {code}? Toàn bộ bản vẽ trong phiếu sẽ bị khoá và chuyển sang trạng thái Đã phát hành.", "en": "Release {code}? All bundled drawings will be locked and moved to Released status.", "zh": "发布 {code}？所有图纸将被锁定并标记为已发布。", "ja": "{code} を発行しますか？対象図面はロックされ発行済みになります。" },
   { "key": "ifcRelease.confirmCancel", "category": "ifcRelease", "vi": "Huỷ phiếu {code}? Bản vẽ đính kèm sẽ không bị ảnh hưởng.", "en": "Cancel {code}? The bundled drawings will not be modified.", "zh": "取消 {code}？关联图纸不会被修改。", "ja": "{code} を取消しますか？対象図面は変更されません。" },
 
   { "key": "ifcRelease.filter.allStatuses", "category": "ifcRelease", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべての状態" },
-  { "key": "ifcRelease.filter.search", "category": "ifcRelease", "vi": "Tìm số phiếu hoặc tên...", "en": "Search by number or title...", "zh": "按编号或标题搜索...", "ja": "番号またはタイトルで検索..." }
+  { "key": "ifcRelease.filter.search", "category": "ifcRelease", "vi": "Tìm số phiếu hoặc tên...", "en": "Search by number or title...", "zh": "按编号或标题搜索...", "ja": "番号またはタイトルで検索..." },
+  { "key": "ifcRelease.stats.total", "category": "ifcRelease", "vi": "Tổng số phiếu", "en": "Total", "zh": "总数", "ja": "合計" }
 ]

@@ -382,7 +382,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
         <StatPill label={t("ifcRelease.status.Draft")} value={statusCounts.Draft ?? 0} tone="slate" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
         <StatPill label={t("ifcRelease.status.Released")} value={statusCounts.Released ?? 0} tone="emerald" />
         <StatPill label={t("ifcRelease.status.Cancelled")} value={statusCounts.Cancelled ?? 0} tone="rose" />
-        <StatPill label={"Total"} value={rows.length} tone="slate" />
+        <StatPill label={t("ifcRelease.stats.total")} value={rows.length} tone="slate" />
       </section>
 
       <header className="flex flex-wrap items-center justify-between gap-2">

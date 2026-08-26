@@ -133,7 +133,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
 
     // send review → approve → queue IFC
     await page.getByTestId(`shop-drawing-send-${drawingId}`).click();
-    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(/InReview|Đang review|审核中|レビュー中/i);
+    await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(/InReview|Chờ duyệt|In review|审核中|レビュー中/i);
     await page.getByTestId(`shop-drawing-approve-${drawingId}`).click();
     await expect(page.getByTestId(`shop-drawing-status-${drawingId}`)).toHaveText(/Approved|Đã duyệt|已批准|承認済み/i);
     await page.getByTestId(`shop-drawing-queue-${drawingId}`).click();

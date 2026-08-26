@@ -522,7 +522,7 @@
   {
     "key": "masterData.category.drawing_revision_reason.title",
     "category": "masterData",
-    "vi": "Lý do revision bản vẽ",
+    "vi": "Lý do cập nhật phiên bản bản vẽ",
     "en": "Drawing revision reason",
     "zh": "图纸修订原因",
     "ja": "図面リビジョン理由"

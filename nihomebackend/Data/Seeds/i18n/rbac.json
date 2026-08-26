@@ -1626,7 +1626,7 @@
   {
     "key": "rbac.perm.design.projects.manage.description",
     "category": "rbac",
-    "vi": "Cho phép tạo/sửa dự án thiết kế và cấu hình team bộ môn.",
+    "vi": "Cho phép tạo/sửa dự án thiết kế và cấu hình đội ngũ bộ môn.",
     "en": "Allows creating/editing design projects and configuring discipline teams.",
     "zh": "允许创建/编辑设计项目并配置专业团队。",
     "ja": "設計プロジェクトの作成・編集及び専門チームの設定を許可します。"
@@ -1634,7 +1634,7 @@
   {
     "key": "rbac.perm.design.concepts.view.label",
     "category": "rbac",
-    "vi": "Xem hồ sơ Concept",
+    "vi": "Xem hồ sơ thiết kế ý tưởng",
     "en": "View concept designs",
     "zh": "查看方案设计",
     "ja": "コンセプト設計を表示"
@@ -1642,7 +1642,7 @@
   {
     "key": "rbac.perm.design.concepts.view.description",
     "category": "rbac",
-    "vi": "Cho phép xem các phương án Concept và feedback khách hàng.",
+    "vi": "Cho phép xem các phương án thiết kế ý tưởng và phản hồi của khách hàng.",
     "en": "Allows viewing concept options and customer feedback.",
     "zh": "允许查看方案概念及客户反馈。",
     "ja": "コンセプト案及び顧客フィードバックの閲覧を許可します。"
@@ -1650,7 +1650,7 @@
   {
     "key": "rbac.perm.design.concepts.manage.label",
     "category": "rbac",
-    "vi": "Quản lý hồ sơ Concept",
+    "vi": "Quản lý hồ sơ thiết kế ý tưởng",
     "en": "Manage concept designs",
     "zh": "管理方案设计",
     "ja": "コンセプト設計を管理"
@@ -1658,7 +1658,7 @@
   {
     "key": "rbac.perm.design.concepts.manage.description",
     "category": "rbac",
-    "vi": "Cho phép tạo/sửa phương án Concept, upload 3D/mặt bằng.",
+    "vi": "Cho phép tạo/sửa phương án thiết kế ý tưởng, tải lên mô hình 3D và mặt bằng.",
     "en": "Allows creating/editing concept options and uploading 3D/floor plans.",
     "zh": "允许创建/编辑方案概念并上传3D/平面图。",
     "ja": "コンセプト案の作成・編集及び3D/平面図のアップロードを許可します。"
@@ -1666,7 +1666,7 @@
   {
     "key": "rbac.perm.design.concepts.finalize.label",
     "category": "rbac",
-    "vi": "Chốt phương án Concept",
+    "vi": "Chốt phương án thiết kế ý tưởng",
     "en": "Finalize concept",
     "zh": "确定方案",
     "ja": "コンセプトを確定"
@@ -1674,7 +1674,7 @@
   {
     "key": "rbac.perm.design.concepts.finalize.description",
     "category": "rbac",
-    "vi": "Chốt 1 phương án và tự động khoá các phương án còn lại; mở khoá Basic Design.",
+    "vi": "Chốt một phương án, tự động khoá các phương án còn lại và mở khoá Thiết kế cơ sở.",
     "en": "Locks in one concept, marks the others as dropped and unlocks Basic Design.",
     "zh": "确定一个方案,其余方案将被锁定,并解锁基础设计阶段。",
     "ja": "1つのコンセプトを確定し他をロックした上で基本設計を解錠します。"
@@ -1682,7 +1682,7 @@
   {
     "key": "rbac.perm.design.basic.view.label",
     "category": "rbac",
-    "vi": "Xem hồ sơ Basic Design",
+    "vi": "Xem hồ sơ thiết kế cơ sở",
     "en": "View basic design docs",
     "zh": "查看基础设计文件",
     "ja": "基本設計を表示"
@@ -1698,7 +1698,7 @@
   {
     "key": "rbac.perm.design.basic.manage.label",
     "category": "rbac",
-    "vi": "Quản lý hồ sơ Basic Design",
+    "vi": "Quản lý hồ sơ thiết kế cơ sở",
     "en": "Manage basic design docs",
     "zh": "管理基础设计文件",
     "ja": "基本設計を管理"
@@ -1706,7 +1706,7 @@
   {
     "key": "rbac.perm.design.basic.manage.description",
     "category": "rbac",
-    "vi": "Cho phép upload/thay thế bản vẽ + thuyết minh Basic Design.",
+    "vi": "Cho phép tải lên/thay thế bản vẽ và thuyết minh thiết kế cơ sở.",
     "en": "Allows uploading/replacing drawings and technical narratives for Basic Design.",
     "zh": "允许上传/替换基础设计的图纸与技术说明。",
     "ja": "基本設計の図面・技術説明のアップロード・差し替えを許可します。"
@@ -1714,7 +1714,7 @@
   {
     "key": "rbac.perm.design.basic.approve.label",
     "category": "rbac",
-    "vi": "Duyệt hồ sơ Basic Design",
+    "vi": "Duyệt hồ sơ thiết kế cơ sở",
     "en": "Approve basic design docs",
     "zh": "审批基础设计文件",
     "ja": "基本設計を承認"
@@ -1722,7 +1722,7 @@
   {
     "key": "rbac.perm.design.basic.approve.description",
     "category": "rbac",
-    "vi": "Duyệt nội bộ hồ sơ Basic Design (điều kiện chuyển Thiết kế chi tiết).",
+    "vi": "Duyệt nội bộ hồ sơ thiết kế cơ sở (điều kiện chuyển sang Thiết kế chi tiết).",
     "en": "Internally approves Basic Design documents (gate to Detail Design).",
     "zh": "对基本设计文件进行内部审批（进入详细设计的门槛）。",
     "ja": "基本設計の社内承認（詳細設計移行の要件）を行います。"
@@ -1754,7 +1754,7 @@
   {
     "key": "rbac.perm.design.shop.manage.description",
     "category": "rbac",
-    "vi": "Cho phép tạo/sửa/upload hồ sơ Thiết kế chi tiết và gán reviewer chéo bộ môn.",
+    "vi": "Cho phép tạo/sửa/tải lên hồ sơ Thiết kế chi tiết và phân công người duyệt chéo bộ môn.",
     "en": "Allows creating, editing, and uploading Detail Design documents and assigning cross-discipline reviewers.",
     "zh": "允许创建、编辑和上传详细设计文件，并分配跨专业审查人。",
     "ja": "詳細設計ドキュメントの作成・編集・アップロード及び他専門レビュアーの割当てを許可します。"
@@ -1770,7 +1770,7 @@
   {
     "key": "rbac.perm.design.shop.approve.description",
     "category": "rbac",
-    "vi": "Design Lead duyệt cuối Thiết kế chi tiết trước khi đưa vào phiếu IFC.",
+    "vi": "Chủ trì thiết kế duyệt cuối hồ sơ Thiết kế chi tiết trước khi đưa vào phiếu IFC.",
     "en": "Final Design Lead approval of Detail Design documents before an IFC release.",
     "zh": "详细设计文件在纳入IFC发布前由设计主管终审。",
     "ja": "IFC発行前に設計リーダーが詳細設計ドキュメントを最終承認します。"
@@ -1786,7 +1786,7 @@
   {
     "key": "rbac.perm.design.revisions.view.description",
     "category": "rbac",
-    "vi": "Cho phép xem lịch sử revision và bản vẽ đã bị thu hồi.",
+    "vi": "Cho phép xem lịch sử phiên bản và các bản vẽ đã bị thu hồi.",
     "en": "Allows viewing revision history and superseded drawings.",
     "zh": "允许查看修订历史及已作废图纸。",
     "ja": "リビジョン履歴と失効した図面の閲覧を許可します。"
@@ -1802,7 +1802,7 @@
   {
     "key": "rbac.perm.design.revisions.manage.description",
     "category": "rbac",
-    "vi": "Cho phép tạo revision mới với lý do thay đổi + tự thu hồi bản cũ.",
+    "vi": "Cho phép tạo phiên bản mới kèm lý do thay đổi và tự động thu hồi bản cũ.",
     "en": "Allows creating a new revision with a change reason; auto-supersedes the previous one.",
     "zh": "允许创建新修订并附带变更原因,自动作废旧版。",
     "ja": "変更理由付きの新規リビジョンを作成し、旧版を自動失効させることを許可します。"
@@ -2170,7 +2170,7 @@
   {
     "key": "rbac.role.DESIGN_LEAD.description",
     "category": "rbac",
-    "vi": "Chốt phương án Concept, duyệt Basic Design/Thiết kế chi tiết và phát hành hồ sơ IFC.",
+    "vi": "Chốt phương án thiết kế ý tưởng, duyệt Thiết kế cơ sở/Thiết kế chi tiết và phát hành hồ sơ IFC.",
     "en": "Finalises concepts, approves Basic Design and Detail Design, and releases IFC packages.",
     "zh": "确定概念方案，审批基本设计和详细设计并发布IFC文件。",
     "ja": "コンセプトを確定し、基本設計と詳細設計を承認し、IFC図面を発行します。"
@@ -2186,7 +2186,7 @@
   {
     "key": "rbac.role.ARCHITECT.description",
     "category": "rbac",
-    "vi": "Chịu trách nhiệm hồ sơ thiết kế bộ môn Kiến trúc (Concept · Basic Design · Thiết kế chi tiết).",
+    "vi": "Chịu trách nhiệm hồ sơ bộ môn Kiến trúc (Thiết kế ý tưởng · Thiết kế cơ sở · Thiết kế chi tiết).",
     "en": "Owns architectural design documents across Concept, Basic Design, and Detail Design stages.",
     "zh": "负责建筑专业的概念设计、基本设计及详细设计文件。",
     "ja": "コンセプト・基本設計・詳細設計の各段階における建築設計を担当します。"
@@ -2218,7 +2218,7 @@
   {
     "key": "rbac.role.STRUCT_ENGINEER.description",
     "category": "rbac",
-    "vi": "Phụ trách hồ sơ Kết cấu trong Basic Design và Thiết kế chi tiết.",
+    "vi": "Phụ trách hồ sơ Kết cấu trong giai đoạn Thiết kế cơ sở và Thiết kế chi tiết.",
     "en": "Owns structural engineering deliverables in Basic Design and Detail Design.",
     "zh": "负责基本设计与详细设计中的结构专业文件。",
     "ja": "基本設計と詳細設計における構造関連成果物を担当します。"
