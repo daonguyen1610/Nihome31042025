@@ -31,3 +31,10 @@ public class MasterDataDuplicateCodeException(string category, string code)
     public string Category { get; } = category;
     public string Code { get; } = code;
 }
+
+public class MasterDataInUseException(string category, string code)
+    : InvalidOperationException($"Master-data option '{category}/{code}' is referenced and cannot be deleted. Disable it instead.")
+{
+    public string Category { get; } = category;
+    public string Code { get; } = code;
+}
