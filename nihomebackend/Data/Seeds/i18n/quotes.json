@@ -58,6 +58,7 @@
   {"key": "quotes.validation.pickOpportunity", "category": "quotes", "vi": "Chọn Cơ hội cho báo giá.", "en": "Pick an Opportunity for the quote.", "zh": "请选择商机。", "ja": "商談を選択してください。"},
   {"key": "quotes.validation.unitCostRequired", "category": "quotes", "vi": "Diện tích và đơn giá/m² phải > 0.", "en": "Area and unit price / m² must be > 0.", "zh": "面积和单价/m²需大于0。", "ja": "面積と単価は0より大きい値が必要です。"},
   {"key": "quotes.validation.boqRequired", "category": "quotes", "vi": "BOQ phải có ít nhất 1 dòng.", "en": "BOQ needs at least 1 item.", "zh": "BOQ 至少需要1行。", "ja": "BOQには少なくとも1行が必要です。"},
+  {"key": "quotes.validation.boqInvalidRow", "category": "quotes", "vi": "Mỗi dòng BOQ cần có tên hạng mục, đơn vị, khối lượng lớn hơn 0 và đơn giá không âm.", "en": "Each BOQ row needs an item name, unit, quantity greater than 0, and a non-negative unit price.", "zh": "每个 BOQ 行必须填写项目名称、单位、数量大于 0，且单价不能为负数。", "ja": "各BOQ行には項目名、単位、0より大きい数量、0以上の単価が必要です。"},
   {"key": "quotes.tab.content", "category": "quotes", "vi": "Nội dung", "en": "Content", "zh": "内容", "ja": "内容"},
   {"key": "quotes.tab.versions", "category": "quotes", "vi": "Phiên bản", "en": "Versions", "zh": "版本", "ja": "バージョン"},
   {"key": "quotes.tab.documents", "category": "quotes", "vi": "Tài liệu", "en": "Documents", "zh": "文档", "ja": "資料"},
