@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AlertTriangle, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, ThumbsDown, Trash2, Trophy } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -90,6 +90,7 @@ const AdminOpportunities = () => {
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { id: routeId } = useParams();
   const [handledOpenId, setHandledOpenId] = useState<number | null>(null);
@@ -1030,6 +1031,17 @@ const AdminOpportunities = () => {
                     >
                       <ThumbsDown className="mr-1.5 h-4 w-4" />
                       {t("opportunities.action.markLost")}
+                    </Button>
+                  </div>
+                )}
+                {canManage && detail.stage === "Won" && !detail.wonQuoteId && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)}
+                    >
+                      <Plus className="mr-1.5 h-4 w-4" />
+                      {t("opportunities.action.createQuote")}
                     </Button>
                   </div>
                 )}

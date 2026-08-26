@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -137,17 +138,24 @@ public class QuoteService(
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền tạo báo giá.");
 
-        var opportunity = await db.Opportunities.AsNoTracking()
+        var opportunity = await db.Opportunities
             .FirstOrDefaultAsync(o => o.Id == request.OpportunityId, ct)
             ?? throw new QuoteOperationException($"Không tìm thấy cơ hội #{request.OpportunityId}.");
 
-        // A closed opportunity takes no new quotes. The guard sits here and not in
-        // UpdateAsync on purpose: an old quote on a lost deal still has to be
-        // readable and its note editable for reconciliation.
-        if (opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
+        // A lost opportunity remains closed. A won opportunity without a winning
+        // quote is the supported recovery path from the demo defect (NIH-449):
+        // create one quote and atomically link it as the winning quote. Whether a
+        // won opportunity may own multiple independent quotes remains a business
+        // decision, so the existing one-quote link is preserved.
+        if (opportunity.Stage is OpportunityStage.Lost)
         {
             throw new QuoteOperationException(
                 $"Cơ hội #{opportunity.Id} đang ở trạng thái {opportunity.Stage} — không thể tạo báo giá mới.");
+        }
+        if (opportunity.Stage is OpportunityStage.Won && opportunity.WonQuoteId.HasValue)
+        {
+            throw new QuoteOperationException(
+                $"Cơ hội #{opportunity.Id} đã có báo giá thắng #{opportunity.WonQuoteId.Value}.");
         }
 
         ValidateMethodPayload(request.Method, request.AreaSqm, request.UnitPricePerSqm, request.Items);
@@ -186,6 +194,10 @@ public class QuoteService(
         ApplyItems(quote, request.Method, request.Items);
         RecomputeTotals(quote);
 
+        await using IDbContextTransaction? transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+
         db.Quotes.Add(quote);
         db.QuoteApprovalLogs.Add(new QuoteApprovalLog
         {
@@ -197,6 +209,19 @@ public class QuoteService(
             CreatedAt = now,
         });
         await db.SaveChangesAsync(ct);
+
+        if (opportunity.Stage is OpportunityStage.Won)
+        {
+            opportunity.WonQuoteId = quote.Id;
+            opportunity.UpdatedAt = now;
+            opportunity.UpdatedByUserId = callerUserId;
+            await db.SaveChangesAsync(ct);
+        }
+
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(ct);
+        }
 
         return (await GetAsync(quote.Id, callerUserId, canSeeAll: true, ct))!;
     }

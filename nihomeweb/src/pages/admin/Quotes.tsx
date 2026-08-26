@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -182,11 +182,20 @@ const AdminQuotes = () => {
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const openCreate = () => {
-    setCreateForm(emptyCreate());
+  const openedFromQuery = useRef(false);
+  const openCreate = (opportunityId = 0) => {
+    setCreateForm({ ...emptyCreate(), opportunityId });
     setCreateError(null);
     setCreating(true);
   };
+
+  useEffect(() => {
+    if (openedFromQuery.current) return;
+    const opportunityId = Number(searchParams.get("opportunityId"));
+    if (searchParams.get("create") !== "1" || !Number.isInteger(opportunityId) || opportunityId <= 0) return;
+    openedFromQuery.current = true;
+    openCreate(opportunityId);
+  }, [searchParams]);
 
   const handleCreate = async () => {
     setCreateError(null);
@@ -303,7 +312,7 @@ const AdminQuotes = () => {
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
           {canManage && (
-            <Button onClick={openCreate}>
+            <Button onClick={() => openCreate()}>
               <Plus className="mr-1.5 h-4 w-4" />
               {t("quotes.new")}
             </Button>
@@ -369,7 +378,7 @@ const AdminQuotes = () => {
         <div className="rounded-lg border bg-card p-10 text-center">
           <p className="text-muted-foreground">{t("quotes.empty")}</p>
           {canManage && (
-            <Button className="mt-4" onClick={openCreate}>
+            <Button className="mt-4" onClick={() => openCreate()}>
               <Plus className="mr-1.5 h-4 w-4" />
               {t("quotes.emptyCta")}
             </Button>

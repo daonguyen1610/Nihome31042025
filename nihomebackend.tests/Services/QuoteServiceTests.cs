@@ -44,14 +44,32 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_RejectsQuoteOnWonOpportunity()
+    public async Task CreateAsync_OnWonOpportunity_CreatesAndLinksWinningQuote()
     {
         var (user, opp) = await SeedOpportunityAsync(OpportunityStage.Won);
 
-        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
+        var created = await _sut.CreateAsync(
+            NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+
+        Assert.Single(_db.Quotes);
+        var savedOpportunity = await _db.Opportunities.SingleAsync(o => o.Id == opp.Id);
+        Assert.Equal(created.Id, savedOpportunity.WonQuoteId);
+        Assert.Equal(opp.CustomerId, created.CustomerId);
+        Assert.Equal(opp.OwnerUserId, created.OwnerUserId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OnWonOpportunityWithWinningQuote_RejectsDuplicate()
+    {
+        var (user, opp) = await SeedOpportunityAsync(OpportunityStage.Won);
+        var created = await _sut.CreateAsync(
+            NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+
+        var ex = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
             NewUnitCostRequest(opp.Id), user.Id, canManage: true));
 
-        Assert.Empty(_db.Quotes);
+        Assert.Contains(created.Id.ToString(), ex.Message);
+        Assert.Single(_db.Quotes);
     }
 
     [Fact]

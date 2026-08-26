@@ -68,6 +68,36 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_ForWonOpportunity_LinksWinningQuoteAndRejectsSecondQuote()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var oppId = await CreateOpportunityAsync();
+        (await Client.PatchAsJsonAsync($"/api/opportunities/{oppId}/stage", new
+        {
+            targetStage = "Won",
+        })).EnsureSuccessStatusCode();
+
+        var payload = new
+        {
+            opportunityId = oppId,
+            method = "UnitCost",
+            areaSqm = 50m,
+            unitPricePerSqm = 8_000_000m,
+            discountPercent = 0m,
+            vatPercent = 8m,
+        };
+        var created = await Client.PostAsJsonAsync("/api/quotes", payload);
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var quoteId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        var opportunity = await ReadJsonAsync(await Client.GetAsync($"/api/opportunities/{oppId}"));
+        opportunity.GetProperty("wonQuoteId").GetInt32().Should().Be(quoteId);
+
+        (await Client.PostAsJsonAsync("/api/quotes", payload))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Submit_Approve_Send_HappyPath()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
