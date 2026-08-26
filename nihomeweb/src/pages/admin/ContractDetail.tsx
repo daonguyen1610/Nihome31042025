@@ -1378,6 +1378,22 @@ const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTa
 
 const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
   const { t } = useI18n();
+  const actionKeys: Record<string, string> = {
+    "contract.create": "contracts.timeline.action.create",
+    "contract.update": "contracts.timeline.action.update",
+    "contract.delete": "contracts.timeline.action.delete",
+    "contract.transition": "contracts.timeline.action.transition",
+    "contract.designProject.ensure": "contracts.timeline.action.designProjectEnsure",
+    "contract.milestone.status": "contracts.timeline.action.milestoneStatus",
+    "contract.vo.create": "contracts.timeline.action.voCreate",
+    "contract.vo.update": "contracts.timeline.action.voUpdate",
+    "contract.vo.submit": "contracts.timeline.action.voSubmit",
+    "contract.vo.approve": "contracts.timeline.action.voApprove",
+    "contract.vo.reject": "contracts.timeline.action.voReject",
+    "contract.vo.delete": "contracts.timeline.action.voDelete",
+    "contract.attachment.create": "contracts.timeline.action.attachmentCreate",
+    "contract.attachment.delete": "contracts.timeline.action.attachmentDelete",
+  };
   if (events.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
@@ -1394,10 +1410,14 @@ const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-              <span className="font-semibold text-slate-800">{ev.action}</span>
+              <span className="font-semibold text-slate-800">
+                {actionKeys[ev.action] ? t(actionKeys[ev.action]) : ev.action}
+              </span>
               <span className="text-xs text-slate-500">{new Date(ev.occurredAt).toLocaleString()}</span>
             </div>
-            {ev.message ? <p className="mt-0.5 text-sm text-slate-700">{ev.message}</p> : null}
+            {!actionKeys[ev.action] && ev.message ? (
+              <p className="mt-0.5 text-sm text-slate-700">{ev.message}</p>
+            ) : null}
             {ev.userName ? (
               <p className="mt-1 text-xs text-slate-400">
                 {t("contracts.timeline.by")}: {ev.userName}
