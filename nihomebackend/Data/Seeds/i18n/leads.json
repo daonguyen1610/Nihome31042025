@@ -49,7 +49,7 @@
   {"key": "leads.updated", "category": "leads", "vi": "Đã cập nhật.", "en": "Updated.", "zh": "已更新。", "ja": "更新しました。"},
   {"key": "leads.deleted", "category": "leads", "vi": "Đã xoá.", "en": "Deleted.", "zh": "已删除。", "ja": "削除しました。"},
   {"key": "leads.deleteConfirm", "category": "leads", "vi": "Xoá lead này?", "en": "Delete this lead?", "zh": "删除该线索?", "ja": "このリードを削除しますか?"},
-  {"key": "leads.convert.companyNotice", "category": "leads", "vi": "Lead này có tên công ty nên sẽ tạo khách hàng doanh nghiệp. Cần bổ sung mã số thuế, địa chỉ đăng ký và người đại diện.", "en": "This lead has a company name, so a company customer will be created. Tax code, registered address and legal representative are required.", "zh": "该线索含公司名称，将创建企业客户。需填写税号、注册地址和法定代表人。", "ja": "このリードには会社名があるため法人顧客を作成します。税番号、登記住所、代表者が必要です。"},
+  {"key": "leads.convert.companyNotice", "category": "leads", "vi": "Lead này có tên công ty nên sẽ tạo khách hàng doanh nghiệp. Địa chỉ đăng ký và người đại diện là bắt buộc; mã số thuế có thể bổ sung sau.", "en": "This lead has a company name, so a company customer will be created. Registered address and legal representative are required; the tax code can be added later.", "zh": "该线索含公司名称，将创建企业客户。注册地址和法定代表人为必填项；税号可稍后补充。", "ja": "このリードには会社名があるため法人顧客を作成します。登記住所と代表者は必須です。税番号は後から追加できます。"},
   {"key": "leads.convert.field.taxId", "category": "leads", "vi": "Mã số thuế", "en": "Tax code", "zh": "税号", "ja": "税番号"},
   {"key": "leads.convert.field.address", "category": "leads", "vi": "Địa chỉ đăng ký", "en": "Registered address", "zh": "注册地址", "ja": "登記住所"},
   {"key": "leads.convert.field.representative", "category": "leads", "vi": "Người đại diện", "en": "Legal representative", "zh": "法定代表人", "ja": "法定代表者"},

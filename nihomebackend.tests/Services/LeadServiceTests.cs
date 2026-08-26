@@ -725,7 +725,7 @@ public class LeadServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ConvertAsync_RejectsCompanyLeadWithoutTaxIdAddressRepresentative()
+    public async Task ConvertAsync_RejectsCompanyLeadWithoutAddressAndRepresentative()
     {
         var sales = await SeedUserAsync(UserRole.USER);
         SeedSource("marketing");
@@ -736,9 +736,35 @@ public class LeadServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<LeadOperationException>(() => _sut.ConvertAsync(
             lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
 
-        Assert.Contains("TaxId", ex.Message);
+        Assert.Contains("Address", ex.Message);
         Assert.Empty(_db.Customers);
         Assert.Empty(_db.Opportunities);
+    }
+
+    [Fact]
+    public async Task ConvertAsync_CreatesCompanyCustomer_WhenTaxIdIsMissing()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        var lead = await SeedLeadAsync(LeadStatus.Interested, ownerId: sales.Id);
+        lead.CompanyName = "Công ty chưa có MST";
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.ConvertAsync(
+            lead.Id,
+            new ConvertLeadRequest
+            {
+                Address = "12 Nguyễn Trãi, Hà Nội",
+                RepresentativeName = "Ms. Nga",
+            },
+            sales.Id,
+            canConvert: true);
+
+        var customer = await _db.Customers.SingleAsync(c => c.Id == response!.ConvertedCustomerId);
+        Assert.Equal(CustomerType.Company, customer.Type);
+        Assert.Null(customer.TaxId);
+        Assert.Equal("12 Nguyễn Trãi, Hà Nội", customer.Address);
+        Assert.Equal("Ms. Nga", customer.RepresentativeName);
     }
 
     [Fact]

@@ -346,12 +346,12 @@ const AdminLeads = () => {
     }
   };
 
-  // A lead carrying a company name produces a Company customer, and the backend
-  // requires a tax code, address and representative for those.
+  // A lead carrying a company name produces a Company customer. Tax id remains
+  // optional because a prospect may not have supplied one yet (NIH-448).
   const convertNeedsCompanyFields = Boolean(detail?.companyName?.trim());
   const convertCompanyFieldsMissing =
     convertNeedsCompanyFields &&
-    (!convertTaxId.trim() || !convertAddress.trim() || !convertRepresentative.trim());
+    (!convertAddress.trim() || !convertRepresentative.trim());
 
   const openConvertDialog = () => {
     if (!detail) return;
