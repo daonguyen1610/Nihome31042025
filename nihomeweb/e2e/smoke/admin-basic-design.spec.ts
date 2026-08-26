@@ -10,18 +10,18 @@ import { createDesignProject, createOwnCustomer } from "../fixtures/designProjec
  *   3. The Basic Design tab renders + accepts the create-doc dialog.
  *   4. Status transitions (submit review → internally approved) move a
  *      row through the state machine.
- *   5. The 3-discipline readiness gate + Unlock Shop Drawing button:
+ *   5. The 3-discipline readiness gate + Unlock Detail Design button:
  *      the button is disabled until all 3 disciplines have ≥1 approved
- *      doc; clicking it flips the header stage to Shop Drawing.
+ *      doc; clicking it flips the header stage to Detail Design.
  *
  * This spec exercises the exact flow a Design Lead would run when
- * pushing a project from kick-off to Shop Drawing.
+ * pushing a project from kick-off to Detail Design.
  */
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 
-test.describe("NIH-115 — Basic Design + Shop Drawing unlock (real-user flow)", () => {
-  test("Design Lead can walk a project from Concept → Basic Design → Shop Drawing", async ({
+test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)", () => {
+  test("Design Lead can walk a project from Concept → Basic Design → Detail Design", async ({
     page,
     api,
     loginAs,
@@ -116,11 +116,14 @@ test.describe("NIH-115 — Basic Design + Shop Drawing unlock (real-user flow)",
     });
     await basicTab.click({ force: true });
 
-    // All 3 discipline pills should now be Approved (green).
+    // All 3 discipline pills should now be Approved (green). ShopDrawing
+    // remains the API enum, while Detail Design is the customer-facing term.
+    const readiness = page.locator("section").filter({
+      hasText: /Sẵn sàng chuyển Thiết kế chi tiết|Ready for Detail Design|准备转详细设计|詳細設計移行の準備/i,
+    });
     for (const label of ["Kiến trúc", "Kết cấu", "MEP"]) {
       await expect(
-        page.locator("section").filter({ hasText: /S\u1eb5n s\u00e0ng chuy\u1ec3n Shop Drawing/i })
-          .getByText(new RegExp(`${label}.*(\u0110\u00e3 duy\u1ec7t|Approved)`, "i")),
+        readiness.getByText(new RegExp(`${label}.*(Đã duyệt|Approved|已批准|承認済)`, "i")),
       ).toBeVisible();
     }
 
@@ -131,10 +134,10 @@ test.describe("NIH-115 — Basic Design + Shop Drawing unlock (real-user flow)",
     await expect(page.getByTestId("design-project-documents-tab")).toBeVisible();
     await expect(page.getByText(/NIH-114\.\.118/)).toHaveCount(0);
 
-    // ---------- 5. Click the "Unlock Shop Drawing" button ----------
+    // ---------- 5. Click the "Unlock Detail Design" button ----------
     await basicTab.click({ force: true });
     const unlockBtn = page.getByRole("button", {
-      name: /M\u1edf kho\u00e1 Shop Drawing|Unlock Shop Drawing/i,
+      name: /Mở khoá Thiết kế chi tiết|Unlock Detail Design|解锁详细设计|詳細設計を解放/i,
     });
     await expect(unlockBtn).toBeEnabled();
     await unlockBtn.click({ force: true });

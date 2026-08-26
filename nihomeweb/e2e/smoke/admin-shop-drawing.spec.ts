@@ -2,13 +2,13 @@ import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
 
 /**
- * NIH-116 M2 Shop Drawing end-to-end flow. Real-user path through the
+ * NIH-116 M2 Detail Design end-to-end flow. Real-user path through the
  * `docker compose` stack — the API is not mocked. Verifies:
  *
  *   1. SUPER_ADMIN sets up a fresh DesignProject then walks it through
  *      Concept finalize (NIH-114) + Basic Design approvals (NIH-115) +
- *      Shop Drawing unlock.
- *   2. The Shop Drawing tab renders the readiness pills + list.
+ *      Detail Design unlock.
+ *   2. The Detail Design tab renders the readiness pills + list.
  *   3. Creating a shop drawing via the dialog assigns an auto-code
  *      (KT-SD-001) and shows up under the correct discipline / item.
  *   4. Sending a drawing for review + approving + queueing IFC drives
@@ -20,7 +20,7 @@ import { createDesignProject, createOwnCustomer } from "../fixtures/designProjec
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 
-test.describe("NIH-116 — Shop Drawing (real-user flow)", () => {
+test.describe("NIH-116 — Detail Design (real-user flow)", () => {
   test("Design Lead can create, transition and bulk-delete shop drawings", async ({
     page,
     api,
@@ -84,7 +84,7 @@ test.describe("NIH-116 — Shop Drawing (real-user flow)", () => {
     });
     expect(unlock.ok(), await unlock.text()).toBeTruthy();
 
-    // ---------- 2. Open the detail page + switch to Shop Drawing tab ----------
+    // ---------- 2. Open the detail page + switch to Detail Design tab ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`${baseURL}/admin/design-projects/${projectId}`, {
       waitUntil: "networkidle",
@@ -94,8 +94,8 @@ test.describe("NIH-116 — Shop Drawing (real-user flow)", () => {
       region?.remove();
     });
 
-    const shopTab = page.locator('button[role="tab"]').filter({
-      hasText: /^Shop Drawing$|^Shop drawing$|^施工图$|^施工図$/i,
+    const shopTab = page.getByRole("tab", {
+      name: /^(Thiết kế chi tiết|Detail Design|详细设计|詳細設計)$/i,
     });
     await shopTab.click({ force: true });
     await expect(page.getByTestId("shop-drawing-tab")).toBeVisible();
@@ -187,7 +187,7 @@ test.describe("NIH-116 — Shop Drawing (real-user flow)", () => {
       .toBe(true);
   });
 
-  test("SALE role is blocked from Shop Drawing endpoints", async ({ api, loginAs }) => {
+  test("SALE role is blocked from Detail Design endpoints", async ({ api, loginAs }) => {
     const token = await loginAs(TEST_USERS.sale);
     const res = await api.get("/api/shop-drawings", {
       headers: { Authorization: `Bearer ${token}` },

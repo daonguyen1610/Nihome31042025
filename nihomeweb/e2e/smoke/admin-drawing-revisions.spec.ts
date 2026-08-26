@@ -6,7 +6,7 @@ import { createDesignProject, createOwnCustomer } from "../fixtures/designProjec
  * the `docker compose` stack — the API is not mocked. Verifies:
  *
  *   1. SUPER_ADMIN sets up a project + first shop drawing.
- *   2. The Revisions button on the shop drawing row opens the panel.
+ *   2. The Revisions button on the Detail Design row opens the panel.
  *   3. Creating R1 via the dialog appends a "Đang sử dụng" row.
  *   4. A second revision (R2) flips R1 to "Đã thu hồi" and lands R2
  *      as current.
@@ -17,7 +17,7 @@ import { createDesignProject, createOwnCustomer } from "../fixtures/designProjec
 const uid = () => Math.random().toString(36).slice(2, 8);
 
 test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
-  test("Design Lead can append revisions + diff them from the Shop Drawing tab", async ({
+  test("Design Lead can append revisions + diff them from the Detail Design tab", async ({
     page,
     api,
     loginAs,
@@ -77,7 +77,7 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     expect(shopCreate.ok(), await shopCreate.text()).toBeTruthy();
     const shopId = (await shopCreate.json()).id as number;
 
-    // ---------- 2. Open the Shop Drawing tab in the browser ----------
+    // ---------- 2. Open the Detail Design tab in the browser ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     const shopDrawingListPromise = page.waitForResponse((response) => {
       const url = new URL(response.url());
@@ -92,8 +92,8 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
       const region = document.querySelector('[aria-label*="Notifications ("]');
       region?.remove();
     });
-    const shopTab = page.locator('button[role="tab"]').filter({
-      hasText: /^Shop Drawing$|^Shop drawing$/i,
+    const shopTab = page.getByRole("tab", {
+      name: /^(Thiết kế chi tiết|Detail Design|详细设计|詳細設計)$/i,
     });
     await shopTab.click({ force: true });
     const shopDrawingListResponse = await shopDrawingListPromise;
