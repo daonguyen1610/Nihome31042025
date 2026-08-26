@@ -51,6 +51,7 @@ import {
   QUOTE_STATUSES,
   type CreateQuoteRequest,
   type OpportunityResponse,
+  type QuoteItemInput,
   type QuoteListItemResponse,
   type QuoteListParams,
   type QuoteMethod,
@@ -197,6 +198,24 @@ const AdminQuotes = () => {
     openCreate(opportunityId);
   }, [searchParams]);
 
+  const updateBoqItem = (index: number, patch: Partial<QuoteItemInput>) => {
+    const items = [...(createForm.items ?? [])];
+    items[index] = { ...items[index], ...patch };
+    setCreateForm({ ...createForm, items });
+  };
+
+  const addBoqItem = () => {
+    const item: QuoteItemInput = { name: "", unit: "", quantity: 1, unitPrice: 0 };
+    setCreateForm({ ...createForm, items: [...(createForm.items ?? []), item] });
+  };
+
+  const removeBoqItem = (index: number) => {
+    setCreateForm({
+      ...createForm,
+      items: (createForm.items ?? []).filter((_, itemIndex) => itemIndex !== index),
+    });
+  };
+
   const handleCreate = async () => {
     setCreateError(null);
     if (!createForm.opportunityId) {
@@ -208,9 +227,16 @@ const AdminQuotes = () => {
         setCreateError(t("quotes.validation.unitCostRequired"));
         return;
       }
-    } else if (!createForm.items || createForm.items.length === 0) {
-      setCreateError(t("quotes.validation.boqRequired"));
-      return;
+    } else {
+      const items = createForm.items ?? [];
+      if (items.length === 0) {
+        setCreateError(t("quotes.validation.boqRequired"));
+        return;
+      }
+      if (items.some((item) => !item.name.trim() || !item.unit.trim() || item.quantity <= 0 || item.unitPrice < 0)) {
+        setCreateError(t("quotes.validation.boqInvalidRow"));
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -606,7 +632,7 @@ const AdminQuotes = () => {
         </div>
       )}
 
-      {/* Create dialog — UnitCost mode inline; BOQ mode surfaces on Detail page (NIH-93). */}
+      {/* Create dialog — both pricing methods validate before the request leaves. */}
       <Dialog open={creating} onOpenChange={(o) => !o && setCreating(false)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
@@ -696,13 +722,62 @@ const AdminQuotes = () => {
                 </div>
               </>
             ) : (
-              <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-                {t("quotes.validation.boqRequired")}
-                <br />
-                {/* Slice 2B (NIH-93) will replace this hint with the full inline BOQ editor. */}
-                <em>
-                  BOQ editor lands next — for now create the quote and edit lines on the detail page.
-                </em>
+              <div className="space-y-3 rounded-md border p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>{t("quotes.boq.title")}</Label>
+                  <Button type="button" size="sm" variant="outline" onClick={addBoqItem}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />
+                    {t("quotes.boq.addRow")}
+                  </Button>
+                </div>
+                {(createForm.items ?? []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("quotes.validation.boqRequired")}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {(createForm.items ?? []).map((item, index) => (
+                      <div key={index} className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-2 sm:grid-cols-6">
+                        <Input
+                          className="sm:col-span-2"
+                          aria-label={t("quotes.boq.name")}
+                          placeholder={t("quotes.boq.name")}
+                          value={item.name}
+                          onChange={(event) => updateBoqItem(index, { name: event.target.value })}
+                        />
+                        <Input
+                          aria-label={t("quotes.boq.unit")}
+                          placeholder={t("quotes.boq.unit")}
+                          value={item.unit}
+                          onChange={(event) => updateBoqItem(index, { unit: event.target.value })}
+                        />
+                        <Input
+                          type="number"
+                          min={0.01}
+                          step="any"
+                          aria-label={t("quotes.boq.qty")}
+                          placeholder={t("quotes.boq.qty")}
+                          value={item.quantity}
+                          onChange={(event) => updateBoqItem(index, { quantity: Number(event.target.value) })}
+                        />
+                        <Input
+                          inputMode="numeric"
+                          aria-label={t("quotes.boq.unitPrice")}
+                          placeholder={t("quotes.boq.unitPrice")}
+                          value={item.unitPrice ? formatVnd(item.unitPrice) : ""}
+                          onChange={(event) => updateBoqItem(index, { unitPrice: parseVnd(event.target.value) })}
+                        />
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={t("common.delete")}
+                          onClick={() => removeBoqItem(index)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">

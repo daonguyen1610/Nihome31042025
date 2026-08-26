@@ -869,8 +869,10 @@ public class QuoteService(
         {
             if (items.Count == 0)
                 throw new QuoteOperationException("BOQ: phải có ít nhất 1 dòng hạng mục.");
-            if (items.Any(i => i.Quantity < 0 || i.UnitPrice < 0))
-                throw new QuoteOperationException("BOQ: khối lượng và đơn giá không được âm.");
+            if (items.Any(i => string.IsNullOrWhiteSpace(i.Name) || string.IsNullOrWhiteSpace(i.Unit)))
+                throw new QuoteOperationException("BOQ: tên hạng mục và đơn vị không được để trống.");
+            if (items.Any(i => i.Quantity <= 0 || i.UnitPrice < 0))
+                throw new QuoteOperationException("BOQ: khối lượng phải lớn hơn 0 và đơn giá không được âm.");
         }
     }
 
