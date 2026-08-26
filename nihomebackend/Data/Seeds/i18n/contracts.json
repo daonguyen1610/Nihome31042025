@@ -498,7 +498,7 @@
   {
     "key": "contracts.detail.tab.timeline",
     "category": "contracts",
-    "vi": "Timeline",
+    "vi": "Lịch sử",
     "en": "Timeline",
     "zh": "时间线",
     "ja": "タイムライン"
@@ -894,6 +894,62 @@
     "en": "by",
     "zh": "由",
     "ja": "実行者"
+  },
+  {
+    "key": "contracts.timeline.action.create", "category": "contracts",
+    "vi": "Tạo hợp đồng", "en": "Contract created", "zh": "已创建合同", "ja": "契約を作成"
+  },
+  {
+    "key": "contracts.timeline.action.update", "category": "contracts",
+    "vi": "Cập nhật hợp đồng", "en": "Contract updated", "zh": "已更新合同", "ja": "契約を更新"
+  },
+  {
+    "key": "contracts.timeline.action.delete", "category": "contracts",
+    "vi": "Xoá hợp đồng", "en": "Contract deleted", "zh": "已删除合同", "ja": "契約を削除"
+  },
+  {
+    "key": "contracts.timeline.action.transition", "category": "contracts",
+    "vi": "Chuyển trạng thái hợp đồng", "en": "Contract status changed", "zh": "合同状态已更改", "ja": "契約ステータスを変更"
+  },
+  {
+    "key": "contracts.timeline.action.designProjectEnsure", "category": "contracts",
+    "vi": "Tạo hoặc liên kết Dự án thiết kế", "en": "Design project created or linked", "zh": "已创建或关联设计项目", "ja": "設計プロジェクトを作成または連携"
+  },
+  {
+    "key": "contracts.timeline.action.milestoneStatus", "category": "contracts",
+    "vi": "Cập nhật mốc thanh toán", "en": "Payment milestone updated", "zh": "已更新付款里程碑", "ja": "支払マイルストーンを更新"
+  },
+  {
+    "key": "contracts.timeline.action.voCreate", "category": "contracts",
+    "vi": "Tạo VO", "en": "VO created", "zh": "已创建 VO", "ja": "VOを作成"
+  },
+  {
+    "key": "contracts.timeline.action.voUpdate", "category": "contracts",
+    "vi": "Cập nhật VO", "en": "VO updated", "zh": "已更新 VO", "ja": "VOを更新"
+  },
+  {
+    "key": "contracts.timeline.action.voSubmit", "category": "contracts",
+    "vi": "Gửi duyệt VO", "en": "VO submitted for approval", "zh": "VO 已提交审批", "ja": "VOを承認申請"
+  },
+  {
+    "key": "contracts.timeline.action.voApprove", "category": "contracts",
+    "vi": "Duyệt VO", "en": "VO approved", "zh": "VO 已批准", "ja": "VOを承認"
+  },
+  {
+    "key": "contracts.timeline.action.voReject", "category": "contracts",
+    "vi": "Từ chối VO", "en": "VO rejected", "zh": "VO 已拒绝", "ja": "VOを却下"
+  },
+  {
+    "key": "contracts.timeline.action.voDelete", "category": "contracts",
+    "vi": "Xoá VO", "en": "VO deleted", "zh": "VO 已删除", "ja": "VOを削除"
+  },
+  {
+    "key": "contracts.timeline.action.attachmentCreate", "category": "contracts",
+    "vi": "Tải tài liệu hợp đồng lên", "en": "Contract document uploaded", "zh": "已上传合同文件", "ja": "契約資料をアップロード"
+  },
+  {
+    "key": "contracts.timeline.action.attachmentDelete", "category": "contracts",
+    "vi": "Xoá tài liệu hợp đồng", "en": "Contract document deleted", "zh": "已删除合同文件", "ja": "契約資料を削除"
   },
   {
     "key": "contracts.designProject.title",
