@@ -1722,58 +1722,58 @@
   {
     "key": "rbac.perm.design.basic.approve.description",
     "category": "rbac",
-    "vi": "Duyệt nội bộ hồ sơ Basic Design (điều kiện chuyển Shop Drawing).",
-    "en": "Internally approves Basic Design docs (gate to Shop Drawing).",
-    "zh": "对基础设计文件进行内部审批(转施工图的门槛)。",
-    "ja": "基本設計の社内承認(施工図移行の要件)を行います。"
+    "vi": "Duyệt nội bộ hồ sơ Basic Design (điều kiện chuyển Thiết kế chi tiết).",
+    "en": "Internally approves Basic Design documents (gate to Detail Design).",
+    "zh": "对基本设计文件进行内部审批（进入详细设计的门槛）。",
+    "ja": "基本設計の社内承認（詳細設計移行の要件）を行います。"
   },
   {
     "key": "rbac.perm.design.shop.view.label",
     "category": "rbac",
-    "vi": "Xem Shop Drawing",
-    "en": "View shop drawings",
-    "zh": "查看施工图",
-    "ja": "施工図を表示"
+    "vi": "Xem Thiết kế chi tiết",
+    "en": "View Detail Design",
+    "zh": "查看详细设计",
+    "ja": "詳細設計を表示"
   },
   {
     "key": "rbac.perm.design.shop.view.description",
     "category": "rbac",
-    "vi": "Cho phép xem bản vẽ thi công chi tiết theo bộ môn và hạng mục.",
-    "en": "Allows viewing shop drawings by discipline and work package.",
-    "zh": "允许按专业和分项查看施工图。",
-    "ja": "専門と分類別に施工図の閲覧を許可します。"
+    "vi": "Cho phép xem hồ sơ Thiết kế chi tiết theo bộ môn và hạng mục.",
+    "en": "Allows viewing Detail Design documents by discipline and work package.",
+    "zh": "允许按专业和分项查看详细设计文件。",
+    "ja": "専門と分類別に詳細設計ドキュメントの閲覧を許可します。"
   },
   {
     "key": "rbac.perm.design.shop.manage.label",
     "category": "rbac",
-    "vi": "Quản lý Shop Drawing",
-    "en": "Manage shop drawings",
-    "zh": "管理施工图",
-    "ja": "施工図を管理"
+    "vi": "Quản lý Thiết kế chi tiết",
+    "en": "Manage Detail Design",
+    "zh": "管理详细设计",
+    "ja": "詳細設計を管理"
   },
   {
     "key": "rbac.perm.design.shop.manage.description",
     "category": "rbac",
-    "vi": "Cho phép tạo/sửa/upload Shop Drawing và gán reviewer chéo bộ môn.",
-    "en": "Allows creating/editing/uploading shop drawings and assigning cross-discipline reviewers.",
-    "zh": "允许创建/编辑/上传施工图并分配跨专业审查人。",
-    "ja": "施工図の作成・編集・アップロード及び他専門レビュアーの割当てを許可します。"
+    "vi": "Cho phép tạo/sửa/upload hồ sơ Thiết kế chi tiết và gán reviewer chéo bộ môn.",
+    "en": "Allows creating, editing, and uploading Detail Design documents and assigning cross-discipline reviewers.",
+    "zh": "允许创建、编辑和上传详细设计文件，并分配跨专业审查人。",
+    "ja": "詳細設計ドキュメントの作成・編集・アップロード及び他専門レビュアーの割当てを許可します。"
   },
   {
     "key": "rbac.perm.design.shop.approve.label",
     "category": "rbac",
-    "vi": "Duyệt Shop Drawing",
-    "en": "Approve shop drawings",
-    "zh": "审批施工图",
-    "ja": "施工図を承認"
+    "vi": "Duyệt Thiết kế chi tiết",
+    "en": "Approve Detail Design",
+    "zh": "审批详细设计",
+    "ja": "詳細設計を承認"
   },
   {
     "key": "rbac.perm.design.shop.approve.description",
     "category": "rbac",
-    "vi": "Duyệt cuối Shop Drawing bởi Design Lead trước khi đưa vào phiếu IFC.",
-    "en": "Final Design Lead approval of shop drawings before an IFC release.",
-    "zh": "施工图在纳入IFC发布前由设计主管终审。",
-    "ja": "IFC発行前に設計リーダーが施工図を最終承認します。"
+    "vi": "Design Lead duyệt cuối Thiết kế chi tiết trước khi đưa vào phiếu IFC.",
+    "en": "Final Design Lead approval of Detail Design documents before an IFC release.",
+    "zh": "详细设计文件在纳入IFC发布前由设计主管终审。",
+    "ja": "IFC発行前に設計リーダーが詳細設計ドキュメントを最終承認します。"
   },
   {
     "key": "rbac.perm.design.revisions.view.label",
@@ -2170,10 +2170,10 @@
   {
     "key": "rbac.role.DESIGN_LEAD.description",
     "category": "rbac",
-    "vi": "Chốt phương án Concept, duyệt Basic/Shop Drawing và phát hành hồ sơ IFC.",
-    "en": "Finalises concepts, approves Basic/Shop drawings and releases IFC packages.",
-    "zh": "确定方案概念,审批基础/施工图并发布IFC文件。",
-    "ja": "コンセプトを確定し、基本/施工図を承認し、IFC図面を発行します。"
+    "vi": "Chốt phương án Concept, duyệt Basic Design/Thiết kế chi tiết và phát hành hồ sơ IFC.",
+    "en": "Finalises concepts, approves Basic Design and Detail Design, and releases IFC packages.",
+    "zh": "确定概念方案，审批基本设计和详细设计并发布IFC文件。",
+    "ja": "コンセプトを確定し、基本設計と詳細設計を承認し、IFC図面を発行します。"
   },
   {
     "key": "rbac.role.ARCHITECT.label",
@@ -2186,10 +2186,10 @@
   {
     "key": "rbac.role.ARCHITECT.description",
     "category": "rbac",
-    "vi": "Chịu trách nhiệm hồ sơ thiết kế bộ môn Kiến trúc (Concept · Basic · Shop Drawing).",
-    "en": "Owns architectural design documents across Concept, Basic and Shop Drawing stages.",
-    "zh": "负责建筑专业的方案、基础及施工图设计文件。",
-    "ja": "コンセプト・基本・施工図の各段階における建築設計を担当します。"
+    "vi": "Chịu trách nhiệm hồ sơ thiết kế bộ môn Kiến trúc (Concept · Basic Design · Thiết kế chi tiết).",
+    "en": "Owns architectural design documents across Concept, Basic Design, and Detail Design stages.",
+    "zh": "负责建筑专业的概念设计、基本设计及详细设计文件。",
+    "ja": "コンセプト・基本設計・詳細設計の各段階における建築設計を担当します。"
   },
   {
     "key": "rbac.role.MEP_ENGINEER.label",
@@ -2218,10 +2218,10 @@
   {
     "key": "rbac.role.STRUCT_ENGINEER.description",
     "category": "rbac",
-    "vi": "Phụ trách hồ sơ Kết cấu trong Basic Design và Shop Drawing.",
-    "en": "Owns structural engineering deliverables in Basic Design and Shop Drawing.",
-    "zh": "负责基础设计与施工图中的结构专业文件。",
-    "ja": "基本設計と施工図における構造関連成果物を担当します。"
+    "vi": "Phụ trách hồ sơ Kết cấu trong Basic Design và Thiết kế chi tiết.",
+    "en": "Owns structural engineering deliverables in Basic Design and Detail Design.",
+    "zh": "负责基本设计与详细设计中的结构专业文件。",
+    "ja": "基本設計と詳細設計における構造関連成果物を担当します。"
   },
   {
     "key": "rbac.role.LEGAL_OFFICER.label",

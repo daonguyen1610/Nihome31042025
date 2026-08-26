@@ -1,8 +1,8 @@
 [
-  { "key": "shopDrawing.title", "category": "shopDrawing", "vi": "Bản vẽ Shop Drawing", "en": "Shop Drawings", "zh": "施工图", "ja": "施工図" },
-  { "key": "shopDrawing.empty", "category": "shopDrawing", "vi": "Chưa có bản vẽ Shop Drawing nào cho dự án này.", "en": "No shop drawings yet.", "zh": "该项目尚无施工图。", "ja": "施工図はまだありません。" },
-  { "key": "shopDrawing.lockedBefore", "category": "shopDrawing", "vi": "Dự án chưa ở giai đoạn Shop Drawing. Hãy mở khoá từ tab Basic Design trước.", "en": "Project is not at the Shop Drawing stage yet. Unlock it from the Basic Design tab first.", "zh": "项目尚未进入施工图阶段。请先在基本设计选项卡中解锁。", "ja": "案件は施工図段階に達していません。まず基本設計タブから解放してください。" },
-  { "key": "shopDrawing.lockedAfter", "category": "shopDrawing", "vi": "Dự án đã hoàn thành — bản vẽ Shop Drawing chỉ đọc.", "en": "Project is completed — shop drawings are read-only.", "zh": "项目已完成——施工图为只读。", "ja": "案件は完了しました — 施工図は読み取り専用です。" },
+  { "key": "shopDrawing.title", "category": "shopDrawing", "vi": "Thiết kế chi tiết", "en": "Detail Design", "zh": "详细设计", "ja": "詳細設計" },
+  { "key": "shopDrawing.empty", "category": "shopDrawing", "vi": "Chưa có hồ sơ Thiết kế chi tiết nào cho dự án này.", "en": "No Detail Design documents yet.", "zh": "该项目尚无详细设计文件。", "ja": "詳細設計ドキュメントはまだありません。" },
+  { "key": "shopDrawing.lockedBefore", "category": "shopDrawing", "vi": "Dự án chưa ở giai đoạn Thiết kế chi tiết. Hãy mở khoá từ tab Basic Design trước.", "en": "Project is not at the Detail Design stage yet. Unlock it from the Basic Design tab first.", "zh": "项目尚未进入详细设计阶段。请先在基本设计选项卡中解锁。", "ja": "案件は詳細設計段階に達していません。まず基本設計タブから解放してください。" },
+  { "key": "shopDrawing.lockedAfter", "category": "shopDrawing", "vi": "Dự án đã hoàn thành — hồ sơ Thiết kế chi tiết chỉ đọc.", "en": "Project is completed — Detail Design documents are read-only.", "zh": "项目已完成——详细设计文件为只读。", "ja": "案件は完了しました — 詳細設計ドキュメントは読み取り専用です。" },
 
   { "key": "shopDrawing.new", "category": "shopDrawing", "vi": "Tạo bản vẽ", "en": "New drawing", "zh": "新建施工图", "ja": "新規施工図" },
   { "key": "shopDrawing.edit", "category": "shopDrawing", "vi": "Chỉnh sửa bản vẽ", "en": "Edit drawing", "zh": "编辑施工图", "ja": "施工図を編集" },

@@ -2,7 +2,7 @@
   { "key": "basicDesign.title", "category": "basicDesign", "vi": "Hồ sơ Basic Design", "en": "Basic Design documents", "zh": "基本设计文档", "ja": "基本設計ドキュメント" },
   { "key": "basicDesign.empty", "category": "basicDesign", "vi": "Chưa có hồ sơ Basic Design nào cho dự án này.", "en": "No Basic Design documents yet.", "zh": "该项目尚无基本设计文档。", "ja": "基本設計ドキュメントはまだありません。" },
   { "key": "basicDesign.locked", "category": "basicDesign", "vi": "Dự án chưa ở giai đoạn Basic Design. Hãy chốt phương án Concept trước.", "en": "Project is not at the Basic Design stage yet. Finalize a Concept option first.", "zh": "项目尚未进入基本设计阶段。请先确认方案设计选项。", "ja": "案件は基本設計段階に達していません。先にコンセプト案を確定してください。" },
-  { "key": "basicDesign.lockedShop", "category": "basicDesign", "vi": "Dự án đã chuyển sang Shop Drawing — hồ sơ Basic Design chỉ đọc.", "en": "Project has moved to Shop Drawing — Basic Design documents are read-only.", "zh": "项目已进入施工图阶段——基本设计文档只读。", "ja": "案件は施工図段階に移行しました — 基本設計ドキュメントは読み取り専用です。" },
+  { "key": "basicDesign.lockedShop", "category": "basicDesign", "vi": "Dự án đã chuyển sang Thiết kế chi tiết — hồ sơ Basic Design chỉ đọc.", "en": "Project has moved to Detail Design — Basic Design documents are read-only.", "zh": "项目已进入详细设计阶段——基本设计文档只读。", "ja": "案件は詳細設計段階に移行しました — 基本設計ドキュメントは読み取り専用です。" },
 
   { "key": "basicDesign.new", "category": "basicDesign", "vi": "Tạo bản vẽ", "en": "New document", "zh": "新建文档", "ja": "新規ドキュメント" },
   { "key": "basicDesign.edit", "category": "basicDesign", "vi": "Chỉnh sửa bản vẽ", "en": "Edit document", "zh": "编辑文档", "ja": "ドキュメントを編集" },
@@ -48,12 +48,12 @@
   { "key": "basicDesign.filter.allStatuses", "category": "basicDesign", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべての状態" },
   { "key": "basicDesign.filter.search", "category": "basicDesign", "vi": "Tìm mã hoặc tên bản vẽ...", "en": "Search by code or title...", "zh": "按编号或标题搜索...", "ja": "番号またはタイトルで検索..." },
 
-  { "key": "basicDesign.readiness.title", "category": "basicDesign", "vi": "Sẵn sàng chuyển Shop Drawing", "en": "Ready for Shop Drawing", "zh": "准备转施工图", "ja": "施工図移行の準備" },
+  { "key": "basicDesign.readiness.title", "category": "basicDesign", "vi": "Sẵn sàng chuyển Thiết kế chi tiết", "en": "Ready for Detail Design", "zh": "准备转详细设计", "ja": "詳細設計移行の準備" },
   { "key": "basicDesign.readiness.hint", "category": "basicDesign", "vi": "Cần ≥1 hồ sơ Đã duyệt nội bộ cho mỗi bộ môn: Kiến trúc · Kết cấu · MEP.", "en": "Requires ≥1 Internally Approved document per discipline: Architecture · Structure · MEP.", "zh": "每个专业需 ≥1 份内部已批准文档：建筑·结构·机电。", "ja": "分野ごと（建築・構造・MEP）に社内承認済みドキュメントが 1 件以上必要です。" },
   { "key": "basicDesign.readiness.approved", "category": "basicDesign", "vi": "Đã duyệt", "en": "Approved", "zh": "已批准", "ja": "承認済" },
   { "key": "basicDesign.readiness.missing", "category": "basicDesign", "vi": "Chưa duyệt", "en": "Missing", "zh": "未批准", "ja": "未承認" },
-  { "key": "basicDesign.readiness.unlock", "category": "basicDesign", "vi": "Mở khoá Shop Drawing", "en": "Unlock Shop Drawing", "zh": "解锁施工图", "ja": "施工図を解放" },
-  { "key": "basicDesign.readiness.unlocked", "category": "basicDesign", "vi": "Đã mở khoá Shop Drawing. Dự án đã chuyển giai đoạn.", "en": "Shop Drawing unlocked. Project stage advanced.", "zh": "已解锁施工图，项目阶段已更新。", "ja": "施工図が解放され、案件段階が進みました。" },
+  { "key": "basicDesign.readiness.unlock", "category": "basicDesign", "vi": "Mở khoá Thiết kế chi tiết", "en": "Unlock Detail Design", "zh": "解锁详细设计", "ja": "詳細設計を解放" },
+  { "key": "basicDesign.readiness.unlocked", "category": "basicDesign", "vi": "Đã mở khoá Thiết kế chi tiết. Dự án đã chuyển giai đoạn.", "en": "Detail Design unlocked. Project stage advanced.", "zh": "已解锁详细设计，项目阶段已更新。", "ja": "詳細設計が解放され、案件段階が進みました。" },
 
   { "key": "basicDesign.delete.confirmTitle", "category": "basicDesign", "vi": "Xoá bản vẽ?", "en": "Delete document?", "zh": "删除文档？", "ja": "ドキュメントを削除しますか？" },
   { "key": "basicDesign.delete.confirmBody", "category": "basicDesign", "vi": "Xóa vĩnh viễn hồ sơ \"{code}\" và lịch sử phiên bản liên quan? Hành động này không thể hoàn tác.", "en": "Permanently delete document \"{code}\" and its revision history? This cannot be undone.", "zh": "永久删除文档“{code}”及其修订历史？此操作无法撤销。", "ja": "文書「{code}」と改訂履歴を完全に削除しますか？元に戻せません。" },
