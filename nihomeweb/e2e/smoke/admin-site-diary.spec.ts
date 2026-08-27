@@ -88,20 +88,26 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
     await row.locator('[data-testid^="diary-view-"]').click();
     await expect(page.getByTestId("diary-submit")).toBeVisible();
     await page.getByTestId("diary-submit").click();
+    const actionDialog = page.getByRole("alertdialog");
+    const confirmAction = actionDialog.getByTestId("diary-action-confirm");
+    await expect(confirmAction).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/site-diaries\/\d+\/submit$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("diary-action-confirm").click({ force: true }),
+      confirmAction.click(),
     ]);
+    await expect(actionDialog).toBeHidden();
 
     await page.getByTestId("diary-confirm").click();
+    await expect(confirmAction).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/site-diaries\/\d+\/confirm$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("diary-action-confirm").click({ force: true }),
+      confirmAction.click(),
     ]);
+    await expect(actionDialog).toBeHidden();
 
     // API sanity — status is Confirmed on the row we just walked.
     await expect
@@ -121,12 +127,14 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
 
     // Reopen — must appear only for confirm-permission holders.
     await page.getByTestId("diary-reopen").click();
+    await expect(confirmAction).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/site-diaries\/\d+\/reopen$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("diary-action-confirm").click({ force: true }),
+      confirmAction.click(),
     ]);
+    await expect(actionDialog).toBeHidden();
 
     await expect
       .poll(
