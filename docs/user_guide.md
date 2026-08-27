@@ -33,7 +33,7 @@ NICON is an enterprise management platform for a Design and Build construction c
 The platform serves the following audiences:
 
 - **Sales and Business Development**: Manage leads, opportunities, quotations, tenders, site surveys, and customer contracts.
-- **Design and Engineering**: Control design documents across three phases (Concept, Basic Design, Shop Drawing), manage revisions, and issue construction drawings (IFC).
+- **Design and Engineering**: Control design documents across three phases (Concept, Basic Design, Detail Design), manage revisions, and issue construction drawings (IFC).
 - **Project Management**: Track construction schedules (Gantt), daily site logs, partial and full acceptance inspections, as-built documentation, and defect management (Punchlist).
 - **Procurement**: Manage vendors and subcontractors, compare bids, control material BOQ, process material requests, track warehouse inventory, and alert on overruns.
 - **Finance and Contracts**: Manage primary contracts, subcontracts, variation orders (VO), project cash flow, and profit/loss reporting.
@@ -64,7 +64,7 @@ The platform is organized into eight functional modules spanning the entire proj
 | Module | Scope | Objective |
 |--------|-------|-----------|
 | 1. CRM / Sale / Contract | Customer management, lead tracking, quotations, tenders, site surveys, customer contracts | Manage customer acquisition and business development flexibly |
-| 2. Design Management | Three-phase design control (Concept, Basic Design, Shop Drawing), revision management, IFC issuance | Control technical documents and prevent discrepancies before construction |
+| 2. Design Management | Three-phase design control (Concept, Basic Design, Detail Design), revision management, IFC issuance | Control technical documents and prevent discrepancies before construction |
 | 3. Permitting | Legal document checklists, permit application tracking | Ensure legal compliance and administrative clearance |
 | 4. Construction and Acceptance | Gantt scheduling, daily site logs, partial/full acceptance, as-built records, punchlist | Manage site operations, quality control, and schedule adherence |
 | 5. Procurement | Vendor management, bid comparison, BOQ control, material requests, warehouse management, material alerts | Manage suppliers, subcontractors, and project materials |
@@ -118,7 +118,7 @@ The platform is being developed incrementally. The following components are curr
 | Quotations, capability documents, and tenders | Implemented |
 | Site survey digitization | Implemented — private media upload, geolocation, checklist, Drive sync status, and PDF export are available |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
-| Design management (projects, concept, basic, shop drawing, revisions, IFC) | Implemented |
+| Design management (projects, concept, basic design, detail design, revisions, IFC) | Implemented |
 | Permitting checklists | Implemented |
 | Construction management (tasks/Gantt and site diaries) | Implemented |
 | Acceptance and handover | Implemented |
@@ -255,17 +255,17 @@ Manage drawings for construction permit applications. Maintain technical descrip
 | Basic Design Create/Edit | Create and update documents | 2 days |
 | Basic Design Detail | Drawing catalog, descriptions, file upload, approval status | 2.5 days |
 
-#### 3.2.4 Phase 3: Detailed Design / Shop Drawing
+#### 3.2.4 Phase 3: Detail Design
 
 Manage detailed construction drawings separated by discipline (Architecture, Structure, MEP, Interior). Catalog drawings by construction work item. Link drawings to construction tasks. Manage drawing versions. Submit for review and approval.
 
-The current implementation manages drawing metadata, workflow status, revision reasons, and IFC distribution records. Binary design-file upload, in-browser PDF/DWG preview, revision file snapshots, and IFC package export remain deferred; therefore the Documents tab lists design records but does not currently provide an Open or Download action for Concept, Basic Design, or Shop Drawing files.
+The current implementation manages drawing metadata, workflow status, revision reasons, and IFC distribution records. Binary design-file upload, in-browser PDF/DWG preview, revision file snapshots, and IFC package export remain deferred; therefore the Documents tab lists design records but does not currently provide an Open or Download action for Concept, Basic Design, or Detail Design files.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Shop Drawing List | Documents by project | 1.5 days |
-| Shop Drawing Create/Edit | Create and update documents | 2 days |
-| Shop Drawing Detail (by discipline) | Discipline management, drawing list, cross-review | 3 days |
+| Detail Design List | Documents by project | 1.5 days |
+| Detail Design Create/Edit | Create and update documents | 2 days |
+| Detail Design by Discipline | Discipline management, drawing list, cross-review | 3 days |
 
 #### 3.2.5 Revision Control
 
@@ -706,7 +706,7 @@ The main admin page provides an overview of system status and quick access to ma
 |-------|--------|---------|
 | Dashboard | `/admin`, `/admin/notifications` | Operational overview and personal notifications |
 | CRM | `/admin/leads`, `/admin/customers`, `/admin/opportunities`, `/admin/quotes`, `/admin/capability-documents`, `/admin/tenders`, `/admin/surveys`, `/admin/contracts` | Sales and contract lifecycle |
-| Design and permits | `/admin/design-projects`, `/admin/permits` | Concept, basic design, shop drawing, revision, IFC, and permit workflows |
+| Design and permits | `/admin/design-projects`, `/admin/permits` | Concept, basic design, detail design, revision, IFC, and permit workflows |
 | Construction | `/admin/construction/tasks`, `/diary`, `/punchlist`, `/acceptance`, `/asbuilt`, `/handover` | Delivery, quality, acceptance, and handover |
 | Content | `/admin/activities`, `/admin/news`, `/admin/projects`, `/admin/services`, `/admin/about`, `/admin/categories` | Public website content and categories |
 | Recruitment and contacts | `/admin/recruitment`, `/admin/recruitment/employment-types`, `/admin/contacts` | Positions, applications, options, and inquiries |
