@@ -268,6 +268,26 @@ public class SampleContractSeederTests : IDisposable
         }
     }
 
+    [Fact]
+    public void Seed_MigratesLegacyShopDrawingSampleNotes()
+    {
+        SampleCrmDataSeeder.Seed(_db);
+        var drawing = _db.ShopDrawings.First(item =>
+            item.Note != null && item.Note.StartsWith("[SAMPLE_SD]"));
+        var release = _db.IfcReleases.First(item =>
+            item.Note != null && item.Note.StartsWith("[SAMPLE_IFC]"));
+        drawing.Note = "[SAMPLE_SD] Sample shop drawing.";
+        release.Note = "[SAMPLE_IFC] Sample IFC packet — bundled the first approved shop drawings.";
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.Equal("[SAMPLE_SD] Bản vẽ thiết kế chi tiết mẫu.", drawing.Note);
+        Assert.Equal(
+            "[SAMPLE_IFC] Gói IFC mẫu — gồm các bản vẽ thiết kế chi tiết đã duyệt đầu tiên.",
+            release.Note);
+    }
+
     private int[] RepresentativeCounts() =>
     [
         _db.Contracts.Count(),

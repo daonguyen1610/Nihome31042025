@@ -900,6 +900,8 @@ public static class ContentSeeder
         var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         var seedItems = JsonSerializer.Deserialize<List<ProcessSeedItem>>(stream, opts) ?? [];
 
+        MigrateLegacyDetailDesignProcessLabels(db, opts);
+
         // Re-seed when count mismatches OR when asset JSON columns haven't been populated yet
         var seedWithAssets = seedItems.Any(s => s.Images.Count > 0 || s.Files.Count > 0);
         var dbHasAssets = db.ProcessDocuments.Any(p => p.ImagesJson != null || p.FilesJson != null);
@@ -920,6 +922,59 @@ public static class ContentSeeder
 
         db.ProcessDocuments.AddRange(items);
         db.SaveChanges();
+    }
+
+    private static void MigrateLegacyDetailDesignProcessLabels(
+        AppDbContext db,
+        JsonSerializerOptions options)
+    {
+        const string legacyTitle = "3. QT-Duyệt và kiểm soát bản vẽ shopdrawings";
+        const string detailDesignTitle = "3. QT-Duyệt và kiểm soát bản vẽ thiết kế chi tiết";
+        const string legacyProcedure = "01. TC-SD-QT-Quy trinh kiem soat ban ve shop drawings .doc";
+        const string detailDesignProcedure = "01. TC-SD-QT-Quy trình kiểm soát bản vẽ thiết kế chi tiết.doc";
+        const string legacyPlan = "TC-SD-M01-Kế hoạch trình duyệt shop drawing.doc";
+        const string detailDesignPlan = "TC-SD-M01-Kế hoạch trình duyệt thiết kế chi tiết.doc";
+
+        var process = db.ProcessDocuments.FirstOrDefault(item =>
+            item.GroupKey == "tc" && item.Code == "3");
+        if (process is null) return;
+
+        var changed = false;
+        if (process.Title == legacyTitle)
+        {
+            process.Title = detailDesignTitle;
+            changed = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(process.FilesJson))
+        {
+            var files = JsonSerializer.Deserialize<List<ProcessAssetSeedItem>>(
+                process.FilesJson,
+                options) ?? [];
+            foreach (var file in files)
+            {
+                if (file.DisplayName == legacyProcedure)
+                {
+                    file.DisplayName = detailDesignProcedure;
+                    changed = true;
+                }
+                else if (file.DisplayName == legacyPlan)
+                {
+                    file.DisplayName = detailDesignPlan;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                process.FilesJson = JsonSerializer.Serialize(files);
+            }
+        }
+
+        if (changed)
+        {
+            db.SaveChanges();
+        }
     }
 
     private sealed class ProcessSeedItem
