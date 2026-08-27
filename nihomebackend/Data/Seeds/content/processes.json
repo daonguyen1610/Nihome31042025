@@ -1359,13 +1359,13 @@
   {
     "groupKey": "tc",
     "code": "3",
-    "title": "3. QT-Duyệt và kiểm soát bản vẽ shopdrawings",
+    "title": "3. QT-Duyệt và kiểm soát bản vẽ thiết kế chi tiết",
     "sortOrder": 3,
     "images": [],
     "files": [
       {
         "type": "file",
-        "displayName": "01. TC-SD-QT-Quy trinh kiem soat ban ve shop drawings .doc",
+        "displayName": "01. TC-SD-QT-Quy trình kiểm soát bản vẽ thiết kế chi tiết.doc",
         "url": "/process-assets/files/c2f4348ee4f74633988db908c254ec3d.doc",
         "originalFileName": "01. TC-SD-QT-Quy trinh kiem soat ban ve shop drawings .doc",
         "contentType": "application/force-download",
@@ -1373,7 +1373,7 @@
       },
       {
         "type": "file",
-        "displayName": "TC-SD-M01-Kế hoạch trình duyệt shop drawing.doc",
+        "displayName": "TC-SD-M01-Kế hoạch trình duyệt thiết kế chi tiết.doc",
         "url": "/process-assets/files/70d07890db344b95ad92eb2aa4a7b346.doc",
         "originalFileName": "TC-SD-M01-Kế hoạch trình duyệt shop drawing.doc",
         "contentType": "application/force-download",

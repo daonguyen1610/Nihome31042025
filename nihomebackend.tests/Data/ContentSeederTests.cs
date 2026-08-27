@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -10,6 +12,64 @@ public class ContentSeederTests : IDisposable
     private readonly AppDbContext _db = DbContextFactory.Create();
 
     public void Dispose() => _db.Dispose();
+
+    [Fact]
+    public void Seed_MigratesLegacyShopDrawingProcessLabels()
+    {
+        ContentSeeder.Seed(_db);
+        var process = _db.ProcessDocuments.Single(item =>
+            item.GroupKey == "tc" && item.Code == "3");
+        process.Title = "3. QT-Duyệt và kiểm soát bản vẽ shopdrawings";
+        var legacyFiles = JsonNode.Parse(process.FilesJson!)!.AsArray();
+        foreach (var file in legacyFiles)
+        {
+            var displayName = file!["DisplayName"]!.GetValue<string>();
+            if (displayName == "01. TC-SD-QT-Quy trình kiểm soát bản vẽ thiết kế chi tiết.doc")
+            {
+                file["DisplayName"] = "01. TC-SD-QT-Quy trinh kiem soat ban ve shop drawings .doc";
+            }
+            else if (displayName == "TC-SD-M01-Kế hoạch trình duyệt thiết kế chi tiết.doc")
+            {
+                file["DisplayName"] = "TC-SD-M01-Kế hoạch trình duyệt shop drawing.doc";
+            }
+        }
+        process.FilesJson = legacyFiles.ToJsonString();
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        Assert.Equal(
+            "3. QT-Duyệt và kiểm soát bản vẽ thiết kế chi tiết",
+            process.Title);
+        using var files = JsonDocument.Parse(process.FilesJson!);
+        var displayNames = files.RootElement.EnumerateArray()
+            .Select(item => item.GetProperty("DisplayName").GetString())
+            .ToList();
+        Assert.Contains(
+            "01. TC-SD-QT-Quy trình kiểm soát bản vẽ thiết kế chi tiết.doc",
+            displayNames);
+        Assert.Contains(
+            "TC-SD-M01-Kế hoạch trình duyệt thiết kế chi tiết.doc",
+            displayNames);
+    }
+
+    [Fact]
+    public void Seed_DoesNotOverwriteAdminEditedProcessLabels()
+    {
+        ContentSeeder.Seed(_db);
+        var process = _db.ProcessDocuments.Single(item =>
+            item.GroupKey == "tc" && item.Code == "3");
+        process.Title = "Admin-edited process title";
+        var editedFiles = JsonNode.Parse(process.FilesJson!)!.AsArray();
+        editedFiles[0]!["DisplayName"] = "Admin-edited document label";
+        process.FilesJson = editedFiles.ToJsonString();
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        Assert.Equal("Admin-edited process title", process.Title);
+        Assert.Contains("Admin-edited document label", process.FilesJson);
+    }
 
     [Fact]
     public void Seed_DoesNotOverwriteAdminEditedNewsTranslation()

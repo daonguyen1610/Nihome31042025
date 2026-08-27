@@ -1714,6 +1714,16 @@ public static class SampleCrmDataSeeder
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
+
+        var legacySamples = db.ShopDrawings
+            .Where(d => d.Note == $"{SampleMarker} Sample shop drawing.")
+            .ToList();
+        foreach (var drawing in legacySamples)
+        {
+            drawing.Note = $"{SampleMarker} Bản vẽ thiết kế chi tiết mẫu.";
+        }
+        if (legacySamples.Count > 0) db.SaveChanges();
+
         if (db.ShopDrawings.Any(d => d.DesignProjectId == project.Id
                                   && d.Note != null
                                   && d.Note.StartsWith(SampleMarker))) return;
@@ -1743,7 +1753,7 @@ public static class SampleCrmDataSeeder
                 Title = title,
                 OwnerUserId = owner.Id,
                 Status = status,
-                Note = $"{SampleMarker} Sample shop drawing.",
+                Note = $"{SampleMarker} Bản vẽ thiết kế chi tiết mẫu.",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-daysAgo - 3),
@@ -2019,6 +2029,16 @@ public static class SampleCrmDataSeeder
     private static void SeedIfcReleases(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         const string SampleMarker = "[SAMPLE_IFC]";
+
+        var legacySamples = db.IfcReleases
+            .Where(r => r.Note == $"{SampleMarker} Sample IFC packet — bundled the first approved shop drawings.")
+            .ToList();
+        foreach (var sampleRelease in legacySamples)
+        {
+            sampleRelease.Note = $"{SampleMarker} Gói IFC mẫu — gồm các bản vẽ thiết kế chi tiết đã duyệt đầu tiên.";
+        }
+        if (legacySamples.Count > 0) db.SaveChanges();
+
         if (db.IfcReleases.Any(r => r.Note != null && r.Note.StartsWith(SampleMarker))) return;
 
         var project = db.DesignProjects
@@ -2046,7 +2066,7 @@ public static class SampleCrmDataSeeder
             ReleaseNumber = $"IFC-{now.Year}-001",
             Title = "B\u00e0n giao t\u1ea7ng 1 — s\u1ea3n showroom",
             Status = IfcReleaseStatus.Draft,
-            Note = $"{SampleMarker} Sample IFC packet — bundled the first approved shop drawings.",
+            Note = $"{SampleMarker} Gói IFC mẫu — gồm các bản vẽ thiết kế chi tiết đã duyệt đầu tiên.",
             CreatedByUserId = owner.Id,
             UpdatedByUserId = owner.Id,
             CreatedAt = now.AddDays(-1),
