@@ -69,7 +69,7 @@ The Vite dev server is configured in `vite.config.ts` and defaults to port `8080
 - Public content, recruitment, contact, authentication, and own-profile flows
 - Users, dynamic RBAC, notifications, audit, translations, settings, workflows, and content administration
 - CRM leads, customers, opportunities, quotes, capability documents, tenders, surveys, contracts, and variation orders
-- Design projects, concepts, basic design, shop drawings, revisions, and IFC tracking
+- Design projects, concepts, basic design, detail design, revisions, and IFC tracking
 - Permit checklists and construction tasks/Gantt, site diaries, punch lists, partial acceptance, as-built records, and handover
 
 Authentication, RBAC, translations, and production modules use backend APIs. The known exception is `/admin/master-data`, whose editable language list is still stored in localStorage; treat it as migration debt rather than a production persistence pattern.
