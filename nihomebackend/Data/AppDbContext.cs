@@ -107,6 +107,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<PunchItem> PunchItems => Set<PunchItem>();
 
     public DbSet<AsBuiltDocument> AsBuiltDocuments => Set<AsBuiltDocument>();
+    public DbSet<AsBuiltDocumentCategory> AsBuiltDocumentCategories => Set<AsBuiltDocumentCategory>();
     public DbSet<HandoverRecord> HandoverRecords => Set<HandoverRecord>();
     public DbSet<HandoverStatusHistory> HandoverStatusHistory => Set<HandoverStatusHistory>();
 
@@ -1329,6 +1330,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(a => a.Status);
         });
 
+        modelBuilder.Entity<AsBuiltDocumentCategory>(b =>
+        {
+            b.ToTable("as_built_document_categories");
+            b.HasKey(c => c.Id);
+            b.Property(c => c.Code).HasMaxLength(50).IsRequired();
+            b.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            b.Property(c => c.NameVi).HasMaxLength(200);
+            b.Property(c => c.NameEn).HasMaxLength(200);
+            b.Property(c => c.NameZh).HasMaxLength(200);
+            b.Property(c => c.NameJa).HasMaxLength(200);
+
+            b.HasIndex(c => c.Code).IsUnique();
+            b.HasIndex(c => c.IsActive);
+        });
+
         modelBuilder.Entity<AsBuiltDocument>(b =>
         {
             b.ToTable("as_built_documents");
@@ -1338,13 +1354,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(d => d.Description).HasMaxLength(4000);
             b.Property(d => d.FileUrl).HasMaxLength(500);
             b.Property(d => d.Note).HasMaxLength(2000);
-            b.Property(d => d.Category).HasConversion<string>().HasMaxLength(40);
             b.Property(d => d.Status).HasConversion<string>().HasMaxLength(30);
 
             b.HasOne(d => d.DesignProject)
                 .WithMany()
                 .HasForeignKey(d => d.DesignProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(d => d.Category)
+                .WithMany(c => c.Documents)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasOne(d => d.SubmittedBy)
                 .WithMany()
                 .HasForeignKey(d => d.SubmittedByUserId)
@@ -1356,8 +1375,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             b.HasIndex(d => d.DesignProjectId);
             b.HasIndex(d => new { d.DesignProjectId, d.DocumentCode }).IsUnique();
+            b.HasIndex(d => d.CategoryId);
             b.HasIndex(d => d.Status);
-            b.HasIndex(d => d.Category);
         });
 
         modelBuilder.Entity<HandoverRecord>(b =>

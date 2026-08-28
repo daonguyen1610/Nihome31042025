@@ -2811,7 +2811,35 @@ export type AsBuiltCategory =
   | "AcceptanceMinute"
   | "TestReport"
   | "WarrantyCertificate"
-  | "Other";
+  | "Other"
+  | string; // Allow dynamic categories
+
+// --- As-built document categories (NIH-452) ---------------------------
+export interface AsBuiltDocumentCategoryResponse {
+  id: number;
+  code: string;
+  name: string;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
+  isRequired: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  documentCount: number;
+}
+
+export interface UpsertAsBuiltDocumentCategoryRequest {
+  code: string;
+  name: string;
+  nameVi?: string | null;
+  nameEn?: string | null;
+  nameZh?: string | null;
+  nameJa?: string | null;
+  isRequired: boolean;
+  isActive: boolean;
+  sortOrder: number;
+}
 
 export interface AsBuiltDocumentResponse {
   id: number;
@@ -2819,7 +2847,9 @@ export interface AsBuiltDocumentResponse {
   designProjectName: string;
   documentCode: string;
   title: string;
+  categoryId: number;
   category: AsBuiltCategory;
+  categoryName: string;
   description?: string | null;
   fileUrl?: string | null;
   status: AsBuiltStatus;
@@ -3184,6 +3214,16 @@ export const adminApi = {
     api.put<ProjectCategoryResponse>(`/project-categories/${id}`, data),
   deleteProjectCategory: (id: number) =>
     api.delete(`/project-categories/${id}`),
+
+  // As-built document categories (NIH-452)
+  getAsBuiltDocumentCategories: (includeInactive = false) =>
+    api.get<AsBuiltDocumentCategoryResponse[]>(`/asbuilt-categories?includeInactive=${includeInactive}`),
+  createAsBuiltDocumentCategory: (data: UpsertAsBuiltDocumentCategoryRequest) =>
+    api.post<AsBuiltDocumentCategoryResponse>("/asbuilt-categories", data),
+  updateAsBuiltDocumentCategory: (id: number, data: UpsertAsBuiltDocumentCategoryRequest) =>
+    api.put<AsBuiltDocumentCategoryResponse>(`/asbuilt-categories/${id}`, data),
+  deleteAsBuiltDocumentCategory: (id: number) =>
+    api.delete(`/asbuilt-categories/${id}`),
 
   // Employment types
   getEmploymentTypes: (includeInactive = false) =>

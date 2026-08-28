@@ -7,7 +7,11 @@ public class AsBuiltDocumentResponse
     public string DesignProjectName { get; set; } = string.Empty;
     public string DocumentCode { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
+    public int CategoryId { get; set; }
+    /// <summary>Category code for programmatic use (e.g. "Drawing").</summary>
     public string Category { get; set; } = string.Empty;
+    /// <summary>Category display name (localized).</summary>
+    public string CategoryName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? FileUrl { get; set; }
     public string Status { get; set; } = string.Empty;

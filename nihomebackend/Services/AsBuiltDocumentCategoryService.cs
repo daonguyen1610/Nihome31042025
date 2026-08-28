@@ -1,0 +1,335 @@
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Data;
+using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
+
+namespace NihomeBackend.Services;
+
+/// <summary>
+/// Service for managing as-built document categories (CRUD).
+/// Replaces the old hardcoded <c>AsBuiltCategory</c> enum with dynamic categories.
+/// </summary>
+public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocumentCategoryService> logger)
+{
+    public async Task<List<AsBuiltDocumentCategoryResponse>> GetAllAsync(bool includeInactive = false)
+    {
+        await SeedDefaultCategoriesIfEmptyAsync();
+
+        var query = db.AsBuiltDocumentCategories.AsNoTracking();
+        if (!includeInactive)
+        {
+            query = query.Where(c => c.IsActive);
+        }
+
+        var items = await query
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Name)
+            .Select(c => new
+            {
+                Category = c,
+                DocumentCount = db.AsBuiltDocuments.Count(d => d.CategoryId == c.Id)
+            })
+            .ToListAsync();
+
+        logger.LogDebug("Fetched {Count} as-built document categories (includeInactive={IncludeInactive})", items.Count, includeInactive);
+        return items.Select(x => MapToResponse(x.Category, x.DocumentCount)).ToList();
+    }
+
+    public async Task<AsBuiltDocumentCategoryResponse?> GetByIdAsync(int id)
+    {
+        var entity = await db.AsBuiltDocumentCategories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (entity == null)
+        {
+            return null;
+        }
+
+        var documentCount = await db.AsBuiltDocuments.CountAsync(d => d.CategoryId == id);
+        return MapToResponse(entity, documentCount);
+    }
+
+    public async Task<AsBuiltDocumentCategoryResponse> CreateAsync(UpsertAsBuiltDocumentCategoryRequest req)
+    {
+        var code = NormalizeCode(req.Code);
+        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+
+        await EnsureCodeUniqueAsync(code);
+        await EnsureNameUniqueAsync(nameVi);
+
+        var entity = new AsBuiltDocumentCategory
+        {
+            Code = code,
+            Name = nameVi,
+            NameVi = nameVi,
+            NameEn = (req.NameEn ?? "").Trim(),
+            NameZh = (req.NameZh ?? "").Trim(),
+            NameJa = (req.NameJa ?? "").Trim(),
+            IsRequired = req.IsRequired,
+            IsActive = req.IsActive,
+            SortOrder = req.SortOrder,
+        };
+
+        db.AsBuiltDocumentCategories.Add(entity);
+        await db.SaveChangesAsync();
+
+        logger.LogInformation("Created as-built document category {CategoryId} ({CategoryCode})", entity.Id, entity.Code);
+        return MapToResponse(entity, 0);
+    }
+
+    public async Task<AsBuiltDocumentCategoryResponse?> UpdateAsync(int id, UpsertAsBuiltDocumentCategoryRequest req)
+    {
+        var entity = await db.AsBuiltDocumentCategories.FindAsync(id);
+        if (entity == null)
+        {
+            logger.LogWarning("Cannot update as-built document category. Id {CategoryId} not found", id);
+            return null;
+        }
+
+        var code = NormalizeCode(req.Code);
+        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+
+        await EnsureCodeUniqueAsync(code, id);
+        await EnsureNameUniqueAsync(nameVi, id);
+
+        entity.Code = code;
+        entity.Name = nameVi;
+        entity.NameVi = nameVi;
+        entity.NameEn = (req.NameEn ?? "").Trim();
+        entity.NameZh = (req.NameZh ?? "").Trim();
+        entity.NameJa = (req.NameJa ?? "").Trim();
+        entity.IsRequired = req.IsRequired;
+        entity.IsActive = req.IsActive;
+        entity.SortOrder = req.SortOrder;
+        entity.UpdatedAt = DateTime.UtcNow;
+
+        await db.SaveChangesAsync();
+
+        var documentCount = await db.AsBuiltDocuments.CountAsync(d => d.CategoryId == id);
+        logger.LogInformation("Updated as-built document category {CategoryId} ({CategoryCode})", entity.Id, entity.Code);
+        return MapToResponse(entity, documentCount);
+    }
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var entity = await db.AsBuiltDocumentCategories.FindAsync(id);
+        if (entity == null)
+        {
+            logger.LogWarning("Cannot delete as-built document category. Id {CategoryId} not found", id);
+            return false;
+        }
+
+        var inUse = await db.AsBuiltDocuments
+            .AsNoTracking()
+            .AnyAsync(d => d.CategoryId == id);
+
+        if (inUse)
+        {
+            throw new InvalidOperationException("Danh mục đang được sử dụng trong hồ sơ hoàn công, không thể xóa. Vui lòng vô hiệu hóa thay vì xóa.");
+        }
+
+        db.AsBuiltDocumentCategories.Remove(entity);
+        await db.SaveChangesAsync();
+
+        logger.LogInformation("Deleted as-built document category {CategoryId} ({CategoryCode})", entity.Id, entity.Code);
+        return true;
+    }
+
+    /// <summary>
+    /// Resolve category by ID or create from code if needed.
+    /// Used by AsBuiltDocumentService to handle category references.
+    /// </summary>
+    public async Task<int> ResolveCategoryIdAsync(int? categoryId, string? categoryCode)
+    {
+        if (categoryId.HasValue)
+        {
+            var exists = await db.AsBuiltDocumentCategories.AnyAsync(c => c.Id == categoryId.Value);
+            if (!exists)
+            {
+                throw new InvalidOperationException($"Danh mục hồ sơ không tồn tại (ID: {categoryId.Value}).");
+            }
+            return categoryId.Value;
+        }
+
+        if (string.IsNullOrWhiteSpace(categoryCode))
+        {
+            throw new InvalidOperationException("Vui lòng chọn danh mục hồ sơ.");
+        }
+
+        var byCode = await db.AsBuiltDocumentCategories
+            .FirstOrDefaultAsync(c => c.Code.ToLower() == categoryCode.ToLower());
+
+        if (byCode != null)
+        {
+            return byCode.Id;
+        }
+
+        throw new InvalidOperationException($"Danh mục '{categoryCode}' không hợp lệ.");
+    }
+
+    /// <summary>
+    /// Get all required category IDs for handover completeness checks.
+    /// </summary>
+    public async Task<int[]> GetRequiredCategoryIdsAsync()
+    {
+        return await db.AsBuiltDocumentCategories
+            .AsNoTracking()
+            .Where(c => c.IsRequired && c.IsActive)
+            .Select(c => c.Id)
+            .ToArrayAsync();
+    }
+
+    /// <summary>
+    /// Seed default categories if none exist.
+    /// Called on first access to ensure data consistency.
+    /// </summary>
+    private async Task SeedDefaultCategoriesIfEmptyAsync()
+    {
+        if (await db.AsBuiltDocumentCategories.AsNoTracking().AnyAsync())
+        {
+            return;
+        }
+
+        var defaults = new List<AsBuiltDocumentCategory>
+        {
+            new()
+            {
+                Code = AsBuiltCategoryCodes.Drawing,
+                Name = "Bản vẽ hoàn công",
+                NameVi = "Bản vẽ hoàn công",
+                NameEn = "As-built drawings",
+                NameZh = "竣工图纸",
+                NameJa = "竣工図面",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 1,
+            },
+            new()
+            {
+                Code = AsBuiltCategoryCodes.AcceptanceMinute,
+                Name = "Biên bản nghiệm thu",
+                NameVi = "Biên bản nghiệm thu",
+                NameEn = "Acceptance minutes",
+                NameZh = "验收记录",
+                NameJa = "検収議事録",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 2,
+            },
+            new()
+            {
+                Code = AsBuiltCategoryCodes.TestReport,
+                Name = "Báo cáo thí nghiệm",
+                NameVi = "Báo cáo thí nghiệm",
+                NameEn = "Test reports",
+                NameZh = "测试报告",
+                NameJa = "試験報告書",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 3,
+            },
+            new()
+            {
+                Code = AsBuiltCategoryCodes.WarrantyCertificate,
+                Name = "Chứng chỉ bảo hành",
+                NameVi = "Chứng chỉ bảo hành",
+                NameEn = "Warranty certificates",
+                NameZh = "保修证书",
+                NameJa = "保証書",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 4,
+            },
+            new()
+            {
+                Code = AsBuiltCategoryCodes.Other,
+                Name = "Tài liệu khác",
+                NameVi = "Tài liệu khác",
+                NameEn = "Other supporting documents",
+                NameZh = "其他支持文件",
+                NameJa = "その他の書類",
+                IsRequired = false,
+                IsActive = true,
+                SortOrder = 5,
+            },
+        };
+
+        db.AsBuiltDocumentCategories.AddRange(defaults);
+        await db.SaveChangesAsync();
+
+        logger.LogInformation("Seeded {Count} default as-built document categories", defaults.Count);
+    }
+
+    private async Task EnsureCodeUniqueAsync(string code, int? excludingId = null)
+    {
+        var normalized = code.ToLower();
+
+        var exists = await db.AsBuiltDocumentCategories
+            .AsNoTracking()
+            .AnyAsync(c => c.Code.ToLower() == normalized && (!excludingId.HasValue || c.Id != excludingId.Value));
+
+        if (exists)
+        {
+            throw new InvalidOperationException($"Mã danh mục '{code}' đã tồn tại.");
+        }
+    }
+
+    private async Task EnsureNameUniqueAsync(string name, int? excludingId = null)
+    {
+        var normalized = name.ToLower();
+
+        var exists = await db.AsBuiltDocumentCategories
+            .AsNoTracking()
+            .AnyAsync(c => c.Name.ToLower() == normalized && (!excludingId.HasValue || c.Id != excludingId.Value));
+
+        if (exists)
+        {
+            throw new InvalidOperationException("Danh mục đã tồn tại.");
+        }
+    }
+
+    private static string NormalizeCode(string code)
+    {
+        var normalized = (code ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Mã danh mục không được để trống.");
+        }
+
+        // Validate code format: alphanumeric with optional underscores
+        if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, @"^[A-Za-z][A-Za-z0-9_]*$"))
+        {
+            throw new InvalidOperationException("Mã danh mục chỉ được chứa chữ cái, số và dấu gạch dưới, bắt đầu bằng chữ cái.");
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeName(string name)
+    {
+        var normalized = (name ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Tên danh mục không được để trống.");
+        }
+
+        return normalized;
+    }
+
+    private static AsBuiltDocumentCategoryResponse MapToResponse(AsBuiltDocumentCategory item, int documentCount) => new()
+    {
+        Id = item.Id,
+        Code = item.Code,
+        Name = item.Name,
+        NameVi = string.IsNullOrWhiteSpace(item.NameVi) ? item.Name : item.NameVi,
+        NameEn = item.NameEn ?? "",
+        NameZh = item.NameZh ?? "",
+        NameJa = item.NameJa ?? "",
+        IsRequired = item.IsRequired,
+        IsActive = item.IsActive,
+        SortOrder = item.SortOrder,
+        DocumentCount = documentCount,
+    };
+}

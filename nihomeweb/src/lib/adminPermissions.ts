@@ -85,6 +85,8 @@ export const ADMIN_PERMS = {
   constructionAsBuilt: "construction.asbuilt.view",
   constructionAsBuiltManage: "construction.asbuilt.manage",
   constructionAsBuiltApprove: "construction.asbuilt.approve",
+  constructionAsBuiltCategories: "construction.asbuilt-categories.view",
+  constructionAsBuiltCategoriesManage: "construction.asbuilt-categories.manage",
   constructionHandover: "construction.handover.view",
   constructionHandoverManage: "construction.handover.manage",
   constructionHandoverComplete: "construction.handover.complete",
