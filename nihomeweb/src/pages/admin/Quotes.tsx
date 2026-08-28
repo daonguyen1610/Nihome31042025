@@ -729,46 +729,69 @@ const AdminQuotes = () => {
                 ) : (
                   <div className="space-y-3">
                     {(createForm.items ?? []).map((item, index) => (
-                      <div key={index} className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-2 sm:grid-cols-6">
-                        <Input
-                          className="sm:col-span-2"
-                          aria-label={t("quotes.boq.name")}
-                          placeholder={t("quotes.boq.name")}
-                          value={item.name}
-                          onChange={(event) => updateBoqItem(index, { name: event.target.value })}
-                        />
-                        <Input
-                          aria-label={t("quotes.boq.unit")}
-                          placeholder={t("quotes.boq.unit")}
-                          value={item.unit}
-                          onChange={(event) => updateBoqItem(index, { unit: event.target.value })}
-                        />
-                        <Input
-                          type="number"
-                          min={0.01}
-                          max={MAX_QUOTE_QUANTITY}
-                          step="any"
-                          aria-label={t("quotes.boq.qty")}
-                          placeholder={t("quotes.boq.qty")}
-                          value={item.quantity}
-                          onChange={(event) => updateBoqItem(index, { quantity: Number(event.target.value) })}
-                        />
-                        <Input
-                          inputMode="numeric"
-                          aria-label={t("quotes.boq.unitPrice")}
-                          placeholder={t("quotes.boq.unitPrice")}
-                          value={item.unitPrice ? formatVnd(item.unitPrice) : ""}
-                          onChange={(event) => updateBoqItem(index, { unitPrice: parseVnd(event.target.value) })}
-                        />
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          aria-label={t("common.delete")}
-                          onClick={() => removeBoqItem(index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div key={index} className="rounded-lg border bg-muted/30 p-3">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {t("quotes.boq.itemNumber", { n: index + 1 })}
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-destructive hover:text-destructive"
+                            aria-label={t("common.delete")}
+                            onClick={() => removeBoqItem(index)}
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />
+                            {t("common.delete")}
+                          </Button>
+                        </div>
+                        <div className="grid gap-3">
+                          <div>
+                            <Label className="text-xs">{t("quotes.boq.name")}</Label>
+                            <Input
+                              placeholder={t("quotes.boq.namePlaceholder")}
+                              value={item.name}
+                              onChange={(event) => updateBoqItem(index, { name: event.target.value })}
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">{t("quotes.boq.unit")}</Label>
+                              <Input
+                                placeholder="m², m³, kg..."
+                                value={item.unit}
+                                onChange={(event) => updateBoqItem(index, { unit: event.target.value })}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">{t("quotes.boq.qty")}</Label>
+                              <Input
+                                type="number"
+                                min={0.01}
+                                max={MAX_QUOTE_QUANTITY}
+                                step="any"
+                                placeholder="0"
+                                value={item.quantity}
+                                onChange={(event) => updateBoqItem(index, { quantity: Number(event.target.value) })}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">{t("quotes.boq.unitPrice")}</Label>
+                              <Input
+                                inputMode="numeric"
+                                placeholder="0 ₫"
+                                value={item.unitPrice ? formatVnd(item.unitPrice) : ""}
+                                onChange={(event) => updateBoqItem(index, { unitPrice: parseVnd(event.target.value) })}
+                              />
+                            </div>
+                          </div>
+                          {item.quantity > 0 && item.unitPrice > 0 && (
+                            <div className="text-right text-sm font-medium">
+                              {t("quotes.boq.amount")}: {formatVnd(item.quantity * item.unitPrice)} ₫
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
