@@ -121,5 +121,5 @@
   { "key": "asbuiltCat.error.codeRequired", "category": "construction", "vi": "Vui lòng nhập mã danh mục.", "en": "Please enter a category code.", "zh": "请输入类别编码。", "ja": "カテゴリコードを入力してください。" },
   { "key": "asbuiltCat.error.nameRequired", "category": "construction", "vi": "Vui lòng nhập tên danh mục.", "en": "Please enter a category name.", "zh": "请输入类别名称。", "ja": "カテゴリ名を入力してください。" },
   { "key": "asbuiltCat.delete.title", "category": "construction", "vi": "Xoá danh mục", "en": "Delete category", "zh": "删除类别", "ja": "カテゴリを削除" },
-  { "key": "asbuiltCat.delete.confirm", "category": "construction", "vi": "Bạn có chắc muốn xoá danh mục \"{name}\"? Danh mục đang được sử dụng sẽ không thể xoá.", "en": "Are you sure you want to delete the category \"{name}\"? Categories in use cannot be deleted.", "zh": "您确定要删除类别"{name}"吗？正在使用的类别无法删除。", "ja": "カテゴリ「{name}」を削除してもよろしいですか？使用中のカテゴリは削除できません。" }
+  { "key": "asbuiltCat.delete.confirm", "category": "construction", "vi": "Bạn có chắc muốn xoá danh mục '{name}'? Danh mục đang được sử dụng sẽ không thể xoá.", "en": "Are you sure you want to delete the category '{name}'? Categories in use cannot be deleted.", "zh": "您确定要删除类别'{name}'吗？正在使用的类别无法删除。", "ja": "カテゴリ「{name}」を削除してもよろしいですか？使用中のカテゴリは削除できません。" }
 ]
