@@ -21,6 +21,10 @@ public class Contract : IConcurrencyTracked
     public int CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;
 
+    /// <summary>Operational project that groups this contract with all M1-M8 work.</summary>
+    public int? OperationalProjectId { get; set; }
+    public OperationalProject? OperationalProject { get; set; }
+
     /// <summary>Optional source opportunity (nullable — a contract can be drafted directly).</summary>
     public int? OpportunityId { get; set; }
     public Opportunity? Opportunity { get; set; }

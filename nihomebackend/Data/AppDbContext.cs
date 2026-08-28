@@ -76,6 +76,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SurveyMedia> SurveyMedia => Set<SurveyMedia>();
     public DbSet<SurveyChecklistResult> SurveyChecklistResults => Set<SurveyChecklistResult>();
 
+    // Internal project aggregate shared across operational modules (NIH-460).
+    public DbSet<OperationalProject> OperationalProjects => Set<OperationalProject>();
+
     // Procurement
     public DbSet<Vendor> Vendors => Set<Vendor>();
 
@@ -512,11 +515,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(o => o.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(o => o.OperationalProject)
+                .WithMany(p => p.Opportunities)
+                .HasForeignKey(o => o.OperationalProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
             b.HasOne(o => o.Owner)
                 .WithMany()
                 .HasForeignKey(o => o.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(o => o.CustomerId);
+            b.HasIndex(o => o.OperationalProjectId);
             b.HasIndex(o => o.OwnerUserId);
             b.HasIndex(o => o.Stage);
             b.HasIndex(o => o.ExpectedCloseDate);
@@ -562,11 +570,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(q => q.OpportunityId)
                 .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(q => q.OperationalProject)
+                .WithMany(p => p.Quotes)
+                .HasForeignKey(q => q.OperationalProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
             b.HasOne(q => q.Owner)
                 .WithMany()
                 .HasForeignKey(q => q.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(q => q.OpportunityId);
+            b.HasIndex(q => q.OperationalProjectId);
             b.HasIndex(q => q.OwnerUserId);
             b.HasIndex(q => q.Status);
             b.HasIndex(q => q.ValidUntil);
@@ -665,6 +678,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(c => c.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(c => c.OperationalProject)
+                .WithMany(p => p.Contracts)
+                .HasForeignKey(c => c.OperationalProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
             b.HasOne(c => c.Opportunity)
                 .WithMany()
                 .HasForeignKey(c => c.OpportunityId)
@@ -678,6 +695,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(c => c.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
             b.HasIndex(c => c.CustomerId);
+            b.HasIndex(c => c.OperationalProjectId);
             b.HasIndex(c => c.OwnerUserId);
             b.HasIndex(c => c.Status);
             b.HasIndex(c => c.SignedDate);
@@ -916,6 +934,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(r => new { r.SurveyId, r.SortOrder });
         });
 
+        modelBuilder.Entity<OperationalProject>(b =>
+        {
+            b.ToTable("operational_projects");
+            b.HasKey(p => p.Id);
+            b.Property(p => p.Code).HasMaxLength(40).IsRequired();
+            b.HasIndex(p => p.Code).IsUnique();
+            b.Property(p => p.Name).HasMaxLength(300).IsRequired();
+            b.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(p => p.Note).HasMaxLength(4000);
+            b.Property(p => p.RowVersion).IsRowVersion();
+            b.HasOne(p => p.Customer)
+                .WithMany(c => c.OperationalProjects)
+                .HasForeignKey(p => p.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(p => p.ProjectManager)
+                .WithMany()
+                .HasForeignKey(p => p.ProjectManagerUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            b.HasIndex(p => p.CustomerId);
+            b.HasIndex(p => p.ProjectManagerUserId);
+            b.HasIndex(p => p.Status);
+            b.HasIndex(p => p.UpdatedAt);
+        });
+
         modelBuilder.Entity<DesignProject>(b =>
         {
             b.ToTable("design_projects");
@@ -926,6 +968,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(dp => dp.Note).HasMaxLength(4000);
             b.Property(dp => dp.CurrentStage).HasConversion<string>().HasMaxLength(20);
             b.Property(dp => dp.Status).HasConversion<string>().HasMaxLength(20);
+
+            b.HasOne(dp => dp.OperationalProject)
+                .WithOne(p => p.DesignProject)
+                .HasForeignKey<DesignProject>(dp => dp.OperationalProjectId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             b.HasOne(dp => dp.Customer)
                 .WithMany()
@@ -945,6 +992,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.NoAction);
 
             b.HasIndex(dp => dp.CustomerId);
+            b.HasIndex(dp => dp.OperationalProjectId).IsUnique().HasFilter("[OperationalProjectId] IS NOT NULL");
             b.HasIndex(dp => dp.ContractId).IsUnique().HasFilter("[ContractId] IS NOT NULL");
             b.HasIndex(dp => dp.ProjectManagerUserId);
             b.HasIndex(dp => dp.DesignLeadUserId);

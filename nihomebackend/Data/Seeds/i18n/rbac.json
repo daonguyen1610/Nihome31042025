@@ -2367,6 +2367,12 @@
     "zh": "将当前筛选的供应商列表导出为 CSV。",
     "ja": "現在絞り込まれている仕入先一覧をCSVに出力します。"
   },
+  { "key": "rbac.perm.operations.projects.view.label", "category": "rbac", "vi": "Xem dự án vận hành", "en": "View operational projects", "zh": "查看运营项目", "ja": "運用プロジェクトを表示" },
+  { "key": "rbac.perm.operations.projects.view.description", "category": "rbac", "vi": "Xem dự án do người dùng tạo hoặc phụ trách.", "en": "View operational projects created by or assigned to the user.", "zh": "查看由用户创建或负责的运营项目。", "ja": "ユーザーが作成または担当する運用プロジェクトを表示します。" },
+  { "key": "rbac.perm.operations.projects.view.all.label", "category": "rbac", "vi": "Xem toàn bộ dự án vận hành", "en": "View all operational projects", "zh": "查看全部运营项目", "ja": "すべての運用プロジェクトを表示" },
+  { "key": "rbac.perm.operations.projects.view.all.description", "category": "rbac", "vi": "Xem danh mục dự án vận hành không giới hạn theo người phụ trách.", "en": "View the operational-project portfolio without manager scope.", "zh": "查看不受项目经理范围限制的运营项目组合。", "ja": "担当者の範囲に関係なく運用プロジェクト一覧を表示します。" },
+  { "key": "rbac.perm.operations.projects.manage.label", "category": "rbac", "vi": "Quản lý dự án vận hành", "en": "Manage operational projects", "zh": "管理运营项目", "ja": "運用プロジェクトを管理" },
+  { "key": "rbac.perm.operations.projects.manage.description", "category": "rbac", "vi": "Tạo, chỉnh sửa, chuyển trạng thái và xoá dự án đủ điều kiện.", "en": "Create, edit, transition, and delete eligible operational projects.", "zh": "创建、编辑、转换状态和删除符合条件的运营项目。", "ja": "運用プロジェクトの作成、編集、状態変更、条件付き削除を行います。" },
   { "key": "adminRbac.filter.search", "category": "adminRbac", "vi": "Tìm quyền", "en": "Search permissions", "zh": "搜索权限", "ja": "権限を検索" },
   { "key": "adminRbac.filter.searchPlaceholder", "category": "adminRbac", "vi": "Tìm theo tên hoặc mã quyền…", "en": "Search by name or code…", "zh": "按名称或代码搜索…", "ja": "名称またはコードで検索…" },
   { "key": "adminRbac.filter.module", "category": "adminRbac", "vi": "Nhóm chức năng", "en": "Module", "zh": "功能模块", "ja": "モジュール" },

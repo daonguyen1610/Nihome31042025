@@ -11,6 +11,9 @@ public class CreateOpportunityRequest
     [Required]
     public int CustomerId { get; set; }
 
+    /// <summary>Optional approved project/pre-project context.</summary>
+    public int? OperationalProjectId { get; set; }
+
     /// <summary>Optional explicit owner. If null, service assigns the caller (when the caller is sales).</summary>
     public int? OwnerUserId { get; set; }
 
@@ -39,6 +42,8 @@ public class UpdateOpportunityRequest : IConcurrencyRequest
 
     [Required]
     public int CustomerId { get; set; }
+
+    public int? OperationalProjectId { get; set; }
 
     public int? OwnerUserId { get; set; }
 

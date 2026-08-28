@@ -123,6 +123,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISurveyMediaStorageService, SurveyMediaStorageService>();
         services.AddScoped<ISurveyDriveSyncProcessor, SurveyDriveSyncProcessor>();
         services.AddSingleton<IGoogleDriveAdapter, GoogleDriveAdapter>();
+        services.AddScoped<IOperationalProjectService, OperationalProjectService>();
         services.AddScoped<IDesignProjectService, DesignProjectService>();
         services.AddScoped<IBusinessDocumentStorageService, BusinessDocumentStorageService>();
         services.AddScoped<IPermitChecklistService, PermitChecklistService>();

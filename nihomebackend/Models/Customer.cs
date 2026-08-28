@@ -45,6 +45,7 @@ public class Customer : IConcurrencyTracked
     public List<CustomerContact> Contacts { get; set; } = new();
     public List<CustomerActivity> Activities { get; set; } = new();
     public List<CustomerDocument> Documents { get; set; } = new();
+    public List<OperationalProject> OperationalProjects { get; set; } = new();
 }
 
 public enum CustomerType

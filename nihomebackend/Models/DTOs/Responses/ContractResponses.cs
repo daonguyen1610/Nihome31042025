@@ -10,6 +10,8 @@ public class ContractResponse
     public int CustomerId { get; set; }
     public string? CustomerName { get; set; }
 
+    public int? OperationalProjectId { get; set; }
+
     public int? OpportunityId { get; set; }
     public string? OpportunityTitle { get; set; }
 

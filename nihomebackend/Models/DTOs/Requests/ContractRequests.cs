@@ -17,6 +17,8 @@ public class UpsertContractRequest : IConcurrencyRequest
     [Required]
     public int CustomerId { get; set; }
 
+    public int? OperationalProjectId { get; set; }
+
     public int? OpportunityId { get; set; }
     public int? QuoteId { get; set; }
     public int? OwnerUserId { get; set; }

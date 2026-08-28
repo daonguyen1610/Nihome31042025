@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BriefcaseBusiness, ExternalLink, FileSignature, FileText, Plus, ReceiptText, Search, Trash2, RefreshCw, Star, Upload, X, Pencil } from "lucide-react";
+import { BriefcaseBusiness, Building2, ExternalLink, FileSignature, FileText, Plus, ReceiptText, Search, Trash2, RefreshCw, Star, Upload, X, Pencil } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
@@ -50,6 +50,7 @@ import {
   type ContractResponse,
   type MasterDataOption,
   type OpportunityResponse,
+  type OperationalProjectListItemResponse,
   type QuoteListItemResponse,
   type UpdateCustomerRequest,
   type UpsertCustomerContactRequest,
@@ -111,6 +112,7 @@ const AdminCustomers = () => {
   const canViewOpportunities = has(ADMIN_PERMS.opportunities);
   const canViewQuotes = has(ADMIN_PERMS.quotes);
   const canViewContracts = has(ADMIN_PERMS.contracts);
+  const canViewOperationalProjects = has(ADMIN_PERMS.operationalProjects);
 
   const [rows, setRows] = useState<CustomerResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -158,9 +160,10 @@ const AdminCustomers = () => {
   const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
   const [quotes, setQuotes] = useState<QuoteListItemResponse[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
-  const [relatedTotals, setRelatedTotals] = useState({ opportunities: 0, quotes: 0, contracts: 0 });
+  const [operationalProjects, setOperationalProjects] = useState<OperationalProjectListItemResponse[]>([]);
+  const [relatedTotals, setRelatedTotals] = useState({ projects: 0, opportunities: 0, quotes: 0, contracts: 0 });
   const [relatedLoading, setRelatedLoading] = useState(false);
-  const [relatedErrors, setRelatedErrors] = useState<Partial<Record<"opportunities" | "quotes" | "contracts", string>>>({});
+  const [relatedErrors, setRelatedErrors] = useState<Partial<Record<"projects" | "opportunities" | "quotes" | "contracts", string>>>({});
 
   useEffect(() => {
     const h = window.setTimeout(() => {
@@ -228,6 +231,14 @@ const AdminCustomers = () => {
     setRelatedErrors({});
 
     await Promise.all([
+      canViewOperationalProjects
+        ? adminApi.listOperationalProjects({ customerId, pageSize: 100 })
+            .then(({ data }) => {
+              setOperationalProjects(data.items);
+              setRelatedTotals((current) => ({ ...current, projects: data.total }));
+            })
+            .catch((error) => setRelatedErrors((current) => ({ ...current, projects: extractApiError(error) })))
+        : Promise.resolve(),
       canViewOpportunities
         ? adminApi.listOpportunities({ customerId, pageSize: 100 })
             .then(({ data }) => {
@@ -271,7 +282,8 @@ const AdminCustomers = () => {
     setOpportunities([]);
     setQuotes([]);
     setContracts([]);
-    setRelatedTotals({ opportunities: 0, quotes: 0, contracts: 0 });
+    setOperationalProjects([]);
+    setRelatedTotals({ projects: 0, opportunities: 0, quotes: 0, contracts: 0 });
     setRelatedErrors({});
     setDocumentFile(null);
     setDocumentLabel("");
@@ -326,7 +338,8 @@ const AdminCustomers = () => {
     setOpportunities([]);
     setQuotes([]);
     setContracts([]);
-    setRelatedTotals({ opportunities: 0, quotes: 0, contracts: 0 });
+    setOperationalProjects([]);
+    setRelatedTotals({ projects: 0, opportunities: 0, quotes: 0, contracts: 0 });
     setRelatedErrors({});
     setDocumentFile(null);
     setDocumentLabel("");
@@ -1573,7 +1586,7 @@ const AdminCustomers = () => {
                       <RefreshCw className="h-4 w-4 animate-spin" aria-hidden />
                       {t("customers.tab.related.loading")}
                     </div>
-                  ) : !canViewOpportunities && !canViewQuotes && !canViewContracts ? (
+                  ) : !canViewOperationalProjects && !canViewOpportunities && !canViewQuotes && !canViewContracts ? (
                     <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
                       {t("customers.tab.related.noAccess")}
                     </p>
@@ -1586,6 +1599,28 @@ const AdminCustomers = () => {
                             <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> {t("common.retry")}
                           </Button>
                         </div>
+                      )}
+
+                      {canViewOperationalProjects && (
+                        <RelatedSection
+                          title={t("customers.tab.related.projects")}
+                          icon={<Building2 className="h-4 w-4 text-indigo-600" />}
+                          count={relatedTotals.projects}
+                          emptyText={t("customers.tab.related.projects.empty")}
+                          error={relatedErrors.projects}
+                          viewAllHref={`/admin/operational-projects?customerId=${detail.id}`}
+                          viewAllLabel={t("customers.tab.related.viewAll")}
+                        >
+                          {operationalProjects.map((project) => (
+                            <RelatedRow
+                              key={project.id}
+                              title={`${project.code} · ${project.name}`}
+                              subtitle={t(`operationalProjects.status.${project.status}`)}
+                              value={t("operationalProjects.count.contractsWithValue", { count: project.contractCount })}
+                              href={`/admin/operational-projects/${project.id}`}
+                            />
+                          ))}
+                        </RelatedSection>
                       )}
 
                       {canViewOpportunities && (

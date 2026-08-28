@@ -49,6 +49,7 @@ import {
   FolderArchive,
   PackageCheck,
   User as UserIcon,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -147,6 +148,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.crm"),
         icon: UserPlus,
         items: [
+          { to: "/admin/operational-projects", label: t("nav.operationalProjects"), icon: BriefcaseBusiness, permission: ADMIN_PERMS.operationalProjects },
           { to: "/admin/leads", label: t("nav.leads"), icon: UserPlus, permission: ADMIN_PERMS.leads },
           { to: "/admin/customers", label: t("nav.customers"), icon: UserRound, permission: ADMIN_PERMS.customers },
           { to: "/admin/opportunities", label: t("nav.opportunities"), icon: Target, permission: ADMIN_PERMS.opportunities },

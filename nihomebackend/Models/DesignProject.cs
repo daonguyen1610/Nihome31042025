@@ -14,6 +14,13 @@ public class DesignProject
 {
     public int Id { get; set; }
 
+    /// <summary>
+    /// Parent operational project. Nullable only while legacy rows are being
+    /// backfilled; new write paths populate it.
+    /// </summary>
+    public int? OperationalProjectId { get; set; }
+    public OperationalProject? OperationalProject { get; set; }
+
     /// <summary>Human-friendly project code (e.g. DP-2026-0001) — unique.</summary>
     public string ProjectCode { get; set; } = string.Empty;
 
