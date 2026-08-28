@@ -164,6 +164,7 @@ public class OpportunityService(
         var customer = await db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
+        await EnsureProjectMatchesCustomerAsync(request.OperationalProjectId, request.CustomerId, ct);
 
         var now = DateTime.UtcNow;
         var ownerId = request.OwnerUserId ?? callerUserId;
@@ -172,6 +173,7 @@ public class OpportunityService(
         {
             Name = request.Name.Trim(),
             CustomerId = request.CustomerId,
+            OperationalProjectId = request.OperationalProjectId,
             OwnerUserId = ownerId,
             EstimatedValue = request.EstimatedValue,
             WinProbability = request.WinProbability,
@@ -215,6 +217,8 @@ public class OpportunityService(
         var customer = await db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
+        var operationalProjectId = request.OperationalProjectId ?? op.OperationalProjectId;
+        await EnsureProjectMatchesCustomerAsync(operationalProjectId, request.CustomerId, ct);
 
         var previousOwnerId = op.OwnerUserId;
 
@@ -226,6 +230,7 @@ public class OpportunityService(
 
         op.Name = request.Name.Trim();
         op.CustomerId = request.CustomerId;
+        op.OperationalProjectId = operationalProjectId;
         op.OwnerUserId = request.OwnerUserId;
         op.EstimatedValue = request.EstimatedValue;
         op.WinProbability = request.WinProbability;
@@ -578,6 +583,7 @@ public class OpportunityService(
             Name = op.Name,
             CustomerId = op.CustomerId,
             CustomerName = customerName,
+            OperationalProjectId = op.OperationalProjectId,
             OwnerUserId = op.OwnerUserId,
             OwnerName = ownerName,
             EstimatedValue = op.EstimatedValue,
@@ -610,5 +616,27 @@ public class OpportunityService(
                     })
                     .ToList(),
         };
+    }
+
+    private async Task EnsureProjectMatchesCustomerAsync(
+        int? projectId,
+        int customerId,
+        CancellationToken ct)
+    {
+        if (!projectId.HasValue) return;
+        var projectCustomerId = await db.OperationalProjects
+            .AsNoTracking()
+            .Where(project => project.Id == projectId.Value)
+            .Select(project => (int?)project.CustomerId)
+            .FirstOrDefaultAsync(ct);
+        if (!projectCustomerId.HasValue)
+        {
+            throw new OpportunityOperationException($"Không tìm thấy Dự án #{projectId.Value}.");
+        }
+        if (projectCustomerId.Value != customerId)
+        {
+            throw new OpportunityOperationException(
+                "Cơ hội và Dự án phải thuộc cùng một Khách hàng.");
+        }
     }
 }

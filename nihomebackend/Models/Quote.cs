@@ -18,6 +18,10 @@ public class Quote : IConcurrencyTracked
     public int OpportunityId { get; set; }
     public Opportunity Opportunity { get; set; } = null!;
 
+    /// <summary>Project context copied from the opportunity and validated server-side.</summary>
+    public int? OperationalProjectId { get; set; }
+    public OperationalProject? OperationalProject { get; set; }
+
     /// <summary>Sales owner. Nullable while unassigned; SetNull on user delete.</summary>
     public int? OwnerUserId { get; set; }
     public ApplicationUser? Owner { get; set; }

@@ -62,6 +62,7 @@ public class QuoteResponse
     public string? OpportunityName { get; set; }
     public int? CustomerId { get; set; }
     public string? CustomerName { get; set; }
+    public int? OperationalProjectId { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
 
@@ -104,6 +105,7 @@ public class QuoteListItemResponse
     public int OpportunityId { get; set; }
     public string? OpportunityName { get; set; }
     public string? CustomerName { get; set; }
+    public int? OperationalProjectId { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public int Version { get; set; }

@@ -8,6 +8,8 @@ namespace NihomeBackend.Models.DTOs.Requests;
 /// </summary>
 public class CreateDesignProjectRequest
 {
+    public int? OperationalProjectId { get; set; }
+
     [Required]
     [StringLength(300, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;

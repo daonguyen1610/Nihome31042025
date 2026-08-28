@@ -44,6 +44,19 @@ The handover workspace uses separate read, write, and completion capabilities. T
 
 Scoped access includes records created by or assigned to the caller and projects where the caller is project manager or design lead. Reassigning a responsible user requires project leadership or `manage.all`. Wildcard PM, design-lead, admin, and super-admin patterns inherit the broad permissions defined in `rbac-defaults.json`; technical business roles with explicit `view`/`manage` entries remain project-scoped.
 
+### Operational project permissions
+
+| Permission | Scope |
+|---|---|
+| `operations.projects.view` | Open operational-project list and detail within the caller's created/managed scope. |
+| `operations.projects.view.all` | Read the full operational-project portfolio. |
+| `operations.projects.manage` | Create, edit, transition, and delete eligible projects within scope. |
+
+`view.all` and `manage` are independent. A project with linked business data
+cannot be deleted, and its customer cannot be changed. Existing installations
+receive the new grants through `AddOperationalProjects`; fresh databases use
+`rbac-defaults.json`.
+
 ## API Surface
 
 - `GET /api/users` — `users.view`
@@ -113,5 +126,4 @@ For per-controller happy-path coverage (admin/SA returns 2xx with a valid payloa
 ### Browser-level RBAC matrix
 
 `nihomeweb/e2e/smoke/admin-rbac-matrix.spec.ts` drives the seeded role accounts through the admin route surface and asserts that each role can reach its permitted set and gets the inline `<Forbidden />` screen on the rest. Allow/deny sets are kept in sync with `/api/users/me/permissions` returned by the live stack so drift between `rbac-defaults.json`, the seeder, and the frontend permission map fails the suite. Run with `BASE_URL=http://localhost:5043 npx playwright test admin-rbac-matrix`.
-
 

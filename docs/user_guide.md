@@ -61,6 +61,12 @@ NICON operates as a Design and Build construction company based in Ho Chi Minh C
 
 The platform is organized into eight functional modules spanning the entire project lifecycle:
 
+All eight modules share the same operational hierarchy: one customer (company
+or individual) can own many operational projects, and one operational project
+can contain many contracts. The operational project code is the traceability
+key used from sales through handover. Public website projects and design-stage
+projects are separate views and must not be used as substitutes for this key.
+
 | Module | Scope | Objective |
 |--------|-------|-----------|
 | 1. CRM / Sale / Contract | Customer management, lead tracking, quotations, tenders, site surveys, customer contracts | Manage customer acquisition and business development flexibly |
@@ -115,6 +121,7 @@ The platform is being developed incrementally. The following components are curr
 | Site settings and email template configuration | Implemented |
 | In-app admin notifications | Implemented |
 | CRM module (customers, leads, opportunities) | Implemented |
+| Central operational projects (customer, sales, contract, and design rollup) | Implemented; remaining modules are connected by subsequent NIH-447 subtasks |
 | Quotations, capability documents, and tenders | Implemented |
 | Site survey digitization | Implemented — private media upload, geolocation, checklist, Drive sync status, and PDF export are available |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
@@ -134,6 +141,22 @@ The platform is being developed incrementally. The following components are curr
 ## 3. Module Analysis
 
 This section provides detailed functional analysis for each module based on the NICON business requirements.
+
+### 3.0 Operational Project Workspace
+
+Open **CRM → Operational Projects** to create or find the shared project before
+working across modules. The list shows customer, lifecycle status, and counts
+of linked opportunities, quotations, and contracts. The detail view provides
+direct links to those records and to the design workflow.
+
+A new project starts in **Planning**. It can move to **Active**, **On hold**,
+**Completed**, or **Cancelled** according to the displayed lifecycle. Only an
+empty Planning project can be deleted; cancel a project that already contains
+business history. The customer cannot be changed after records are linked.
+
+Users normally see projects they created or manage. Portfolio roles with the
+`operations.projects.view.all` permission see all projects. Creating or editing
+requires `operations.projects.manage`.
 
 ### 3.1 Module 1: CRM / Sale / Contract
 

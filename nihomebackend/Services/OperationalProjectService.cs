@@ -1,0 +1,391 @@
+using System.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using NihomeBackend.Data;
+using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
+
+namespace NihomeBackend.Services;
+
+public class OperationalProjectService(
+    AppDbContext db,
+    ILogger<OperationalProjectService> logger) : IOperationalProjectService
+{
+    private const int MaxPageSize = 100;
+
+    public async Task<OperationalProjectListResponse> ListAsync(
+        OperationalProjectListParams parameters,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var page = Math.Max(parameters.Page, 1);
+        var pageSize = Math.Clamp(parameters.PageSize, 1, MaxPageSize);
+        var query = db.OperationalProjects.AsNoTracking().AsQueryable();
+
+        if (!canSeeAll)
+        {
+            query = query.Where(project =>
+                project.ProjectManagerUserId == callerUserId ||
+                project.CreatedByUserId == callerUserId);
+        }
+        else if (parameters.ProjectManagerUserId.HasValue)
+        {
+            query = query.Where(project =>
+                project.ProjectManagerUserId == parameters.ProjectManagerUserId.Value);
+        }
+
+        if (parameters.CustomerId.HasValue)
+        {
+            query = query.Where(project => project.CustomerId == parameters.CustomerId.Value);
+        }
+        if (parameters.Status.HasValue)
+        {
+            query = query.Where(project => project.Status == parameters.Status.Value);
+        }
+        if (!string.IsNullOrWhiteSpace(parameters.Search))
+        {
+            var term = $"%{parameters.Search.Trim()}%";
+            query = query.Where(project =>
+                EF.Functions.Like(project.Code, term) ||
+                EF.Functions.Like(project.Name, term) ||
+                EF.Functions.Like(project.Customer.Name, term));
+        }
+
+        var total = await query.CountAsync(ct);
+        var items = await query
+            .OrderByDescending(project => project.UpdatedAt)
+            .ThenByDescending(project => project.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(project => new OperationalProjectListItemResponse
+            {
+                Id = project.Id,
+                Code = project.Code,
+                Name = project.Name,
+                CustomerId = project.CustomerId,
+                CustomerName = project.Customer.Name,
+                ProjectManagerUserId = project.ProjectManagerUserId,
+                ProjectManagerName = project.ProjectManager != null
+                    ? project.ProjectManager.FullName
+                    : null,
+                Status = project.Status.ToString(),
+                StartDate = project.StartDate,
+                EndDate = project.EndDate,
+                OpportunityCount = project.Opportunities.Count,
+                QuoteCount = project.Quotes.Count,
+                ContractCount = project.Contracts.Count,
+                UpdatedAt = project.UpdatedAt,
+            })
+            .ToListAsync(ct);
+
+        return new OperationalProjectListResponse
+        {
+            Total = total,
+            Page = page,
+            PageSize = pageSize,
+            Items = items,
+        };
+    }
+
+    public async Task<OperationalProjectResponse?> GetAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var project = await db.OperationalProjects
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(item => item.Customer)
+            .Include(item => item.ProjectManager)
+            .Include(item => item.DesignProject)
+            .Include(item => item.Opportunities)
+            .Include(item => item.Quotes)
+            .Include(item => item.Contracts)
+            .FirstOrDefaultAsync(item => item.Id == id, ct);
+
+        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return null;
+        return Map(project);
+    }
+
+    public async Task<OperationalProjectResponse> CreateAsync(
+        CreateOperationalProjectRequest request,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        await ValidateAsync(request, callerUserId, canSeeAll, ct);
+        var now = DateTime.UtcNow;
+        var year = now.Year;
+        await using var allocationTransaction = await BeginCodeAllocationAsync(year, ct);
+
+        var project = new OperationalProject
+        {
+            Code = await NextCodeAsync(year, ct),
+            Name = request.Name.Trim(),
+            CustomerId = request.CustomerId,
+            ProjectManagerUserId = request.ProjectManagerUserId ?? callerUserId,
+            Status = OperationalProjectStatus.Planning,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
+            Note = TrimOrNull(request.Note),
+            CreatedAt = now,
+            CreatedByUserId = callerUserId,
+            UpdatedAt = now,
+            UpdatedByUserId = callerUserId,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync(ct);
+        if (allocationTransaction is not null) await allocationTransaction.CommitAsync(ct);
+
+        logger.LogInformation(
+            "OperationalProject {ProjectId} ({ProjectCode}) created by user {UserId}",
+            project.Id,
+            project.Code,
+            callerUserId);
+        return (await GetAsync(project.Id, callerUserId, canSeeAll, ct))!;
+    }
+
+    public async Task<OperationalProjectResponse?> UpdateAsync(
+        int id,
+        UpdateOperationalProjectRequest request,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return null;
+
+        await ValidateAsync(request, callerUserId, canSeeAll, ct);
+        if (project.CustomerId != request.CustomerId &&
+            await HasDependenciesAsync(project.Id, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Không thể đổi Khách hàng khi Dự án đã có dữ liệu nghiệp vụ.");
+        }
+        ValidateTransition(project.Status, request.Status);
+        CrmConcurrency.Apply(db, project, request.RowVersion);
+
+        project.Name = request.Name.Trim();
+        project.CustomerId = request.CustomerId;
+        project.ProjectManagerUserId = request.ProjectManagerUserId ?? callerUserId;
+        project.Status = request.Status;
+        project.StartDate = request.StartDate;
+        project.EndDate = request.EndDate;
+        project.Note = TrimOrNull(request.Note);
+        project.UpdatedAt = DateTime.UtcNow;
+        project.UpdatedByUserId = callerUserId;
+
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return await GetAsync(id, callerUserId, canSeeAll, ct);
+    }
+
+    public async Task<bool> DeleteAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        string? rowVersion,
+        CancellationToken ct = default)
+    {
+        var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return false;
+        if (project.Status != OperationalProjectStatus.Planning)
+        {
+            throw new OperationalProjectOperationException(
+                "Chỉ có thể xoá Dự án đang ở trạng thái Lập kế hoạch.");
+        }
+
+        if (await HasDependenciesAsync(id, ct))
+        {
+            throw new OperationalProjectOperationException(
+                "Không thể xoá Dự án đã có dữ liệu nghiệp vụ. Hãy chuyển sang Đã huỷ.");
+        }
+
+        CrmConcurrency.Apply(db, project, rowVersion);
+        db.OperationalProjects.Remove(project);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return true;
+    }
+
+    private async Task<bool> HasDependenciesAsync(int projectId, CancellationToken ct) =>
+        await db.Opportunities.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
+        await db.Quotes.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
+        await db.Contracts.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
+        await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct);
+
+    private async Task ValidateAsync(
+        CreateOperationalProjectRequest request,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw new OperationalProjectOperationException("Tên Dự án là bắt buộc.");
+        }
+        if (request.StartDate.HasValue && request.EndDate.HasValue &&
+            request.EndDate.Value.Date < request.StartDate.Value.Date)
+        {
+            throw new OperationalProjectOperationException(
+                "Ngày kết thúc Dự án phải bằng hoặc sau ngày bắt đầu.");
+        }
+        if (!await db.Customers.AnyAsync(customer => customer.Id == request.CustomerId, ct))
+        {
+            throw new OperationalProjectOperationException(
+                $"Khách hàng #{request.CustomerId} không tồn tại.");
+        }
+
+        var managerId = request.ProjectManagerUserId ?? callerUserId;
+        if (!await db.Users.AnyAsync(user => user.Id == managerId, ct))
+        {
+            throw new OperationalProjectOperationException($"PM #{managerId} không tồn tại.");
+        }
+        if (!canSeeAll && managerId != callerUserId)
+        {
+            throw new OperationalProjectOperationException(
+                "Bạn không có quyền phân công Dự án cho người khác.");
+        }
+    }
+
+    private static void ValidateTransition(
+        OperationalProjectStatus current,
+        OperationalProjectStatus requested)
+    {
+        if (current == requested) return;
+        var allowed = current switch
+        {
+            OperationalProjectStatus.Planning => requested is OperationalProjectStatus.Active or
+                OperationalProjectStatus.Cancelled,
+            OperationalProjectStatus.Active => requested is OperationalProjectStatus.OnHold or
+                OperationalProjectStatus.Completed or OperationalProjectStatus.Cancelled,
+            OperationalProjectStatus.OnHold => requested is OperationalProjectStatus.Active or
+                OperationalProjectStatus.Cancelled,
+            _ => false,
+        };
+        if (!allowed)
+        {
+            throw new OperationalProjectOperationException(
+                $"Không thể chuyển trạng thái Dự án từ {current} sang {requested}.");
+        }
+    }
+
+    private async Task<string> NextCodeAsync(int year, CancellationToken ct)
+    {
+        var prefix = $"PJ-{year}-";
+        var codes = await db.OperationalProjects
+            .Where(project => project.Code.StartsWith(prefix))
+            .Select(project => project.Code)
+            .ToListAsync(ct);
+        var next = codes
+            .Select(code => code.Length > prefix.Length &&
+                int.TryParse(code[prefix.Length..], out var sequence)
+                    ? sequence
+                    : 0)
+            .DefaultIfEmpty()
+            .Max() + 1;
+        return $"{prefix}{next:D4}";
+    }
+
+    private async Task<IDbContextTransaction?> BeginCodeAllocationAsync(
+        int year,
+        CancellationToken ct)
+    {
+        if (!db.Database.IsRelational()) return null;
+        var isSqlServer = string.Equals(
+            db.Database.ProviderName,
+            "Microsoft.EntityFrameworkCore.SqlServer",
+            StringComparison.Ordinal);
+        var transaction = await db.Database.BeginTransactionAsync(
+            isSqlServer ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable,
+            ct);
+        if (!isSqlServer) return transaction;
+
+        try
+        {
+            var resource = $"operational-project-code-{year}";
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DECLARE @result int;
+                EXEC @result = sys.sp_getapplock
+                    @Resource = {resource},
+                    @LockMode = 'Exclusive',
+                    @LockOwner = 'Transaction',
+                    @LockTimeout = 15000;
+                IF @result < 0
+                    THROW 51000, 'Unable to acquire the project code allocation lock.', 1;
+                """, ct);
+            return transaction;
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
+    }
+
+    private static bool CanAccess(
+        OperationalProject project,
+        int callerUserId,
+        bool canSeeAll) => canSeeAll ||
+            project.ProjectManagerUserId == callerUserId ||
+            project.CreatedByUserId == callerUserId;
+
+    private static OperationalProjectResponse Map(OperationalProject project) => new()
+    {
+        Id = project.Id,
+        Code = project.Code,
+        Name = project.Name,
+        CustomerId = project.CustomerId,
+        CustomerName = project.Customer.Name,
+        ProjectManagerUserId = project.ProjectManagerUserId,
+        ProjectManagerName = project.ProjectManager?.FullName,
+        Status = project.Status.ToString(),
+        StartDate = project.StartDate,
+        EndDate = project.EndDate,
+        Note = project.Note,
+        OpportunityCount = project.Opportunities.Count,
+        QuoteCount = project.Quotes.Count,
+        ContractCount = project.Contracts.Count,
+        DesignProjectId = project.DesignProject?.Id,
+        DesignProjectCode = project.DesignProject?.ProjectCode,
+        RowVersion = CrmConcurrency.Encode(project.RowVersion),
+        CreatedAt = project.CreatedAt,
+        UpdatedAt = project.UpdatedAt,
+        Opportunities = project.Opportunities
+            .OrderByDescending(item => item.UpdatedAt)
+            .Select(item => new OperationalProjectOpportunityResponse
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Stage = item.Stage.ToString(),
+                EstimatedValue = item.EstimatedValue,
+            })
+            .ToList(),
+        Quotes = project.Quotes
+            .OrderByDescending(item => item.UpdatedAt)
+            .Select(item => new OperationalProjectQuoteResponse
+            {
+                Id = item.Id,
+                Code = item.Code,
+                Status = item.Status.ToString(),
+                GrandTotal = item.GrandTotal,
+            })
+            .ToList(),
+        Contracts = project.Contracts
+            .OrderByDescending(item => item.UpdatedAt)
+            .Select(item => new OperationalProjectContractResponse
+            {
+                Id = item.Id,
+                ContractNumber = item.ContractNumber,
+                Status = item.Status.ToString(),
+                Value = item.Value,
+                StartDate = item.StartDate,
+                EndDate = item.EndDate,
+            })
+            .ToList(),
+    };
+
+    private static string? TrimOrNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}

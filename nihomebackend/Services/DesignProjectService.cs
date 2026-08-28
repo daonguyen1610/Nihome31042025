@@ -95,12 +95,13 @@ public class DesignProjectService(
             throw new DesignProjectOperationException("Tên dự án là bắt buộc.");
         }
 
-        await EnsureRelationsAsync(request, ct);
+        await EnsureRelationsAsync(request, excludeDesignProjectId: null, ct);
         var allocationYear = DateTime.UtcNow.Year;
         await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
 
         var entity = new DesignProject
         {
+            OperationalProjectId = request.OperationalProjectId,
             ProjectCode = await NextCodeAsync(allocationYear, ct),
             Name = name,
             CustomerId = request.CustomerId,
@@ -144,9 +145,11 @@ public class DesignProjectService(
             throw new DesignProjectOperationException("Tên dự án là bắt buộc.");
         }
 
-        await EnsureRelationsAsync(request, ct);
+        request.OperationalProjectId ??= entity.OperationalProjectId;
+        await EnsureRelationsAsync(request, id, ct);
 
         entity.Name = name;
+        entity.OperationalProjectId = request.OperationalProjectId;
         entity.CustomerId = request.CustomerId;
         entity.ContractId = request.ContractId;
         entity.ProjectManagerUserId = request.ProjectManagerUserId;
@@ -204,6 +207,7 @@ public class DesignProjectService(
 
         var entity = new DesignProject
         {
+            OperationalProjectId = contract.OperationalProjectId,
             ProjectCode = await NextCodeAsync(allocationYear, ct),
             // Auto-created rows get a predictable, human-friendly name
             // derived from the contract number so the operator can find
@@ -260,16 +264,68 @@ public class DesignProjectService(
         }
     }
 
-    private async Task EnsureRelationsAsync(CreateDesignProjectRequest request, CancellationToken ct)
+    private async Task EnsureRelationsAsync(
+        CreateDesignProjectRequest request,
+        int? excludeDesignProjectId,
+        CancellationToken ct)
     {
         if (!await db.Customers.AnyAsync(c => c.Id == request.CustomerId, ct))
         {
             throw new DesignProjectOperationException($"Khách hàng #{request.CustomerId} không tồn tại.");
         }
-        if (request.ContractId.HasValue &&
-            !await db.Contracts.AnyAsync(c => c.Id == request.ContractId.Value, ct))
+        if (request.ContractId.HasValue)
         {
-            throw new DesignProjectOperationException($"Hợp đồng #{request.ContractId} không tồn tại.");
+            var contract = await db.Contracts
+                .AsNoTracking()
+                .Where(item => item.Id == request.ContractId.Value)
+                .Select(item => new { item.CustomerId, item.OperationalProjectId })
+                .SingleOrDefaultAsync(ct);
+            if (contract is null)
+            {
+                throw new DesignProjectOperationException(
+                    $"Hợp đồng #{request.ContractId} không tồn tại.");
+            }
+            if (contract.CustomerId != request.CustomerId)
+            {
+                throw new DesignProjectOperationException(
+                    "Dự án thiết kế và Hợp đồng phải thuộc cùng một Khách hàng.");
+            }
+            if (request.OperationalProjectId.HasValue &&
+                contract.OperationalProjectId.HasValue &&
+                request.OperationalProjectId != contract.OperationalProjectId)
+            {
+                throw new DesignProjectOperationException(
+                    "Dự án thiết kế và Hợp đồng phải thuộc cùng một Dự án vận hành.");
+            }
+            request.OperationalProjectId ??= contract.OperationalProjectId;
+        }
+        if (request.OperationalProjectId.HasValue)
+        {
+            var projectCustomerId = await db.OperationalProjects
+                .AsNoTracking()
+                .Where(item => item.Id == request.OperationalProjectId.Value)
+                .Select(item => (int?)item.CustomerId)
+                .SingleOrDefaultAsync(ct);
+            if (!projectCustomerId.HasValue)
+            {
+                throw new DesignProjectOperationException(
+                    $"Dự án #{request.OperationalProjectId.Value} không tồn tại.");
+            }
+            if (projectCustomerId.Value != request.CustomerId)
+            {
+                throw new DesignProjectOperationException(
+                    "Dự án thiết kế và Dự án vận hành phải thuộc cùng một Khách hàng.");
+            }
+            var alreadyLinked = await db.DesignProjects
+                .AsNoTracking()
+                .AnyAsync(item =>
+                    item.OperationalProjectId == request.OperationalProjectId.Value &&
+                    (!excludeDesignProjectId.HasValue || item.Id != excludeDesignProjectId.Value), ct);
+            if (alreadyLinked)
+            {
+                throw new DesignProjectOperationException(
+                    "Dự án vận hành đã có một luồng thiết kế.");
+            }
         }
         if (request.ProjectManagerUserId.HasValue &&
             !await db.Users.AnyAsync(u => u.Id == request.ProjectManagerUserId.Value, ct))
@@ -353,6 +409,7 @@ public class DesignProjectService(
     private static DesignProjectListItemResponse MapListItem(DesignProject dp) => new()
     {
         Id = dp.Id,
+        OperationalProjectId = dp.OperationalProjectId,
         ProjectCode = dp.ProjectCode,
         Name = dp.Name,
         CustomerId = dp.CustomerId,
@@ -373,6 +430,7 @@ public class DesignProjectService(
     private static DesignProjectResponse MapDetail(DesignProject dp) => new()
     {
         Id = dp.Id,
+        OperationalProjectId = dp.OperationalProjectId,
         ProjectCode = dp.ProjectCode,
         Name = dp.Name,
         CustomerId = dp.CustomerId,

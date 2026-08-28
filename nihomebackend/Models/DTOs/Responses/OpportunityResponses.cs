@@ -17,6 +17,7 @@ public class OpportunityResponse
     public string Name { get; set; } = string.Empty;
     public int CustomerId { get; set; }
     public string? CustomerName { get; set; }
+    public int? OperationalProjectId { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public decimal EstimatedValue { get; set; }

@@ -752,6 +752,98 @@ export const CONTRACT_STATUSES: ContractStatus[] = [
   "Cancelled",
 ];
 
+// -------- Central operational projects (NIH-460) --------
+
+export type OperationalProjectStatus =
+  | "Planning"
+  | "Active"
+  | "OnHold"
+  | "Completed"
+  | "Cancelled";
+
+export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
+  "Planning",
+  "Active",
+  "OnHold",
+  "Completed",
+  "Cancelled",
+];
+
+export interface OperationalProjectListItemResponse {
+  id: number;
+  code: string;
+  name: string;
+  customerId: number;
+  customerName: string;
+  projectManagerUserId?: number | null;
+  projectManagerName?: string | null;
+  status: OperationalProjectStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+  opportunityCount: number;
+  quoteCount: number;
+  contractCount: number;
+  updatedAt: string;
+}
+
+export interface OperationalProjectResponse extends OperationalProjectListItemResponse {
+  note?: string | null;
+  designProjectId?: number | null;
+  designProjectCode?: string | null;
+  rowVersion: string;
+  createdAt: string;
+  opportunities: Array<{
+    id: number;
+    name: string;
+    stage: OpportunityStage;
+    estimatedValue: number;
+  }>;
+  quotes: Array<{
+    id: number;
+    code: string;
+    status: QuoteStatus;
+    grandTotal: number;
+  }>;
+  contracts: Array<{
+    id: number;
+    contractNumber: string;
+    status: ContractStatus;
+    value: number;
+    startDate?: string | null;
+    endDate?: string | null;
+  }>;
+}
+
+export interface OperationalProjectListResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: OperationalProjectListItemResponse[];
+}
+
+export interface OperationalProjectListParams {
+  customerId?: number;
+  projectManagerUserId?: number;
+  status?: OperationalProjectStatus;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateOperationalProjectRequest {
+  name: string;
+  customerId: number;
+  projectManagerUserId?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  note?: string | null;
+}
+
+export interface UpdateOperationalProjectRequest extends CreateOperationalProjectRequest {
+  status: OperationalProjectStatus;
+  rowVersion?: string;
+}
+
 export interface ContractResponse {
   id: number;
   contractNumber: string;
@@ -760,6 +852,7 @@ export interface ContractResponse {
   opportunityId?: number | null;
   opportunityTitle?: string | null;
   quoteId?: number | null;
+  operationalProjectId?: number | null;
   /** Derived from design_projects; present when a design project is attached. */
   designProjectId?: number | null;
   designProjectCode?: string | null;
@@ -845,6 +938,7 @@ export interface UpsertContractRequest {
   customerId: number;
   opportunityId?: number | null;
   quoteId?: number | null;
+  operationalProjectId?: number | null;
   ownerUserId?: number | null;
   status: ContractStatus;
   signedDate?: string | null;
@@ -968,6 +1062,7 @@ export interface OpportunityResponse {
   name: string;
   customerId: number;
   customerName?: string;
+  operationalProjectId?: number | null;
   ownerUserId?: number;
   ownerName?: string;
   estimatedValue: number;
@@ -1007,6 +1102,7 @@ export interface OpportunityPipelineResponse {
 export interface CreateOpportunityRequest {
   name: string;
   customerId: number;
+  operationalProjectId?: number | null;
   ownerUserId?: number | null;
   estimatedValue: number;
   winProbability: number;
@@ -1019,6 +1115,7 @@ export interface UpdateOpportunityRequest {
   rowVersion?: string;
   name: string;
   customerId: number;
+  operationalProjectId?: number | null;
   ownerUserId?: number | null;
   estimatedValue: number;
   winProbability: number;
@@ -1140,6 +1237,7 @@ export interface QuoteResponse {
   id: number;
   code: string;
   opportunityId: number;
+  operationalProjectId?: number | null;
   opportunityName?: string;
   customerId?: number;
   customerName?: string;
@@ -1700,6 +1798,7 @@ export interface DesignProjectResponse {
   name: string;
   customerId: number;
   customerName?: string | null;
+  operationalProjectId?: number | null;
   contractId?: number | null;
   contractNumber?: string | null;
   projectManagerUserId?: number | null;
@@ -1721,6 +1820,7 @@ export interface DesignProjectListItemResponse {
   name: string;
   customerId: number;
   customerName?: string | null;
+  operationalProjectId?: number | null;
   contractId?: number | null;
   contractNumber?: string | null;
   projectManagerUserId?: number | null;
@@ -1760,6 +1860,7 @@ export interface DesignProjectListParams {
 export interface CreateDesignProjectRequest {
   name: string;
   customerId: number;
+  operationalProjectId?: number | null;
   contractId?: number | null;
   projectManagerUserId?: number | null;
   designLeadUserId?: number | null;
@@ -3958,6 +4059,18 @@ export const adminApi = {
     api.put<WorkflowConfig>(`/workflows/${id}`, body),
   deleteWorkflow: (id: number) =>
     api.delete(`/workflows/${id}`),
+
+  // Central operational projects (NIH-460)
+  listOperationalProjects: (params: OperationalProjectListParams = {}) =>
+    api.get<OperationalProjectListResponse>("/operational-projects", { params }),
+  getOperationalProject: (id: number) =>
+    api.get<OperationalProjectResponse>(`/operational-projects/${id}`),
+  createOperationalProject: (body: CreateOperationalProjectRequest) =>
+    api.post<OperationalProjectResponse>("/operational-projects", body),
+  updateOperationalProject: (id: number, body: UpdateOperationalProjectRequest) =>
+    api.put<OperationalProjectResponse>(`/operational-projects/${id}`, body),
+  deleteOperationalProject: (id: number, rowVersion?: string) =>
+    api.delete(`/operational-projects/${id}`, withIfMatch(rowVersion)),
 
   // Contracts (NIH-102)
   listContracts: (params?: ContractListParams) =>

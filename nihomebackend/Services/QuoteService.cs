@@ -99,6 +99,7 @@ public class QuoteService(
                 OpportunityId = r.Quote.OpportunityId,
                 OpportunityName = r.OpportunityName,
                 CustomerName = r.CustomerName,
+                OperationalProjectId = r.Quote.OperationalProjectId,
                 OwnerUserId = r.Quote.OwnerUserId,
                 OwnerName = r.OwnerName,
                 Version = r.Quote.Version,
@@ -172,6 +173,7 @@ public class QuoteService(
         {
             Code = await GenerateCodeAsync(now, ct),
             OpportunityId = request.OpportunityId,
+            OperationalProjectId = opportunity.OperationalProjectId,
             OwnerUserId = ownerId,
             Method = request.Method,
             Version = 1,
@@ -925,6 +927,7 @@ public class QuoteService(
         OpportunityName = q.Opportunity?.Name,
         CustomerId = q.Opportunity?.CustomerId,
         CustomerName = q.Opportunity?.Customer?.Name,
+        OperationalProjectId = q.OperationalProjectId,
         OwnerUserId = q.OwnerUserId,
         OwnerName = q.Owner?.FullName,
         Method = q.Method.ToString(),

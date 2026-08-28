@@ -347,6 +347,7 @@ The platform uses SQL Server 2022 with Entity Framework Core 8 as the ORM. The d
 | `activity_categories`  | Categories for grouping activities                  |
 | `news_articles`        | News and article content entries                    |
 | `projects`             | Project portfolio entries                           |
+| `operational_projects` | Central internal project shared across the eight operational modules |
 | `service_items`        | Service offering descriptions                       |
 | `slideshow_items`      | Homepage slideshow slides                           |
 | `job_positions`        | Open job positions for recruitment                  |
@@ -524,6 +525,7 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `ActivityCategoryService`  | CRUD for activity categories                             |
 | `NewsService`              | CRUD for news articles with language support              |
 | `ProjectService`           | CRUD for projects with slug lookup                       |
+| `OperationalProjectService` | Scoped central-project CRUD, lifecycle, aggregation, code allocation, and concurrency |
 | `ServiceItemService`       | CRUD for services with slug lookup                       |
 | `SlideshowService`         | CRUD for slideshow items with filtering                  |
 | `AboutSectionService`      | CRUD for profile/about page sections and structured data |
@@ -655,6 +657,27 @@ Direct static requests under `/files/quotes`, `/files/customers`, `/files/contra
 Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. Uploading before saving a two-step form can still leave an inaccessible, unreferenced physical file when the user cancels, because staged-file expiry/reconciliation is not yet implemented. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
 
 Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries, punch lists, and surveys are excluded because they do not currently expose a complete persisted document contract.
+
+### 7.10 Central Operational Project API
+
+`OperationalProject` is the internal aggregate shared across the NICON modules;
+it must not be confused with public portfolio content or the three-phase
+`DesignProject`. The API is available at `/api/operational-projects` and
+`/api/v1/operational-projects`:
+
+| Method | Path | Permission | Purpose |
+|---|---|---|---|
+| `GET` | `/api/operational-projects` | `operations.projects.view` | List the caller's project scope with filters and rollup counts |
+| `GET` | `/api/operational-projects/{id}` | `operations.projects.view` | Read the customer, opportunity, quote, contract, and design rollup |
+| `POST` | `/api/operational-projects` | `operations.projects.manage` | Create a planning project with a generated `PJ-YYYY-NNNN` code |
+| `PUT` | `/api/operational-projects/{id}` | `operations.projects.manage` | Update metadata or perform an allowed lifecycle transition |
+| `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
+
+`operations.projects.view.all` removes owner scope but does not grant mutation
+permission. Update and delete requests use `rowversion`; the detail response
+also emits an ETag. `AddOperationalProjects` backfills existing design,
+contract, opportunity, and quote relationships before adding their foreign
+keys. See `docs/business-domain-model.md` for the domain contract.
 
 ---
 

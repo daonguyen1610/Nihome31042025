@@ -16,6 +16,10 @@ public class Opportunity : IConcurrencyTracked
     public int CustomerId { get; set; }
     public Customer Customer { get; set; } = null!;
 
+    /// <summary>Optional project/pre-project context for the sales pursuit.</summary>
+    public int? OperationalProjectId { get; set; }
+    public OperationalProject? OperationalProject { get; set; }
+
     /// <summary>Sales owner. Nullable while unassigned; SetNull on user delete.</summary>
     public int? OwnerUserId { get; set; }
     public ApplicationUser? Owner { get; set; }

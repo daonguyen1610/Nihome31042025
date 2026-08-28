@@ -190,6 +190,7 @@ public class ContractService(
             ? await db.Database.BeginTransactionAsync(ct)
             : null;
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
+        var operationalProjectId = await ResolveOperationalProjectIdAsync(req, null, ct);
 
         // A supplied number is the caller's to own; a generated one is ours to
         // make stick. Generation reads the current maximum and adds one, so two
@@ -229,6 +230,7 @@ public class ContractService(
         {
             ContractNumber = number,
             CustomerId = req.CustomerId,
+            OperationalProjectId = operationalProjectId,
             OpportunityId = req.OpportunityId,
             QuoteId = req.QuoteId,
             OwnerUserId = ownerUserId,
@@ -279,6 +281,10 @@ public class ContractService(
             : null;
 
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
+        var operationalProjectId = await ResolveOperationalProjectIdAsync(
+            req,
+            entity.OperationalProjectId,
+            ct);
 
         var newNumber = string.IsNullOrWhiteSpace(req.ContractNumber)
             ? entity.ContractNumber
@@ -298,6 +304,7 @@ public class ContractService(
             throw new ContractValidationException("Customer is outside the caller's ownership scope.");
         }
         entity.CustomerId = req.CustomerId;
+        entity.OperationalProjectId = operationalProjectId;
         entity.OpportunityId = req.OpportunityId;
         entity.QuoteId = req.QuoteId;
         // Same safeguard as CreateAsync: only manager-tier callers can
@@ -593,6 +600,71 @@ public class ContractService(
         await db.Contracts.AsNoTracking()
             .AnyAsync(c => c.ContractNumber == number && (excludeId == null || c.Id != excludeId), ct);
 
+    private async Task<int?> ResolveOperationalProjectIdAsync(
+        UpsertContractRequest request,
+        int? existingProjectId,
+        CancellationToken ct)
+    {
+        int? opportunityProjectId = null;
+        if (request.OpportunityId.HasValue)
+        {
+            opportunityProjectId = await db.Opportunities
+                .AsNoTracking()
+                .Where(item => item.Id == request.OpportunityId.Value)
+                .Select(item => item.OperationalProjectId)
+                .SingleAsync(ct);
+        }
+
+        int? quoteProjectId = null;
+        if (request.QuoteId.HasValue)
+        {
+            quoteProjectId = await db.Quotes
+                .AsNoTracking()
+                .Where(item => item.Id == request.QuoteId.Value)
+                .Select(item => item.OperationalProjectId)
+                .SingleAsync(ct);
+        }
+
+        var inheritedIds = new[] { opportunityProjectId, quoteProjectId }
+            .Where(item => item.HasValue)
+            .Select(item => item!.Value)
+            .Distinct()
+            .ToList();
+        if (inheritedIds.Count > 1)
+        {
+            throw new ContractValidationException(
+                "Cơ hội và Báo giá đang thuộc hai Dự án khác nhau.");
+        }
+
+        var inheritedId = inheritedIds.SingleOrDefault();
+        var selectedId = request.OperationalProjectId ??
+            (inheritedId == 0 ? existingProjectId : inheritedId);
+        if (request.OperationalProjectId.HasValue && inheritedId != 0 &&
+            request.OperationalProjectId.Value != inheritedId)
+        {
+            throw new ContractValidationException(
+                "Hợp đồng, Cơ hội và Báo giá phải thuộc cùng một Dự án.");
+        }
+        if (!selectedId.HasValue) return null;
+
+        var projectCustomerId = await db.OperationalProjects
+            .AsNoTracking()
+            .Where(item => item.Id == selectedId.Value)
+            .Select(item => (int?)item.CustomerId)
+            .SingleOrDefaultAsync(ct);
+        if (!projectCustomerId.HasValue)
+        {
+            throw new ContractValidationException(
+                $"Dự án {selectedId.Value} không tồn tại.");
+        }
+        if (projectCustomerId.Value != request.CustomerId)
+        {
+            throw new ContractValidationException(
+                "Hợp đồng và Dự án phải thuộc cùng một Khách hàng.");
+        }
+        return selectedId;
+    }
+
     private async Task<string> GenerateNumberAsync(CancellationToken ct)
     {
         var year = DateTime.UtcNow.Year;
@@ -706,6 +778,7 @@ public class ContractService(
             ContractNumber = entity.ContractNumber,
             CustomerId = entity.CustomerId,
             CustomerName = customerName,
+            OperationalProjectId = entity.OperationalProjectId,
             OpportunityId = entity.OpportunityId,
             OpportunityTitle = opportunityTitle,
             QuoteId = entity.QuoteId,
