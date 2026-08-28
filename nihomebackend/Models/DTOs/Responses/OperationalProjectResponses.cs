@@ -44,6 +44,11 @@ public class OperationalProjectOpportunityResponse
     public string Name { get; set; } = string.Empty;
     public string Stage { get; set; } = string.Empty;
     public decimal EstimatedValue { get; set; }
+    public int WinProbability { get; set; }
+    public DateTime? ExpectedCloseDate { get; set; }
+    public string? CustomerName { get; set; }
+    public string? OwnerName { get; set; }
+    public string? LostReasonCode { get; set; }
 }
 
 public class OperationalProjectQuoteResponse
@@ -52,6 +57,12 @@ public class OperationalProjectQuoteResponse
     public string Code { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public decimal GrandTotal { get; set; }
+    public string? CustomerName { get; set; }
+    public string? OwnerName { get; set; }
+    public DateTime ValidUntil { get; set; }
+    public bool IsExpired { get; set; }
+    public string Method { get; set; } = string.Empty;
+    public DateTime? SentAt { get; set; }
 }
 
 public class OperationalProjectContractResponse
@@ -62,4 +73,7 @@ public class OperationalProjectContractResponse
     public decimal Value { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public string? CustomerName { get; set; }
+    public string? OwnerName { get; set; }
+    public DateTime? SignedDate { get; set; }
 }
