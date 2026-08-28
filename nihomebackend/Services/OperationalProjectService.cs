@@ -110,6 +110,8 @@ public class OperationalProjectService(
             .Include(item => item.Quotes)
                 .ThenInclude(q => q.Opportunity)
                 .ThenInclude(o => o!.Customer)
+            .Include(item => item.Quotes)
+                .ThenInclude(q => q.Items)
             .Include(item => item.Contracts)
                 .ThenInclude(c => c.Customer)
             .Include(item => item.Contracts)
@@ -384,13 +386,37 @@ public class OperationalProjectService(
                 Id = item.Id,
                 Code = item.Code,
                 Status = item.Status.ToString(),
+                Method = item.Method.ToString(),
+                Version = item.Version,
+                AreaSqm = item.AreaSqm,
+                UnitPricePerSqm = item.UnitPricePerSqm,
+                PackageDescription = item.PackageDescription,
+                Subtotal = item.Subtotal,
+                DiscountPercent = item.DiscountPercent,
+                VatPercent = item.VatPercent,
                 GrandTotal = item.GrandTotal,
-                CustomerName = item.Opportunity?.Customer?.Name,
-                OwnerName = item.Owner?.FullName,
                 ValidUntil = item.ValidUntil,
                 IsExpired = item.ValidUntil < DateTime.UtcNow && item.Status != QuoteStatus.CustomerApproved && item.Status != QuoteStatus.Cancelled,
-                Method = item.Method.ToString(),
+                Note = item.Note,
+                CustomerName = item.Opportunity?.Customer?.Name,
+                OwnerName = item.Owner?.FullName,
+                SubmittedAt = item.SubmittedAt,
+                ApprovedAt = item.ApprovedAt,
                 SentAt = item.SentAt,
+                CreatedAt = item.CreatedAt,
+                Items = item.Items
+                    .OrderBy(i => i.SortOrder)
+                    .Select(i => new OperationalProjectQuoteItemResponse
+                    {
+                        Id = i.Id,
+                        ItemCode = i.ItemCode,
+                        Name = i.Name,
+                        Unit = i.Unit,
+                        Quantity = i.Quantity,
+                        UnitPrice = i.UnitPrice,
+                        Amount = i.Amount,
+                    })
+                    .ToList(),
             })
             .ToList(),
         Contracts = project.Contracts
@@ -401,11 +427,14 @@ public class OperationalProjectService(
                 ContractNumber = item.ContractNumber,
                 Status = item.Status.ToString(),
                 Value = item.Value,
+                SignedDate = item.SignedDate,
                 StartDate = item.StartDate,
                 EndDate = item.EndDate,
+                ScopeOfWork = item.ScopeOfWork,
+                Note = item.Note,
                 CustomerName = item.Customer?.Name,
                 OwnerName = item.Owner?.FullName,
-                SignedDate = item.SignedDate,
+                CreatedAt = item.CreatedAt,
             })
             .ToList(),
     };
