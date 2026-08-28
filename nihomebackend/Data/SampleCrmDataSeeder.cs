@@ -54,6 +54,7 @@ public static class SampleCrmDataSeeder
         SeedAcceptanceRecords(db, projectManager, now);
         SeedAsBuiltDocuments(db, projectManager, now, webRootPath);
         SeedHandoverRecords(db, projectManager, now);
+        SeedOperationalProjects(db, owner, projectManager, now);
         RepairSampleRelationships(db, owner);
     }
 
@@ -2777,6 +2778,165 @@ public static class SampleCrmDataSeeder
             if (!filePath.StartsWith(rootPrefix, StringComparison.Ordinal) || File.Exists(filePath)) continue;
             File.WriteAllBytes(filePath, BuildPlaceholderPdf(title));
         }
+    }
+
+    private const string SampleOperationalProjectMarker = "[SAMPLE-OP]";
+
+    private static void SeedOperationalProjects(AppDbContext db, ApplicationUser owner, ApplicationUser pm, DateTime now)
+    {
+        var existingCodes = db.OperationalProjects
+            .Where(p => p.Code.StartsWith("PJ-SAMPLE-"))
+            .Select(p => p.Code)
+            .ToHashSet();
+        if (existingCodes.Count > 0) return;
+
+        var customers = db.Customers
+            .Where(c => c.Name.StartsWith(SampleTag))
+            .OrderBy(c => c.Id)
+            .Take(5)
+            .ToList();
+        if (customers.Count == 0) return;
+
+        var samples = new (string Name, OperationalProjectStatus Status, int DaysAgo, int? DurationDays, string Note)[]
+        {
+            (
+                "Nhà máy sản xuất ABC - Giai đoạn 1",
+                OperationalProjectStatus.Completed,
+                365,
+                180,
+                $"{SampleOperationalProjectMarker} Dự án nhà máy sản xuất linh kiện điện tử, diện tích 5,000m². Đã hoàn thành bàn giao và nghiệm thu."
+            ),
+            (
+                "Văn phòng công ty XYZ",
+                OperationalProjectStatus.Active,
+                90,
+                120,
+                $"{SampleOperationalProjectMarker} Thiết kế và thi công văn phòng làm việc 3 tầng, diện tích sàn 2,500m². Đang trong giai đoạn hoàn thiện nội thất."
+            ),
+            (
+                "Kho logistics Bình Dương",
+                OperationalProjectStatus.Active,
+                45,
+                150,
+                $"{SampleOperationalProjectMarker} Kho bãi logistics tiêu chuẩn ISO, diện tích 10,000m². Tiến độ đạt 60%, đang thi công phần mái."
+            ),
+            (
+                "Biệt thự nghỉ dưỡng Vũng Tàu",
+                OperationalProjectStatus.Planning,
+                15,
+                null,
+                $"{SampleOperationalProjectMarker} Dự án biệt thự cao cấp ven biển, diện tích đất 800m². Đang hoàn thiện hồ sơ pháp lý và thiết kế chi tiết."
+            ),
+            (
+                "Nhà xưởng công nghiệp 2024",
+                OperationalProjectStatus.OnHold,
+                120,
+                200,
+                $"{SampleOperationalProjectMarker} Nhà xưởng sản xuất công nghiệp nặng, diện tích 15,000m². Tạm dừng do điều chỉnh quy hoạch địa phương."
+            ),
+            (
+                "Trung tâm thương mại mini",
+                OperationalProjectStatus.Cancelled,
+                200,
+                180,
+                $"{SampleOperationalProjectMarker} Dự án TTTM quy mô nhỏ, 4 tầng. Hủy do thay đổi chiến lược đầu tư của chủ đầu tư."
+            ),
+            (
+                "Showroom ô tô cao cấp",
+                OperationalProjectStatus.Active,
+                30,
+                90,
+                $"{SampleOperationalProjectMarker} Showroom trưng bày xe hơi cao cấp, diện tích 1,200m². Tiến độ đạt 40%, đang thi công phần kết cấu."
+            ),
+            (
+                "Nhà hàng & cafe riverside",
+                OperationalProjectStatus.Planning,
+                7,
+                null,
+                $"{SampleOperationalProjectMarker} Nhà hàng view sông, thiết kế hiện đại kết hợp truyền thống. Đang chờ phê duyệt PCCC."
+            ),
+        };
+
+        var codeIndex = 1;
+        foreach (var (name, status, daysAgo, durationDays, note) in samples)
+        {
+            var code = $"PJ-SAMPLE-{codeIndex:D3}";
+            codeIndex++;
+
+            var customer = customers[(codeIndex - 1) % customers.Count];
+
+            var startDate = now.AddDays(-daysAgo);
+            var endDate = durationDays.HasValue ? startDate.AddDays(durationDays.Value) : (DateTime?)null;
+
+            var project = new OperationalProject
+            {
+                Code = code,
+                Name = name,
+                Status = status,
+                CustomerId = customer.Id,
+                ProjectManagerUserId = pm.Id,
+                StartDate = status != OperationalProjectStatus.Planning ? startDate : null,
+                EndDate = endDate,
+                Note = note,
+                CreatedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-daysAgo - 5),
+                UpdatedAt = now.AddDays(-1),
+            };
+
+            db.OperationalProjects.Add(project);
+        }
+
+        db.SaveChanges();
+
+        // Link some opportunities, quotes, and contracts to operational projects
+        LinkOperationalProjectRelationships(db, owner);
+    }
+
+    private static void LinkOperationalProjectRelationships(AppDbContext db, ApplicationUser owner)
+    {
+        var operationalProjects = db.OperationalProjects
+            .Where(p => p.Note != null && p.Note.StartsWith(SampleOperationalProjectMarker))
+            .OrderBy(p => p.Id)
+            .ToList();
+        if (operationalProjects.Count == 0) return;
+
+        var opportunities = db.Opportunities
+            .Where(o => o.Name.StartsWith(SampleTag) && o.OperationalProjectId == null)
+            .OrderBy(o => o.Id)
+            .Take(operationalProjects.Count)
+            .ToList();
+
+        var quotes = db.Quotes
+            .Where(q => q.Note != null && q.Note.StartsWith(SampleQuoteNoteMarker) && q.OperationalProjectId == null)
+            .OrderBy(q => q.Id)
+            .Take(operationalProjects.Count)
+            .ToList();
+
+        var contracts = db.Contracts
+            .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker) && c.OperationalProjectId == null)
+            .OrderBy(c => c.Id)
+            .Take(operationalProjects.Count)
+            .ToList();
+
+        for (var i = 0; i < operationalProjects.Count; i++)
+        {
+            var project = operationalProjects[i];
+            if (i < opportunities.Count)
+            {
+                opportunities[i].OperationalProjectId = project.Id;
+            }
+            if (i < quotes.Count)
+            {
+                quotes[i].OperationalProjectId = project.Id;
+            }
+            if (i < contracts.Count)
+            {
+                contracts[i].OperationalProjectId = project.Id;
+            }
+        }
+
+        db.SaveChanges();
     }
 
     private static void RepairSampleRelationships(AppDbContext db, ApplicationUser owner)
