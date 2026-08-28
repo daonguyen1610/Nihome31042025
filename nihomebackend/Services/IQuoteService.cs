@@ -28,7 +28,8 @@ public interface IQuoteService
         CreateQuoteRequest request,
         int callerUserId,
         bool canManage,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        bool canSeeAll = false);
 
     Task<QuoteResponse?> UpdateAsync(
         int id,

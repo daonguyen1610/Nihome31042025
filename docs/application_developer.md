@@ -677,7 +677,23 @@ it must not be confused with public portfolio content or the three-phase
 permission. Update and delete requests use `rowversion`; the detail response
 also emits an ETag. `AddOperationalProjects` backfills existing design,
 contract, opportunity, and quote relationships before adding their foreign
-keys. See `docs/business-domain-model.md` for the domain contract.
+keys. The operational hierarchy and user workflow are documented in
+`docs/user_guide.md`.
+
+### 7.11 BOQ Quotation Integrity
+
+BOQ quotations use the same server calculation on create and update: each line
+amount is `quantity × unit price`, subtotal is the sum of rounded line amounts,
+discount is applied before VAT, and the grand total is rounded to two decimal
+places away from zero. The React create/edit preview mirrors this formula via
+`src/lib/quoteTotals.ts`; the API remains authoritative.
+
+The server rejects missing rows, blank names/units, non-positive quantities,
+negative prices, percentages outside 0–100, and values that cannot fit the SQL
+`decimal(18,*)` columns. A scoped Sales user cannot create a quotation for
+another owner's opportunity. `Idempotency-Key` replay returns the original
+create response without inserting another quotation, and BOQ version snapshots
+preserve the source line set after post-approval edits.
 
 ---
 

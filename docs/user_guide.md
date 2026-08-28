@@ -197,6 +197,15 @@ Manage sales opportunities with deal value, probability, and stage tracking. Pro
 
 Create quotations using investment rate or preliminary BOQ. Calculate discounts, VAT, and totals automatically. Manage quotation versions. Support internal approval workflow. Generate PDF output for client delivery. Track quotation status: sent, approved, rejected.
 
+For a BOQ quotation, add one or more rows and enter the item name, unit,
+quantity, and unit price. The form previews each calculation basis and the
+subtotal, discount, VAT, and grand total before saving. Blank rows, quantities
+at or below zero, negative prices, invalid percentages, and values above the
+supported accounting range are rejected in both the browser and API. Reopening
+or editing a BOQ preserves its item set; submitting and approving follow the
+same quotation workflow and project/owner permissions. Retrying the same create
+request with its idempotency key does not create a duplicate quotation.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Quotation List | Filter by customer, opportunity, status | 1.5 days |

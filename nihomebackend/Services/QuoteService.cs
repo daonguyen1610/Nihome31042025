@@ -43,6 +43,8 @@ public class QuoteService(
     private const int MaxPageSize = 100;
     private const int DefaultValidityDays = 30;
     private const int ExpiringSoonDays = 3;
+    private const decimal MaxMoney = 9_999_999_999_999_999.99m;
+    private const decimal MaxQuantity = 99_999_999_999_999.9999m;
 
     // ------------------------------ List / Get ------------------------------
 
@@ -135,13 +137,19 @@ public class QuoteService(
         CreateQuoteRequest request,
         int callerUserId,
         bool canManage,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool canSeeAll = false)
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền tạo báo giá.");
+        request.Items ??= new List<QuoteItemInput>();
 
         var opportunity = await db.Opportunities
             .FirstOrDefaultAsync(o => o.Id == request.OpportunityId, ct)
             ?? throw new QuoteOperationException($"Không tìm thấy cơ hội #{request.OpportunityId}.");
+        if (!canSeeAll && opportunity.OwnerUserId != callerUserId)
+        {
+            throw new QuoteOperationException("Không tìm thấy Cơ hội trong phạm vi được phân công.");
+        }
 
         // A lost opportunity remains closed. A won opportunity without a winning
         // quote is the supported recovery path from the demo defect (NIH-449):
@@ -237,6 +245,7 @@ public class QuoteService(
         CancellationToken ct = default)
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền chỉnh sửa báo giá.");
+        request.Items ??= new List<QuoteItemInput>();
 
         var quote = await db.Quotes.Include(q => q.Items).FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
@@ -830,7 +839,7 @@ public class QuoteService(
         int sort = 0;
         foreach (var i in inputs)
         {
-            var amount = decimal.Round(i.Quantity * i.UnitPrice, 2, MidpointRounding.AwayFromZero);
+            var amount = RoundMoney(i.Quantity * i.UnitPrice);
             quote.Items.Add(new QuoteItem
             {
                 ItemCode = string.IsNullOrWhiteSpace(i.ItemCode) ? null : i.ItemCode.Trim(),
@@ -848,13 +857,13 @@ public class QuoteService(
     {
         decimal subtotal = quote.Method == QuoteMethod.Boq
             ? quote.Items.Sum(i => i.Amount)
-            : decimal.Round((quote.AreaSqm ?? 0m) * (quote.UnitPricePerSqm ?? 0m), 2, MidpointRounding.AwayFromZero);
+            : RoundMoney((quote.AreaSqm ?? 0m) * (quote.UnitPricePerSqm ?? 0m));
 
         var afterDiscount = subtotal * (1 - quote.DiscountPercent / 100m);
         var vat = afterDiscount * (quote.VatPercent / 100m);
-        var grand = decimal.Round(afterDiscount + vat, 2, MidpointRounding.AwayFromZero);
+        var grand = RoundMoney(afterDiscount + vat);
 
-        quote.Subtotal = decimal.Round(subtotal, 2, MidpointRounding.AwayFromZero);
+        quote.Subtotal = RoundMoney(subtotal);
         quote.GrandTotal = grand;
     }
 
@@ -866,16 +875,45 @@ public class QuoteService(
                 throw new QuoteOperationException("Suất đầu tư: Diện tích m² phải > 0.");
             if (unitPrice is null || unitPrice <= 0)
                 throw new QuoteOperationException("Suất đầu tư: Đơn giá/m² phải > 0.");
+            if (area > MaxMoney || unitPrice > MaxMoney || area > MaxMoney / unitPrice)
+                throw new QuoteOperationException("Suất đầu tư: giá trị Báo giá vượt giới hạn lưu trữ.");
         }
         else
         {
+            if (items.Any(i => i is null))
+                throw new QuoteOperationException("BOQ: dòng hạng mục không hợp lệ.");
             if (items.Count == 0)
                 throw new QuoteOperationException("BOQ: phải có ít nhất 1 dòng hạng mục.");
             if (items.Any(i => string.IsNullOrWhiteSpace(i.Name) || string.IsNullOrWhiteSpace(i.Unit)))
                 throw new QuoteOperationException("BOQ: tên hạng mục và đơn vị không được để trống.");
             if (items.Any(i => i.Quantity <= 0 || i.UnitPrice < 0))
                 throw new QuoteOperationException("BOQ: khối lượng phải lớn hơn 0 và đơn giá không được âm.");
+            if (items.Any(i => i.Quantity > MaxQuantity || i.UnitPrice > MaxMoney))
+                throw new QuoteOperationException("BOQ: khối lượng hoặc đơn giá vượt giới hạn lưu trữ.");
+            if (items.Any(i => i.UnitPrice > 0 && i.Quantity > MaxMoney / i.UnitPrice))
+                throw new QuoteOperationException("BOQ: thành tiền hạng mục vượt giới hạn lưu trữ.");
+            decimal subtotal = 0;
+            foreach (var item in items)
+            {
+                var amount = decimal.Round(
+                    item.Quantity * item.UnitPrice,
+                    2,
+                    MidpointRounding.AwayFromZero);
+                if (amount > MaxMoney - subtotal)
+                    throw new QuoteOperationException("BOQ: tổng tiền trước thuế vượt giới hạn lưu trữ.");
+                subtotal += amount;
+            }
         }
+    }
+
+    private static decimal RoundMoney(decimal value)
+    {
+        var rounded = decimal.Round(value, 2, MidpointRounding.AwayFromZero);
+        if (rounded < 0 || rounded > MaxMoney)
+        {
+            throw new QuoteOperationException("Giá trị Báo giá vượt giới hạn lưu trữ.");
+        }
+        return rounded;
     }
 
     private static QuoteVersionSnapshot SnapshotOf(Quote q, DateTime now, int by) => new()

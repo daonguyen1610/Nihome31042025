@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -51,6 +52,145 @@ public class QuotesControllerTests : IntegrationTestBase
         body.GetProperty("version").GetInt32().Should().Be(1);
         body.GetProperty("code").GetString().Should().StartWith("QT-");
         body.GetProperty("grandTotalInWords").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Boq_CreateReopenUpdateAndApprove_PreservesTotalsAndItems()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var oppId = await CreateOpportunityAsync();
+        var create = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId = oppId,
+            method = "Boq",
+            items = new[]
+            {
+                new { itemCode = "BOQ-01", name = "Concrete", unit = "m3", quantity = 2.5m, unitPrice = 100m },
+                new { itemCode = "BOQ-02", name = "Steel", unit = "kg", quantity = 3m, unitPrice = 50m },
+            },
+            discountPercent = 10m,
+            vatPercent = 8m,
+        });
+
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(create);
+        created.GetProperty("subtotal").GetDecimal().Should().Be(400m);
+        created.GetProperty("grandTotal").GetDecimal().Should().Be(388.8m);
+        created.GetProperty("items").GetArrayLength().Should().Be(2);
+
+        var quoteId = created.GetProperty("id").GetInt32();
+        var reopened = await Client.GetAsync($"/api/quotes/{quoteId}");
+        reopened.EnsureSuccessStatusCode();
+        var reopenedBody = await ReadJsonAsync(reopened);
+        reopenedBody.GetProperty("items")[0].GetProperty("itemCode").GetString().Should().Be("BOQ-01");
+
+        var update = await Client.PutAsJsonAsync($"/api/quotes/{quoteId}", new
+        {
+            rowVersion = reopenedBody.GetProperty("rowVersion").GetString(),
+            items = new[]
+            {
+                new { itemCode = "BOQ-01", name = "Concrete", unit = "m3", quantity = 4m, unitPrice = 100m },
+            },
+            discountPercent = 0m,
+            vatPercent = 10m,
+        });
+        update.EnsureSuccessStatusCode();
+        var updated = await ReadJsonAsync(update);
+        updated.GetProperty("subtotal").GetDecimal().Should().Be(400m);
+        updated.GetProperty("grandTotal").GetDecimal().Should().Be(440m);
+        updated.GetProperty("items").GetArrayLength().Should().Be(1);
+
+        var submit = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
+        {
+            rowVersion = updated.GetProperty("rowVersion").GetString(),
+        });
+        submit.EnsureSuccessStatusCode();
+        var submitted = await ReadJsonAsync(submit);
+        var approve = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new
+        {
+            rowVersion = submitted.GetProperty("rowVersion").GetString(),
+        });
+        approve.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(approve)).GetProperty("status").GetString().Should().Be("Approved");
+    }
+
+    [Fact]
+    public async Task Boq_InvalidOrOverflowingRows_AreRejected()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var oppId = await CreateOpportunityAsync();
+
+        (await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId = oppId,
+            method = "Boq",
+            items = Array.Empty<object>(),
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        (await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId = oppId,
+            method = "Boq",
+            items = new[]
+            {
+                new { name = "Overflow", unit = "item", quantity = 99_999_999_999_999m, unitPrice = 99_999_999_999_999m },
+            },
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Boq_CreateRetryWithSameKey_DoesNotDuplicateQuote()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var oppId = await CreateOpportunityAsync();
+        var payload = new
+        {
+            opportunityId = oppId,
+            method = "Boq",
+            items = new[] { new { name = "Wall", unit = "m2", quantity = 10m, unitPrice = 20m } },
+            discountPercent = 0m,
+            vatPercent = 8m,
+        };
+        var key = $"nih-450-{Guid.NewGuid():N}";
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/quotes")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        firstRequest.Headers.Add("Idempotency-Key", key);
+        using var replayRequest = new HttpRequestMessage(HttpMethod.Post, "/api/quotes")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        replayRequest.Headers.Add("Idempotency-Key", key);
+
+        var first = await Client.SendAsync(firstRequest);
+        var replay = await Client.SendAsync(replayRequest);
+
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.StatusCode.Should().Be(HttpStatusCode.Created);
+        var firstId = (await ReadJsonAsync(first)).GetProperty("id").GetInt32();
+        var replayId = (await ReadJsonAsync(replay)).GetProperty("id").GetInt32();
+        replayId.Should().Be(firstId);
+        (await WithDbAsync(db => db.Quotes.CountAsync(quote => quote.OpportunityId == oppId)))
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Sale_CannotCreateBoqForAnotherOwnersOpportunity()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var oppId = await CreateOpportunityAsync();
+        Client.DefaultRequestHeaders.Authorization = null;
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        var response = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId = oppId,
+            method = "Boq",
+            items = new[] { new { name = "Wall", unit = "m2", quantity = 10m, unitPrice = 20m } },
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

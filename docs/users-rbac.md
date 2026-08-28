@@ -30,6 +30,11 @@ The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`, `D
 
 The backend additionally prevents a super admin from changing their own role, deactivating their own account, or removing the last active `SUPER_ADMIN`.
 
+Quotation management remains owner-scoped. `crm.quotes.manage` allows a Sales
+user to create and edit quotations only for opportunities in that user's
+scope; `crm.quotes.view.all` is required to operate across owners. Approval and
+sending continue to require their dedicated `approve` and `send` permissions.
+
 ### Project handover permissions
 
 The handover workspace uses separate read, write, and completion capabilities. The API remains the authority; frontend route and action gates only improve the user experience.
@@ -126,4 +131,3 @@ For per-controller happy-path coverage (admin/SA returns 2xx with a valid payloa
 ### Browser-level RBAC matrix
 
 `nihomeweb/e2e/smoke/admin-rbac-matrix.spec.ts` drives the seeded role accounts through the admin route surface and asserts that each role can reach its permitted set and gets the inline `<Forbidden />` screen on the rest. Allow/deny sets are kept in sync with `/api/users/me/permissions` returned by the live stack so drift between `rbac-defaults.json`, the seeder, and the frontend permission map fails the suite. Run with `BASE_URL=http://localhost:5043 npx playwright test admin-rbac-matrix`.
-

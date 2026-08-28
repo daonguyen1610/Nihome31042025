@@ -23,6 +23,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
+import { calculateQuoteTotals, MAX_QUOTE_QUANTITY, validateQuoteValues } from "@/lib/quoteTotals";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -182,6 +183,10 @@ const AdminQuotes = () => {
   const [createForm, setCreateForm] = useState<CreateQuoteRequest>(emptyCreate());
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const createTotals = useMemo(
+    () => calculateQuoteTotals(createForm.method, createForm),
+    [createForm],
+  );
 
   const openedFromQuery = useRef(false);
   const openCreate = (opportunityId = 0) => {
@@ -222,21 +227,10 @@ const AdminQuotes = () => {
       setCreateError(t("quotes.validation.pickOpportunity"));
       return;
     }
-    if (createForm.method === "UnitCost") {
-      if (!createForm.areaSqm || !createForm.unitPricePerSqm) {
-        setCreateError(t("quotes.validation.unitCostRequired"));
-        return;
-      }
-    } else {
-      const items = createForm.items ?? [];
-      if (items.length === 0) {
-        setCreateError(t("quotes.validation.boqRequired"));
-        return;
-      }
-      if (items.some((item) => !item.name.trim() || !item.unit.trim() || item.quantity <= 0 || item.unitPrice < 0)) {
-        setCreateError(t("quotes.validation.boqInvalidRow"));
-        return;
-      }
+    const validationIssue = validateQuoteValues(createForm.method, createForm);
+    if (validationIssue) {
+      setCreateError(t(`quotes.validation.${validationIssue}`));
+      return;
     }
     setSaving(true);
     try {
@@ -752,6 +746,7 @@ const AdminQuotes = () => {
                         <Input
                           type="number"
                           min={0.01}
+                          max={MAX_QUOTE_QUANTITY}
                           step="any"
                           aria-label={t("quotes.boq.qty")}
                           placeholder={t("quotes.boq.qty")}
@@ -811,6 +806,13 @@ const AdminQuotes = () => {
                   }
                 />
               </div>
+            </div>
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3 text-sm">
+              <p className="text-xs text-muted-foreground">{t("quotes.preview.unsaved")}</p>
+              <div className="flex justify-between gap-3"><span>{t("quotes.field.subtotal")}</span><strong>{formatVnd(createTotals.subtotal)} ₫</strong></div>
+              <div className="flex justify-between gap-3"><span>{t("quotes.field.discountPercent")} ({createForm.discountPercent}%)</span><span>-{formatVnd(createTotals.discountAmount)} ₫</span></div>
+              <div className="flex justify-between gap-3"><span>{t("quotes.field.vatPercent")} ({createForm.vatPercent}%)</span><span>{formatVnd(createTotals.vatAmount)} ₫</span></div>
+              <div className="flex justify-between gap-3 border-t pt-2 text-base"><span>{t("quotes.field.grandTotal")}</span><strong>{formatVnd(createTotals.grandTotal)} ₫</strong></div>
             </div>
             <div>
               <Label>{t("quotes.field.validUntil")}</Label>
