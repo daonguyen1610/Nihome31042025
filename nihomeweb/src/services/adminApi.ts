@@ -807,24 +807,47 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     id: number;
     code: string;
     status: QuoteStatus;
+    method: QuoteMethod;
+    version: number;
+    areaSqm?: number | null;
+    unitPricePerSqm?: number | null;
+    packageDescription?: string | null;
+    subtotal: number;
+    discountPercent: number;
+    vatPercent: number;
     grandTotal: number;
-    customerName?: string | null;
-    ownerName?: string | null;
     validUntil: string;
     isExpired: boolean;
-    method: QuoteMethod;
+    note?: string | null;
+    customerName?: string | null;
+    ownerName?: string | null;
+    submittedAt?: string | null;
+    approvedAt?: string | null;
     sentAt?: string | null;
+    createdAt: string;
+    items: Array<{
+      id: number;
+      itemCode?: string | null;
+      name: string;
+      unit: string;
+      quantity: number;
+      unitPrice: number;
+      amount: number;
+    }>;
   }>;
   contracts: Array<{
     id: number;
     contractNumber: string;
     status: ContractStatus;
     value: number;
+    signedDate?: string | null;
     startDate?: string | null;
     endDate?: string | null;
+    scopeOfWork?: string | null;
+    note?: string | null;
     customerName?: string | null;
     ownerName?: string | null;
-    signedDate?: string | null;
+    createdAt: string;
   }>;
 }
 

@@ -56,13 +56,36 @@ public class OperationalProjectQuoteResponse
     public int Id { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+    public string Method { get; set; } = string.Empty;
+    public int Version { get; set; }
+    public decimal? AreaSqm { get; set; }
+    public decimal? UnitPricePerSqm { get; set; }
+    public string? PackageDescription { get; set; }
+    public decimal Subtotal { get; set; }
+    public decimal DiscountPercent { get; set; }
+    public decimal VatPercent { get; set; }
     public decimal GrandTotal { get; set; }
-    public string? CustomerName { get; set; }
-    public string? OwnerName { get; set; }
     public DateTime ValidUntil { get; set; }
     public bool IsExpired { get; set; }
-    public string Method { get; set; } = string.Empty;
+    public string? Note { get; set; }
+    public string? CustomerName { get; set; }
+    public string? OwnerName { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
     public DateTime? SentAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public List<OperationalProjectQuoteItemResponse> Items { get; set; } = new();
+}
+
+public class OperationalProjectQuoteItemResponse
+{
+    public int Id { get; set; }
+    public string? ItemCode { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Unit { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal Amount { get; set; }
 }
 
 public class OperationalProjectContractResponse
@@ -71,9 +94,35 @@ public class OperationalProjectContractResponse
     public string ContractNumber { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public decimal Value { get; set; }
+    public DateTime? SignedDate { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public string? ScopeOfWork { get; set; }
+    public string? Note { get; set; }
     public string? CustomerName { get; set; }
     public string? OwnerName { get; set; }
-    public DateTime? SignedDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class OperationalProjectContractAttachmentResponse
+{
+    public int Id { get; set; }
+    public string Kind { get; set; } = string.Empty;
+    public string FilePath { get; set; } = string.Empty;
+    public string OriginalFileName { get; set; } = string.Empty;
+    public long FileSize { get; set; }
+    public string ContentType { get; set; } = string.Empty;
+    public string? Label { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class OperationalProjectPaymentMilestoneResponse
+{
+    public int Id { get; set; }
+    public int Order { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal PercentValue { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime? DueDate { get; set; }
+    public string Status { get; set; } = string.Empty;
 }

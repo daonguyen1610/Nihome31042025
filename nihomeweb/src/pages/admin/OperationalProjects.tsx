@@ -305,47 +305,132 @@ const OperationalProjects = () => {
                 {detail.quotes.length === 0 ? (
                   <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {detail.quotes.map(item => (
                       <div key={item.id} className="rounded-md border p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium font-mono">{item.code}</p>
-                              <Badge variant="outline" className="text-xs">{t(`quotes.status.${item.status}`)}</Badge>
-                              {item.isExpired && <Badge variant="destructive" className="text-xs">{t("quotes.expired")}</Badge>}
-                            </div>
-                            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                              <div className="flex gap-2">
-                                <dt className="text-muted-foreground">{t("quotes.field.grandTotal")}:</dt>
-                                <dd className="font-medium">{currencyFormat.format(item.grandTotal)}</dd>
-                              </div>
-                              <div className="flex gap-2">
-                                <dt className="text-muted-foreground">{t("quotes.field.method")}:</dt>
-                                <dd>{t(`quotes.method.${item.method}`)}</dd>
-                              </div>
-                              <div className="flex gap-2">
-                                <dt className="text-muted-foreground">{t("quotes.field.validUntil")}:</dt>
-                                <dd>{new Date(item.validUntil).toLocaleDateString()}</dd>
-                              </div>
-                              {item.sentAt && (
-                                <div className="flex gap-2">
-                                  <dt className="text-muted-foreground">{t("quotes.field.sentAt")}:</dt>
-                                  <dd>{new Date(item.sentAt).toLocaleDateString()}</dd>
-                                </div>
-                              )}
-                              {item.ownerName && (
-                                <div className="flex gap-2">
-                                  <dt className="text-muted-foreground">{t("quotes.field.owner")}:</dt>
-                                  <dd>{item.ownerName}</dd>
-                                </div>
-                              )}
-                            </dl>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium font-mono">{item.code}</p>
+                            <Badge variant="outline" className="text-xs">{t(`quotes.status.${item.status}`)}</Badge>
+                            {item.isExpired && <Badge variant="destructive" className="text-xs">{t("quotes.expired")}</Badge>}
+                            <span className="text-xs text-muted-foreground">v{item.version}</span>
                           </div>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/admin/quotes/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
                           </Button>
                         </div>
+                        
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-3">
+                          <div>
+                            <dt className="text-muted-foreground text-xs">{t("quotes.field.method")}</dt>
+                            <dd>{t(`quotes.method.${item.method}`)}</dd>
+                          </div>
+                          {item.method === "UnitCost" && item.areaSqm && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("quotes.field.area")}</dt>
+                              <dd>{item.areaSqm} m²</dd>
+                            </div>
+                          )}
+                          {item.method === "UnitCost" && item.unitPricePerSqm && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("quotes.field.unitPrice")}</dt>
+                              <dd>{currencyFormat.format(item.unitPricePerSqm)}/m²</dd>
+                            </div>
+                          )}
+                          <div>
+                            <dt className="text-muted-foreground text-xs">{t("quotes.field.subtotal")}</dt>
+                            <dd>{currencyFormat.format(item.subtotal)}</dd>
+                          </div>
+                          {item.discountPercent > 0 && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("quotes.field.discount")}</dt>
+                              <dd>-{item.discountPercent}%</dd>
+                            </div>
+                          )}
+                          <div>
+                            <dt className="text-muted-foreground text-xs">{t("quotes.field.vat")}</dt>
+                            <dd>{item.vatPercent}%</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground text-xs">{t("quotes.field.grandTotal")}</dt>
+                            <dd className="font-semibold text-primary">{currencyFormat.format(item.grandTotal)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground text-xs">{t("quotes.field.validUntil")}</dt>
+                            <dd>{new Date(item.validUntil).toLocaleDateString()}</dd>
+                          </div>
+                          {item.ownerName && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("quotes.field.owner")}</dt>
+                              <dd>{item.ownerName}</dd>
+                            </div>
+                          )}
+                          {item.submittedAt && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("quotes.field.submittedAt")}</dt>
+                              <dd>{new Date(item.submittedAt).toLocaleDateString()}</dd>
+                            </div>
+                          )}
+                          {item.approvedAt && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("quotes.field.approvedAt")}</dt>
+                              <dd>{new Date(item.approvedAt).toLocaleDateString()}</dd>
+                            </div>
+                          )}
+                          {item.sentAt && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("quotes.field.sentAt")}</dt>
+                              <dd>{new Date(item.sentAt).toLocaleDateString()}</dd>
+                            </div>
+                          )}
+                        </dl>
+
+                        {item.packageDescription && (
+                          <div className="mb-3 text-sm">
+                            <p className="text-muted-foreground text-xs mb-1">{t("quotes.field.packageDescription")}</p>
+                            <p className="whitespace-pre-wrap">{item.packageDescription}</p>
+                          </div>
+                        )}
+
+                        {item.method === "Boq" && item.items.length > 0 && (
+                          <div className="mt-3 border-t pt-3">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">{t("quotes.items")} ({item.items.length})</p>
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="border-b text-left text-muted-foreground">
+                                    <th className="pb-1 pr-2">{t("quotes.item.name")}</th>
+                                    <th className="pb-1 pr-2 text-right">{t("quotes.item.quantity")}</th>
+                                    <th className="pb-1 pr-2">{t("quotes.item.unit")}</th>
+                                    <th className="pb-1 pr-2 text-right">{t("quotes.item.unitPrice")}</th>
+                                    <th className="pb-1 text-right">{t("quotes.item.amount")}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {item.items.map(line => (
+                                    <tr key={line.id} className="border-b border-dashed">
+                                      <td className="py-1 pr-2">
+                                        {line.itemCode && <span className="text-muted-foreground">{line.itemCode} - </span>}
+                                        {line.name}
+                                      </td>
+                                      <td className="py-1 pr-2 text-right">{line.quantity}</td>
+                                      <td className="py-1 pr-2">{line.unit}</td>
+                                      <td className="py-1 pr-2 text-right">{currencyFormat.format(line.unitPrice)}</td>
+                                      <td className="py-1 text-right font-medium">{currencyFormat.format(line.amount)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {item.note && (
+                          <div className="mt-3 border-t pt-3 text-sm">
+                            <p className="text-muted-foreground text-xs mb-1">{t("quotes.field.note")}</p>
+                            <p className="whitespace-pre-wrap text-muted-foreground">{item.note}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -365,48 +450,67 @@ const OperationalProjects = () => {
                 {detail.contracts.length === 0 ? (
                   <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {detail.contracts.map(item => (
                       <div key={item.id} className="rounded-md border p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium font-mono">{item.contractNumber}</p>
-                              <Badge variant="outline" className="text-xs">{t(`contracts.status.${item.status}`)}</Badge>
-                            </div>
-                            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                              <div className="flex gap-2">
-                                <dt className="text-muted-foreground">{t("contracts.field.value")}:</dt>
-                                <dd className="font-medium">{currencyFormat.format(item.value)}</dd>
-                              </div>
-                              {item.signedDate && (
-                                <div className="flex gap-2">
-                                  <dt className="text-muted-foreground">{t("contracts.field.signedDate")}:</dt>
-                                  <dd>{new Date(item.signedDate).toLocaleDateString()}</dd>
-                                </div>
-                              )}
-                              {(item.startDate || item.endDate) && (
-                                <div className="col-span-2 flex gap-2">
-                                  <dt className="text-muted-foreground">{t("contracts.field.duration")}:</dt>
-                                  <dd>
-                                    {item.startDate && new Date(item.startDate).toLocaleDateString()}
-                                    {item.startDate && item.endDate && " - "}
-                                    {item.endDate && new Date(item.endDate).toLocaleDateString()}
-                                  </dd>
-                                </div>
-                              )}
-                              {item.ownerName && (
-                                <div className="flex gap-2">
-                                  <dt className="text-muted-foreground">{t("contracts.field.owner")}:</dt>
-                                  <dd>{item.ownerName}</dd>
-                                </div>
-                              )}
-                            </dl>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium font-mono">{item.contractNumber}</p>
+                            <Badge variant="outline" className="text-xs">{t(`contracts.status.${item.status}`)}</Badge>
                           </div>
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/admin/contracts/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
                           </Button>
                         </div>
+
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                          <div>
+                            <dt className="text-muted-foreground text-xs">{t("contracts.field.value")}</dt>
+                            <dd className="font-semibold text-primary">{currencyFormat.format(item.value)}</dd>
+                          </div>
+                          {item.signedDate && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("contracts.field.signedDate")}</dt>
+                              <dd>{new Date(item.signedDate).toLocaleDateString()}</dd>
+                            </div>
+                          )}
+                          {(item.startDate || item.endDate) && (
+                            <div className="col-span-2">
+                              <dt className="text-muted-foreground text-xs">{t("contracts.field.duration")}</dt>
+                              <dd>
+                                {item.startDate && new Date(item.startDate).toLocaleDateString()}
+                                {item.startDate && item.endDate && " - "}
+                                {item.endDate && new Date(item.endDate).toLocaleDateString()}
+                              </dd>
+                            </div>
+                          )}
+                          {item.ownerName && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("contracts.field.owner")}</dt>
+                              <dd>{item.ownerName}</dd>
+                            </div>
+                          )}
+                          {item.customerName && (
+                            <div>
+                              <dt className="text-muted-foreground text-xs">{t("contracts.field.customer")}</dt>
+                              <dd>{item.customerName}</dd>
+                            </div>
+                          )}
+                        </dl>
+
+                        {item.scopeOfWork && (
+                          <div className="mt-3 border-t pt-3 text-sm">
+                            <p className="text-muted-foreground text-xs mb-1">{t("contracts.field.scopeOfWork")}</p>
+                            <div className="whitespace-pre-wrap text-sm" dangerouslySetInnerHTML={{ __html: item.scopeOfWork }} />
+                          </div>
+                        )}
+
+                        {item.note && (
+                          <div className="mt-3 border-t pt-3 text-sm">
+                            <p className="text-muted-foreground text-xs mb-1">{t("contracts.field.note")}</p>
+                            <p className="whitespace-pre-wrap text-muted-foreground">{item.note}</p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
