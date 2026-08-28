@@ -169,7 +169,8 @@ public class QuotesController(
         try
         {
             var canManage = await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct);
-            var response = await svc.CreateAsync(request, userId.Value, canManage, ct);
+            var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+            var response = await svc.CreateAsync(request, userId.Value, canManage, ct, canSeeAll);
             audit.Log(new AuditEvent
             {
                 Action = "quote.create",

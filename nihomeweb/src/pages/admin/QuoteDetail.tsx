@@ -30,6 +30,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize, formatVnd, parseVnd } from "@/lib/numberFormat";
+import { calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,18 +123,7 @@ function computePreview(
   method: "UnitCost" | "Boq",
   form: UpdateQuoteRequest,
 ): { subtotal: number; grandTotal: number } {
-  const subtotal =
-    method === "Boq"
-      ? (form.items ?? []).reduce(
-          (s, i) => s + Math.round(i.quantity * i.unitPrice * 100) / 100,
-          0,
-        )
-      : Math.round(((form.areaSqm ?? 0) * (form.unitPricePerSqm ?? 0)) * 100) /
-        100;
-  const afterDiscount = subtotal * (1 - form.discountPercent / 100);
-  const vat = afterDiscount * (form.vatPercent / 100);
-  const grandTotal = Math.round((afterDiscount + vat) * 100) / 100;
-  return { subtotal: Math.round(subtotal * 100) / 100, grandTotal };
+  return calculateQuoteTotals(method, form);
 }
 
 // -------- Component --------
@@ -285,6 +275,15 @@ const AdminQuoteDetail = () => {
 
   const handleSave = async () => {
     if (!quote || !form) return;
+    const validationIssue = validateQuoteValues(quote.method, form);
+    if (validationIssue) {
+      toast({
+        title: t("common.error"),
+        description: t(`quotes.validation.${validationIssue}`),
+        variant: "destructive",
+      });
+      return;
+    }
     setSaving(true);
     try {
       const { data } = await adminApi.updateQuote(quote.id, {
