@@ -247,9 +247,12 @@ const OperationalProjects = () => {
                   <div className="space-y-2">
                     {detail.opportunities.map(item => (
                       <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{item.name}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{t(`opportunities.stage.${item.stage}`)}</p>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p className="font-medium">{item.name}</p>
+                          <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <Badge variant="outline" className="text-xs">{t(`opportunities.stage.${item.stage}`)}</Badge>
+                            <span className="text-muted-foreground">{currencyFormat.format(item.estimatedValue)}</span>
+                          </div>
                         </div>
                         <Button variant="ghost" size="sm" asChild>
                           <Link to={`/admin/opportunities/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
@@ -308,12 +311,19 @@ const OperationalProjects = () => {
                   <div className="space-y-2">
                     {detail.contracts.map(item => (
                       <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 space-y-1">
                           <p className="font-medium font-mono">{item.contractNumber}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-2 text-sm">
                             <Badge variant="outline" className="text-xs">{t(`contracts.status.${item.status}`)}</Badge>
-                            <span>{currencyFormat.format(item.value)}</span>
+                            <span className="text-muted-foreground">{currencyFormat.format(item.value)}</span>
                           </div>
+                          {(item.startDate || item.endDate) && (
+                            <p className="text-xs text-muted-foreground">
+                              {item.startDate && new Date(item.startDate).toLocaleDateString()}
+                              {item.startDate && item.endDate && " - "}
+                              {item.endDate && new Date(item.endDate).toLocaleDateString()}
+                            </p>
+                          )}
                         </div>
                         <Button variant="ghost" size="sm" asChild>
                           <Link to={`/admin/contracts/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
