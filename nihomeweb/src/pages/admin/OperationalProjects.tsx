@@ -100,6 +100,7 @@ const OperationalProjects = () => {
         const response = await adminApi.getOperationalProject(projectId);
         setDetail(response.data);
       } else {
+        setDetail(null);
         const response = await adminApi.listOperationalProjects({
           customerId: customerFilter,
           search: search.trim() || undefined,
