@@ -102,8 +102,18 @@ public class OperationalProjectService(
             .Include(item => item.ProjectManager)
             .Include(item => item.DesignProject)
             .Include(item => item.Opportunities)
+                .ThenInclude(o => o.Customer)
+            .Include(item => item.Opportunities)
+                .ThenInclude(o => o.Owner)
             .Include(item => item.Quotes)
+                .ThenInclude(q => q.Owner)
+            .Include(item => item.Quotes)
+                .ThenInclude(q => q.Opportunity)
+                .ThenInclude(o => o!.Customer)
             .Include(item => item.Contracts)
+                .ThenInclude(c => c.Customer)
+            .Include(item => item.Contracts)
+                .ThenInclude(c => c.Owner)
             .FirstOrDefaultAsync(item => item.Id == id, ct);
 
         if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return null;
@@ -360,6 +370,11 @@ public class OperationalProjectService(
                 Name = item.Name,
                 Stage = item.Stage.ToString(),
                 EstimatedValue = item.EstimatedValue,
+                WinProbability = item.WinProbability,
+                ExpectedCloseDate = item.ExpectedCloseDate,
+                CustomerName = item.Customer?.Name,
+                OwnerName = item.Owner?.FullName,
+                LostReasonCode = item.LostReasonCode,
             })
             .ToList(),
         Quotes = project.Quotes
@@ -370,6 +385,12 @@ public class OperationalProjectService(
                 Code = item.Code,
                 Status = item.Status.ToString(),
                 GrandTotal = item.GrandTotal,
+                CustomerName = item.Opportunity?.Customer?.Name,
+                OwnerName = item.Owner?.FullName,
+                ValidUntil = item.ValidUntil,
+                IsExpired = item.ValidUntil < DateTime.UtcNow && item.Status != QuoteStatus.CustomerApproved && item.Status != QuoteStatus.Cancelled,
+                Method = item.Method.ToString(),
+                SentAt = item.SentAt,
             })
             .ToList(),
         Contracts = project.Contracts
@@ -382,6 +403,9 @@ public class OperationalProjectService(
                 Value = item.Value,
                 StartDate = item.StartDate,
                 EndDate = item.EndDate,
+                CustomerName = item.Customer?.Name,
+                OwnerName = item.Owner?.FullName,
+                SignedDate = item.SignedDate,
             })
             .ToList(),
     };

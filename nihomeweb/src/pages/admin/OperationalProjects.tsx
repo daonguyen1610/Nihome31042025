@@ -244,19 +244,48 @@ const OperationalProjects = () => {
                 {detail.opportunities.length === 0 ? (
                   <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {detail.opportunities.map(item => (
-                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="font-medium">{item.name}</p>
-                          <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <Badge variant="outline" className="text-xs">{t(`opportunities.stage.${item.stage}`)}</Badge>
-                            <span className="text-muted-foreground">{currencyFormat.format(item.estimatedValue)}</span>
+                      <div key={item.id} className="rounded-md border p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{item.name}</p>
+                              <Badge variant="outline" className="text-xs">{t(`opportunities.stage.${item.stage}`)}</Badge>
+                            </div>
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              <div className="flex gap-2">
+                                <dt className="text-muted-foreground">{t("opportunities.field.estimatedValue")}:</dt>
+                                <dd className="font-medium">{currencyFormat.format(item.estimatedValue)}</dd>
+                              </div>
+                              <div className="flex gap-2">
+                                <dt className="text-muted-foreground">{t("opportunities.field.winProbability")}:</dt>
+                                <dd className="font-medium">{item.winProbability}%</dd>
+                              </div>
+                              {item.expectedCloseDate && (
+                                <div className="flex gap-2">
+                                  <dt className="text-muted-foreground">{t("opportunities.field.expectedCloseDate")}:</dt>
+                                  <dd>{new Date(item.expectedCloseDate).toLocaleDateString()}</dd>
+                                </div>
+                              )}
+                              {item.ownerName && (
+                                <div className="flex gap-2">
+                                  <dt className="text-muted-foreground">{t("opportunities.field.owner")}:</dt>
+                                  <dd>{item.ownerName}</dd>
+                                </div>
+                              )}
+                              {item.lostReasonCode && (
+                                <div className="col-span-2 flex gap-2">
+                                  <dt className="text-muted-foreground">{t("opportunities.field.lostReason")}:</dt>
+                                  <dd>{item.lostReasonCode}</dd>
+                                </div>
+                              )}
+                            </dl>
                           </div>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/admin/opportunities/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/admin/opportunities/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
-                        </Button>
                       </div>
                     ))}
                   </div>
@@ -276,19 +305,47 @@ const OperationalProjects = () => {
                 {detail.quotes.length === 0 ? (
                   <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {detail.quotes.map(item => (
-                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium font-mono">{item.code}</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant="outline" className="text-xs">{t(`quotes.status.${item.status}`)}</Badge>
-                            <span>{currencyFormat.format(item.grandTotal)}</span>
+                      <div key={item.id} className="rounded-md border p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium font-mono">{item.code}</p>
+                              <Badge variant="outline" className="text-xs">{t(`quotes.status.${item.status}`)}</Badge>
+                              {item.isExpired && <Badge variant="destructive" className="text-xs">{t("quotes.expired")}</Badge>}
+                            </div>
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              <div className="flex gap-2">
+                                <dt className="text-muted-foreground">{t("quotes.field.grandTotal")}:</dt>
+                                <dd className="font-medium">{currencyFormat.format(item.grandTotal)}</dd>
+                              </div>
+                              <div className="flex gap-2">
+                                <dt className="text-muted-foreground">{t("quotes.field.method")}:</dt>
+                                <dd>{t(`quotes.method.${item.method}`)}</dd>
+                              </div>
+                              <div className="flex gap-2">
+                                <dt className="text-muted-foreground">{t("quotes.field.validUntil")}:</dt>
+                                <dd>{new Date(item.validUntil).toLocaleDateString()}</dd>
+                              </div>
+                              {item.sentAt && (
+                                <div className="flex gap-2">
+                                  <dt className="text-muted-foreground">{t("quotes.field.sentAt")}:</dt>
+                                  <dd>{new Date(item.sentAt).toLocaleDateString()}</dd>
+                                </div>
+                              )}
+                              {item.ownerName && (
+                                <div className="flex gap-2">
+                                  <dt className="text-muted-foreground">{t("quotes.field.owner")}:</dt>
+                                  <dd>{item.ownerName}</dd>
+                                </div>
+                              )}
+                            </dl>
                           </div>
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/admin/quotes/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/admin/quotes/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
-                        </Button>
                       </div>
                     ))}
                   </div>
@@ -308,26 +365,48 @@ const OperationalProjects = () => {
                 {detail.contracts.length === 0 ? (
                   <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {detail.contracts.map(item => (
-                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="font-medium font-mono">{item.contractNumber}</p>
-                          <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <Badge variant="outline" className="text-xs">{t(`contracts.status.${item.status}`)}</Badge>
-                            <span className="text-muted-foreground">{currencyFormat.format(item.value)}</span>
+                      <div key={item.id} className="rounded-md border p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium font-mono">{item.contractNumber}</p>
+                              <Badge variant="outline" className="text-xs">{t(`contracts.status.${item.status}`)}</Badge>
+                            </div>
+                            <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                              <div className="flex gap-2">
+                                <dt className="text-muted-foreground">{t("contracts.field.value")}:</dt>
+                                <dd className="font-medium">{currencyFormat.format(item.value)}</dd>
+                              </div>
+                              {item.signedDate && (
+                                <div className="flex gap-2">
+                                  <dt className="text-muted-foreground">{t("contracts.field.signedDate")}:</dt>
+                                  <dd>{new Date(item.signedDate).toLocaleDateString()}</dd>
+                                </div>
+                              )}
+                              {(item.startDate || item.endDate) && (
+                                <div className="col-span-2 flex gap-2">
+                                  <dt className="text-muted-foreground">{t("contracts.field.duration")}:</dt>
+                                  <dd>
+                                    {item.startDate && new Date(item.startDate).toLocaleDateString()}
+                                    {item.startDate && item.endDate && " - "}
+                                    {item.endDate && new Date(item.endDate).toLocaleDateString()}
+                                  </dd>
+                                </div>
+                              )}
+                              {item.ownerName && (
+                                <div className="flex gap-2">
+                                  <dt className="text-muted-foreground">{t("contracts.field.owner")}:</dt>
+                                  <dd>{item.ownerName}</dd>
+                                </div>
+                              )}
+                            </dl>
                           </div>
-                          {(item.startDate || item.endDate) && (
-                            <p className="text-xs text-muted-foreground">
-                              {item.startDate && new Date(item.startDate).toLocaleDateString()}
-                              {item.startDate && item.endDate && " - "}
-                              {item.endDate && new Date(item.endDate).toLocaleDateString()}
-                            </p>
-                          )}
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/admin/contracts/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/admin/contracts/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
-                        </Button>
                       </div>
                     ))}
                   </div>

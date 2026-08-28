@@ -797,12 +797,23 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     name: string;
     stage: OpportunityStage;
     estimatedValue: number;
+    winProbability: number;
+    expectedCloseDate?: string | null;
+    customerName?: string | null;
+    ownerName?: string | null;
+    lostReasonCode?: string | null;
   }>;
   quotes: Array<{
     id: number;
     code: string;
     status: QuoteStatus;
     grandTotal: number;
+    customerName?: string | null;
+    ownerName?: string | null;
+    validUntil: string;
+    isExpired: boolean;
+    method: QuoteMethod;
+    sentAt?: string | null;
   }>;
   contracts: Array<{
     id: number;
@@ -811,6 +822,9 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     value: number;
     startDate?: string | null;
     endDate?: string | null;
+    customerName?: string | null;
+    ownerName?: string | null;
+    signedDate?: string | null;
   }>;
 }
 
