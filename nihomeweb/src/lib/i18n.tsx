@@ -36,7 +36,7 @@ export const translateError = (t: (key: string) => string, message: string): str
 type Ctx = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 };
 
 const I18nContext = createContext<Ctx | null>(null);
@@ -95,7 +95,15 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const setLang = (l: Lang) => setLangState(l);
 
   const t = useMemo(() => {
-    return (key: string) => currentMap[key] ?? fallbackViMap[key] ?? key;
+    return (key: string, params?: Record<string, string | number>) => {
+      let text = currentMap[key] ?? fallbackViMap[key] ?? key;
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+        }
+      }
+      return text;
+    };
   }, [currentMap, fallbackViMap]);
 
   return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
