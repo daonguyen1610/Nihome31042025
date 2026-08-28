@@ -232,6 +232,22 @@
     "ja": "業務範囲"
   },
   {
+    "key": "contracts.field.scopeOfWork",
+    "category": "contracts",
+    "vi": "Phạm vi công việc",
+    "en": "Scope of work",
+    "zh": "工作范围",
+    "ja": "業務範囲"
+  },
+  {
+    "key": "contracts.field.duration",
+    "category": "contracts",
+    "vi": "Thời gian thực hiện",
+    "en": "Duration",
+    "zh": "执行周期",
+    "ja": "実施期間"
+  },
+  {
     "key": "contracts.field.note",
     "category": "contracts",
     "vi": "Ghi chú",
