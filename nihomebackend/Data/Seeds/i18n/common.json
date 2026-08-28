@@ -1166,5 +1166,29 @@
     "en": "That email address is not valid. For example: name@company.com.",
     "zh": "邮箱地址无效。例如：name@company.com。",
     "ja": "メールアドレスが正しくありません。例: name@company.com。"
+  },
+  {
+    "key": "common.pagination.total",
+    "category": "common",
+    "vi": "Tổng: {total} bản ghi",
+    "en": "Total: {total} records",
+    "zh": "共 {total} 条记录",
+    "ja": "合計: {total} 件"
+  },
+  {
+    "key": "common.pagination.prev",
+    "category": "common",
+    "vi": "Trước",
+    "en": "Previous",
+    "zh": "上一页",
+    "ja": "前へ"
+  },
+  {
+    "key": "common.pagination.next",
+    "category": "common",
+    "vi": "Sau",
+    "en": "Next",
+    "zh": "下一页",
+    "ja": "次へ"
   }
 ]
