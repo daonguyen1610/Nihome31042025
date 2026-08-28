@@ -2901,38 +2901,47 @@ public static class SampleCrmDataSeeder
             .ToList();
         if (operationalProjects.Count == 0) return;
 
+        // Build a lookup of operational project by customer for consistent linking
+        var projectByCustomer = operationalProjects
+            .GroupBy(p => p.CustomerId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        // Link opportunities to projects matching their customer
         var opportunities = db.Opportunities
             .Where(o => o.Name.StartsWith(SampleTag) && o.OperationalProjectId == null)
-            .OrderBy(o => o.Id)
-            .Take(operationalProjects.Count)
             .ToList();
+        foreach (var opp in opportunities)
+        {
+            if (projectByCustomer.TryGetValue(opp.CustomerId, out var project))
+            {
+                opp.OperationalProjectId = project.Id;
+            }
+        }
 
+        // Link quotes to projects matching their customer (via opportunity)
         var quotes = db.Quotes
+            .Include(q => q.Opportunity)
             .Where(q => q.Note != null && q.Note.StartsWith(SampleQuoteNoteMarker) && q.OperationalProjectId == null)
-            .OrderBy(q => q.Id)
-            .Take(operationalProjects.Count)
             .ToList();
+        foreach (var quote in quotes)
+        {
+            var customerId = quote.Opportunity?.CustomerId;
+            if (customerId.HasValue && projectByCustomer.TryGetValue(customerId.Value, out var project))
+            {
+                quote.OperationalProjectId = project.Id;
+            }
+        }
 
+        // Link contracts to projects matching their customer
+        // This ensures contract and its opportunity share the same operational project
         var contracts = db.Contracts
             .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker) && c.OperationalProjectId == null)
-            .OrderBy(c => c.Id)
-            .Take(operationalProjects.Count)
             .ToList();
-
-        for (var i = 0; i < operationalProjects.Count; i++)
+        foreach (var contract in contracts)
         {
-            var project = operationalProjects[i];
-            if (i < opportunities.Count)
+            if (projectByCustomer.TryGetValue(contract.CustomerId, out var project))
             {
-                opportunities[i].OperationalProjectId = project.Id;
-            }
-            if (i < quotes.Count)
-            {
-                quotes[i].OperationalProjectId = project.Id;
-            }
-            if (i < contracts.Count)
-            {
-                contracts[i].OperationalProjectId = project.Id;
+                contract.OperationalProjectId = project.Id;
             }
         }
 
