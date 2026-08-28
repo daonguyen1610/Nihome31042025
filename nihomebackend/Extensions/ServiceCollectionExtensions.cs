@@ -139,6 +139,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAsBuiltDocumentService, AsBuiltDocumentService>();
         services.AddScoped<IHandoverRecordService, HandoverRecordService>();
         services.AddScoped<HostedImageService>();
+        services.AddScoped<AsBuiltDocumentCategoryService>();
 
         // Content services
         services.AddScoped<ActivityService>();

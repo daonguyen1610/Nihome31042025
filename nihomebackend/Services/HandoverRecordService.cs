@@ -10,6 +10,7 @@ namespace NihomeBackend.Services;
 public class HandoverRecordService(
     AppDbContext db,
     ILogger<HandoverRecordService> logger,
+    AsBuiltDocumentCategoryService categoryService,
     IBusinessDocumentStorageService? documentStorage = null) : IHandoverRecordService
 {
     private const int MaxPageSize = 200;
@@ -342,18 +343,19 @@ public class HandoverRecordService(
         CancellationToken ct)
     {
         var ids = projectIds.Distinct().ToList();
+        var requiredCategoryIds = await categoryService.GetRequiredCategoryIdsAsync();
         var result = ids.ToDictionary(id => id, _ => new HandoverReadinessResponse
         {
-            RequiredAsBuiltCategories = AsBuiltCategoryExtensions.Required.Length,
+            RequiredAsBuiltCategories = requiredCategoryIds.Length,
         });
         if (ids.Count == 0) return result;
 
         var approvedCategories = await db.AsBuiltDocuments.AsNoTracking()
             .Where(item => ids.Contains(item.DesignProjectId) && item.Status == AsBuiltStatus.Approved)
-            .Select(item => new { item.DesignProjectId, item.Category })
+            .Select(item => new { item.DesignProjectId, item.CategoryId })
             .Distinct().ToListAsync(ct);
         foreach (var group in approvedCategories.GroupBy(item => item.DesignProjectId))
-            result[group.Key].ApprovedRequiredAsBuiltCategories = group.Count(item => AsBuiltCategoryExtensions.Required.Contains(item.Category));
+            result[group.Key].ApprovedRequiredAsBuiltCategories = group.Count(item => requiredCategoryIds.Contains(item.CategoryId));
 
         var unresolved = await db.PunchItems.AsNoTracking()
             .Where(item => ids.Contains(item.DesignProjectId)

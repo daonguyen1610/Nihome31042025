@@ -28,8 +28,9 @@ public class AsBuiltDocument
     /// <summary>Free-text body / description.</summary>
     public string? Description { get; set; }
 
-    /// <summary>Category — used to compute dossier completeness.</summary>
-    public AsBuiltCategory Category { get; set; }
+    /// <summary>Category FK — used to compute dossier completeness.</summary>
+    public int CategoryId { get; set; }
+    public AsBuiltDocumentCategory Category { get; set; } = null!;
 
     /// <summary>Optional relative URL of the attached file (PDF / DWG / photo).</summary>
     public string? FileUrl { get; set; }
@@ -57,25 +58,6 @@ public class AsBuiltDocument
     public int? UpdatedByUserId { get; set; }
 }
 
-/// <summary>
-/// Fixed category set for the as-built dossier. Every project handover
-/// needs at least one Approved document in each *required* category
-/// (see <see cref="AsBuiltCategoryExtensions"/>).
-/// </summary>
-public enum AsBuiltCategory
-{
-    /// <summary>Bản vẽ hoàn công / As-built drawings.</summary>
-    Drawing = 0,
-    /// <summary>Biên bản nghiệm thu / Acceptance minutes.</summary>
-    AcceptanceMinute = 1,
-    /// <summary>Báo cáo thí nghiệm / Test reports.</summary>
-    TestReport = 2,
-    /// <summary>Chứng chỉ bảo hành / Warranty certificates.</summary>
-    WarrantyCertificate = 3,
-    /// <summary>Tài liệu khác / Other supporting documents.</summary>
-    Other = 4,
-}
-
 /// <summary>Lifecycle of an <see cref="AsBuiltDocument"/>.</summary>
 public enum AsBuiltStatus
 {
@@ -92,17 +74,23 @@ public enum AsBuiltStatus
 }
 
 /// <summary>
-/// Central place that defines which <see cref="AsBuiltCategory"/>
-/// values are required for handover. Kept as a static list so both
-/// the completeness roll-up and the front-end stat tile agree.
+/// Well-known category codes for programmatic access.
+/// These codes must match the seeded <see cref="AsBuiltDocumentCategory.Code"/> values.
 /// </summary>
-public static class AsBuiltCategoryExtensions
+public static class AsBuiltCategoryCodes
 {
-    public static readonly AsBuiltCategory[] Required =
+    public const string Drawing = "Drawing";
+    public const string AcceptanceMinute = "AcceptanceMinute";
+    public const string TestReport = "TestReport";
+    public const string WarrantyCertificate = "WarrantyCertificate";
+    public const string Other = "Other";
+
+    /// <summary>Required category codes for handover completeness.</summary>
+    public static readonly string[] Required =
     {
-        AsBuiltCategory.Drawing,
-        AsBuiltCategory.AcceptanceMinute,
-        AsBuiltCategory.TestReport,
-        AsBuiltCategory.WarrantyCertificate,
+        Drawing,
+        AcceptanceMinute,
+        TestReport,
+        WarrantyCertificate,
     };
 }

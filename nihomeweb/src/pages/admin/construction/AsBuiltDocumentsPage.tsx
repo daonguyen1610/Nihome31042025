@@ -59,6 +59,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import {
   adminApi,
   type AsBuiltCategory,
+  type AsBuiltDocumentCategoryResponse,
   type AsBuiltDocumentListParams,
   type AsBuiltDocumentResponse,
   type AsBuiltStatus,
@@ -68,13 +69,6 @@ import {
 } from "@/services/adminApi";
 
 const ASBUILT_STATUSES: AsBuiltStatus[] = ["Draft", "Submitted", "Approved", "Archived", "Cancelled"];
-const ASBUILT_CATEGORIES: AsBuiltCategory[] = [
-  "Drawing",
-  "AcceptanceMinute",
-  "TestReport",
-  "WarrantyCertificate",
-  "Other",
-];
 const EDITABLE_STATUSES = new Set<AsBuiltStatus>(["Draft", "Submitted"]);
 
 const STATUS_BADGE: Record<AsBuiltStatus, string> = {
@@ -110,6 +104,7 @@ export default function AsBuiltDocumentsPage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
 
+  const [categories, setCategories] = useState<AsBuiltDocumentCategoryResponse[]>([]);
   const [rows, setRows] = useState<AsBuiltDocumentResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [statusCounts, setStatusCounts] = useState<Partial<Record<AsBuiltStatus, number>>>({});
@@ -143,14 +138,28 @@ export default function AsBuiltDocumentsPage() {
     note: "",
   });
 
+  // Helper to get localized category name
+  const getCategoryName = useCallback((code: string) => {
+    const cat = categories.find(c => c.code === code);
+    if (!cat) return code;
+    // Return name based on current locale (simplified - uses nameVi or falls back to name)
+    return cat.nameVi || cat.name;
+  }, [categories]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await adminApi.listDesignProjects({ pageSize: 200 });
-        if (!cancelled) setProjects(res.data.items ?? []);
+        const [projectsRes, categoriesRes] = await Promise.all([
+          adminApi.listDesignProjects({ pageSize: 200 }),
+          adminApi.getAsBuiltDocumentCategories(),
+        ]);
+        if (!cancelled) {
+          setProjects(projectsRes.data.items ?? []);
+          setCategories(categoriesRes.data ?? []);
+        }
       } catch {
-        // Project dropdown is optional.
+        // Initial data load optional - will work without
       }
     })();
     return () => {
@@ -538,9 +547,9 @@ export default function AsBuiltDocumentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">{t("asbuilt.filter.category.all")}</SelectItem>
-                  {ASBUILT_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {t(`asbuilt.category.${c.toLowerCase()}`)}
+                  {categories.filter(c => c.isActive).map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.nameVi || c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -702,7 +711,7 @@ export default function AsBuiltDocumentsPage() {
                       <td className="px-3 py-2 font-medium">{r.title}</td>
                       <td className="px-3 py-2">
                         <Badge variant="outline" className={CATEGORY_BADGE}>
-                          {t(`asbuilt.category.${r.category.toLowerCase()}`)}
+                          {r.categoryName || getCategoryName(r.category)}
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">{r.designProjectName}</td>
@@ -753,7 +762,7 @@ export default function AsBuiltDocumentsPage() {
                         {t(`asbuilt.status.${r.status.toLowerCase()}`)}
                       </Badge>
                       <Badge variant="outline" className={CATEGORY_BADGE}>
-                        {t(`asbuilt.category.${r.category.toLowerCase()}`)}
+                        {r.categoryName || getCategoryName(r.category)}
                       </Badge>
                     </div>
                   </div>
@@ -814,7 +823,7 @@ export default function AsBuiltDocumentsPage() {
                     {t(`asbuilt.status.${detail.status.toLowerCase()}`)}
                   </Badge>
                   <Badge variant="outline" className={CATEGORY_BADGE}>
-                    {t(`asbuilt.category.${detail.category.toLowerCase()}`)}
+                    {detail.categoryName || getCategoryName(detail.category)}
                   </Badge>
                 </div>
 
@@ -976,9 +985,9 @@ export default function AsBuiltDocumentsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ASBUILT_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {t(`asbuilt.category.${c.toLowerCase()}`)}
+                  {categories.filter(c => c.isActive).map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.nameVi || c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

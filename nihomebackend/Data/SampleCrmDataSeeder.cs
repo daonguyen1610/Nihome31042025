@@ -52,6 +52,7 @@ public static class SampleCrmDataSeeder
         SeedSiteDiaries(db, projectManager, now);
         SeedPunchItems(db, projectManager, now);
         SeedAcceptanceRecords(db, projectManager, now);
+        SeedAsBuiltDocumentCategories(db);
         SeedAsBuiltDocuments(db, projectManager, now, webRootPath);
         SeedHandoverRecords(db, projectManager, now);
         SeedOperationalProjects(db, owner, projectManager, now);
@@ -2533,6 +2534,82 @@ public static class SampleCrmDataSeeder
     }
 
     /// <summary>
+    /// Seed default as-built document categories (NIH-452).
+    /// Must run before SeedAsBuiltDocuments.
+    /// </summary>
+    private static void SeedAsBuiltDocumentCategories(AppDbContext db)
+    {
+        if (db.AsBuiltDocumentCategories.Any()) return;
+
+        var categories = new[]
+        {
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.Drawing,
+                Name = "Bản vẽ hoàn công",
+                NameVi = "Bản vẽ hoàn công",
+                NameEn = "As-built drawings",
+                NameZh = "竣工图纸",
+                NameJa = "竣工図面",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 1,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.AcceptanceMinute,
+                Name = "Biên bản nghiệm thu",
+                NameVi = "Biên bản nghiệm thu",
+                NameEn = "Acceptance minutes",
+                NameZh = "验收记录",
+                NameJa = "検収議事録",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 2,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.TestReport,
+                Name = "Báo cáo thí nghiệm",
+                NameVi = "Báo cáo thí nghiệm",
+                NameEn = "Test reports",
+                NameZh = "测试报告",
+                NameJa = "試験報告書",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 3,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.WarrantyCertificate,
+                Name = "Chứng chỉ bảo hành",
+                NameVi = "Chứng chỉ bảo hành",
+                NameEn = "Warranty certificates",
+                NameZh = "保修证书",
+                NameJa = "保証書",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 4,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.Other,
+                Name = "Tài liệu khác",
+                NameVi = "Tài liệu khác",
+                NameEn = "Other supporting documents",
+                NameZh = "其他支持文件",
+                NameJa = "その他の書類",
+                IsRequired = false,
+                IsActive = true,
+                SortOrder = 5,
+            },
+        };
+
+        db.AsBuiltDocumentCategories.AddRange(categories);
+        db.SaveChanges();
+    }
+
+    /// <summary>
     /// M4 sample as-built dossier (NIH-145) — 6 documents covering
     /// every category across Draft/Submitted/Approved/Archived so the
     /// completeness roll-up on the list page has real numbers on a
@@ -2543,6 +2620,10 @@ public static class SampleCrmDataSeeder
         const string SampleMarker = "[SAMPLE_ASBUILT]";
         MaterializeAsBuiltPlaceholders(webRootPath);
         if (db.AsBuiltDocuments.Any(a => a.Note != null && a.Note.StartsWith(SampleMarker))) return;
+
+        // Resolve category IDs
+        var categoryByCode = db.AsBuiltDocumentCategories
+            .ToDictionary(c => c.Code, c => c.Id);
 
         var project = db.DesignProjects
             .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
@@ -2558,11 +2639,11 @@ public static class SampleCrmDataSeeder
             {
                 DesignProjectId = project.Id,
                 DocumentCode = "AB-001",
-                Title = "B\u1ea3n v\u1ebd ho\u00e0n c\u00f4ng ki\u1ebfn tr\u00fac t\u1ea7ng 1",
-                Category = AsBuiltCategory.Drawing,
+                Title = "Bản vẽ hoàn công kiến trúc tầng 1",
+                CategoryId = categoryByCode[AsBuiltCategoryCodes.Drawing],
                 Status = AsBuiltStatus.Approved,
                 FileUrl = "/files/asbuilt/sample-arch-l1.pdf",
-                Note = $"{SampleMarker} \u0110\u00e3 duy\u1ec7t - m\u1eabu",
+                Note = $"{SampleMarker} Đã duyệt - mẫu",
                 SubmittedAt = now.AddDays(-6),
                 SubmittedByUserId = owner.Id,
                 ApprovedAt = now.AddDays(-4),
@@ -2577,11 +2658,11 @@ public static class SampleCrmDataSeeder
             {
                 DesignProjectId = project.Id,
                 DocumentCode = "AB-002",
-                Title = "Bi\u00ean b\u1ea3n nghi\u1ec7m thu m\u00f3ng",
-                Category = AsBuiltCategory.AcceptanceMinute,
+                Title = "Biên bản nghiệm thu móng",
+                CategoryId = categoryByCode[AsBuiltCategoryCodes.AcceptanceMinute],
                 Status = AsBuiltStatus.Archived,
                 FileUrl = "/files/asbuilt/sample-minute-foundation.pdf",
-                Note = $"{SampleMarker} \u0110\u00e3 l\u01b0u tr\u1eef - m\u1eabu",
+                Note = $"{SampleMarker} Đã lưu trữ - mẫu",
                 SubmittedAt = now.AddDays(-14),
                 SubmittedByUserId = owner.Id,
                 ApprovedAt = now.AddDays(-12),
@@ -2597,11 +2678,11 @@ public static class SampleCrmDataSeeder
             {
                 DesignProjectId = project.Id,
                 DocumentCode = "AB-003",
-                Title = "B\u00e1o c\u00e1o th\u00ed nghi\u1ec7m b\u00ea t\u00f4ng C30",
-                Category = AsBuiltCategory.TestReport,
+                Title = "Báo cáo thí nghiệm bê tông C30",
+                CategoryId = categoryByCode[AsBuiltCategoryCodes.TestReport],
                 Status = AsBuiltStatus.Approved,
                 FileUrl = "/files/asbuilt/sample-test-c30.pdf",
-                Note = $"{SampleMarker} \u0110\u00e3 duy\u1ec7t - m\u1eabu",
+                Note = $"{SampleMarker} Đã duyệt - mẫu",
                 SubmittedAt = now.AddDays(-8),
                 SubmittedByUserId = owner.Id,
                 ApprovedAt = now.AddDays(-7),
@@ -2617,11 +2698,11 @@ public static class SampleCrmDataSeeder
             {
                 DesignProjectId = project.Id,
                 DocumentCode = "AB-004",
-                Title = "Ch\u1ee9ng ch\u1ec9 b\u1ea3o h\u00e0nh th\u1ea7u ph\u1ee5 MEP",
-                Category = AsBuiltCategory.WarrantyCertificate,
+                Title = "Chứng chỉ bảo hành thầu phụ MEP",
+                CategoryId = categoryByCode[AsBuiltCategoryCodes.WarrantyCertificate],
                 Status = AsBuiltStatus.Submitted,
                 FileUrl = "/files/asbuilt/sample-warranty-mep.pdf",
-                Note = $"{SampleMarker} Ch\u1edd duy\u1ec7t - m\u1eabu",
+                Note = $"{SampleMarker} Chờ duyệt - mẫu",
                 SubmittedAt = now.AddDays(-1),
                 SubmittedByUserId = owner.Id,
                 CreatedByUserId = owner.Id,
@@ -2634,10 +2715,10 @@ public static class SampleCrmDataSeeder
             {
                 DesignProjectId = project.Id,
                 DocumentCode = "AB-005",
-                Title = "T\u1eadp \u1ea3nh ho\u00e0n c\u00f4ng ph\u1ea7n ngo\u1ea1i th\u1ea5t",
-                Category = AsBuiltCategory.Other,
+                Title = "Tập ảnh hoàn công phần ngoại thất",
+                CategoryId = categoryByCode[AsBuiltCategoryCodes.Other],
                 Status = AsBuiltStatus.Draft,
-                Note = $"{SampleMarker} Nh\u00e1p - m\u1eabu",
+                Note = $"{SampleMarker} Nháp - mẫu",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddHours(-6),
@@ -2648,10 +2729,10 @@ public static class SampleCrmDataSeeder
             {
                 DesignProjectId = project.Id,
                 DocumentCode = "AB-006",
-                Title = "B\u1ea3n v\u1ebd sai phi\u00ean b\u1ea3n - c\u1ea7n hu\u1ef7",
-                Category = AsBuiltCategory.Drawing,
+                Title = "Bản vẽ sai phiên bản - cần huỷ",
+                CategoryId = categoryByCode[AsBuiltCategoryCodes.Drawing],
                 Status = AsBuiltStatus.Cancelled,
-                Note = $"{SampleMarker} \u0110\u00e3 hu\u1ef7 - m\u1eabu",
+                Note = $"{SampleMarker} Đã huỷ - mẫu",
                 CreatedByUserId = owner.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-15),

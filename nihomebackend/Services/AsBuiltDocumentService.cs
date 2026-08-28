@@ -13,6 +13,7 @@ namespace NihomeBackend.Services;
 public class AsBuiltDocumentService(
     AppDbContext db,
     ILogger<AsBuiltDocumentService> logger,
+    AsBuiltDocumentCategoryService categoryService,
     IBusinessDocumentStorageService? documentStorage = null) : IAsBuiltDocumentService
 {
     private const int MaxPageSize = 200;
@@ -45,20 +46,22 @@ public class AsBuiltDocumentService(
             .Select(g => new { Status = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Status.ToString(), x => x.Count, ct);
         var categoryCounts = await scope
-            .GroupBy(a => a.Category)
-            .Select(g => new { Category = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Category.ToString(), x => x.Count, ct);
+            .Include(a => a.Category)
+            .GroupBy(a => a.Category.Code)
+            .Select(g => new { CategoryCode = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CategoryCode, x => x.Count, ct);
 
         // Completeness only makes sense when we're looking at one project.
         var completedRequired = 0;
+        var requiredCategoryIds = await categoryService.GetRequiredCategoryIdsAsync();
         if (p.DesignProjectId.HasValue)
         {
-            var approvedCats = await scope
+            var approvedCatIds = await scope
                 .Where(a => a.Status == AsBuiltStatus.Approved || a.Status == AsBuiltStatus.Archived)
-                .Select(a => a.Category)
+                .Select(a => a.CategoryId)
                 .Distinct()
                 .ToListAsync(ct);
-            completedRequired = AsBuiltCategoryExtensions.Required.Count(approvedCats.Contains);
+            completedRequired = requiredCategoryIds.Count(approvedCatIds.Contains);
         }
 
         return new AsBuiltDocumentListResponse
@@ -70,7 +73,7 @@ public class AsBuiltDocumentService(
             StatusCounts = statusCounts,
             CategoryCounts = categoryCounts,
             CompletedRequiredCategories = completedRequired,
-            TotalRequiredCategories = AsBuiltCategoryExtensions.Required.Length,
+            TotalRequiredCategories = requiredCategoryIds.Length,
         };
     }
 
@@ -87,6 +90,7 @@ public class AsBuiltDocumentService(
         var entity = await db.AsBuiltDocuments
             .AsNoTracking()
             .Include(a => a.DesignProject)
+            .Include(a => a.Category)
             .Include(a => a.SubmittedBy)
             .Include(a => a.ApprovedBy)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
@@ -104,10 +108,8 @@ public class AsBuiltDocumentService(
         {
             throw new AsBuiltDocumentOperationException("Tiêu đề tài liệu là bắt buộc.");
         }
-        if (!Enum.TryParse<AsBuiltCategory>(request.Category, true, out var category))
-        {
-            throw new AsBuiltDocumentOperationException($"Danh mục '{request.Category}' không hợp lệ.");
-        }
+
+        var categoryId = await categoryService.ResolveCategoryIdAsync(null, request.Category);
 
         var projectExists = await db.DesignProjects.AnyAsync(dp => dp.Id == request.DesignProjectId, ct);
         if (!projectExists)
@@ -124,7 +126,7 @@ public class AsBuiltDocumentService(
             DocumentCode = code,
             Title = title,
             Description = TrimOrNull(request.Description),
-            Category = category,
+            CategoryId = categoryId,
             FileUrl = TrimOrNull(request.FileUrl),
             Note = TrimOrNull(request.Note),
             Status = AsBuiltStatus.Draft,
@@ -154,15 +156,14 @@ public class AsBuiltDocumentService(
         {
             throw new AsBuiltDocumentOperationException("Tiêu đề tài liệu là bắt buộc.");
         }
-        if (!Enum.TryParse<AsBuiltCategory>(request.Category, true, out var category))
-        {
-            throw new AsBuiltDocumentOperationException($"Danh mục '{request.Category}' không hợp lệ.");
-        }
+
+        var categoryId = await categoryService.ResolveCategoryIdAsync(null, request.Category);
+
         await EnsureUniqueTitleAsync(entity.DesignProjectId, title, entity.Id, ct);
 
         var previousFileUrl = entity.FileUrl;
         entity.Title = title;
-        entity.Category = category;
+        entity.CategoryId = categoryId;
         entity.Description = TrimOrNull(request.Description);
         entity.FileUrl = TrimOrNull(request.FileUrl);
         entity.Note = TrimOrNull(request.Note);
@@ -255,6 +256,7 @@ public class AsBuiltDocumentService(
         var query = db.AsBuiltDocuments
             .AsNoTracking()
             .Include(a => a.DesignProject)
+            .Include(a => a.Category)
             .Include(a => a.SubmittedBy)
             .Include(a => a.ApprovedBy)
             .AsQueryable();
@@ -266,15 +268,10 @@ public class AsBuiltDocumentService(
 
         if (!string.IsNullOrWhiteSpace(p.Category))
         {
-            var categories = p.Category
+            var categoryCodes = p.Category
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(value => Enum.TryParse<AsBuiltCategory>(value, true, out var parsed)
-                    ? (AsBuiltCategory?)parsed
-                    : null)
-                .Where(value => value.HasValue)
-                .Select(value => value!.Value)
                 .ToList();
-            if (categories.Count > 0) query = query.Where(a => categories.Contains(a.Category));
+            if (categoryCodes.Count > 0) query = query.Where(a => categoryCodes.Contains(a.Category.Code));
         }
 
         if (!string.IsNullOrWhiteSpace(p.Status))
@@ -432,7 +429,9 @@ public class AsBuiltDocumentService(
         DesignProjectName = e.DesignProject?.Name ?? string.Empty,
         DocumentCode = e.DocumentCode,
         Title = e.Title,
-        Category = e.Category.ToString(),
+        CategoryId = e.CategoryId,
+        Category = e.Category?.Code ?? string.Empty,
+        CategoryName = e.Category?.Name ?? string.Empty,
         Description = e.Description,
         FileUrl = e.FileUrl,
         Status = e.Status.ToString(),

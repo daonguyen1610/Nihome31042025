@@ -303,13 +303,20 @@ public class HandoverRecordsControllerTests : IntegrationTestBase
                 CreatedByUserId = actorUserId,
                 UpdatedByUserId = actorUserId,
             });
-            db.AsBuiltDocuments.AddRange(AsBuiltCategoryExtensions.Required.Select((category, index) =>
+
+            // Get required category IDs from the seeded categories
+            var requiredCategoryIds = await db.AsBuiltDocumentCategories
+                .Where(c => c.IsRequired && c.IsActive)
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            db.AsBuiltDocuments.AddRange(requiredCategoryIds.Select((categoryId, index) =>
                 new AsBuiltDocument
                 {
                     DesignProjectId = projectId,
                     DocumentCode = $"AB-{suffix}-{index}",
-                    Title = $"Approved {category}",
-                    Category = category,
+                    Title = $"Approved Category {categoryId}",
+                    CategoryId = categoryId,
                     Status = AsBuiltStatus.Approved,
                     ApprovedAt = DateTime.UtcNow,
                     ApprovedByUserId = actorUserId,

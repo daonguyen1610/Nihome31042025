@@ -139,6 +139,9 @@
     { "module": "construction.asbuilt", "action": "manage" },
     { "module": "construction.asbuilt", "action": "approve" },
 
+    { "module": "construction.asbuilt-categories", "action": "view" },
+    { "module": "construction.asbuilt-categories", "action": "manage" },
+
     { "module": "construction.handover", "action": "view" },
     { "module": "construction.handover", "action": "view.all" },
     { "module": "construction.handover", "action": "manage" },
