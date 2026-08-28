@@ -1,8 +1,9 @@
-import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BriefcaseBusiness, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, ExternalLink, FileText, Pencil, Plus, RefreshCcw, Search, ShoppingCart, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -230,11 +231,100 @@ const OperationalProjects = () => {
 
           {detail.note && <section className="rounded-lg border bg-card p-4"><h2 className="mb-2 font-medium">{t("operationalProjects.field.note")}</h2><p className="whitespace-pre-wrap text-sm text-muted-foreground">{detail.note}</p></section>}
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            <RelatedSection title={t("operationalProjects.related.opportunities")} empty={t("operationalProjects.related.empty")}>{detail.opportunities.map(item => <RelatedLink key={item.id} href={`/admin/opportunities/${item.id}`} title={item.name} subtitle={t(`opportunities.stage.${item.stage}`)} />)}</RelatedSection>
-            <RelatedSection title={t("operationalProjects.related.quotes")} empty={t("operationalProjects.related.empty")}>{detail.quotes.map(item => <RelatedLink key={item.id} href={`/admin/quotes/${item.id}`} title={item.code} subtitle={`${t(`quotes.status.${item.status}`)} · ${currencyFormat.format(item.grandTotal)}`} />)}</RelatedSection>
-            <RelatedSection title={t("operationalProjects.related.contracts")} empty={t("operationalProjects.related.empty")}>{detail.contracts.map(item => <RelatedLink key={item.id} href={`/admin/contracts/${item.id}`} title={item.contractNumber} subtitle={`${t(`contracts.status.${item.status}`)} · ${currencyFormat.format(item.value)}`} />)}</RelatedSection>
-          </div>
+          <Accordion type="multiple" defaultValue={["opportunities", "quotes", "contracts"]} className="space-y-3">
+            <AccordionItem value="opportunities" className="rounded-lg border bg-card px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-3">
+                  <BriefcaseBusiness className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{t("operationalProjects.related.opportunities")}</span>
+                  <Badge variant="secondary" className="ml-1">{detail.opportunities.length}</Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                {detail.opportunities.length === 0 ? (
+                  <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {detail.opportunities.map(item => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{item.name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{t(`opportunities.stage.${item.stage}`)}</p>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/admin/opportunities/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="quotes" className="rounded-lg border bg-card px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{t("operationalProjects.related.quotes")}</span>
+                  <Badge variant="secondary" className="ml-1">{detail.quotes.length}</Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                {detail.quotes.length === 0 ? (
+                  <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {detail.quotes.map(item => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium font-mono">{item.code}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="text-xs">{t(`quotes.status.${item.status}`)}</Badge>
+                            <span>{currencyFormat.format(item.grandTotal)}</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/admin/quotes/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="contracts" className="rounded-lg border bg-card px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-3">
+                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{t("operationalProjects.related.contracts")}</span>
+                  <Badge variant="secondary" className="ml-1">{detail.contracts.length}</Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                {detail.contracts.length === 0 ? (
+                  <p className="py-2 text-sm text-muted-foreground">{t("operationalProjects.related.empty")}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {detail.contracts.map(item => (
+                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium font-mono">{item.contractNumber}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="text-xs">{t(`contracts.status.${item.status}`)}</Badge>
+                            <span>{currencyFormat.format(item.value)}</span>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/admin/contracts/${item.id}`}><ExternalLink className="h-4 w-4" /></Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       ) : (
         <div className="space-y-5">
@@ -274,7 +364,5 @@ const OperationalProjects = () => {
 
 const Summary = ({ label, value, href }: { label: string; value: string; href?: string }) => <div className="rounded-lg border bg-card p-4"><p className="text-xs text-muted-foreground">{label}</p>{href ? <Link className="mt-1 block font-medium text-primary hover:underline" to={href}>{value}</Link> : <p className="mt-1 font-medium">{value}</p>}</div>;
 const Count = ({ value, label }: { value: number; label: string }) => <div><strong className="block text-base">{value}</strong><span className="text-muted-foreground">{label}</span></div>;
-const RelatedSection = ({ title, empty, children }: { title: string; empty: string; children: ReactNode }) => <section className="rounded-lg border bg-card p-4"><h2 className="mb-3 flex items-center gap-2 font-semibold"><BriefcaseBusiness className="h-4 w-4" />{title}</h2><div className="space-y-2">{Children.count(children) ? children : <p className="text-sm text-muted-foreground">{empty}</p>}</div></section>;
-const RelatedLink = ({ href, title, subtitle }: { href: string; title: string; subtitle: string }) => <Link className="block rounded-md border p-3 hover:bg-muted/50" to={href}><p className="font-medium">{title}</p><p className="mt-1 text-xs text-muted-foreground">{subtitle}</p></Link>;
 
 export default OperationalProjects;
