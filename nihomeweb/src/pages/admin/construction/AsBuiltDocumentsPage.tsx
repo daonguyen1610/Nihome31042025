@@ -120,6 +120,7 @@ export default function AsBuiltDocumentsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formProjectId, setFormProjectId] = useState<number | undefined>(); // For create dialog
 
   const [pendingTransition, setPendingTransition] = useState<{
     id: number;
@@ -209,7 +210,17 @@ export default function AsBuiltDocumentsPage() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ title: "", category: "Drawing", description: "", fileUrl: "", note: "" });
+    // Pre-select first active category if available
+    const firstActiveCategory = categories.find(c => c.isActive);
+    setForm({ 
+      title: "", 
+      category: firstActiveCategory?.code || "Drawing", 
+      description: "", 
+      fileUrl: "", 
+      note: "" 
+    });
+    // Pre-select current filter project if set, otherwise leave empty for user to choose
+    setFormProjectId(projectId);
     setFormError(null);
     setFormOpen(true);
   };
@@ -223,6 +234,7 @@ export default function AsBuiltDocumentsPage() {
       fileUrl: r.fileUrl ?? "",
       note: r.note ?? "",
     });
+    setFormProjectId(undefined); // Not needed for edit
     setFormError(null);
     setFormOpen(true);
   };
@@ -234,7 +246,8 @@ export default function AsBuiltDocumentsPage() {
       setFormError(t("asbuilt.form.required.title"));
       return;
     }
-    if (!editingId && projectId == null) {
+    // For new documents, require project selection in dialog
+    if (!editingId && formProjectId == null) {
       setFormError(t("asbuilt.form.required.project"));
       return;
     }
@@ -260,7 +273,7 @@ export default function AsBuiltDocumentsPage() {
       } else {
         await adminApi.createAsBuiltDocument({
           ...payload,
-          designProjectId: projectId!,
+          designProjectId: formProjectId!,
         } as CreateAsBuiltDocumentRequest);
       }
       toast({ title: t("asbuilt.form.saved") });
@@ -475,7 +488,7 @@ export default function AsBuiltDocumentsPage() {
               {t("common.refresh")}
             </Button>
             {canManage && (
-              <Button size="sm" onClick={openCreate} data-testid="asbuilt-new" disabled={projectId == null}>
+              <Button size="sm" onClick={openCreate} data-testid="asbuilt-new">
                 <Plus className="mr-2 h-4 w-4" />
                 {t("asbuilt.action.new")}
               </Button>
@@ -962,13 +975,28 @@ export default function AsBuiltDocumentsPage() {
             <DialogTitle>
               {editingId ? t("asbuilt.form.editTitle") : t("asbuilt.form.newTitle")}
             </DialogTitle>
-            <DialogDescription>
-              {projects.find((p) => p.id === projectId)?.name}
-            </DialogDescription>
+            {editingId && (
+              <DialogDescription>
+                {projects.find((p) => p.id === projectId)?.name}
+              </DialogDescription>
+            )}
           </DialogHeader>
           <div className="space-y-3">
+            {/* Project selector - only show when creating new document */}
+            {!editingId && (
+              <div>
+                <Label>{t("asbuilt.field.project")} *</Label>
+                <SearchableSelect
+                  options={projects.map((p) => ({ value: String(p.id), label: p.name }))}
+                  value={formProjectId != null ? String(formProjectId) : ""}
+                  onChange={(v) => setFormProjectId(v ? Number(v) : undefined)}
+                  placeholder={t("asbuilt.form.selectProject")}
+                  data-testid="asbuilt-form-project"
+                />
+              </div>
+            )}
             <div>
-              <Label>{t("asbuilt.field.title")}</Label>
+              <Label>{t("asbuilt.field.title")} *</Label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -976,7 +1004,7 @@ export default function AsBuiltDocumentsPage() {
               />
             </div>
             <div>
-              <Label>{t("asbuilt.field.category")}</Label>
+              <Label>{t("asbuilt.field.category")} *</Label>
               <Select
                 value={form.category}
                 onValueChange={(v) => setForm({ ...form, category: v as AsBuiltCategory })}
