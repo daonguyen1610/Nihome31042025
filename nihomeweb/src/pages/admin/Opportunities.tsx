@@ -340,7 +340,10 @@ const AdminOpportunities = () => {
     setLostReason("");
     setLostNote("");
     setWonQuote("");
-    if (searchParams.has("open")) {
+    if (routeId) {
+      // If opened via URL path like /admin/opportunities/6, navigate back to list
+      navigate("/admin/opportunities", { replace: true });
+    } else if (searchParams.has("open")) {
       setSearchParams((current) => {
         const next = new URLSearchParams(current);
         next.delete("open");
