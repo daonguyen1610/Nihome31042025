@@ -193,6 +193,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/construction/punchlist", label: t("nav.constructionPunch"), icon: ShieldAlert, permission: ADMIN_PERMS.constructionPunch },
           { to: "/admin/construction/acceptance", label: t("nav.constructionAcceptance"), icon: ClipboardCheck, permission: ADMIN_PERMS.constructionAcceptance },
           { to: "/admin/construction/asbuilt", label: t("nav.constructionAsBuilt"), icon: FolderArchive, permission: ADMIN_PERMS.constructionAsBuilt },
+          { to: "/admin/construction/asbuilt-categories", label: t("nav.constructionAsBuiltCategories"), icon: FolderTree, permission: ADMIN_PERMS.constructionAsBuiltCategories },
           { to: "/admin/construction/handover", label: t("nav.constructionHandover"), icon: PackageCheck, permission: ADMIN_PERMS.constructionHandover },
         ],
       },

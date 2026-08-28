@@ -76,6 +76,7 @@
 
   { "key": "asbuilt.form.newTitle", "category": "construction", "vi": "Tạo tài liệu hoàn công", "en": "Create as-built document", "zh": "创建竣工资料", "ja": "竣工資料を作成" },
   { "key": "asbuilt.form.editTitle", "category": "construction", "vi": "Cập nhật tài liệu hoàn công", "en": "Update as-built document", "zh": "更新竣工资料", "ja": "竣工資料を更新" },
+  { "key": "asbuilt.form.selectProject", "category": "construction", "vi": "Chọn dự án...", "en": "Select project...", "zh": "选择项目...", "ja": "プロジェクトを選択..." },
   { "key": "asbuilt.form.save", "category": "construction", "vi": "Lưu", "en": "Save", "zh": "保存", "ja": "保存" },
   { "key": "asbuilt.form.saving", "category": "construction", "vi": "Đang lưu…", "en": "Saving…", "zh": "保存中…", "ja": "保存中…" },
   { "key": "asbuilt.form.required.title", "category": "construction", "vi": "Tiêu đề là bắt buộc.", "en": "Title is required.", "zh": "标题为必填。", "ja": "タイトルは必須です。" },
@@ -99,5 +100,26 @@
   { "key": "asbuilt.toast.bulkDeleted", "category": "construction", "vi": "Đã xoá {count} tài liệu.", "en": "Deleted {count} documents.", "zh": "已删除 {count} 份资料。", "ja": "{count}件の資料を削除しました。" },
   { "key": "asbuilt.toast.bulkSkipped", "category": "construction", "vi": "Bỏ qua {count} tài liệu đã duyệt/lưu trữ.", "en": "Skipped {count} approved/archived documents.", "zh": "已跳过 {count} 份已批准/已归档资料。", "ja": "{count}件の承認済み・アーカイブ済み資料をスキップしました。" },
   { "key": "asbuilt.toast.transition.success", "category": "construction", "vi": "Cập nhật trạng thái thành công.", "en": "Status updated.", "zh": "状态已更新。", "ja": "ステータスを更新しました。" },
-  { "key": "asbuilt.toast.exported", "category": "construction", "vi": "Đã xuất danh sách hồ sơ hoàn công.", "en": "As-built documents exported.", "zh": "竣工资料已导出。", "ja": "竣工資料を出力しました。" }
+  { "key": "asbuilt.toast.exported", "category": "construction", "vi": "Đã xuất danh sách hồ sơ hoàn công.", "en": "As-built documents exported.", "zh": "竣工资料已导出。", "ja": "竣工資料を出力しました。" },
+
+  { "key": "nav.constructionAsBuiltCategories", "category": "nav", "vi": "Danh mục hồ sơ HC", "en": "As-built categories", "zh": "竣工资料类别", "ja": "竣工資料カテゴリ" },
+
+  { "key": "asbuiltCat.title", "category": "construction", "vi": "Danh mục hồ sơ hoàn công", "en": "As-built document categories", "zh": "竣工资料类别", "ja": "竣工資料カテゴリ" },
+  { "key": "asbuiltCat.action.new", "category": "construction", "vi": "Thêm danh mục", "en": "Add category", "zh": "添加类别", "ja": "カテゴリを追加" },
+  { "key": "asbuiltCat.form.titleCreate", "category": "construction", "vi": "Thêm danh mục mới", "en": "Add new category", "zh": "添加新类别", "ja": "新しいカテゴリを追加" },
+  { "key": "asbuiltCat.form.titleEdit", "category": "construction", "vi": "Chỉnh sửa danh mục", "en": "Edit category", "zh": "编辑类别", "ja": "カテゴリを編集" },
+  { "key": "asbuiltCat.field.code", "category": "construction", "vi": "Mã", "en": "Code", "zh": "编码", "ja": "コード" },
+  { "key": "asbuiltCat.field.name", "category": "construction", "vi": "Tên danh mục", "en": "Category name", "zh": "类别名称", "ja": "カテゴリ名" },
+  { "key": "asbuiltCat.field.nameVi", "category": "construction", "vi": "Tên tiếng Việt", "en": "Vietnamese name", "zh": "越南语名称", "ja": "ベトナム語名" },
+  { "key": "asbuiltCat.field.nameEn", "category": "construction", "vi": "Tên tiếng Anh", "en": "English name", "zh": "英语名称", "ja": "英語名" },
+  { "key": "asbuiltCat.field.nameZh", "category": "construction", "vi": "Tên tiếng Trung", "en": "Chinese name", "zh": "中文名称", "ja": "中国語名" },
+  { "key": "asbuiltCat.field.nameJa", "category": "construction", "vi": "Tên tiếng Nhật", "en": "Japanese name", "zh": "日语名称", "ja": "日本語名" },
+  { "key": "asbuiltCat.field.isRequired", "category": "construction", "vi": "Bắt buộc", "en": "Required", "zh": "必需", "ja": "必須" },
+  { "key": "asbuiltCat.field.isActive", "category": "construction", "vi": "Kích hoạt", "en": "Active", "zh": "启用", "ja": "有効" },
+  { "key": "asbuiltCat.field.sortOrder", "category": "construction", "vi": "Thứ tự", "en": "Sort order", "zh": "排序", "ja": "並び順" },
+  { "key": "asbuiltCat.hint.codeReadonly", "category": "construction", "vi": "Mã không thể thay đổi sau khi tạo.", "en": "Code cannot be changed after creation.", "zh": "创建后无法更改编码。", "ja": "作成後にコードを変更することはできません。" },
+  { "key": "asbuiltCat.error.codeRequired", "category": "construction", "vi": "Vui lòng nhập mã danh mục.", "en": "Please enter a category code.", "zh": "请输入类别编码。", "ja": "カテゴリコードを入力してください。" },
+  { "key": "asbuiltCat.error.nameRequired", "category": "construction", "vi": "Vui lòng nhập tên danh mục.", "en": "Please enter a category name.", "zh": "请输入类别名称。", "ja": "カテゴリ名を入力してください。" },
+  { "key": "asbuiltCat.delete.title", "category": "construction", "vi": "Xoá danh mục", "en": "Delete category", "zh": "删除类别", "ja": "カテゴリを削除" },
+  { "key": "asbuiltCat.delete.confirm", "category": "construction", "vi": "Bạn có chắc muốn xoá danh mục \"{name}\"? Danh mục đang được sử dụng sẽ không thể xoá.", "en": "Are you sure you want to delete the category \"{name}\"? Categories in use cannot be deleted.", "zh": "您确定要删除类别"{name}"吗？正在使用的类别无法删除。", "ja": "カテゴリ「{name}」を削除してもよろしいですか？使用中のカテゴリは削除できません。" }
 ]
