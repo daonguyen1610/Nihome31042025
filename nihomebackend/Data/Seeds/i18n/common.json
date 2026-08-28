@@ -1032,6 +1032,14 @@
     "ja": "すべて選択"
   },
   {
+    "key": "common.selectItem",
+    "category": "common",
+    "vi": "Chọn mục",
+    "en": "Select item",
+    "zh": "选择项目",
+    "ja": "項目を選択"
+  },
+  {
     "key": "common.deselectAll",
     "category": "common",
     "vi": "Bỏ chọn tất cả",
