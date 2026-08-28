@@ -196,16 +196,16 @@ public class OperationalProjectServiceTests : IDisposable
     private static UpdateOperationalProjectRequest ValidUpdate(
         OperationalProjectResponse current,
         OperationalProjectStatus status) => new()
-    {
-        Name = current.Name,
-        CustomerId = current.CustomerId,
-        ProjectManagerUserId = current.ProjectManagerUserId,
-        StartDate = current.StartDate,
-        EndDate = current.EndDate,
-        Note = current.Note,
-        Status = status,
-        RowVersion = current.RowVersion,
-    };
+        {
+            Name = current.Name,
+            CustomerId = current.CustomerId,
+            ProjectManagerUserId = current.ProjectManagerUserId,
+            StartDate = current.StartDate,
+            EndDate = current.EndDate,
+            Note = current.Note,
+            Status = status,
+            RowVersion = current.RowVersion,
+        };
 
     private ApplicationUser AddUser(string phone, string name)
     {
