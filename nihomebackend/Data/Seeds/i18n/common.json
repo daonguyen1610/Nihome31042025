@@ -56,6 +56,38 @@
     "ja": "オフ"
   },
   {
+    "key": "common.yes",
+    "category": "common",
+    "vi": "Có",
+    "en": "Yes",
+    "zh": "是",
+    "ja": "はい"
+  },
+  {
+    "key": "common.no",
+    "category": "common",
+    "vi": "Không",
+    "en": "No",
+    "zh": "否",
+    "ja": "いいえ"
+  },
+  {
+    "key": "common.active",
+    "category": "common",
+    "vi": "Kích hoạt",
+    "en": "Active",
+    "zh": "启用",
+    "ja": "有効"
+  },
+  {
+    "key": "common.inactive",
+    "category": "common",
+    "vi": "Vô hiệu",
+    "en": "Inactive",
+    "zh": "禁用",
+    "ja": "無効"
+  },
+  {
     "key": "common.cancel",
     "category": "common",
     "vi": "Huỷ",
