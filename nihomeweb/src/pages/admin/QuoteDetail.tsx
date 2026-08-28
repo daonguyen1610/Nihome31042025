@@ -310,8 +310,9 @@ const AdminQuoteDetail = () => {
     }
   };
 
-  const runWorkflow = async () => {
-    if (!workflow || !quote) return;
+  const runWorkflow = async (kind?: WorkflowKind) => {
+    const targetWorkflow = kind ?? workflow;
+    if (!targetWorkflow || !quote) return;
     setWorkflowBusy(true);
     try {
       const body = { note: workflowNote.trim() || undefined, rowVersion: quote.rowVersion };
@@ -324,12 +325,12 @@ const AdminQuoteDetail = () => {
         customerReject: () => adminApi.markQuoteCustomerRejected(quote.id, body),
         cancel: () => adminApi.cancelQuote(quote.id, body),
       };
-      const { data } = await fn[workflow]();
+      const { data } = await fn[targetWorkflow]();
       setQuote(data);
       setForm(toFormState(data));
       setWorkflow(null);
       setWorkflowNote("");
-      toast({ title: t(`quotes.action.${workflow}`) });
+      toast({ title: t(`quotes.action.${targetWorkflow}`) });
     } catch (err) {
       toast({
         title: t("common.error"),
@@ -339,6 +340,18 @@ const AdminQuoteDetail = () => {
       if (isConcurrencyConflict(err)) await load();
     } finally {
       setWorkflowBusy(false);
+    }
+  };
+
+  // Actions that can run directly without a dialog (note is optional)
+  const directActions: WorkflowKind[] = ["submit", "approve", "rejectInternal", "send", "customerApprove"];
+
+  const handleWorkflowClick = (k: WorkflowKind) => {
+    if (directActions.includes(k)) {
+      void runWorkflow(k);
+    } else {
+      setWorkflowNote("");
+      setWorkflow(k);
     }
   };
 
@@ -487,11 +500,12 @@ const AdminQuoteDetail = () => {
               <Button
                 key={k}
                 variant={k === "rejectInternal" || k === "customerReject" || k === "cancel" ? "outline" : "default"}
-                onClick={() => { setWorkflowNote(""); setWorkflow(k); }}
+                onClick={() => handleWorkflowClick(k)}
                 disabled={
-                  (k === "approve" || k === "rejectInternal") ? !canApprove
+                  workflowBusy ||
+                  ((k === "approve" || k === "rejectInternal") ? !canApprove
                   : k === "send" ? !canSend
-                  : !canManage
+                  : !canManage)
                 }
               >
                 {workflowIcon(k)}

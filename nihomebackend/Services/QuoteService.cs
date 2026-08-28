@@ -391,8 +391,6 @@ public class QuoteService(
             rowVersion: req.RowVersion,
             beforeSave: q =>
             {
-                if (string.IsNullOrWhiteSpace(req.Note))
-                    throw new QuoteOperationException("Từ chối phải kèm ghi chú.");
                 q.SubmittedAt = null;
                 q.SubmittedByUserId = null;
             }, ct);
