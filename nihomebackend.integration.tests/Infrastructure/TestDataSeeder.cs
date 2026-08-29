@@ -28,7 +28,12 @@ public static class TestDataSeeder
             ["SALE"] = "0911000003",
             ["SALES_MANAGER"] = "0911000010",
             ["DESIGN"] = "0911000004",
+            ["DESIGN_LEAD"] = "0911000011",
+            ["ARCHITECT"] = "0911000012",
+            ["MEP_ENGINEER"] = "0911000013",
+            ["STRUCT_ENGINEER"] = "0911000014",
             ["PM"] = "0911000005",
+            ["LEGAL_OFFICER"] = "0911000015",
             ["QS"] = "0911000006",
             ["ACCOUNTANT"] = "0911000007",
             ["WAREHOUSE"] = "0911000008",
@@ -85,6 +90,7 @@ public static class TestDataSeeder
         // Seed master-data catalogue so CRM/Design/Permit lookup endpoints
         // have something to return.
         MasterDataSeeder.Seed(db);
+        SeedAsBuiltDocumentCategories(db);
 
         // Seed notification templates so NotifyFromTemplateAsync has
         // something to resolve.
@@ -111,6 +117,74 @@ public static class TestDataSeeder
             });
             db.SaveChanges();
         }
+    }
+
+    private static void SeedAsBuiltDocumentCategories(AppDbContext db)
+    {
+        if (db.AsBuiltDocumentCategories.Any()) return;
+
+        db.AsBuiltDocumentCategories.AddRange(
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.Drawing,
+                Name = "Bản vẽ hoàn công",
+                NameVi = "Bản vẽ hoàn công",
+                NameEn = "As-built drawings",
+                NameZh = "竣工图纸",
+                NameJa = "竣工図面",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 1,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.AcceptanceMinute,
+                Name = "Biên bản nghiệm thu",
+                NameVi = "Biên bản nghiệm thu",
+                NameEn = "Acceptance minutes",
+                NameZh = "验收记录",
+                NameJa = "検収議事録",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 2,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.TestReport,
+                Name = "Báo cáo thí nghiệm",
+                NameVi = "Báo cáo thí nghiệm",
+                NameEn = "Test reports",
+                NameZh = "测试报告",
+                NameJa = "試験報告書",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 3,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.WarrantyCertificate,
+                Name = "Chứng chỉ bảo hành",
+                NameVi = "Chứng chỉ bảo hành",
+                NameEn = "Warranty certificates",
+                NameZh = "保修证书",
+                NameJa = "保証書",
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = 4,
+            },
+            new AsBuiltDocumentCategory
+            {
+                Code = AsBuiltCategoryCodes.Other,
+                Name = "Tài liệu khác",
+                NameVi = "Tài liệu khác",
+                NameEn = "Other supporting documents",
+                NameZh = "其他支持文件",
+                NameJa = "その他の書類",
+                IsRequired = false,
+                IsActive = true,
+                SortOrder = 5,
+            });
+        db.SaveChanges();
     }
 
     private static void SeedBusinessRoleUsers(AppDbContext db, PasswordService password)

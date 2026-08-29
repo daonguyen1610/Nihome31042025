@@ -54,7 +54,11 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
         response.request().method() === "PUT" && /\/api\/contracts\/\d+$/.test(response.url()),
     );
     await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
-    expect((await updateResponse).ok()).toBe(true);
+    const response = await updateResponse;
+    expect(
+        response.ok(),
+        `Contract update failed with ${response.status()}: ${await response.text()}`,
+    ).toBe(true);
     await expect(editForm).toBeHidden();
 
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);

@@ -52,6 +52,9 @@ public class SampleContractSeederTests : IDisposable
         {
             var opportunity = _db.Opportunities.Single(item => item.Id == contract.OpportunityId);
             Assert.Equal(opportunity.CustomerId, contract.CustomerId);
+            Assert.NotNull(contract.OperationalProjectId);
+            var operationalProject = _db.OperationalProjects.Single(item => item.Id == contract.OperationalProjectId);
+            Assert.Equal(contract.CustomerId, operationalProject.CustomerId);
             if (contract.QuoteId.HasValue)
             {
                 var quote = _db.Quotes.Single(item => item.Id == contract.QuoteId.Value);
@@ -82,6 +85,54 @@ public class SampleContractSeederTests : IDisposable
         var numbers = _db.Contracts.Select(c => c.ContractNumber).ToList();
         Assert.Equal(numbers.Count, numbers.Distinct().Count());
         Assert.All(numbers, n => Assert.StartsWith("HD-", n));
+    }
+
+    [Fact]
+    public void Seed_AsBuiltCategoriesHaveCompleteTranslations()
+    {
+        SampleCrmDataSeeder.Seed(_db);
+
+        var categories = _db.AsBuiltDocumentCategories.OrderBy(item => item.SortOrder).ToList();
+        Assert.Equal(
+            [
+                AsBuiltCategoryCodes.Drawing,
+                AsBuiltCategoryCodes.AcceptanceMinute,
+                AsBuiltCategoryCodes.TestReport,
+                AsBuiltCategoryCodes.WarrantyCertificate,
+                AsBuiltCategoryCodes.Other,
+            ],
+            categories.Select(item => item.Code));
+        Assert.Equal(4, categories.Count(item => item.IsRequired));
+        Assert.All(categories, category =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(category.NameVi));
+            Assert.False(string.IsNullOrWhiteSpace(category.NameEn));
+            Assert.False(string.IsNullOrWhiteSpace(category.NameZh));
+            Assert.False(string.IsNullOrWhiteSpace(category.NameJa));
+        });
+    }
+
+    [Fact]
+    public void Seed_RepairsStaleSampleOperationalProjectRelationships()
+    {
+        SampleCrmDataSeeder.Seed(_db);
+        var contract = _db.Contracts.OrderBy(item => item.Id).First();
+        var opportunity = _db.Opportunities.Single(item => item.Id == contract.OpportunityId);
+        var quote = _db.Quotes.Single(item => item.Id == contract.QuoteId);
+        var mismatchedProject = _db.OperationalProjects.First(item => item.CustomerId != contract.CustomerId);
+        contract.OperationalProjectId = mismatchedProject.Id;
+        opportunity.OperationalProjectId = mismatchedProject.Id;
+        quote.OperationalProjectId = mismatchedProject.Id;
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.Equal(contract.CustomerId,
+            _db.OperationalProjects.Single(item => item.Id == contract.OperationalProjectId).CustomerId);
+        Assert.Equal(opportunity.CustomerId,
+            _db.OperationalProjects.Single(item => item.Id == opportunity.OperationalProjectId).CustomerId);
+        Assert.Equal(opportunity.CustomerId,
+            _db.OperationalProjects.Single(item => item.Id == quote.OperationalProjectId).CustomerId);
     }
 
     [Fact]

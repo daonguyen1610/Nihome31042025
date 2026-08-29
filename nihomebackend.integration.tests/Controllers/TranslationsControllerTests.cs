@@ -135,6 +135,64 @@ public class TranslationsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task EntityTranslations_DesignLead_CanSaveAndReset()
+    {
+        var entityId = await WithDbAsync(async db =>
+        {
+            var slideshow = new SlideshowItem
+            {
+                Slug = UniqueSlug("design-lead-translation"),
+                ImageUrl = "/images/design-lead-translation.jpg",
+                Title = "Nội dung gốc",
+                IsActive = true,
+            };
+            db.SlideshowItems.Add(slideshow);
+            await db.SaveChangesAsync();
+            return slideshow.Id;
+        });
+
+        try
+        {
+            await AuthTestHelper.AuthenticateAsync(
+                Client,
+                client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN_LEAD"));
+
+            var saveResponse = await Client.PostAsJsonAsync(
+                $"/api/translations/entity/Slideshow/{entityId}",
+                new
+                {
+                    languageCode = "en",
+                    translations = new Dictionary<string, string> { ["Title"] = "Design lead translation" },
+                });
+            saveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            await WithDbAsync(async db =>
+            {
+                var translation = await db.EntityTranslations.SingleAsync(item =>
+                    item.EntityType == EntityTypes.Slideshow && item.EntityId == entityId);
+                translation.Value.Should().Be("Design lead translation");
+            });
+
+            (await Client.DeleteAsync($"/api/translations/entity/Slideshow/{entityId}"))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+            await WithDbAsync(async db =>
+            {
+                (await db.EntityTranslations.AnyAsync(item =>
+                    item.EntityType == EntityTypes.Slideshow && item.EntityId == entityId)).Should().BeFalse();
+            });
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                db.EntityTranslations.RemoveRange(db.EntityTranslations.Where(translation =>
+                    translation.EntityType == EntityTypes.Slideshow && translation.EntityId == entityId));
+                db.SlideshowItems.RemoveRange(db.SlideshowItems.Where(item => item.Id == entityId));
+                await db.SaveChangesAsync();
+            });
+        }
+    }
+
+    [Fact]
     public async Task Slideshow_TranslationRoundTrip_UpdatesStatusAndPublicContent()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);

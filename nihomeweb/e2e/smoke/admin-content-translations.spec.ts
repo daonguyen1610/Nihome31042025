@@ -46,12 +46,18 @@ async function openEntityType(page: Page, entityType: string) {
   return body.items;
 }
 
-async function openEntityEditor(page: Page, entityId: number) {
+async function openEntityEditor(page: Page, entityType: string, entityId: number) {
   const card = page.locator("div.rounded-lg.border.bg-card", {
     has: page.getByText(`#${entityId}`, { exact: true }),
   });
   await expect(card).toBeVisible();
+  const responsePromise = page.waitForResponse((response) =>
+    response.url().includes(`/api/translations/entity/${entityType}/${entityId}`)
+      && response.request().method() === "GET",
+  );
   await card.getByRole("button").click();
+  const response = await responsePromise;
+  expect(response.ok(), `load ${entityType} #${entityId} translation detail`).toBeTruthy();
   const editor = page.getByRole("dialog");
   await expect(editor).toBeVisible();
   return editor;
@@ -80,7 +86,7 @@ test.describe("Content translations — browser coverage", () => {
       const items = await openEntityType(page, entityType.type);
       expect(items.length, `${entityType.label} needs seeded showcase data`).toBeGreaterThan(0);
 
-      const editor = await openEntityEditor(page, items[0].id);
+      const editor = await openEntityEditor(page, entityType.type, items[0].id);
       await expect(editor.getByText(`${entityType.label} #${items[0].id}`, { exact: true })).toBeVisible();
       await expect(editor.locator("textarea")).toHaveCount(entityType.fields.length * 2);
 
@@ -125,7 +131,7 @@ test.describe("Content translations — browser coverage", () => {
       await loginInBrowserAs(page, TEST_USERS.admin);
       await openEntityType(page, "Slideshow");
 
-      let editor = await openEntityEditor(page, created.id);
+      let editor = await openEntityEditor(page, "Slideshow", created.id);
       await translatedField(editor, "Title").fill(translatedTitle);
       await editor.getByRole("button", { name: "Save changes", exact: true }).click();
       await expect(editor).toBeHidden();
@@ -135,7 +141,7 @@ test.describe("Content translations — browser coverage", () => {
       });
       await expect(card).toContainText("1/9");
 
-      editor = await openEntityEditor(page, created.id);
+      editor = await openEntityEditor(page, "Slideshow", created.id);
       await expect(translatedField(editor, "Title")).toHaveValue(translatedTitle);
 
       page.once("dialog", (dialog) => dialog.accept());
@@ -143,7 +149,7 @@ test.describe("Content translations — browser coverage", () => {
       await expect(editor).toBeHidden();
       await expect(card).toContainText("Not translated");
 
-      editor = await openEntityEditor(page, created.id);
+      editor = await openEntityEditor(page, "Slideshow", created.id);
       await expect(translatedField(editor, "Title")).toHaveValue("");
     } finally {
       await api.delete(`/api/slideshow/${created.id}`, {
@@ -161,7 +167,7 @@ test.describe("Content translations — browser coverage", () => {
     const items = await openEntityType(page, "About");
     expect(items.length, "About needs seeded showcase data").toBeGreaterThan(0);
 
-    const editor = await openEntityEditor(page, items[0].id);
+    const editor = await openEntityEditor(page, "About", items[0].id);
     await translatedField(editor, "Structured content items").fill("{not-valid-json");
 
     let saveRequests = 0;
@@ -186,7 +192,7 @@ test.describe("Content translations — browser coverage", () => {
     const items = await openEntityType(page, "Activity");
     expect(items.length, "Activities need seeded showcase data").toBeGreaterThan(0);
 
-    const editor = await openEntityEditor(page, items[0].id);
+    const editor = await openEntityEditor(page, "Activity", items[0].id);
     const textareas = editor.locator("textarea");
     await expect(textareas).not.toHaveCount(0);
     for (let index = 0; index < await textareas.count(); index += 1) {
@@ -194,5 +200,19 @@ test.describe("Content translations — browser coverage", () => {
     }
     await expect(editor.getByRole("button", { name: "Save changes", exact: true })).toHaveCount(0);
     await expect(editor.getByRole("button", { name: "Reset translations", exact: true })).toHaveCount(0);
+  });
+
+  test("design lead can access content translation write actions", async ({
+    page,
+    loginInBrowserAs,
+  }) => {
+    await useEnglish(page);
+    await loginInBrowserAs(page, TEST_USERS.designLead);
+    const items = await openEntityType(page, "Activity");
+    expect(items.length, "Activities need seeded showcase data").toBeGreaterThan(0);
+
+    const editor = await openEntityEditor(page, "Activity", items[0].id);
+    await expect(editor.getByRole("button", { name: "Save changes", exact: true })).toBeVisible();
+    await expect(editor.getByRole("button", { name: "Reset translations", exact: true })).toBeVisible();
   });
 });
