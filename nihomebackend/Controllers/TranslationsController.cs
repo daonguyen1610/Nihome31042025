@@ -92,6 +92,7 @@ public class TranslationsController(
             new { type = EntityTypes.ActivityCategory, display = "Activity Categories", fields = new[] { "Name" } },
             new { type = EntityTypes.NewsCategory, display = "News Categories", fields = new[] { "Name" } },
             new { type = EntityTypes.ProjectCategory, display = "Project Categories", fields = new[] { "Name" } },
+            new { type = EntityTypes.AsBuiltDocumentCategory, display = "As-built Document Categories", fields = new[] { "Name" } },
         };
         return Ok(types);
     }
@@ -200,6 +201,16 @@ public class TranslationsController(
                     translationCount = new[] { c.NameEn, c.NameZh, c.NameJa }.Count(v => !string.IsNullOrWhiteSpace(v)),
                     expectedFields = 3
                 }),
+            EntityTypes.AsBuiltDocumentCategory => (await db.AsBuiltDocumentCategories.AsNoTracking().OrderBy(c => c.SortOrder).ToListAsync())
+                .Select(c => new
+                {
+                    id = c.Id,
+                    title = c.NameVi,
+                    description = c.Code,
+                    hasTranslation = CountActualTranslations(c.NameVi, c.NameEn, c.NameZh, c.NameJa) > 0,
+                    translationCount = CountActualTranslations(c.NameVi, c.NameEn, c.NameZh, c.NameJa),
+                    expectedFields = 3
+                }),
             _ => null
         };
 
@@ -306,7 +317,23 @@ public class TranslationsController(
                     };
                 }
                 break;
+            case EntityTypes.AsBuiltDocumentCategory:
+                var asBuiltCat = await db.AsBuiltDocumentCategories.AsNoTracking().FirstOrDefaultAsync(c => c.Id == entityId);
+                if (asBuiltCat != null)
+                {
+                    original = new() { ["Name"] = asBuiltCat.NameVi };
+                    categoryTranslations = new()
+                    {
+                        ["en"] = new() { ["Name"] = GetActualTranslation(asBuiltCat.NameVi, asBuiltCat.NameEn) },
+                        ["zh"] = new() { ["Name"] = GetActualTranslation(asBuiltCat.NameVi, asBuiltCat.NameZh) },
+                        ["ja"] = new() { ["Name"] = GetActualTranslation(asBuiltCat.NameVi, asBuiltCat.NameJa) },
+                    };
+                }
+                break;
         }
+
+        if (entityType == EntityTypes.AsBuiltDocumentCategory && original == null)
+            return NotFound();
 
         if (categoryTranslations != null)
         {
@@ -329,9 +356,21 @@ public class TranslationsController(
     public async Task<IActionResult> SaveEntityTranslations(
         string entityType, int entityId, [FromBody] SaveEntityTranslationsRequest req)
     {
-        if (entityType is EntityTypes.ActivityCategory or EntityTypes.NewsCategory or EntityTypes.ProjectCategory)
+        if (entityType is EntityTypes.ActivityCategory or EntityTypes.NewsCategory
+            or EntityTypes.ProjectCategory or EntityTypes.AsBuiltDocumentCategory)
         {
             var value = req.Translations.GetValueOrDefault("Name", "");
+            if (entityType == EntityTypes.AsBuiltDocumentCategory)
+            {
+                if (req.LanguageCode is not ("en" or "zh" or "ja"))
+                    return BadRequest(new { message = "Ngôn ngữ bản dịch phải là en, zh hoặc ja." });
+
+                value = value.Trim();
+                if (string.IsNullOrWhiteSpace(value))
+                    return BadRequest(new { message = "Tên bản dịch không được để trống. Ví dụ: As-built drawings." });
+                if (value.Length > 200)
+                    return BadRequest(new { message = "Tên bản dịch không được vượt quá 200 ký tự." });
+            }
             switch (entityType)
             {
                 case EntityTypes.ActivityCategory:
@@ -351,6 +390,12 @@ public class TranslationsController(
                     if (projCat == null) return NotFound();
                     SetCategoryLanguageField(projCat, req.LanguageCode, value);
                     projCat.UpdatedAt = DateTime.UtcNow;
+                    break;
+                case EntityTypes.AsBuiltDocumentCategory:
+                    var asBuiltCat = await db.AsBuiltDocumentCategories.FindAsync(entityId);
+                    if (asBuiltCat == null) return NotFound();
+                    SetCategoryLanguageField(asBuiltCat, req.LanguageCode, value);
+                    asBuiltCat.UpdatedAt = DateTime.UtcNow;
                     break;
             }
             await db.SaveChangesAsync();
@@ -391,6 +436,16 @@ public class TranslationsController(
         }
     }
 
+    private static void SetCategoryLanguageField(AsBuiltDocumentCategory category, string lang, string value)
+    {
+        switch (lang)
+        {
+            case "en": category.NameEn = value; break;
+            case "zh": category.NameZh = value; break;
+            case "ja": category.NameJa = value; break;
+        }
+    }
+
     /// <summary>Delete all translations for an entity.</summary>
     [HttpDelete("entity/{entityType}/{entityId:int}")]
     [RequirePermission("content.translations", "manage")]
@@ -419,11 +474,27 @@ public class TranslationsController(
                 projCat.UpdatedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync();
                 return NoContent();
+            case EntityTypes.AsBuiltDocumentCategory:
+                var asBuiltCat = await db.AsBuiltDocumentCategories.FindAsync(entityId);
+                if (asBuiltCat == null) return NotFound();
+                asBuiltCat.NameEn = asBuiltCat.NameVi;
+                asBuiltCat.NameZh = asBuiltCat.NameVi;
+                asBuiltCat.NameJa = asBuiltCat.NameVi;
+                asBuiltCat.UpdatedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync();
+                return NoContent();
         }
 
         await entitySvc.DeleteEntityTranslationsAsync(entityType, entityId);
         return NoContent();
     }
+
+    private static int CountActualTranslations(string source, params string[] translations) =>
+        translations.Count(value => !string.IsNullOrWhiteSpace(value)
+            && !string.Equals(value, source, StringComparison.Ordinal));
+
+    private static string GetActualTranslation(string source, string translation) =>
+        string.Equals(source, translation, StringComparison.Ordinal) ? "" : translation;
 
     // Extract only the text values from IntroBlocksJson as a JSON string array.
     private static string ExtractIntroBlockTexts(string? introBlocksJson)

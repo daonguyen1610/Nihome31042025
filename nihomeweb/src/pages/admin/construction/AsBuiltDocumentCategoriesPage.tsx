@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   CheckCircle2,
   CircleOff,
@@ -58,10 +59,7 @@ type StatusFilter = "all" | "active" | "inactive";
 
 interface FormData {
   code: string;
-  nameVi: string;
-  nameEn: string;
-  nameZh: string;
-  nameJa: string;
+  name: string;
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
@@ -69,10 +67,7 @@ interface FormData {
 
 const emptyForm: FormData = {
   code: "",
-  nameVi: "",
-  nameEn: "",
-  nameZh: "",
-  nameJa: "",
+  name: "",
   isRequired: false,
   isActive: true,
   sortOrder: 0,
@@ -83,6 +78,7 @@ export default function AsBuiltDocumentCategoriesPage() {
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionAsBuiltCategoriesManage);
+  const canViewTranslations = has(ADMIN_PERMS.translations);
 
   const [items, setItems] = useState<AsBuiltDocumentCategoryResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,10 +151,7 @@ export default function AsBuiltDocumentCategoriesPage() {
     setEditingId(item.id);
     setForm({
       code: item.code,
-      nameVi: item.nameVi || item.name,
-      nameEn: item.nameEn || "",
-      nameZh: item.nameZh || "",
-      nameJa: item.nameJa || "",
+      name: item.nameVi || item.name,
       isRequired: item.isRequired,
       isActive: item.isActive,
       sortOrder: item.sortOrder,
@@ -179,7 +172,7 @@ export default function AsBuiltDocumentCategoriesPage() {
     setFormError(null);
 
     const code = form.code.trim();
-    const localizedNames = [form.nameVi, form.nameEn, form.nameZh, form.nameJa].map((name) => name.trim());
+    const name = form.name.trim();
     if (!code) {
       setFormError(t("asbuiltCat.error.codeRequired"));
       return;
@@ -192,11 +185,11 @@ export default function AsBuiltDocumentCategoriesPage() {
       setFormError(t("asbuiltCat.error.codeTooLong"));
       return;
     }
-    if (localizedNames.some((name) => !name)) {
-      setFormError(t("asbuiltCat.error.allNamesRequired"));
+    if (!name) {
+      setFormError(t("asbuiltCat.error.nameRequired"));
       return;
     }
-    if (localizedNames.some((name) => name.length > 200)) {
+    if (name.length > 200) {
       setFormError(t("asbuiltCat.error.nameTooLong"));
       return;
     }
@@ -205,10 +198,7 @@ export default function AsBuiltDocumentCategoriesPage() {
     try {
       const payload: UpsertAsBuiltDocumentCategoryRequest = {
         code,
-        nameVi: localizedNames[0],
-        nameEn: localizedNames[1],
-        nameZh: localizedNames[2],
-        nameJa: localizedNames[3],
+        name,
         isRequired: form.isRequired,
         isActive: form.isActive,
         sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
@@ -542,57 +532,28 @@ export default function AsBuiltDocumentCategoriesPage() {
             </div>
             </div>
 
-            <div className="rounded-lg border p-4">
-              <div className="mb-4">
-                <p className="text-sm font-medium">{t("asbuiltCat.form.localizedNames")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{t("asbuiltCat.form.localizedNamesHint")}</p>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="nameVi">{t("asbuiltCat.field.nameVi")} *</Label>
+              <Label htmlFor="name">{t("asbuiltCat.field.name")} *</Label>
               <Input
-                id="nameVi"
-                value={form.nameVi}
-                onChange={(e) => setForm({ ...form, nameVi: e.target.value })}
+                id="name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder={t("asbuiltCat.form.nameViPlaceholder")}
                 maxLength={200}
                 required
               />
+              <p className="text-xs text-muted-foreground">{t("asbuiltCat.hint.sourceName")}</p>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="nameEn">{t("asbuiltCat.field.nameEn")} *</Label>
-              <Input
-                id="nameEn"
-                value={form.nameEn}
-                onChange={(e) => setForm({ ...form, nameEn: e.target.value })}
-                placeholder={t("asbuiltCat.form.nameEnPlaceholder")}
-                maxLength={200}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="nameZh">{t("asbuiltCat.field.nameZh")} *</Label>
-              <Input
-                id="nameZh"
-                value={form.nameZh}
-                onChange={(e) => setForm({ ...form, nameZh: e.target.value })}
-                placeholder={t("asbuiltCat.form.nameZhPlaceholder")}
-                maxLength={200}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="nameJa">{t("asbuiltCat.field.nameJa")} *</Label>
-              <Input
-                id="nameJa"
-                value={form.nameJa}
-                onChange={(e) => setForm({ ...form, nameJa: e.target.value })}
-                placeholder={t("asbuiltCat.form.nameJaPlaceholder")}
-                maxLength={200}
-                required
-              />
-            </div>
-            </div>
+
+            <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-sky-900">{t("asbuiltCat.hint.manageTranslations")}</p>
+              {canViewTranslations && (
+                <Button asChild type="button" variant="outline" size="sm" className="shrink-0 bg-background">
+                  <Link to="/admin/translations?tab=entity&type=AsBuiltDocumentCategory">
+                    {t("asbuiltCat.action.openTranslations")}
+                  </Link>
+                </Button>
+              )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
