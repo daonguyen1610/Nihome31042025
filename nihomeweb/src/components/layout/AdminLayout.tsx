@@ -345,7 +345,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   const renderItem = (item: NavItem) => {
     const active = item.end
       ? location.pathname === item.to
-      : location.pathname.startsWith(item.to);
+      : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
     return (
       <Link
         key={item.to}
