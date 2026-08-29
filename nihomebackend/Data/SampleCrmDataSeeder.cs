@@ -57,6 +57,7 @@ public static class SampleCrmDataSeeder
         SeedHandoverRecords(db, projectManager, now);
         SeedOperationalProjects(db, owner, projectManager, now);
         RepairSampleRelationships(db, owner);
+        LinkOperationalProjectRelationships(db, owner);
     }
 
     private static void SeedLeads(AppDbContext db, ApplicationUser owner, DateTime now)
@@ -2989,7 +2990,7 @@ public static class SampleCrmDataSeeder
 
         // Link opportunities to projects matching their customer
         var opportunities = db.Opportunities
-            .Where(o => o.Name.StartsWith(SampleTag) && o.OperationalProjectId == null)
+            .Where(o => o.Name.StartsWith(SampleTag))
             .ToList();
         foreach (var opp in opportunities)
         {
@@ -3002,7 +3003,7 @@ public static class SampleCrmDataSeeder
         // Link quotes to projects matching their customer (via opportunity)
         var quotes = db.Quotes
             .Include(q => q.Opportunity)
-            .Where(q => q.Note != null && q.Note.StartsWith(SampleQuoteNoteMarker) && q.OperationalProjectId == null)
+            .Where(q => q.Note != null && q.Note.StartsWith(SampleQuoteNoteMarker))
             .ToList();
         foreach (var quote in quotes)
         {
@@ -3016,7 +3017,7 @@ public static class SampleCrmDataSeeder
         // Link contracts to projects matching their customer
         // This ensures contract and its opportunity share the same operational project
         var contracts = db.Contracts
-            .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker) && c.OperationalProjectId == null)
+            .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker))
             .ToList();
         foreach (var contract in contracts)
         {

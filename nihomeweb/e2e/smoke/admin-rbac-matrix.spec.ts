@@ -10,7 +10,7 @@ const __dirname = dirname(__filename);
 /**
  * Phase 6 — full RBAC matrix smoke against the live stack at $BASE_URL.
  *
- * Drives all 9 seeded accounts (SUPER_ADMIN, ADMIN, USER + 7 business roles)
+ * Drives both system admins and all 13 seeded business-role accounts
  * through every admin route surface and asserts:
  *  - allowed paths render without the inline 403 screen
  *  - denied paths render Forbidden (`<RequirePermission>` blocks)
@@ -47,6 +47,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/construction/punchlist",
   "/admin/construction/acceptance",
   "/admin/construction/asbuilt",
+  "/admin/construction/asbuilt-categories",
   "/admin/construction/handover",
   "/admin/activities",
   "/admin/news",
@@ -141,6 +142,7 @@ const matrix: RoleExpectation[] = [
       "/admin/construction/punchlist",
       "/admin/construction/acceptance",
       "/admin/construction/asbuilt",
+      "/admin/construction/asbuilt-categories",
       "/admin/construction/handover",
     ],
   },
@@ -168,7 +170,42 @@ const matrix: RoleExpectation[] = [
       "/admin/construction/punchlist",
       "/admin/construction/acceptance",
       "/admin/construction/asbuilt",
+      "/admin/construction/asbuilt-categories",
       "/admin/construction/handover",
+    ],
+  },
+  {
+    user: TEST_USERS.designLead,
+    allowed: [
+      "/admin", "/admin/notifications", "/admin/activities", "/admin/news",
+      "/admin/projects", "/admin/services", "/admin/categories", "/admin/about",
+      "/admin/clients", "/admin/partners", "/admin/suppliers", "/admin/awards",
+      "/admin/languages", "/admin/translations", "/admin/master-data", "/admin/workflows",
+      "/admin/processes/general", "/admin/design-projects", "/admin/operational-projects",
+      "/admin/construction/tasks", "/admin/construction/diary", "/admin/construction/punchlist",
+      "/admin/construction/acceptance", "/admin/construction/asbuilt",
+      "/admin/construction/asbuilt-categories", "/admin/construction/handover",
+    ],
+  },
+  ...[
+    TEST_USERS.architect,
+    TEST_USERS.mepEngineer,
+    TEST_USERS.structuralEngineer,
+  ].map((user): RoleExpectation => ({
+    user,
+    allowed: [
+      "/admin", "/admin/notifications", "/admin/master-data", "/admin/workflows",
+      "/admin/design-projects", "/admin/operational-projects", "/admin/construction/tasks",
+      "/admin/construction/diary", "/admin/construction/punchlist",
+      "/admin/construction/acceptance", "/admin/construction/asbuilt",
+      "/admin/construction/asbuilt-categories", "/admin/construction/handover",
+    ],
+  })),
+  {
+    user: TEST_USERS.legalOfficer,
+    allowed: [
+      "/admin", "/admin/notifications", "/admin/contracts", "/admin/design-projects",
+      "/admin/operational-projects", "/admin/permits", "/admin/master-data", "/admin/workflows",
     ],
   },
   {
