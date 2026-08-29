@@ -98,7 +98,41 @@ public class TranslationsControllerCategoryTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteEntityTranslations_ClearsAllThreeLanguageColumns_ForProjectCategory()
+    public async Task SourceIdenticalValue_CountsOnlyAfterExplicitCentralizedSave()
+    {
+        var category = new ActivityCategory
+        {
+            Name = "Studio",
+            NameVi = "Studio",
+            NameEn = "Studio",
+            NameZh = "Studio",
+            NameJa = "Studio",
+            IsActive = true,
+        };
+        _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
+
+        var before = Assert.IsType<OkObjectResult>(
+            await _sut.GetEntitiesWithTranslationStatus(EntityTypes.ActivityCategory));
+        Assert.Contains("\"translationCount\":0", JsonSerializer.Serialize(before.Value));
+
+        var saveResult = await _sut.SaveEntityTranslations(
+            EntityTypes.ActivityCategory,
+            category.Id,
+            new SaveEntityTranslationsRequest { LanguageCode = "en", Translations = new() { ["Name"] = "Studio" } });
+        Assert.IsType<OkResult>(saveResult);
+
+        var after = Assert.IsType<OkObjectResult>(
+            await _sut.GetEntitiesWithTranslationStatus(EntityTypes.ActivityCategory));
+        Assert.Contains("\"translationCount\":1", JsonSerializer.Serialize(after.Value));
+
+        var detail = Assert.IsType<OkObjectResult>(
+            await _sut.GetEntityTranslations(EntityTypes.ActivityCategory, category.Id));
+        Assert.Contains("\"en\":{\"Name\":\"Studio\"}", JsonSerializer.Serialize(detail.Value));
+    }
+
+    [Fact]
+    public async Task DeleteEntityTranslations_RestoresSourceFallback_ForProjectCategory()
     {
         var category = new ProjectCategory
         {
@@ -117,9 +151,25 @@ public class TranslationsControllerCategoryTests : IDisposable
 
         Assert.IsType<NoContentResult>(result);
         var stored = await _db.ProjectCategories.FindAsync(category.Id);
-        Assert.Equal("", stored!.NameEn);
-        Assert.Equal("", stored.NameZh);
-        Assert.Equal("", stored.NameJa);
+        Assert.Equal("Nhà máy", stored!.NameEn);
+        Assert.Equal("Nhà máy", stored.NameZh);
+        Assert.Equal("Nhà máy", stored.NameJa);
         Assert.Equal("Nhà máy", stored.NameVi);
+
+        var statusResult = Assert.IsType<OkObjectResult>(
+            await _sut.GetEntitiesWithTranslationStatus(EntityTypes.ProjectCategory));
+        Assert.Contains("\"translationCount\":0", JsonSerializer.Serialize(statusResult.Value));
+
+        var detailResult = Assert.IsType<OkObjectResult>(
+            await _sut.GetEntityTranslations(EntityTypes.ProjectCategory, category.Id));
+        var detailJson = JsonSerializer.Serialize(detailResult.Value, new JsonSerializerOptions
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        });
+        using var detail = JsonDocument.Parse(detailJson);
+        var translations = detail.RootElement.GetProperty("translations");
+        Assert.Equal("", translations.GetProperty("en").GetProperty("Name").GetString());
+        Assert.Equal("", translations.GetProperty("zh").GetProperty("Name").GetString());
+        Assert.Equal("", translations.GetProperty("ja").GetProperty("Name").GetString());
     }
 }

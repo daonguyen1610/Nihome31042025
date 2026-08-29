@@ -105,6 +105,18 @@ public class EntityTranslationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteEntityTranslations_InvalidatesCachedLanguages()
+    {
+        await _sut.SetTranslationsAsync(EType, 6, "en", new Dictionary<string, string> { ["Title"] = "Cached" });
+        await _sut.GetEntityTranslationsAsync(EType, 6, "en");
+
+        await _sut.DeleteEntityTranslationsAsync(EType, 6);
+
+        var translations = await _sut.GetEntityTranslationsAsync(EType, 6, "en");
+        Assert.Empty(translations);
+    }
+
+    [Fact]
     public async Task GetAllTranslationsForEntity_ReturnsOrderedRows()
     {
         await _sut.SetTranslationsAsync(EType, 9, "ja", new Dictionary<string, string> { ["B"] = "b" });

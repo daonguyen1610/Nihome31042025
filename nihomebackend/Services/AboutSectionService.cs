@@ -107,6 +107,7 @@ public class AboutSectionService(
         var imageUrl = entity.ImageUrl;
         db.AboutSectionContents.Remove(entity);
         await db.SaveChangesAsync();
+        await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.About, id);
         hostedImageService.DeleteIfManagedUpload(imageUrl);
         return true;
     }

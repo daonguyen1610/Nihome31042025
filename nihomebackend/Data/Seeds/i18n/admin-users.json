@@ -472,6 +472,30 @@
     "ja": "表示順"
   },
   {
+    "key": "cat.sourceNameHint",
+    "category": "cat",
+    "vi": "Đây là tên gốc tiếng Việt của danh mục.",
+    "en": "This is the category's Vietnamese source name.",
+    "zh": "这是该类别的越南语原始名称。",
+    "ja": "これはカテゴリのベトナム語の元の名前です。"
+  },
+  {
+    "key": "cat.manageTranslationsHint",
+    "category": "cat",
+    "vi": "Bản dịch tiếng Anh, Trung và Nhật được quản lý tập trung tại Dịch nội dung.",
+    "en": "English, Chinese, and Japanese translations are managed centrally in Content translations.",
+    "zh": "英语、中文和日语翻译在“内容翻译”中集中管理。",
+    "ja": "英語・中国語・日本語の翻訳は「コンテンツ翻訳」で一元管理します。"
+  },
+  {
+    "key": "cat.openTranslations",
+    "category": "cat",
+    "vi": "Mở Dịch nội dung",
+    "en": "Open content translations",
+    "zh": "打开内容翻译",
+    "ja": "コンテンツ翻訳を開く"
+  },
+  {
     "key": "cat.published",
     "category": "cat",
     "vi": "Hiển thị",

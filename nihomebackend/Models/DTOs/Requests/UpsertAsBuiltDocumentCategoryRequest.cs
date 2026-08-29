@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
-public class UpsertAsBuiltDocumentCategoryRequest : IValidatableObject
+public class UpsertAsBuiltDocumentCategoryRequest : IValidatableObject, ILegacyLocalizedCategoryRequest
 {
     /// <summary>Internal code for programmatic references (e.g. "Drawing", "AcceptanceMinute").</summary>
     [Required(ErrorMessage = "Mã danh mục là bắt buộc. Ví dụ: Drawing.")]

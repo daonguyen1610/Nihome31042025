@@ -181,7 +181,9 @@ interface TranslationPair {
 
 interface EntityTypeInfo {
   type: string;
+  displayKey: string;
   fields: string[];
+  fieldFormats: Record<string, "text" | "content" | "stringArray" | "sections" | "json">;
 }
 
 interface EntityItem {
@@ -199,6 +201,20 @@ const SUPPORTED_LANGS = ["en", "zh", "ja"] as const;
 const LANG_LABELS: Record<string, string> = { vi: "🇻🇳 VI", en: "🇺🇸 English", zh: "🇨🇳 中文", ja: "🇯🇵 日本語" };
 const ALL_LANGS = ["vi", "en", "zh", "ja"] as const;
 const PAGE_SIZE = 20;
+
+const usesPlainTextEditor = (typeInfo: EntityTypeInfo, field: string) =>
+  typeInfo.fieldFormats[field] !== "json" && JSON_FIELDS.includes(field);
+
+const prettyJson = (value: string) => {
+  if (!value.trim()) return "";
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
+};
+
+const contentFieldKey = (field: string) => `translations.contentField.${field}`;
 
 /* ─── Component ──────────────────────────────────── */
 
@@ -257,12 +273,12 @@ const TranslationsPage = () => {
       if (searchQ) params.search = searchQ;
       const { data } = await api.get<TranslationPair[]>("/translations/admin", { params });
       setPairs(data);
-    } catch {
-      toast({ title: "Error", description: "Failed to load translations", variant: "destructive" });
+    } catch (error) {
+      toast({ title: t("common.error"), description: extractApiError(error), variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [filterCat, searchQ, toast]);
+  }, [filterCat, searchQ, t, toast]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -370,15 +386,23 @@ const TranslationsPage = () => {
 
       // Convert JSON fields to plain text for display
       const orig: Record<string, string> = { ...rawOrig };
-      for (const f of JSON_FIELDS) {
-        if (orig[f]) orig[f] = jsonToPlainText(orig[f], f);
+      for (const f of typeInfo.fields) {
+        if (usesPlainTextEditor(typeInfo, f) && orig[f]) {
+          orig[f] = jsonToPlainText(orig[f], f);
+        } else if (typeInfo.fieldFormats[f] === "json" && orig[f]) {
+          orig[f] = prettyJson(orig[f]);
+        }
       }
       setEntityOriginal(orig);
 
       const trans: Record<string, Record<string, string>> = data.translations ?? {};
       for (const lang of Object.keys(trans)) {
-        for (const f of JSON_FIELDS) {
-          if (trans[lang][f]) trans[lang][f] = jsonToPlainText(trans[lang][f], f);
+        for (const f of typeInfo.fields) {
+          if (usesPlainTextEditor(typeInfo, f) && trans[lang][f]) {
+            trans[lang][f] = jsonToPlainText(trans[lang][f], f);
+          } else if (typeInfo.fieldFormats[f] === "json" && trans[lang][f]) {
+            trans[lang][f] = prettyJson(trans[lang][f]);
+          }
         }
       }
 
@@ -439,7 +463,16 @@ const TranslationsPage = () => {
       const raw = entityTranslations[entityModalLang] ?? {};
       const fields: Record<string, string> = {};
       for (const [k, v] of Object.entries(raw)) {
-        fields[k] = JSON_FIELDS.includes(k) ? plainTextToJson(v, k) : v;
+        if (entityModalType.fieldFormats[k] === "json") {
+          try {
+            fields[k] = JSON.stringify(JSON.parse(v));
+          } catch {
+            toast({ title: t("translations.invalidJson"), variant: "destructive" });
+            return;
+          }
+        } else {
+          fields[k] = usesPlainTextEditor(entityModalType, k) ? plainTextToJson(v, k) : v;
+        }
       }
       await api.post(`/translations/entity/${entityModalType.type}/${entityModalItem.id}`, {
         languageCode: entityModalLang,
@@ -720,7 +753,7 @@ const TranslationsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {entityTypes.map((et) => (
-                    <SelectItem key={et.type} value={et.type}>{et.type}</SelectItem>
+                    <SelectItem key={et.type} value={et.type}>{t(et.displayKey)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -851,7 +884,7 @@ const TranslationsPage = () => {
                   {t("translations.entityModalTitle").replace("{name}", entityModalItem.title)}
                 </DialogTitle>
                 <p className="text-xs text-muted-foreground">
-                  {entityModalType.type} #{entityModalItem.id}
+                  {t(entityModalType.displayKey)} #{entityModalItem.id}
                 </p>
               </DialogHeader>
 
@@ -878,14 +911,17 @@ const TranslationsPage = () => {
               <div className="space-y-4">
                 {entityModalType.fields.map((field) => {
                   const rows =
-                    ["Content", "Sections", "Challenges", "Solutions", "Description", "IntroBlocks"].includes(field) ? 8
+                    entityModalType.fieldFormats[field] === "json" ? 12
+                    : ["Content", "Sections", "Challenges", "Solutions", "Description", "IntroBlocks", "ItemsJson"].includes(field) ? 8
                     : ["Highlights", "Requirements"].includes(field) ? 5
                     : 3;
                   const hintKey = fieldHintKey(field);
                   return (
                     <div key={field} className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">🇻🇳 {field} (Original)</Label>
+                        <Label className="text-xs">
+                          🇻🇳 {t(contentFieldKey(field))} ({t("translations.source")})
+                        </Label>
                         <Textarea
                           value={entityOriginal[field] ?? ""}
                           readOnly
@@ -894,7 +930,9 @@ const TranslationsPage = () => {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">{LANG_LABELS[entityModalLang]} {field}</Label>
+                        <Label className="text-xs">
+                          {LANG_LABELS[entityModalLang]} {t(contentFieldKey(field))}
+                        </Label>
                         <Textarea
                           value={entityTranslations[entityModalLang]?.[field] ?? ""}
                           onChange={(e) => updateEntityField(field, e.target.value)}

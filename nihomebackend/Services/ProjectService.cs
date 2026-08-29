@@ -161,7 +161,10 @@ public class ProjectService(
         Description = t.TryGetValue("Description", out var descTranslation) ? descTranslation : p.Description,
         Challenges = DeserializeStringArray(t.TryGetValue("Challenges", out var challengesTranslation) ? challengesTranslation : p.ChallengesJson),
         Solutions = DeserializeStringArray(t.TryGetValue("Solutions", out var solutionsTranslation) ? solutionsTranslation : p.SolutionsJson),
-        Highlights = string.IsNullOrEmpty(p.HighlightsJson) ? null : JsonSerializer.Deserialize<JsonElement>(p.HighlightsJson),
+        Highlights = DeserializeJsonElement(
+            t.TryGetValue("Highlights", out var highlightsTranslation)
+                ? highlightsTranslation
+                : p.HighlightsJson),
         Content = t.TryGetValue("Content", out var contentJson)
             ? DeserializeContent(contentJson)
             : DeserializeContent(p.ContentJson),
@@ -180,6 +183,19 @@ public class ProjectService(
             // (Translations.tsx), which the API never validates as JSON before
             // saving — fall back to no data instead of 500-ing the whole project
             // response for every reader in that language.
+            return null;
+        }
+    }
+
+    private static JsonElement? DeserializeJsonElement(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<JsonElement>(json);
+        }
+        catch (JsonException)
+        {
             return null;
         }
     }

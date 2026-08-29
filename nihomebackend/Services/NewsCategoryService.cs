@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -37,9 +38,9 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
         {
             Name = nameVi,
             NameVi = nameVi,
-            NameEn = (req.NameEn ?? "").Trim(),
-            NameZh = (req.NameZh ?? "").Trim(),
-            NameJa = (req.NameJa ?? "").Trim(),
+            NameEn = LocalizedCategoryTranslationSync.ResolveProvidedOrFallback(req.NameEn, nameVi),
+            NameZh = LocalizedCategoryTranslationSync.ResolveProvidedOrFallback(req.NameZh, nameVi),
+            NameJa = LocalizedCategoryTranslationSync.ResolveProvidedOrFallback(req.NameJa, nameVi),
             IsActive = req.IsActive,
             SortOrder = req.SortOrder,
         };
@@ -61,14 +62,16 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
         }
 
         var previousName = entity.Name;
+        var previousSourceName = string.IsNullOrWhiteSpace(entity.NameVi) ? entity.Name : entity.NameVi;
+        var explicitLanguages = await LocalizedCategoryTranslationSync.GetExplicitLanguagesAsync(db, EntityTypes.NewsCategory, id);
         var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
         await EnsureNameUniqueAsync(nameVi, id);
 
         entity.Name = nameVi;
         entity.NameVi = nameVi;
-        entity.NameEn = (req.NameEn ?? "").Trim();
-        entity.NameZh = (req.NameZh ?? "").Trim();
-        entity.NameJa = (req.NameJa ?? "").Trim();
+        entity.NameEn = LocalizedCategoryTranslationSync.ResolveUpdate(req.NameEn, entity.NameEn, previousSourceName, nameVi, explicitLanguages.Contains("en"));
+        entity.NameZh = LocalizedCategoryTranslationSync.ResolveUpdate(req.NameZh, entity.NameZh, previousSourceName, nameVi, explicitLanguages.Contains("zh"));
+        entity.NameJa = LocalizedCategoryTranslationSync.ResolveUpdate(req.NameJa, entity.NameJa, previousSourceName, nameVi, explicitLanguages.Contains("ja"));
         entity.IsActive = req.IsActive;
         entity.SortOrder = req.SortOrder;
         entity.UpdatedAt = DateTime.UtcNow;
@@ -98,6 +101,8 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
             throw new InvalidOperationException("Danh mục đang được sử dụng trong tin tức, không thể xóa.");
         }
 
+        db.EntityTranslations.RemoveRange(db.EntityTranslations.Where(translation =>
+            translation.EntityType == EntityTypes.NewsCategory && translation.EntityId == id));
         db.NewsCategories.Remove(entity);
         await db.SaveChangesAsync();
 
@@ -140,6 +145,9 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
         {
             Name = trimmed,
             NameVi = trimmed,
+            NameEn = trimmed,
+            NameZh = trimmed,
+            NameJa = trimmed,
             IsActive = true,
             SortOrder = maxSortOrder + 1,
         };
@@ -175,6 +183,9 @@ public class NewsCategoryService(AppDbContext db, ILogger<NewsCategoryService> l
             {
                 Name = name,
                 NameVi = name,
+                NameEn = name,
+                NameZh = name,
+                NameJa = name,
                 IsActive = true,
                 SortOrder = index + 1,
             })

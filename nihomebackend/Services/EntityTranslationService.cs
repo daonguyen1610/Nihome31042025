@@ -99,6 +99,10 @@ public class EntityTranslationService(AppDbContext db, IMemoryCache cache)
             .ToListAsync();
         db.EntityTranslations.RemoveRange(rows);
         await db.SaveChangesAsync();
+        foreach (var languageCode in rows.Select(row => row.LanguageCode).Distinct())
+        {
+            InvalidateCache(entityType, entityId, languageCode);
+        }
     }
 
     /// <summary>Get all translations for an entity across all languages (for admin).</summary>

@@ -66,6 +66,9 @@ public class ActivityCategoryServiceTests : IDisposable
         Assert.Contains(result, item => item.Name == "Event");
         Assert.Contains(result, item => item.Name == "News");
         Assert.All(result, item => Assert.Equal(item.Name, item.NameVi));
+        Assert.All(result, item => Assert.Equal(item.NameVi, item.NameEn));
+        Assert.All(result, item => Assert.Equal(item.NameVi, item.NameZh));
+        Assert.All(result, item => Assert.Equal(item.NameVi, item.NameJa));
     }
 
     [Fact]
@@ -147,6 +150,69 @@ public class ActivityCategoryServiceTests : IDisposable
 
         Assert.NotNull(result);
         Assert.All(_db.Activities.ToList(), activity => Assert.Equal("New Name", activity.Category));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PreservesTranslationsAndAdvancesSourceFallbacks()
+    {
+        var category = new ActivityCategory
+        {
+            Name = "Tên cũ",
+            NameVi = "Tên cũ",
+            NameEn = "Translated name",
+            NameZh = "Tên cũ",
+            NameJa = "",
+            IsActive = true,
+        };
+        _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(category.Id, new UpsertActivityCategoryRequest
+        {
+            Name = "Tên mới",
+            NameVi = "Tên mới",
+            IsActive = true,
+        });
+
+        Assert.Equal("Translated name", category.NameEn);
+        Assert.Equal("Tên mới", category.NameZh);
+        Assert.Equal("Tên mới", category.NameJa);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PreservesExplicitSourceIdenticalTranslation()
+    {
+        var category = new ActivityCategory
+        {
+            Name = "Studio",
+            NameVi = "Studio",
+            NameEn = "Studio",
+            NameZh = "Studio",
+            NameJa = "Studio",
+            IsActive = true,
+        };
+        _db.ActivityCategories.Add(category);
+        await _db.SaveChangesAsync();
+        _db.EntityTranslations.Add(new EntityTranslation
+        {
+            EntityType = NihomeBackend.Constants.EntityTypes.ActivityCategory,
+            EntityId = category.Id,
+            FieldName = "Name",
+            LanguageCode = "en",
+            Value = "Studio",
+        });
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(category.Id, new UpsertActivityCategoryRequest
+        {
+            Name = "Xưởng thiết kế",
+            NameVi = "Xưởng thiết kế",
+            IsActive = true,
+        });
+
+        Assert.Equal("Studio", category.NameEn);
+        Assert.Equal("Xưởng thiết kế", category.NameZh);
+        Assert.Equal("Xưởng thiết kế", category.NameJa);
     }
 
     [Fact]
@@ -237,6 +303,9 @@ public class ActivityCategoryServiceTests : IDisposable
         var stored = Assert.Single(_db.ActivityCategories);
         Assert.Equal("Brand New", stored.Name);
         Assert.Equal("Brand New", stored.NameVi);
+        Assert.Equal("Brand New", stored.NameEn);
+        Assert.Equal("Brand New", stored.NameZh);
+        Assert.Equal("Brand New", stored.NameJa);
         Assert.True(stored.IsActive);
         Assert.Equal(1, stored.SortOrder);
     }
