@@ -63,6 +63,27 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task PreviewNextNumber_WithManagePermission_ReturnsEditableSuggestion()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+
+        var res = await Client.GetAsync("/api/contracts/next-number");
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+        var contractNumber = (await ReadJsonAsync(res)).GetProperty("contractNumber").GetString();
+        contractNumber.Should().MatchRegex($"^HD-{DateTime.UtcNow.Year}-[0-9]{{4,}}$");
+    }
+
+    [Fact]
+    public async Task PreviewNextNumber_WithoutManagePermission_IsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+
+        (await Client.GetAsync("/api/contracts/next-number")).StatusCode
+            .Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task FullRoundTrip_AsSalesManager_Create_Update_Delete()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -109,6 +130,7 @@ public class ContractsControllerTests : IntegrationTestBase
             value = 100,
         });
         first.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await ReadJsonAsync(first)).GetProperty("contractNumber").GetString().Should().Be(number);
 
         var dup = await Client.PostAsJsonAsync("/api/contracts", new
         {

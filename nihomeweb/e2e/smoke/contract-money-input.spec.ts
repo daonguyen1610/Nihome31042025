@@ -1,6 +1,21 @@
 import { expect } from "@playwright/test";
 import { test, TEST_USERS } from "../fixtures/auth";
 
+test("the new contract form suggests an editable contract number", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto("/admin/contracts");
+
+  await page.getByRole("button", { name: /Thêm hợp đồng|New contract|新增合同|契約を追加/i }).click();
+
+  const contractNumber = page.locator("#c-number");
+  await expect(contractNumber).toHaveValue(/^HD-\d{4}-\d{4,}$/, { timeout: 15_000 });
+  await contractNumber.fill("HD-CUSTOM-EDITABLE");
+  await expect(contractNumber).toHaveValue("HD-CUSTOM-EDITABLE");
+});
+
 /**
  * The contract value field was a bare number input. It now groups thousands, and
  * the grouping must not fight the caret: reformatting on every keystroke pushes

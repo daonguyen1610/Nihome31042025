@@ -249,6 +249,13 @@ The Survey integration is **push-only**. Files uploaded through Nihome are copie
 
 Create contracts or generate from approved quotations. Manage contract value, scope, and terms. Track payment milestones (advance, stage-based, completion). Manage appendices and variation orders. Track contract status: in-progress, paused, completed. Manage customer care history and contract renewal.
 
+When opening **New contract**, the system suggests the next Contract Number in
+`HD-YYYY-NNNN` format. The number remains editable for an authorized user who
+needs to follow an external numbering convention. An unchanged suggestion is
+allocated authoritatively when the form is saved, so it may advance if another
+contract was created in the meantime. Custom numbers must be unique and cannot
+exceed 40 characters.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Contract List | Filter by project, customer, status | 1.5 days |

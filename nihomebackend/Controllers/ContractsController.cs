@@ -84,6 +84,14 @@ public class ContractsController(
         return Ok(found);
     }
 
+    [HttpGet("next-number")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<ActionResult<object>> PreviewNextNumber(CancellationToken ct)
+    {
+        var contractNumber = await svc.PreviewNextNumberAsync(ct);
+        return Ok(new { contractNumber });
+    }
+
     [HttpPost]
     [RequirePermission("crm.contracts", "manage")]
     [Idempotency("crm.contracts.create")]

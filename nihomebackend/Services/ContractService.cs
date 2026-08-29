@@ -179,6 +179,9 @@ public class ContractService(
             designProjectStage: row.DesignProject?.CurrentStage);
     }
 
+    public Task<string> PreviewNextNumberAsync(CancellationToken ct = default) =>
+        GenerateNumberAsync(ct);
+
     public async Task<ContractResponse> CreateAsync(UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default)
     {
         if (req.PaymentMilestones is not null)
@@ -192,16 +195,15 @@ public class ContractService(
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
         var operationalProjectId = await ResolveOperationalProjectIdAsync(req, null, ct);
 
-        // A supplied number is the caller's to own; a generated one is ours to
-        // make stick. Generation reads the current maximum and adds one, so two
-        // people creating a contract at the same moment derive the same number
-        // and one of them loses on the unique index. Rather than hand that back
-        // as a conflict the caller has to resolve by retrying, take the next one.
+        // A supplied number is the caller's to own; generated numbers are
+        // serialized on SQL Server before reading the current maximum.
         var callerSupplied = !string.IsNullOrWhiteSpace(req.ContractNumber);
-        var number = callerSupplied ? req.ContractNumber!.Trim() : await GenerateNumberAsync(ct);
+        var number = callerSupplied ? req.ContractNumber!.Trim() : string.Empty;
 
         if (!callerSupplied)
         {
+            await AcquireNumberAllocationLockAsync(ct);
+            number = await GenerateNumberAsync(ct);
             const int maxAttempts = 5;
             for (var attempt = 1; await NumberExistsAsync(number, excludeId: null, ct); attempt++)
             {
@@ -688,6 +690,23 @@ public class ContractService(
             .Max();
 
         return $"{prefix}{highestSeq + 1:0000}";
+    }
+
+    private async Task AcquireNumberAllocationLockAsync(CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer()) return;
+
+        var resource = $"contracts:number:{DateTime.UtcNow.Year}";
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            DECLARE @result int;
+            EXEC @result = sp_getapplock
+                @Resource = {resource},
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 10000;
+            IF @result < 0
+                THROW 51000, 'Unable to allocate a contract number.', 1;
+            """, ct);
     }
 
     private static void ValidatePaymentMilestones(List<ContractPaymentMilestoneRequest> milestones)
