@@ -1,4 +1,7 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -60,6 +63,75 @@ public class TranslationsControllerTests : IntegrationTestBase
         var project = types.EnumerateArray().Single(item =>
             item.GetProperty("type").GetString() == "Project");
         project.GetProperty("fieldFormats").GetProperty("Highlights").GetString().Should().Be("json");
+    }
+
+    [Fact]
+    public async Task EntityTranslations_ViewOnlyRole_CannotSaveOrReset()
+    {
+        var entityId = await WithDbAsync(async db =>
+        {
+            var slideshow = new SlideshowItem
+            {
+                Slug = UniqueSlug("view-only-translation"),
+                ImageUrl = "/images/view-only-translation.jpg",
+                Title = "Nội dung gốc",
+                IsActive = true,
+            };
+            db.SlideshowItems.Add(slideshow);
+            await db.SaveChangesAsync();
+            db.EntityTranslations.Add(new EntityTranslation
+            {
+                EntityType = EntityTypes.Slideshow,
+                EntityId = slideshow.Id,
+                FieldName = "Title",
+                LanguageCode = "en",
+                Value = "Existing translation",
+            });
+            await db.SaveChangesAsync();
+            return slideshow.Id;
+        });
+
+        try
+        {
+            await AuthTestHelper.AuthenticateAsync(
+                Client,
+                client => AuthTestHelper.LoginAsRoleAsync(client, "BGD"));
+
+            (await Client.GetAsync($"/api/translations/entity/Slideshow/{entityId}"))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var saveResponse = await Client.PostAsJsonAsync(
+                $"/api/translations/entity/Slideshow/{entityId}",
+                new
+                {
+                    languageCode = "en",
+                    translations = new Dictionary<string, string> { ["Title"] = "Unauthorized change" },
+                });
+            saveResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            (await Client.DeleteAsync($"/api/translations/entity/Slideshow/{entityId}"))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            await WithDbAsync(async db =>
+            {
+                var translations = await db.EntityTranslations
+                    .Where(translation => translation.EntityType == EntityTypes.Slideshow
+                        && translation.EntityId == entityId)
+                    .ToListAsync();
+                translations.Should().ContainSingle();
+                translations[0].Value.Should().Be("Existing translation");
+            });
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                db.EntityTranslations.RemoveRange(db.EntityTranslations.Where(translation =>
+                    translation.EntityType == EntityTypes.Slideshow && translation.EntityId == entityId));
+                db.SlideshowItems.RemoveRange(db.SlideshowItems.Where(item => item.Id == entityId));
+                await db.SaveChangesAsync();
+            });
+        }
     }
 
     [Fact]

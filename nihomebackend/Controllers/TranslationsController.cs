@@ -132,15 +132,19 @@ public class TranslationsController(
             .ToListAsync())
             .Select(t => (t.EntityId, t.LanguageCode))
             .ToHashSet();
-        var translationCounts = await db.EntityTranslations
+        var translatedFields = await db.EntityTranslations
             .AsNoTracking()
             .Where(t => t.EntityType == entityType
                 && supportedLanguages.Contains(t.LanguageCode)
                 && definition.Fields.Keys.Contains(t.FieldName)
                 && t.Value != "")
+            .Select(t => new { t.EntityId, t.LanguageCode, t.FieldName })
+            .ToListAsync();
+        var translationCounts = translatedFields
             .GroupBy(t => t.EntityId)
-            .Select(g => new { EntityId = g.Key, Count = g.Select(t => new { t.LanguageCode, t.FieldName }).Distinct().Count() })
-            .ToDictionaryAsync(x => x.EntityId, x => x.Count);
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(t => (t.LanguageCode, t.FieldName)).Distinct().Count());
         var expectedFields = definition.Fields.Count * supportedLanguages.Length;
 
         object? items = entityType switch
