@@ -312,13 +312,28 @@ const Contracts = () => {
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormData>(emptyForm);
+  const [suggestedContractNumber, setSuggestedContractNumber] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const loadSuggestedContractNumber = useCallback(async () => {
+    setSuggestedContractNumber(null);
+    try {
+      const { data } = await adminApi.previewNextContractNumber();
+      setSuggestedContractNumber(data.contractNumber);
+      setForm((current) => current.contractNumber.trim() === ""
+        ? { ...current, contractNumber: data.contractNumber }
+        : current);
+    } catch {
+      return;
+    }
+  }, []);
 
   const openCreate = () => {
     setForm({ ...emptyForm });
     setFormError(null);
     setDialogOpen(true);
+    void loadSuggestedContractNumber();
   };
 
   // Arriving from an approved quote opens the form already filled in. customerId
@@ -335,9 +350,9 @@ const Contracts = () => {
     });
     setFormError(null);
     setDialogOpen(true);
+    void loadSuggestedContractNumber();
     // Runs once per navigation carrying the parameters.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromQuoteId]);
+  }, [fromQuoteId, loadSuggestedContractNumber, prefillCustomerId, prefillOpportunityId, prefillValue]);
   const patchMilestone = (index: number, patch: Partial<MilestoneDraft>) => {
     setForm((prev) => ({
       ...prev,
@@ -420,8 +435,11 @@ const Contracts = () => {
         status: m.status,
         note: m.note.trim() || null,
       }));
+    const enteredContractNumber = form.contractNumber.trim();
     const payload: UpsertContractRequest = {
-      contractNumber: form.contractNumber.trim() || null,
+      contractNumber: enteredContractNumber === suggestedContractNumber
+        ? null
+        : enteredContractNumber || null,
       customerId: form.customerId,
       opportunityId: form.opportunityId,
       quoteId: form.quoteId,
@@ -840,6 +858,7 @@ const Contracts = () => {
           setDialogOpen(open);
           if (!open) {
             setFormError(null);
+            setSuggestedContractNumber(null);
           }
         }}
       >
@@ -860,6 +879,7 @@ const Contracts = () => {
                   value={form.contractNumber}
                   onChange={(e) => setForm({ ...form, contractNumber: e.target.value })}
                   className="h-9 font-mono"
+                  maxLength={40}
                   placeholder="HD-YYYY-NNNN"
                 />
               </div>

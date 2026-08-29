@@ -4150,6 +4150,8 @@ export const adminApi = {
     api.get<ContractListResponse>("/contracts", { params }),
   getContract: (id: number) =>
     api.get<ContractResponse>(`/contracts/${id}`),
+  previewNextContractNumber: () =>
+    api.get<{ contractNumber: string }>("/contracts/next-number"),
   createContract: (body: UpsertContractRequest) =>
     api.post<ContractResponse>("/contracts", body),
   updateContract: (id: number, body: UpsertContractRequest) =>

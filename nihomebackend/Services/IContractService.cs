@@ -23,6 +23,8 @@ public interface IContractService
 
     Task<ContractResponse?> GetAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 
+    Task<string> PreviewNextNumberAsync(CancellationToken ct = default);
+
     Task<ContractResponse> CreateAsync(
         UpsertContractRequest req, int callerUserId, bool canReassignOwner, CancellationToken ct = default);
 

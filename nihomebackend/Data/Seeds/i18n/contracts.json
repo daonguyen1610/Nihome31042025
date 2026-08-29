@@ -74,10 +74,10 @@
   {
     "key": "contracts.numberHint",
     "category": "contracts",
-    "vi": "Để trống để hệ thống tự sinh theo mẫu HD-YYYY-NNNN.",
-    "en": "Leave blank to auto-generate HD-YYYY-NNNN.",
-    "zh": "留空时系统自动按 HD-YYYY-NNNN 生成。",
-    "ja": "空欄の場合、システムが HD-YYYY-NNNN 形式で自動採番します。"
+    "vi": "Hệ thống tạo sẵn theo mẫu HD-YYYY-NNNN; bạn có thể chỉnh sửa.",
+    "en": "A number is generated in the HD-YYYY-NNNN format; you can edit it.",
+    "zh": "系统已按 HD-YYYY-NNNN 格式生成编号；您可以修改。",
+    "ja": "HD-YYYY-NNNN 形式の番号が自動生成されます。必要に応じて編集できます。"
   },
   {
     "key": "contracts.deadlineBadge",

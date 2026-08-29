@@ -68,6 +68,15 @@ public class ContractServiceTests : IDisposable
     // ---------------- Create ----------------
 
     [Fact]
+    public async Task PreviewNextNumber_ReturnsNumberWithoutPersistingContract()
+    {
+        var preview = await _sut.PreviewNextNumberAsync();
+
+        Assert.Equal($"HD-{DateTime.UtcNow.Year}-0001", preview);
+        Assert.Empty(_db.Contracts);
+    }
+
+    [Fact]
     public async Task Create_AutoGeneratesContractNumber()
     {
         var result = await _sut.CreateAsync(Req(), callerUserId: 42, canReassignOwner: true);
