@@ -103,6 +103,8 @@ Use a separate agent or clean review context for BA and QA validation when avail
 * Do not hardcode frontend media/backend hosts such as localhost. Backend-served media must be stored as host-relative paths like `/images/...`; frontend helpers may resolve those paths against the current API origin.
 * Entities with per-language fields (e.g. `NameVi`/`Name`/`NameZh`/`NameJa`) must have every language field populated on every write path — create, auto-create-from-legacy-data, seed, and migration. Do not rely on read-time fallback to compensate for missing writes.
 * Follow the nihomeweb/CLAUDE.md for strictly developing the web UI application.
+**The content translations must be to updated in Content Translations**
+- Must be centralized the content translations in the `/admin/translations` endpoint.
 
 ---
 
