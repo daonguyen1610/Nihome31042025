@@ -54,7 +54,10 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
     public async Task<AsBuiltDocumentCategoryResponse> CreateAsync(UpsertAsBuiltDocumentCategoryRequest req)
     {
         var code = NormalizeCode(req.Code);
-        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+        var nameVi = NormalizeName(req.NameVi, "Tên tiếng Việt", "Bản vẽ hoàn công");
+        var nameEn = NormalizeName(req.NameEn, "Tên tiếng Anh", "As-built drawings");
+        var nameZh = NormalizeName(req.NameZh, "Tên tiếng Trung", "竣工图纸");
+        var nameJa = NormalizeName(req.NameJa, "Tên tiếng Nhật", "竣工図面");
 
         await EnsureCodeUniqueAsync(code);
         await EnsureNameUniqueAsync(nameVi);
@@ -64,9 +67,9 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
             Code = code,
             Name = nameVi,
             NameVi = nameVi,
-            NameEn = (req.NameEn ?? "").Trim(),
-            NameZh = (req.NameZh ?? "").Trim(),
-            NameJa = (req.NameJa ?? "").Trim(),
+            NameEn = nameEn,
+            NameZh = nameZh,
+            NameJa = nameJa,
             IsRequired = req.IsRequired,
             IsActive = req.IsActive,
             SortOrder = req.SortOrder,
@@ -89,17 +92,23 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
         }
 
         var code = NormalizeCode(req.Code);
-        var nameVi = NormalizeName(!string.IsNullOrWhiteSpace(req.NameVi) ? req.NameVi : req.Name);
+        if (!string.Equals(entity.Code, code, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Mã danh mục không thể thay đổi sau khi tạo.");
+        }
+        var nameVi = NormalizeName(req.NameVi, "Tên tiếng Việt", "Bản vẽ hoàn công");
+        var nameEn = NormalizeName(req.NameEn, "Tên tiếng Anh", "As-built drawings");
+        var nameZh = NormalizeName(req.NameZh, "Tên tiếng Trung", "竣工图纸");
+        var nameJa = NormalizeName(req.NameJa, "Tên tiếng Nhật", "竣工図面");
 
         await EnsureCodeUniqueAsync(code, id);
         await EnsureNameUniqueAsync(nameVi, id);
 
-        entity.Code = code;
         entity.Name = nameVi;
         entity.NameVi = nameVi;
-        entity.NameEn = (req.NameEn ?? "").Trim();
-        entity.NameZh = (req.NameZh ?? "").Trim();
-        entity.NameJa = (req.NameJa ?? "").Trim();
+        entity.NameEn = nameEn;
+        entity.NameZh = nameZh;
+        entity.NameJa = nameJa;
         entity.IsRequired = req.IsRequired;
         entity.IsActive = req.IsActive;
         entity.SortOrder = req.SortOrder;
@@ -141,14 +150,18 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
     /// Resolve category by ID or create from code if needed.
     /// Used by AsBuiltDocumentService to handle category references.
     /// </summary>
-    public async Task<int> ResolveCategoryIdAsync(int? categoryId, string? categoryCode)
+    public async Task<int> ResolveCategoryIdAsync(
+        int? categoryId,
+        string? categoryCode,
+        int? allowedInactiveCategoryId = null)
     {
         if (categoryId.HasValue)
         {
-            var exists = await db.AsBuiltDocumentCategories.AnyAsync(c => c.Id == categoryId.Value);
+            var exists = await db.AsBuiltDocumentCategories.AnyAsync(c =>
+                c.Id == categoryId.Value && (c.IsActive || c.Id == allowedInactiveCategoryId));
             if (!exists)
             {
-                throw new InvalidOperationException($"Danh mục hồ sơ không tồn tại (ID: {categoryId.Value}).");
+                throw new InvalidOperationException($"Danh mục hồ sơ không tồn tại hoặc đã bị vô hiệu hóa (ID: {categoryId.Value}).");
             }
             return categoryId.Value;
         }
@@ -159,14 +172,16 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
         }
 
         var byCode = await db.AsBuiltDocumentCategories
-            .FirstOrDefaultAsync(c => c.Code.ToLower() == categoryCode.ToLower());
+            .FirstOrDefaultAsync(c =>
+                c.Code.ToLower() == categoryCode.ToLower()
+                && (c.IsActive || c.Id == allowedInactiveCategoryId));
 
         if (byCode != null)
         {
             return byCode.Id;
         }
 
-        throw new InvalidOperationException($"Danh mục '{categoryCode}' không hợp lệ.");
+        throw new InvalidOperationException($"Danh mục '{categoryCode}' không hợp lệ hoặc đã bị vô hiệu hóa.");
     }
 
     /// <summary>
@@ -295,24 +310,24 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
         var normalized = (code ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            throw new InvalidOperationException("Mã danh mục không được để trống.");
+            throw new InvalidOperationException("Mã danh mục không được để trống. Ví dụ: Drawing.");
         }
 
         // Validate code format: alphanumeric with optional underscores
         if (!System.Text.RegularExpressions.Regex.IsMatch(normalized, @"^[A-Za-z][A-Za-z0-9_]*$"))
         {
-            throw new InvalidOperationException("Mã danh mục chỉ được chứa chữ cái, số và dấu gạch dưới, bắt đầu bằng chữ cái.");
+            throw new InvalidOperationException("Mã danh mục phải bắt đầu bằng chữ cái và chỉ chứa chữ cái, số hoặc dấu gạch dưới. Ví dụ: ConstructionPhoto.");
         }
 
         return normalized;
     }
 
-    private static string NormalizeName(string name)
+    private static string NormalizeName(string name, string fieldName, string example)
     {
         var normalized = (name ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            throw new InvalidOperationException("Tên danh mục không được để trống.");
+            throw new InvalidOperationException($"{fieldName} không được để trống. Ví dụ: {example}.");
         }
 
         return normalized;

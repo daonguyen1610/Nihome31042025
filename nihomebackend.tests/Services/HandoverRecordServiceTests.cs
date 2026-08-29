@@ -20,9 +20,14 @@ public class HandoverRecordServiceTests : IDisposable
     public HandoverRecordServiceTests()
     {
         _db = DbContextFactory.Create();
+        SeedCategories();
+        var categoryService = new AsBuiltDocumentCategoryService(
+            _db,
+            NullLogger<AsBuiltDocumentCategoryService>.Instance);
         _sut = new HandoverRecordService(
             _db,
             NullLogger<HandoverRecordService>.Instance,
+            categoryService,
             _documentStorage.Object);
         var user = new ApplicationUser
         {
@@ -187,6 +192,23 @@ public class HandoverRecordServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Ready_transition_counts_archived_required_asbuilt_documents()
+    {
+        SeedApprovedAcceptance();
+        SeedAsBuilt(AsBuiltStatus.Archived);
+        var created = await _sut.CreateAsync(Request(complete: true), _userId, false);
+
+        var ready = await _sut.TransitionAsync(
+            created.Id,
+            new TransitionHandoverStatusRequest { Status = "ReadyForHandover" },
+            _userId,
+            false);
+
+        Assert.Equal("ReadyForHandover", ready!.Status);
+        Assert.True(ready.Readiness.IsReady);
+    }
+
+    [Fact]
     public async Task Complete_uses_dedicated_action_and_requires_signatory()
     {
         SeedReadyUpstream();
@@ -315,16 +337,39 @@ public class HandoverRecordServiceTests : IDisposable
     }
 
     private void SeedApprovedAsBuilt()
+        => SeedAsBuilt(AsBuiltStatus.Approved);
+
+    private void SeedAsBuilt(AsBuiltStatus status)
     {
-        var documents = AsBuiltCategoryExtensions.Required.Select((category, index) => new AsBuiltDocument
+        var categories = _db.AsBuiltDocumentCategories.Where(category => category.IsRequired).ToList();
+        var documents = categories.Select((category, index) => new AsBuiltDocument
         {
             DesignProjectId = _projectId,
             DocumentCode = $"AB-HO-{index + 1:000}",
-            Title = category.ToString(),
-            Category = category,
-            Status = AsBuiltStatus.Approved,
+            Title = category.Name,
+            CategoryId = category.Id,
+            Status = status,
         });
         _db.AsBuiltDocuments.AddRange(documents);
+        _db.SaveChanges();
+    }
+
+    private void SeedCategories()
+    {
+        var codes = new[] { "Drawing", "AcceptanceMinute", "TestReport", "WarrantyCertificate" };
+        _db.AsBuiltDocumentCategories.AddRange(codes.Select((code, index) =>
+            new AsBuiltDocumentCategory
+            {
+                Code = code,
+                Name = code,
+                NameVi = code,
+                NameEn = code,
+                NameZh = code,
+                NameJa = code,
+                IsRequired = true,
+                IsActive = true,
+                SortOrder = index + 1,
+            }));
         _db.SaveChanges();
     }
 

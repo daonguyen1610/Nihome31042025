@@ -25,9 +25,14 @@ public class AsBuiltDocumentServiceTests : IDisposable
     public AsBuiltDocumentServiceTests()
     {
         _db = DbContextFactory.Create();
+        SeedCategories();
+        var categoryService = new AsBuiltDocumentCategoryService(
+            _db,
+            NullLogger<AsBuiltDocumentCategoryService>.Instance);
         _sut = new AsBuiltDocumentService(
             _db,
             NullLogger<AsBuiltDocumentService>.Instance,
+            categoryService,
             _documentStorage.Object);
 
         var user = new ApplicationUser
@@ -65,6 +70,32 @@ public class AsBuiltDocumentServiceTests : IDisposable
             Title = title ?? "Bản vẽ hoàn công",
             Category = category,
         };
+
+    private void SeedCategories()
+    {
+        var categories = new[]
+        {
+            ("Drawing", true),
+            ("AcceptanceMinute", true),
+            ("TestReport", true),
+            ("WarrantyCertificate", true),
+            ("Other", false),
+        };
+        _db.AsBuiltDocumentCategories.AddRange(categories.Select((category, index) =>
+            new AsBuiltDocumentCategory
+            {
+                Code = category.Item1,
+                Name = category.Item1,
+                NameVi = category.Item1,
+                NameEn = category.Item1,
+                NameZh = category.Item1,
+                NameJa = category.Item1,
+                IsRequired = category.Item2,
+                IsActive = true,
+                SortOrder = index + 1,
+            }));
+        _db.SaveChanges();
+    }
 
     [Fact]
     public async Task CreateAsync_allocates_sequential_code()
@@ -274,6 +305,33 @@ public class AsBuiltDocumentServiceTests : IDisposable
         // Required = 4 (Drawing, AcceptanceMinute, TestReport, WarrantyCertificate).
         Assert.Equal(4, list.TotalRequiredCategories);
         Assert.Equal(2, list.CompletedRequiredCategories);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_retains_existing_inactive_category_but_rejects_another_inactive_category()
+    {
+        var document = await _sut.CreateAsync(Req("Historical drawing"), _userId);
+        var drawing = await _db.AsBuiltDocumentCategories.SingleAsync(item => item.Code == "Drawing");
+        var other = await _db.AsBuiltDocumentCategories.SingleAsync(item => item.Code == "Other");
+        drawing.IsActive = false;
+        other.IsActive = false;
+        await _db.SaveChangesAsync();
+
+        var retained = await _sut.UpdateAsync(document.Id, new UpdateAsBuiltDocumentRequest
+        {
+            Title = "Updated historical drawing",
+            Category = "Drawing",
+        }, _userId);
+        Assert.Equal("Drawing", retained!.Category);
+
+        await Assert.ThrowsAsync<AsBuiltDocumentOperationException>(() => _sut.UpdateAsync(
+            document.Id,
+            new UpdateAsBuiltDocumentRequest
+            {
+                Title = "Invalid category switch",
+                Category = "Other",
+            },
+            _userId));
     }
 
     [Fact]

@@ -2831,11 +2831,10 @@ export interface AsBuiltDocumentCategoryResponse {
 
 export interface UpsertAsBuiltDocumentCategoryRequest {
   code: string;
-  name: string;
-  nameVi?: string | null;
-  nameEn?: string | null;
-  nameZh?: string | null;
-  nameJa?: string | null;
+  nameVi: string;
+  nameEn: string;
+  nameZh: string;
+  nameJa: string;
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
