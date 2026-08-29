@@ -95,6 +95,7 @@ public class ServiceItemService(
         }
         db.ServiceItems.Remove(entity);
         await db.SaveChangesAsync();
+        await translationSvc.DeleteEntityTranslationsAsync(EntityTypes.Service, id);
         logger.LogInformation("Deleted service item {ServiceItemId}", id);
         return true;
     }

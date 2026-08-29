@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { localizedName } from "@/lib/category";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import {
   adminApi,
   type ActivityCategoryResponse,
@@ -38,20 +40,20 @@ type CategoryItem = ActivityCategoryResponse | ProjectCategoryResponse | NewsCat
 
 type CategoryFormData = {
   nameVi: string;
-  nameEn: string;
-  nameZh: string;
-  nameJa: string;
   isActive: boolean;
   sortOrder: number;
 };
 
 const emptyForm: CategoryFormData = {
   nameVi: "",
-  nameEn: "",
-  nameZh: "",
-  nameJa: "",
   isActive: true,
   sortOrder: 0,
+};
+
+const translationTypeByCategory: Record<CategoryKind, string> = {
+  activities: "ActivityCategory",
+  news: "NewsCategory",
+  projects: "ProjectCategory",
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -81,6 +83,8 @@ const parseTab = (raw: string | null): CategoryKind => {
 const Categories = () => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
+  const { has } = usePermissions();
+  const canViewTranslations = has(ADMIN_PERMS.translations);
   const [searchParams, setSearchParams] = useSearchParams();
   const kind = parseTab(searchParams.get("tab"));
 
@@ -146,9 +150,6 @@ const Categories = () => {
     setEditingId(item.id);
     setForm({
       nameVi: item.nameVi || item.name,
-      nameEn: item.nameEn,
-      nameZh: item.nameZh,
-      nameJa: item.nameJa,
       isActive: item.isActive,
       sortOrder: item.sortOrder,
     });
@@ -174,9 +175,6 @@ const Categories = () => {
       const payload: UpsertActivityCategoryRequest | UpsertProjectCategoryRequest | UpsertNewsCategoryRequest = {
         name: form.nameVi.trim(),
         nameVi: form.nameVi.trim(),
-        nameEn: form.nameEn.trim(),
-        nameZh: form.nameZh.trim(),
-        nameJa: form.nameJa.trim(),
         isActive: form.isActive,
         sortOrder: Number.isFinite(form.sortOrder) ? form.sortOrder : 0,
       };
@@ -370,33 +368,17 @@ const Categories = () => {
                   autoFocus
                   required
                 />
+                <p className="text-xs text-muted-foreground">{t("cat.sourceNameHint")}</p>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="cat-name-en">{t("cat.nameEn")}</Label>
-                <Input
-                  id="cat-name-en"
-                  value={form.nameEn}
-                  onChange={(e) => setForm((prev) => ({ ...prev, nameEn: e.target.value }))}
-                  placeholder={t("cat.nameEnPh")}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="cat-name-zh">{t("cat.nameZh")}</Label>
-                <Input
-                  id="cat-name-zh"
-                  value={form.nameZh}
-                  onChange={(e) => setForm((prev) => ({ ...prev, nameZh: e.target.value }))}
-                  placeholder={t("cat.nameZhPh")}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs" htmlFor="cat-name-ja">{t("cat.nameJa")}</Label>
-                <Input
-                  id="cat-name-ja"
-                  value={form.nameJa}
-                  onChange={(e) => setForm((prev) => ({ ...prev, nameJa: e.target.value }))}
-                  placeholder={t("cat.nameJaPh")}
-                />
+              <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-sky-900">{t("cat.manageTranslationsHint")}</p>
+                {canViewTranslations && (
+                  <Button asChild type="button" variant="outline" size="sm" className="shrink-0 bg-background">
+                    <Link to={`/admin/translations?tab=entity&type=${translationTypeByCategory[kind]}`}>
+                      {t("cat.openTranslations")}
+                    </Link>
+                  </Button>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs" htmlFor="cat-order">{t("cat.order")}</Label>

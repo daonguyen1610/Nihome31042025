@@ -20,6 +20,7 @@ public class NewsCategoriesController(NewsCategoryService svc) : ControllerBase
 
     [HttpPost]
     [RequirePermission("content.news-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Create([FromBody] UpsertNewsCategoryRequest req)
     {
         try
@@ -35,6 +36,7 @@ public class NewsCategoriesController(NewsCategoryService svc) : ControllerBase
 
     [HttpPut("{id:int}")]
     [RequirePermission("content.news-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertNewsCategoryRequest req)
     {
         try

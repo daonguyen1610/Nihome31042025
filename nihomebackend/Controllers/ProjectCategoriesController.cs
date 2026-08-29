@@ -20,6 +20,7 @@ public class ProjectCategoriesController(ProjectCategoryService svc) : Controlle
 
     [HttpPost]
     [RequirePermission("content.project-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Create([FromBody] UpsertProjectCategoryRequest req)
     {
         try
@@ -35,6 +36,7 @@ public class ProjectCategoriesController(ProjectCategoryService svc) : Controlle
 
     [HttpPut("{id:int}")]
     [RequirePermission("content.project-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertProjectCategoryRequest req)
     {
         try

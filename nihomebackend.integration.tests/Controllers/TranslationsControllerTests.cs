@@ -43,6 +43,214 @@ public class TranslationsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task EntityTypes_ReturnCompleteMetadata()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+
+        var response = await Client.GetAsync("/api/translations/entity/types");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var types = await ReadJsonAsync(response);
+        types.GetArrayLength().Should().Be(11);
+        var slideshow = types.EnumerateArray().Single(item =>
+            item.GetProperty("type").GetString() == "Slideshow");
+        slideshow.GetProperty("displayKey").GetString().Should().Be("translations.entityType.slideshow");
+        slideshow.GetProperty("fields").EnumerateArray().Select(field => field.GetString())
+            .Should().BeEquivalentTo("Title", "Subtitle", "LinkText");
+        var project = types.EnumerateArray().Single(item =>
+            item.GetProperty("type").GetString() == "Project");
+        project.GetProperty("fieldFormats").GetProperty("Highlights").GetString().Should().Be("json");
+    }
+
+    [Fact]
+    public async Task Slideshow_TranslationRoundTrip_UpdatesStatusAndPublicContent()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var slug = UniqueSlug("translated-slide");
+        var createResponse = await Client.PostAsJsonAsync("/api/slideshow", new
+        {
+            slug,
+            imageUrl = "/images/translated-slide.jpg",
+            title = "Tiêu đề gốc",
+            subtitle = "Phụ đề gốc",
+            linkUrl = "/about",
+            linkText = "Xem thêm",
+            isActive = true,
+            sortOrder = 90,
+        });
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await ReadJsonAsync(createResponse)).GetProperty("id").GetInt32();
+
+        try
+        {
+            foreach (var (language, title) in new[]
+            {
+                ("en", "English title"),
+                ("zh", "中文标题"),
+                ("ja", "日本語タイトル"),
+            })
+            {
+                var saveResponse = await Client.PostAsJsonAsync(
+                    $"/api/translations/entity/Slideshow/{id}",
+                    new
+                    {
+                        languageCode = language,
+                        translations = new Dictionary<string, string> { ["Title"] = title },
+                    });
+                saveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+
+            var statusResponse = await Client.GetAsync("/api/translations/entity/Slideshow");
+            statusResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var status = await ReadJsonAsync(statusResponse);
+            var item = status.GetProperty("items").EnumerateArray()
+                .Single(candidate => candidate.GetProperty("id").GetInt32() == id);
+            item.GetProperty("translationCount").GetInt32().Should().Be(3);
+            item.GetProperty("expectedFields").GetInt32().Should().Be(9);
+
+            var publicResponse = await Client.GetAsync($"/api/slideshow/{slug}?lang=zh");
+            publicResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(publicResponse)).GetProperty("title").GetString().Should().Be("中文标题");
+
+            (await Client.DeleteAsync($"/api/translations/entity/Slideshow/{id}"))
+                .StatusCode.Should().Be(HttpStatusCode.NoContent);
+            var resetResponse = await Client.GetAsync($"/api/slideshow/{slug}?lang=en");
+            (await ReadJsonAsync(resetResponse)).GetProperty("title").GetString().Should().Be("Tiêu đề gốc");
+        }
+        finally
+        {
+            await Client.DeleteAsync($"/api/slideshow/{id}");
+        }
+    }
+
+    [Fact]
+    public async Task Project_HighlightsTranslation_IsReturnedByPublicApi()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var slug = UniqueSlug("translated-project");
+        var projectId = await WithDbAsync(async db =>
+        {
+            var project = new NihomeBackend.Models.Project
+            {
+                Slug = slug,
+                ImageUrl = "/images/project.jpg",
+                Name = "Dự án dịch",
+                Client = "Khách hàng",
+                Location = "Hà Nội",
+                Scale = "Nhỏ",
+                Scope = "Xây dựng",
+                HighlightsJson = "[{\"label\":\"Diện tích\",\"value\":\"100 m2\"}]",
+            };
+            db.Projects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+
+        try
+        {
+            var translatedHighlights = "[{\"label\":\"Area\",\"value\":\"100 m2\"}]";
+            var saveResponse = await Client.PostAsJsonAsync(
+                $"/api/translations/entity/Project/{projectId}",
+                new
+                {
+                    languageCode = "en",
+                    translations = new Dictionary<string, string> { ["Highlights"] = translatedHighlights },
+                });
+            saveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var publicResponse = await Client.GetAsync($"/api/projects/{slug}?lang=en");
+            publicResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var project = await ReadJsonAsync(publicResponse);
+            project.GetProperty("highlights")[0].GetProperty("label").GetString().Should().Be("Area");
+        }
+        finally
+        {
+            await Client.DeleteAsync($"/api/projects/{projectId}");
+        }
+    }
+
+    [Fact]
+    public async Task GenericEntityTranslation_RejectsInvalidContractValues()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var ids = await WithDbAsync(async db =>
+        {
+            var slide = new NihomeBackend.Models.SlideshowItem
+            {
+                Slug = UniqueSlug("validation-slide"),
+                ImageUrl = "/images/validation.jpg",
+                Title = "Validation slide",
+            };
+            var project = new NihomeBackend.Models.Project
+            {
+                Slug = UniqueSlug("validation-project"),
+                ImageUrl = "/images/project.jpg",
+                Name = "Validation project",
+                Client = "Client",
+                Location = "Location",
+                Scale = "Scale",
+                Scope = "Scope",
+                HighlightsJson = "[{\"label\":\"Diện tích\",\"value\":\"100 m2\"}]",
+            };
+            db.AddRange(slide, project);
+            await db.SaveChangesAsync();
+            return (SlideId: slide.Id, ProjectId: project.Id);
+        });
+
+        try
+        {
+            (await Client.GetAsync("/api/translations/entity/Unsupported"))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await Client.GetAsync("/api/translations/entity/Slideshow/999999"))
+                .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+            var invalidLanguage = await Client.PostAsJsonAsync($"/api/translations/entity/Slideshow/{ids.SlideId}", new
+            {
+                languageCode = "vi",
+                translations = new Dictionary<string, string> { ["Title"] = "Không hợp lệ" },
+            });
+            invalidLanguage.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var invalidField = await Client.PostAsJsonAsync($"/api/translations/entity/Slideshow/{ids.SlideId}", new
+            {
+                languageCode = "en",
+                translations = new Dictionary<string, string> { ["ImageUrl"] = "/unsafe.jpg" },
+            });
+            invalidField.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var invalidJson = await Client.PostAsJsonAsync($"/api/translations/entity/Project/{ids.ProjectId}", new
+            {
+                languageCode = "en",
+                translations = new Dictionary<string, string> { ["Highlights"] = "not-json" },
+            });
+            invalidJson.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var invalidStructure = await Client.PostAsJsonAsync($"/api/translations/entity/Project/{ids.ProjectId}", new
+            {
+                languageCode = "en",
+                translations = new Dictionary<string, string> { ["Highlights"] = "{\"label\":\"Area\",\"value\":\"100 m2\"}" },
+            });
+            invalidStructure.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var missingSourceStructure = await Client.PostAsJsonAsync($"/api/translations/entity/Project/{ids.ProjectId}", new
+            {
+                languageCode = "en",
+                translations = new Dictionary<string, string> { ["Challenges"] = "[\"Challenge\"]" },
+            });
+            missingSourceStructure.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                db.SlideshowItems.Remove((await db.SlideshowItems.FindAsync(ids.SlideId))!);
+                db.Projects.Remove((await db.Projects.FindAsync(ids.ProjectId))!);
+                await db.SaveChangesAsync();
+            });
+        }
+    }
+
+    [Fact]
     public async Task AsBuiltCategory_TranslationRoundTrip_UsesContentTranslations()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);

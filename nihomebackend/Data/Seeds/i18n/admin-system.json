@@ -2634,10 +2634,10 @@
   {
     "key": "translations.confirmReset",
     "category": "translations",
-    "vi": "Đặt lại toàn bộ bản dịch của nội dung này về tên gốc?",
-    "en": "Reset all translations for this content to the source name?",
-    "zh": "将此内容的所有翻译重置为原始名称吗？",
-    "ja": "このコンテンツのすべての翻訳を元の名前にリセットしますか？"
+    "vi": "Xóa toàn bộ bản dịch của nội dung này và sử dụng lại nội dung gốc?",
+    "en": "Remove all translations for this content and use the source content again?",
+    "zh": "删除此内容的所有翻译并重新使用原始内容吗？",
+    "ja": "このコンテンツの翻訳をすべて削除し、元のコンテンツを再び使用しますか？"
   },
   {
     "key": "translations.resetSuccess",
@@ -2662,6 +2662,294 @@
     "en": "The translated name must not exceed 200 characters.",
     "zh": "翻译名称不得超过 200 个字符。",
     "ja": "翻訳名は200文字以内で入力してください。"
+  },
+  {
+    "key": "translations.invalidJson",
+    "category": "translations",
+    "vi": "Nội dung JSON không hợp lệ. Vui lòng giữ đúng cấu trúc của nội dung gốc.",
+    "en": "Invalid JSON. Keep the same structure as the source content.",
+    "zh": "JSON 内容无效。请保持与原始内容相同的结构。",
+    "ja": "JSONが無効です。元のコンテンツと同じ構造を維持してください。"
+  },
+  {
+    "key": "translations.source",
+    "category": "translations",
+    "vi": "Nội dung gốc",
+    "en": "Source",
+    "zh": "原始内容",
+    "ja": "元の内容"
+  },
+  {
+    "key": "translations.entityType.activity",
+    "category": "translations",
+    "vi": "Hoạt động",
+    "en": "Activities",
+    "zh": "活动",
+    "ja": "活動"
+  },
+  {
+    "key": "translations.entityType.news",
+    "category": "translations",
+    "vi": "Tin tức",
+    "en": "News",
+    "zh": "新闻",
+    "ja": "ニュース"
+  },
+  {
+    "key": "translations.entityType.project",
+    "category": "translations",
+    "vi": "Dự án",
+    "en": "Projects",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "translations.entityType.service",
+    "category": "translations",
+    "vi": "Dịch vụ",
+    "en": "Services",
+    "zh": "服务",
+    "ja": "サービス"
+  },
+  {
+    "key": "translations.entityType.slideshow",
+    "category": "translations",
+    "vi": "Trình chiếu trang chủ",
+    "en": "Homepage slideshow",
+    "zh": "首页轮播",
+    "ja": "ホームページスライドショー"
+  },
+  {
+    "key": "translations.entityType.jobPosition",
+    "category": "translations",
+    "vi": "Vị trí tuyển dụng",
+    "en": "Job positions",
+    "zh": "招聘职位",
+    "ja": "募集職種"
+  },
+  {
+    "key": "translations.entityType.about",
+    "category": "translations",
+    "vi": "Nội dung giới thiệu",
+    "en": "About sections",
+    "zh": "关于我们内容",
+    "ja": "会社紹介コンテンツ"
+  },
+  {
+    "key": "translations.entityType.activityCategory",
+    "category": "translations",
+    "vi": "Danh mục hoạt động",
+    "en": "Activity categories",
+    "zh": "活动类别",
+    "ja": "活動カテゴリ"
+  },
+  {
+    "key": "translations.entityType.newsCategory",
+    "category": "translations",
+    "vi": "Danh mục tin tức",
+    "en": "News categories",
+    "zh": "新闻类别",
+    "ja": "ニュースカテゴリ"
+  },
+  {
+    "key": "translations.entityType.projectCategory",
+    "category": "translations",
+    "vi": "Danh mục dự án",
+    "en": "Project categories",
+    "zh": "项目类别",
+    "ja": "プロジェクトカテゴリ"
+  },
+  {
+    "key": "translations.entityType.asBuiltCategory",
+    "category": "translations",
+    "vi": "Danh mục hồ sơ hoàn công",
+    "en": "As-built document categories",
+    "zh": "竣工资料类别",
+    "ja": "竣工資料カテゴリ"
+  },
+  {
+    "key": "translations.contentField.Title",
+    "category": "translations",
+    "vi": "Tiêu đề",
+    "en": "Title",
+    "zh": "标题",
+    "ja": "タイトル"
+  },
+  {
+    "key": "translations.contentField.Excerpt",
+    "category": "translations",
+    "vi": "Tóm tắt",
+    "en": "Excerpt",
+    "zh": "摘要",
+    "ja": "概要"
+  },
+  {
+    "key": "translations.contentField.Content",
+    "category": "translations",
+    "vi": "Nội dung",
+    "en": "Content",
+    "zh": "内容",
+    "ja": "コンテンツ"
+  },
+  {
+    "key": "translations.contentField.Name",
+    "category": "translations",
+    "vi": "Tên",
+    "en": "Name",
+    "zh": "名称",
+    "ja": "名前"
+  },
+  {
+    "key": "translations.contentField.Description",
+    "category": "translations",
+    "vi": "Mô tả",
+    "en": "Description",
+    "zh": "描述",
+    "ja": "説明"
+  },
+  {
+    "key": "translations.contentField.Challenges",
+    "category": "translations",
+    "vi": "Thách thức",
+    "en": "Challenges",
+    "zh": "挑战",
+    "ja": "課題"
+  },
+  {
+    "key": "translations.contentField.Solutions",
+    "category": "translations",
+    "vi": "Giải pháp",
+    "en": "Solutions",
+    "zh": "解决方案",
+    "ja": "解決策"
+  },
+  {
+    "key": "translations.contentField.Highlights",
+    "category": "translations",
+    "vi": "Điểm nổi bật",
+    "en": "Highlights",
+    "zh": "亮点",
+    "ja": "ハイライト"
+  },
+  {
+    "key": "translations.contentField.ShortTitle",
+    "category": "translations",
+    "vi": "Tiêu đề ngắn",
+    "en": "Short title",
+    "zh": "短标题",
+    "ja": "短いタイトル"
+  },
+  {
+    "key": "translations.contentField.Tagline",
+    "category": "translations",
+    "vi": "Thông điệp ngắn",
+    "en": "Tagline",
+    "zh": "标语",
+    "ja": "タグライン"
+  },
+  {
+    "key": "translations.contentField.Intro",
+    "category": "translations",
+    "vi": "Giới thiệu",
+    "en": "Introduction",
+    "zh": "介绍",
+    "ja": "紹介"
+  },
+  {
+    "key": "translations.contentField.Sections",
+    "category": "translations",
+    "vi": "Các phần nội dung",
+    "en": "Content sections",
+    "zh": "内容部分",
+    "ja": "コンテンツセクション"
+  },
+  {
+    "key": "translations.contentField.IntroBlocks",
+    "category": "translations",
+    "vi": "Các đoạn giới thiệu",
+    "en": "Introduction blocks",
+    "zh": "介绍段落",
+    "ja": "紹介ブロック"
+  },
+  {
+    "key": "translations.contentField.Subtitle",
+    "category": "translations",
+    "vi": "Tiêu đề phụ",
+    "en": "Subtitle",
+    "zh": "副标题",
+    "ja": "サブタイトル"
+  },
+  {
+    "key": "translations.contentField.LinkText",
+    "category": "translations",
+    "vi": "Nhãn liên kết",
+    "en": "Link label",
+    "zh": "链接标签",
+    "ja": "リンクラベル"
+  },
+  {
+    "key": "translations.contentField.Department",
+    "category": "translations",
+    "vi": "Phòng ban",
+    "en": "Department",
+    "zh": "部门",
+    "ja": "部署"
+  },
+  {
+    "key": "translations.contentField.Requirements",
+    "category": "translations",
+    "vi": "Yêu cầu",
+    "en": "Requirements",
+    "zh": "要求",
+    "ja": "応募要件"
+  },
+  {
+    "key": "translations.contentField.Eyebrow",
+    "category": "translations",
+    "vi": "Nhãn đầu mục",
+    "en": "Eyebrow label",
+    "zh": "眉题标签",
+    "ja": "アイブロウラベル"
+  },
+  {
+    "key": "translations.contentField.TitleA",
+    "category": "translations",
+    "vi": "Tiêu đề phần một",
+    "en": "Title part one",
+    "zh": "标题第一部分",
+    "ja": "タイトル前半"
+  },
+  {
+    "key": "translations.contentField.TitleB",
+    "category": "translations",
+    "vi": "Tiêu đề phần hai",
+    "en": "Title part two",
+    "zh": "标题第二部分",
+    "ja": "タイトル後半"
+  },
+  {
+    "key": "translations.contentField.Paragraph1",
+    "category": "translations",
+    "vi": "Đoạn mô tả một",
+    "en": "Description paragraph one",
+    "zh": "描述段落一",
+    "ja": "説明段落1"
+  },
+  {
+    "key": "translations.contentField.Paragraph2",
+    "category": "translations",
+    "vi": "Đoạn mô tả hai",
+    "en": "Description paragraph two",
+    "zh": "描述段落二",
+    "ja": "説明段落2"
+  },
+  {
+    "key": "translations.contentField.ItemsJson",
+    "category": "translations",
+    "vi": "Danh sách nội dung có cấu trúc",
+    "en": "Structured content items",
+    "zh": "结构化内容列表",
+    "ja": "構造化コンテンツ項目"
   },
   {
     "key": "translations.addModalTitle",

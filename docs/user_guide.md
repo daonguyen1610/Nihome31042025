@@ -984,14 +984,18 @@ Translations are managed through the admin panel at `/admin/translations`. Admin
 
 ### 11.3 Entity Translations
 
-Content entities (activities, news, projects, services, slideshow items) support field-level translations. This uses a polymorphic pattern where each translation record specifies:
-- Entity type (e.g., `Activity`, `NewsArticle`)
+The **Content translations** tab centralizes field-level translations for activities, news, projects, services, homepage slideshow items, job positions, about sections, and the activity, news, project, and as-built document category catalogs. Category CRUD screens only maintain the Vietnamese source name; English, Chinese, and Japanese values are edited here.
+
+Each translation record specifies:
+- Entity type (for example, `Activity` or `Project`)
 - Entity ID
 - Field name (e.g., `Title`, `Excerpt`)
 - Language code
 - Translated value
 
-This allows any field of any content entity to be translated without modifying the database schema.
+The list shows translation progress across all three target languages. Reset removes the entity's translations and restores source-content fallback. Structured fields must contain valid JSON with the same keys, value types, array lengths, and ordering as the Vietnamese source; this prevents translated content from changing the public data contract.
+
+Users need `content.translations.view` to open this module and `content.translations.manage` to save or reset translations. Legacy category API payloads containing `nameEn`, `nameZh`, or `nameJa` also require translation-manage permission.
 
 ### 11.4 Translation Categories
 
@@ -1498,6 +1502,10 @@ Logo kinds: `Client`, `Partner`, `Supplier`.
 | POST   | `/api/translations/bulk`              | Admin  | Bulk create or update translations       |
 | DELETE | `/api/translations/key/{key}`         | Admin  | Delete a translation key (all languages) |
 | GET    | `/api/translations/entity/types`      | Admin  | List entity types with translatable fields|
+| GET    | `/api/translations/entity/{type}`     | Admin  | List entities with translation progress   |
+| GET    | `/api/translations/entity/{type}/{id}`| Admin  | Get source content and all translations   |
+| POST   | `/api/translations/entity/{type}/{id}`| Admin  | Save one target language                  |
+| DELETE | `/api/translations/entity/{type}/{id}`| Admin  | Reset all translations for an entity      |
 
 #### Create/Update Translation Pair Request
 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -94,6 +95,10 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
             throw new InvalidOperationException("Mã danh mục không thể thay đổi sau khi tạo.");
         }
         var previousSourceName = entity.NameVi;
+        var explicitLanguages = await LocalizedCategoryTranslationSync.GetExplicitLanguagesAsync(
+            db,
+            EntityTypes.AsBuiltDocumentCategory,
+            id);
         var name = NormalizeName(req.Name, req.NameVi);
 
         await EnsureCodeUniqueAsync(code, id);
@@ -101,15 +106,12 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
 
         entity.Name = name;
         entity.NameVi = name;
-        entity.NameEn = req.NameEn == null
-            ? SynchronizeFallbackTranslation(entity.NameEn, previousSourceName, name)
-            : req.NameEn.Trim();
-        entity.NameZh = req.NameZh == null
-            ? SynchronizeFallbackTranslation(entity.NameZh, previousSourceName, name)
-            : req.NameZh.Trim();
-        entity.NameJa = req.NameJa == null
-            ? SynchronizeFallbackTranslation(entity.NameJa, previousSourceName, name)
-            : req.NameJa.Trim();
+        entity.NameEn = LocalizedCategoryTranslationSync.ResolveUpdate(
+            req.NameEn, entity.NameEn, previousSourceName, name, explicitLanguages.Contains("en"));
+        entity.NameZh = LocalizedCategoryTranslationSync.ResolveUpdate(
+            req.NameZh, entity.NameZh, previousSourceName, name, explicitLanguages.Contains("zh"));
+        entity.NameJa = LocalizedCategoryTranslationSync.ResolveUpdate(
+            req.NameJa, entity.NameJa, previousSourceName, name, explicitLanguages.Contains("ja"));
         entity.IsRequired = req.IsRequired;
         entity.IsActive = req.IsActive;
         entity.SortOrder = req.SortOrder;
@@ -140,6 +142,8 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
             throw new InvalidOperationException("Danh mục đang được sử dụng trong hồ sơ hoàn công, không thể xóa. Vui lòng vô hiệu hóa thay vì xóa.");
         }
 
+        db.EntityTranslations.RemoveRange(db.EntityTranslations.Where(translation =>
+            translation.EntityType == EntityTypes.AsBuiltDocumentCategory && translation.EntityId == id));
         db.AsBuiltDocumentCategories.Remove(entity);
         await db.SaveChangesAsync();
 
@@ -333,15 +337,6 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
 
         return normalized;
     }
-
-    private static string SynchronizeFallbackTranslation(
-        string translation,
-        string previousSourceName,
-        string newSourceName) =>
-        string.IsNullOrWhiteSpace(translation)
-        || string.Equals(translation, previousSourceName, StringComparison.Ordinal)
-            ? newSourceName
-            : translation;
 
     private static string ResolveLegacyTranslation(string? translation, string sourceName) =>
         translation?.Trim() ?? sourceName;

@@ -184,6 +184,9 @@ public class ContentSeederTests : IDisposable
         Assert.NotNull(article.NewsCategoryId);
         var category = _db.NewsCategories.Single(c => c.Id == article.NewsCategoryId);
         Assert.Equal("Company News", category.NameVi);
+        Assert.Equal("Company News", category.NameEn);
+        Assert.Equal("Company News", category.NameZh);
+        Assert.Equal("Company News", category.NameJa);
     }
 
     [Fact]
@@ -228,6 +231,52 @@ public class ContentSeederTests : IDisposable
         Assert.Equal("Quotation", category.NameEn);
         Assert.Equal("报价", category.NameZh);
         Assert.Equal("見積もり", category.NameJa);
+    }
+
+    [Fact]
+    public void Seed_PreservesSourceFallbackAfterTranslationReset()
+    {
+        _db.ProjectCategories.Add(new ProjectCategory
+        {
+            Name = "Nhà máy công nghiệp",
+            NameVi = "Nhà máy công nghiệp",
+            NameEn = "Nhà máy công nghiệp",
+            NameZh = "Nhà máy công nghiệp",
+            NameJa = "Nhà máy công nghiệp",
+            IsActive = true,
+        });
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        var category = _db.ProjectCategories.Single(c => c.Name == "Nhà máy công nghiệp");
+        Assert.Equal(category.NameVi, category.NameEn);
+        Assert.Equal(category.NameVi, category.NameZh);
+        Assert.Equal(category.NameVi, category.NameJa);
+    }
+
+    [Fact]
+    public void Seed_BackfillsLanguagesOnNonCanonicalLegacyCategories()
+    {
+        _db.ActivityCategories.Add(new ActivityCategory { Name = "Legacy activity", NameVi = "Legacy activity" });
+        _db.ProjectCategories.Add(new ProjectCategory { Name = "Legacy project", NameVi = "Legacy project" });
+        _db.NewsCategories.Add(new NewsCategory { Name = "Legacy news", NameVi = "Legacy news" });
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        var activity = _db.ActivityCategories.Single(category => category.Name == "Legacy activity");
+        Assert.Equal(activity.NameVi, activity.NameEn);
+        Assert.Equal(activity.NameVi, activity.NameZh);
+        Assert.Equal(activity.NameVi, activity.NameJa);
+        var project = _db.ProjectCategories.Single(category => category.Name == "Legacy project");
+        Assert.Equal(project.NameVi, project.NameEn);
+        Assert.Equal(project.NameVi, project.NameZh);
+        Assert.Equal(project.NameVi, project.NameJa);
+        var news = _db.NewsCategories.Single(category => category.Name == "Legacy news");
+        Assert.Equal(news.NameVi, news.NameEn);
+        Assert.Equal(news.NameVi, news.NameZh);
+        Assert.Equal(news.NameVi, news.NameJa);
     }
 
     [Fact]

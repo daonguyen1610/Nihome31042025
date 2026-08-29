@@ -49,6 +49,9 @@ public class ProjectCategoryServiceTests : IDisposable
         Assert.Contains(result, c => c.Name == "Factory");
         Assert.Contains(result, c => c.Name == "Hotel");
         Assert.All(result, c => Assert.Equal(c.Name, c.NameVi));
+        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameEn));
+        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameZh));
+        Assert.All(result, c => Assert.Equal(c.NameVi, c.NameJa));
     }
 
     [Fact]
@@ -190,6 +193,9 @@ public class ProjectCategoryServiceTests : IDisposable
         var stored = Assert.Single(_db.ProjectCategories);
         Assert.Equal("Brand New", stored.Name);
         Assert.Equal("Brand New", stored.NameVi);
+        Assert.Equal("Brand New", stored.NameEn);
+        Assert.Equal("Brand New", stored.NameZh);
+        Assert.Equal("Brand New", stored.NameJa);
         Assert.True(stored.IsActive);
         Assert.Equal(1, stored.SortOrder);
     }

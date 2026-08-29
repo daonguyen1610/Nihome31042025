@@ -20,6 +20,7 @@ public class ActivityCategoriesController(ActivityCategoryService svc) : Control
 
     [HttpPost]
     [RequirePermission("content.activity-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Create([FromBody] UpsertActivityCategoryRequest req)
     {
         try
@@ -35,6 +36,7 @@ public class ActivityCategoriesController(ActivityCategoryService svc) : Control
 
     [HttpPut("{id:int}")]
     [RequirePermission("content.activity-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertActivityCategoryRequest req)
     {
         try

@@ -40,6 +40,7 @@ public class AsBuiltDocumentCategoriesController(AsBuiltDocumentCategoryService 
     /// </summary>
     [HttpPost]
     [RequirePermission("construction.asbuilt-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Create([FromBody] UpsertAsBuiltDocumentCategoryRequest req)
     {
         try
@@ -58,6 +59,7 @@ public class AsBuiltDocumentCategoriesController(AsBuiltDocumentCategoryService 
     /// </summary>
     [HttpPut("{id:int}")]
     [RequirePermission("construction.asbuilt-categories", "manage")]
+    [RequireTranslationManageForLegacyFields]
     public async Task<IActionResult> Update(int id, [FromBody] UpsertAsBuiltDocumentCategoryRequest req)
     {
         try

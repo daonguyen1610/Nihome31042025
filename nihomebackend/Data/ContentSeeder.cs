@@ -31,8 +31,8 @@ public static class ContentSeeder
         SeedRecruitment(db);
         SeedContactMessages(db);
         SeedEntityTranslations(db);
-        LinkCategories(db);
         SeedCategories(db);
+        LinkCategories(db);
     }
 
     private static void SeedCategories(AppDbContext db)
@@ -168,6 +168,22 @@ public static class ContentSeeder
 
     private static void LinkCategories(AppDbContext db)
     {
+        foreach (var category in db.ActivityCategories)
+        {
+            (category.NameEn, category.NameZh, category.NameJa) = BackfillCategoryLanguages(
+                category.NameVi, category.Name, category.NameEn, category.NameZh, category.NameJa);
+        }
+        foreach (var category in db.ProjectCategories)
+        {
+            (category.NameEn, category.NameZh, category.NameJa) = BackfillCategoryLanguages(
+                category.NameVi, category.Name, category.NameEn, category.NameZh, category.NameJa);
+        }
+        foreach (var category in db.NewsCategories)
+        {
+            (category.NameEn, category.NameZh, category.NameJa) = BackfillCategoryLanguages(
+                category.NameVi, category.Name, category.NameEn, category.NameZh, category.NameJa);
+        }
+
         // Ensure ActivityCategory rows exist for every distinct Activity.Category
         var activityCategoryNames = db.Activities
             .Select(a => a.Category)
@@ -185,7 +201,16 @@ public static class ContentSeeder
             var trimmed = name.Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
             if (existingActivityNames.Contains(NormalizeCategoryKey(trimmed))) continue;
-            db.ActivityCategories.Add(new ActivityCategory { Name = trimmed, NameVi = trimmed, IsActive = true, SortOrder = nextOrder++ });
+            db.ActivityCategories.Add(new ActivityCategory
+            {
+                Name = trimmed,
+                NameVi = trimmed,
+                NameEn = trimmed,
+                NameZh = trimmed,
+                NameJa = trimmed,
+                IsActive = true,
+                SortOrder = nextOrder++,
+            });
             existingActivityNames.Add(NormalizeCategoryKey(trimmed));
         }
 
@@ -206,7 +231,16 @@ public static class ContentSeeder
             var trimmed = (name ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
             if (existingProjectNames.Contains(NormalizeCategoryKey(trimmed))) continue;
-            db.ProjectCategories.Add(new ProjectCategory { Name = trimmed, NameVi = trimmed, IsActive = true, SortOrder = nextProjectOrder++ });
+            db.ProjectCategories.Add(new ProjectCategory
+            {
+                Name = trimmed,
+                NameVi = trimmed,
+                NameEn = trimmed,
+                NameZh = trimmed,
+                NameJa = trimmed,
+                IsActive = true,
+                SortOrder = nextProjectOrder++,
+            });
             existingProjectNames.Add(NormalizeCategoryKey(trimmed));
         }
 
@@ -227,7 +261,16 @@ public static class ContentSeeder
             var trimmed = (name ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
             if (existingNewsNames.Contains(NormalizeCategoryKey(trimmed))) continue;
-            db.NewsCategories.Add(new NewsCategory { Name = trimmed, NameVi = trimmed, IsActive = true, SortOrder = nextNewsOrder++ });
+            db.NewsCategories.Add(new NewsCategory
+            {
+                Name = trimmed,
+                NameVi = trimmed,
+                NameEn = trimmed,
+                NameZh = trimmed,
+                NameJa = trimmed,
+                IsActive = true,
+                SortOrder = nextNewsOrder++,
+            });
             existingNewsNames.Add(NormalizeCategoryKey(trimmed));
         }
         db.SaveChanges();
@@ -262,6 +305,20 @@ public static class ContentSeeder
             }
         }
         db.SaveChanges();
+    }
+
+    private static (string English, string Chinese, string Japanese) BackfillCategoryLanguages(
+        string? nameVi,
+        string name,
+        string? english,
+        string? chinese,
+        string? japanese)
+    {
+        var source = string.IsNullOrWhiteSpace(nameVi) ? name : nameVi;
+        return (
+            string.IsNullOrWhiteSpace(english) ? source : english,
+            string.IsNullOrWhiteSpace(chinese) ? source : chinese,
+            string.IsNullOrWhiteSpace(japanese) ? source : japanese);
     }
 
     // ─── Activities (manifest-driven from legacy nicon.vn) ──────────
