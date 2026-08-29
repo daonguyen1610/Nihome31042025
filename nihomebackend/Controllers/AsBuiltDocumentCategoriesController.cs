@@ -20,7 +20,7 @@ public class AsBuiltDocumentCategoriesController(AsBuiltDocumentCategoryService 
     /// <summary>
     /// List all as-built document categories.
     /// </summary>
-    /// <param name="includeInactive">Include deactivated categories (admin only).</param>
+    /// <param name="includeInactive">Include deactivated categories for historical document display.</param>
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
         => Ok(await svc.GetAllAsync(includeInactive));

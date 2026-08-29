@@ -16,6 +16,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
+import { localizedName } from "@/lib/category";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -88,7 +89,7 @@ const formatDateTime = (iso: string | null | undefined) => {
 };
 
 export default function AsBuiltDocumentsPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionAsBuiltManage);
@@ -143,9 +144,8 @@ export default function AsBuiltDocumentsPage() {
   const getCategoryName = useCallback((code: string) => {
     const cat = categories.find(c => c.code === code);
     if (!cat) return code;
-    // Return name based on current locale (simplified - uses nameVi or falls back to name)
-    return cat.nameVi || cat.name;
-  }, [categories]);
+    return localizedName(cat, lang);
+  }, [categories, lang]);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,7 +153,7 @@ export default function AsBuiltDocumentsPage() {
       try {
         const [projectsRes, categoriesRes] = await Promise.all([
           adminApi.listDesignProjects({ pageSize: 200 }),
-          adminApi.getAsBuiltDocumentCategories(),
+          adminApi.getAsBuiltDocumentCategories(true),
         ]);
         if (!cancelled) {
           setProjects(projectsRes.data.items ?? []);
@@ -449,6 +449,13 @@ export default function AsBuiltDocumentsPage() {
     [t, total, statusCounts, completedRequired, totalRequired],
   );
 
+  const selectableCategories = useMemo(() => {
+    const existingCategoryCode = editingId == null
+      ? undefined
+      : rows.find((row) => row.id === editingId)?.category;
+    return categories.filter((item) => item.isActive || item.code === existingCategoryCode);
+  }, [categories, editingId, rows]);
+
   const rowClickable = useCallback(
     (r: AsBuiltDocumentResponse) => ({
       role: "button" as const,
@@ -562,7 +569,7 @@ export default function AsBuiltDocumentsPage() {
                   <SelectItem value="__all__">{t("asbuilt.filter.category.all")}</SelectItem>
                   {categories.filter(c => c.isActive).map((c) => (
                     <SelectItem key={c.code} value={c.code}>
-                      {c.nameVi || c.name}
+                      {localizedName(c, lang)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -724,7 +731,7 @@ export default function AsBuiltDocumentsPage() {
                       <td className="px-3 py-2 font-medium">{r.title}</td>
                       <td className="px-3 py-2">
                         <Badge variant="outline" className={CATEGORY_BADGE}>
-                          {r.categoryName || getCategoryName(r.category)}
+                          {getCategoryName(r.category)}
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">{r.designProjectName}</td>
@@ -775,7 +782,7 @@ export default function AsBuiltDocumentsPage() {
                         {t(`asbuilt.status.${r.status.toLowerCase()}`)}
                       </Badge>
                       <Badge variant="outline" className={CATEGORY_BADGE}>
-                        {r.categoryName || getCategoryName(r.category)}
+                        {getCategoryName(r.category)}
                       </Badge>
                     </div>
                   </div>
@@ -836,7 +843,7 @@ export default function AsBuiltDocumentsPage() {
                     {t(`asbuilt.status.${detail.status.toLowerCase()}`)}
                   </Badge>
                   <Badge variant="outline" className={CATEGORY_BADGE}>
-                    {detail.categoryName || getCategoryName(detail.category)}
+                    {getCategoryName(detail.category)}
                   </Badge>
                 </div>
 
@@ -1013,9 +1020,9 @@ export default function AsBuiltDocumentsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.filter(c => c.isActive).map((c) => (
+                  {selectableCategories.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
-                      {c.nameVi || c.name}
+                      {localizedName(c, lang)}{c.isActive ? "" : ` (${t("common.inactive")})`}
                     </SelectItem>
                   ))}
                 </SelectContent>

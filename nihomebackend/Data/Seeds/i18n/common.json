@@ -8,6 +8,14 @@
     "ja": "検索..."
   },
   {
+    "key": "common.clearSearch",
+    "category": "common",
+    "vi": "Xóa nội dung tìm kiếm",
+    "en": "Clear search",
+    "zh": "清除搜索",
+    "ja": "検索をクリア"
+  },
+  {
     "key": "common.error",
     "category": "common",
     "vi": "Đã xảy ra lỗi",

@@ -109,7 +109,7 @@ public class AsBuiltDocumentService(
             throw new AsBuiltDocumentOperationException("Tiêu đề tài liệu là bắt buộc.");
         }
 
-        var categoryId = await categoryService.ResolveCategoryIdAsync(null, request.Category);
+        var categoryId = await ResolveCategoryIdAsync(request.Category);
 
         var projectExists = await db.DesignProjects.AnyAsync(dp => dp.Id == request.DesignProjectId, ct);
         if (!projectExists)
@@ -157,7 +157,7 @@ public class AsBuiltDocumentService(
             throw new AsBuiltDocumentOperationException("Tiêu đề tài liệu là bắt buộc.");
         }
 
-        var categoryId = await categoryService.ResolveCategoryIdAsync(null, request.Category);
+        var categoryId = await ResolveCategoryIdAsync(request.Category, entity.CategoryId);
 
         await EnsureUniqueTitleAsync(entity.DesignProjectId, title, entity.Id, ct);
 
@@ -454,5 +454,17 @@ public class AsBuiltDocumentService(
         if (value is null) return null;
         var trimmed = value.Trim();
         return trimmed.Length == 0 ? null : trimmed;
+    }
+
+    private async Task<int> ResolveCategoryIdAsync(string? categoryCode, int? allowedInactiveCategoryId = null)
+    {
+        try
+        {
+            return await categoryService.ResolveCategoryIdAsync(null, categoryCode, allowedInactiveCategoryId);
+        }
+        catch (InvalidOperationException exception)
+        {
+            throw new AsBuiltDocumentOperationException(exception.Message);
+        }
     }
 }

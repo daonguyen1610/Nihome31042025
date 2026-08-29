@@ -117,12 +117,25 @@ namespace nihomebackend.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<string>(
+                name: "Category",
+                table: "as_built_documents",
+                type: "nvarchar(50)",
+                maxLength: 50,
+                nullable: false,
+                defaultValue: "Other");
+
+            migrationBuilder.Sql(@"
+                UPDATE documents
+                SET Category = categories.Code
+                FROM as_built_documents AS documents
+                INNER JOIN as_built_document_categories AS categories
+                    ON documents.CategoryId = categories.Id
+            ");
+
             migrationBuilder.DropForeignKey(
                 name: "FK_as_built_documents_as_built_document_categories_CategoryId",
                 table: "as_built_documents");
-
-            migrationBuilder.DropTable(
-                name: "as_built_document_categories");
 
             migrationBuilder.DropIndex(
                 name: "IX_as_built_documents_CategoryId",
@@ -132,13 +145,8 @@ namespace nihomebackend.Migrations
                 name: "CategoryId",
                 table: "as_built_documents");
 
-            migrationBuilder.AddColumn<string>(
-                name: "Category",
-                table: "as_built_documents",
-                type: "nvarchar(40)",
-                maxLength: 40,
-                nullable: false,
-                defaultValue: "");
+            migrationBuilder.DropTable(
+                name: "as_built_document_categories");
 
             migrationBuilder.CreateIndex(
                 name: "IX_as_built_documents_Category",

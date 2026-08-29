@@ -351,7 +351,8 @@ public class HandoverRecordService(
         if (ids.Count == 0) return result;
 
         var approvedCategories = await db.AsBuiltDocuments.AsNoTracking()
-            .Where(item => ids.Contains(item.DesignProjectId) && item.Status == AsBuiltStatus.Approved)
+            .Where(item => ids.Contains(item.DesignProjectId)
+                && (item.Status == AsBuiltStatus.Approved || item.Status == AsBuiltStatus.Archived))
             .Select(item => new { item.DesignProjectId, item.CategoryId })
             .Distinct().ToListAsync(ct);
         foreach (var group in approvedCategories.GroupBy(item => item.DesignProjectId))
