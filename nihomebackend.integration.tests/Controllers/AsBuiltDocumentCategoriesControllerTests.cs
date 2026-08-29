@@ -39,10 +39,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var createRes = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
         {
             code = $"Design{Guid.NewGuid():N}"[..20],
-            nameVi = "Danh mục thiết kế",
-            nameEn = "Design category",
-            nameZh = "设计类别",
-            nameJa = "設計カテゴリ",
+            name = "Danh mục thiết kế",
             isRequired = false,
             isActive = true,
             sortOrder = 10
@@ -80,10 +77,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var createRes = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
         {
             code,
-            nameVi = name,
-            nameEn = "Test Category EN",
-            nameZh = "测试分类",
-            nameJa = "テストカテゴリ",
+            name,
             isRequired = false,
             isActive = true,
             sortOrder = 99
@@ -92,16 +86,17 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var created = await ReadJsonAsync(createRes);
         var id = created.GetProperty("id").GetInt32();
         created.GetProperty("code").GetString().Should().Be(code);
+        created.GetProperty("nameVi").GetString().Should().Be(name);
+        created.GetProperty("nameEn").GetString().Should().Be(name);
+        created.GetProperty("nameZh").GetString().Should().Be(name);
+        created.GetProperty("nameJa").GetString().Should().Be(name);
         created.GetProperty("isRequired").GetBoolean().Should().BeFalse();
 
         // Update
         var updateRes = await Client.PutAsJsonAsync($"/api/asbuilt-categories/{id}", new
         {
             code,
-            nameVi = name + " Updated",
-            nameEn = "Test Category EN Updated",
-            nameZh = "测试分类更新",
-            nameJa = "テストカテゴリ更新",
+            name = name + " Updated",
             isRequired = true,
             isActive = false,
             sortOrder = 100
@@ -174,10 +169,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var res = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
         {
             code = "Drawing",
-            nameVi = "Danh mục trùng",
-            nameEn = "Duplicate category",
-            nameZh = "重复类别",
-            nameJa = "重複カテゴリ",
+            name = "Danh mục trùng",
             isRequired = false,
             isActive = true,
             sortOrder = 0
@@ -185,56 +177,71 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
-    [Theory]
-    [InlineData("nameVi")]
-    [InlineData("nameEn")]
-    [InlineData("nameZh")]
-    [InlineData("nameJa")]
-    public async Task Create_MissingLocalizedName_ReturnsBadRequest(string missingField)
+    [Fact]
+    public async Task Create_MissingName_ReturnsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
 
         var payload = new Dictionary<string, object?>
         {
             ["code"] = $"Missing{Guid.NewGuid():N}"[..20],
-            ["nameVi"] = "Danh mục kiểm thử",
-            ["nameEn"] = "Test category",
-            ["nameZh"] = "测试类别",
-            ["nameJa"] = "テストカテゴリ",
             ["isRequired"] = false,
             ["isActive"] = true,
             ["sortOrder"] = 10,
         };
-        payload.Remove(missingField);
-
         var res = await Client.PostAsJsonAsync("/api/asbuilt-categories", payload);
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var json = await ReadJsonAsync(res);
         json.GetProperty("errors")
             .EnumerateObject()
-            .Any(property => property.Name.Equals(missingField, StringComparison.OrdinalIgnoreCase))
+            .Any(property => property.Name.Equals("name", StringComparison.OrdinalIgnoreCase))
             .Should().BeTrue();
     }
 
     [Fact]
-    public async Task Create_WhitespaceLocalizedName_ReturnsBadRequest()
+    public async Task Create_WhitespaceName_ReturnsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
 
         var res = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
         {
             code = $"Whitespace{Guid.NewGuid():N}"[..20],
-            nameVi = "Danh mục kiểm thử",
-            nameEn = "   ",
-            nameZh = "测试类别",
-            nameJa = "テストカテゴリ",
+            name = "   ",
             isRequired = false,
             isActive = true,
             sortOrder = 10
         });
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_LegacyNameViAlias_RemainsSupported()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var code = $"Legacy{Guid.NewGuid():N}"[..20];
+
+        var createRes = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
+        {
+            code,
+            nameVi = "Tên nguồn kiểu cũ",
+            nameEn = "Legacy English name",
+            nameZh = "旧版中文名称",
+            nameJa = "旧版日本語名",
+            isRequired = false,
+            isActive = true,
+            sortOrder = 90,
+        });
+
+        createRes.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createRes);
+        created.GetProperty("nameEn").GetString().Should().Be("Legacy English name");
+        created.GetProperty("nameZh").GetString().Should().Be("旧版中文名称");
+        created.GetProperty("nameJa").GetString().Should().Be("旧版日本語名");
+        var id = created.GetProperty("id").GetInt32();
+        (await Client.DeleteAsync($"/api/asbuilt-categories/{id}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]
@@ -246,10 +253,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var createRes = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
         {
             code,
-            nameVi = "Mã không đổi",
-            nameEn = "Immutable code",
-            nameZh = "不可变编码",
-            nameJa = "不変コード",
+            name = "Mã không đổi",
             isRequired = false,
             isActive = true,
             sortOrder = 10
@@ -261,10 +265,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var updateRes = await Client.PutAsJsonAsync($"/api/asbuilt-categories/{id}", new
         {
             code = code + "Changed",
-            nameVi = "Mã không đổi",
-            nameEn = "Immutable code",
-            nameZh = "不可变编码",
-            nameJa = "不変コード",
+            name = "Mã không đổi",
             isRequired = false,
             isActive = true,
             sortOrder = 10
@@ -285,10 +286,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var categoryRes = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
         {
             code,
-            nameVi = "Danh mục vô hiệu",
-            nameEn = "Inactive category",
-            nameZh = "禁用类别",
-            nameJa = "無効カテゴリ",
+            name = "Danh mục vô hiệu",
             isRequired = false,
             isActive = false,
             sortOrder = 10
@@ -325,10 +323,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var res = await Client.PutAsJsonAsync("/api/asbuilt-categories/999999", new
         {
             code = "NonExistent",
-            nameVi = "Kiểm thử",
-            nameEn = "Test",
-            nameZh = "测试",
-            nameJa = "テスト",
+            name = "Kiểm thử",
             isRequired = false,
             isActive = true,
             sortOrder = 0
@@ -345,10 +340,7 @@ public class AsBuiltDocumentCategoriesControllerTests : IntegrationTestBase
         var res = await Client.PostAsJsonAsync("/api/asbuilt-categories", new
         {
             code = "NoPermTest",
-            nameVi = "Không có quyền",
-            nameEn = "No permission",
-            nameZh = "没有权限",
-            nameJa = "権限なし",
+            name = "Không có quyền",
             isRequired = false,
             isActive = true,
             sortOrder = 0

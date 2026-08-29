@@ -54,22 +54,19 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
     public async Task<AsBuiltDocumentCategoryResponse> CreateAsync(UpsertAsBuiltDocumentCategoryRequest req)
     {
         var code = NormalizeCode(req.Code);
-        var nameVi = NormalizeName(req.NameVi, "Tên tiếng Việt", "Bản vẽ hoàn công");
-        var nameEn = NormalizeName(req.NameEn, "Tên tiếng Anh", "As-built drawings");
-        var nameZh = NormalizeName(req.NameZh, "Tên tiếng Trung", "竣工图纸");
-        var nameJa = NormalizeName(req.NameJa, "Tên tiếng Nhật", "竣工図面");
+        var name = NormalizeName(req.Name, req.NameVi);
 
         await EnsureCodeUniqueAsync(code);
-        await EnsureNameUniqueAsync(nameVi);
+        await EnsureNameUniqueAsync(name);
 
         var entity = new AsBuiltDocumentCategory
         {
             Code = code,
-            Name = nameVi,
-            NameVi = nameVi,
-            NameEn = nameEn,
-            NameZh = nameZh,
-            NameJa = nameJa,
+            Name = name,
+            NameVi = name,
+            NameEn = ResolveLegacyTranslation(req.NameEn, name),
+            NameZh = ResolveLegacyTranslation(req.NameZh, name),
+            NameJa = ResolveLegacyTranslation(req.NameJa, name),
             IsRequired = req.IsRequired,
             IsActive = req.IsActive,
             SortOrder = req.SortOrder,
@@ -96,19 +93,23 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
         {
             throw new InvalidOperationException("Mã danh mục không thể thay đổi sau khi tạo.");
         }
-        var nameVi = NormalizeName(req.NameVi, "Tên tiếng Việt", "Bản vẽ hoàn công");
-        var nameEn = NormalizeName(req.NameEn, "Tên tiếng Anh", "As-built drawings");
-        var nameZh = NormalizeName(req.NameZh, "Tên tiếng Trung", "竣工图纸");
-        var nameJa = NormalizeName(req.NameJa, "Tên tiếng Nhật", "竣工図面");
+        var previousSourceName = entity.NameVi;
+        var name = NormalizeName(req.Name, req.NameVi);
 
         await EnsureCodeUniqueAsync(code, id);
-        await EnsureNameUniqueAsync(nameVi, id);
+        await EnsureNameUniqueAsync(name, id);
 
-        entity.Name = nameVi;
-        entity.NameVi = nameVi;
-        entity.NameEn = nameEn;
-        entity.NameZh = nameZh;
-        entity.NameJa = nameJa;
+        entity.Name = name;
+        entity.NameVi = name;
+        entity.NameEn = req.NameEn == null
+            ? SynchronizeFallbackTranslation(entity.NameEn, previousSourceName, name)
+            : req.NameEn.Trim();
+        entity.NameZh = req.NameZh == null
+            ? SynchronizeFallbackTranslation(entity.NameZh, previousSourceName, name)
+            : req.NameZh.Trim();
+        entity.NameJa = req.NameJa == null
+            ? SynchronizeFallbackTranslation(entity.NameJa, previousSourceName, name)
+            : req.NameJa.Trim();
         entity.IsRequired = req.IsRequired;
         entity.IsActive = req.IsActive;
         entity.SortOrder = req.SortOrder;
@@ -322,16 +323,28 @@ public class AsBuiltDocumentCategoryService(AppDbContext db, ILogger<AsBuiltDocu
         return normalized;
     }
 
-    private static string NormalizeName(string name, string fieldName, string example)
+    private static string NormalizeName(string? name, string? legacyNameVi)
     {
-        var normalized = (name ?? string.Empty).Trim();
+        var normalized = (!string.IsNullOrWhiteSpace(name) ? name : legacyNameVi ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(normalized))
         {
-            throw new InvalidOperationException($"{fieldName} không được để trống. Ví dụ: {example}.");
+            throw new InvalidOperationException("Tên danh mục không được để trống. Ví dụ: Bản vẽ hoàn công.");
         }
 
         return normalized;
     }
+
+    private static string SynchronizeFallbackTranslation(
+        string translation,
+        string previousSourceName,
+        string newSourceName) =>
+        string.IsNullOrWhiteSpace(translation)
+        || string.Equals(translation, previousSourceName, StringComparison.Ordinal)
+            ? newSourceName
+            : translation;
+
+    private static string ResolveLegacyTranslation(string? translation, string sourceName) =>
+        translation?.Trim() ?? sourceName;
 
     private static AsBuiltDocumentCategoryResponse MapToResponse(AsBuiltDocumentCategory item, int documentCount) => new()
     {

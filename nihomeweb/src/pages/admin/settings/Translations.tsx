@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Search,
   Plus,
@@ -13,7 +14,10 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import api from "@/lib/api";
+import { extractApiError } from "@/lib/apiError";
 import { toHostRelativeUrl } from "@/lib/url";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
@@ -201,8 +205,13 @@ const PAGE_SIZE = 20;
 const TranslationsPage = () => {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { has } = usePermissions();
+  const canManageTranslations = has(ADMIN_PERMS.translationsManage);
+  const [searchParams] = useSearchParams();
 
-  const [tab, setTab] = useState<"static" | "entity">("static");
+  const [tab, setTab] = useState<"static" | "entity">(
+    searchParams.get("tab") === "entity" ? "entity" : "static",
+  );
 
   /* ── Static translations state ── */
   const [pairs, setPairs] = useState<TranslationPair[]>([]);
@@ -226,7 +235,7 @@ const TranslationsPage = () => {
 
   /* ── Entity translations state ── */
   const [entityTypes, setEntityTypes] = useState<EntityTypeInfo[]>([]);
-  const [selectedType, setSelectedType] = useState("");
+  const [selectedType, setSelectedType] = useState(searchParams.get("type") ?? "");
   const [entityItems, setEntityItems] = useState<EntityItem[]>([]);
   const [entityLoading, setEntityLoading] = useState(false);
 
@@ -413,6 +422,18 @@ const TranslationsPage = () => {
 
   const saveEntityTranslations = async () => {
     if (!entityModalItem || !entityModalType) return;
+    const isAsBuiltCategory = entityModalType.type === "AsBuiltDocumentCategory";
+    if (isAsBuiltCategory) {
+      const name = entityTranslations[entityModalLang]?.Name ?? "";
+      if (!name.trim()) {
+        toast({ title: t("translations.nameRequired"), variant: "destructive" });
+        return;
+      }
+      if (name.trim().length > 200) {
+        toast({ title: t("translations.nameTooLong"), variant: "destructive" });
+        return;
+      }
+    }
     setEntitySaving(true);
     try {
       const raw = entityTranslations[entityModalLang] ?? {};
@@ -425,6 +446,22 @@ const TranslationsPage = () => {
         translations: fields,
       });
       toast({ title: t("form.updated") });
+      setEntityModalOpen(false);
+      fetchEntities();
+    } catch (error) {
+      toast({ title: extractApiError(error), variant: "destructive" });
+    } finally {
+      setEntitySaving(false);
+    }
+  };
+
+  const resetEntityTranslations = async () => {
+    if (!entityModalItem || !entityModalType) return;
+    if (!confirm(t("translations.confirmReset"))) return;
+    setEntitySaving(true);
+    try {
+      await api.delete(`/translations/entity/${entityModalType.type}/${entityModalItem.id}`);
+      toast({ title: t("translations.resetSuccess") });
       setEntityModalOpen(false);
       fetchEntities();
     } catch {
@@ -512,9 +549,11 @@ const TranslationsPage = () => {
                 </SelectContent>
               </Select>
               <AdminExportButton onClick={handleExportStaticTranslations} disabled={loading || pairs.length === 0} />
-              <Button onClick={openAdd}>
-                <Plus className="mr-1.5 h-4 w-4" /> {t("translations.addKey")}
-              </Button>
+              {canManageTranslations && (
+                <Button onClick={openAdd}>
+                  <Plus className="mr-1.5 h-4 w-4" /> {t("translations.addKey")}
+                </Button>
+              )}
             </div>
 
             {/* Table */}
@@ -555,7 +594,7 @@ const TranslationsPage = () => {
                           <dt className="text-muted-foreground">🇯🇵 JA</dt>
                           <dd className="min-w-0 break-words">{p.translations["ja"] ?? "—"}</dd>
                         </dl>
-                        <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
+                        {canManageTranslations && <div className="mt-3 flex items-center justify-end gap-1 border-t pt-2">
                           <Button
                             size="icon"
                             variant="ghost"
@@ -574,7 +613,7 @@ const TranslationsPage = () => {
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
-                        </div>
+                        </div>}
                       </li>
                     ))}
                   </ul>
@@ -589,7 +628,7 @@ const TranslationsPage = () => {
                             <th key={lang} className="px-4 py-3 text-left font-medium">{LANG_LABELS[lang]}</th>
                           ))}
                           <th className="px-4 py-3 text-left font-medium">{t("translations.field.category")}</th>
-                          <th className="w-32 px-4 py-3 text-left font-medium">{t("common.actions")}</th>
+                          {canManageTranslations && <th className="w-32 px-4 py-3 text-left font-medium">{t("common.actions")}</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -609,7 +648,7 @@ const TranslationsPage = () => {
                                 </Badge>
                               )}
                             </td>
-                            <td className="px-4 py-3">
+                            {canManageTranslations && <td className="px-4 py-3">
                               <div className="flex gap-1">
                                 <Button
                                   size="icon"
@@ -630,7 +669,7 @@ const TranslationsPage = () => {
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </div>
-                            </td>
+                            </td>}
                           </tr>
                         ))}
                       </tbody>
@@ -711,9 +750,13 @@ const TranslationsPage = () => {
                       <span className="shrink-0 font-mono text-xs text-muted-foreground">#{item.id}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      {item.hasTranslation ? (
+                      {item.translationCount === item.expectedFields ? (
                         <Badge variant="outline" className="gap-1 border-emerald-200 bg-emerald-50 font-medium text-emerald-700">
                           <Check className="h-3 w-3" /> {t("translations.translated")} ({item.translationCount}/{item.expectedFields})
+                        </Badge>
+                      ) : item.translationCount > 0 ? (
+                        <Badge variant="outline" className="gap-1 border-sky-200 bg-sky-50 font-medium text-sky-700">
+                          <Check className="h-3 w-3" /> {t("translations.partiallyTranslated")} ({item.translationCount}/{item.expectedFields})
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="gap-1 border-amber-200 bg-amber-50 font-medium text-amber-700">
@@ -721,7 +764,8 @@ const TranslationsPage = () => {
                         </Badge>
                       )}
                       <Button size="sm" onClick={() => openEntityTranslate(item)}>
-                        <Pencil className="mr-1.5 h-3 w-3" /> {t("translations.translate")}
+                        <Pencil className="mr-1.5 h-3 w-3" />
+                        {canManageTranslations ? t("translations.translate") : t("common.view")}
                       </Button>
                     </div>
                   </div>
@@ -854,6 +898,8 @@ const TranslationsPage = () => {
                         <Textarea
                           value={entityTranslations[entityModalLang]?.[field] ?? ""}
                           onChange={(e) => updateEntityField(field, e.target.value)}
+                          readOnly={!canManageTranslations}
+                          maxLength={entityModalType.type === "AsBuiltDocumentCategory" ? 200 : undefined}
                           rows={rows}
                           className="resize-y font-mono"
                         />
@@ -872,10 +918,17 @@ const TranslationsPage = () => {
                 <Button variant="outline" onClick={() => setEntityModalOpen(false)}>
                   {t("common.cancel")}
                 </Button>
-                <Button onClick={saveEntityTranslations} disabled={entitySaving}>
-                  {entitySaving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-                  {t("common.save")}
-                </Button>
+                {canManageTranslations && entityModalItem.hasTranslation && (
+                  <Button variant="destructive" onClick={resetEntityTranslations} disabled={entitySaving}>
+                    {t("translations.reset")}
+                  </Button>
+                )}
+                {canManageTranslations && (
+                  <Button onClick={saveEntityTranslations} disabled={entitySaving}>
+                    {entitySaving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                    {t("common.save")}
+                  </Button>
+                )}
               </DialogFooter>
             </>
           )}

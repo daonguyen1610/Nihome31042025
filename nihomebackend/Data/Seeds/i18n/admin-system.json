@@ -2600,6 +2600,14 @@
     "ja": "翻訳済み"
   },
   {
+    "key": "translations.partiallyTranslated",
+    "category": "translations",
+    "vi": "Đã dịch một phần",
+    "en": "Partially translated",
+    "zh": "部分已翻译",
+    "ja": "一部翻訳済み"
+  },
+  {
     "key": "translations.notTranslated",
     "category": "translations",
     "vi": "Chưa dịch",
@@ -2614,6 +2622,46 @@
     "en": "Translate",
     "zh": "翻译",
     "ja": "翻訳"
+  },
+  {
+    "key": "translations.reset",
+    "category": "translations",
+    "vi": "Đặt lại bản dịch",
+    "en": "Reset translations",
+    "zh": "重置翻译",
+    "ja": "翻訳をリセット"
+  },
+  {
+    "key": "translations.confirmReset",
+    "category": "translations",
+    "vi": "Đặt lại toàn bộ bản dịch của nội dung này về tên gốc?",
+    "en": "Reset all translations for this content to the source name?",
+    "zh": "将此内容的所有翻译重置为原始名称吗？",
+    "ja": "このコンテンツのすべての翻訳を元の名前にリセットしますか？"
+  },
+  {
+    "key": "translations.resetSuccess",
+    "category": "translations",
+    "vi": "Đã đặt lại bản dịch",
+    "en": "Translations reset",
+    "zh": "翻译已重置",
+    "ja": "翻訳をリセットしました"
+  },
+  {
+    "key": "translations.nameRequired",
+    "category": "translations",
+    "vi": "Tên bản dịch không được để trống. Ví dụ: Bản vẽ hoàn công.",
+    "en": "The translated name is required. Example: As-built drawings.",
+    "zh": "翻译名称不能为空。例如：竣工图纸。",
+    "ja": "翻訳名は必須です。例：竣工図面。"
+  },
+  {
+    "key": "translations.nameTooLong",
+    "category": "translations",
+    "vi": "Tên bản dịch không được vượt quá 200 ký tự.",
+    "en": "The translated name must not exceed 200 characters.",
+    "zh": "翻译名称不得超过 200 个字符。",
+    "ja": "翻訳名は200文字以内で入力してください。"
   },
   {
     "key": "translations.addModalTitle",
