@@ -149,6 +149,16 @@ working across modules. The list shows customer, lifecycle status, and counts
 of linked opportunities, quotations, and contracts. The detail view provides
 direct links to those records and to the design workflow.
 
+The detail view also includes a **Payment timeline**. It combines payment
+milestones from every Contract linked to the same operational project and shows
+the Contract number on each entry so similarly named milestones remain
+distinguishable. The planned date comes from the milestone due date. The
+current Contract data does not store a durable actual-payment date, so the
+timeline leaves that field empty rather than estimating it from another update.
+Adding this date requires an approved data and legacy-backfill policy. Changes
+made in a Contract otherwise appear automatically because the timeline reads the
+Contract milestone records directly rather than maintaining a separate copy.
+
 A new project starts in **Planning**. It can move to **Active**, **On hold**,
 **Completed**, or **Cancelled** according to the displayed lifecycle. Only an
 empty Planning project can be deleted; cancel a project that already contains

@@ -43,5 +43,14 @@
   {"key":"operationalProjects.count.opportunities","category":"operationalProjects","vi":"Cơ hội","en":"Opps","zh":"商机","ja":"商談"},
   {"key":"operationalProjects.count.quotes","category":"operationalProjects","vi":"Báo giá","en":"Quotes","zh":"报价","ja":"見積"},
   {"key":"operationalProjects.count.contracts","category":"operationalProjects","vi":"Hợp đồng","en":"Contracts","zh":"合同","ja":"契約"},
-  {"key":"operationalProjects.count.contractsWithValue","category":"operationalProjects","vi":"{count} hợp đồng","en":"{count} contracts","zh":"{count} 份合同","ja":"契約 {count} 件"}
+  {"key":"operationalProjects.count.contractsWithValue","category":"operationalProjects","vi":"{count} hợp đồng","en":"{count} contracts","zh":"{count} 份合同","ja":"契約 {count} 件"},
+  {"key":"operationalProjects.timeline.title","category":"operationalProjects","vi":"Timeline thanh toán","en":"Payment timeline","zh":"付款时间线","ja":"支払タイムライン"},
+  {"key":"operationalProjects.timeline.description","category":"operationalProjects","vi":"Tổng hợp các mốc thanh toán từ tất cả hợp đồng thuộc dự án, phân biệt theo số hợp đồng.","en":"Payment milestones from every contract in this project, identified by contract number.","zh":"汇总此项目所有合同的付款里程碑，并按合同编号区分。","ja":"このプロジェクトに属するすべての契約の支払マイルストーンを、契約番号ごとに表示します。"},
+  {"key":"operationalProjects.timeline.empty","category":"operationalProjects","vi":"Chưa có mốc thanh toán hợp đồng trong dự án.","en":"No contract payment milestones in this project yet.","zh":"此项目暂无合同付款里程碑。","ja":"このプロジェクトには契約の支払マイルストーンがまだありません。"},
+  {"key":"operationalProjects.timeline.plannedDate","category":"operationalProjects","vi":"Ngày kế hoạch","en":"Planned date","zh":"计划日期","ja":"予定日"},
+  {"key":"operationalProjects.timeline.actualDate","category":"operationalProjects","vi":"Ngày hoàn tất thực tế","en":"Actual completion date","zh":"实际完成日期","ja":"実際の完了日"},
+  {"key":"operationalProjects.timeline.updatedAt","category":"operationalProjects","vi":"Cập nhật gần nhất","en":"Last updated","zh":"最近更新","ja":"最終更新"},
+  {"key":"operationalProjects.timeline.source","category":"operationalProjects","vi":"Nguồn cập nhật","en":"Update source","zh":"更新来源","ja":"更新元"},
+  {"key":"operationalProjects.timeline.source.ContractPaymentMilestone","category":"operationalProjects","vi":"Mốc thanh toán hợp đồng","en":"Contract payment milestone","zh":"合同付款里程碑","ja":"契約支払マイルストーン"},
+  {"key":"operationalProjects.timeline.percent","category":"operationalProjects","vi":"{percent}% giá trị hợp đồng","en":"{percent}% of contract value","zh":"合同金额的 {percent}%","ja":"契約金額の {percent}%"}
 ]

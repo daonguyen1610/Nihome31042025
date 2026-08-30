@@ -45,6 +45,19 @@ public class OperationalProjectsController(
         return Ok(result);
     }
 
+    [HttpGet("{id:int}/timeline")]
+    [RequirePermission("operations.projects", "view")]
+    public async Task<ActionResult<IReadOnlyList<OperationalProjectTimelineItemResponse>>> GetTimeline(
+        int id,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
+        var result = await service.GetTimelineAsync(id, userId.Value, canSeeAll, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost]
     [RequirePermission("operations.projects", "manage")]
     [Idempotency("operations.projects.create")]

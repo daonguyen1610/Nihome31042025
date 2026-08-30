@@ -126,3 +126,20 @@ public class OperationalProjectPaymentMilestoneResponse
     public DateTime? DueDate { get; set; }
     public string Status { get; set; } = string.Empty;
 }
+
+public class OperationalProjectTimelineItemResponse
+{
+    public int Id { get; set; }
+    public int ContractId { get; set; }
+    public string ContractNumber { get; set; } = string.Empty;
+    public int Order { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal PercentValue { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime? PlannedDate { get; set; }
+    public DateTime? ActualDate { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string Source { get; set; } = string.Empty;
+    public string? Note { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
