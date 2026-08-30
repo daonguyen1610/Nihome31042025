@@ -671,6 +671,7 @@ it must not be confused with public portfolio content or the three-phase
 |---|---|---|---|
 | `GET` | `/api/operational-projects` | `operations.projects.view` | List the caller's project scope with filters and rollup counts |
 | `GET` | `/api/operational-projects/{id}` | `operations.projects.view` | Read the customer, opportunity, quote, contract, and design rollup |
+| `GET` | `/api/operational-projects/{id}/timeline` | `operations.projects.view` | Read payment milestones from every Contract in the caller's project scope |
 | `POST` | `/api/operational-projects` | `operations.projects.manage` | Create a planning project with a generated `PJ-YYYY-NNNN` code |
 | `PUT` | `/api/operational-projects/{id}` | `operations.projects.manage` | Update metadata or perform an allowed lifecycle transition |
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
@@ -681,6 +682,17 @@ also emits an ETag. `AddOperationalProjects` backfills existing design,
 contract, opportunity, and quote relationships before adding their foreign
 keys. The operational hierarchy and user workflow are documented in
 `docs/user_guide.md`.
+
+The read-only timeline endpoint derives its entries from existing Contract
+payment milestones and does not copy or synchronize data. Each entry identifies
+its Contract, source, status, planned due date, latest update time, and amount.
+The current milestone schema has no durable actual-payment date. The endpoint
+therefore returns an empty actual date for every status rather than presenting
+`UpdatedAt` or retention-managed audit data as financial fact. A populated
+actual date requires business approval for a dedicated field and legacy-data
+policy. Calls are naturally idempotent, and projects outside the caller's scope
+return `404` without disclosing their existence. No schema migration or
+legacy-data backfill is included in this bounded implementation.
 
 ### 7.11 BOQ Quotation Integrity
 

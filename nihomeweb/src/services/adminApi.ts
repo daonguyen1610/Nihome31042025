@@ -851,6 +851,22 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
   }>;
 }
 
+export interface OperationalProjectTimelineItem {
+  id: number;
+  contractId: number;
+  contractNumber: string;
+  order: number;
+  name: string;
+  percentValue: number;
+  amount: number;
+  plannedDate?: string | null;
+  actualDate?: string | null;
+  status: PaymentMilestoneStatus;
+  source: "ContractPaymentMilestone";
+  note?: string | null;
+  updatedAt: string;
+}
+
 export interface OperationalProjectListResponse {
   total: number;
   page: number;
@@ -4138,6 +4154,8 @@ export const adminApi = {
     api.get<OperationalProjectListResponse>("/operational-projects", { params }),
   getOperationalProject: (id: number) =>
     api.get<OperationalProjectResponse>(`/operational-projects/${id}`),
+  getOperationalProjectTimeline: (id: number) =>
+    api.get<OperationalProjectTimelineItem[]>(`/operational-projects/${id}/timeline`),
   createOperationalProject: (body: CreateOperationalProjectRequest) =>
     api.post<OperationalProjectResponse>("/operational-projects", body),
   updateOperationalProject: (id: number, body: UpdateOperationalProjectRequest) =>

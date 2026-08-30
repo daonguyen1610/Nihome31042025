@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, BriefcaseBusiness, ExternalLink, FileText, Pencil, Plus, RefreshCcw, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, CalendarClock, ExternalLink, FileText, Pencil, Plus, RefreshCcw, Search, ShoppingCart, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -26,6 +26,8 @@ import {
   type OperationalProjectListItemResponse,
   type OperationalProjectResponse,
   type OperationalProjectStatus,
+  type OperationalProjectTimelineItem,
+  type PaymentMilestoneStatus,
   type UpdateOperationalProjectRequest,
   type UserListItemResponse,
 } from "@/services/adminApi";
@@ -36,6 +38,12 @@ const statusClass: Record<OperationalProjectStatus, string> = {
   OnHold: "border-amber-200 bg-amber-50 text-amber-700",
   Completed: "border-slate-200 bg-slate-50 text-slate-700",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
+const milestoneStatusClass: Record<PaymentMilestoneStatus, string> = {
+  Pending: "border-amber-200 bg-amber-50 text-amber-700",
+  Requested: "border-sky-200 bg-sky-50 text-sky-700",
+  Paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
 const emptyForm = (): UpdateOperationalProjectRequest => ({
@@ -59,6 +67,7 @@ const OperationalProjects = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.operationalProjectsManage);
+  const canViewContracts = has(ADMIN_PERMS.contracts);
   const canListUsers = has(ADMIN_PERMS.users);
   const projectId = id && /^\d+$/.test(id) ? Number(id) : null;
   const customerFilter = /^\d+$/.test(searchParams.get("customerId") ?? "")
@@ -68,6 +77,7 @@ const OperationalProjects = () => {
   const [rows, setRows] = useState<OperationalProjectListItemResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<OperationalProjectResponse | null>(null);
+  const [timeline, setTimeline] = useState<OperationalProjectTimelineItem[]>([]);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
   const [search, setSearch] = useState("");
@@ -120,10 +130,15 @@ const OperationalProjects = () => {
     setError(null);
     try {
       if (projectId != null) {
-        const response = await adminApi.getOperationalProject(projectId);
-        setDetail(response.data);
+        const [detailResponse, timelineResponse] = await Promise.all([
+          adminApi.getOperationalProject(projectId),
+          adminApi.getOperationalProjectTimeline(projectId),
+        ]);
+        setDetail(detailResponse.data);
+        setTimeline(timelineResponse.data ?? []);
       } else {
         setDetail(null);
+        setTimeline([]);
         const response = await adminApi.listOperationalProjects({
           customerId: customerFilter,
           search: search.trim() || undefined,
@@ -253,7 +268,75 @@ const OperationalProjects = () => {
 
           {detail.note && <section className="rounded-lg border bg-card p-4"><h2 className="mb-2 font-medium">{t("operationalProjects.field.note")}</h2><p className="whitespace-pre-wrap text-sm text-muted-foreground">{detail.note}</p></section>}
 
-          <Accordion type="multiple" defaultValue={["opportunities", "quotes", "contracts"]} className="space-y-3">
+          <Accordion type="multiple" defaultValue={["timeline", "opportunities", "quotes", "contracts"]} className="space-y-3">
+            <AccordionItem value="timeline" className="rounded-lg border bg-card px-4">
+              <AccordionTrigger className="py-4 hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <CalendarClock className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{t("operationalProjects.timeline.title")}</span>
+                  <Badge variant="secondary" className="ml-1">{timeline.length}</Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                <p className="mb-4 text-sm text-muted-foreground">{t("operationalProjects.timeline.description")}</p>
+                {timeline.length === 0 ? (
+                  <p className="rounded-md border border-dashed p-5 text-center text-sm text-muted-foreground">
+                    {t("operationalProjects.timeline.empty")}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {timeline.map(item => (
+                      <article key={item.id} className="rounded-md border p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="break-words font-medium">{item.name}</h3>
+                              <Badge variant="outline" className={milestoneStatusClass[item.status]}>
+                                {t(`contracts.milestoneStatus.${item.status}`)}
+                              </Badge>
+                            </div>
+                            {canViewContracts ? (
+                              <Link
+                                to={`/admin/contracts/${item.contractId}`}
+                                className="mt-1 inline-flex items-center gap-1 break-all font-mono text-sm text-primary hover:underline"
+                              >
+                                {item.contractNumber}<ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                              </Link>
+                            ) : (
+                              <p className="mt-1 break-all font-mono text-sm text-muted-foreground">{item.contractNumber}</p>
+                            )}
+                          </div>
+                          <p className="shrink-0 font-semibold text-primary">{currencyFormat.format(item.amount)}</p>
+                        </div>
+                        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                          <div>
+                            <dt className="text-xs text-muted-foreground">{t("operationalProjects.timeline.plannedDate")}</dt>
+                            <dd>{formatDate(item.plannedDate)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">{t("operationalProjects.timeline.actualDate")}</dt>
+                            <dd>{formatDate(item.actualDate)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">{t("operationalProjects.timeline.updatedAt")}</dt>
+                            <dd>{formatDate(item.updatedAt)}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs text-muted-foreground">{t("operationalProjects.timeline.source")}</dt>
+                            <dd>{t(`operationalProjects.timeline.source.${item.source}`)}</dd>
+                          </div>
+                        </dl>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          {t("operationalProjects.timeline.percent", { percent: item.percentValue })}
+                        </p>
+                        {item.note && <p className="mt-3 whitespace-pre-wrap break-words border-t pt-3 text-sm text-muted-foreground">{item.note}</p>}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="opportunities" className="rounded-lg border bg-card px-4">
               <AccordionTrigger className="hover:no-underline py-4">
                 <div className="flex items-center gap-3">

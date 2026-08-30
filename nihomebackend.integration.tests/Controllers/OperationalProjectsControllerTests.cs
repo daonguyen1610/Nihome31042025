@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -237,6 +238,136 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var delete = await Client.SendAsync(request);
 
         delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Timeline_AggregatesContractsAndRepeatedReadIsStable()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var projectId = await WithDbAsync(async db =>
+        {
+            var managerId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-TL-{Guid.NewGuid():N}"[..20],
+                Name = "Timeline aggregation",
+                CustomerId = customerId,
+                ProjectManagerUserId = managerId,
+                CreatedByUserId = managerId,
+                UpdatedByUserId = managerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var contracts = new[]
+            {
+                new Contract
+                {
+                    ContractNumber = $"HD-TL-A-{Guid.NewGuid():N}"[..24],
+                    CustomerId = customerId,
+                    OperationalProjectId = project.Id,
+                    Value = 10_000,
+                },
+                new Contract
+                {
+                    ContractNumber = $"HD-TL-B-{Guid.NewGuid():N}"[..24],
+                    CustomerId = customerId,
+                    OperationalProjectId = project.Id,
+                    Value = 20_000,
+                },
+            };
+            db.Contracts.AddRange(contracts);
+            await db.SaveChangesAsync();
+            var milestones = new[]
+            {
+                new ContractPaymentMilestone
+                {
+                    ContractId = contracts[0].Id,
+                    Order = 1,
+                    Name = "Advance",
+                    PercentValue = 20,
+                    DueDate = new DateTime(2026, 9, 1),
+                },
+                new ContractPaymentMilestone
+                {
+                    ContractId = contracts[1].Id,
+                    Order = 1,
+                    Name = new string('M', 200),
+                    PercentValue = 50,
+                    DueDate = new DateTime(2026, 8, 1),
+                    Status = PaymentMilestoneStatus.Paid,
+                    Note = new string('N', 500),
+                },
+            };
+            db.ContractPaymentMilestones.AddRange(milestones);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+
+        var first = await Client.GetAsync($"/api/operational-projects/{projectId}/timeline");
+        var second = await Client.GetAsync($"/api/operational-projects/{projectId}/timeline");
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        var items = (await ReadJsonAsync(first)).EnumerateArray().ToList();
+        items.Should().HaveCount(2);
+        items[0].GetProperty("status").GetString().Should().Be("Paid");
+        items[0].GetProperty("contractNumber").GetString().Should().StartWith("HD-TL-B-");
+        items[0].GetProperty("plannedDate").GetDateTime().Should().Be(new DateTime(2026, 8, 1));
+        items[0].GetProperty("actualDate").ValueKind.Should().Be(JsonValueKind.Null);
+        items[0].GetProperty("source").GetString().Should().Be("ContractPaymentMilestone");
+        items[0].GetProperty("name").GetString().Should().HaveLength(200);
+        items[0].GetProperty("note").GetString().Should().HaveLength(500);
+        (await second.Content.ReadAsStringAsync()).Should().Be(await first.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Timeline_ProjectOutsideCallerScope_IsNotFound()
+    {
+        var customerId = await CreateCustomerAsync();
+        var projectId = await WithDbAsync(async db =>
+        {
+            var ownerId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-SCOPE-{Guid.NewGuid():N}"[..24],
+                Name = "Restricted timeline",
+                CustomerId = customerId,
+                ProjectManagerUserId = ownerId,
+                CreatedByUserId = ownerId,
+                UpdatedByUserId = ownerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+
+        var response = await Client.GetAsync($"/api/operational-projects/{projectId}/timeline");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Timeline_UnknownProject_IsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+
+        var response = await Client.GetAsync("/api/operational-projects/2147483647/timeline");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     private Task<int> CreateCustomerAsync(string name = "Operational project customer")

@@ -19,6 +19,12 @@ public interface IOperationalProjectService
         bool canSeeAll,
         CancellationToken ct = default);
 
+    Task<IReadOnlyList<OperationalProjectTimelineItemResponse>?> GetTimelineAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default);
+
     Task<OperationalProjectResponse> CreateAsync(
         CreateOperationalProjectRequest request,
         int callerUserId,

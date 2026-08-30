@@ -122,6 +122,63 @@ public class OperationalProjectService(
         return Map(project);
     }
 
+    public async Task<IReadOnlyList<OperationalProjectTimelineItemResponse>?> GetTimelineAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var project = await db.OperationalProjects
+            .AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return null;
+
+        var milestones = await db.ContractPaymentMilestones
+            .AsNoTracking()
+            .Where(item => item.Contract.OperationalProjectId == id)
+            .Select(item => new
+            {
+                item.Id,
+                item.ContractId,
+                item.Contract.ContractNumber,
+                item.Order,
+                item.Name,
+                item.PercentValue,
+                ContractValue = item.Contract.Value,
+                item.DueDate,
+                item.Status,
+                item.Note,
+                item.UpdatedAt,
+            })
+            .ToListAsync(ct);
+
+        return milestones
+            .OrderBy(item => item.DueDate.HasValue ? 0 : 1)
+            .ThenBy(item => item.DueDate)
+            .ThenBy(item => item.ContractNumber)
+            .ThenBy(item => item.Order)
+            .Select(item => new OperationalProjectTimelineItemResponse
+            {
+                Id = item.Id,
+                ContractId = item.ContractId,
+                ContractNumber = item.ContractNumber,
+                Order = item.Order,
+                Name = item.Name,
+                PercentValue = item.PercentValue,
+                Amount = Math.Round(
+                    item.ContractValue * item.PercentValue / 100m,
+                    2,
+                    MidpointRounding.AwayFromZero),
+                PlannedDate = item.DueDate,
+                ActualDate = null,
+                Status = item.Status.ToString(),
+                Source = nameof(ContractPaymentMilestone),
+                Note = item.Note,
+                UpdatedAt = item.UpdatedAt,
+            })
+            .ToList();
+    }
+
     public async Task<OperationalProjectResponse> CreateAsync(
         CreateOperationalProjectRequest request,
         int callerUserId,

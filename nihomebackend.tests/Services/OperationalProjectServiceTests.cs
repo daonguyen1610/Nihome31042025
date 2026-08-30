@@ -184,6 +184,77 @@ public class OperationalProjectServiceTests : IDisposable
         Assert.Single(result.Contracts);
     }
 
+    [Fact]
+    public async Task GetTimelineAsync_AggregatesMilestonesAcrossContractsInPlannedDateOrder()
+    {
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        var firstContract = new Contract
+        {
+            ContractNumber = "HD-OP-TL-1",
+            CustomerId = _customerId,
+            OperationalProjectId = created.Id,
+            Value = 1_000,
+        };
+        var secondContract = new Contract
+        {
+            ContractNumber = "HD-OP-TL-2",
+            CustomerId = _customerId,
+            OperationalProjectId = created.Id,
+            Value = 2_000,
+        };
+        _db.Contracts.AddRange(firstContract, secondContract);
+        await _db.SaveChangesAsync();
+        _db.ContractPaymentMilestones.AddRange(
+            new ContractPaymentMilestone
+            {
+                ContractId = firstContract.Id,
+                Order = 2,
+                Name = "Later milestone",
+                PercentValue = 25,
+                DueDate = new DateTime(2026, 9, 1),
+            },
+            new ContractPaymentMilestone
+            {
+                ContractId = secondContract.Id,
+                Order = 1,
+                Name = "Paid milestone",
+                PercentValue = 50,
+                DueDate = new DateTime(2026, 8, 1),
+                Status = PaymentMilestoneStatus.Paid,
+                Note = "Paid after customer acceptance",
+            });
+        await _db.SaveChangesAsync();
+
+        var result = await _service.GetTimelineAsync(created.Id, _managerId, false);
+
+        Assert.NotNull(result);
+        Assert.Collection(
+            result!,
+            item =>
+            {
+                Assert.Equal(secondContract.Id, item.ContractId);
+                Assert.Equal("HD-OP-TL-2", item.ContractNumber);
+                Assert.Equal(1_000, item.Amount);
+                Assert.Null(item.ActualDate);
+                Assert.Equal("ContractPaymentMilestone", item.Source);
+            },
+            item =>
+            {
+                Assert.Equal(firstContract.Id, item.ContractId);
+                Assert.Null(item.ActualDate);
+            });
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_ProjectOutsideCallerScope_ReturnsNull()
+    {
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+
+        var result = await _service.GetTimelineAsync(created.Id, _otherUserId, false);
+
+        Assert.Null(result);
+    }
+
     public void Dispose() => _db.Dispose();
 
     private CreateOperationalProjectRequest ValidCreate(string name = "Central project") => new()
