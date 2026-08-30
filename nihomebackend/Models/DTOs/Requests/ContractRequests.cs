@@ -62,6 +62,8 @@ public class ContractPaymentMilestoneRequest
 
     public DateTime? DueDate { get; set; }
 
+    public DateTime? ActualPaymentDate { get; set; }
+
     public PaymentMilestoneStatus Status { get; set; } = PaymentMilestoneStatus.Pending;
 
     [StringLength(500)]

@@ -301,6 +301,7 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
                     PercentValue = 50,
                     DueDate = new DateTime(2026, 8, 1),
                     Status = PaymentMilestoneStatus.Paid,
+                    ActualPaymentDate = new DateTime(2026, 8, 30),
                     Note = new string('N', 500),
                 },
             };
@@ -319,7 +320,8 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         items[0].GetProperty("status").GetString().Should().Be("Paid");
         items[0].GetProperty("contractNumber").GetString().Should().StartWith("HD-TL-B-");
         items[0].GetProperty("plannedDate").GetDateTime().Should().Be(new DateTime(2026, 8, 1));
-        items[0].GetProperty("actualDate").ValueKind.Should().Be(JsonValueKind.Null);
+        items[0].GetProperty("actualDate").GetDateTime().Should().Be(new DateTime(2026, 8, 30));
+        items[1].GetProperty("actualDate").ValueKind.Should().Be(JsonValueKind.Null);
         items[0].GetProperty("source").GetString().Should().Be("ContractPaymentMilestone");
         items[0].GetProperty("name").GetString().Should().HaveLength(200);
         items[0].GetProperty("note").GetString().Should().HaveLength(500);

@@ -21,4 +21,6 @@ public class UpdateMilestoneStatusRequest : IConcurrencyRequest
 
     [Required]
     public PaymentMilestoneStatus Status { get; set; }
+
+    public DateTime? ActualPaymentDate { get; set; }
 }

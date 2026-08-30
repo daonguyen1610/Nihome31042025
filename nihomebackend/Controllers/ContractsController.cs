@@ -270,9 +270,24 @@ public class ContractsController(
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
         req.RowVersion = CrmConcurrency.ResolveRequestToken(Request, req.RowVersion);
-        var updated = await svc.UpdateMilestoneStatusAsync(
-            id, milestoneId, req.Status, userId.Value, canSeeAll, ct, req.RowVersion);
-        if (updated == null) return NotFound();
+        ContractResponse? updated;
+        try
+        {
+            updated = await svc.UpdateMilestoneStatusAsync(
+                id,
+                milestoneId,
+                req.Status,
+                req.ActualPaymentDate,
+                userId.Value,
+                canSeeAll,
+                ct,
+                req.RowVersion);
+            if (updated == null) return NotFound();
+        }
+        catch (ContractValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
 
         audit.Log(new AuditEvent
         {

@@ -77,6 +77,7 @@ public class ContractPaymentMilestoneResponse
     /// <summary>Server-derived: Contract.Value × PercentValue / 100.</summary>
     public decimal Amount { get; set; }
     public DateTime? DueDate { get; set; }
+    public DateTime? ActualPaymentDate { get; set; }
     public PaymentMilestoneStatus Status { get; set; }
     public string? Note { get; set; }
     public DateTime CreatedAt { get; set; }

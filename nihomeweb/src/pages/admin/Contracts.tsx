@@ -63,6 +63,7 @@ type MilestoneDraft = {
   name: string;
   percentValue: number;
   dueDate: string;
+  actualPaymentDate: string;
   status: PaymentMilestoneStatus;
   note: string;
 };
@@ -113,17 +114,26 @@ const blankMilestone = (order: number): MilestoneDraft => ({
   name: "",
   percentValue: 0,
   dueDate: "",
+  actualPaymentDate: "",
   status: "Pending",
   note: "",
 });
 
 // Canonical preset used by NIH-103 spec.
 const PRESET_30_30_30_10: MilestoneDraft[] = [
-  { order: 1, name: "Đợt 1 - Tạm ứng khi ký HĐ", percentValue: 30, dueDate: "", status: "Pending", note: "" },
-  { order: 2, name: "Đợt 2 - Nghiệm thu 50%", percentValue: 30, dueDate: "", status: "Pending", note: "" },
-  { order: 3, name: "Đợt 3 - Bàn giao", percentValue: 30, dueDate: "", status: "Pending", note: "" },
-  { order: 4, name: "Đợt 4 - Quyết toán bảo hành", percentValue: 10, dueDate: "", status: "Pending", note: "" },
+  { order: 1, name: "Đợt 1 - Tạm ứng khi ký HĐ", percentValue: 30, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
+  { order: 2, name: "Đợt 2 - Nghiệm thu 50%", percentValue: 30, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
+  { order: 3, name: "Đợt 3 - Bàn giao", percentValue: 30, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
+  { order: 4, name: "Đợt 4 - Quyết toán bảo hành", percentValue: 10, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" },
 ];
+
+const getLocalIsoDate = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const toIsoTimestamp = (value: string): string | null => {
   if (!value) return null;
@@ -425,6 +435,10 @@ const Contracts = () => {
           setFormError(t("contracts.milestoneNameRequired"));
           return;
         }
+        if (m.status === "Paid" && !m.actualPaymentDate) {
+          setFormError(t("contracts.milestoneActualPaymentDateRequired"));
+          return;
+        }
       }
     }
     const milestonesPayload: ContractPaymentMilestoneRequest[] = form.milestones.map((m, i) => ({
@@ -432,6 +446,7 @@ const Contracts = () => {
         name: m.name.trim(),
         percentValue: Number.isFinite(m.percentValue) ? m.percentValue : 0,
         dueDate: toIsoTimestamp(m.dueDate),
+        actualPaymentDate: m.status === "Paid" ? toIsoTimestamp(m.actualPaymentDate) : null,
         status: m.status,
         note: m.note.trim() || null,
       }));
@@ -1066,7 +1081,15 @@ const Contracts = () => {
                             <Label className="text-xs">{t("contracts.milestone.status")}</Label>
                             <Select
                               value={m.status}
-                              onValueChange={(v) => patchMilestone(idx, { status: v as PaymentMilestoneStatus })}
+                              onValueChange={(value) => {
+                                const status = value as PaymentMilestoneStatus;
+                                patchMilestone(idx, {
+                                  status,
+                                  actualPaymentDate: status === "Paid"
+                                    ? m.actualPaymentDate || getLocalIsoDate()
+                                    : "",
+                                });
+                              }}
                             >
                               <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                               <SelectContent>
@@ -1076,6 +1099,19 @@ const Contracts = () => {
                               </SelectContent>
                             </Select>
                           </div>
+                          {m.status === "Paid" ? (
+                            <div className="min-w-0 space-y-1">
+                              <Label className="text-xs">{t("contracts.milestone.actualPaymentDate")} *</Label>
+                              <Input
+                                type="date"
+                                min={DATE_MIN}
+                                max={DATE_MAX}
+                                value={m.actualPaymentDate}
+                                onChange={(e) => patchMilestone(idx, { actualPaymentDate: e.target.value })}
+                                className="h-8"
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     );

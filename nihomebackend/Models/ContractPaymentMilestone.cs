@@ -29,6 +29,9 @@ public class ContractPaymentMilestone
     /// <summary>Planned billing / payment date.</summary>
     public DateTime? DueDate { get; set; }
 
+    /// <summary>User-confirmed date on which this milestone was paid.</summary>
+    public DateTime? ActualPaymentDate { get; set; }
+
     public PaymentMilestoneStatus Status { get; set; } = PaymentMilestoneStatus.Pending;
 
     public string? Note { get; set; }

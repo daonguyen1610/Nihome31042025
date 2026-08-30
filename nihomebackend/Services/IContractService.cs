@@ -44,7 +44,7 @@ public interface IContractService
     /// Paid). Returns the refreshed contract response, or <c>null</c> if
     /// the contract or milestone is not found / not owned.</summary>
     Task<ContractResponse?> UpdateMilestoneStatusAsync(
-        int contractId, int milestoneId, PaymentMilestoneStatus newStatus,
+        int contractId, int milestoneId, PaymentMilestoneStatus newStatus, DateTime? actualPaymentDate,
         int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
 }
 

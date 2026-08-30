@@ -710,6 +710,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasKey(m => m.Id);
             b.Property(m => m.Name).HasMaxLength(200).IsRequired();
             b.Property(m => m.PercentValue).HasColumnType("decimal(5,2)");
+            b.Property(m => m.ActualPaymentDate).HasColumnType("date");
             b.Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(m => m.Note).HasMaxLength(500);
             b.HasOne(m => m.Contract)
