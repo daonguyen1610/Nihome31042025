@@ -61,6 +61,11 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     ).toBe(true);
     await expect(editForm).toBeHidden();
 
+    await page.getByRole("tab", { name: /Phụ lục|Variation orders|变更附录|変更契約/i }).click();
+    await expect(
+        page.getByText(/VO trong hệ thống|VO in the system|系统中的 VO|システム上のVO/i),
+    ).toBeVisible();
+
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 

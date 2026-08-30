@@ -72,6 +72,11 @@ public class ContractAppendixService(
 
         ValidatePayload(req);
 
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+        await AcquireNumberAllocationLockAsync(contractId, ct);
+
         var nextNumber = 1 + (await db.ContractAppendices
             .Where(v => v.ContractId == contractId)
             .Select(v => (int?)v.VoNumber)
@@ -94,6 +99,10 @@ public class ContractAppendixService(
         };
         db.ContractAppendices.Add(entity);
         await db.SaveChangesAsync(ct);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(ct);
+        }
         logger.LogInformation("Created VO {VoNumber} on contract {ContractId}", entity.VoNumber, contractId);
 
         return await GetAsync(contractId, entity.Id, callerUserId, canSeeAll: true, ct);
@@ -266,6 +275,23 @@ public class ContractAppendixService(
         {
             throw new ContractValidationException("Giá trị điều chỉnh (ValueDelta) phải khác 0.");
         }
+    }
+
+    private async Task AcquireNumberAllocationLockAsync(int contractId, CancellationToken ct)
+    {
+        if (!db.Database.IsSqlServer()) return;
+
+        var resource = $"contracts:appendix-number:{contractId}";
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            DECLARE @result int;
+            EXEC @result = sys.sp_getapplock
+                @Resource = {resource},
+                @LockMode = 'Exclusive',
+                @LockOwner = 'Transaction',
+                @LockTimeout = 10000;
+            IF @result < 0
+                THROW 51000, 'Unable to allocate a contract appendix number.', 1;
+            """, ct);
     }
 
     private async Task<Contract?> FetchContractAsync(int contractId, int callerUserId, bool canSeeAll, CancellationToken ct)

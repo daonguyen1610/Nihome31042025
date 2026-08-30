@@ -525,6 +525,14 @@ Manage input contracts with subcontractors and material suppliers. Define contra
 
 Record design changes or scope modifications. Calculate cost increases or decreases. Link VOs to primary or subcontractor contracts. Upload appendix files. Track approval workflow status. Maintain contract modification history.
 
+In the current system, each VO belongs to exactly one customer Contract and
+therefore inherits that Contract's operational Project. Create and edit the VO
+as **Draft**, submit it for review, then approve or reject the submitted record.
+A rejected VO can be revised and submitted again. Only **Approved** VOs change
+the Contract's Current value; Draft, Submitted, and Rejected records remain
+traceable without changing that total. These states describe current system
+behavior and do not replace NICON's pending approval of the official VO policy.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | VO List | Variation orders by project | 1 day |
