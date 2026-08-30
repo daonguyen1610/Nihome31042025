@@ -45,7 +45,7 @@ type TimelineItem = {
   percentValue: number;
   amount: number;
   plannedDate: string;
-  actualDate: null;
+  actualDate: string | null;
   status: "Paid";
   source: "ContractPaymentMilestone";
   note: string;
@@ -63,7 +63,7 @@ function longTimelineItem(locale: keyof typeof localeCopy): TimelineItem {
     percentValue: 50,
     amount: 500_000_000,
     plannedDate: "2026-09-01T00:00:00Z",
-    actualDate: null,
+    actualDate: "2026-08-30T00:00:00Z",
     status: "Paid",
     source: "ContractPaymentMilestone",
     note: seed.repeat(Math.ceil(500 / seed.length)).slice(0, 500),
@@ -106,6 +106,9 @@ test("project payment timeline renders empty and maximum-length content in all l
     await expect(page.getByText(timelineItem.note, { exact: true })).toBeVisible();
     await expect(page.getByText(localeCopy[locale].planned, { exact: true })).toBeVisible();
     await expect(page.getByText(localeCopy[locale].actual, { exact: true })).toBeVisible();
+    await expect(
+      page.getByText(localeCopy[locale].actual, { exact: true }).locator("..").locator("dd"),
+    ).not.toHaveText("—");
     await expect(page.getByText(localeCopy[locale].updated, { exact: true }).last()).toBeVisible();
     await expect(page.getByText(localeCopy[locale].sourceLabel, { exact: true })).toBeVisible();
     await expect(page.getByText(localeCopy[locale].source, { exact: true })).toBeVisible();

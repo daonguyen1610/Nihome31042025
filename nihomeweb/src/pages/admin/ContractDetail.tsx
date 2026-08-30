@@ -121,6 +121,7 @@ interface MilestoneDraft {
   name: string;
   percentValue: number;
   dueDate: string;
+  actualPaymentDate: string;
   status: PaymentMilestoneStatus;
   note: string;
 }
@@ -139,6 +140,14 @@ interface ContractEditForm {
 }
 
 const toIsoDate = (value?: string | null): string => value?.slice(0, 10) ?? "";
+
+const getLocalIsoDate = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const toIsoTimestamp = (value: string): string | null => {
   if (!value) return null;
@@ -161,10 +170,25 @@ const toEditForm = (contract: ContractResponse): ContractEditForm => ({
     name: milestone.name,
     percentValue: milestone.percentValue,
     dueDate: toIsoDate(milestone.dueDate),
+    actualPaymentDate: toIsoDate(milestone.actualPaymentDate),
     status: milestone.status,
     note: milestone.note ?? "",
   })),
 });
+
+const hasScheduleChanges = (contract: ContractResponse, milestones: MilestoneDraft[]): boolean => {
+  if (contract.paymentMilestones.length !== milestones.length) return true;
+  return milestones.some((milestone, index) => {
+    const persisted = contract.paymentMilestones[index];
+    return milestone.order !== persisted.order
+      || milestone.name.trim() !== persisted.name
+      || milestone.percentValue !== persisted.percentValue
+      || milestone.dueDate !== toIsoDate(persisted.dueDate)
+      || milestone.actualPaymentDate !== toIsoDate(persisted.actualPaymentDate)
+      || milestone.status !== persisted.status
+      || (milestone.note.trim() || null) !== (persisted.note?.trim() || null);
+  });
+};
 
 // -------- header --------
 
@@ -540,7 +564,9 @@ const EditInfoTab = ({ form, customers, error, onChange }: EditInfoTabProps) => 
 
 interface ScheduleTabProps {
   contract: ContractResponse;
+  canManage: boolean;
   onMilestoneStatus: (milestoneId: number, next: PaymentMilestoneStatus) => Promise<void>;
+  onEditActualPaymentDate: (milestoneId: number, actualPaymentDate?: string | null) => void;
   busyMilestoneId: number | null;
 }
 
@@ -554,7 +580,7 @@ const isOverdue = (
   return d < Date.now();
 };
 
-const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleTabProps) => {
+const ScheduleTab = ({ contract, canManage, onMilestoneStatus, onEditActualPaymentDate, busyMilestoneId }: ScheduleTabProps) => {
   const { t } = useI18n();
   const milestones = contract.paymentMilestones;
 
@@ -590,6 +616,9 @@ const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleT
                     {m.percentValue}% • {formatVndWithSymbol(m.amount)}
                   </span>
                   <span>• {t("contracts.milestone.dueDate")}: {formatDate(m.dueDate)}</span>
+                  {m.status === "Paid" ? (
+                    <span>• {t("contracts.milestone.actualPaymentDate")}: {formatDate(m.actualPaymentDate)}</span>
+                  ) : null}
                   <Badge className={cn("border", MILESTONE_STATUS_STYLES[m.status])}>
                     {t(`contracts.milestoneStatus.${m.status}`)}
                   </Badge>
@@ -600,7 +629,7 @@ const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleT
                   ) : null}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              {canManage ? <div className="flex flex-wrap gap-2">
                 {m.status === "Pending" ? (
                   <Button size="sm" variant="outline" disabled={busy} onClick={() => onMilestoneStatus(m.id, "Requested")}>
                     {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Send className="mr-1 h-3 w-3" />}
@@ -608,9 +637,15 @@ const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleT
                   </Button>
                 ) : null}
                 {(m.status === "Pending" || m.status === "Requested") ? (
-                  <Button size="sm" disabled={busy} onClick={() => onMilestoneStatus(m.id, "Paid")}>
+                  <Button size="sm" disabled={busy} onClick={() => onEditActualPaymentDate(m.id)}>
                     {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1 h-3 w-3" />}
                     {t("contracts.schedule.markPaid")}
+                  </Button>
+                ) : null}
+                {m.status === "Paid" ? (
+                  <Button size="sm" variant="outline" disabled={busy} onClick={() => onEditActualPaymentDate(m.id, m.actualPaymentDate)}>
+                    <Pencil className="mr-1 h-3 w-3" />
+                    {t("contracts.schedule.editActualPaymentDate")}
                   </Button>
                 ) : null}
                 {m.status !== "Pending" ? (
@@ -618,7 +653,7 @@ const ScheduleTab = ({ contract, onMilestoneStatus, busyMilestoneId }: ScheduleT
                     {t("contracts.schedule.revertPending")}
                   </Button>
                 ) : null}
-              </div>
+              </div> : null}
             </div>
           </div>
         );
@@ -650,7 +685,7 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button type="button" size="sm" variant="outline" onClick={() => onChange([...milestones, { order: milestones.length + 1, name: "", percentValue: 0, dueDate: "", status: "Pending", note: "" }])}>
+        <Button type="button" size="sm" variant="outline" onClick={() => onChange([...milestones, { order: milestones.length + 1, name: "", percentValue: 0, dueDate: "", actualPaymentDate: "", status: "Pending", note: "" }])}>
           <Plus className="mr-1 h-4 w-4" />
           {t("contracts.addMilestone")}
         </Button>
@@ -690,7 +725,15 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
                 <Label>{t("contracts.milestone.status")}</Label>
                 <Select
                   value={milestone.status}
-                  onValueChange={(status) => patch(index, { status: status as PaymentMilestoneStatus })}
+                  onValueChange={(value) => {
+                    const status = value as PaymentMilestoneStatus;
+                    patch(index, {
+                      status,
+                      actualPaymentDate: status === "Paid"
+                        ? milestone.actualPaymentDate || getLocalIsoDate()
+                        : "",
+                    });
+                  }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -702,6 +745,16 @@ const EditScheduleTab = ({ value, milestones, onChange }: EditScheduleTabProps) 
                   </SelectContent>
                 </Select>
               </div>
+              {milestone.status === "Paid" ? (
+                <div className="space-y-1.5">
+                  <Label>{t("contracts.milestone.actualPaymentDate")} *</Label>
+                  <Input
+                    type="date"
+                    value={milestone.actualPaymentDate}
+                    onChange={(event) => patch(index, { actualPaymentDate: event.target.value })}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         );
@@ -1461,6 +1514,7 @@ const ContractDetail = () => {
   const [tab, setTab] = useState<TabId>("info");
   const [transitionBusy, setTransitionBusy] = useState<ContractStatus | null>(null);
   const [busyMilestoneId, setBusyMilestoneId] = useState<number | null>(null);
+  const [paidDateDraft, setPaidDateDraft] = useState<{ milestoneId: number; value: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<ContractEditForm | null>(null);
@@ -1578,7 +1632,7 @@ const ContractDetail = () => {
       if (!contract) return;
       setBusyMilestoneId(milestoneId);
       try {
-        await adminApi.updateMilestoneStatus(contract.id, milestoneId, nextStatus, contract.rowVersion);
+        await adminApi.updateMilestoneStatus(contract.id, milestoneId, nextStatus, null, contract.rowVersion);
         await refreshContract();
       } catch (err) {
         toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
@@ -1589,6 +1643,38 @@ const ContractDetail = () => {
     },
     [contract, refreshContract, toast],
   );
+
+  const openPaidDateDialog = useCallback((milestoneId: number, actualPaymentDate?: string | null) => {
+    setPaidDateDraft({
+      milestoneId,
+      value: toIsoDate(actualPaymentDate) || getLocalIsoDate(),
+    });
+  }, []);
+
+  const confirmPaidDate = useCallback(async () => {
+    if (!contract || !paidDateDraft) return;
+    if (!paidDateDraft.value) {
+      toast({ variant: "destructive", title: t("contracts.milestoneActualPaymentDateRequired") });
+      return;
+    }
+    setBusyMilestoneId(paidDateDraft.milestoneId);
+    try {
+      await adminApi.updateMilestoneStatus(
+        contract.id,
+        paidDateDraft.milestoneId,
+        "Paid",
+        toIsoTimestamp(paidDateDraft.value),
+        contract.rowVersion,
+      );
+      setPaidDateDraft(null);
+      await refreshContract();
+    } catch (err) {
+      toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
+      if (isConcurrencyConflict(err)) await refreshContract();
+    } finally {
+      setBusyMilestoneId(null);
+    }
+  }, [contract, paidDateDraft, refreshContract, t, toast]);
 
   const beginEdit = useCallback(async () => {
     if (!contract) return;
@@ -1624,6 +1710,7 @@ const ContractDetail = () => {
   const saveEdit = useCallback(async () => {
     if (!contract || !form) return;
     setFormError(null);
+    const scheduleChanged = hasScheduleChanges(contract, form.milestones);
     if (form.signedDate && form.startDate && form.startDate < form.signedDate) {
       setFormError(t("form.invalidDateRange"));
       setTab("info");
@@ -1645,14 +1732,24 @@ const ContractDetail = () => {
       setTab("schedule");
       return;
     }
-    const paymentMilestones: ContractPaymentMilestoneRequest[] = form.milestones.map((milestone, index) => ({
-      order: index + 1,
-      name: milestone.name.trim(),
-      percentValue: milestone.percentValue,
-      dueDate: toIsoTimestamp(milestone.dueDate),
-      status: milestone.status,
-      note: milestone.note.trim() || null,
-    }));
+    if (scheduleChanged && form.milestones.some((milestone) => milestone.status === "Paid" && !milestone.actualPaymentDate)) {
+      setFormError(t("contracts.milestoneActualPaymentDateRequired"));
+      setTab("schedule");
+      return;
+    }
+    const paymentMilestones: ContractPaymentMilestoneRequest[] | null = scheduleChanged
+      ? form.milestones.map((milestone, index) => ({
+          order: index + 1,
+          name: milestone.name.trim(),
+          percentValue: milestone.percentValue,
+          dueDate: toIsoTimestamp(milestone.dueDate),
+          actualPaymentDate: milestone.status === "Paid"
+            ? toIsoTimestamp(milestone.actualPaymentDate)
+            : null,
+          status: milestone.status,
+          note: milestone.note.trim() || null,
+        }))
+      : null;
     const payload: UpsertContractRequest = {
       rowVersion: contract.rowVersion,
       contractNumber: form.contractNumber.trim() || null,
@@ -1773,7 +1870,13 @@ const ContractDetail = () => {
                 {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
               </div>
             ) : (
-              <ScheduleTab contract={contract} onMilestoneStatus={handleMilestoneStatus} busyMilestoneId={busyMilestoneId} />
+              <ScheduleTab
+                contract={contract}
+                canManage={canManage}
+                onMilestoneStatus={handleMilestoneStatus}
+                onEditActualPaymentDate={openPaidDateDialog}
+                busyMilestoneId={busyMilestoneId}
+              />
             )}
           </TabsContent>
           <TabsContent value="appendices" className="mt-4">
@@ -1798,6 +1901,41 @@ const ContractDetail = () => {
             <TimelineTab events={timeline} />
           </TabsContent>
         </Tabs>
+
+        <Dialog open={paidDateDraft !== null} onOpenChange={(open) => (!open ? setPaidDateDraft(null) : null)}>
+          <DialogContent className="w-[95vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("contracts.schedule.paidDateDialogTitle")}</DialogTitle>
+              <DialogDescription>{t("contracts.schedule.paidDateDialogDescription")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5 py-2">
+              <Label htmlFor="contract-actual-payment-date">
+                {t("contracts.milestone.actualPaymentDate")} *
+              </Label>
+              <Input
+                id="contract-actual-payment-date"
+                type="date"
+                value={paidDateDraft?.value ?? ""}
+                onChange={(event) => setPaidDateDraft((current) => current
+                  ? { ...current, value: event.target.value }
+                  : current)}
+              />
+            </div>
+            <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+              <Button type="button" variant="outline" onClick={() => setPaidDateDraft(null)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                disabled={!paidDateDraft?.value || busyMilestoneId !== null}
+                onClick={() => void confirmPaidDate()}
+              >
+                {busyMilestoneId !== null ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
+                {t("contracts.schedule.confirmPaid")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

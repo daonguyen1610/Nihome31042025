@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -350,7 +351,7 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Milestone_StatusUpdate_UpdatesStatus()
+    public async Task Milestone_StatusUpdate_RequiresPersistsAndClearsActualPaymentDate()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
@@ -371,12 +372,60 @@ public class ContractsControllerTests : IntegrationTestBase
         var contractId = createdJson.GetProperty("id").GetInt32();
         var milestoneId = createdJson.GetProperty("paymentMilestones")[0].GetProperty("id").GetInt32();
 
-        var res = await Client.PatchAsJsonAsync(
+        var missingDate = await Client.PatchAsJsonAsync(
             $"/api/contracts/{contractId}/milestones/{milestoneId}/status",
             new { status = "Paid" });
-        res.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadJsonAsync(res)).GetProperty("paymentMilestones")[0].GetProperty("status").GetString()
-            .Should().Be("Paid");
+        missingDate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var paid = await Client.PatchAsJsonAsync(
+            $"/api/contracts/{contractId}/milestones/{milestoneId}/status",
+            new { status = "Paid", actualPaymentDate = "2026-08-30T15:45:00Z" });
+        paid.StatusCode.Should().Be(HttpStatusCode.OK);
+        var paidMilestone = (await ReadJsonAsync(paid)).GetProperty("paymentMilestones")[0];
+        paidMilestone.GetProperty("status").GetString().Should().Be("Paid");
+        paidMilestone.GetProperty("actualPaymentDate").GetDateTime()
+            .Should().Be(new DateTime(2026, 8, 30));
+
+        var pending = await Client.PatchAsJsonAsync(
+            $"/api/contracts/{contractId}/milestones/{milestoneId}/status",
+            new { status = "Pending", actualPaymentDate = "2026-09-01T00:00:00Z" });
+        pending.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pendingMilestone = (await ReadJsonAsync(pending)).GetProperty("paymentMilestones")[0];
+        pendingMilestone.GetProperty("status").GetString().Should().Be("Pending");
+        pendingMilestone.GetProperty("actualPaymentDate").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Milestone_StatusUpdate_WithoutManagePermission_IsForbiddenAndPreservesState()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var created = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            status = "Signed",
+            value = 100_000_000,
+            paymentMilestones = new object[]
+            {
+                new { order = 1, name = "M1", percentValue = 100m, status = "Pending" },
+            },
+        });
+        created.EnsureSuccessStatusCode();
+        var createdJson = await ReadJsonAsync(created);
+        var contractId = createdJson.GetProperty("id").GetInt32();
+        var milestoneId = createdJson.GetProperty("paymentMilestones")[0].GetProperty("id").GetInt32();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PM"));
+        var response = await Client.PatchAsJsonAsync(
+            $"/api/contracts/{contractId}/milestones/{milestoneId}/status",
+            new { status = "Paid", actualPaymentDate = "2026-08-30T00:00:00Z" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        var persisted = await WithDbAsync(db => db.ContractPaymentMilestones
+            .AsNoTracking()
+            .SingleAsync(milestone => milestone.Id == milestoneId));
+        persisted.Status.Should().Be(NihomeBackend.Models.PaymentMilestoneStatus.Pending);
+        persisted.ActualPaymentDate.Should().BeNull();
     }
 
     [Fact]

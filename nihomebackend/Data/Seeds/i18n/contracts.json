@@ -400,6 +400,22 @@
     "ja": "予定日"
   },
   {
+    "key": "contracts.milestone.actualPaymentDate",
+    "category": "contracts",
+    "vi": "Ngày thanh toán thực tế",
+    "en": "Actual payment date",
+    "zh": "实际付款日期",
+    "ja": "実際の支払日"
+  },
+  {
+    "key": "contracts.milestoneActualPaymentDateRequired",
+    "category": "contracts",
+    "vi": "Ngày thanh toán thực tế là bắt buộc khi đợt ở trạng thái Đã thanh toán, ví dụ 30/08/2026.",
+    "en": "The actual payment date is required when a milestone is Paid, for example 30/08/2026.",
+    "zh": "里程碑为已付款状态时，必须填写实际付款日期，例如 2026/08/30。",
+    "ja": "マイルストーンが支払済の場合、実際の支払日が必要です（例：2026/08/30）。"
+  },
+  {
     "key": "contracts.milestone.status",
     "category": "contracts",
     "vi": "Trạng thái",
@@ -614,6 +630,38 @@
     "en": "Mark as Paid",
     "zh": "标记为已付款",
     "ja": "支払済にする"
+  },
+  {
+    "key": "contracts.schedule.editActualPaymentDate",
+    "category": "contracts",
+    "vi": "Sửa ngày thanh toán",
+    "en": "Edit payment date",
+    "zh": "编辑付款日期",
+    "ja": "支払日を編集"
+  },
+  {
+    "key": "contracts.schedule.paidDateDialogTitle",
+    "category": "contracts",
+    "vi": "Xác nhận ngày thanh toán",
+    "en": "Confirm payment date",
+    "zh": "确认付款日期",
+    "ja": "支払日を確認"
+  },
+  {
+    "key": "contracts.schedule.paidDateDialogDescription",
+    "category": "contracts",
+    "vi": "Ngày hôm nay được đề xuất tự động. Bạn có thể chọn ngày thanh toán thực tế khác trước khi xác nhận.",
+    "en": "Today's date is suggested automatically. You can select a different actual payment date before confirming.",
+    "zh": "系统会自动建议今天的日期。确认前，您可以选择其他实际付款日期。",
+    "ja": "今日の日付が自動的に提案されます。確認前に別の実際の支払日を選択できます。"
+  },
+  {
+    "key": "contracts.schedule.confirmPaid",
+    "category": "contracts",
+    "vi": "Xác nhận đã thanh toán",
+    "en": "Confirm paid",
+    "zh": "确认已付款",
+    "ja": "支払済を確認"
   },
   {
     "key": "contracts.schedule.revertPending",

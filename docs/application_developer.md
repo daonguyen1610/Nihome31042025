@@ -686,13 +686,13 @@ keys. The operational hierarchy and user workflow are documented in
 The read-only timeline endpoint derives its entries from existing Contract
 payment milestones and does not copy or synchronize data. Each entry identifies
 its Contract, source, status, planned due date, latest update time, and amount.
-The current milestone schema has no durable actual-payment date. The endpoint
-therefore returns an empty actual date for every status rather than presenting
-`UpdatedAt` or retention-managed audit data as financial fact. A populated
-actual date requires business approval for a dedicated field and legacy-data
-policy. Calls are naturally idempotent, and projects outside the caller's scope
-return `404` without disclosing their existence. No schema migration or
-legacy-data backfill is included in this bounded implementation.
+`ContractPaymentMilestone.ActualPaymentDate` stores the user-confirmed business
+date and is exposed as `actualDate`; the endpoint never substitutes `UpdatedAt`
+or retention-managed audit data. A `Paid` write requires this date, while moving
+to `Pending` or `Requested` clears it. Existing rows remain nullable because the
+migration intentionally does not invent or backfill historical payment dates.
+Calls are naturally idempotent, and projects outside the caller's scope return
+`404` without disclosing their existence.
 
 ### 7.11 BOQ Quotation Integrity
 

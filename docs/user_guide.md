@@ -153,11 +153,13 @@ The detail view also includes a **Payment timeline**. It combines payment
 milestones from every Contract linked to the same operational project and shows
 the Contract number on each entry so similarly named milestones remain
 distinguishable. The planned date comes from the milestone due date. The
-current Contract data does not store a durable actual-payment date, so the
-timeline leaves that field empty rather than estimating it from another update.
-Adding this date requires an approved data and legacy-backfill policy. Changes
-made in a Contract otherwise appear automatically because the timeline reads the
-Contract milestone records directly rather than maintaining a separate copy.
+actual date comes from the date confirmed on the Contract payment milestone and
+is never estimated from a technical update timestamp. When marking a milestone
+**Paid**, the system proposes today's date; users with Contract edit permission
+can choose another date or correct it later. Returning the milestone to
+**Pending** or **Requested** clears the actual date. Historical rows can remain
+empty until a user confirms them. Contract changes appear automatically because
+the timeline reads the milestone records directly instead of maintaining a copy.
 
 A new project starts in **Planning**. It can move to **Active**, **On hold**,
 **Completed**, or **Cancelled** according to the displayed lifecycle. Only an

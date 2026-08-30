@@ -950,6 +950,7 @@ export interface ContractPaymentMilestoneResponse {
   percentValue: number;
   amount: number;
   dueDate?: string | null;
+  actualPaymentDate?: string | null;
   status: PaymentMilestoneStatus;
   note?: string | null;
   createdAt: string;
@@ -961,6 +962,7 @@ export interface ContractPaymentMilestoneRequest {
   name: string;
   percentValue: number;
   dueDate?: string | null;
+  actualPaymentDate?: string | null;
   status: PaymentMilestoneStatus;
   note?: string | null;
 }
@@ -4186,11 +4188,12 @@ export const adminApi = {
     contractId: number,
     milestoneId: number,
     status: PaymentMilestoneStatus,
+    actualPaymentDate?: string | null,
     rowVersion?: string,
   ) =>
     api.patch<ContractResponse>(
       `/contracts/${contractId}/milestones/${milestoneId}/status`,
-      { status, rowVersion },
+      { status, actualPaymentDate, rowVersion },
     ),
   listContractAppendices: (contractId: number) =>
     api.get<ContractAppendixResponse[]>(`/contracts/${contractId}/appendices`),

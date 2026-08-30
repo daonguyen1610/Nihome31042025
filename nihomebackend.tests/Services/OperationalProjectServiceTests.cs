@@ -221,6 +221,7 @@ public class OperationalProjectServiceTests : IDisposable
                 PercentValue = 50,
                 DueDate = new DateTime(2026, 8, 1),
                 Status = PaymentMilestoneStatus.Paid,
+                ActualPaymentDate = new DateTime(2026, 8, 30),
                 Note = "Paid after customer acceptance",
             });
         await _db.SaveChangesAsync();
@@ -235,7 +236,7 @@ public class OperationalProjectServiceTests : IDisposable
                 Assert.Equal(secondContract.Id, item.ContractId);
                 Assert.Equal("HD-OP-TL-2", item.ContractNumber);
                 Assert.Equal(1_000, item.Amount);
-                Assert.Null(item.ActualDate);
+                Assert.Equal(new DateTime(2026, 8, 30), item.ActualDate);
                 Assert.Equal("ContractPaymentMilestone", item.Source);
             },
             item =>

@@ -425,6 +425,34 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_PaidMilestonePersistsActualPaymentDate()
+    {
+        var req = Req(value: 100m);
+        var milestone = Milestone(1, 100m, "Paid in full");
+        milestone.Status = PaymentMilestoneStatus.Paid;
+        milestone.ActualPaymentDate = new DateTime(2026, 8, 30, 12, 30, 0, DateTimeKind.Utc);
+        req.PaymentMilestones = new() { milestone };
+
+        var result = await _sut.CreateAsync(req, 1, canReassignOwner: true);
+
+        Assert.Equal(new DateTime(2026, 8, 30), result.PaymentMilestones.Single().ActualPaymentDate);
+    }
+
+    [Fact]
+    public async Task Create_PaidMilestoneWithoutActualPaymentDateThrows()
+    {
+        var req = Req(value: 100m);
+        var milestone = Milestone(1, 100m, "Paid in full");
+        milestone.Status = PaymentMilestoneStatus.Paid;
+        req.PaymentMilestones = new() { milestone };
+
+        await Assert.ThrowsAsync<ContractValidationException>(
+            () => _sut.CreateAsync(req, 1, canReassignOwner: true));
+        Assert.Empty(_db.Contracts);
+        Assert.Empty(_db.ContractPaymentMilestones);
+    }
+
+    [Fact]
     public async Task Create_MilestonePercentsMustSumTo100()
     {
         var req = Req();
@@ -458,12 +486,18 @@ public class ContractServiceTests : IDisposable
         initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
         var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
         Assert.Single(contract.PaymentMilestones);
+        var persistedMilestone = await _db.ContractPaymentMilestones.FindAsync(contract.PaymentMilestones[0].Id);
+        persistedMilestone!.Status = PaymentMilestoneStatus.Paid;
+        persistedMilestone.ActualPaymentDate = null;
+        await _db.SaveChangesAsync();
 
         var update = Req(value: 100m);
         update.PaymentMilestones = null; // null → preserve
         var refreshed = await _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true);
         Assert.NotNull(refreshed);
         Assert.Single(refreshed!.PaymentMilestones);
+        Assert.Equal(PaymentMilestoneStatus.Paid, refreshed.PaymentMilestones[0].Status);
+        Assert.Null(refreshed.PaymentMilestones[0].ActualPaymentDate);
     }
 
     [Fact]
@@ -610,17 +644,70 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateMilestoneStatus_MutatesTheSpecifiedRow()
+    public async Task UpdateMilestoneStatus_PaidPersistsCustomActualPaymentDate()
+    {
+        var initial = Req(value: 100m);
+        initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        var milestoneId = contract.PaymentMilestones[0].Id;
+        var actualPaymentDate = new DateTime(2026, 8, 30, 15, 45, 0, DateTimeKind.Utc);
+
+        var updated = await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Paid, actualPaymentDate,
+            1, canSeeAll: true);
+        Assert.NotNull(updated);
+        Assert.Equal(PaymentMilestoneStatus.Paid, updated!.PaymentMilestones.Single().Status);
+        Assert.Equal(new DateTime(2026, 8, 30), updated.PaymentMilestones.Single().ActualPaymentDate);
+    }
+
+    [Fact]
+    public async Task UpdateMilestoneStatus_PaidWithoutActualPaymentDateThrowsWithoutMutation()
     {
         var initial = Req(value: 100m);
         initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
         var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
         var milestoneId = contract.PaymentMilestones[0].Id;
 
-        var updated = await _sut.UpdateMilestoneStatusAsync(
-            contract.Id, milestoneId, PaymentMilestoneStatus.Paid, 1, canSeeAll: true);
-        Assert.NotNull(updated);
-        Assert.Equal(PaymentMilestoneStatus.Paid, updated!.PaymentMilestones.Single().Status);
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.UpdateMilestoneStatusAsync(
+                contract.Id, milestoneId, PaymentMilestoneStatus.Paid, null,
+                1, canSeeAll: true));
+
+        _db.ChangeTracker.Clear();
+        var persisted = await _db.ContractPaymentMilestones.FindAsync(milestoneId);
+        Assert.NotNull(persisted);
+        Assert.Equal(PaymentMilestoneStatus.Pending, persisted!.Status);
+        Assert.Null(persisted.ActualPaymentDate);
+    }
+
+    [Fact]
+    public async Task UpdateMilestoneStatus_RepaidCorrectsDateAndNonPaidStatusesClearIt()
+    {
+        var initial = Req(value: 100m);
+        initial.PaymentMilestones = new() { Milestone(1, 100m, "Full") };
+        var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        var milestoneId = contract.PaymentMilestones[0].Id;
+
+        await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Paid, new DateTime(2026, 8, 30),
+            1, canSeeAll: true);
+        var corrected = await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Paid, new DateTime(2026, 8, 31),
+            1, canSeeAll: true);
+        Assert.Equal(new DateTime(2026, 8, 31), corrected!.PaymentMilestones.Single().ActualPaymentDate);
+
+        var requested = await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Requested, new DateTime(2026, 9, 1),
+            1, canSeeAll: true);
+        Assert.Null(requested!.PaymentMilestones.Single().ActualPaymentDate);
+
+        await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Paid, new DateTime(2026, 9, 2),
+            1, canSeeAll: true);
+        var pending = await _sut.UpdateMilestoneStatusAsync(
+            contract.Id, milestoneId, PaymentMilestoneStatus.Pending, new DateTime(2026, 9, 3),
+            1, canSeeAll: true);
+        Assert.Null(pending!.PaymentMilestones.Single().ActualPaymentDate);
     }
 
     [Fact]
@@ -638,7 +725,7 @@ public class ContractServiceTests : IDisposable
         _db.SaveChanges();
 
         var result = await _sut.UpdateMilestoneStatusAsync(
-            contract.Id, milestone.Id, PaymentMilestoneStatus.Paid,
+            contract.Id, milestone.Id, PaymentMilestoneStatus.Paid, new DateTime(2026, 8, 30),
             callerUserId: 999, canSeeAll: false);
         Assert.Null(result);
     }

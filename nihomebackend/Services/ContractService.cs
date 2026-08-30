@@ -445,7 +445,7 @@ public class ContractService(
     }
 
     public async Task<ContractResponse?> UpdateMilestoneStatusAsync(
-        int contractId, int milestoneId, PaymentMilestoneStatus newStatus,
+        int contractId, int milestoneId, PaymentMilestoneStatus newStatus, DateTime? actualPaymentDate,
         int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
         var contract = await db.Contracts.FindAsync(new object?[] { contractId }, ct);
@@ -458,7 +458,12 @@ public class ContractService(
             .FirstOrDefaultAsync(m => m.Id == milestoneId && m.ContractId == contractId, ct);
         if (milestone == null) return null;
 
+        ValidateActualPaymentDate(newStatus, actualPaymentDate);
+
         milestone.Status = newStatus;
+        milestone.ActualPaymentDate = newStatus == PaymentMilestoneStatus.Paid
+            ? actualPaymentDate!.Value.Date
+            : null;
         milestone.UpdatedAt = DateTime.UtcNow;
         contract.UpdatedAt = DateTime.UtcNow;
         contract.UpdatedByUserId = callerUserId;
@@ -716,6 +721,7 @@ public class ContractService(
         var orderSet = new HashSet<int>();
         foreach (var m in milestones)
         {
+            ValidateActualPaymentDate(m.Status, m.ActualPaymentDate);
             if (!orderSet.Add(m.Order))
             {
                 throw new ContractValidationException(
@@ -731,6 +737,17 @@ public class ContractService(
         {
             throw new ContractValidationException(
                 $"Payment milestones must sum to 100% (got {sum}).");
+        }
+    }
+
+    private static void ValidateActualPaymentDate(
+        PaymentMilestoneStatus status,
+        DateTime? actualPaymentDate)
+    {
+        if (status == PaymentMilestoneStatus.Paid && actualPaymentDate is null)
+        {
+            throw new ContractValidationException(
+                "Ngày thanh toán thực tế là bắt buộc khi mốc ở trạng thái Đã thanh toán, ví dụ 30/08/2026.");
         }
     }
 
@@ -759,6 +776,9 @@ public class ContractService(
                 Name = m.Name.Trim(),
                 PercentValue = m.PercentValue,
                 DueDate = m.DueDate,
+                ActualPaymentDate = m.Status == PaymentMilestoneStatus.Paid
+                    ? m.ActualPaymentDate!.Value.Date
+                    : null,
                 Status = m.Status,
                 Note = string.IsNullOrWhiteSpace(m.Note) ? null : m.Note.Trim(),
             })
@@ -835,6 +855,7 @@ public class ContractService(
                     PercentValue = m.PercentValue,
                     Amount = Math.Round(entity.Value * m.PercentValue / 100m, 2),
                     DueDate = m.DueDate,
+                    ActualPaymentDate = m.ActualPaymentDate,
                     Status = m.Status,
                     Note = m.Note,
                     CreatedAt = m.CreatedAt,

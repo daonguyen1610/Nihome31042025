@@ -97,6 +97,116 @@ test("mobile contract card opens the complete contract detail", async ({
     await expect(page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i })).toBeVisible();
 });
 
+test("paid milestone date is suggested, customizable, and displayed", async ({
+    page,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    const contractId = 455100;
+    let actualPaymentDate: string | null = null;
+    let status = "Pending";
+    const contract = () => ({
+        id: contractId,
+        contractNumber: "HD-2026-4551",
+        customerId: 1,
+        customerName: "NICON",
+        operationalProjectId: null,
+        opportunityId: null,
+        opportunityTitle: null,
+        quoteId: null,
+        quoteCode: null,
+        designProjectId: null,
+        designProjectCode: null,
+        designProjectName: null,
+        designProjectCurrentStage: null,
+        ownerUserId: 1,
+        ownerName: "E2E Admin",
+        status: "Signed",
+        signedDate: "2026-08-01T00:00:00Z",
+        startDate: null,
+        endDate: null,
+        value: 100_000_000,
+        approvedVoTotal: 0,
+        currentValue: 100_000_000,
+        hasSignedScan: false,
+        attachmentCount: 0,
+        appendixCount: 0,
+        scopeOfWork: null,
+        note: null,
+        createdAt: "2026-08-01T00:00:00Z",
+        updatedAt: "2026-08-30T00:00:00Z",
+        rowVersion: "AAAAAAAAB9M=",
+        paymentMilestones: [{
+            id: 1,
+            order: 1,
+            name: "Final payment",
+            percentValue: 100,
+            amount: 100_000_000,
+            dueDate: "2026-08-20T00:00:00Z",
+            actualPaymentDate,
+            status,
+            note: null,
+            createdAt: "2026-08-01T00:00:00Z",
+            updatedAt: "2026-08-30T00:00:00Z",
+        }],
+    });
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.route(new RegExp(`/api/(?:v1/)?contracts/${contractId}(?:/.*)?$`), async route => {
+        const request = route.request();
+        const path = new URL(request.url()).pathname;
+        if (request.method() === "PATCH" && path.endsWith("/milestones/1/status")) {
+            const payload = request.postDataJSON() as { status: string; actualPaymentDate: string | null };
+            status = payload.status;
+            actualPaymentDate = payload.actualPaymentDate;
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(contract()) });
+            return;
+        }
+        if (request.method() === "GET" && path.endsWith("/appendices")) {
+            await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+            return;
+        }
+        if (request.method() === "GET" && path.endsWith("/attachments")) {
+            await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+            return;
+        }
+        if (request.method() === "GET" && path.endsWith("/timeline")) {
+            await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+            return;
+        }
+        await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(contract()) });
+    });
+
+    await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Lịch thanh toán|Payment schedule|付款计划|支払スケジュール/i }).click();
+    await page.getByRole("button", { name: /Đánh dấu Đã thanh toán|Mark as Paid|标记为已付款|支払済にする/i }).click();
+
+    const dateInput = page.locator("#contract-actual-payment-date");
+    const localToday = await page.evaluate(() => {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        return `${now.getFullYear()}-${month}-${day}`;
+    });
+    await expect(dateInput).toHaveValue(localToday);
+    await dateInput.fill("2026-08-30");
+    await page.getByRole("button", { name: /Xác nhận đã thanh toán|Confirm paid|确认已付款|支払済を確認/i }).click();
+
+    await expect.poll(() => actualPaymentDate).toBe("2026-08-30T00:00:00.000Z");
+    await expect(page.getByText(/Ngày thanh toán thực tế: 30\/08\/2026|Actual payment date: 30\/08\/2026|实际付款日期: 30\/08\/2026|実際の支払日: 30\/08\/2026/i)).toBeVisible();
+
+    await page.route(new RegExp("/api/(?:v1/)?users/me/permissions$"), route =>
+        route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ role: "CONTRACT_VIEWER", roleId: null, permissions: ["crm.contracts.view"] }),
+        }));
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Lịch thanh toán|Payment schedule|付款计划|支払スケジュール/i }).click();
+    await expect(page.getByRole("button", { name: /Sửa ngày thanh toán|Edit payment date|编辑付款日期|支払日を編集/i })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Trả về Chưa yêu cầu|Revert to Pending|退回为待处理|未請求に戻す/i })).toHaveCount(0);
+});
+
 test("contract documents accept and upload multiple local files", async ({
     page,
     loginInBrowserAs,
