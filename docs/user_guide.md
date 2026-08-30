@@ -530,8 +530,11 @@ therefore inherits that Contract's operational Project. Create and edit the VO
 as **Draft**, submit it for review, then approve or reject the submitted record.
 A rejected VO can be revised and submitted again. Only **Approved** VOs change
 the Contract's Current value; Draft, Submitted, and Rejected records remain
-traceable without changing that total. These states describe current system
-behavior and do not replace NICON's pending approval of the official VO policy.
+traceable without changing that total. Anyone with permission to edit VOs can
+permanently delete one in any status after confirmation. Deleting an Approved
+VO removes its adjustment from the Contract's Current value. These states
+describe current system behavior and do not replace NICON's pending approval
+of the remaining official VO policy.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

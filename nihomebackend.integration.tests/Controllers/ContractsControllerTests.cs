@@ -420,6 +420,36 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DeleteApprovedAppendix_AsOwningSale_SucceedsAndRestoresCurrentValue()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId, status: "Signed", value: 500_000_000m);
+        var create = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/appendices", new
+        {
+            title = "Owned approved VO",
+            reason = "Delete permission regression",
+            valueDelta = 50_000_000m,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var voId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+        (await Client.PostAsync($"/api/contracts/{contractId}/appendices/{voId}/submit", null))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.PostAsJsonAsync(
+            $"/api/contracts/{contractId}/appendices/{voId}/approve",
+            new { note = "Approved" })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.DeleteAsync($"/api/contracts/{contractId}/appendices/{voId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var refreshed = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contractId}"));
+        refreshed.GetProperty("approvedVoTotal").GetDecimal().Should().Be(0);
+        refreshed.GetProperty("currentValue").GetDecimal().Should().Be(500_000_000m);
+    }
+
+    [Fact]
     public async Task CreateAppendix_SameIdempotencyKey_ReplaysWithoutDuplicate()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

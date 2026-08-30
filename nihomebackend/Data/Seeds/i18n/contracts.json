@@ -648,6 +648,10 @@
     "vi": "Chỉ VO đã duyệt được cộng vào Giá trị hiện tại; VO nháp, đang duyệt hoặc bị từ chối không làm thay đổi giá trị.", "en": "Only approved VOs affect Current value; draft, submitted, or rejected VOs do not change it.", "zh": "只有已批准的 VO 会影响当前金额；草稿、已提交或已拒绝的 VO 不会改变该金额。", "ja": "現在金額に反映されるのは承認済みVOのみです。下書き・申請済み・却下のVOは金額を変更しません。"
   },
   {
+    "key": "contracts.appendix.guide.delete", "category": "contracts",
+    "vi": "Người có quyền chỉnh sửa có thể xoá VO ở mọi trạng thái. Khi xoá VO đã duyệt, giá trị điều chỉnh sẽ được loại khỏi Giá trị hiện tại.", "en": "Users with edit permission may delete a VO in any status. Deleting an approved VO removes its adjustment from Current value.", "zh": "拥有编辑权限的用户可以删除任何状态的 VO。删除已批准的 VO 后，其调整金额将从当前金额中移除。", "ja": "編集権限を持つユーザーは、どのステータスのVOでも削除できます。承認済みVOを削除すると、その調整額は現在金額から除外されます。"
+  },
+  {
     "key": "contracts.appendix.new",
     "category": "contracts",
     "vi": "Tạo VO mới",
