@@ -62,6 +62,17 @@ public class ContractAppendixServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_AllocatesSequenceWithinOwningContract()
+    {
+        var first = await _sut.CreateAsync(_contract.Id, Req(), callerUserId: 100, canSeeAll: true);
+        var second = await _sut.CreateAsync(_contract.Id, Req(title: "T2"), callerUserId: 100, canSeeAll: true);
+
+        Assert.Equal(1, first!.VoNumber);
+        Assert.Equal(2, second!.VoNumber);
+        Assert.All(_db.ContractAppendices, appendix => Assert.Equal(_contract.Id, appendix.ContractId));
+    }
+
+    [Fact]
     public async Task Create_ThrowsOnZeroDelta()
     {
         await Assert.ThrowsAsync<ContractValidationException>(
@@ -173,6 +184,26 @@ public class ContractAppendixServiceTests : IDisposable
     {
         var rows = await _sut.ListAsync(_contract.Id, callerUserId: 999, canSeeAll: false);
         Assert.Null(rows);
+    }
+
+    [Fact]
+    public async Task Update_CannotAddressAppendixThroughAnotherContract()
+    {
+        var vo = await _sut.CreateAsync(_contract.Id, Req(), 100, true);
+        var otherContract = new Contract
+        {
+            ContractNumber = "HD-TEST-0002",
+            CustomerId = _contract.CustomerId,
+            OwnerUserId = 100,
+            Value = 2_000_000m,
+        };
+        _db.Contracts.Add(otherContract);
+        await _db.SaveChangesAsync();
+
+        var updated = await _sut.UpdateAsync(otherContract.Id, vo!.Id, Req(title: "Cross contract"), 100, true);
+
+        Assert.Null(updated);
+        Assert.Equal("T", _db.ContractAppendices.Single().Title);
     }
 
     private string CreateManagedFile(string fileName)

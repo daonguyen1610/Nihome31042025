@@ -301,6 +301,7 @@ public class ContractsController(
 
     [HttpPost("{id:int}/appendices")]
     [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.appendices.create")]
     public async Task<ActionResult<ContractAppendixResponse>> CreateAppendix(
         int id, [FromBody] UpsertContractAppendixRequest req, CancellationToken ct)
     {
@@ -331,6 +332,7 @@ public class ContractsController(
 
     [HttpPut("{id:int}/appendices/{voId:int}")]
     [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.appendices.update")]
     public async Task<ActionResult<ContractAppendixResponse>> UpdateAppendix(
         int id, int voId, [FromBody] UpsertContractAppendixRequest req, CancellationToken ct)
     {
@@ -360,6 +362,7 @@ public class ContractsController(
 
     [HttpPost("{id:int}/appendices/{voId:int}/submit")]
     [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.appendices.submit")]
     public async Task<ActionResult<ContractAppendixResponse>> SubmitAppendix(int id, int voId, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -387,6 +390,7 @@ public class ContractsController(
 
     [HttpPost("{id:int}/appendices/{voId:int}/approve")]
     [RequirePermission("crm.contracts", "view.all")]
+    [Idempotency("crm.contracts.appendices.approve")]
     public async Task<ActionResult<ContractAppendixResponse>> ApproveAppendix(
         int id, int voId, [FromBody] ContractAppendixDecisionRequest? req, CancellationToken ct)
     {
@@ -415,6 +419,7 @@ public class ContractsController(
 
     [HttpPost("{id:int}/appendices/{voId:int}/reject")]
     [RequirePermission("crm.contracts", "view.all")]
+    [Idempotency("crm.contracts.appendices.reject")]
     public async Task<ActionResult<ContractAppendixResponse>> RejectAppendix(
         int id, int voId, [FromBody] ContractAppendixDecisionRequest req, CancellationToken ct)
     {

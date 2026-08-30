@@ -420,6 +420,68 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task CreateAppendix_SameIdempotencyKey_ReplaysWithoutDuplicate()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var key = $"contract-vo-{Guid.NewGuid():N}";
+        var payload = new { title = "VO idempotent", reason = "Retry", valueDelta = 1_000_000m };
+
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/contracts/{contractId}/appendices")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        firstRequest.Headers.Add("Idempotency-Key", key);
+        using var first = await Client.SendAsync(firstRequest);
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        var firstBody = await ReadJsonAsync(first);
+
+        using var replayRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/contracts/{contractId}/appendices")
+        {
+            Content = JsonContent.Create(payload),
+        };
+        replayRequest.Headers.Add("Idempotency-Key", key);
+        using var replay = await Client.SendAsync(replayRequest);
+
+        replay.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.Headers.GetValues("Idempotency-Replayed").Should().ContainSingle("true");
+        (await ReadJsonAsync(replay)).GetProperty("id").GetInt32()
+            .Should().Be(firstBody.GetProperty("id").GetInt32());
+        var list = await Client.GetAsync($"/api/contracts/{contractId}/appendices");
+        (await ReadJsonAsync(list)).EnumerateArray()
+            .Count(item => item.GetProperty("title").GetString() == "VO idempotent")
+            .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UpdateAppendix_ThroughDifferentContract_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var sourceContractId = await CreateContractAsync(customerId);
+        var otherContractId = await CreateContractAsync(customerId);
+        var create = await Client.PostAsJsonAsync($"/api/contracts/{sourceContractId}/appendices", new
+        {
+            title = "Source VO",
+            reason = "Source contract only",
+            valueDelta = 500_000m,
+        });
+        var voId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+
+        var response = await Client.PutAsJsonAsync($"/api/contracts/{otherContractId}/appendices/{voId}", new
+        {
+            title = "Cross contract",
+            reason = "Must be rejected",
+            valueDelta = 900_000m,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var sourceRows = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{sourceContractId}/appendices"));
+        sourceRows[0].GetProperty("title").GetString().Should().Be("Source VO");
+    }
+
+    [Fact]
     public async Task DeleteAppendix_MissingAppendix_ReturnsNotFound()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

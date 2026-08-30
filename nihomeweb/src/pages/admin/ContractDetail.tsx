@@ -737,10 +737,12 @@ const blankVoDraft = (): VoDraft => ({
 interface VoTabProps {
   contract: ContractResponse;
   rows: ContractAppendixResponse[];
+  canManage: boolean;
+  canDecide: boolean;
   refresh: () => Promise<void>;
 }
 
-const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
+const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) => {
   const { t } = useI18n();
   const { toast } = useToast();
   const [draft, setDraft] = useState<VoDraft | null>(null);
@@ -752,8 +754,8 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const deletableIds = useMemo(
-    () => rows.map((row) => row.id),
-    [rows],
+    () => canManage ? rows.map((row) => row.id) : [],
+    [canManage, rows],
   );
   const bulk = useBulkSelection<number>({
     visibleIds: deletableIds,
@@ -902,10 +904,12 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
         ) : (
           <span />
         )}
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="mr-1 h-4 w-4" />
-          {t("contracts.appendix.new")}
-        </Button>
+        {canManage ? (
+          <Button size="sm" onClick={openCreate}>
+            <Plus className="mr-1 h-4 w-4" />
+            {t("contracts.appendix.new")}
+          </Button>
+        ) : null}
       </div>
 
       <BulkActionBar
@@ -922,10 +926,10 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
       ) : (
         <div className="space-y-3">
           {rows.map((vo) => {
-            const editable = vo.status === "Draft" || vo.status === "Rejected";
-            const canSubmit = vo.status === "Draft";
-            const canDecide = vo.status === "Submitted";
-            const canDelete = true;
+            const editable = canManage && (vo.status === "Draft" || vo.status === "Rejected");
+            const canSubmit = canManage && vo.status === "Draft";
+            const canReview = canDecide && vo.status === "Submitted";
+            const canDelete = canManage;
             return (
               <div key={vo.id} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1015,7 +1019,7 @@ const VoTab = ({ contract, rows, refresh }: VoTabProps) => {
                         {t("contracts.appendix.submit")}
                       </Button>
                     ) : null}
-                    {canDecide ? (
+                    {canReview ? (
                       <>
                         <Button
                           size="sm"
@@ -1443,6 +1447,7 @@ const ContractDetail = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const idNum = Number(params.id);
   const canManage = has(ADMIN_PERMS.contractsManage);
+  const canDecideVo = has(ADMIN_PERMS.contractsViewAll);
 
   const [contract, setContract] = useState<ContractResponse | null>(null);
   const [ensuringDesignProject, setEnsuringDesignProject] = useState(false);
@@ -1771,7 +1776,13 @@ const ContractDetail = () => {
             )}
           </TabsContent>
           <TabsContent value="appendices" className="mt-4">
-            <VoTab contract={contract} rows={appendices} refresh={refreshContract} />
+            <VoTab
+              contract={contract}
+              rows={appendices}
+              canManage={canManage}
+              canDecide={canDecideVo}
+              refresh={refreshContract}
+            />
           </TabsContent>
           <TabsContent value="documents" className="mt-4">
             <DocumentsTab
