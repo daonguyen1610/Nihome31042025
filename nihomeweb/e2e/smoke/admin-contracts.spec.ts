@@ -65,6 +65,9 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
     await expect(
         page.getByText(/VO trong hệ thống|VO in the system|系统中的 VO|システム上のVO/i),
     ).toBeVisible();
+    await expect(
+        page.getByText(/Người có quyền chỉnh sửa có thể xoá VO ở mọi trạng thái|Users with edit permission may delete a VO in any status|拥有编辑权限的用户可以删除任何状态的 VO|編集権限を持つユーザーは、どのステータスのVOでも削除できます/i),
+    ).toBeVisible();
 
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });

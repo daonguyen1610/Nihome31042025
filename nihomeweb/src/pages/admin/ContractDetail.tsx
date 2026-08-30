@@ -888,6 +888,7 @@ const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabProps) =>
             <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.purpose")}</p>
             <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.workflow")}</p>
             <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.impact")}</p>
+            <p className="mt-1 text-sky-900">{t("contracts.appendix.guide.delete")}</p>
           </div>
         </div>
       </div>

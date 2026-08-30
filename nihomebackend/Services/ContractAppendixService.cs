@@ -9,7 +9,7 @@ namespace NihomeBackend.Services;
 /// <summary>Workflow rules (NIH-104):
 /// <list type="bullet">
 ///   <item>Anyone with <c>crm.contracts.manage</c> may Create/Update the
-///     draft, Submit it, or Delete a Draft/Rejected row.</item>
+///     draft, Submit it, or Delete a VO in any workflow status.</item>
 ///   <item>Only <c>view.all</c> callers (Sales Manager / Legal / BOD /
 ///     Admin) may Approve / Reject a Submitted VO. The controller wires
 ///     this by only exposing the approve/reject endpoints when the

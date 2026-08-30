@@ -7,7 +7,8 @@ namespace NihomeBackend.Services;
 /// <summary>CRUD + approval workflow for a contract's Variation Orders
 /// (<see cref="ContractAppendix"/>). Owning contract's <c>CurrentValue</c>
 /// updates through <see cref="ContractService.GetAsync"/>; no separate
-/// write is needed because Σ Approved is computed on read.</summary>
+/// write is needed because Σ Approved is computed on read. Callers with
+/// edit permission may delete a VO in any workflow status.</summary>
 public interface IContractAppendixService
 {
     Task<List<ContractAppendixResponse>?> ListAsync(int contractId, int callerUserId, bool canSeeAll, CancellationToken ct = default);
