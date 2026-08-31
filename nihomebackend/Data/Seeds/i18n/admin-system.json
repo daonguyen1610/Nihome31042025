@@ -2576,7 +2576,7 @@
     "key": "settings.drive.startError", "category": "settings", "vi": "Không thể bắt đầu kết nối Google Drive.", "en": "Could not start Google Drive connection.", "zh": "无法开始连接 Google Drive。", "ja": "Google Drive 接続を開始できませんでした。"
   },
   {
-    "key": "settings.drive.oauthNotConfigured", "category": "settings", "vi": "Máy chủ chưa cấu hình OAuthRedirectUri.", "en": "The server has not configured OAuthRedirectUri.", "zh": "服务器尚未配置 OAuthRedirectUri。", "ja": "サーバーに OAuthRedirectUri が設定されていません。"
+    "key": "settings.drive.oauthNotConfigured", "category": "settings", "vi": "Cấu hình Google Drive OAuth chưa đầy đủ. Hãy kiểm tra trạng thái sau khi lưu cấu hình.", "en": "Google Drive OAuth configuration is incomplete. Check the status after saving the configuration.", "zh": "Google Drive OAuth 配置不完整。保存配置后请重新检查状态。", "ja": "Google Drive OAuth の設定が不完全です。設定を保存した後、状態を再確認してください。"
   },
   {
     "key": "settings.drive.managePermissionRequired", "category": "settings", "vi": "Cần quyền quản lý cài đặt để kết nối lại.", "en": "Settings management permission is required to reconnect.", "zh": "重新连接需要设置管理权限。", "ja": "再接続には設定管理権限が必要です。"

@@ -321,22 +321,26 @@ const DriveTab = () => {
   const [configurationVersion, setConfigurationVersion] = useState(0);
   const oauthPopup = useRef<Window | null>(null);
   const popupPoll = useRef<number | null>(null);
+  const statusRequestId = useRef(0);
   const canManage = has(ADMIN_PERMS.settingsManage);
 
   const loadStatus = useCallback(async () => {
+    const requestId = ++statusRequestId.current;
     setLoading(true);
     try {
       const { data } = await adminApi.getGoogleDriveAdminStatus();
-      setStatus(data);
+      if (requestId === statusRequestId.current) setStatus(data);
     } catch {
-      setStatus(null);
-      toast({
-        title: t("common.error"),
-        description: t("settings.drive.loadError"),
-        variant: "destructive",
-      });
+      if (requestId === statusRequestId.current) {
+        setStatus(null);
+        toast({
+          title: t("common.error"),
+          description: t("settings.drive.loadError"),
+          variant: "destructive",
+        });
+      }
     } finally {
-      setLoading(false);
+      if (requestId === statusRequestId.current) setLoading(false);
     }
   }, [t, toast]);
 
