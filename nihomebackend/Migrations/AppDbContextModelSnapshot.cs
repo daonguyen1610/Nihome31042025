@@ -1809,8 +1809,10 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.GoogleDriveCredential", b =>
                 {
                     b.Property<int>("Id")
-                        .ValueGeneratedNever()
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AccountEmail")
                         .HasMaxLength(320)
