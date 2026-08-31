@@ -2504,6 +2504,102 @@
     "ja": "セキュリティ"
   },
   {
+    "key": "settings.drive.tab", "category": "settings", "vi": "Google Drive", "en": "Google Drive", "zh": "Google Drive", "ja": "Google Drive"
+  },
+  {
+    "key": "settings.drive.title", "category": "settings", "vi": "Kết nối Google Drive", "en": "Google Drive connection", "zh": "Google Drive 连接", "ja": "Google Drive 接続"
+  },
+  {
+    "key": "settings.drive.description", "category": "settings", "vi": "Quản lý tài khoản My Drive dùng để lưu tài liệu dự án.", "en": "Manage the My Drive account used for project documents.", "zh": "管理用于项目文档的 My Drive 帐户。", "ja": "プロジェクト文書に使用する My Drive アカウントを管理します。"
+  },
+  {
+    "key": "settings.drive.check", "category": "settings", "vi": "Kiểm tra", "en": "Check", "zh": "检查", "ja": "確認"
+  },
+  {
+    "key": "settings.drive.connectionStatus", "category": "settings", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "状態"
+  },
+  {
+    "key": "settings.drive.account", "category": "settings", "vi": "Tài khoản", "en": "Account", "zh": "帐户", "ja": "アカウント"
+  },
+  {
+    "key": "settings.drive.notAvailable", "category": "settings", "vi": "Chưa có", "en": "Not available", "zh": "暂无", "ja": "利用不可"
+  },
+  {
+    "key": "settings.drive.rootFolder", "category": "settings", "vi": "Thư mục gốc", "en": "Root folder", "zh": "根文件夹", "ja": "ルートフォルダー"
+  },
+  {
+    "key": "settings.drive.openFolder", "category": "settings", "vi": "Mở thư mục", "en": "Open folder", "zh": "打开文件夹", "ja": "フォルダーを開く"
+  },
+  {
+    "key": "settings.drive.reconnect", "category": "settings", "vi": "Kết nối lại Google Drive", "en": "Reconnect Google Drive", "zh": "重新连接 Google Drive", "ja": "Google Drive を再接続"
+  },
+  {
+    "key": "settings.drive.connecting", "category": "settings", "vi": "Đang chuyển đến Google...", "en": "Redirecting to Google...", "zh": "正在跳转到 Google…", "ja": "Google に移動中..."
+  },
+  {
+    "key": "settings.drive.loadError", "category": "settings", "vi": "Không tải được trạng thái Google Drive.", "en": "Failed to load Google Drive status.", "zh": "无法加载 Google Drive 状态。", "ja": "Google Drive の状態を読み込めませんでした。"
+  },
+  {
+    "key": "settings.drive.startError", "category": "settings", "vi": "Không thể bắt đầu kết nối Google Drive.", "en": "Could not start Google Drive connection.", "zh": "无法开始连接 Google Drive。", "ja": "Google Drive 接続を開始できませんでした。"
+  },
+  {
+    "key": "settings.drive.oauthNotConfigured", "category": "settings", "vi": "Máy chủ chưa cấu hình OAuthRedirectUri.", "en": "The server has not configured OAuthRedirectUri.", "zh": "服务器尚未配置 OAuthRedirectUri。", "ja": "サーバーに OAuthRedirectUri が設定されていません。"
+  },
+  {
+    "key": "settings.drive.managePermissionRequired", "category": "settings", "vi": "Cần quyền quản lý cài đặt để kết nối lại.", "en": "Settings management permission is required to reconnect.", "zh": "重新连接需要设置管理权限。", "ja": "再接続には設定管理権限が必要です。"
+  },
+  {
+    "key": "settings.drive.status.disabled", "category": "settings", "vi": "Đã tắt", "en": "Disabled", "zh": "已禁用", "ja": "無効"
+  },
+  {
+    "key": "settings.drive.status.connected", "category": "settings", "vi": "Đã kết nối", "en": "Connected", "zh": "已连接", "ja": "接続済み"
+  },
+  {
+    "key": "settings.drive.status.readOnly", "category": "settings", "vi": "Chỉ đọc", "en": "Read only", "zh": "只读", "ja": "読み取り専用"
+  },
+  {
+    "key": "settings.drive.status.invalidRoot", "category": "settings", "vi": "Thư mục gốc không hợp lệ", "en": "Invalid root folder", "zh": "根文件夹无效", "ja": "ルートフォルダーが無効"
+  },
+  {
+    "key": "settings.drive.status.reconnectRequired", "category": "settings", "vi": "Cần kết nối lại", "en": "Reconnect required", "zh": "需要重新连接", "ja": "再接続が必要"
+  },
+  {
+    "key": "settings.drive.status.unavailable", "category": "settings", "vi": "Không khả dụng", "en": "Unavailable", "zh": "不可用", "ja": "利用不可"
+  },
+  {
+    "key": "settings.drive.error.invalidRoot", "category": "settings", "vi": "Thư mục gốc không tồn tại, đã ở trong thùng rác hoặc không phải thư mục.", "en": "The root folder does not exist, is trashed, or is not a folder.", "zh": "根文件夹不存在、已移至回收站或不是文件夹。", "ja": "ルートフォルダーが存在しない、ゴミ箱にある、またはフォルダーではありません。"
+  },
+  {
+    "key": "settings.drive.error.reconnectRequired", "category": "settings", "vi": "Quyền truy cập đã hết hạn hoặc bị thu hồi. Hãy kết nối lại.", "en": "Access expired or was revoked. Reconnect Google Drive.", "zh": "访问权限已过期或被撤销，请重新连接。", "ja": "アクセスの有効期限が切れたか取り消されました。再接続してください。"
+  },
+  {
+    "key": "settings.drive.error.unavailable", "category": "settings", "vi": "Không thể xác thực hoặc truy cập Google Drive lúc này.", "en": "Google Drive cannot be authenticated or reached right now.", "zh": "目前无法验证或访问 Google Drive。", "ja": "現在 Google Drive を認証または利用できません。"
+  },
+  {
+    "key": "settings.drive.oauth.success", "category": "settings", "vi": "Đã kết nối Google Drive.", "en": "Google Drive connected.", "zh": "Google Drive 已连接。", "ja": "Google Drive に接続しました。"
+  },
+  {
+    "key": "settings.drive.oauth.error", "category": "settings", "vi": "Không thể kết nối Google Drive.", "en": "Could not connect Google Drive.", "zh": "无法连接 Google Drive。", "ja": "Google Drive に接続できませんでした。"
+  },
+  {
+    "key": "settings.drive.oauth.denied", "category": "settings", "vi": "Bạn đã hủy hoặc từ chối cấp quyền.", "en": "Authorization was cancelled or denied.", "zh": "授权已取消或拒绝。", "ja": "承認がキャンセルまたは拒否されました。"
+  },
+  {
+    "key": "settings.drive.oauth.invalid_state", "category": "settings", "vi": "Yêu cầu kết nối đã hết hạn. Vui lòng thử lại.", "en": "The connection request expired. Please try again.", "zh": "连接请求已过期，请重试。", "ja": "接続リクエストの有効期限が切れました。再試行してください。"
+  },
+  {
+    "key": "settings.drive.oauth.authorization_expired", "category": "settings", "vi": "Tài khoản không còn quyền quản lý cài đặt. Vui lòng đăng nhập lại bằng tài khoản được cấp quyền.", "en": "The account no longer has settings management permission. Sign in again with an authorized account.", "zh": "该帐户不再具有设置管理权限。请使用已授权帐户重新登录。", "ja": "このアカウントには設定管理権限がありません。権限のあるアカウントで再度サインインしてください。"
+  },
+  {
+    "key": "settings.drive.oauth.missing_refresh_token", "category": "settings", "vi": "Google không cấp refresh token. Hãy thử lại và chấp thuận quyền truy cập.", "en": "Google did not issue a refresh token. Try again and approve access.", "zh": "Google 未签发刷新令牌，请重试并批准访问。", "ja": "Google が更新トークンを発行しませんでした。再試行してアクセスを承認してください。"
+  },
+  {
+    "key": "settings.drive.oauth.root_validation_failed", "category": "settings", "vi": "Tài khoản vừa chọn không thể thêm tệp vào thư mục gốc đã cấu hình. Kết nối hiện tại chưa bị thay đổi.", "en": "The selected account cannot add files to the configured root folder. The current connection was not changed.", "zh": "所选帐户无法向已配置的根文件夹添加文件。当前连接未更改。", "ja": "選択したアカウントは設定済みルートフォルダーにファイルを追加できません。現在の接続は変更されていません。"
+  },
+  {
+    "key": "settings.drive.oauth.failed", "category": "settings", "vi": "Google không chấp nhận mã xác thực. Vui lòng thử lại.", "en": "Google did not accept the authorization code. Please try again.", "zh": "Google 未接受授权码，请重试。", "ja": "Google が認証コードを受け付けませんでした。再試行してください。"
+  },
+  {
     "key": "translations.subtitle",
     "category": "translations",
     "vi": "Quản lý toàn bộ khóa dịch giao diện và bản dịch nội dung",

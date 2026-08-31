@@ -13,6 +13,9 @@ public sealed class GoogleDriveOptions
     public string ClientId { get; set; } = string.Empty;
     public string ClientSecret { get; set; } = string.Empty;
     public string RefreshToken { get; set; } = string.Empty;
+    public string OAuthRedirectUri { get; set; } = string.Empty;
+    public string FrontendReturnUrl { get; set; } = "/admin/settings?tab=drive";
+    public string DataProtectionKeysPath { get; set; } = string.Empty;
     public string RootFolderId { get; set; } = string.Empty;
     public string ApplicationName { get; set; } = "Nicon Google Drive Integration";
     public string InstanceId { get; set; } = string.Empty;

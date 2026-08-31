@@ -968,25 +968,17 @@ The production artifact includes `web.config` for the ASP.NET Core Module and se
 
 ### 10.3 Google Drive credentials on IIS
 
-Project document synchronization uses Google Drive API v3 with OAuth user authorization. The backend reads the `GoogleDrive` configuration section and does not read a runtime credential file. Never put Google passwords or OAuth values in source-controlled configuration, logs, screenshots, or support messages. Synchronization is opt-in: checked-in configuration sets `Enabled` to `false`, and workers perform no Drive I/O in that state.
+Project document synchronization uses Google Drive API v3 with OAuth user authorization. Client identity and folder settings come from protected deployment configuration. An administrator grants My Drive access from **Settings > Google Drive**; the backend encrypts the resulting refresh token with ASP.NET Core Data Protection and stores only the ciphertext in `google_drive_credentials`. Never put Google passwords or OAuth values in source-controlled configuration, logs, screenshots, or support messages. Synchronization is opt-in: checked-in configuration sets `Enabled` to `false`, and workers perform no Drive I/O in that state.
 
 #### Create the OAuth credential
 
 1. In [Google Cloud Console](https://console.cloud.google.com/), select the Nicon project and enable **Google Drive API**.
 2. Configure Google Auth Platform with an External audience. While the app is in Testing, add the Google account that owns the target Drive folder as a test user.
 3. Add only the `https://www.googleapis.com/auth/drive` scope.
-4. Create a **Desktop app** OAuth client and download its client configuration to a temporary protected location as `oauth-client.json`.
-5. On a trusted administrator machine, obtain a refresh token by running:
-
-   ```bash
-   gcloud auth application-default login \
-     --client-id-file=/secure/path/oauth-client.json \
-     --scopes=https://www.googleapis.com/auth/drive
-   ```
-
-6. Sign in as the Google account that owns the target folder and approve access. Read `client_id`, `client_secret`, and `refresh_token` from the generated Application Default Credentials only on that trusted machine; place those values into the protected deployed configuration described below.
-7. Delete the generated credential file and temporary client download when they are no longer required. If a client secret or refresh token is exposed, revoke it and create a replacement before deployment.
-8. Copy `<FOLDER_ID>` from `https://drive.google.com/drive/folders/<FOLDER_ID>` for the root that will contain Nicon project folders.
+4. Create a **Web application** OAuth client. A Desktop client is insufficient for a deployed HTTPS callback.
+5. Register the exact backend callback, for example `https://nicon.example.com/api/site-settings/google-drive/oauth/callback`, as an authorized redirect URI.
+6. Store its client ID and client secret in protected deployment configuration. Do not configure a refresh token for a new installation.
+7. Copy `<FOLDER_ID>` from `https://drive.google.com/drive/folders/<FOLDER_ID>` for the root that will contain Nicon project folders.
 
 The repository and release ZIP deliberately contain empty OAuth values. After extracting `publish-release.zip` on IIS:
 
@@ -998,7 +990,10 @@ The repository and release ZIP deliberately contain empty OAuth values. After ex
      "Enabled": true,
      "ClientId": "<OAUTH_CLIENT_ID>",
      "ClientSecret": "<OAUTH_CLIENT_SECRET>",
-     "RefreshToken": "<OAUTH_REFRESH_TOKEN>",
+    "RefreshToken": "",
+    "OAuthRedirectUri": "https://nicon.example.com/api/site-settings/google-drive/oauth/callback",
+    "FrontendReturnUrl": "https://nicon.example.com/admin/settings?tab=drive",
+    "DataProtectionKeysPath": "D:\\NiconSecrets\\DataProtection-Keys",
      "RootFolderId": "<FOLDER_ID>",
      "InstanceId": "<DEPLOYMENT_UNIQUE_ID>",
     "ApplicationName": "Nicon Google Drive Integration",
@@ -1023,9 +1018,11 @@ The repository and release ZIP deliberately contain empty OAuth values. After ex
   the centralized registry beneath `RootFolderId`; nested values are resolved
   segment by segment and must not be embedded in module code.
 
-3. Recycle the IIS application pool and check application logs and a controlled project upload. Startup rejects incomplete OAuth, root, instance, or folder configuration when `Enabled` is `true`.
+3. Grant Modify access on `DataProtectionKeysPath` only to the IIS application-pool identity and responsible administrators. This key ring must survive application recycle and deployment; losing it makes the encrypted database token unreadable and requires reconnection.
+4. Recycle the IIS application pool, sign in to Nicon with `system.settings.manage`, open **Settings > Google Drive**, and select **Connect/Reconnect Google Drive**. Sign in once as the approved My Drive account and approve access.
+5. Confirm status is `Connected`, then perform a controlled project upload. Startup rejects incomplete client, root, instance, or folder configuration when `Enabled` is `true`; a refresh token is no longer required at startup.
 
-As a safer alternative to storing secrets in the deployed JSON, IIS can provide `GoogleDrive__Enabled`, `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, `GoogleDrive__RootFolderId`, and `GoogleDrive__InstanceId` as protected environment variables; folder paths use the same hierarchy. ASP.NET Core maps them to the same options. Never commit real OAuth values or add them to `deployment-config`.
+IIS can provide `GoogleDrive__Enabled`, `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__OAuthRedirectUri`, `GoogleDrive__FrontendReturnUrl`, `GoogleDrive__DataProtectionKeysPath`, `GoogleDrive__RootFolderId`, and `GoogleDrive__InstanceId` as protected environment variables. `RefreshToken` remains an optional migration fallback for existing deployments; after a successful admin connection, the encrypted database credential takes precedence. Never commit real OAuth values or add them to `deployment-config`.
 
 Project document storage is Drive-primary. Nicon uploads manual project files directly to their configured Drive category, proxies authenticated downloads, and moves deleted files to Drive trash rather than permanently erasing them. SQL remains authoritative for catalog metadata, application authorization, claims, and workflow state, while Drive is authoritative for file content. Reconciliation catalogs unknown files without a host copy and reflects remote changes. Existing source-module files use a compatibility sidecar until those modules migrate their own storage contracts. Drive sharing and permission synchronization are intentionally disabled until IT supplies approved group mappings.
 
@@ -1036,6 +1033,7 @@ Connection statuses have the following meanings:
 - `Connected`: a Google account is authenticated through OAuth, the root is a live folder, and Drive reports permission to add children.
 - `ReadOnly`: the folder is visible but Drive reports no permission to add children.
 - `InvalidRoot`: `RootFolderId` points to a non-folder item or an item in trash.
+- `ReconnectRequired`: the refresh token is missing, expired, or revoked; an administrator must reconnect once in Settings.
 - `Unavailable`: authentication or folder access failed.
 
 Each project document permits at most three worker claims. During backoff after a failed claim, an authorized user can select **Retry** to make the next remaining claim eligible immediately. After the third failed claim the row is terminal; correct the Drive configuration before replacing or restaging the source file.
@@ -1048,7 +1046,7 @@ Retry and deletion are rejected while a row is `Processing`. This preserves the 
 
 The response includes only safe identity/folder metadata and never includes the credential path, client secret, refresh token, or private key.
 
-For Docker development, populate the four empty `GoogleDrive` OAuth/folder values in the local ignored secret configuration or provide `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, and `GoogleDrive__RootFolderId` to the backend container, then recreate it:
+For Docker development, provide client ID, client secret, localhost callback URI, root folder, and instance ID through local ignored configuration or environment variables, then recreate the backend. Compose persists the Data Protection key ring in the `data_protection_keys` volume.
 
 ```bash
 docker compose up -d --build --force-recreate nihomeBackend
@@ -1056,7 +1054,7 @@ docker compose up -d --build --force-recreate nihomeBackend
 
 Until all OAuth values and `RootFolderId` are valid, the worker logs a safe connection warning and leaves pending rows unclaimed at their current attempt count.
 
-OAuth apps left in Testing can issue refresh tokens with a limited lifetime. Before production use, move the app to Production and complete any Google verification required for the Drive scope. Store the resulting credential as an operational secret with an owner and rotation procedure.
+OAuth apps left in Testing can issue refresh tokens with a limited lifetime. Before production use, move the app to Production and complete any Google verification required for the Drive scope. The Google SDK automatically exchanges the stored refresh token for short-lived access tokens. A revoked refresh token cannot be silently renewed; health status becomes `ReconnectRequired` and an administrator must approve access again.
 
 Official references: [Drive API v3](https://developers.google.com/workspace/drive/api/reference/rest/v3), [files.get](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get), [OAuth scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth), [Shared Drives](https://developers.google.com/workspace/drive/api/guides/about-shareddrives), and [Drive API errors](https://developers.google.com/workspace/drive/api/guides/handle-errors#storageQuotaExceeded).
 

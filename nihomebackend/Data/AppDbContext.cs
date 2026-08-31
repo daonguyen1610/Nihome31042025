@@ -80,6 +80,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProject> OperationalProjects => Set<OperationalProject>();
     public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
     public DbSet<ProjectDriveFolder> ProjectDriveFolders => Set<ProjectDriveFolder>();
+    public DbSet<GoogleDriveCredential> GoogleDriveCredentials => Set<GoogleDriveCredential>();
 
     // Procurement
     public DbSet<Vendor> Vendors => Set<Vendor>();
@@ -1015,6 +1016,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(f => new { f.OperationalProjectId, f.Category }).IsUnique();
             b.HasIndex(f => f.DriveFolderId).IsUnique();
             b.HasIndex(f => f.ReconciliationClaimExpiresAt);
+        });
+
+        modelBuilder.Entity<GoogleDriveCredential>(b =>
+        {
+            b.ToTable("google_drive_credentials");
+            b.HasKey(credential => credential.Id);
+            b.Property(credential => credential.Id).ValueGeneratedNever();
+            b.Property(credential => credential.ProtectedRefreshToken).HasMaxLength(4000).IsRequired();
+            b.Property(credential => credential.AccountEmail).HasMaxLength(320);
+            b.Property(credential => credential.RowVersion).IsRowVersion();
+            b.ToTable(table => table.HasCheckConstraint(
+                "CK_google_drive_credentials_singleton",
+                "[Id] = 1"));
         });
 
         modelBuilder.Entity<DesignProject>(b =>

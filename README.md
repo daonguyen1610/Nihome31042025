@@ -34,9 +34,9 @@ We need to declare the `appsettings.json` like
 
 ## Connect Google Drive with OAuth
 
-Survey Media uploads files to Google Drive by using an OAuth user credential. The backend reads `ClientId`, `ClientSecret`, `RefreshToken`, and `RootFolderId` directly from the `GoogleDrive` configuration section; it does not use a runtime credential file.
+Project documents use a Google OAuth user credential for personal My Drive. Deployment configuration supplies the client identity, callback URI, and root folder. An administrator connects the account from **Settings > Google Drive**; the backend encrypts the refresh token with ASP.NET Core Data Protection and stores only ciphertext in SQL.
 
-> **Security:** `ClientSecret` and `RefreshToken` are secrets. Generate them only on a trusted administrator machine. Never commit real values, paste them into tickets or logs, or add them to `deployment-config`.
+> **Security:** `ClientSecret`, refresh tokens, and Data Protection keys are secrets. Never commit real values, paste them into tickets or logs, or add them to `deployment-config`. Persist and access-control the Data Protection key ring or stored credentials cannot be decrypted after deployment.
 
 ### 1. Create or select a Google Cloud project
 
@@ -66,46 +66,17 @@ Survey Media uploads files to Google Drive by using an OAuth user credential. Th
 
 This project currently requires the full Drive scope because the worker finds, creates, uploads, reconciles, and deletes managed files beneath the configured root folder. Google classifies this as a restricted scope. An external production application may require Google OAuth verification and, depending on how restricted data is stored or transmitted, a security assessment.
 
-### 4. Create a Desktop OAuth client
+### 4. Create a Web OAuth client
 
 1. Open **Google Auth Platform > Clients**.
 2. Click **Create client**.
-3. Select **Desktop app** as the application type.
-4. Name it, for example, `Nihome Drive Administrator`.
-5. Create the client and download its JSON file to a temporary protected location, for example:
+3. Select **Web application** as the application type.
+4. Register the exact backend callback URI, for example `https://nicon.example.com/api/site-settings/google-drive/oauth/callback`.
+5. Store the downloaded `client_id` and `client_secret` only in protected deployment configuration. A Desktop OAuth client with only `http://localhost` cannot serve a deployed HTTPS callback.
 
-    ```text
-    /secure/path/oauth-client.json
-    ```
+### 5. Connect the account
 
-The downloaded file contains the `client_id` and `client_secret`. Do not place this file inside the repository.
-
-### 5. Generate the refresh token
-
-Install and initialize the [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) on the trusted administrator machine. Then run:
-
-```bash
-gcloud auth application-default login \
-  --client-id-file=/secure/path/oauth-client.json \
-  --scopes=https://www.googleapis.com/auth/drive
-```
-
-1. A browser opens. Sign in with the same Google account that owns or can edit the target Drive folder.
-2. Approve the requested Drive access.
-3. If the OAuth app is in Testing, Google may show an unverified-app warning; continue only when the displayed project and client are the ones created above.
-4. After authorization, Application Default Credentials are written locally to:
-    - macOS/Linux: `~/.config/gcloud/application_default_credentials.json`
-    - Windows: `%APPDATA%\gcloud\application_default_credentials.json`
-5. Open that file locally and copy these values to a secure temporary note:
-    - `client_id` → `GoogleDrive:ClientId`
-    - `client_secret` → `GoogleDrive:ClientSecret`
-    - `refresh_token` → `GoogleDrive:RefreshToken`
-
-This generated file is only a temporary source for the three values. Nihome does not read it at runtime. Delete it when it is no longer needed if the machine does not use Application Default Credentials for other work:
-
-```bash
-gcloud auth application-default revoke
-```
+After server configuration, sign in to Nicon with `system.settings.manage`, open **Settings > Google Drive**, and select **Connect/Reconnect Google Drive**. Google asks for consent once. Nicon receives the authorization code, validates signed state and PKCE, and stores the issued refresh token encrypted. The Google SDK refreshes short-lived access tokens automatically; revoked access is reported as **Reconnect required**.
 
 ### 6. Create and authorize the root Drive folder
 
@@ -130,7 +101,10 @@ For local development, put the values in a local, uncommitted configuration sour
 "GoogleDrive": {
   "ClientId": "<OAUTH_CLIENT_ID>",
   "ClientSecret": "<OAUTH_CLIENT_SECRET>",
-  "RefreshToken": "<OAUTH_REFRESH_TOKEN>",
+    "RefreshToken": "",
+    "OAuthRedirectUri": "https://nicon.example.com/api/site-settings/google-drive/oauth/callback",
+    "FrontendReturnUrl": "https://nicon.example.com/admin/settings?tab=drive",
+    "DataProtectionKeysPath": "/secure/nicon/data-protection-keys",
   "RootFolderId": "<FOLDER_ID>",
   "ApplicationName": "Nihome Google Drive Integration",
   "Folders": {
@@ -146,7 +120,9 @@ ASP.NET Core environment variables are preferred when the configuration file is 
 ```text
 GoogleDrive__ClientId=<OAUTH_CLIENT_ID>
 GoogleDrive__ClientSecret=<OAUTH_CLIENT_SECRET>
-GoogleDrive__RefreshToken=<OAUTH_REFRESH_TOKEN>
+GoogleDrive__OAuthRedirectUri=https://nicon.example.com/api/site-settings/google-drive/oauth/callback
+GoogleDrive__FrontendReturnUrl=https://nicon.example.com/admin/settings?tab=drive
+GoogleDrive__DataProtectionKeysPath=/secure/nicon/data-protection-keys
 GoogleDrive__RootFolderId=<FOLDER_ID>
 GoogleDrive__Folders__SurveyMedia=01_Khao_sat
 ```

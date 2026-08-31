@@ -1,6 +1,7 @@
 using System.Text;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -63,9 +64,9 @@ public static class ServiceCollectionExtensions
                 "GoogleDrive:InstanceId không được để trống.")
             .Validate(options => !options.Enabled || new[]
                 {
-                    options.ClientId, options.ClientSecret, options.RefreshToken, options.RootFolderId,
+                    options.ClientId, options.ClientSecret, options.RootFolderId,
                 }.All(folder => !string.IsNullOrWhiteSpace(folder)),
-                "GoogleDrive OAuth và RootFolderId phải được cấu hình đầy đủ khi tích hợp được bật.")
+                "GoogleDrive ClientId, ClientSecret và RootFolderId phải được cấu hình đầy đủ khi tích hợp được bật.")
             .Validate(options => !options.Enabled || options.Folders is not null && new[]
                 {
                     options.Folders.CrmPreDesign, options.Folders.DesignConcept, options.Folders.DesignBasic,
@@ -77,6 +78,13 @@ public static class ServiceCollectionExtensions
             .ValidateOnStart();
         services.AddSingleton(serviceProvider =>
             serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleDriveOptions>>().Value);
+        var dataProtection = services.AddDataProtection()
+            .SetApplicationName("Nicon");
+        var dataProtectionKeysPath = configuration[$"{GoogleDriveOptions.SectionName}:DataProtectionKeysPath"];
+        if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+        services.AddHttpClient(nameof(GoogleDriveOAuthService), client =>
+            client.Timeout = TimeSpan.FromSeconds(30));
 
         var jwtSection = configuration.GetSection("Jwt");
         var activeKeyId = jwtSection["ActiveKeyId"];
@@ -141,7 +149,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProjectDriveFolderService, ProjectDriveFolderService>();
         services.AddSingleton<IProjectDriveClaimRenewer, ProjectDriveClaimRenewer>();
         services.AddSingleton<IProjectDriveClaimLease, ProjectDriveClaimLease>();
-        services.AddSingleton<IGoogleDriveAdapter, GoogleDriveAdapter>();
+        services.AddScoped<IGoogleDriveCredentialStore, GoogleDriveCredentialStore>();
+        services.AddScoped<GoogleDriveOAuthService>();
+        services.AddScoped<IGoogleDriveAdapter, GoogleDriveAdapter>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();
         services.AddScoped<ProjectDocumentService>();
         services.AddScoped<IProjectDocumentService>(provider => provider.GetRequiredService<ProjectDocumentService>());

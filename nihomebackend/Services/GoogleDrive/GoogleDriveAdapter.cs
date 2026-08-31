@@ -60,17 +60,20 @@ public interface IGoogleDriveAdapter
 /// Creates the Drive client lazily. Folder operations always anchor at the configured root and set
 /// Shared Drive flags where Drive permits.
 /// </summary>
-public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriveAdapter, IDisposable
+public sealed class GoogleDriveAdapter(
+    GoogleDriveOptions options,
+    IGoogleDriveCredentialStore credentialStore) : IGoogleDriveAdapter, IDisposable
 {
     private DriveService? service;
+    private readonly SemaphoreSlim serviceLock = new(1, 1);
 
     public async Task<DriveConnection> CheckConnectionAsync(CancellationToken ct = default)
     {
-        var aboutRequest = Service.About.Get();
+        var aboutRequest = (await GetServiceAsync(ct)).About.Get();
         aboutRequest.Fields = "user(emailAddress)";
         var about = await aboutRequest.ExecuteAsync(ct);
 
-        var request = Service.Files.Get(options.RootFolderId);
+        var request = (await GetServiceAsync(ct)).Files.Get(options.RootFolderId);
         request.Fields = "id,name,mimeType,trashed,driveId,webViewLink,capabilities(canAddChildren)";
         request.SupportsAllDrives = options.SupportsAllDrives;
         var folder = await request.ExecuteAsync(ct);
@@ -121,7 +124,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
                 ["niconSurveyMediaId"] = idempotencyValue,
             },
         };
-        var request = Service.Files.Create(metadata, content, contentType);
+        var request = (await GetServiceAsync(ct)).Files.Create(metadata, content, contentType);
         request.Fields = "id";
         request.SupportsAllDrives = options.SupportsAllDrives;
         var progress = await request.UploadAsync(ct);
@@ -156,7 +159,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
                 ["niconGeneration"] = generationValue,
             },
         };
-        var request = Service.Files.Create(metadata, content, contentType);
+        var request = (await GetServiceAsync(ct)).Files.Create(metadata, content, contentType);
         request.Fields = ItemFields;
         request.SupportsAllDrives = options.SupportsAllDrives;
         var progress = await request.UploadAsync(ct);
@@ -171,7 +174,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         string? pageToken = null;
         do
         {
-            var request = Service.Files.List();
+            var request = (await GetServiceAsync(ct)).Files.List();
             request.Q = $"'{EscapeQueryValue(folderId)}' in parents and trashed = false";
             request.Fields = $"nextPageToken,files({ItemFields})";
             request.PageSize = 1000;
@@ -187,7 +190,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     public async Task DownloadAsync(string fileId, Stream destination, CancellationToken ct = default)
     {
-        var request = Service.Files.Get(fileId);
+        var request = (await GetServiceAsync(ct)).Files.Get(fileId);
         request.SupportsAllDrives = options.SupportsAllDrives;
         var progress = await request.DownloadAsync(destination, ct);
         if (progress.Status != Google.Apis.Download.DownloadStatus.Completed)
@@ -196,7 +199,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     public async Task<DriveItem?> GetMetadataAsync(string fileId, CancellationToken ct = default)
     {
-        var request = Service.Files.Get(fileId);
+        var request = (await GetServiceAsync(ct)).Files.Get(fileId);
         request.Fields = ItemFields;
         request.SupportsAllDrives = options.SupportsAllDrives;
         try
@@ -211,7 +214,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     public async Task UpdateFileNameAsync(string fileId, string fileName, CancellationToken ct = default)
     {
-        var request = Service.Files.Update(new GoogleFile { Name = fileName }, fileId);
+        var request = (await GetServiceAsync(ct)).Files.Update(new GoogleFile { Name = fileName }, fileId);
         request.Fields = "id,name";
         request.SupportsAllDrives = options.SupportsAllDrives;
         await request.ExecuteAsync(ct);
@@ -219,11 +222,11 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     public async Task MoveAsync(string fileId, string destinationFolderId, CancellationToken ct = default)
     {
-        var metadataRequest = Service.Files.Get(fileId);
+        var metadataRequest = (await GetServiceAsync(ct)).Files.Get(fileId);
         metadataRequest.Fields = "parents";
         metadataRequest.SupportsAllDrives = options.SupportsAllDrives;
         var metadata = await metadataRequest.ExecuteAsync(ct);
-        var request = Service.Files.Update(new GoogleFile(), fileId);
+        var request = (await GetServiceAsync(ct)).Files.Update(new GoogleFile(), fileId);
         request.AddParents = destinationFolderId;
         request.RemoveParents = string.Join(',', metadata.Parents ?? []);
         request.Fields = ItemFields;
@@ -245,7 +248,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         string propertyPrefix,
         CancellationToken ct)
     {
-        var list = Service.Files.List();
+        var list = (await GetServiceAsync(ct)).Files.List();
         list.Q = $"'{EscapeQueryValue(folderId)}' in parents and " +
             $"appProperties has {{ key='{propertyPrefix}Instance' and value='{EscapeQueryValue(options.InstanceId)}' }} and " +
             $"appProperties has {{ key='{propertyPrefix}ReplicaKey' and value='{EscapeQueryValue(replicaKey)}' }} and " +
@@ -270,7 +273,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         string propertyName,
         CancellationToken ct)
     {
-        var list = Service.Files.List();
+        var list = (await GetServiceAsync(ct)).Files.List();
         list.Q = $"'{EscapeQueryValue(folderId)}' in parents and " +
             $"appProperties has {{ key='{propertyName}' and value='{EscapeQueryValue(idempotencyValue)}' }} and " +
             "trashed = false";
@@ -284,7 +287,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     public async Task DeleteAsync(string fileId, CancellationToken ct = default)
     {
-        var request = Service.Files.Update(new GoogleFile { Trashed = true }, fileId);
+        var request = (await GetServiceAsync(ct)).Files.Update(new GoogleFile { Trashed = true }, fileId);
         request.Fields = "id,trashed";
         request.SupportsAllDrives = options.SupportsAllDrives;
         try
@@ -300,7 +303,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
     {
         var identityQuery = string.Join(" and ", folder.AppProperties.OrderBy(property => property.Key).Select(property =>
             $"appProperties has {{ key='{EscapeQueryValue(property.Key)}' and value='{EscapeQueryValue(property.Value)}' }}"));
-        var list = Service.Files.List();
+        var list = (await GetServiceAsync(ct)).Files.List();
         list.Q = $"'{EscapeQueryValue(parentId)}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false" +
             (identityQuery.Length == 0 ? $" and name = '{EscapeQueryValue(folder.Name)}'" : $" and {identityQuery}");
         list.Fields = "files(id,name)";
@@ -311,7 +314,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         var existing = found.Files?.FirstOrDefault();
         if (existing?.Id is not null) return existing.Id;
 
-        var create = Service.Files.Create(new GoogleFile
+        var create = (await GetServiceAsync(ct)).Files.Create(new GoogleFile
         {
             Name = folder.Name,
             MimeType = "application/vnd.google-apps.folder",
@@ -341,16 +344,30 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         file.Id, file.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture),
         file.ModifiedTimeDateTimeOffset?.UtcDateTime, file.WebViewLink);
 
-    private DriveService Service => service ??= CreateService();
-
-    private DriveService CreateService()
+    private async Task<DriveService> GetServiceAsync(CancellationToken ct)
     {
+        if (service is not null) return service;
+        await serviceLock.WaitAsync(ct);
+        try
+        {
+            service ??= await CreateServiceAsync(ct);
+            return service;
+        }
+        finally
+        {
+            serviceLock.Release();
+        }
+    }
+
+    private async Task<DriveService> CreateServiceAsync(CancellationToken ct)
+    {
+        var refreshToken = await credentialStore.GetRefreshTokenAsync(ct);
         if (string.IsNullOrWhiteSpace(options.ClientId) ||
             string.IsNullOrWhiteSpace(options.ClientSecret) ||
-            string.IsNullOrWhiteSpace(options.RefreshToken))
+            string.IsNullOrWhiteSpace(refreshToken))
         {
             throw new InvalidOperationException(
-                "GoogleDrive:ClientId, ClientSecret và RefreshToken phải được cấu hình đầy đủ.");
+                "Google Drive chưa có thông tin xác thực hợp lệ. Hãy kết nối lại trong Cài đặt.");
         }
         if (string.IsNullOrWhiteSpace(options.RootFolderId))
         {
@@ -362,7 +379,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
             type = "authorized_user",
             client_id = options.ClientId,
             client_secret = options.ClientSecret,
-            refresh_token = options.RefreshToken,
+            refresh_token = refreshToken,
         });
         var credential = GoogleCredential.FromJson(credentialJson)
             .CreateScoped(DriveService.Scope.Drive);
@@ -378,5 +395,9 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         });
     }
 
-    public void Dispose() => service?.Dispose();
+    public void Dispose()
+    {
+        service?.Dispose();
+        serviceLock.Dispose();
+    }
 }
