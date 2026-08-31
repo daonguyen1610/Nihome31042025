@@ -36,6 +36,7 @@ public sealed class GoogleDriveFolderOptions
 
     public string For(ProjectDocumentCategory category) => category switch
     {
+        ProjectDocumentCategory.Survey => SurveyMedia,
         ProjectDocumentCategory.CrmPreDesign => CrmPreDesign,
         ProjectDocumentCategory.DesignConcept => DesignConcept,
         ProjectDocumentCategory.DesignBasic => DesignBasic,

@@ -46,7 +46,7 @@ public sealed class SurveyMediaServiceTests : IDisposable
         Assert.NotNull(response);
         var sidecar = Assert.Single(db.ProjectDocuments);
         Assert.Equal(project.Id, sidecar.OperationalProjectId);
-        Assert.Equal(ProjectDocumentCategory.CrmPreDesign, sidecar.Category);
+        Assert.Equal(ProjectDocumentCategory.Survey, sidecar.Category);
         Assert.Equal(ProjectDocumentSourceModule.Survey, sidecar.SourceModule);
         Assert.Equal(ProjectDocumentSourceType.ExistingManagedFile, sidecar.SourceType);
         Assert.Equal("SurveyMedia", sidecar.SourceEntityType);

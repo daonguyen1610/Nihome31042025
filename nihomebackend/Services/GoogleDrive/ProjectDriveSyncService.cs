@@ -305,6 +305,7 @@ public sealed class ProjectDriveSyncProcessor(
 
             var folder = await folderService.EnsureAsync(document.OperationalProject, document.Category, document.UpdatedByUserId, ct);
             if (!await RenewClaimAsync(documentId, token, generation, ct)) return;
+            await MoveToFolderIfNeededAsync(document, folder, ct);
             await using var content = storage.OpenRead(document.OperationalProjectId, document.LocalPath);
             var upload = await claimLease.RunAsync(documentId, token, generation,
                 operationCt => drive.UploadAsync(folder.DriveFolderId, ReplicaKey(document.Id), generation,
@@ -352,6 +353,16 @@ public sealed class ProjectDriveSyncProcessor(
         catch (Exception exception)
         {
             await RecordFailureAsync(documentId, token, generation, exception, ct);
+        }
+    }
+
+    internal async Task MoveToFolderIfNeededAsync(
+        ProjectDocument document, ProjectDriveFolder folder, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(document.DriveFileId) &&
+            !string.Equals(document.DriveFolderId, folder.DriveFolderId, StringComparison.Ordinal))
+        {
+            await drive.MoveAsync(document.DriveFileId, folder.DriveFolderId, ct);
         }
     }
 

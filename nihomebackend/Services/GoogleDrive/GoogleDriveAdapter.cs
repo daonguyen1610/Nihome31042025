@@ -227,6 +227,7 @@ public sealed class GoogleDriveAdapter(
         metadataRequest.Fields = "parents";
         metadataRequest.SupportsAllDrives = options.SupportsAllDrives;
         var metadata = await metadataRequest.ExecuteAsync(ct);
+        if (metadata.Parents?.Contains(destinationFolderId, StringComparer.Ordinal) == true) return;
         var request = (await GetServiceAsync(ct)).Files.Update(new GoogleFile(), fileId);
         request.AddParents = destinationFolderId;
         request.RemoveParents = string.Join(',', metadata.Parents ?? []);

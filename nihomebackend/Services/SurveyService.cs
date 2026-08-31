@@ -296,7 +296,7 @@ public class SurveyService(
         {
             var media = await db.SurveyMedia.Where(item => item.SurveyId == entity.Id).ToListAsync(ct);
             var files = media.Select(item => new ProjectDocumentMoveDescriptor(
-                ProjectDocumentCategory.CrmPreDesign,
+                ProjectDocumentCategory.Survey,
                 ProjectDocumentSourceModule.Survey,
                 EntityTypes.SurveyMedia,
                 SurveyMediaService.ProjectDocumentSlot,

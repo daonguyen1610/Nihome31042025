@@ -88,7 +88,7 @@ public sealed class SurveyMediaService(
             {
                 await projectDocuments.StageExistingManagedFileAsync(
                     linkedProject.OperationalProjectId.Value,
-                    ProjectDocumentCategory.CrmPreDesign,
+                    ProjectDocumentCategory.Survey,
                     ProjectDocumentSourceModule.Survey,
                     EntityTypes.SurveyMedia,
                     ProjectDocumentSlot,
