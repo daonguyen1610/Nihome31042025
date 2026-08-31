@@ -204,6 +204,8 @@ public class SiteSettingsControllerTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(response);
         body.GetProperty("status").GetString().Should().Be("Disabled");
+        body.GetProperty("oauthConfigured").GetBoolean().Should().BeFalse();
+        body.TryGetProperty("oAuthConfigured", out _).Should().BeFalse();
         body.TryGetProperty("refreshToken", out _).Should().BeFalse();
     }
 

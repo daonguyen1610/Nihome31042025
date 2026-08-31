@@ -12,7 +12,7 @@ public sealed record GoogleDriveDisconnectResponse(bool HadStoredCredential, boo
 
 public sealed record GoogleDriveAdminStatusResponse(
     string Status,
-    bool OAuthConfigured,
+    [property: JsonPropertyName("oauthConfigured")] bool OAuthConfigured,
     bool HasStoredCredential,
     string? AccountEmail,
     DateTime? ConnectedAt,
