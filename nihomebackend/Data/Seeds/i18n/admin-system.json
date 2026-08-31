@@ -2678,7 +2678,7 @@
     "key": "settings.drive.configuration.help.clientId", "category": "settings", "vi": "Lấy từ Google Cloud Console > Google Auth Platform > Clients. Giá trị phải kết thúc bằng .apps.googleusercontent.com.", "en": "Get this from Google Cloud Console > Google Auth Platform > Clients. It must end with .apps.googleusercontent.com.", "zh": "从 Google Cloud Console > Google Auth Platform > Clients 获取。该值必须以 .apps.googleusercontent.com 结尾。", "ja": "Google Cloud Console > Google Auth Platform > Clients から取得します。値は .apps.googleusercontent.com で終わる必要があります。"
   },
   {
-    "key": "settings.drive.configuration.help.clientSecret", "category": "settings", "vi": "Lấy cùng OAuth Client với Client ID. Secret được mã hóa khi lưu và không hiển thị lại; không cần nhập lại nếu không thay đổi.", "en": "Get this from the same OAuth client as the Client ID. It is encrypted when saved and never displayed again; leave it blank when unchanged.", "zh": "从与 Client ID 相同的 OAuth 客户端获取。保存时会加密且不会再次显示；如不更改请留空。", "ja": "Client ID と同じ OAuth クライアントから取得します。保存時に暗号化され再表示されないため、変更しない場合は空欄にします。"
+    "key": "settings.drive.configuration.help.clientSecret", "category": "settings", "vi": "Lấy từ cùng Web OAuth Client với Client ID. Secret được mã hóa khi lưu; dấu chấm chỉ xác nhận đã lưu, không phải giá trị Secret thật.", "en": "Get this from the same Web OAuth Client as the Client ID. The secret is encrypted when saved; the mask only confirms storage and is not the real secret.", "zh": "从与 Client ID 相同的 Web OAuth 客户端获取。密钥保存时会加密；掩码仅表示已保存，并非真实密钥。", "ja": "Client ID と同じ Web OAuth クライアントから取得します。保存時に暗号化され、マスクは保存済みであることだけを示し、実際のシークレットではありません。"
   },
   {
     "key": "settings.drive.configuration.help.redirectUri", "category": "settings", "vi": "Dùng URL HTTPS công khai của backend và kết thúc bằng /api/site-settings/google-drive/oauth/callback. Phải trùng tuyệt đối với Authorized redirect URI trên Google.", "en": "Use the backend's public HTTPS URL ending in /api/site-settings/google-drive/oauth/callback. It must exactly match an Authorized redirect URI in Google.", "zh": "使用后端的公共 HTTPS URL，并以 /api/site-settings/google-drive/oauth/callback 结尾。它必须与 Google 中的 Authorized redirect URI 完全一致。", "ja": "バックエンドの公開 HTTPS URL を使用し、/api/site-settings/google-drive/oauth/callback で終わるようにします。Google の Authorized redirect URI と完全に一致する必要があります。"
@@ -2717,7 +2717,7 @@
     "key": "settings.drive.configuration.clientSecret", "category": "settings", "vi": "OAuth Client Secret", "en": "OAuth Client Secret", "zh": "OAuth 客户端密钥", "ja": "OAuth クライアントシークレット"
   },
   {
-    "key": "settings.drive.configuration.secretStored", "category": "settings", "vi": "Secret đã được lưu mã hóa. Để trống để giữ nguyên.", "en": "The secret is encrypted. Leave blank to keep it unchanged.", "zh": "密钥已加密保存，留空可保持不变。", "ja": "シークレットは暗号化済みです。変更しない場合は空欄にします。"
+    "key": "settings.drive.configuration.secretStored", "category": "settings", "vi": "Secret của Web OAuth Client đã được lưu mã hóa. Giữ nguyên dấu chấm nếu không thay đổi.", "en": "The Web OAuth Client secret is encrypted. Leave the masked field unchanged to keep it.", "zh": "Web OAuth 客户端密钥已加密保存。如不更改，请保留掩码字段。", "ja": "Web OAuth クライアントシークレットは暗号化済みです。変更しない場合はマスク欄をそのままにしてください。"
   },
   {
     "key": "settings.drive.configuration.secretMissing", "category": "settings", "vi": "Chưa có secret. Bắt buộc nhập trước khi bật tích hợp.", "en": "No secret is stored. Enter one before enabling the integration.", "zh": "尚未保存密钥，启用集成前必须输入。", "ja": "シークレットが未保存です。連携を有効にする前に入力してください。"
