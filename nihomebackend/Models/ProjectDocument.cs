@@ -78,6 +78,7 @@ public enum ProjectDocumentCategory
     ConstructionAcceptance = 6,
     Procurement = 7,
     FinanceContracts = 8,
+    Survey = 9,
 }
 
 public enum ProjectDocumentSourceModule

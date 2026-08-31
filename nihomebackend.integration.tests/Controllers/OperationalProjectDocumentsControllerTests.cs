@@ -43,11 +43,13 @@ public sealed class OperationalProjectDocumentsControllerTests(
         var categories = (await ReadJsonAsync(response)).EnumerateArray().ToArray();
         categories.Select(category => category.GetProperty("value").GetString()).Should().Equal(
             "CrmPreDesign", "DesignConcept", "DesignBasic", "DesignShopDrawing",
-            "LegalPermits", "ConstructionAcceptance", "Procurement", "FinanceContracts");
+            "LegalPermits", "ConstructionAcceptance", "Procurement", "FinanceContracts", "Survey");
         categories.Should().OnlyContain(category =>
             !string.IsNullOrWhiteSpace(category.GetProperty("folderPath").GetString()) &&
             category.GetProperty("translationKey").GetString() ==
             $"operationalProjects.documents.category.{category.GetProperty("value").GetString()}");
+        categories.Single(category => category.GetProperty("value").GetString() == "Survey")
+            .GetProperty("folderPath").GetString().Should().Be("01_Khao_sat");
     }
 
     [Fact]

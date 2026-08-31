@@ -712,9 +712,11 @@ existing module storage and lifecycle as a compatibility bridge. Quote,
 Contract attachment/appendix, Basic Design, Shop
 Drawing, Permit, Acceptance, As-Built, Handover, and Operational
 Project-linked Survey writes stage sidecars in the same database transaction as
-their authoritative record. Such source-owned catalog rows cannot be deleted
+their authoritative record and use the dedicated Survey category mapped to the
+configured `SurveyMedia` folder path. Such source-owned catalog rows cannot be deleted
 through the generic endpoint; users must remove or replace the file in its
-source module. No migration backfills historical files automatically.
+source module. The Survey folder correction migration reclassifies existing managed
+Survey sidecars, but no migration discovers or stages historical files that never had a sidecar.
 
 Relationship changes are reconciled only on an explicit update that changes the
 resolved Operational Project. Linking or reassigning an Opportunity, Contract,

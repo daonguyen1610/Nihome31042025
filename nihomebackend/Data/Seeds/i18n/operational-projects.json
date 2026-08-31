@@ -86,6 +86,7 @@
   {"key":"operationalProjects.documents.sourceModule.Acceptance","category":"operationalProjects","vi":"Nghiệm thu","en":"Acceptance","zh":"验收","ja":"検収"},
   {"key":"operationalProjects.documents.sourceModule.Handover","category":"operationalProjects","vi":"Bàn giao","en":"Handover","zh":"移交","ja":"引渡し"},
   {"key":"operationalProjects.documents.category.Unclassified","category":"operationalProjects","vi":"Chưa phân loại","en":"Unclassified","zh":"未分类","ja":"未分類"},
+  {"key":"operationalProjects.documents.category.Survey","category":"operationalProjects","vi":"Khảo sát","en":"Survey","zh":"勘察","ja":"調査"},
   {"key":"operationalProjects.documents.category.CrmPreDesign","category":"operationalProjects","vi":"CRM và tiền thiết kế","en":"CRM and pre-design","zh":"CRM 与前期设计","ja":"CRM・設計前"},
   {"key":"operationalProjects.documents.category.DesignConcept","category":"operationalProjects","vi":"Thiết kế sơ bộ / Concept","en":"Concept design","zh":"概念设计","ja":"コンセプト設計"},
   {"key":"operationalProjects.documents.category.DesignBasic","category":"operationalProjects","vi":"Thiết kế cơ sở","en":"Basic design","zh":"基础设计","ja":"基本設計"},

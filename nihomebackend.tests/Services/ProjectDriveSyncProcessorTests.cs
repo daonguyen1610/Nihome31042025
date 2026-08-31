@@ -90,6 +90,23 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task MoveToFolderIfNeededAsync_ExistingReplicaInWrongCategory_MovesOnce()
+    {
+        var document = new ProjectDocument
+        {
+            DriveFileId = "survey-file",
+            DriveFolderId = "folder-crm",
+        };
+        var surveyFolder = new ProjectDriveFolder { DriveFolderId = "folder-survey" };
+
+        await processor.MoveToFolderIfNeededAsync(document, surveyFolder, CancellationToken.None);
+        document.DriveFolderId = surveyFolder.DriveFolderId;
+        await processor.MoveToFolderIfNeededAsync(document, surveyFolder, CancellationToken.None);
+
+        drive.Verify(item => item.MoveAsync("survey-file", "folder-survey", CancellationToken.None), Times.Once);
+    }
+
+    [Fact]
     public void Model_UsesRowVersionAndUniqueConflictObservationIdentity()
     {
         var document = db.Model.FindEntityType(typeof(ProjectDocument))!;
@@ -606,7 +623,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         var document = new ProjectDocument
         {
             OperationalProjectId = project.Id,
-            Category = ProjectDocumentCategory.CrmPreDesign,
+            Category = ProjectDocumentCategory.Survey,
             SourceModule = ProjectDocumentSourceModule.Survey,
             SourceType = ProjectDocumentSourceType.ExistingManagedFile,
             SourceEntityType = "SurveyMedia",

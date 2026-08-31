@@ -20,6 +20,7 @@ public sealed class GoogleDriveOptionsTests
     }
 
     [Theory]
+    [InlineData(ProjectDocumentCategory.Survey, "01_Khao_sat")]
     [InlineData(ProjectDocumentCategory.CrmPreDesign, "01_CRM_PreDesign")]
     [InlineData(ProjectDocumentCategory.DesignConcept, "02_Thiet_ke/01_So_bo_Concept")]
     [InlineData(ProjectDocumentCategory.DesignBasic, "02_Thiet_ke/02_Co_so")]
