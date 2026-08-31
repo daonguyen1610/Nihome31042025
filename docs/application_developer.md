@@ -718,6 +718,12 @@ through the generic endpoint; users must remove or replace the file in its
 source module. The Survey folder correction migration reclassifies existing managed
 Survey sidecars, but no migration discovers or stages historical files that never had a sidecar.
 
+The current implementation is a supported hybrid subset, not completion of the
+expanded customer-wide Google Drive contract. See
+`docs/google-drive-acceptance-review.md` for the requirement-by-requirement
+status, tested upload coverage, live verification evidence, unresolved business
+decisions, and delivery blockers.
+
 Relationship changes are reconciled only on an explicit update that changes the
 resolved Operational Project. Linking or reassigning an Opportunity, Contract,
 or Design Project stages its currently supported source files in the destination
@@ -998,7 +1004,12 @@ The migration intentionally leaves upgraded installations disabled with empty de
 
 Project document storage is Drive-primary. Nicon uploads manual project files directly to their configured Drive category, proxies authenticated downloads, and moves deleted files to Drive trash rather than permanently erasing them. SQL remains authoritative for catalog metadata, application authorization, claims, and workflow state, while Drive is authoritative for file content. Reconciliation catalogs unknown files without a host copy and reflects remote changes. Existing source-module files use a compatibility sidecar until those modules migrate their own storage contracts. Drive sharing and permission synchronization are intentionally disabled until IT supplies approved group mappings.
 
-The background worker performs the same validation before claiming a pending row. It uploads only while the result is `Connected`; a read-only folder, an invalid root, or an unavailable connection leaves the row pending without consuming an attempt. The connection response displays the authenticated account for administrators to verify against the deployment setup.
+The background worker skips claims while synchronization is disabled. Once enabled,
+it claims a pending row and increments its attempt before provider operations;
+read-only, invalid-root, unavailable, or revoked-access failures can therefore
+consume one of the row's three attempts. Correct the connection before retrying
+affected rows. The connection response displays the authenticated account for
+administrators to verify against the deployment setup.
 
 Connection statuses have the following meanings:
 
@@ -1024,7 +1035,10 @@ For Docker development, provide client ID, client secret, localhost callback URI
 docker compose up -d --build --force-recreate nihomeBackend
 ```
 
-Until all OAuth values and `RootFolderId` are valid, the worker logs a safe connection warning and leaves pending rows unclaimed at their current attempt count.
+While synchronization is disabled, the worker leaves pending rows unclaimed at
+their current attempt count. Do not enable synchronization until OAuth values
+and `RootFolderId` are valid; provider failures after enablement can consume an
+attempt.
 
 OAuth apps left in Testing can issue refresh tokens with a limited lifetime. Before production use, move the app to Production and complete any Google verification required for the Drive scope. The Google SDK automatically exchanges the stored refresh token for short-lived access tokens. A revoked refresh token cannot be silently renewed; health status becomes `ReconnectRequired` and an administrator must approve access again.
 
