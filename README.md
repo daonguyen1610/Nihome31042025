@@ -76,7 +76,9 @@ This project currently requires the full Drive scope because the worker finds, c
 
 ### 5. Save the configuration and connect the account
 
-Sign in to Nicon with `system.settings.manage` and open **Settings > Google Drive**. Enter the OAuth client ID, write-only client secret, exact callback URI, internal Admin return path, root folder ID, stable deployment instance ID, application name, business folder paths, Drive compatibility mode, and polling interval. Save before selecting **Connect/Reconnect Google Drive**. Google asks for consent once. Nicon encrypts both the client secret and issued refresh token in SQL; revoked access is reported as **Reconnect required**.
+Sign in to Nicon with `system.settings.manage` and open **Settings > Google Drive**. Enter the OAuth client ID, write-only client secret, exact callback URI, internal Admin return path, root folder ID, stable deployment instance ID, application name, business folder paths, Drive compatibility mode, and polling interval. Save before selecting **Connect Google Drive**. Nicon opens Google sign-in in a popup, Google asks which account to use and requests consent, then the popup closes after the callback. Nicon encrypts both the client secret and issued refresh token in SQL; revoked access is reported as **Reconnect required**.
+
+To use another Google account, select **Disconnect** to remove the current Nicon credential and request revocation from Google, then select **Connect Google Drive** and choose the replacement account. **Switch Google account** performs the same disconnect first, then opens Google's account chooser. If Google cannot confirm revocation, Nicon remains locally disconnected and shows manual-revocation guidance. If the replacement authorization is cancelled or fails, Nicon remains disconnected rather than silently retaining the previous account.
 
 ### 6. Create and authorize the root Drive folder
 

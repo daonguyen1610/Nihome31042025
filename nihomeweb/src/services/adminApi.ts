@@ -351,6 +351,11 @@ export interface GoogleDriveOAuthStartResponse {
   authorizationUrl: string;
 }
 
+export interface GoogleDriveDisconnectResponse {
+  hadStoredCredential: boolean;
+  providerRevoked: boolean;
+}
+
 export interface GoogleDriveFolderConfiguration {
   surveyMedia: string;
   crmPreDesign: string;
@@ -3501,6 +3506,8 @@ export const adminApi = {
     api.put<GoogleDriveAdminConfigurationResponse>("/site-settings/google-drive/configuration", data),
   startGoogleDriveOAuth: () =>
     api.post<GoogleDriveOAuthStartResponse>("/site-settings/google-drive/oauth/start"),
+  disconnectGoogleDriveOAuth: () =>
+    api.post<GoogleDriveDisconnectResponse>("/site-settings/google-drive/oauth/disconnect"),
 
   // Contact messages
   getContacts: (replied?: boolean) => {

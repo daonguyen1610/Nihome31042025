@@ -81,6 +81,8 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     {
         (await Client.PostAsync("/api/site-settings/google-drive/oauth/start", null))
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.PostAsync("/api/site-settings/google-drive/oauth/disconnect", null))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -97,6 +99,8 @@ public class SiteSettingsControllerTests : IntegrationTestBase
         (await Client.PutAsJsonAsync("/api/site-settings/google-drive/configuration", new { }))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await Client.PostAsync("/api/site-settings/google-drive/oauth/start", null))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.PostAsync("/api/site-settings/google-drive/oauth/disconnect", null))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
@@ -201,5 +205,20 @@ public class SiteSettingsControllerTests : IntegrationTestBase
         var body = await ReadJsonAsync(response);
         body.GetProperty("status").GetString().Should().Be("Disabled");
         body.TryGetProperty("refreshToken", out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DisconnectGoogleDrive_AsAdmin_ClearsLocalConnectionWithoutSecrets()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+
+        var response = await Client.PostAsync("/api/site-settings/google-drive/oauth/disconnect", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var raw = await response.Content.ReadAsStringAsync();
+        raw.ToLowerInvariant().Should().NotContain("refreshtoken");
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("hadStoredCredential").GetBoolean().Should().BeFalse();
+        body.GetProperty("providerRevoked").GetBoolean().Should().BeFalse();
     }
 }

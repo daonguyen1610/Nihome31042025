@@ -93,6 +93,11 @@ public sealed class GoogleDriveLiveSmokeTests
             int connectedByUserId,
             string expectedConfigurationVersion,
             CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task ClearRefreshTokenAsync(
+            int updatedByUserId,
+            string expectedConfigurationVersion,
+            CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private static string Required(string name) =>

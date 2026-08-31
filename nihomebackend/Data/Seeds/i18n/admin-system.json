@@ -2534,7 +2534,40 @@
     "key": "settings.drive.reconnect", "category": "settings", "vi": "Kết nối lại Google Drive", "en": "Reconnect Google Drive", "zh": "重新连接 Google Drive", "ja": "Google Drive を再接続"
   },
   {
-    "key": "settings.drive.connecting", "category": "settings", "vi": "Đang chuyển đến Google...", "en": "Redirecting to Google...", "zh": "正在跳转到 Google…", "ja": "Google に移動中..."
+    "key": "settings.drive.connect", "category": "settings", "vi": "Kết nối Google Drive", "en": "Connect Google Drive", "zh": "连接 Google Drive", "ja": "Google Drive に接続"
+  },
+  {
+    "key": "settings.drive.switchAccount", "category": "settings", "vi": "Đổi tài khoản Google", "en": "Switch Google account", "zh": "切换 Google 帐户", "ja": "Google アカウントを切り替え"
+  },
+  {
+    "key": "settings.drive.switchConfirm", "category": "settings", "vi": "Ngắt kết nối tài khoản Google Drive hiện tại rồi đăng nhập tài khoản khác? Nếu bạn hủy đăng nhập mới, Nicon sẽ giữ trạng thái chưa kết nối.", "en": "Disconnect the current Google Drive account and sign in with another one? If you cancel the new sign-in, Nicon will remain disconnected.", "zh": "断开当前 Google Drive 帐户并登录其他帐户？如果取消新的登录，Nicon 将保持未连接状态。", "ja": "現在の Google Drive アカウントを解除して別のアカウントでログインしますか？新しいログインをキャンセルした場合、Nicon は未接続のままになります。"
+  },
+  {
+    "key": "settings.drive.connecting", "category": "settings", "vi": "Đang mở cửa sổ Google...", "en": "Opening Google sign-in...", "zh": "正在打开 Google 登录窗口…", "ja": "Google ログインを開いています..."
+  },
+  {
+    "key": "settings.drive.popupBlocked", "category": "settings", "vi": "Trình duyệt đã chặn cửa sổ đăng nhập Google. Hãy cho phép popup rồi thử lại.", "en": "The browser blocked the Google sign-in window. Allow popups and try again.", "zh": "浏览器阻止了 Google 登录窗口。请允许弹出窗口后重试。", "ja": "Google ログイン画面がブロックされました。ポップアップを許可して再試行してください。"
+  },
+  {
+    "key": "settings.drive.popupClosed", "category": "settings", "vi": "Cửa sổ đăng nhập Google đã đóng trước khi kết nối hoàn tất. Nicon đã tải lại trạng thái kết nối.", "en": "The Google sign-in window closed before the connection completed. Nicon refreshed the connection status.", "zh": "Google 登录窗口在连接完成前已关闭。Nicon 已刷新连接状态。", "ja": "接続が完了する前に Google ログイン画面が閉じられました。Nicon は接続状態を更新しました。"
+  },
+  {
+    "key": "settings.drive.disconnect", "category": "settings", "vi": "Ngắt kết nối", "en": "Disconnect", "zh": "断开连接", "ja": "接続解除"
+  },
+  {
+    "key": "settings.drive.disconnecting", "category": "settings", "vi": "Đang ngắt kết nối...", "en": "Disconnecting...", "zh": "正在断开连接…", "ja": "接続を解除しています..."
+  },
+  {
+    "key": "settings.drive.disconnectConfirm", "category": "settings", "vi": "Ngắt kết nối tài khoản Google Drive hiện tại? Nicon sẽ dừng sử dụng tài khoản này.", "en": "Disconnect the current Google Drive account? Nicon will stop using this account.", "zh": "断开当前 Google Drive 帐户？Nicon 将停止使用此帐户。", "ja": "現在の Google Drive アカウントとの接続を解除しますか？Nicon はこのアカウントの使用を停止します。"
+  },
+  {
+    "key": "settings.drive.disconnectSuccess", "category": "settings", "vi": "Đã ngắt kết nối Google Drive.", "en": "Google Drive disconnected.", "zh": "Google Drive 已断开连接。", "ja": "Google Drive の接続を解除しました。"
+  },
+  {
+    "key": "settings.drive.disconnectRevokeWarning", "category": "settings", "vi": "Nicon đã xóa liên kết cục bộ nhưng Google chưa xác nhận thu hồi quyền. Bạn có thể thu hồi Nicon trong phần bảo mật Tài khoản Google.", "en": "Nicon removed the local connection, but Google did not confirm revocation. You can revoke Nicon from your Google Account security settings.", "zh": "Nicon 已删除本地连接，但 Google 未确认撤销授权。您可以在 Google 帐户安全设置中撤销 Nicon。", "ja": "Nicon はローカル接続を削除しましたが、Google は取り消しを確認していません。Google アカウントのセキュリティ設定から Nicon を取り消せます。"
+  },
+  {
+    "key": "settings.drive.disconnectError", "category": "settings", "vi": "Không thể ngắt kết nối Google Drive. Hãy tải lại trạng thái và thử lại.", "en": "Could not disconnect Google Drive. Refresh the status and try again.", "zh": "无法断开 Google Drive。请刷新状态后重试。", "ja": "Google Drive の接続を解除できませんでした。状態を更新して再試行してください。"
   },
   {
     "key": "settings.drive.loadError", "category": "settings", "vi": "Không tải được trạng thái Google Drive.", "en": "Failed to load Google Drive status.", "zh": "无法加载 Google Drive 状态。", "ja": "Google Drive の状態を読み込めませんでした。"
@@ -2594,7 +2627,7 @@
     "key": "settings.drive.oauth.missing_refresh_token", "category": "settings", "vi": "Google không cấp refresh token. Hãy thử lại và chấp thuận quyền truy cập.", "en": "Google did not issue a refresh token. Try again and approve access.", "zh": "Google 未签发刷新令牌，请重试并批准访问。", "ja": "Google が更新トークンを発行しませんでした。再試行してアクセスを承認してください。"
   },
   {
-    "key": "settings.drive.oauth.root_validation_failed", "category": "settings", "vi": "Tài khoản vừa chọn không thể thêm tệp vào thư mục gốc đã cấu hình. Kết nối hiện tại chưa bị thay đổi.", "en": "The selected account cannot add files to the configured root folder. The current connection was not changed.", "zh": "所选帐户无法向已配置的根文件夹添加文件。当前连接未更改。", "ja": "選択したアカウントは設定済みルートフォルダーにファイルを追加できません。現在の接続は変更されていません。"
+    "key": "settings.drive.oauth.root_validation_failed", "category": "settings", "vi": "Tài khoản vừa chọn không thể thêm tệp vào thư mục gốc đã cấu hình. Nicon chưa kết nối tài khoản này.", "en": "The selected account cannot add files to the configured root folder. Nicon did not connect this account.", "zh": "所选帐户无法向已配置的根文件夹添加文件。Nicon 未连接此帐户。", "ja": "選択したアカウントは設定済みルートフォルダーにファイルを追加できません。Nicon はこのアカウントに接続しませんでした。"
   },
   {
     "key": "settings.drive.oauth.configuration_changed", "category": "settings", "vi": "Cấu hình đã thay đổi trong lúc kết nối. Vui lòng bắt đầu kết nối lại.", "en": "The configuration changed during authorization. Start the connection again.", "zh": "授权期间配置已更改，请重新开始连接。", "ja": "認証中に設定が変更されました。接続をやり直してください。"
@@ -2607,6 +2640,72 @@
   },
   {
     "key": "settings.drive.configuration.description", "category": "settings", "vi": "Toàn bộ cấu hình được lưu an toàn trong cơ sở dữ liệu. Client secret không bao giờ được hiển thị lại.", "en": "All settings are stored securely in the database. The client secret is never displayed again.", "zh": "所有设置均安全存储在数据库中，客户端密钥不会再次显示。", "ja": "すべての設定はデータベースに安全に保存され、クライアントシークレットは再表示されません。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.title", "category": "settings", "vi": "Hướng dẫn lấy thông tin cấu hình từng bước", "en": "Step-by-step configuration guide", "zh": "分步配置指南", "ja": "設定情報の取得手順"
+  },
+  {
+    "key": "settings.drive.configuration.guide.description", "category": "settings", "vi": "Hoàn thành các bước theo thứ tự trước khi bật tích hợp. Chỉ quản trị viên được phép xem và nhập Client Secret.", "en": "Complete these steps in order before enabling the integration. Only an authorized administrator should view and enter the Client Secret.", "zh": "请按顺序完成以下步骤后再启用集成。只有授权管理员可以查看和输入客户端密钥。", "ja": "連携を有効にする前に、次の手順を順番に完了してください。クライアントシークレットを表示・入力できるのは権限のある管理者のみです。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.googleProject", "category": "settings", "vi": "Mở Google Cloud Console, chọn hoặc tạo dự án dành cho Nicon, sau đó vào APIs & Services > Library và bật Google Drive API.", "en": "Open Google Cloud Console, select or create the project for Nicon, then go to APIs & Services > Library and enable Google Drive API.", "zh": "打开 Google Cloud Console，选择或创建 Nicon 项目，然后进入 APIs & Services > Library 并启用 Google Drive API。", "ja": "Google Cloud Console を開き、Nicon 用のプロジェクトを選択または作成して、APIs & Services > Library で Google Drive API を有効にします。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.consentScreen", "category": "settings", "vi": "Trong Google Auth Platform, cấu hình Branding và Audience, thêm tài khoản thử nghiệm nếu ứng dụng đang ở chế độ Testing, rồi thêm phạm vi https://www.googleapis.com/auth/drive trong Data Access.", "en": "In Google Auth Platform, configure Branding and Audience, add test users while the app is in Testing, then add the https://www.googleapis.com/auth/drive scope under Data Access.", "zh": "在 Google Auth Platform 中配置 Branding 和 Audience；如果应用处于 Testing 状态，请添加测试用户；然后在 Data Access 中添加 https://www.googleapis.com/auth/drive 范围。", "ja": "Google Auth Platform で Branding と Audience を設定し、アプリが Testing の場合はテストユーザーを追加して、Data Access に https://www.googleapis.com/auth/drive スコープを追加します。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.oauthClient", "category": "settings", "vi": "Vào Clients, tạo OAuth Client mới với loại Web application. Không chọn loại Desktop application.", "en": "Open Clients and create an OAuth client of type Web application. Do not select Desktop application.", "zh": "打开 Clients，创建类型为 Web application 的 OAuth 客户端。请勿选择 Desktop application。", "ja": "Clients を開き、Web application 種別の OAuth クライアントを作成します。Desktop application は選択しないでください。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.redirectUri", "category": "settings", "vi": "Tạo OAuth Redirect URI bằng địa chỉ HTTPS công khai của backend cộng với /api/site-settings/google-drive/oauth/callback, rồi thêm nguyên giá trị đó vào Authorized redirect URIs của Google.", "en": "Build the OAuth Redirect URI from the backend's public HTTPS origin plus /api/site-settings/google-drive/oauth/callback, then add that exact value to Google's Authorized redirect URIs.", "zh": "使用后端的公共 HTTPS 地址加上 /api/site-settings/google-drive/oauth/callback 构建 OAuth Redirect URI，然后将完全相同的值添加到 Google 的 Authorized redirect URIs。", "ja": "バックエンドの公開 HTTPS オリジンに /api/site-settings/google-drive/oauth/callback を加えて OAuth Redirect URI を作成し、同じ値を Google の Authorized redirect URIs に追加します。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.credentials", "category": "settings", "vi": "Sau khi tạo OAuth Client, sao chép Client ID và Client Secret vào hai trường tương ứng bên dưới. Không gửi hoặc lưu Secret trong tài liệu, ảnh chụp hay mã nguồn.", "en": "After creating the OAuth client, copy its Client ID and Client Secret into the matching fields below. Never send or store the secret in documentation, screenshots, or source code.", "zh": "创建 OAuth 客户端后，将其 Client ID 和 Client Secret 复制到下方对应字段。切勿在文档、截图或源代码中发送或保存密钥。", "ja": "OAuth クライアントの作成後、Client ID と Client Secret を下の対応する欄にコピーします。シークレットを文書、スクリーンショット、ソースコードに保存・共有しないでください。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.rootFolder", "category": "settings", "vi": "Trong Google Drive, tạo hoặc chọn thư mục gốc mà Nicon được phép quản lý. Sao chép ID nằm sau /folders/ và trước dấu ? hoặc dấu / tiếp theo trong URL, rồi bảo đảm tài khoản kết nối có quyền thêm tệp.", "en": "In Google Drive, create or select the root folder that Nicon may manage. Copy the ID after /folders/ and before the next ? or / in the URL, then ensure the connected account can add files.", "zh": "在 Google Drive 中创建或选择允许 Nicon 管理的根文件夹。复制 URL 中 /folders/ 之后、下一个 ? 或 / 之前的 ID，并确保连接的帐户可以添加文件。", "ja": "Google Drive で Nicon が管理するルートフォルダーを作成または選択します。URL の /folders/ より後、次の ? または / より前の ID をコピーし、接続アカウントにファイル追加権限があることを確認します。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.deploymentValues", "category": "settings", "vi": "Nhập mã hệ thống duy nhất cho môi trường này, tên ứng dụng dễ nhận biết, đường dẫn quay lại Admin, chu kỳ đồng bộ và các đường dẫn thư mục nghiệp vụ bên dưới thư mục gốc.", "en": "Enter a unique ID for this deployment, a recognizable application name, the Admin return path, the sync interval, and the business folder paths beneath the root folder.", "zh": "输入此部署的唯一 ID、易识别的应用名称、管理后台返回路径、同步间隔，以及根文件夹下的业务文件夹路径。", "ja": "この環境固有の ID、識別しやすいアプリ名、管理画面の戻り先、同期間隔、およびルートフォルダー配下の業務フォルダーパスを入力します。"
+  },
+  {
+    "key": "settings.drive.configuration.guide.step.saveAndConnect", "category": "settings", "vi": "Sau khi điền đủ các trường, bật Tích hợp và chọn Lưu cấu hình. Khi lưu thành công, chọn Kết nối Google Drive; trong popup của Google, đăng nhập tài khoản được phê duyệt, cấp quyền và kiểm tra trạng thái Đã kết nối.", "en": "After completing all fields, turn on Enable integration and select Save configuration. When the save succeeds, select Connect Google Drive; in Google's popup, sign in with the approved account, grant access, and confirm the Connected status.", "zh": "填写完所有字段后，打开启用集成并选择保存配置。保存成功后，选择连接 Google Drive；在 Google 弹出窗口中使用获批帐户登录并授权，然后确认状态为已连接。", "ja": "すべての欄を入力した後、連携を有効化をオンにして設定を保存を選択します。保存に成功したら Google Drive に接続を選択し、Google のポップアップで承認済みアカウントにログインしてアクセスを許可し、接続済み状態を確認します。"
+  },
+  {
+    "key": "settings.drive.configuration.help.enabled", "category": "settings", "vi": "Bật sau khi điền đủ các trường, rồi chọn Lưu cấu hình để cho phép kết nối và tác vụ đồng bộ sử dụng Drive.", "en": "Turn this on after completing the fields, then select Save configuration to allow connection and synchronization jobs to use Drive.", "zh": "填写完所有字段后打开此选项，然后选择保存配置，以允许连接和同步任务使用 Drive。", "ja": "すべての欄を入力した後にオンにし、設定を保存を選択して接続と同期処理による Drive の使用を許可します。"
+  },
+  {
+    "key": "settings.drive.configuration.help.clientId", "category": "settings", "vi": "Lấy từ Google Cloud Console > Google Auth Platform > Clients. Giá trị phải kết thúc bằng .apps.googleusercontent.com.", "en": "Get this from Google Cloud Console > Google Auth Platform > Clients. It must end with .apps.googleusercontent.com.", "zh": "从 Google Cloud Console > Google Auth Platform > Clients 获取。该值必须以 .apps.googleusercontent.com 结尾。", "ja": "Google Cloud Console > Google Auth Platform > Clients から取得します。値は .apps.googleusercontent.com で終わる必要があります。"
+  },
+  {
+    "key": "settings.drive.configuration.help.clientSecret", "category": "settings", "vi": "Lấy cùng OAuth Client với Client ID. Secret được mã hóa khi lưu và không hiển thị lại; không cần nhập lại nếu không thay đổi.", "en": "Get this from the same OAuth client as the Client ID. It is encrypted when saved and never displayed again; leave it blank when unchanged.", "zh": "从与 Client ID 相同的 OAuth 客户端获取。保存时会加密且不会再次显示；如不更改请留空。", "ja": "Client ID と同じ OAuth クライアントから取得します。保存時に暗号化され再表示されないため、変更しない場合は空欄にします。"
+  },
+  {
+    "key": "settings.drive.configuration.help.redirectUri", "category": "settings", "vi": "Dùng URL HTTPS công khai của backend và kết thúc bằng /api/site-settings/google-drive/oauth/callback. Phải trùng tuyệt đối với Authorized redirect URI trên Google.", "en": "Use the backend's public HTTPS URL ending in /api/site-settings/google-drive/oauth/callback. It must exactly match an Authorized redirect URI in Google.", "zh": "使用后端的公共 HTTPS URL，并以 /api/site-settings/google-drive/oauth/callback 结尾。它必须与 Google 中的 Authorized redirect URI 完全一致。", "ja": "バックエンドの公開 HTTPS URL を使用し、/api/site-settings/google-drive/oauth/callback で終わるようにします。Google の Authorized redirect URI と完全に一致する必要があります。"
+  },
+  {
+    "key": "settings.drive.configuration.help.returnUrl", "category": "settings", "vi": "Đường dẫn nội bộ để popup quay lại trang cài đặt, thông thường là /admin/settings?tab=drive. Không nhập tên miền đầy đủ.", "en": "Internal path used by the popup to return to Settings, normally /admin/settings?tab=drive. Do not enter a full domain.", "zh": "弹出窗口返回设置页面所用的内部路径，通常为 /admin/settings?tab=drive。请勿输入完整域名。", "ja": "ポップアップが設定画面へ戻るための内部パスです。通常は /admin/settings?tab=drive を使用し、完全なドメインは入力しません。"
+  },
+  {
+    "key": "settings.drive.configuration.help.rootFolderId", "category": "settings", "vi": "Mở thư mục gốc trên Google Drive và sao chép ID sau /folders/, không gồm dấu ? hoặc phần URL tiếp theo. Không dán toàn bộ URL.", "en": "Open the root folder in Google Drive and copy the ID after /folders/, excluding any ? or following URL part. Do not paste the full URL.", "zh": "在 Google Drive 中打开根文件夹，复制 /folders/ 后的 ID，不要包含 ? 或后续 URL 部分。不要粘贴完整 URL。", "ja": "Google Drive でルートフォルダーを開き、/folders/ より後の ID をコピーします。? 以降など後続の URL 部分や URL 全体は含めないでください。"
+  },
+  {
+    "key": "settings.drive.configuration.help.instanceId", "category": "settings", "vi": "Tự đặt mã duy nhất và ổn định cho môi trường này, ví dụ nicon-production. Không dùng cùng mã cho staging và production.", "en": "Choose a unique, stable ID for this deployment, for example nicon-production. Do not reuse it across staging and production.", "zh": "为此部署设置唯一且稳定的 ID，例如 nicon-production。请勿在预发布和生产环境中重复使用。", "ja": "この環境固有で変更しない ID を設定します（例: nicon-production）。ステージングと本番で同じ ID を使用しないでください。"
+  },
+  {
+    "key": "settings.drive.configuration.help.applicationName", "category": "settings", "vi": "Tên dễ nhận biết cho Google Drive client của Nicon, ví dụ Nicon Google Drive Integration; tối đa 100 ký tự.", "en": "A recognizable name for Nicon's Google Drive client, for example Nicon Google Drive Integration; maximum 100 characters.", "zh": "Nicon Google Drive 客户端的易识别名称，例如 Nicon Google Drive Integration；最多 100 个字符。", "ja": "Nicon の Google Drive クライアントを識別しやすくする名前です（例: Nicon Google Drive Integration）。最大 100 文字です。"
+  },
+  {
+    "key": "settings.drive.configuration.help.pollInterval", "category": "settings", "vi": "Khoảng thời gian giữa các lượt kiểm tra đồng bộ, từ 5 đến 300 giây. Khuyến nghị 15 giây nếu chưa có yêu cầu khác.", "en": "Time between synchronization checks, from 5 to 300 seconds. Use 15 seconds unless your deployment requires otherwise.", "zh": "同步检查之间的间隔，可设为 5 至 300 秒。如无其他部署要求，建议使用 15 秒。", "ja": "同期チェックの間隔で、5～300 秒を指定します。特別な要件がなければ 15 秒を推奨します。"
+  },
+  {
+    "key": "settings.drive.configuration.help.folders", "category": "settings", "vi": "Mỗi trường xác định nơi lưu một loại tài liệu bên dưới Root Folder. Nicon tự tạo thư mục còn thiếu khi tài khoản có quyền thêm tệp.", "en": "Each field defines where one document category is stored beneath the Root Folder. Nicon creates missing folders when the account can add files.", "zh": "每个字段定义一种文档类别在根文件夹下的存储位置。当帐户有权添加文件时，Nicon 会创建缺少的文件夹。", "ja": "各欄は、ルートフォルダー配下で文書カテゴリを保存する場所を指定します。アカウントにファイル追加権限があれば、Nicon が不足するフォルダーを作成します。"
+  },
+  {
+    "key": "settings.drive.configuration.help.folderPath", "category": "settings", "vi": "Nhập đường dẫn tương đối duy nhất, dùng / giữa các cấp; không dùng dấu / ở hai đầu, dấu \\, đoạn trống, đoạn một chấm hoặc hai chấm. Mỗi đoạn tối đa 100 ký tự.", "en": "Enter a unique relative path using / between levels; do not use leading/trailing /, backslashes, empty segments, or single-dot/double-dot segments. Each segment is limited to 100 characters.", "zh": "输入唯一的相对路径，层级之间使用 /；不要使用开头或结尾的 /、反斜杠、空段、. 或 ..。每段最多 100 个字符。", "ja": "階層を / で区切った一意の相対パスを入力します。先頭・末尾の /、バックスラッシュ、空の区切り、.、.. は使用できません。各区切りは最大 100 文字です。"
+  },
+  {
+    "key": "settings.drive.configuration.help.supportsAllDrives", "category": "settings", "vi": "Giữ bật nếu thư mục gốc có thể nằm trong My Drive hoặc Shared Drive. Chỉ tắt khi hệ thống chắc chắn chỉ dùng My Drive.", "en": "Keep enabled when the root may be in My Drive or a Shared Drive. Disable only when the deployment exclusively uses My Drive.", "zh": "如果根文件夹可能位于 My Drive 或共享云端硬盘，请保持启用。仅当部署只使用 My Drive 时才禁用。", "ja": "ルートフォルダーが My Drive または共有ドライブにある可能性がある場合は有効のままにします。My Drive のみを使用する環境でだけ無効にします。"
   },
   {
     "key": "settings.drive.configuration.enabled", "category": "settings", "vi": "Bật tích hợp", "en": "Enable integration", "zh": "启用集成", "ja": "連携を有効化"
