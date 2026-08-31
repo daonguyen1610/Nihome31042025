@@ -492,7 +492,7 @@ public sealed class SurveyMediaServiceTests : IDisposable
         projectStorage.Object,
         drive.Object,
         Mock.Of<IProjectDriveFolderService>(),
-        new GoogleDriveOptions());
+        new TestGoogleDriveSettingsStore(new GoogleDriveOptions()));
 
     public void Dispose()
     {

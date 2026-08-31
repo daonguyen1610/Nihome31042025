@@ -1,12 +1,8 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using System.Text.Json;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
-using NihomeBackend.Extensions;
 using NihomeBackend.Services;
 using NihomeBackend.Services.GoogleDrive;
 
@@ -14,24 +10,6 @@ namespace nihomebackend.tests.Services;
 
 public sealed class GoogleDriveOptionsTests
 {
-    [Fact]
-    public void Configuration_BindsModuleFolderRegistry()
-    {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["GoogleDrive:Folders:SurveyMedia"] = "survey-media-folder",
-            })
-            .Build();
-
-        var options = configuration
-            .GetSection(GoogleDriveOptions.SectionName)
-            .Get<GoogleDriveOptions>();
-
-        Assert.NotNull(options);
-        Assert.Equal("survey-media-folder", options.Folders.SurveyMedia);
-    }
-
     [Fact]
     public void Defaults_AreDisabledWithoutDeploymentIdentity()
     {
@@ -73,7 +51,7 @@ public sealed class GoogleDriveOptionsTests
             .Callback<IReadOnlyList<DriveFolderSegment>, CancellationToken>((segments, _) => calls.Add(segments))
             .ReturnsAsync(() => new DriveFolder($"folder-{calls.Count}", null!));
         var service = new ProjectDriveFolderService(db, drive.Object,
-            new GoogleDriveOptions { InstanceId = "test" });
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions { InstanceId = "test" }));
 
         await service.EnsureAsync(project, ProjectDocumentCategory.DesignConcept);
         await service.EnsureAsync(project, ProjectDocumentCategory.DesignBasic);
@@ -108,30 +86,4 @@ public sealed class GoogleDriveOptionsTests
         Assert.Contains("Google Drive", uploaded.GetProperty("en").GetString());
     }
 
-    [Fact]
-    public void Validation_DisabledEmptyConfiguration_IsAllowed()
-    {
-        using var provider = Services(new Dictionary<string, string?> { ["GoogleDrive:Enabled"] = "false" });
-
-        Assert.False(provider.GetRequiredService<IOptions<GoogleDriveOptions>>().Value.Enabled);
-    }
-
-    [Fact]
-    public void Validation_EnabledEmptyConfiguration_IsRejected()
-    {
-        using var provider = Services(new Dictionary<string, string?> { ["GoogleDrive:Enabled"] = "true" });
-
-        Assert.Throws<OptionsValidationException>(() =>
-            provider.GetRequiredService<IOptions<GoogleDriveOptions>>().Value);
-    }
-
-    private static ServiceProvider Services(Dictionary<string, string?> values)
-    {
-        values["ConnectionStrings:DefaultConnection"] = "Server=test;Database=test;User Id=test;Password=test;TrustServerCertificate=True";
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(values).Build();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddAuthAndEmail(configuration);
-        return services.BuildServiceProvider();
-    }
 }

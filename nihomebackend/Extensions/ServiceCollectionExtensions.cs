@@ -53,34 +53,9 @@ public static class ServiceCollectionExtensions
 
         services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
-        services.AddOptions<GoogleDriveOptions>()
-            .Bind(configuration.GetSection(GoogleDriveOptions.SectionName))
-            .Validate(options => !options.Enabled || options.PollIntervalSeconds is >= 5 and <= 300,
-                "GoogleDrive:PollIntervalSeconds phải nằm trong khoảng 5 đến 300 giây.")
-            .Validate(options => !options.Enabled || options.Folders is not null &&
-                                 !string.IsNullOrWhiteSpace(options.Folders.SurveyMedia),
-                "GoogleDrive:Folders:SurveyMedia không được để trống.")
-            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.InstanceId),
-                "GoogleDrive:InstanceId không được để trống.")
-            .Validate(options => !options.Enabled || new[]
-                {
-                    options.ClientId, options.ClientSecret, options.RootFolderId,
-                }.All(folder => !string.IsNullOrWhiteSpace(folder)),
-                "GoogleDrive ClientId, ClientSecret và RootFolderId phải được cấu hình đầy đủ khi tích hợp được bật.")
-            .Validate(options => !options.Enabled || options.Folders is not null && new[]
-                {
-                    options.Folders.CrmPreDesign, options.Folders.DesignConcept, options.Folders.DesignBasic,
-                    options.Folders.DesignShopDrawing, options.Folders.LegalPermits,
-                    options.Folders.ConstructionAcceptance, options.Folders.Procurement,
-                    options.Folders.FinanceContracts,
-                }.All(folder => !string.IsNullOrWhiteSpace(folder)),
-                "Tám đường dẫn thư mục tài liệu dự án trong GoogleDrive:Folders không được để trống.")
-            .ValidateOnStart();
-        services.AddSingleton(serviceProvider =>
-            serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleDriveOptions>>().Value);
         var dataProtection = services.AddDataProtection()
             .SetApplicationName("Nicon");
-        var dataProtectionKeysPath = configuration[$"{GoogleDriveOptions.SectionName}:DataProtectionKeysPath"];
+        var dataProtectionKeysPath = configuration["DataProtection:KeysPath"];
         if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
             dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
         services.AddHttpClient(nameof(GoogleDriveOAuthService), client =>
@@ -149,7 +124,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProjectDriveFolderService, ProjectDriveFolderService>();
         services.AddSingleton<IProjectDriveClaimRenewer, ProjectDriveClaimRenewer>();
         services.AddSingleton<IProjectDriveClaimLease, ProjectDriveClaimLease>();
-        services.AddScoped<IGoogleDriveCredentialStore, GoogleDriveCredentialStore>();
+        services.AddScoped<IGoogleDriveSettingsStore, GoogleDriveSettingsStore>();
         services.AddScoped<GoogleDriveOAuthService>();
         services.AddScoped<IGoogleDriveAdapter, GoogleDriveAdapter>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();

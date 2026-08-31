@@ -22,12 +22,14 @@ public class OperationalProjectsController(
     IProjectDocumentService documents,
     IPermissionService permissions,
     IAuditLogger audit,
-    GoogleDriveOptions driveOptions) : ControllerBase
+    IGoogleDriveSettingsStore driveSettings) : ControllerBase
 {
     [HttpGet("document-categories")]
     [RequirePermission("operations.projects", "view")]
-    public ActionResult<IReadOnlyList<ProjectDocumentCategoryResponse>> GetDocumentCategories()
+    public async Task<ActionResult<IReadOnlyList<ProjectDocumentCategoryResponse>>> GetDocumentCategories(
+        CancellationToken ct)
     {
+        var driveOptions = await driveSettings.GetRuntimeAsync(ct);
         var categories = Enum.GetValues<ProjectDocumentCategory>()
             .Where(category => category != ProjectDocumentCategory.Unclassified)
             .OrderBy(category => (int)category)

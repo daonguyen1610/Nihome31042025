@@ -24,7 +24,7 @@ public sealed class SurveyDriveSyncProcessorTests : IDisposable
             storage.Object,
             drive.Object,
             mediaService.Object,
-            new GoogleDriveOptions { Enabled = false },
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions { Enabled = false }),
             Mock.Of<IAuditLogger>(),
             NullLogger<SurveyDriveSyncProcessor>.Instance);
 
@@ -98,7 +98,7 @@ public sealed class SurveyDriveSyncProcessorTests : IDisposable
             storage.Object,
             drive.Object,
             mediaService.Object,
-            new GoogleDriveOptions { Enabled = true },
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions { Enabled = true }),
             Mock.Of<IAuditLogger>(),
             NullLogger<SurveyDriveSyncProcessor>.Instance);
 
@@ -152,7 +152,8 @@ public sealed class SurveyDriveSyncProcessorTests : IDisposable
         mediaService.Setup(service => service.GetDriveConnectionStatusAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SurveyDriveConnectionStatusResponse { Status = "Connected" });
         var processor = new SurveyDriveSyncProcessor(db, storage.Object, drive.Object, mediaService.Object,
-            new GoogleDriveOptions { Enabled = true }, Mock.Of<IAuditLogger>(), NullLogger<SurveyDriveSyncProcessor>.Instance);
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions { Enabled = true }),
+            Mock.Of<IAuditLogger>(), NullLogger<SurveyDriveSyncProcessor>.Instance);
 
         Assert.False(await processor.ProcessNextAsync());
 

@@ -10,8 +10,38 @@ namespace NihomeBackend.Controllers;
 [Route("api/site-settings/google-drive")]
 public class GoogleDriveOAuthController(
     GoogleDriveOAuthService oauth,
+    IGoogleDriveSettingsStore settingsStore,
     ILogger<GoogleDriveOAuthController> logger) : ControllerBase
 {
+    [HttpGet("configuration")]
+    [Authorize]
+    [RequirePermission("system.settings", "view")]
+    public async Task<ActionResult<GoogleDriveAdminConfigurationResponse>> Configuration(CancellationToken ct) =>
+        Ok(await settingsStore.GetAdminAsync(ct));
+
+    [HttpPut("configuration")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public async Task<ActionResult<GoogleDriveAdminConfigurationResponse>> UpdateConfiguration(
+        [FromBody] UpdateGoogleDriveConfigurationRequest request,
+        CancellationToken ct)
+    {
+        var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
+        if (!int.TryParse(rawUserId, out var userId) || userId <= 0) return Unauthorized();
+        try
+        {
+            return Ok(await settingsStore.UpdateAsync(request, userId, ct));
+        }
+        catch (GoogleDriveSettingsValidationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (GoogleDriveSettingsConcurrencyException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+    }
+
     [HttpGet("status")]
     [Authorize]
     [RequirePermission("system.settings", "view")]
@@ -21,11 +51,18 @@ public class GoogleDriveOAuthController(
     [HttpPost("oauth/start")]
     [Authorize]
     [RequirePermission("system.settings", "manage")]
-    public ActionResult<GoogleDriveOAuthStartResponse> Start()
+    public async Task<ActionResult<GoogleDriveOAuthStartResponse>> Start(CancellationToken ct)
     {
         var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
         if (!int.TryParse(rawUserId, out var userId) || userId <= 0) return Unauthorized();
-        return Ok(oauth.CreateAuthorizationRequest(userId));
+        try
+        {
+            return Ok(await oauth.CreateAuthorizationRequestAsync(userId, ct));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
     }
 
     [HttpGet("oauth/callback")]
@@ -48,6 +85,6 @@ public class GoogleDriveOAuthController(
                 exception.GetType().Name);
             result = GoogleDriveOAuthResult.TokenExchangeFailed;
         }
-        return Redirect(oauth.BuildFrontendResultUrl(result));
+        return Redirect(await oauth.BuildFrontendResultUrlAsync(result, ct));
     }
 }

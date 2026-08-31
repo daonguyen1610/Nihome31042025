@@ -1023,7 +1023,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.ToTable("google_drive_credentials");
             b.HasKey(credential => credential.Id);
             b.Property(credential => credential.Id).ValueGeneratedNever();
-            b.Property(credential => credential.ProtectedRefreshToken).HasMaxLength(4000).IsRequired();
+            b.Property(credential => credential.ClientId).HasMaxLength(255).IsRequired();
+            b.Property(credential => credential.ProtectedClientSecret).HasMaxLength(4000);
+            b.Property(credential => credential.ProtectedRefreshToken).HasMaxLength(4000);
+            b.Property(credential => credential.OAuthRedirectUri).HasMaxLength(2048).IsRequired();
+            b.Property(credential => credential.FrontendReturnUrl).HasMaxLength(2048).IsRequired();
+            b.Property(credential => credential.RootFolderId).HasMaxLength(200).IsRequired();
+            b.Property(credential => credential.InstanceId).HasMaxLength(100).IsRequired();
+            b.Property(credential => credential.ApplicationName).HasMaxLength(100).IsRequired();
+            b.Property(credential => credential.SurveyMediaFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.CrmPreDesignFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.DesignConceptFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.DesignBasicFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.DesignShopDrawingFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.LegalPermitsFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.ConstructionAcceptanceFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.ProcurementFolder).HasMaxLength(500).IsRequired();
+            b.Property(credential => credential.FinanceContractsFolder).HasMaxLength(500).IsRequired();
             b.Property(credential => credential.AccountEmail).HasMaxLength(320);
             b.Property(credential => credential.RowVersion).IsRowVersion();
             b.ToTable(table => table.HasCheckConstraint(

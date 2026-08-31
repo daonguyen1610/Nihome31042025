@@ -72,11 +72,11 @@ This project currently requires the full Drive scope because the worker finds, c
 2. Click **Create client**.
 3. Select **Web application** as the application type.
 4. Register the exact backend callback URI, for example `https://nicon.example.com/api/site-settings/google-drive/oauth/callback`.
-5. Store the downloaded `client_id` and `client_secret` only in protected deployment configuration. A Desktop OAuth client with only `http://localhost` cannot serve a deployed HTTPS callback.
+5. Keep the downloaded `client_id` and `client_secret` private until an authorized administrator enters them in **Settings > Google Drive**. A Desktop OAuth client with only `http://localhost` cannot serve a deployed HTTPS callback.
 
-### 5. Connect the account
+### 5. Save the configuration and connect the account
 
-After server configuration, sign in to Nicon with `system.settings.manage`, open **Settings > Google Drive**, and select **Connect/Reconnect Google Drive**. Google asks for consent once. Nicon receives the authorization code, validates signed state and PKCE, and stores the issued refresh token encrypted. The Google SDK refreshes short-lived access tokens automatically; revoked access is reported as **Reconnect required**.
+Sign in to Nicon with `system.settings.manage` and open **Settings > Google Drive**. Enter the OAuth client ID, write-only client secret, exact callback URI, internal Admin return path, root folder ID, stable deployment instance ID, application name, business folder paths, Drive compatibility mode, and polling interval. Save before selecting **Connect/Reconnect Google Drive**. Google asks for consent once. Nicon encrypts both the client secret and issued refresh token in SQL; revoked access is reported as **Reconnect required**.
 
 ### 6. Create and authorize the root Drive folder
 
@@ -91,53 +91,21 @@ After server configuration, sign in to Nicon with `system.settings.manage`, open
     https://drive.google.com/drive/folders/<FOLDER_ID>
     ```
 
-    copy only `<FOLDER_ID>` into `GoogleDrive:RootFolderId`.
+        copy only `<FOLDER_ID>` into the **Root folder ID** field in **Settings > Google Drive**.
 
-### 7. Configure Nihome
+### 7. Configure Data Protection key persistence
 
-For local development, put the values in a local, uncommitted configuration source. The expected JSON shape is:
-
-```json
-"GoogleDrive": {
-  "ClientId": "<OAUTH_CLIENT_ID>",
-  "ClientSecret": "<OAUTH_CLIENT_SECRET>",
-    "RefreshToken": "",
-    "OAuthRedirectUri": "https://nicon.example.com/api/site-settings/google-drive/oauth/callback",
-    "FrontendReturnUrl": "https://nicon.example.com/admin/settings?tab=drive",
-    "DataProtectionKeysPath": "/secure/nicon/data-protection-keys",
-  "RootFolderId": "<FOLDER_ID>",
-  "ApplicationName": "Nihome Google Drive Integration",
-  "Folders": {
-     "SurveyMedia": "01_Khao_sat"
-  },
-  "SupportsAllDrives": true,
-  "PollIntervalSeconds": 15
-}
-```
-
-ASP.NET Core environment variables are preferred when the configuration file is source-controlled:
+Google Drive business settings and OAuth credentials are not read from `appsettings.json` or `GoogleDrive__*` environment variables. They are managed only from the Admin page. Deployment configuration owns only the ASP.NET Core Data Protection key-ring location used to decrypt the SQL ciphertext after restarts.
 
 ```text
-GoogleDrive__ClientId=<OAUTH_CLIENT_ID>
-GoogleDrive__ClientSecret=<OAUTH_CLIENT_SECRET>
-GoogleDrive__OAuthRedirectUri=https://nicon.example.com/api/site-settings/google-drive/oauth/callback
-GoogleDrive__FrontendReturnUrl=https://nicon.example.com/admin/settings?tab=drive
-GoogleDrive__DataProtectionKeysPath=/secure/nicon/data-protection-keys
-GoogleDrive__RootFolderId=<FOLDER_ID>
-GoogleDrive__Folders__SurveyMedia=01_Khao_sat
+DataProtection__KeysPath=/secure/nicon/data-protection-keys
 ```
 
-For IIS, place the values only in the protected deployed configuration or protected application-pool environment variables. Restrict access to the application-pool identity and responsible administrators.
+Persist that directory across deployments and restrict it to the application identity and responsible administrators. Losing the key ring makes existing encrypted secrets unreadable and requires entering the client secret and reconnecting again.
 
-### 8. Restart and verify the connection
+### 8. Verify the connection
 
-Recreate the backend after changing Docker configuration:
-
-```bash
-docker compose up -d --build --force-recreate nihomeBackend
-```
-
-Then sign in to Nihome as an authorized administrator, open an Admin Survey detail page, select the **Media** tab, and click **Check connection**. The expected status is **Connected**, with the authenticated account and root folder displayed.
+Configuration saves take effect without restarting the backend. After connecting, confirm **Settings > Google Drive** reports **Connected** with the expected account and root folder, then upload a controlled project file and verify its Drive link.
 
 Connection status troubleshooting:
 

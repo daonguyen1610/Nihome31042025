@@ -340,7 +340,6 @@ export interface GoogleDriveAdminStatusResponse {
   status: "Disabled" | "Connected" | "ReadOnly" | "InvalidRoot" | "ReconnectRequired" | "Unavailable";
   oauthConfigured: boolean;
   hasStoredCredential: boolean;
-  usesConfiguredFallback: boolean;
   accountEmail: string | null;
   connectedAt: string | null;
   rootFolderName: string | null;
@@ -350,6 +349,51 @@ export interface GoogleDriveAdminStatusResponse {
 
 export interface GoogleDriveOAuthStartResponse {
   authorizationUrl: string;
+}
+
+export interface GoogleDriveFolderConfiguration {
+  surveyMedia: string;
+  crmPreDesign: string;
+  designConcept: string;
+  designBasic: string;
+  designShopDrawing: string;
+  legalPermits: string;
+  constructionAcceptance: string;
+  procurement: string;
+  financeContracts: string;
+}
+
+export interface GoogleDriveAdminConfigurationResponse {
+  enabled: boolean;
+  clientId: string;
+  hasClientSecret: boolean;
+  hasRefreshToken: boolean;
+  oAuthRedirectUri: string;
+  frontendReturnUrl: string;
+  rootFolderId: string;
+  instanceId: string;
+  applicationName: string;
+  folders: GoogleDriveFolderConfiguration;
+  supportsAllDrives: boolean;
+  pollIntervalSeconds: number;
+  accountEmail: string | null;
+  connectedAt: string | null;
+  rowVersion: string;
+}
+
+export interface UpdateGoogleDriveConfigurationRequest {
+  enabled: boolean;
+  clientId: string;
+  clientSecret?: string;
+  oAuthRedirectUri: string;
+  frontendReturnUrl: string;
+  rootFolderId: string;
+  instanceId: string;
+  applicationName: string;
+  folders: GoogleDriveFolderConfiguration;
+  supportsAllDrives: boolean;
+  pollIntervalSeconds: number;
+  rowVersion: string;
 }
 
 export interface ContactMessageResponse {
@@ -3451,6 +3495,10 @@ export const adminApi = {
   // Google Drive OAuth administration
   getGoogleDriveAdminStatus: () =>
     api.get<GoogleDriveAdminStatusResponse>("/site-settings/google-drive/status"),
+  getGoogleDriveConfiguration: () =>
+    api.get<GoogleDriveAdminConfigurationResponse>("/site-settings/google-drive/configuration"),
+  updateGoogleDriveConfiguration: (data: UpdateGoogleDriveConfigurationRequest) =>
+    api.put<GoogleDriveAdminConfigurationResponse>("/site-settings/google-drive/configuration", data),
   startGoogleDriveOAuth: () =>
     api.post<GoogleDriveOAuthStartResponse>("/site-settings/google-drive/oauth/start"),
 

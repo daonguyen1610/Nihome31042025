@@ -20,7 +20,7 @@ services:
       ASPNETCORE_URLS: http://0.0.0.0:5043
       DOTNET_USE_POLLING_FILE_WATCHER: "1"
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;
-      GoogleDrive__DataProtectionKeysPath: /root/.aspnet/DataProtection-Keys
+      DataProtection__KeysPath: /root/.aspnet/DataProtection-Keys
     volumes:
       - ./nihomebackend:/app
       - ./nihomeweb:/nihomeweb
