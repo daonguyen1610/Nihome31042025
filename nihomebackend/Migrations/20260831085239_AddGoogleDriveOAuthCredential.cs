@@ -15,7 +15,8 @@ namespace nihomebackend.Migrations
                 name: "google_drive_credentials",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     ProtectedRefreshToken = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
                     AccountEmail = table.Column<string>(type: "nvarchar(320)", maxLength: 320, nullable: true),
                     ConnectedByUserId = table.Column<int>(type: "int", nullable: false),

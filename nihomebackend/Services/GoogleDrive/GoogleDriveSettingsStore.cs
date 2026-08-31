@@ -119,7 +119,7 @@ public sealed class GoogleDriveSettingsStore(
         {
             if (!string.IsNullOrWhiteSpace(request.RowVersion))
                 throw new GoogleDriveSettingsConcurrencyException();
-            settings = new GoogleDriveCredential { Id = 1 };
+            settings = new GoogleDriveCredential();
             db.GoogleDriveCredentials.Add(settings);
         }
         else

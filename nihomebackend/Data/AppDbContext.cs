@@ -1022,7 +1022,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             b.ToTable("google_drive_credentials");
             b.HasKey(credential => credential.Id);
-            b.Property(credential => credential.Id).ValueGeneratedNever();
+            b.Property(credential => credential.Id).UseIdentityColumn();
             b.Property(credential => credential.ClientId).HasMaxLength(255).IsRequired();
             b.Property(credential => credential.ProtectedClientSecret).HasMaxLength(4000);
             b.Property(credential => credential.ProtectedRefreshToken).HasMaxLength(4000);

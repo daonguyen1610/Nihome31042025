@@ -22,6 +22,7 @@ public sealed class GoogleDriveOAuthServiceTests
         await store.SaveRefreshTokenAsync("refresh-token-value", "admin@example.com", 7, string.Empty);
 
         var persisted = await db.GoogleDriveCredentials.AsNoTracking().SingleAsync();
+        Assert.Equal(1, persisted.Id);
         Assert.NotEqual("refresh-token-value", persisted.ProtectedRefreshToken);
         Assert.NotEqual("client-secret-value", persisted.ProtectedClientSecret);
         var runtime = await store.GetRuntimeAsync();
