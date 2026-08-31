@@ -70,6 +70,24 @@ public sealed class GoogleDriveOAuthServiceTests
     }
 
     [Fact]
+    public async Task SettingsStore_ChangingClientIdWithoutNewSecret_IsRejected()
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var current = await store.UpdateAsync(ValidConfiguration("client-secret-value"), 7);
+        var update = ValidConfiguration();
+        update.RowVersion = current.RowVersion;
+        update.ClientId = "456.apps.googleusercontent.com";
+
+        await Assert.ThrowsAsync<GoogleDriveSettingsValidationException>(() =>
+            store.UpdateAsync(update, 8));
+
+        var runtime = await store.GetRuntimeAsync();
+        Assert.Equal("123.apps.googleusercontent.com", runtime.ClientId);
+        Assert.Equal("client-secret-value", runtime.ClientSecret);
+    }
+
+    [Fact]
     public async Task SettingsStore_ChangingOAuthIdentity_RemovesExistingRefreshToken()
     {
         await using var db = CreateDb();

@@ -149,12 +149,19 @@ public sealed class GoogleDriveSettingsStore(
         }
 
         var newSecret = request.ClientSecret?.Trim();
+        var clientIdChanged = !string.Equals(
+            settings.ClientId,
+            normalized.ClientId,
+            StringComparison.Ordinal);
+        if (clientIdChanged && string.IsNullOrWhiteSpace(newSecret))
+            throw new GoogleDriveSettingsValidationException(
+                "ClientSecret mới là bắt buộc khi thay đổi ClientId. Ví dụ: nhập Secret của đúng OAuth Web Client vừa chọn.");
         if (normalized.Enabled && string.IsNullOrWhiteSpace(newSecret) &&
             string.IsNullOrWhiteSpace(settings.ProtectedClientSecret))
             throw new GoogleDriveSettingsValidationException(
                 "ClientSecret là bắt buộc khi bật Google Drive. Ví dụ: GOCSPX-... từ Google Cloud Console.");
 
-        var oauthIdentityChanged = !string.Equals(settings.ClientId, normalized.ClientId, StringComparison.Ordinal) ||
+        var oauthIdentityChanged = clientIdChanged ||
             !string.IsNullOrWhiteSpace(newSecret);
         var folderTopologyChanged =
             !string.Equals(settings.RootFolderId, normalized.RootFolderId, StringComparison.Ordinal) ||

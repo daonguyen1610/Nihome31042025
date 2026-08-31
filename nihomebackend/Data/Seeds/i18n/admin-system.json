@@ -2792,6 +2792,9 @@
     "key": "settings.drive.validation.clientSecret", "category": "settings", "vi": "Client Secret phải dài 8-512 ký tự.", "en": "Client Secret must contain 8-512 characters.", "zh": "客户端密钥必须为 8-512 个字符。", "ja": "クライアントシークレットは 8～512 文字で入力してください。"
   },
   {
+    "key": "settings.drive.validation.clientSecretChangedClient", "category": "settings", "vi": "Khi thay đổi OAuth Client ID, hãy nhập Client Secret mới thuộc cùng Web OAuth Client.", "en": "When changing the OAuth Client ID, enter the new Client Secret from the same Web OAuth Client.", "zh": "更改 OAuth 客户端 ID 时，请输入同一 Web OAuth 客户端的新客户端密钥。", "ja": "OAuth クライアント ID を変更する場合は、同じ Web OAuth クライアントの新しいクライアントシークレットを入力してください。"
+  },
+  {
     "key": "settings.drive.validation.redirectUri", "category": "settings", "vi": "Redirect URI phải là URL HTTPS callback hợp lệ; localhost được dùng HTTP.", "en": "Redirect URI must be a valid HTTPS callback URL; localhost may use HTTP.", "zh": "重定向 URI 必须是有效的 HTTPS 回调 URL；localhost 可使用 HTTP。", "ja": "リダイレクト URI は有効な HTTPS コールバック URL にしてください。localhost は HTTP を使用できます。"
   },
   {

@@ -45,6 +45,7 @@ const SETUP_STEPS = [
 function validate(
   form: GoogleDriveAdminConfigurationResponse,
   clientSecret: string,
+  originalClientId: string,
 ): string | null {
   if (form.pollIntervalSeconds < 5 || form.pollIntervalSeconds > 300)
     return "settings.drive.validation.pollInterval";
@@ -63,6 +64,8 @@ function validate(
   if (!form.enabled) return null;
   if (!CLIENT_ID_PATTERN.test(form.clientId.trim()))
     return "settings.drive.validation.clientId";
+  if (form.clientId.trim() !== originalClientId && clientSecret.trim().length < 8)
+    return "settings.drive.validation.clientSecretChangedClient";
   if (!form.hasClientSecret && clientSecret.trim().length < 8)
     return "settings.drive.validation.clientSecret";
   if (clientSecret.trim() && (clientSecret.trim().length < 8 || clientSecret.trim().length > 512))
@@ -103,6 +106,7 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
   const { t } = useI18n();
   const { toast } = useToast();
   const [form, setForm] = useState<GoogleDriveAdminConfigurationResponse | null>(null);
+  const [originalClientId, setOriginalClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -114,6 +118,7 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
       .then(({ data }) => {
         if (!cancelled) {
           setForm(data);
+          setOriginalClientId(data.clientId);
           setClientSecret("");
         }
       })
@@ -146,7 +151,7 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
 
   const save = async () => {
     if (!form) return;
-    const validationKey = validate(form, clientSecret);
+    const validationKey = validate(form, clientSecret, originalClientId);
     if (validationKey) {
       toast({
         title: t("common.error"),
@@ -176,6 +181,7 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
     try {
       const { data } = await adminApi.updateGoogleDriveConfiguration(payload);
       setForm(data);
+      setOriginalClientId(data.clientId);
       setClientSecret("");
       toast({ title: t("settings.drive.configuration.saved") });
       onSaved();
