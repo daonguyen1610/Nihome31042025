@@ -95,6 +95,7 @@ public sealed class GoogleDriveAdapter(
     public async Task<DriveFolder> EnsureFolderPathAsync(
         IReadOnlyList<DriveFolderSegment> folders, CancellationToken ct = default)
     {
+        await GetServiceAsync(ct);
         var parentId = options.RootFolderId;
         foreach (var folder in folders)
         {
