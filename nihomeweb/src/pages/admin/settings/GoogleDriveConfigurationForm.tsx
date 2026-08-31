@@ -252,7 +252,7 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
         <Field id="drive-client-id" label={t("settings.drive.configuration.clientId")} help={t("settings.drive.configuration.help.clientId")} value={form.clientId} disabled={disabled} onChange={(value) => update("clientId", value)} />
         <div className="space-y-1.5">
           <Label htmlFor="drive-client-secret">{t("settings.drive.configuration.clientSecret")}</Label>
-          <Input id="drive-client-secret" type="password" value={clientSecret} disabled={disabled} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" aria-describedby="drive-client-secret-help drive-client-secret-status" />
+          <Input id="drive-client-secret" type="password" value={clientSecret} placeholder={form.hasClientSecret ? "••••••••••••" : undefined} disabled={disabled} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" aria-describedby="drive-client-secret-help drive-client-secret-status" />
           <p id="drive-client-secret-help" className="text-xs text-muted-foreground">
             {t("settings.drive.configuration.help.clientSecret")}
           </p>
