@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.DataProtection;
 namespace NihomeBackend.Services.GoogleDrive;
 
 public sealed record GoogleDriveOAuthStartResponse(string AuthorizationUrl);
+public sealed record GoogleDriveDisconnectResponse(bool HadStoredCredential, bool ProviderRevoked);
 
 public sealed record GoogleDriveAdminStatusResponse(
     string Status,
@@ -73,7 +74,7 @@ public sealed class GoogleDriveOAuthService(
             ["response_type"] = "code",
             ["scope"] = "https://www.googleapis.com/auth/drive",
             ["access_type"] = "offline",
-            ["prompt"] = "consent",
+            ["prompt"] = "consent select_account",
             ["include_granted_scopes"] = "true",
             ["state"] = state,
             ["code_challenge"] = challenge,
@@ -169,6 +170,50 @@ public sealed class GoogleDriveOAuthService(
             return GoogleDriveOAuthResult.ConfigurationChanged;
         }
         return GoogleDriveOAuthResult.Success;
+    }
+
+    public async Task<GoogleDriveDisconnectResponse> DisconnectAsync(
+        int userId,
+        CancellationToken ct = default)
+    {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        var hadStoredCredential = !string.IsNullOrWhiteSpace(options.RefreshToken);
+        if (!hadStoredCredential)
+            return new GoogleDriveDisconnectResponse(false, false);
+
+        await settingsStore.ClearRefreshTokenAsync(userId, options.ConfigurationVersion, ct);
+
+        var providerRevoked = false;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://oauth2.googleapis.com/revoke")
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["token"] = options.RefreshToken,
+                }),
+            };
+            using var response = await httpClientFactory.CreateClient(nameof(GoogleDriveOAuthService))
+                .SendAsync(request, ct);
+            providerRevoked = response.IsSuccessStatusCode;
+            if (!providerRevoked)
+                logger.LogWarning(
+                    "Google Drive credential revocation returned status {StatusCode}; the local credential will still be removed.",
+                    (int)response.StatusCode);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning(
+                "Google Drive credential revocation timed out; the local credential was already removed.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                "Google Drive credential revocation failed ({ExceptionType}); the local credential will still be removed.",
+                exception.GetType().Name);
+        }
+
+        return new GoogleDriveDisconnectResponse(hadStoredCredential, providerRevoked);
     }
 
     public async Task<GoogleDriveAdminStatusResponse> GetStatusAsync(CancellationToken ct = default)

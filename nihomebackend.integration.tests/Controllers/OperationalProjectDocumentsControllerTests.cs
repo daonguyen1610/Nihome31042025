@@ -710,6 +710,11 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
             int connectedByUserId,
             string expectedConfigurationVersion,
             CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task ClearRefreshTokenAsync(
+            int updatedByUserId,
+            string expectedConfigurationVersion,
+            CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private sealed class InMemoryGoogleDriveAdapter : IGoogleDriveAdapter

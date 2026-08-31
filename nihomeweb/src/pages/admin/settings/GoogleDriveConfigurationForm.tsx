@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { BookOpen, Save } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,17 @@ const FOLDER_FIELDS: Array<keyof GoogleDriveFolderConfiguration> = [
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/;
 const DRIVE_ID_PATTERN = /^[A-Za-z0-9_-]{10,200}$/;
 const INSTANCE_ID_PATTERN = /^[A-Za-z0-9._-]{3,100}$/;
+
+const SETUP_STEPS = [
+  "googleProject",
+  "consentScreen",
+  "oauthClient",
+  "redirectUri",
+  "credentials",
+  "rootFolder",
+  "deploymentValues",
+  "saveAndConnect",
+] as const;
 
 function validate(
   form: GoogleDriveAdminConfigurationResponse,
@@ -189,45 +201,92 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
           <h2 className="text-lg font-semibold">{t("settings.drive.configuration.title")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("settings.drive.configuration.description")}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Label htmlFor="drive-enabled">{t("settings.drive.configuration.enabled")}</Label>
-          <Switch id="drive-enabled" checked={form.enabled} onCheckedChange={(value) => update("enabled", value)} disabled={disabled} />
+        <div className="flex max-w-sm items-start gap-3">
+          <Switch
+            id="drive-enabled"
+            className="mt-0.5"
+            checked={form.enabled}
+            onCheckedChange={(value) => update("enabled", value)}
+            disabled={disabled}
+            aria-describedby="drive-enabled-help"
+          />
+          <div>
+            <Label htmlFor="drive-enabled">{t("settings.drive.configuration.enabled")}</Label>
+            <p id="drive-enabled-help" className="mt-1 text-xs text-muted-foreground">
+              {t("settings.drive.configuration.help.enabled")}
+            </p>
+          </div>
         </div>
       </div>
 
+      <Accordion type="single" collapsible className="rounded-lg border bg-muted/20 px-4">
+        <AccordionItem value="drive-setup-guide" className="border-0">
+          <AccordionTrigger className="gap-3 py-4 text-left hover:no-underline">
+            <span className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 shrink-0 text-primary" />
+              {t("settings.drive.configuration.guide.title")}
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4">
+            <p className="mb-4 text-sm text-muted-foreground">
+              {t("settings.drive.configuration.guide.description")}
+            </p>
+            <ol className="list-decimal space-y-3 pl-5 text-sm marker:font-semibold marker:text-primary">
+              {SETUP_STEPS.map((step) => (
+                <li key={step} className="pl-1 leading-6">
+                  {t(`settings.drive.configuration.guide.step.${step}`)}
+                </li>
+              ))}
+            </ol>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
       <div className="grid gap-4 md:grid-cols-2">
-        <Field id="drive-client-id" label={t("settings.drive.configuration.clientId")} value={form.clientId} disabled={disabled} onChange={(value) => update("clientId", value)} />
+        <Field id="drive-client-id" label={t("settings.drive.configuration.clientId")} help={t("settings.drive.configuration.help.clientId")} value={form.clientId} disabled={disabled} onChange={(value) => update("clientId", value)} />
         <div className="space-y-1.5">
           <Label htmlFor="drive-client-secret">{t("settings.drive.configuration.clientSecret")}</Label>
-          <Input id="drive-client-secret" type="password" value={clientSecret} disabled={disabled} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" />
-          <p className="text-xs text-muted-foreground">
+          <Input id="drive-client-secret" type="password" value={clientSecret} disabled={disabled} onChange={(event) => setClientSecret(event.target.value)} autoComplete="new-password" aria-describedby="drive-client-secret-help drive-client-secret-status" />
+          <p id="drive-client-secret-help" className="text-xs text-muted-foreground">
+            {t("settings.drive.configuration.help.clientSecret")}
+          </p>
+          <p id="drive-client-secret-status" className="text-xs text-muted-foreground">
             {t(form.hasClientSecret ? "settings.drive.configuration.secretStored" : "settings.drive.configuration.secretMissing")}
           </p>
         </div>
-        <Field id="drive-redirect" label={t("settings.drive.configuration.redirectUri")} value={form.oAuthRedirectUri} disabled={disabled} onChange={(value) => update("oAuthRedirectUri", value)} />
-        <Field id="drive-return" label={t("settings.drive.configuration.returnUrl")} value={form.frontendReturnUrl} disabled={disabled} onChange={(value) => update("frontendReturnUrl", value)} />
-        <Field id="drive-root" label={t("settings.drive.configuration.rootFolderId")} value={form.rootFolderId} disabled={disabled} onChange={(value) => update("rootFolderId", value)} />
-        <Field id="drive-instance" label={t("settings.drive.configuration.instanceId")} value={form.instanceId} disabled={disabled} onChange={(value) => update("instanceId", value)} />
-        <Field id="drive-app-name" label={t("settings.drive.configuration.applicationName")} value={form.applicationName} disabled={disabled} onChange={(value) => update("applicationName", value)} />
+        <Field id="drive-redirect" label={t("settings.drive.configuration.redirectUri")} help={t("settings.drive.configuration.help.redirectUri")} value={form.oAuthRedirectUri} disabled={disabled} onChange={(value) => update("oAuthRedirectUri", value)} />
+        <Field id="drive-return" label={t("settings.drive.configuration.returnUrl")} help={t("settings.drive.configuration.help.returnUrl")} value={form.frontendReturnUrl} disabled={disabled} onChange={(value) => update("frontendReturnUrl", value)} />
+        <Field id="drive-root" label={t("settings.drive.configuration.rootFolderId")} help={t("settings.drive.configuration.help.rootFolderId")} value={form.rootFolderId} disabled={disabled} onChange={(value) => update("rootFolderId", value)} />
+        <Field id="drive-instance" label={t("settings.drive.configuration.instanceId")} help={t("settings.drive.configuration.help.instanceId")} value={form.instanceId} disabled={disabled} onChange={(value) => update("instanceId", value)} />
+        <Field id="drive-app-name" label={t("settings.drive.configuration.applicationName")} help={t("settings.drive.configuration.help.applicationName")} value={form.applicationName} disabled={disabled} onChange={(value) => update("applicationName", value)} />
         <div className="space-y-1.5">
           <Label htmlFor="drive-poll">{t("settings.drive.configuration.pollInterval")}</Label>
-          <Input id="drive-poll" type="number" min={5} max={300} value={form.pollIntervalSeconds} disabled={disabled} onChange={(event) => update("pollIntervalSeconds", Number(event.target.value))} />
+          <Input id="drive-poll" type="number" min={5} max={300} value={form.pollIntervalSeconds} disabled={disabled} onChange={(event) => update("pollIntervalSeconds", Number(event.target.value))} aria-describedby="drive-poll-help" />
+          <p id="drive-poll-help" className="text-xs text-muted-foreground">
+            {t("settings.drive.configuration.help.pollInterval")}
+          </p>
         </div>
       </div>
 
       <div>
         <h3 className="text-sm font-semibold">{t("settings.drive.configuration.folders")}</h3>
+        <p className="mt-1 text-xs text-muted-foreground">{t("settings.drive.configuration.help.folders")}</p>
         <div className="mt-3 grid gap-4 md:grid-cols-2">
           {FOLDER_FIELDS.map((field) => (
-            <Field key={field} id={`drive-folder-${field}`} label={t(`settings.drive.configuration.folder.${field}`)} value={form.folders[field]} disabled={disabled} onChange={(value) => updateFolder(field, value)} />
+            <Field key={field} id={`drive-folder-${field}`} label={t(`settings.drive.configuration.folder.${field}`)} help={t("settings.drive.configuration.help.folderPath")} value={form.folders[field]} disabled={disabled} onChange={(value) => updateFolder(field, value)} />
           ))}
         </div>
       </div>
 
       <div className="flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Switch id="drive-all-drives" checked={form.supportsAllDrives} onCheckedChange={(value) => update("supportsAllDrives", value)} disabled={disabled} />
-          <Label htmlFor="drive-all-drives">{t("settings.drive.configuration.supportsAllDrives")}</Label>
+        <div className="flex max-w-xl items-start gap-3">
+          <Switch id="drive-all-drives" className="mt-0.5" checked={form.supportsAllDrives} onCheckedChange={(value) => update("supportsAllDrives", value)} disabled={disabled} aria-describedby="drive-all-drives-help" />
+          <div>
+            <Label htmlFor="drive-all-drives">{t("settings.drive.configuration.supportsAllDrives")}</Label>
+            <p id="drive-all-drives-help" className="mt-1 text-xs text-muted-foreground">
+              {t("settings.drive.configuration.help.supportsAllDrives")}
+            </p>
+          </div>
         </div>
         {canManage && (
           <Button type="button" onClick={save} disabled={saving}>
@@ -240,9 +299,10 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
   );
 }
 
-function Field({ id, label, value, disabled, onChange }: {
+function Field({ id, label, help, value, disabled, onChange }: {
   id: string;
   label: string;
+  help: string;
   value: string;
   disabled: boolean;
   onChange: (value: string) => void;
@@ -250,7 +310,8 @@ function Field({ id, label, value, disabled, onChange }: {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+      <Input id={id} value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} aria-describedby={`${id}-help`} />
+      <p id={`${id}-help`} className="text-xs text-muted-foreground">{help}</p>
     </div>
   );
 }

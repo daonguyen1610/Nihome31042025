@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ExternalLink, HardDrive, Map as MapIcon, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import { ExternalLink, HardDrive, LogOut, Map as MapIcon, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +58,8 @@ const DRIVE_OAUTH_RESULT_KEYS: Record<string, string> = {
   configuration_changed: "settings.drive.oauth.configuration_changed",
   failed: "settings.drive.oauth.failed",
 };
+
+const DRIVE_OAUTH_MESSAGE = "nicon.google-drive.oauth";
 
 const OtpToggleControl = ({
   label,
@@ -315,7 +317,10 @@ const DriveTab = () => {
   const [status, setStatus] = useState<GoogleDriveAdminStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [configurationVersion, setConfigurationVersion] = useState(0);
+  const oauthPopup = useRef<Window | null>(null);
+  const popupPoll = useRef<number | null>(null);
   const canManage = has(ADMIN_PERMS.settingsManage);
 
   const loadStatus = useCallback(async () => {
@@ -339,9 +344,7 @@ const DriveTab = () => {
     void loadStatus();
   }, [loadStatus]);
 
-  useEffect(() => {
-    const result = searchParams.get("driveOAuth");
-    if (!result) return;
+  const showOAuthResult = useCallback((result: string) => {
     const successful = result === "success";
     toast({
       title: t(successful ? "settings.drive.oauth.success" : "settings.drive.oauth.error"),
@@ -350,28 +353,128 @@ const DriveTab = () => {
         : t(DRIVE_OAUTH_RESULT_KEYS[result] ?? "settings.drive.oauth.failed"),
       variant: successful ? "default" : "destructive",
     });
+    setConnecting(false);
+    if (successful) setConfigurationVersion((value) => value + 1);
+    void loadStatus();
+  }, [loadStatus, t, toast]);
+
+  useEffect(() => {
+    const result = searchParams.get("driveOAuth");
+    if (!result) return;
+    if (window.opener && window.opener !== window) {
+      window.opener.postMessage({ type: DRIVE_OAUTH_MESSAGE, result }, window.location.origin);
+      window.close();
+      return;
+    }
+    showOAuthResult(result);
     const next = new URLSearchParams(searchParams);
     next.delete("driveOAuth");
     next.set("tab", "drive");
     setSearchParams(next, { replace: true });
-    if (successful) void loadStatus();
-  }, [loadStatus, searchParams, setSearchParams, t, toast]);
+  }, [searchParams, setSearchParams, showOAuthResult]);
+
+  useEffect(() => {
+    const onOAuthMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== oauthPopup.current) return;
+      if (!event.data || event.data.type !== DRIVE_OAUTH_MESSAGE || typeof event.data.result !== "string") return;
+      if (popupPoll.current !== null) window.clearInterval(popupPoll.current);
+      popupPoll.current = null;
+      oauthPopup.current?.close();
+      oauthPopup.current = null;
+      showOAuthResult(event.data.result);
+    };
+    window.addEventListener("message", onOAuthMessage);
+    return () => {
+      window.removeEventListener("message", onOAuthMessage);
+      if (popupPoll.current !== null) window.clearInterval(popupPoll.current);
+      oauthPopup.current?.close();
+    };
+  }, [showOAuthResult]);
 
   const connect = async () => {
+    const switchingAccount = status?.hasStoredCredential === true;
+    if (switchingAccount && !window.confirm(t("settings.drive.switchConfirm"))) return;
+    const width = 560;
+    const height = 720;
+    const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
+    const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
+    const popup = window.open(
+      "about:blank",
+      "nicon-google-drive-oauth",
+      `popup=yes,width=${width},height=${height},left=${left},top=${top}`,
+    );
+    if (!popup) {
+      toast({
+        title: t("common.error"),
+        description: t("settings.drive.popupBlocked"),
+        variant: "destructive",
+      });
+      return;
+    }
+    oauthPopup.current?.close();
+    oauthPopup.current = popup;
     setConnecting(true);
     try {
+      if (switchingAccount) {
+        const { data: disconnectResult } = await adminApi.disconnectGoogleDriveOAuth();
+        setConfigurationVersion((value) => value + 1);
+        if (disconnectResult.hadStoredCredential && !disconnectResult.providerRevoked) {
+          toast({
+            title: t("settings.drive.disconnectSuccess"),
+            description: t("settings.drive.disconnectRevokeWarning"),
+          });
+        }
+      }
       const { data } = await adminApi.startGoogleDriveOAuth();
       const authorizationUrl = new URL(data.authorizationUrl);
       if (authorizationUrl.protocol !== "https:" || authorizationUrl.hostname !== "accounts.google.com")
         throw new Error("Unexpected OAuth authorization URL");
-      window.location.assign(authorizationUrl.toString());
+      popup.location.assign(authorizationUrl.toString());
+      popup.focus();
+      popupPoll.current = window.setInterval(() => {
+        if (!popup.closed) return;
+        if (popupPoll.current !== null) window.clearInterval(popupPoll.current);
+        popupPoll.current = null;
+        oauthPopup.current = null;
+        setConnecting(false);
+        void loadStatus();
+        toast({ description: t("settings.drive.popupClosed") });
+      }, 500);
     } catch {
+      popup.close();
+      oauthPopup.current = null;
       setConnecting(false);
+      if (switchingAccount) void loadStatus();
       toast({
         title: t("common.error"),
         description: t("settings.drive.startError"),
         variant: "destructive",
       });
+    }
+  };
+
+  const disconnect = async () => {
+    if (!window.confirm(t("settings.drive.disconnectConfirm"))) return;
+    setDisconnecting(true);
+    try {
+      const { data } = await adminApi.disconnectGoogleDriveOAuth();
+      toast({
+        title: t("settings.drive.disconnectSuccess"),
+        description: data.hadStoredCredential && !data.providerRevoked
+          ? t("settings.drive.disconnectRevokeWarning")
+          : undefined,
+      });
+      setConfigurationVersion((value) => value + 1);
+      await loadStatus();
+    } catch {
+      await loadStatus();
+      toast({
+        title: t("common.error"),
+        description: t("settings.drive.disconnectError"),
+        variant: "destructive",
+      });
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -441,11 +544,24 @@ const DriveTab = () => {
           )}
 
           {canManage ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button type="button" onClick={connect} disabled={connecting || !status.oauthConfigured}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <Button type="button" onClick={connect} disabled={connecting || disconnecting || !status.oauthConfigured}>
                 <HardDrive className="mr-1.5 h-4 w-4" />
-                {connecting ? t("settings.drive.connecting") : t("settings.drive.reconnect")}
+                {connecting
+                  ? t("settings.drive.connecting")
+                  : t(status.hasStoredCredential ? "settings.drive.switchAccount" : "settings.drive.connect")}
               </Button>
+              {status.hasStoredCredential && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={disconnect}
+                  disabled={connecting || disconnecting}
+                >
+                  <LogOut className="mr-1.5 h-4 w-4" />
+                  {disconnecting ? t("settings.drive.disconnecting") : t("settings.drive.disconnect")}
+                </Button>
+              )}
               {!status.oauthConfigured && (
                 <p className="text-xs text-destructive">{t("settings.drive.oauthNotConfigured")}</p>
               )}

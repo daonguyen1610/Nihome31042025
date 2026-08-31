@@ -65,6 +65,27 @@ public class GoogleDriveOAuthController(
         }
     }
 
+    [HttpPost("oauth/disconnect")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public async Task<ActionResult<GoogleDriveDisconnectResponse>> Disconnect(CancellationToken ct)
+    {
+        var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
+        if (!int.TryParse(rawUserId, out var userId) || userId <= 0) return Unauthorized();
+        try
+        {
+            return Ok(await oauth.DisconnectAsync(userId, ct));
+        }
+        catch (GoogleDriveSettingsValidationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (GoogleDriveSettingsConcurrencyException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+    }
+
     [HttpGet("oauth/callback")]
     [AllowAnonymous]
     public async Task<IActionResult> Callback(

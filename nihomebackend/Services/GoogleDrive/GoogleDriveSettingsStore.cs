@@ -53,6 +53,10 @@ public interface IGoogleDriveSettingsStore
         int connectedByUserId,
         string expectedConfigurationVersion,
         CancellationToken ct = default);
+    Task ClearRefreshTokenAsync(
+        int updatedByUserId,
+        string expectedConfigurationVersion,
+        CancellationToken ct = default);
 }
 
 public sealed class GoogleDriveSettingsStore(
@@ -223,6 +227,42 @@ public sealed class GoogleDriveSettingsStore(
         settings.ConnectedByUserId = connectedByUserId;
         settings.ConnectedAt = DateTime.UtcNow;
         settings.UpdatedByUserId = connectedByUserId;
+        settings.UpdatedAt = DateTime.UtcNow;
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new GoogleDriveSettingsConcurrencyException();
+        }
+    }
+
+    public async Task ClearRefreshTokenAsync(
+        int updatedByUserId,
+        string expectedConfigurationVersion,
+        CancellationToken ct = default)
+    {
+        var settings = await db.GoogleDriveCredentials.SingleOrDefaultAsync(item => item.Id == 1, ct)
+            ?? throw new GoogleDriveSettingsValidationException(
+                "Cấu hình Google Drive chưa được lưu. Hãy lưu cấu hình trong trang Admin trước khi ngắt kết nối.");
+        byte[] expectedVersion;
+        try
+        {
+            expectedVersion = Convert.FromBase64String(expectedConfigurationVersion);
+        }
+        catch (FormatException)
+        {
+            throw new GoogleDriveSettingsConcurrencyException();
+        }
+        if (!expectedVersion.SequenceEqual(settings.RowVersion))
+            throw new GoogleDriveSettingsConcurrencyException();
+        db.Entry(settings).Property(item => item.RowVersion).OriginalValue = expectedVersion;
+        settings.ProtectedRefreshToken = null;
+        settings.AccountEmail = null;
+        settings.ConnectedByUserId = null;
+        settings.ConnectedAt = null;
+        settings.UpdatedByUserId = updatedByUserId;
         settings.UpdatedAt = DateTime.UtcNow;
         try
         {

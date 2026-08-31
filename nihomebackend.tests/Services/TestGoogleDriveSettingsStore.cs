@@ -36,4 +36,9 @@ internal sealed class TestGoogleDriveSettingsStore(GoogleDriveOptions options) :
         int connectedByUserId,
         string expectedConfigurationVersion,
         CancellationToken ct = default) => throw new NotSupportedException();
+
+    public Task ClearRefreshTokenAsync(
+        int updatedByUserId,
+        string expectedConfigurationVersion,
+        CancellationToken ct = default) => throw new NotSupportedException();
 }
