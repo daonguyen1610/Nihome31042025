@@ -12,6 +12,7 @@ import {
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import SlideshowSettings from "./settings/SlideshowSettings";
+import GoogleDriveConfigurationForm from "./settings/GoogleDriveConfigurationForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +55,7 @@ const DRIVE_OAUTH_RESULT_KEYS: Record<string, string> = {
   authorization_expired: "settings.drive.oauth.authorization_expired",
   missing_refresh_token: "settings.drive.oauth.missing_refresh_token",
   root_validation_failed: "settings.drive.oauth.root_validation_failed",
+  configuration_changed: "settings.drive.oauth.configuration_changed",
   failed: "settings.drive.oauth.failed",
 };
 
@@ -313,6 +315,7 @@ const DriveTab = () => {
   const [status, setStatus] = useState<GoogleDriveAdminStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
+  const [configurationVersion, setConfigurationVersion] = useState(0);
   const canManage = has(ADMIN_PERMS.settingsManage);
 
   const loadStatus = useCallback(async () => {
@@ -373,7 +376,16 @@ const DriveTab = () => {
   };
 
   return (
-    <section className="rounded-lg border bg-card p-4 sm:p-6">
+    <div className="space-y-4">
+      <GoogleDriveConfigurationForm
+        canManage={canManage}
+        reloadKey={configurationVersion}
+        onSaved={() => {
+          setConfigurationVersion((value) => value + 1);
+          void loadStatus();
+        }}
+      />
+      <section className="rounded-lg border bg-card p-4 sm:p-6">
       <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <HardDrive className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
@@ -443,7 +455,8 @@ const DriveTab = () => {
           )}
         </div>
       )}
-    </section>
+      </section>
+    </div>
   );
 };
 

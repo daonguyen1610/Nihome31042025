@@ -61,10 +61,10 @@ public interface IGoogleDriveAdapter
 /// Shared Drive flags where Drive permits.
 /// </summary>
 public sealed class GoogleDriveAdapter(
-    GoogleDriveOptions options,
-    IGoogleDriveCredentialStore credentialStore) : IGoogleDriveAdapter, IDisposable
+    IGoogleDriveSettingsStore settingsStore) : IGoogleDriveAdapter, IDisposable
 {
     private DriveService? service;
+    private GoogleDriveOptions options = new();
     private readonly SemaphoreSlim serviceLock = new(1, 1);
 
     public async Task<DriveConnection> CheckConnectionAsync(CancellationToken ct = default)
@@ -361,7 +361,8 @@ public sealed class GoogleDriveAdapter(
 
     private async Task<DriveService> CreateServiceAsync(CancellationToken ct)
     {
-        var refreshToken = await credentialStore.GetRefreshTokenAsync(ct);
+        options = await settingsStore.GetRuntimeAsync(ct);
+        var refreshToken = options.RefreshToken;
         if (string.IsNullOrWhiteSpace(options.ClientId) ||
             string.IsNullOrWhiteSpace(options.ClientSecret) ||
             string.IsNullOrWhiteSpace(refreshToken))

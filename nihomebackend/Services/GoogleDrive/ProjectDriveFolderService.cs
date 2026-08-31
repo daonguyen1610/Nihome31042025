@@ -16,7 +16,7 @@ public interface IProjectDriveFolderService
 public sealed class ProjectDriveFolderService(
     AppDbContext db,
     IGoogleDriveAdapter drive,
-    GoogleDriveOptions options) : IProjectDriveFolderService
+    IGoogleDriveSettingsStore settingsStore) : IProjectDriveFolderService
 {
     public async Task<ProjectDriveFolder> EnsureAsync(
         OperationalProject project,
@@ -24,6 +24,7 @@ public sealed class ProjectDriveFolderService(
         int? userId = null,
         CancellationToken ct = default)
     {
+        var options = await settingsStore.GetRuntimeAsync(ct);
         if (category == ProjectDocumentCategory.Unclassified)
             throw new ProjectDocumentValidationException("Tệp chưa phân loại không thể được lưu vào thư mục dự án.");
         var existing = await db.ProjectDriveFolders.AsNoTracking().FirstOrDefaultAsync(folder =>
@@ -33,14 +34,14 @@ public sealed class ProjectDriveFolderService(
         var projectFolder = SafeFolderName($"{project.Code}_{project.Name}");
         var segments = new List<DriveFolderSegment>
         {
-            new(projectFolder, FolderIdentity("project", project.Id, null, 0)),
+            new(projectFolder, FolderIdentity(options.InstanceId, "project", project.Id, null, 0)),
         };
         var categoryPath = new List<string>();
         foreach (var name in options.Folders.SegmentsFor(category))
         {
             categoryPath.Add(name);
             segments.Add(new DriveFolderSegment(name,
-                PathIdentity(project.Id, string.Join('/', categoryPath))));
+                PathIdentity(options.InstanceId, project.Id, string.Join('/', categoryPath))));
         }
         var remote = await drive.EnsureFolderPathAsync(segments, ct);
         var now = DateTime.UtcNow;
@@ -69,22 +70,23 @@ public sealed class ProjectDriveFolderService(
         }
     }
 
-    private Dictionary<string, string> FolderIdentity(
+    private static Dictionary<string, string> FolderIdentity(
+        string instanceId,
         string kind,
         int projectId,
         ProjectDocumentCategory? category,
         int depth) => new()
         {
-            ["niconInstance"] = options.InstanceId,
+            ["niconInstance"] = instanceId,
             ["niconFolderKind"] = kind,
             ["niconProjectId"] = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ["niconCategory"] = category?.ToString() ?? string.Empty,
             ["niconFolderDepth"] = depth.ToString(System.Globalization.CultureInfo.InvariantCulture),
         };
 
-    private Dictionary<string, string> PathIdentity(int projectId, string path) => new()
+    private static Dictionary<string, string> PathIdentity(string instanceId, int projectId, string path) => new()
     {
-        ["niconInstance"] = options.InstanceId,
+        ["niconInstance"] = instanceId,
         ["niconFolderKind"] = "project-path",
         ["niconProjectId"] = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
         ["niconFolderPath"] = path,

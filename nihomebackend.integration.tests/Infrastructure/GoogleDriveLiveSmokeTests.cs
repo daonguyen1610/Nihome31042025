@@ -24,7 +24,7 @@ public sealed class GoogleDriveLiveSmokeTests
             ApplicationName = "Nicon Google Drive Live Smoke Test",
             SupportsAllDrives = true,
         };
-        using var drive = new GoogleDriveAdapter(options, new ConfiguredCredentialStore(options));
+        using var drive = new GoogleDriveAdapter(new ConfiguredSettingsStore(options));
         var connection = await drive.CheckConnectionAsync();
         Assert.True(connection.IsFolder);
         Assert.False(connection.IsTrashed);
@@ -74,18 +74,24 @@ public sealed class GoogleDriveLiveSmokeTests
         }
     }
 
-    private sealed class ConfiguredCredentialStore(GoogleDriveOptions options) : IGoogleDriveCredentialStore
+    private sealed class ConfiguredSettingsStore(GoogleDriveOptions options) : IGoogleDriveSettingsStore
     {
-        public Task<string?> GetRefreshTokenAsync(CancellationToken ct = default) =>
-            Task.FromResult<string?>(options.RefreshToken);
+        public Task<GoogleDriveOptions> GetRuntimeAsync(CancellationToken ct = default) =>
+            Task.FromResult(options);
 
-        public Task<GoogleDriveCredentialMetadata> GetMetadataAsync(CancellationToken ct = default) =>
-            Task.FromResult(new GoogleDriveCredentialMetadata(false, true, null, null));
+        public Task<GoogleDriveAdminConfigurationResponse> GetAdminAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
 
-        public Task SaveAsync(
+        public Task<GoogleDriveAdminConfigurationResponse> UpdateAsync(
+            UpdateGoogleDriveConfigurationRequest request,
+            int updatedByUserId,
+            CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task SaveRefreshTokenAsync(
             string refreshToken,
             string? accountEmail,
             int connectedByUserId,
+            string expectedConfigurationVersion,
             CancellationToken ct = default) => throw new NotSupportedException();
     }
 

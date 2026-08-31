@@ -12,7 +12,7 @@ public sealed class ProjectDocumentService(
     IProjectDocumentStorageService storage,
     IGoogleDriveAdapter drive,
     IProjectDriveFolderService folders,
-    GoogleDriveOptions driveOptions) : IProjectDocumentService, IProjectDocumentStagingService
+    IGoogleDriveSettingsStore driveSettings) : IProjectDocumentService, IProjectDocumentStagingService
 {
     public const int MaxSyncAttempts = 3;
 
@@ -30,7 +30,7 @@ public sealed class ProjectDocumentService(
         int projectId, ProjectDocumentUploadRequest request, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
         if (!await CanAccessProjectAsync(projectId, callerUserId, canSeeAll, ct)) return null;
-        if (!driveOptions.Enabled)
+        if (!(await driveSettings.GetRuntimeAsync(ct)).Enabled)
             throw new ProjectDocumentValidationException("Google Drive chưa được bật; không thể tải tệp dự án lên.");
         ValidateCategory(request.Category, allowUnclassified: false);
         await ValidateMetadataAsync(projectId, request.SourceModule, request.SourceRecordId, request.CustomerId, request.ContractId, ct);

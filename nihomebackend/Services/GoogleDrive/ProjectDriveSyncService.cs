@@ -19,7 +19,7 @@ public sealed class ProjectDriveSyncProcessor(
     IProjectDocumentStorageService storage,
     IGoogleDriveAdapter drive,
     IProjectDriveFolderService folderService,
-    GoogleDriveOptions options,
+    IGoogleDriveSettingsStore settingsStore,
     IProjectDriveClaimLease claimLease,
     IAuditLogger audit,
     ILogger<ProjectDriveSyncProcessor> logger) : IProjectDriveSyncProcessor
@@ -27,9 +27,12 @@ public sealed class ProjectDriveSyncProcessor(
     private static readonly TimeSpan ReconciliationLease = TimeSpan.FromMinutes(5);
     private const string NativeMimePrefix = "application/vnd.google-apps.";
     private const string UnsupportedNativeReason = "Tệp Google Workspace gốc chưa hỗ trợ tải xuống; có thể mở bằng liên kết Google Drive.";
+    private string currentInstanceId = string.Empty;
 
     public async Task<bool> ProcessNextOutboundAsync(CancellationToken ct = default)
     {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        currentInstanceId = options.InstanceId;
         if (!options.Enabled) return false;
         var now = DateTime.UtcNow;
         var candidates = await db.ProjectDocuments.AsNoTracking().Where(IsDueForClaim(now))
@@ -54,6 +57,8 @@ public sealed class ProjectDriveSyncProcessor(
 
     public async Task ReconcileBoundProjectsAsync(CancellationToken ct = default)
     {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        currentInstanceId = options.InstanceId;
         if (!options.Enabled) return;
         var projectIds = await db.ProjectDriveFolders.AsNoTracking()
             .Where(folder => !folder.LastReconciledAt.HasValue || folder.LastReconciledAt < DateTime.UtcNow.AddMinutes(-1))
@@ -63,6 +68,8 @@ public sealed class ProjectDriveSyncProcessor(
 
     public async Task ReconcileProjectAsync(int projectId, CancellationToken ct = default)
     {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        currentInstanceId = options.InstanceId;
         if (!options.Enabled) return;
         var folders = await db.ProjectDriveFolders.Where(folder => folder.OperationalProjectId == projectId)
             .OrderBy(folder => folder.Category).ThenBy(folder => folder.Id).ToListAsync(ct);
@@ -694,7 +701,7 @@ public sealed class ProjectDriveSyncProcessor(
         documentId = 0;
         generation = 0;
         return TryGetNiconProperty(remote.AppProperties, "Instance", out var instance) &&
-            string.Equals(instance, options.InstanceId, StringComparison.Ordinal) &&
+            string.Equals(instance, currentInstanceId, StringComparison.Ordinal) &&
             TryGetNiconProperty(remote.AppProperties, "ReplicaKey", out var replicaKey) &&
             replicaKey.StartsWith("project-document:", StringComparison.Ordinal) &&
             long.TryParse(replicaKey["project-document:".Length..], out documentId) &&
@@ -720,18 +727,24 @@ public sealed class ProjectDriveSyncProcessor(
 
 public sealed class ProjectDriveSyncService(
     IServiceScopeFactory scopeFactory,
-    GoogleDriveOptions options,
     ILogger<ProjectDriveSyncService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!options.Enabled) return;
-        var delay = TimeSpan.FromSeconds(Math.Clamp(options.PollIntervalSeconds, 5, 300));
         while (!stoppingToken.IsCancellationRequested)
         {
+            var delay = TimeSpan.FromSeconds(15);
             try
             {
                 using var scope = scopeFactory.CreateScope();
+                var settings = scope.ServiceProvider.GetRequiredService<IGoogleDriveSettingsStore>();
+                var options = await settings.GetRuntimeAsync(stoppingToken);
+                delay = TimeSpan.FromSeconds(Math.Clamp(options.PollIntervalSeconds, 5, 300));
+                if (!options.Enabled)
+                {
+                    await Task.Delay(delay, stoppingToken);
+                    continue;
+                }
                 var processor = scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>();
                 var processed = await processor.ProcessNextOutboundAsync(stoppingToken);
                 await processor.ReconcileBoundProjectsAsync(stoppingToken);

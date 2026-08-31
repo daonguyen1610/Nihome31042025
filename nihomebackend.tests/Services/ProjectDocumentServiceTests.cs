@@ -35,7 +35,7 @@ public sealed class ProjectDocumentServiceTests : IDisposable
                     DriveFolderId = $"folder-{category}",
                 });
         service = new ProjectDocumentService(db, storage.Object, drive.Object, folders.Object,
-            new GoogleDriveOptions { Enabled = true, InstanceId = "test" });
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions { Enabled = true, InstanceId = "test" }));
     }
 
     [Fact]

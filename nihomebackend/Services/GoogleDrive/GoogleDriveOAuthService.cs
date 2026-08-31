@@ -13,7 +13,6 @@ public sealed record GoogleDriveAdminStatusResponse(
     string Status,
     bool OAuthConfigured,
     bool HasStoredCredential,
-    bool UsesConfiguredFallback,
     string? AccountEmail,
     DateTime? ConnectedAt,
     string? RootFolderName,
@@ -29,9 +28,14 @@ public enum GoogleDriveOAuthResult
     TokenExchangeFailed,
     MissingRefreshToken,
     RootValidationFailed,
+    ConfigurationChanged,
 }
 
-internal sealed record GoogleDriveOAuthState(int UserId, DateTime ExpiresAt, string CodeVerifier);
+internal sealed record GoogleDriveOAuthState(
+    int UserId,
+    DateTime ExpiresAt,
+    string CodeVerifier,
+    string ConfigurationVersion);
 
 internal sealed record GoogleDriveTokenResponse(
     [property: JsonPropertyName("access_token")] string? AccessToken,
@@ -40,9 +44,8 @@ internal sealed record GoogleDriveTokenResponse(
     [property: JsonPropertyName("error_description")] string? ErrorDescription);
 
 public sealed class GoogleDriveOAuthService(
-    GoogleDriveOptions options,
     IDataProtectionProvider dataProtectionProvider,
-    IGoogleDriveCredentialStore credentialStore,
+    IGoogleDriveSettingsStore settingsStore,
     IHttpClientFactory httpClientFactory,
     IGoogleDriveAdapter drive,
     IPermissionService permissions,
@@ -52,13 +55,17 @@ public sealed class GoogleDriveOAuthService(
     private readonly IDataProtector stateProtector = dataProtectionProvider.CreateProtector(
         "Nicon.GoogleDrive.OAuthState.v1");
 
-    public GoogleDriveOAuthStartResponse CreateAuthorizationRequest(int userId)
+    public async Task<GoogleDriveOAuthStartResponse> CreateAuthorizationRequestAsync(
+        int userId,
+        CancellationToken ct = default)
     {
-        EnsureOAuthConfiguration();
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        EnsureOAuthConfiguration(options);
         var verifier = Base64UrlEncode(RandomNumberGenerator.GetBytes(48));
         var challenge = Base64UrlEncode(SHA256.HashData(Encoding.ASCII.GetBytes(verifier)));
         var state = stateProtector.Protect(JsonSerializer.Serialize(
-            new GoogleDriveOAuthState(userId, DateTime.UtcNow.AddMinutes(10), verifier), JsonOptions));
+            new GoogleDriveOAuthState(
+                userId, DateTime.UtcNow.AddMinutes(10), verifier, options.ConfigurationVersion), JsonOptions));
         var query = new Dictionary<string, string?>
         {
             ["client_id"] = options.ClientId,
@@ -110,7 +117,13 @@ public sealed class GoogleDriveOAuthService(
             return GoogleDriveOAuthResult.AuthorizationExpired;
         }
 
-        EnsureOAuthConfiguration();
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        if (!string.Equals(
+                options.ConfigurationVersion,
+                oauthState.ConfigurationVersion,
+                StringComparison.Ordinal))
+            return GoogleDriveOAuthResult.ConfigurationChanged;
+        EnsureOAuthConfiguration(options);
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://oauth2.googleapis.com/token")
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -138,26 +151,39 @@ public sealed class GoogleDriveOAuthService(
         if (string.IsNullOrWhiteSpace(token.RefreshToken))
             return GoogleDriveOAuthResult.MissingRefreshToken;
 
-        if (!await CanManageConfiguredRootAsync(token.AccessToken, ct))
+        if (!await CanManageConfiguredRootAsync(options, token.AccessToken, ct))
             return GoogleDriveOAuthResult.RootValidationFailed;
 
         var accountEmail = await TryGetAccountEmailAsync(token.AccessToken, ct);
-        await credentialStore.SaveAsync(token.RefreshToken, accountEmail, oauthState.UserId, ct);
+        try
+        {
+            await settingsStore.SaveRefreshTokenAsync(
+                token.RefreshToken,
+                accountEmail,
+                oauthState.UserId,
+                oauthState.ConfigurationVersion,
+                ct);
+        }
+        catch (GoogleDriveSettingsConcurrencyException)
+        {
+            return GoogleDriveOAuthResult.ConfigurationChanged;
+        }
         return GoogleDriveOAuthResult.Success;
     }
 
     public async Task<GoogleDriveAdminStatusResponse> GetStatusAsync(CancellationToken ct = default)
     {
-        var metadata = await credentialStore.GetMetadataAsync(ct);
+        var metadata = await settingsStore.GetAdminAsync(ct);
+        var options = await settingsStore.GetRuntimeAsync(ct);
         var configured = options.Enabled &&
             !string.IsNullOrWhiteSpace(options.ClientId) &&
             !string.IsNullOrWhiteSpace(options.ClientSecret) &&
             !string.IsNullOrWhiteSpace(options.OAuthRedirectUri);
         if (!options.Enabled)
-            return new("Disabled", configured, metadata.HasDatabaseCredential, false,
+            return new("Disabled", configured, metadata.HasRefreshToken,
                 metadata.AccountEmail, metadata.ConnectedAt, null, null, null);
-        if (!metadata.HasDatabaseCredential && !metadata.HasConfiguredFallback)
-            return new("ReconnectRequired", configured, false, false,
+        if (!metadata.HasRefreshToken)
+            return new("ReconnectRequired", configured, false,
                 null, null, null, null, "Chưa có tài khoản Google Drive được kết nối.");
 
         try
@@ -166,8 +192,7 @@ public sealed class GoogleDriveOAuthService(
             var status = !connection.IsFolder || connection.IsTrashed
                 ? "InvalidRoot"
                 : connection.CanAddChildren ? "Connected" : "ReadOnly";
-            return new(status, configured, metadata.HasDatabaseCredential,
-                !metadata.HasDatabaseCredential && metadata.HasConfiguredFallback,
+            return new(status, configured, metadata.HasRefreshToken,
                 connection.AccountEmail ?? metadata.AccountEmail, metadata.ConnectedAt,
                 connection.FolderName, connection.FolderLink,
                 status == "InvalidRoot"
@@ -182,8 +207,7 @@ public sealed class GoogleDriveOAuthService(
                 exception.GetType().Name,
                 reconnectRequired);
             return new(reconnectRequired ? "ReconnectRequired" : "Unavailable", configured,
-                metadata.HasDatabaseCredential,
-                !metadata.HasDatabaseCredential && metadata.HasConfiguredFallback,
+                metadata.HasRefreshToken,
                 metadata.AccountEmail, metadata.ConnectedAt, null, null,
                 reconnectRequired
                     ? "Quyền truy cập Google Drive đã hết hạn hoặc bị thu hồi. Hãy kết nối lại."
@@ -191,7 +215,9 @@ public sealed class GoogleDriveOAuthService(
         }
     }
 
-    public string BuildFrontendResultUrl(GoogleDriveOAuthResult result)
+    public async Task<string> BuildFrontendResultUrlAsync(
+        GoogleDriveOAuthResult result,
+        CancellationToken ct = default)
     {
         var resultValue = result switch
         {
@@ -201,10 +227,15 @@ public sealed class GoogleDriveOAuthService(
             GoogleDriveOAuthResult.AuthorizationExpired => "authorization_expired",
             GoogleDriveOAuthResult.MissingRefreshToken => "missing_refresh_token",
             GoogleDriveOAuthResult.RootValidationFailed => "root_validation_failed",
+            GoogleDriveOAuthResult.ConfigurationChanged => "configuration_changed",
             _ => "failed",
         };
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        var returnUrl = string.IsNullOrWhiteSpace(options.FrontendReturnUrl)
+            ? "/admin/settings?tab=drive"
+            : options.FrontendReturnUrl;
         return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(
-            options.FrontendReturnUrl, "driveOAuth", resultValue);
+            returnUrl, "driveOAuth", resultValue);
     }
 
     private async Task<string?> TryGetAccountEmailAsync(string? accessToken, CancellationToken ct)
@@ -224,7 +255,10 @@ public sealed class GoogleDriveOAuthService(
             : null;
     }
 
-    private async Task<bool> CanManageConfiguredRootAsync(string? accessToken, CancellationToken ct)
+    private async Task<bool> CanManageConfiguredRootAsync(
+        GoogleDriveOptions options,
+        string? accessToken,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(accessToken) || string.IsNullOrWhiteSpace(options.RootFolderId))
             return false;
@@ -253,7 +287,7 @@ public sealed class GoogleDriveOAuthService(
                canAddChildren.GetBoolean();
     }
 
-    private void EnsureOAuthConfiguration()
+    private static void EnsureOAuthConfiguration(GoogleDriveOptions options)
     {
         if (!options.Enabled || string.IsNullOrWhiteSpace(options.ClientId) ||
             string.IsNullOrWhiteSpace(options.ClientSecret) ||

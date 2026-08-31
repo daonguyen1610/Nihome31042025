@@ -68,6 +68,15 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GoogleDriveConfiguration_WithoutAuth_ReturnsUnauthorized()
+    {
+        (await Client.GetAsync("/api/site-settings/google-drive/configuration"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.PutAsJsonAsync("/api/site-settings/google-drive/configuration", new { }))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task StartGoogleDriveOAuth_WithoutAuth_ReturnsUnauthorized()
     {
         (await Client.PostAsync("/api/site-settings/google-drive/oauth/start", null))
@@ -83,8 +92,85 @@ public class SiteSettingsControllerTests : IntegrationTestBase
 
         (await Client.GetAsync("/api/site-settings/google-drive/status"))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/site-settings/google-drive/configuration"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.PutAsJsonAsync("/api/site-settings/google-drive/configuration", new { }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await Client.PostAsync("/api/site-settings/google-drive/oauth/start", null))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GoogleDriveConfiguration_AsAdmin_PersistsWithoutReturningSecret()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var currentResponse = await Client.GetAsync("/api/site-settings/google-drive/configuration");
+        currentResponse.EnsureSuccessStatusCode();
+        var current = await ReadJsonAsync(currentResponse);
+        const string secret = "integration-client-secret";
+
+        var updateResponse = await Client.PutAsJsonAsync(
+            "/api/site-settings/google-drive/configuration",
+            new
+            {
+                enabled = false,
+                clientId = "123.apps.googleusercontent.com",
+                clientSecret = secret,
+                oAuthRedirectUri = "https://example.com/api/site-settings/google-drive/oauth/callback",
+                frontendReturnUrl = "/admin/settings?tab=drive",
+                rootFolderId = "1234567890root",
+                instanceId = "nicon-integration",
+                applicationName = "Nicon Google Drive Integration",
+                folders = new
+                {
+                    surveyMedia = "01_Khao_sat",
+                    crmPreDesign = "01_CRM_PreDesign",
+                    designConcept = "02_Thiet_ke/01_So_bo_Concept",
+                    designBasic = "02_Thiet_ke/02_Co_so",
+                    designShopDrawing = "02_Thiet_ke/03_Chi_tiet_ShopDrawing",
+                    legalPermits = "03_Xin_phep_Phap_ly",
+                    constructionAcceptance = "04_Thi_cong_Nghiem_thu",
+                    procurement = "05_Cung_ung_Vat_tu",
+                    financeContracts = "06_Tai_chinh_Hop_dong",
+                },
+                supportsAllDrives = true,
+                pollIntervalSeconds = 15,
+                rowVersion = current.GetProperty("rowVersion").GetString(),
+            });
+
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var raw = await updateResponse.Content.ReadAsStringAsync();
+        raw.Should().NotContain(secret);
+        var updated = await ReadJsonAsync(updateResponse);
+        updated.TryGetProperty("clientSecret", out _).Should().BeFalse();
+        updated.GetProperty("hasClientSecret").GetBoolean().Should().BeTrue();
+        updated.GetProperty("clientId").GetString().Should().Be("123.apps.googleusercontent.com");
+    }
+
+    [Fact]
+    public async Task GoogleDriveConfiguration_InvalidEnabledPayload_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+
+        var response = await Client.PutAsJsonAsync(
+            "/api/site-settings/google-drive/configuration",
+            new
+            {
+                enabled = true,
+                clientId = "invalid",
+                clientSecret = "valid-secret-value",
+                oAuthRedirectUri = "https://example.com/wrong",
+                frontendReturnUrl = "/admin/settings?tab=drive",
+                rootFolderId = "invalid",
+                instanceId = "nicon-integration",
+                applicationName = "Nicon Google Drive Integration",
+                folders = new { },
+                supportsAllDrives = true,
+                pollIntervalSeconds = 15,
+                rowVersion = "",
+            });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

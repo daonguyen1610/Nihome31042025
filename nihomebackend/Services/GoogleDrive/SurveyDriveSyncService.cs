@@ -17,7 +17,7 @@ public sealed class SurveyDriveSyncProcessor(
     ISurveyMediaStorageService storage,
     IGoogleDriveAdapter drive,
     ISurveyMediaService mediaService,
-    GoogleDriveOptions options,
+    IGoogleDriveSettingsStore settingsStore,
     IAuditLogger audit,
     ILogger<SurveyDriveSyncProcessor> logger) : ISurveyDriveSyncProcessor
 {
@@ -29,6 +29,7 @@ public sealed class SurveyDriveSyncProcessor(
     /// </summary>
     public async Task<bool> ProcessNextAsync(CancellationToken ct = default)
     {
+        var options = await settingsStore.GetRuntimeAsync(ct);
         if (!options.Enabled) return false;
 
         var connection = await mediaService.GetDriveConnectionStatusAsync(ct);
@@ -69,7 +70,7 @@ public sealed class SurveyDriveSyncProcessor(
                     .SetProperty(m => m.UpdatedAt, now), ct);
             if (claimed == 0) continue;
 
-            await ProcessClaimAsync(id, claimToken, ct);
+            await ProcessClaimAsync(id, claimToken, options, ct);
             return true;
         }
         return false;
@@ -85,7 +86,11 @@ public sealed class SurveyDriveSyncProcessor(
          media.SyncAttemptCount <= SurveyMediaService.MaxSyncAttempts &&
          media.ClaimExpiresAt <= now));
 
-    private async Task ProcessClaimAsync(long mediaId, Guid claimToken, CancellationToken ct)
+    private async Task ProcessClaimAsync(
+        long mediaId,
+        Guid claimToken,
+        GoogleDriveOptions options,
+        CancellationToken ct)
     {
         var media = await db.SurveyMedia
             .Include(m => m.Survey).ThenInclude(s => s.LinkedProject)
@@ -178,19 +183,24 @@ public sealed class SurveyDriveSyncProcessor(
 /// </summary>
 public sealed class SurveyDriveSyncService(
     IServiceScopeFactory scopeFactory,
-    GoogleDriveOptions options,
     ILogger<SurveyDriveSyncService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!options.Enabled) return;
-
-        var delay = TimeSpan.FromSeconds(Math.Clamp(options.PollIntervalSeconds, 5, 300));
         while (!stoppingToken.IsCancellationRequested)
         {
+            var delay = TimeSpan.FromSeconds(15);
             try
             {
                 using var scope = scopeFactory.CreateScope();
+                var settings = scope.ServiceProvider.GetRequiredService<IGoogleDriveSettingsStore>();
+                var options = await settings.GetRuntimeAsync(stoppingToken);
+                delay = TimeSpan.FromSeconds(Math.Clamp(options.PollIntervalSeconds, 5, 300));
+                if (!options.Enabled)
+                {
+                    await Task.Delay(delay, stoppingToken);
+                    continue;
+                }
                 var processor = scope.ServiceProvider.GetRequiredService<ISurveyDriveSyncProcessor>();
                 if (!await processor.ProcessNextAsync(stoppingToken))
                 {

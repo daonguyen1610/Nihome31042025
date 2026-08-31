@@ -2597,7 +2597,124 @@
     "key": "settings.drive.oauth.root_validation_failed", "category": "settings", "vi": "Tài khoản vừa chọn không thể thêm tệp vào thư mục gốc đã cấu hình. Kết nối hiện tại chưa bị thay đổi.", "en": "The selected account cannot add files to the configured root folder. The current connection was not changed.", "zh": "所选帐户无法向已配置的根文件夹添加文件。当前连接未更改。", "ja": "選択したアカウントは設定済みルートフォルダーにファイルを追加できません。現在の接続は変更されていません。"
   },
   {
+    "key": "settings.drive.oauth.configuration_changed", "category": "settings", "vi": "Cấu hình đã thay đổi trong lúc kết nối. Vui lòng bắt đầu kết nối lại.", "en": "The configuration changed during authorization. Start the connection again.", "zh": "授权期间配置已更改，请重新开始连接。", "ja": "認証中に設定が変更されました。接続をやり直してください。"
+  },
+  {
     "key": "settings.drive.oauth.failed", "category": "settings", "vi": "Google không chấp nhận mã xác thực. Vui lòng thử lại.", "en": "Google did not accept the authorization code. Please try again.", "zh": "Google 未接受授权码，请重试。", "ja": "Google が認証コードを受け付けませんでした。再試行してください。"
+  },
+  {
+    "key": "settings.drive.configuration.title", "category": "settings", "vi": "Cấu hình Google Drive", "en": "Google Drive configuration", "zh": "Google Drive 配置", "ja": "Google Drive 設定"
+  },
+  {
+    "key": "settings.drive.configuration.description", "category": "settings", "vi": "Toàn bộ cấu hình được lưu an toàn trong cơ sở dữ liệu. Client secret không bao giờ được hiển thị lại.", "en": "All settings are stored securely in the database. The client secret is never displayed again.", "zh": "所有设置均安全存储在数据库中，客户端密钥不会再次显示。", "ja": "すべての設定はデータベースに安全に保存され、クライアントシークレットは再表示されません。"
+  },
+  {
+    "key": "settings.drive.configuration.enabled", "category": "settings", "vi": "Bật tích hợp", "en": "Enable integration", "zh": "启用集成", "ja": "連携を有効化"
+  },
+  {
+    "key": "settings.drive.configuration.clientId", "category": "settings", "vi": "OAuth Client ID", "en": "OAuth Client ID", "zh": "OAuth 客户端 ID", "ja": "OAuth クライアント ID"
+  },
+  {
+    "key": "settings.drive.configuration.clientSecret", "category": "settings", "vi": "OAuth Client Secret", "en": "OAuth Client Secret", "zh": "OAuth 客户端密钥", "ja": "OAuth クライアントシークレット"
+  },
+  {
+    "key": "settings.drive.configuration.secretStored", "category": "settings", "vi": "Secret đã được lưu mã hóa. Để trống để giữ nguyên.", "en": "The secret is encrypted. Leave blank to keep it unchanged.", "zh": "密钥已加密保存，留空可保持不变。", "ja": "シークレットは暗号化済みです。変更しない場合は空欄にします。"
+  },
+  {
+    "key": "settings.drive.configuration.secretMissing", "category": "settings", "vi": "Chưa có secret. Bắt buộc nhập trước khi bật tích hợp.", "en": "No secret is stored. Enter one before enabling the integration.", "zh": "尚未保存密钥，启用集成前必须输入。", "ja": "シークレットが未保存です。連携を有効にする前に入力してください。"
+  },
+  {
+    "key": "settings.drive.configuration.redirectUri", "category": "settings", "vi": "OAuth Redirect URI", "en": "OAuth Redirect URI", "zh": "OAuth 重定向 URI", "ja": "OAuth リダイレクト URI"
+  },
+  {
+    "key": "settings.drive.configuration.returnUrl", "category": "settings", "vi": "Đường dẫn quay lại Admin", "en": "Admin return path", "zh": "管理后台返回路径", "ja": "管理画面の戻り先"
+  },
+  {
+    "key": "settings.drive.configuration.rootFolderId", "category": "settings", "vi": "Root Folder ID", "en": "Root Folder ID", "zh": "根文件夹 ID", "ja": "ルートフォルダー ID"
+  },
+  {
+    "key": "settings.drive.configuration.instanceId", "category": "settings", "vi": "Mã định danh hệ thống", "en": "Deployment instance ID", "zh": "部署实例 ID", "ja": "デプロイインスタンス ID"
+  },
+  {
+    "key": "settings.drive.configuration.applicationName", "category": "settings", "vi": "Tên ứng dụng Google", "en": "Google application name", "zh": "Google 应用名称", "ja": "Google アプリケーション名"
+  },
+  {
+    "key": "settings.drive.configuration.pollInterval", "category": "settings", "vi": "Chu kỳ đồng bộ (giây)", "en": "Sync interval (seconds)", "zh": "同步间隔（秒）", "ja": "同期間隔（秒）"
+  },
+  {
+    "key": "settings.drive.configuration.folders", "category": "settings", "vi": "Cấu trúc thư mục nghiệp vụ", "en": "Business folder structure", "zh": "业务文件夹结构", "ja": "業務フォルダー構成"
+  },
+  {
+    "key": "settings.drive.configuration.folder.surveyMedia", "category": "settings", "vi": "Khảo sát", "en": "Survey media", "zh": "勘察媒体", "ja": "調査メディア"
+  },
+  {
+    "key": "settings.drive.configuration.folder.crmPreDesign", "category": "settings", "vi": "CRM / Tiền thiết kế", "en": "CRM / Pre-design", "zh": "CRM / 前期设计", "ja": "CRM / 事前設計"
+  },
+  {
+    "key": "settings.drive.configuration.folder.designConcept", "category": "settings", "vi": "Thiết kế sơ bộ", "en": "Concept design", "zh": "概念设计", "ja": "コンセプト設計"
+  },
+  {
+    "key": "settings.drive.configuration.folder.designBasic", "category": "settings", "vi": "Thiết kế cơ sở", "en": "Basic design", "zh": "基础设计", "ja": "基本設計"
+  },
+  {
+    "key": "settings.drive.configuration.folder.designShopDrawing", "category": "settings", "vi": "Thiết kế chi tiết / Shop Drawing", "en": "Detailed design / Shop drawing", "zh": "详细设计 / 施工图", "ja": "詳細設計 / 施工図"
+  },
+  {
+    "key": "settings.drive.configuration.folder.legalPermits", "category": "settings", "vi": "Xin phép / Pháp lý", "en": "Permits / Legal", "zh": "许可 / 法务", "ja": "許認可 / 法務"
+  },
+  {
+    "key": "settings.drive.configuration.folder.constructionAcceptance", "category": "settings", "vi": "Thi công / Nghiệm thu", "en": "Construction / Acceptance", "zh": "施工 / 验收", "ja": "施工 / 検収"
+  },
+  {
+    "key": "settings.drive.configuration.folder.procurement", "category": "settings", "vi": "Cung ứng / Vật tư", "en": "Procurement / Materials", "zh": "采购 / 材料", "ja": "調達 / 資材"
+  },
+  {
+    "key": "settings.drive.configuration.folder.financeContracts", "category": "settings", "vi": "Tài chính / Hợp đồng", "en": "Finance / Contracts", "zh": "财务 / 合同", "ja": "財務 / 契約"
+  },
+  {
+    "key": "settings.drive.configuration.supportsAllDrives", "category": "settings", "vi": "Hỗ trợ cả My Drive và Shared Drive", "en": "Support both My Drive and Shared Drives", "zh": "同时支持 My Drive 和共享云端硬盘", "ja": "My Drive と共有ドライブの両方をサポート"
+  },
+  {
+    "key": "settings.drive.configuration.save", "category": "settings", "vi": "Lưu cấu hình", "en": "Save configuration", "zh": "保存配置", "ja": "設定を保存"
+  },
+  {
+    "key": "settings.drive.configuration.saved", "category": "settings", "vi": "Đã lưu cấu hình Google Drive.", "en": "Google Drive configuration saved.", "zh": "Google Drive 配置已保存。", "ja": "Google Drive 設定を保存しました。"
+  },
+  {
+    "key": "settings.drive.configuration.loadError", "category": "settings", "vi": "Không tải được cấu hình Google Drive.", "en": "Failed to load Google Drive configuration.", "zh": "无法加载 Google Drive 配置。", "ja": "Google Drive 設定を読み込めませんでした。"
+  },
+  {
+    "key": "settings.drive.configuration.saveError", "category": "settings", "vi": "Không lưu được cấu hình. Kiểm tra dữ liệu và tải lại nếu cấu hình đã được người khác thay đổi.", "en": "Could not save the configuration. Check the values and reload if another user changed it.", "zh": "无法保存配置。请检查输入；如被其他用户修改，请重新加载。", "ja": "設定を保存できません。値を確認し、他のユーザーが変更した場合は再読み込みしてください。"
+  },
+  {
+    "key": "settings.drive.validation.clientId", "category": "settings", "vi": "Client ID không hợp lệ. Ví dụ: 123.apps.googleusercontent.com.", "en": "Client ID is invalid. Example: 123.apps.googleusercontent.com.", "zh": "客户端 ID 无效，例如：123.apps.googleusercontent.com。", "ja": "クライアント ID が無効です。例: 123.apps.googleusercontent.com。"
+  },
+  {
+    "key": "settings.drive.validation.clientSecret", "category": "settings", "vi": "Client Secret phải dài 8-512 ký tự.", "en": "Client Secret must contain 8-512 characters.", "zh": "客户端密钥必须为 8-512 个字符。", "ja": "クライアントシークレットは 8～512 文字で入力してください。"
+  },
+  {
+    "key": "settings.drive.validation.redirectUri", "category": "settings", "vi": "Redirect URI phải là URL HTTPS callback hợp lệ; localhost được dùng HTTP.", "en": "Redirect URI must be a valid HTTPS callback URL; localhost may use HTTP.", "zh": "重定向 URI 必须是有效的 HTTPS 回调 URL；localhost 可使用 HTTP。", "ja": "リダイレクト URI は有効な HTTPS コールバック URL にしてください。localhost は HTTP を使用できます。"
+  },
+  {
+    "key": "settings.drive.validation.returnUrl", "category": "settings", "vi": "Đường dẫn quay lại phải bắt đầu bằng /admin/ và không chứa host.", "en": "The return path must start with /admin/ and must not include a host.", "zh": "返回路径必须以 /admin/ 开头且不能包含主机。", "ja": "戻り先は /admin/ で始まり、ホストを含めないでください。"
+  },
+  {
+    "key": "settings.drive.validation.rootFolderId", "category": "settings", "vi": "Root Folder ID không hợp lệ. Chỉ nhập ID, không nhập URL.", "en": "Root Folder ID is invalid. Enter the ID, not the URL.", "zh": "根文件夹 ID 无效。请输入 ID，而不是 URL。", "ja": "ルートフォルダー ID が無効です。URL ではなく ID を入力してください。"
+  },
+  {
+    "key": "settings.drive.validation.instanceId", "category": "settings", "vi": "Instance ID phải dài 3-100 ký tự và chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang.", "en": "Instance ID must contain 3-100 letters, numbers, dots, underscores, or hyphens.", "zh": "实例 ID 必须为 3-100 个字母、数字、点、下划线或连字符。", "ja": "インスタンス ID は英数字、ドット、アンダースコア、ハイフンの 3～100 文字にしてください。"
+  },
+  {
+    "key": "settings.drive.validation.applicationName", "category": "settings", "vi": "Tên ứng dụng là bắt buộc và không vượt quá 100 ký tự.", "en": "Application name is required and cannot exceed 100 characters.", "zh": "应用名称为必填项，且不能超过 100 个字符。", "ja": "アプリケーション名は必須で、100 文字以内にしてください。"
+  },
+  {
+    "key": "settings.drive.validation.pollInterval", "category": "settings", "vi": "Chu kỳ đồng bộ phải từ 5 đến 300 giây.", "en": "Sync interval must be between 5 and 300 seconds.", "zh": "同步间隔必须为 5 到 300 秒。", "ja": "同期間隔は 5～300 秒にしてください。"
+  },
+  {
+    "key": "settings.drive.validation.folderPath", "category": "settings", "vi": "Mỗi đường dẫn thư mục là bắt buộc, không bắt đầu/kết thúc bằng / và không chứa . hoặc ..", "en": "Each folder path is required, cannot start or end with /, and cannot contain . or ..", "zh": "每个文件夹路径均为必填项，不能以 / 开头或结尾，也不能包含 . 或 ..。", "ja": "各フォルダーパスは必須です。先頭・末尾に / を付けず、. または .. を含めないでください。"
+  },
+  {
+    "key": "settings.drive.validation.folderDuplicate", "category": "settings", "vi": "Các đường dẫn thư mục nghiệp vụ không được trùng nhau.", "en": "Business folder paths must be unique.", "zh": "业务文件夹路径不得重复。", "ja": "業務フォルダーパスは重複できません。"
   },
   {
     "key": "translations.subtitle",

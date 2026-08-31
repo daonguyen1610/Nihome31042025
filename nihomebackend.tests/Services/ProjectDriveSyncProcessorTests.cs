@@ -39,14 +39,16 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
                 It.IsAny<Func<CancellationToken, Task<DriveUpload>>>(), It.IsAny<CancellationToken>()))
             .Returns((long _, Guid _, long _, Func<CancellationToken, Task<DriveUpload>> operation, CancellationToken ct) =>
                 operation(ct));
-        processor = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object, options, claimLease.Object,
+        processor = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object,
+            new TestGoogleDriveSettingsStore(options), claimLease.Object,
             Mock.Of<IAuditLogger>(), NullLogger<ProjectDriveSyncProcessor>.Instance);
     }
 
     [Fact]
     public async Task Disabled_ClaimsAndReconciliationDoNothing()
     {
-        var disabled = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object, new GoogleDriveOptions(), claimLease.Object,
+        var disabled = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object,
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions()), claimLease.Object,
             Mock.Of<IAuditLogger>(), NullLogger<ProjectDriveSyncProcessor>.Instance);
 
         Assert.False(await disabled.ProcessNextOutboundAsync());
