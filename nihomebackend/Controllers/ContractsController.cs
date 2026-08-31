@@ -579,15 +579,24 @@ public class ContractsController(
         if (stored.Result is BadRequestObjectResult bad) return bad;
         if (stored.Payload == null) return BadRequest(new { message = "Không upload được file." });
 
-        var created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
+        ContractAttachmentResponse? created;
+        try
         {
-            Kind = kind,
-            FilePath = stored.Payload!.filePath,
-            OriginalFileName = stored.Payload.originalFileName,
-            FileSize = stored.Payload.fileSize,
-            ContentType = stored.Payload.contentType,
-            Label = label,
-        }, userId.Value, canSeeAll, ct);
+            created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
+            {
+                Kind = kind,
+                FilePath = stored.Payload!.filePath,
+                OriginalFileName = stored.Payload.originalFileName,
+                FileSize = stored.Payload.fileSize,
+                ContentType = stored.Payload.contentType,
+                Label = label,
+            }, userId.Value, canSeeAll, ct);
+        }
+        catch
+        {
+            DeleteUploadedFile(stored.Payload.filePath);
+            throw;
+        }
         // ContractExistsForCallerAsync above already verified the caller
         // may write to this contract, so CreateAsync should never return
         // null here — but be defensive so a race between the ownership
@@ -724,6 +733,14 @@ public class ContractsController(
         if (contract == null) return false;
         if (!canSeeAll && contract.OwnerUserId != callerUserId) return false;
         return true;
+    }
+
+    private void DeleteUploadedFile(string filePath)
+    {
+        var fileName = Path.GetFileName(filePath);
+        if (!string.Equals(filePath, $"/files/{StorageSubfolder}/{fileName}", StringComparison.Ordinal)) return;
+        var fullPath = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder, fileName);
+        if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
     }
 
     private int? GetUserId()

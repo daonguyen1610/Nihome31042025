@@ -18,6 +18,7 @@ public class AsBuiltDocumentServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly AsBuiltDocumentService _sut;
     private readonly int _userId;
     private readonly int _projectId;
@@ -33,7 +34,8 @@ public class AsBuiltDocumentServiceTests : IDisposable
             _db,
             NullLogger<AsBuiltDocumentService>.Instance,
             categoryService,
-            _documentStorage.Object);
+            _documentStorage.Object,
+            _projectDocuments.Object);
 
         var user = new ApplicationUser
         {
@@ -56,6 +58,15 @@ public class AsBuiltDocumentServiceTests : IDisposable
             CustomerId = customer.Id,
             CurrentStage = DesignProjectStage.ShopDrawing,
         };
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-AB-001",
+            Name = "As-built operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+        project.OperationalProjectId = operationalProject.Id;
         _db.DesignProjects.Add(project);
         _db.SaveChanges();
 
@@ -107,6 +118,52 @@ public class AsBuiltDocumentServiceTests : IDisposable
         Assert.Equal("AB-002", b.DocumentCode);
         Assert.Equal("AB-003", c.DocumentCode);
         Assert.Equal("Draft", a.Status);
+    }
+
+    [Fact]
+    public async Task Create_and_update_stage_file_identity_and_replacement_diff()
+    {
+        var request = Req("Staged as-built");
+        request.FileUrl = "/files/business-documents/as-built/old.pdf";
+        var created = await _sut.CreateAsync(request, _userId);
+
+        await _sut.UpdateAsync(created.Id, new UpdateAsBuiltDocumentRequest
+        {
+            Title = created.Title,
+            Category = created.Category,
+            FileUrl = "/files/business-documents/as-built/new.pdf",
+        }, _userId);
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument), "file", created.Id,
+            "/files/business-documents/as-built/old.pdf", "old.pdf", It.IsAny<int?>(),
+            It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            It.IsAny<int>(), ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument), "file",
+            created.Id, "/files/business-documents/as-built/old.pdf", _userId,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument), "file", created.Id,
+            "/files/business-documents/as-built/new.pdf", "new.pdf", It.IsAny<int?>(),
+            It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_staging_failure_rolls_back_generated_record()
+    {
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentCategory>(), It.IsAny<ProjectDocumentSourceModule>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("staging failed"));
+        var request = Req("Rollback as-built");
+        request.FileUrl = "/files/business-documents/as-built/rollback.pdf";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(request, _userId));
+
+        Assert.Empty(await _db.AsBuiltDocuments.ToListAsync());
     }
 
     [Fact]
@@ -284,6 +341,25 @@ public class AsBuiltDocumentServiceTests : IDisposable
         });
         Assert.Equal(new[] { a1.Id, a2.Id }, res.DeletedIds.Order());
         Assert.Equal(new[] { 999 }, res.SkippedIds);
+    }
+
+    [Fact]
+    public async Task Delete_and_bulk_delete_stage_file_deletes()
+    {
+        var firstRequest = Req("Delete staged");
+        firstRequest.FileUrl = "/files/business-documents/as-built/one.pdf";
+        var first = await _sut.CreateAsync(firstRequest, _userId);
+        var secondRequest = Req("Bulk staged");
+        secondRequest.FileUrl = "/files/business-documents/as-built/two.pdf";
+        var second = await _sut.CreateAsync(secondRequest, _userId);
+
+        await _sut.DeleteAsync(first.Id);
+        await _sut.BulkDeleteAsync(new BulkDeleteAsBuiltDocumentsRequest { Ids = [second.Id] });
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            It.IsAny<int>(), ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument), "file",
+            It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
     }
 
     [Fact]

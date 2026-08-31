@@ -29,6 +29,8 @@ public sealed class SurveyDriveSyncProcessor(
     /// </summary>
     public async Task<bool> ProcessNextAsync(CancellationToken ct = default)
     {
+        if (!options.Enabled) return false;
+
         var connection = await mediaService.GetDriveConnectionStatusAsync(ct);
         if (!string.Equals(connection.Status, "Connected", StringComparison.Ordinal))
         {
@@ -74,12 +76,14 @@ public sealed class SurveyDriveSyncProcessor(
     }
 
     internal static Expression<Func<SurveyMedia, bool>> IsDueForClaim(DateTime now) => media =>
-        (media.SyncStatus == SurveyMediaSyncStatus.Pending &&
+        (media.Survey == null || media.Survey.LinkedOpportunityId == null ||
+         media.Survey.LinkedOpportunity!.OperationalProjectId == null) &&
+        ((media.SyncStatus == SurveyMediaSyncStatus.Pending &&
          media.SyncAttemptCount < SurveyMediaService.MaxSyncAttempts &&
          (!media.NextSyncAttemptAt.HasValue || media.NextSyncAttemptAt <= now)) ||
         (media.SyncStatus == SurveyMediaSyncStatus.Processing &&
          media.SyncAttemptCount <= SurveyMediaService.MaxSyncAttempts &&
-         media.ClaimExpiresAt <= now);
+         media.ClaimExpiresAt <= now));
 
     private async Task ProcessClaimAsync(long mediaId, Guid claimToken, CancellationToken ct)
     {
@@ -179,6 +183,8 @@ public sealed class SurveyDriveSyncService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        if (!options.Enabled) return;
+
         var delay = TimeSpan.FromSeconds(Math.Clamp(options.PollIntervalSeconds, 5, 300));
         while (!stoppingToken.IsCancellationRequested)
         {

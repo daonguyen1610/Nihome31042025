@@ -897,6 +897,58 @@ export interface UpdateOperationalProjectRequest extends CreateOperationalProjec
   rowVersion?: string;
 }
 
+export interface ProjectDocumentCategoryResponse {
+  value: string;
+  folderPath: string;
+  translationKey: string;
+}
+
+export type ProjectDocumentSyncStatus =
+  | "Pending"
+  | "Processing"
+  | "Synced"
+  | "Failed"
+  | "Deleted"
+  | "Conflict";
+
+export type ProjectDocumentSourceType =
+  | "ManualUpload"
+  | "ExistingManagedFile"
+  | "GoogleDriveImport";
+
+export interface ProjectDocumentResponse {
+  id: number;
+  operationalProjectId: number;
+  category: string;
+  sourceModule: string;
+  sourceType: ProjectDocumentSourceType;
+  sourceEntityType?: string | null;
+  sourceSlot?: string | null;
+  sourceRecordId?: number | null;
+  customerId?: number | null;
+  contractId?: number | null;
+  originalFileName: string;
+  contentType: string;
+  size: number;
+  sha256: string;
+  origin: string;
+  generation: number;
+  desiredOperation: string;
+  syncStatus: ProjectDocumentSyncStatus;
+  syncAttemptCount: number;
+  maxSyncAttempts: number;
+  syncError?: string | null;
+  nextSyncAttemptAt?: string | null;
+  driveWebViewLink?: string | null;
+  driveModifiedAt?: string | null;
+  isDownloadable: boolean;
+  unsupportedReason?: string | null;
+  conflictState: "None" | "PendingConfirmation";
+  conflictWithDocumentId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ContractResponse {
   id: number;
   contractNumber: string;
@@ -4164,6 +4216,30 @@ export const adminApi = {
     api.put<OperationalProjectResponse>(`/operational-projects/${id}`, body),
   deleteOperationalProject: (id: number, rowVersion?: string) =>
     api.delete(`/operational-projects/${id}`, withIfMatch(rowVersion)),
+  listProjectDocumentCategories: () =>
+    api.get<ProjectDocumentCategoryResponse[]>("/operational-projects/document-categories"),
+  listProjectDocuments: (projectId: number) =>
+    api.get<ProjectDocumentResponse[]>(`/operational-projects/${projectId}/documents`),
+  uploadProjectDocument: (projectId: number, file: File, category: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("category", category);
+    return api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents`, formData);
+  },
+  downloadProjectDocument: (projectId: number, documentId: number) =>
+    api.get<Blob>(`/operational-projects/${projectId}/documents/${documentId}/content`, {
+      responseType: "blob",
+    }),
+  deleteProjectDocument: (projectId: number, documentId: number) =>
+    api.delete(`/operational-projects/${projectId}/documents/${documentId}`),
+  retryProjectDocument: (projectId: number, documentId: number) =>
+    api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents/${documentId}/retry`),
+  classifyProjectDocument: (projectId: number, documentId: number, category: string) =>
+    api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents/${documentId}/classify`, { category }),
+  resolveProjectDocumentKeepBoth: (projectId: number, documentId: number) =>
+    api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents/${documentId}/resolve-conflict`, {
+      confirmKeepBoth: true,
+    }),
 
   // Contracts (NIH-102)
   listContracts: (params?: ContractListParams) =>

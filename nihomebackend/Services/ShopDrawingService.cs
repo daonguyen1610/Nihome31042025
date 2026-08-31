@@ -14,6 +14,7 @@ namespace NihomeBackend.Services;
 public class ShopDrawingService(
     AppDbContext db,
     ILogger<ShopDrawingService> logger,
+    IProjectDocumentStagingService projectDocuments,
     IWebHostEnvironment? env = null) : IShopDrawingService
 {
     private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
@@ -288,6 +289,16 @@ public class ShopDrawingService(
                 && revision.TargetId == id)
             .ToListAsync(ct);
         var managedFile = ToManagedFullPath(entity.FilePath);
+        var projectId = await db.DesignProjects.AsNoTracking()
+            .Where(project => project.Id == entity.DesignProjectId)
+            .Select(project => project.OperationalProjectId)
+            .SingleAsync(ct);
+        if (projectId.HasValue && !string.IsNullOrWhiteSpace(entity.FilePath))
+        {
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectId.Value, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+                entity.Id, entity.FilePath, entity.UpdatedByUserId, ct);
+        }
         db.IfcReleaseItems.RemoveRange(releaseItems);
         db.DrawingRevisions.RemoveRange(revisions);
         db.ShopDrawings.Remove(entity);
@@ -336,6 +347,17 @@ public class ShopDrawingService(
                 .Where(revision => revision.TargetType == DrawingRevisionTargetType.ShopDrawing
                     && drawingIds.Contains(revision.TargetId))
                 .ToListAsync(ct);
+
+            var projects = await db.DesignProjects.AsNoTracking()
+                .Where(project => rows.Select(row => row.DesignProjectId).Contains(project.Id))
+                .ToDictionaryAsync(project => project.Id, project => project.OperationalProjectId, ct);
+            foreach (var row in rows.Where(row => !string.IsNullOrWhiteSpace(row.FilePath)))
+            {
+                if (projects[row.DesignProjectId] is not int projectId) continue;
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+                    row.Id, row.FilePath!, row.UpdatedByUserId, ct);
+            }
 
             db.IfcReleaseItems.RemoveRange(releaseItems);
             db.DrawingRevisions.RemoveRange(revisions);
@@ -450,7 +472,8 @@ public class ShopDrawingService(
         }
 
         var now = DateTime.UtcNow;
-        var previousFile = ToManagedFullPath(entity.FilePath);
+        var previousPath = entity.FilePath;
+        var previousFile = ToManagedFullPath(previousPath);
         var relativeDir = Path.Combine("files", "design", "shop");
         var uploadDir = Path.Combine(_contentRoot, "wwwroot", relativeDir);
         Directory.CreateDirectory(uploadDir);
@@ -476,6 +499,20 @@ public class ShopDrawingService(
 
         try
         {
+            if (entity.DesignProject.OperationalProjectId.HasValue)
+            {
+                if (!string.IsNullOrWhiteSpace(previousPath))
+                {
+                    await projectDocuments.StageExistingManagedFileDeleteAsync(
+                        entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                        nameof(ShopDrawing), "file", entity.Id, previousPath, callerUserId, ct);
+                }
+                await projectDocuments.StageExistingManagedFileAsync(
+                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentCategory.DesignShopDrawing,
+                    ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file", entity.Id,
+                    entity.FilePath, entity.OriginalFileName!, entity.DesignProject.CustomerId,
+                    entity.DesignProject.ContractId, callerUserId, ct);
+            }
             await db.SaveChangesAsync(ct);
         }
         catch

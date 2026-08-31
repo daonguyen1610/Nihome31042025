@@ -7,7 +7,18 @@ using GoogleFile = Google.Apis.Drive.v3.Data.File;
 namespace NihomeBackend.Services.GoogleDrive;
 
 public sealed record DriveFolder(string Id, string Link);
-public sealed record DriveUpload(string FileId);
+public sealed record DriveFolderSegment(string Name, IReadOnlyDictionary<string, string> AppProperties);
+public sealed record DriveUpload(string FileId, string? Version = null, DateTime? ModifiedAt = null, string? Link = null);
+public sealed record DriveItem(
+    string Id,
+    string Name,
+    string MimeType,
+    long? Size,
+    string? Version,
+    DateTime? ModifiedAt,
+    string? Link,
+    IReadOnlyDictionary<string, string> AppProperties,
+    bool IsTrashed);
 public sealed record DriveConnection(
     string? AccountEmail,
     string FolderName,
@@ -21,6 +32,7 @@ public interface IGoogleDriveAdapter
 {
     Task<DriveConnection> CheckConnectionAsync(CancellationToken ct = default);
     Task<DriveFolder> EnsureFolderPathAsync(IReadOnlyList<string> folderNames, CancellationToken ct = default);
+    Task<DriveFolder> EnsureFolderPathAsync(IReadOnlyList<DriveFolderSegment> folders, CancellationToken ct = default);
     Task<DriveUpload> UploadAsync(
         string folderId,
         long surveyMediaId,
@@ -28,6 +40,19 @@ public interface IGoogleDriveAdapter
         string contentType,
         Stream content,
         CancellationToken ct = default);
+    Task<DriveUpload> UploadAsync(
+        string folderId,
+        string replicaKey,
+        long generation,
+        string fileName,
+        string contentType,
+        Stream content,
+        CancellationToken ct = default);
+    Task<IReadOnlyList<DriveItem>> ListChildrenAsync(string folderId, CancellationToken ct = default);
+    Task DownloadAsync(string fileId, Stream destination, CancellationToken ct = default);
+    Task<DriveItem?> GetMetadataAsync(string fileId, CancellationToken ct = default);
+    Task UpdateFileNameAsync(string fileId, string fileName, CancellationToken ct = default);
+    Task MoveAsync(string fileId, string destinationFolderId, CancellationToken ct = default);
     Task DeleteAsync(string fileId, CancellationToken ct = default);
 }
 
@@ -61,11 +86,16 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     public async Task<DriveFolder> EnsureFolderPathAsync(
         IReadOnlyList<string> folderNames, CancellationToken ct = default)
+        => await EnsureFolderPathAsync(folderNames.Select(name =>
+            new DriveFolderSegment(name, new Dictionary<string, string>())).ToList(), ct);
+
+    public async Task<DriveFolder> EnsureFolderPathAsync(
+        IReadOnlyList<DriveFolderSegment> folders, CancellationToken ct = default)
     {
         var parentId = options.RootFolderId;
-        foreach (var folderName in folderNames)
+        foreach (var folder in folders)
         {
-            parentId = await FindOrCreateFolderAsync(parentId, folderName, ct);
+            parentId = await FindOrCreateFolderAsync(parentId, folder, ct);
         }
         return new DriveFolder(parentId, $"https://drive.google.com/drive/folders/{parentId}");
     }
@@ -88,7 +118,7 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
             Parents = [folderId],
             AppProperties = new Dictionary<string, string>
             {
-                ["nihomeSurveyMediaId"] = idempotencyValue,
+                ["niconSurveyMediaId"] = idempotencyValue,
             },
         };
         var request = Service.Files.Create(metadata, content, contentType);
@@ -102,12 +132,147 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         return new DriveUpload(request.ResponseBody.Id);
     }
 
-    private async Task<string?> FindUploadedFileAsync(
-        string folderId, string idempotencyValue, CancellationToken ct)
+    public async Task<DriveUpload> UploadAsync(
+        string folderId,
+        string replicaKey,
+        long generation,
+        string fileName,
+        string contentType,
+        Stream content,
+        CancellationToken ct = default)
+    {
+        var generationValue = generation.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var existing = await FindReplicaAsync(folderId, replicaKey, generationValue, ct);
+        if (existing is not null) return ToUpload(existing);
+
+        var metadata = new GoogleFile
+        {
+            Name = fileName,
+            Parents = [folderId],
+            AppProperties = new Dictionary<string, string>
+            {
+                ["niconInstance"] = options.InstanceId,
+                ["niconReplicaKey"] = replicaKey,
+                ["niconGeneration"] = generationValue,
+            },
+        };
+        var request = Service.Files.Create(metadata, content, contentType);
+        request.Fields = ItemFields;
+        request.SupportsAllDrives = options.SupportsAllDrives;
+        var progress = await request.UploadAsync(ct);
+        if (progress.Status != Google.Apis.Upload.UploadStatus.Completed || request.ResponseBody?.Id is null)
+            throw progress.Exception ?? new InvalidOperationException("Google Drive không trả về mã tệp sau khi tải lên.");
+        return ToUpload(request.ResponseBody);
+    }
+
+    public async Task<IReadOnlyList<DriveItem>> ListChildrenAsync(string folderId, CancellationToken ct = default)
+    {
+        var items = new List<DriveItem>();
+        string? pageToken = null;
+        do
+        {
+            var request = Service.Files.List();
+            request.Q = $"'{EscapeQueryValue(folderId)}' in parents and trashed = false";
+            request.Fields = $"nextPageToken,files({ItemFields})";
+            request.PageSize = 1000;
+            request.PageToken = pageToken;
+            request.SupportsAllDrives = options.SupportsAllDrives;
+            request.IncludeItemsFromAllDrives = options.SupportsAllDrives;
+            var response = await request.ExecuteAsync(ct);
+            items.AddRange(response.Files?.Select(ToItem) ?? []);
+            pageToken = response.NextPageToken;
+        } while (!string.IsNullOrWhiteSpace(pageToken));
+        return items;
+    }
+
+    public async Task DownloadAsync(string fileId, Stream destination, CancellationToken ct = default)
+    {
+        var request = Service.Files.Get(fileId);
+        request.SupportsAllDrives = options.SupportsAllDrives;
+        var progress = await request.DownloadAsync(destination, ct);
+        if (progress.Status != Google.Apis.Download.DownloadStatus.Completed)
+            throw progress.Exception ?? new InvalidOperationException("Không thể tải tệp từ Google Drive.");
+    }
+
+    public async Task<DriveItem?> GetMetadataAsync(string fileId, CancellationToken ct = default)
+    {
+        var request = Service.Files.Get(fileId);
+        request.Fields = ItemFields;
+        request.SupportsAllDrives = options.SupportsAllDrives;
+        try
+        {
+            return ToItem(await request.ExecuteAsync(ct));
+        }
+        catch (GoogleApiException exception) when (exception.HttpStatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    public async Task UpdateFileNameAsync(string fileId, string fileName, CancellationToken ct = default)
+    {
+        var request = Service.Files.Update(new GoogleFile { Name = fileName }, fileId);
+        request.Fields = "id,name";
+        request.SupportsAllDrives = options.SupportsAllDrives;
+        await request.ExecuteAsync(ct);
+    }
+
+    public async Task MoveAsync(string fileId, string destinationFolderId, CancellationToken ct = default)
+    {
+        var metadataRequest = Service.Files.Get(fileId);
+        metadataRequest.Fields = "parents";
+        metadataRequest.SupportsAllDrives = options.SupportsAllDrives;
+        var metadata = await metadataRequest.ExecuteAsync(ct);
+        var request = Service.Files.Update(new GoogleFile(), fileId);
+        request.AddParents = destinationFolderId;
+        request.RemoveParents = string.Join(',', metadata.Parents ?? []);
+        request.Fields = ItemFields;
+        request.SupportsAllDrives = options.SupportsAllDrives;
+        await request.ExecuteAsync(ct);
+    }
+
+    private async Task<GoogleFile?> FindReplicaAsync(
+        string folderId, string replicaKey, string generation, CancellationToken ct)
+    {
+        return await FindReplicaAsync(folderId, replicaKey, generation, "nicon", ct) ??
+            await FindReplicaAsync(folderId, replicaKey, generation, "nihome", ct);
+    }
+
+    private async Task<GoogleFile?> FindReplicaAsync(
+        string folderId,
+        string replicaKey,
+        string generation,
+        string propertyPrefix,
+        CancellationToken ct)
     {
         var list = Service.Files.List();
         list.Q = $"'{EscapeQueryValue(folderId)}' in parents and " +
-            $"appProperties has {{ key='nihomeSurveyMediaId' and value='{EscapeQueryValue(idempotencyValue)}' }} and " +
+            $"appProperties has {{ key='{propertyPrefix}Instance' and value='{EscapeQueryValue(options.InstanceId)}' }} and " +
+            $"appProperties has {{ key='{propertyPrefix}ReplicaKey' and value='{EscapeQueryValue(replicaKey)}' }} and " +
+            $"appProperties has {{ key='{propertyPrefix}Generation' and value='{EscapeQueryValue(generation)}' }} and trashed = false";
+        list.Fields = $"files({ItemFields})";
+        list.PageSize = 1;
+        list.SupportsAllDrives = options.SupportsAllDrives;
+        list.IncludeItemsFromAllDrives = options.SupportsAllDrives;
+        return (await list.ExecuteAsync(ct)).Files?.FirstOrDefault();
+    }
+
+    private async Task<string?> FindUploadedFileAsync(
+        string folderId, string idempotencyValue, CancellationToken ct)
+    {
+        return await FindUploadedFileAsync(folderId, idempotencyValue, "niconSurveyMediaId", ct) ??
+            await FindUploadedFileAsync(folderId, idempotencyValue, "nihomeSurveyMediaId", ct);
+    }
+
+    private async Task<string?> FindUploadedFileAsync(
+        string folderId,
+        string idempotencyValue,
+        string propertyName,
+        CancellationToken ct)
+    {
+        var list = Service.Files.List();
+        list.Q = $"'{EscapeQueryValue(folderId)}' in parents and " +
+            $"appProperties has {{ key='{propertyName}' and value='{EscapeQueryValue(idempotencyValue)}' }} and " +
             "trashed = false";
         list.Fields = "files(id)";
         list.PageSize = 1;
@@ -119,7 +284,8 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     public async Task DeleteAsync(string fileId, CancellationToken ct = default)
     {
-        var request = Service.Files.Delete(fileId);
+        var request = Service.Files.Update(new GoogleFile { Trashed = true }, fileId);
+        request.Fields = "id,trashed";
         request.SupportsAllDrives = options.SupportsAllDrives;
         try
         {
@@ -130,11 +296,13 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
         }
     }
 
-    private async Task<string> FindOrCreateFolderAsync(string parentId, string folderName, CancellationToken ct)
+    private async Task<string> FindOrCreateFolderAsync(string parentId, DriveFolderSegment folder, CancellationToken ct)
     {
-        var escapedName = EscapeQueryValue(folderName);
+        var identityQuery = string.Join(" and ", folder.AppProperties.OrderBy(property => property.Key).Select(property =>
+            $"appProperties has {{ key='{EscapeQueryValue(property.Key)}' and value='{EscapeQueryValue(property.Value)}' }}"));
         var list = Service.Files.List();
-        list.Q = $"name = '{escapedName}' and '{EscapeQueryValue(parentId)}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+        list.Q = $"'{EscapeQueryValue(parentId)}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false" +
+            (identityQuery.Length == 0 ? $" and name = '{EscapeQueryValue(folder.Name)}'" : $" and {identityQuery}");
         list.Fields = "files(id,name)";
         list.PageSize = 2;
         list.SupportsAllDrives = options.SupportsAllDrives;
@@ -145,9 +313,12 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
         var create = Service.Files.Create(new GoogleFile
         {
-            Name = folderName,
+            Name = folder.Name,
             MimeType = "application/vnd.google-apps.folder",
             Parents = [parentId],
+            AppProperties = folder.AppProperties.Count == 0
+                ? null
+                : new Dictionary<string, string>(folder.AppProperties),
         });
         create.Fields = "id";
         create.SupportsAllDrives = options.SupportsAllDrives;
@@ -156,6 +327,19 @@ public sealed class GoogleDriveAdapter(GoogleDriveOptions options) : IGoogleDriv
 
     private static string EscapeQueryValue(string value) =>
         value.Replace("\\", "\\\\").Replace("'", "\\'");
+
+    private const string ItemFields = "id,name,mimeType,size,version,modifiedTime,webViewLink,appProperties,trashed";
+
+    private static DriveItem ToItem(GoogleFile file) => new(
+        file.Id, file.Name ?? string.Empty, file.MimeType ?? "application/octet-stream", file.Size,
+        file.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture), file.ModifiedTimeDateTimeOffset?.UtcDateTime,
+        file.WebViewLink, file.AppProperties is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(file.AppProperties), file.Trashed == true);
+
+    private static DriveUpload ToUpload(GoogleFile file) => new(
+        file.Id, file.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        file.ModifiedTimeDateTimeOffset?.UtcDateTime, file.WebViewLink);
 
     private DriveService Service => service ??= CreateService();
 

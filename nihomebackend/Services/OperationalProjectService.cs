@@ -283,6 +283,7 @@ public class OperationalProjectService(
         await db.Opportunities.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
         await db.Quotes.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
         await db.Contracts.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
+        await db.ProjectDocuments.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
         await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct);
 
     private async Task ValidateAsync(

@@ -24,7 +24,8 @@ public class QuoteServiceTests : IDisposable
             _db,
             _notifications.Object,
             Mock.Of<IQuoteDocumentService>(),
-            NullLogger<QuoteService>.Instance);
+            NullLogger<QuoteService>.Instance,
+            Mock.Of<IProjectDocumentStagingService>());
     }
 
     public void Dispose() => _db.Dispose();

@@ -10,6 +10,8 @@ internal static class AggregateDeletionService
     public static async Task<IReadOnlyList<int>> DeleteCustomerAsync(
         AppDbContext db,
         Customer customer,
+        IProjectDocumentStagingService projectDocuments,
+        int? userId,
         CancellationToken ct)
     {
         var customerId = customer.Id;
@@ -30,8 +32,8 @@ internal static class AggregateDeletionService
             .Select(tender => tender.Id)
             .ToListAsync(ct);
 
-        await DeleteDesignProjectsAsync(db, designProjectIds, ct);
-        var quoteIds = await DeleteOpportunitiesAsync(db, opportunityIds, ct);
+        await DeleteDesignProjectsAsync(db, designProjectIds, projectDocuments, userId, ct);
+        var quoteIds = await DeleteOpportunitiesAsync(db, opportunityIds, projectDocuments, userId, ct);
 
         var convertedLeads = await db.Leads
             .Where(lead => lead.ConvertedCustomerId == customerId)
@@ -44,6 +46,7 @@ internal static class AggregateDeletionService
         var contracts = await db.Contracts
             .Where(contract => contractIds.Contains(contract.Id))
             .ToListAsync(ct);
+        await StageContractDocumentDeletesAsync(db, contracts, projectDocuments, userId, ct);
         var tenders = await db.Tenders
             .Where(tender => tenderIds.Contains(tender.Id))
             .Include(tender => tender.ChecklistItems)
@@ -62,6 +65,8 @@ internal static class AggregateDeletionService
     public static async Task<IReadOnlyList<int>> DeleteOpportunitiesAsync(
         AppDbContext db,
         IReadOnlyCollection<int> opportunityIds,
+        IProjectDocumentStagingService projectDocuments,
+        int? userId,
         CancellationToken ct)
     {
         if (opportunityIds.Count == 0) return Array.Empty<int>();
@@ -79,6 +84,7 @@ internal static class AggregateDeletionService
         var quotes = await db.Quotes
             .Where(quote => quoteIds.Contains(quote.Id))
             .ToListAsync(ct);
+        await StageQuoteDocumentDeletesAsync(db, quotes, projectDocuments, userId, ct);
         var contracts = await db.Contracts
             .Where(contract => contract.OpportunityId.HasValue
                 && foundIds.Contains(contract.OpportunityId.Value))
@@ -111,6 +117,8 @@ internal static class AggregateDeletionService
     public static async Task DeleteDesignProjectsAsync(
         AppDbContext db,
         IReadOnlyCollection<int> designProjectIds,
+        IProjectDocumentStagingService projectDocuments,
+        int? userId,
         CancellationToken ct)
     {
         if (designProjectIds.Count == 0) return;
@@ -121,6 +129,7 @@ internal static class AggregateDeletionService
         if (projects.Count == 0) return;
 
         var foundIds = projects.Select(project => project.Id).ToList();
+        await StageDesignDocumentDeletesAsync(db, projects, projectDocuments, userId, ct);
         var conceptIds = await db.ConceptOptions
             .Where(option => foundIds.Contains(option.DesignProjectId))
             .Select(option => option.Id)
@@ -202,6 +211,120 @@ internal static class AggregateDeletionService
         await RemoveTranslationsAsync(db, EntityTypes.AsBuiltDocument, asBuiltDocumentIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.HandoverRecord, handoverRecordIds, ct);
         await RemoveTranslationsAsync(db, EntityTypes.DesignProject, foundIds, ct);
+    }
+
+    private static async Task StageQuoteDocumentDeletesAsync(
+        AppDbContext db, IReadOnlyCollection<Quote> quotes,
+        IProjectDocumentStagingService projectDocuments, int? userId, CancellationToken ct)
+    {
+        var linked = quotes.Where(quote => quote.OperationalProjectId.HasValue).ToList();
+        if (linked.Count == 0) return;
+        var quoteIds = linked.Select(quote => quote.Id).ToList();
+        var documents = await db.QuoteDocuments
+            .Where(document => quoteIds.Contains(document.QuoteId))
+            .ToListAsync(ct);
+        var projectByQuote = linked.ToDictionary(quote => quote.Id, quote => quote.OperationalProjectId!.Value);
+        foreach (var document in documents)
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectByQuote[document.QuoteId], ProjectDocumentSourceModule.Crm,
+                nameof(QuoteDocument), "file", document.Id, document.FilePath, userId, ct);
+    }
+
+    private static async Task StageContractDocumentDeletesAsync(
+        AppDbContext db, IReadOnlyCollection<Contract> contracts,
+        IProjectDocumentStagingService projectDocuments, int? userId, CancellationToken ct)
+    {
+        var linked = contracts.Where(contract => contract.OperationalProjectId.HasValue).ToList();
+        if (linked.Count == 0) return;
+        var contractIds = linked.Select(contract => contract.Id).ToList();
+        var projectByContract = linked.ToDictionary(contract => contract.Id, contract => contract.OperationalProjectId!.Value);
+        var attachments = await db.ContractAttachments
+            .Where(document => contractIds.Contains(document.ContractId)).ToListAsync(ct);
+        foreach (var document in attachments)
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectByContract[document.ContractId], ProjectDocumentSourceModule.Crm,
+                nameof(ContractAttachment), "file", document.Id, document.FilePath, userId, ct);
+        var appendices = await db.ContractAppendices
+            .Where(document => contractIds.Contains(document.ContractId) && document.FilePath != null).ToListAsync(ct);
+        foreach (var document in appendices)
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectByContract[document.ContractId], ProjectDocumentSourceModule.Crm,
+                nameof(ContractAppendix), "file", document.Id, document.FilePath!, userId, ct);
+    }
+
+    private static async Task StageDesignDocumentDeletesAsync(
+        AppDbContext db, IReadOnlyCollection<DesignProject> projects,
+        IProjectDocumentStagingService projectDocuments, int? userId, CancellationToken ct)
+    {
+        var linked = projects.Where(project => project.OperationalProjectId.HasValue).ToList();
+        if (linked.Count == 0) return;
+        var designProjectIds = linked.Select(project => project.Id).ToList();
+        var projectByDesign = linked.ToDictionary(project => project.Id, project => project.OperationalProjectId!.Value);
+        var basicDocuments = await db.BasicDesignDocs
+            .Where(document => designProjectIds.Contains(document.DesignProjectId) && document.FilePath != null)
+            .ToListAsync(ct);
+        foreach (var document in basicDocuments)
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectByDesign[document.DesignProjectId], ProjectDocumentSourceModule.Design,
+                nameof(BasicDesignDoc), "file", document.Id, document.FilePath!, userId, ct);
+        var shopDrawings = await db.ShopDrawings
+            .Where(document => designProjectIds.Contains(document.DesignProjectId) && document.FilePath != null)
+            .ToListAsync(ct);
+        foreach (var document in shopDrawings)
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectByDesign[document.DesignProjectId], ProjectDocumentSourceModule.Design,
+                nameof(ShopDrawing), "file", document.Id, document.FilePath!, userId, ct);
+        var permits = await db.PermitChecklistItems
+            .Where(document => designProjectIds.Contains(document.DesignProjectId) &&
+                (document.SubmittedFilePath != null || document.IssuedFilePath != null))
+            .ToListAsync(ct);
+        foreach (var document in permits)
+        {
+            var projectId = projectByDesign[document.DesignProjectId];
+            if (!string.IsNullOrWhiteSpace(document.SubmittedFilePath))
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+                    "submittedPackage", document.Id, document.SubmittedFilePath, userId, ct);
+            if (!string.IsNullOrWhiteSpace(document.IssuedFilePath))
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+                    "issuedPermit", document.Id, document.IssuedFilePath, userId, ct);
+        }
+        var acceptances = await db.AcceptanceRecords
+            .Where(record => designProjectIds.Contains(record.DesignProjectId) && record.Documents != null)
+            .ToListAsync(ct);
+        foreach (var record in acceptances)
+            foreach (var path in DeserializeManagedPaths(record.Documents, "/files/business-documents/acceptance/"))
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectByDesign[record.DesignProjectId], ProjectDocumentSourceModule.Acceptance,
+                    nameof(AcceptanceRecord), "documents", record.Id, path, userId, ct);
+        var asBuiltDocuments = await db.AsBuiltDocuments
+            .Where(document => designProjectIds.Contains(document.DesignProjectId) && document.FileUrl != null)
+            .ToListAsync(ct);
+        foreach (var document in asBuiltDocuments)
+            if (document.FileUrl!.StartsWith("/files/business-documents/as-built/", StringComparison.OrdinalIgnoreCase))
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectByDesign[document.DesignProjectId], ProjectDocumentSourceModule.Acceptance,
+                    nameof(AsBuiltDocument), "file", document.Id, document.FileUrl, userId, ct);
+        var handovers = await db.HandoverRecords
+            .Where(record => designProjectIds.Contains(record.DesignProjectId) && record.Documents != null)
+            .ToListAsync(ct);
+        foreach (var record in handovers)
+            foreach (var path in DeserializeManagedPaths(record.Documents, "/files/business-documents/handover/"))
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectByDesign[record.DesignProjectId], ProjectDocumentSourceModule.Handover,
+                    nameof(HandoverRecord), "documents", record.Id, path, userId, ct);
+    }
+
+    private static IEnumerable<string> DeserializeManagedPaths(string? json, string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(json)) yield break;
+        List<string>? paths;
+        try { paths = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json); }
+        catch (System.Text.Json.JsonException) { yield break; }
+        if (paths is null) yield break;
+        foreach (var path in paths.Select(value => value?.Trim()).Where(value => !string.IsNullOrWhiteSpace(value)))
+            if (path!.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) yield return path;
     }
 
     private static async Task RemoveTranslationsAsync(

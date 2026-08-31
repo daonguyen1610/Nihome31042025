@@ -19,6 +19,7 @@ namespace NihomeBackend.Services;
 public class ContractAppendixService(
     AppDbContext db,
     ILogger<ContractAppendixService> logger,
+    IProjectDocumentStagingService projectDocuments,
     IWebHostEnvironment? env = null)
     : IContractAppendixService
 {
@@ -98,10 +99,30 @@ public class ContractAppendixService(
             UpdatedByUserId = callerUserId,
         };
         db.ContractAppendices.Add(entity);
-        await db.SaveChangesAsync(ct);
-        if (transaction is not null)
+        try
         {
-            await transaction.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+            if (contract.OperationalProjectId.HasValue && !string.IsNullOrWhiteSpace(entity.FilePath))
+            {
+                await projectDocuments.StageExistingManagedFileAsync(
+                    contract.OperationalProjectId.Value, ProjectDocumentCategory.FinanceContracts,
+                    ProjectDocumentSourceModule.Crm, nameof(ContractAppendix), "file", entity.Id,
+                    entity.FilePath, entity.OriginalFileName ?? Path.GetFileName(entity.FilePath),
+                    contract.CustomerId, contract.Id, callerUserId, ct);
+                await db.SaveChangesAsync(ct);
+            }
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            else if (entity.Id > 0)
+            {
+                db.ContractAppendices.Remove(entity);
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+            DeleteManagedFile(entity.FilePath);
+            throw;
         }
         logger.LogInformation("Created VO {VoNumber} on contract {ContractId}", entity.VoNumber, contractId);
 
@@ -151,7 +172,30 @@ public class ContractAppendixService(
             vo.SubmittedByUserId = null;
         }
 
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            if (contract.OperationalProjectId.HasValue &&
+                !string.Equals(previousFilePath, vo.FilePath, StringComparison.Ordinal))
+            {
+                if (!string.IsNullOrWhiteSpace(previousFilePath))
+                    await projectDocuments.StageExistingManagedFileDeleteAsync(
+                        contract.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
+                        nameof(ContractAppendix), "file", vo.Id, previousFilePath, callerUserId, ct);
+                if (!string.IsNullOrWhiteSpace(vo.FilePath))
+                    await projectDocuments.StageExistingManagedFileAsync(
+                        contract.OperationalProjectId.Value, ProjectDocumentCategory.FinanceContracts,
+                        ProjectDocumentSourceModule.Crm, nameof(ContractAppendix), "file", vo.Id,
+                        vo.FilePath, vo.OriginalFileName ?? Path.GetFileName(vo.FilePath),
+                        contract.CustomerId, contract.Id, callerUserId, ct);
+            }
+            await db.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            if (!string.Equals(previousFilePath, vo.FilePath, StringComparison.Ordinal))
+                DeleteManagedFile(vo.FilePath);
+            throw;
+        }
         if (!string.Equals(previousFilePath, vo.FilePath, StringComparison.Ordinal))
             DeleteManagedFile(previousFilePath);
         return await GetAsync(contractId, voId, callerUserId, canSeeAll: true, ct);
@@ -241,6 +285,12 @@ public class ContractAppendixService(
         if (vo == null) return false;
 
         var filePath = vo.FilePath;
+        if (contract.OperationalProjectId.HasValue && !string.IsNullOrWhiteSpace(filePath))
+        {
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                contract.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
+                nameof(ContractAppendix), "file", vo.Id, filePath, callerUserId, ct);
+        }
         db.ContractAppendices.Remove(vo);
         await db.SaveChangesAsync(ct);
         DeleteManagedFile(filePath);

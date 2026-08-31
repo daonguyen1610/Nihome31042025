@@ -17,14 +17,84 @@ public sealed class SurveyMediaServiceTests : IDisposable
 {
     private readonly NihomeBackend.Data.AppDbContext db = DbContextFactory.Create();
     private readonly Mock<ISurveyMediaStorageService> storage = new();
+    private readonly Mock<IProjectDocumentStorageService> projectStorage = new();
     private readonly Mock<IGoogleDriveAdapter> drive = new();
     private readonly MemoryCache cache = new(new MemoryCacheOptions());
     private readonly SurveyMediaService service;
 
     public SurveyMediaServiceTests()
     {
+        var projectDocuments = CreateProjectDocumentService();
         service = new SurveyMediaService(
-            db, storage.Object, drive.Object, new TranslationService(db, cache));
+            db, storage.Object, drive.Object, projectDocuments, new TranslationService(db, cache));
+    }
+
+    [Fact]
+    public async Task AddAsync_LinkedOperationalProject_StagesOneGenericSidecar()
+    {
+        var (survey, project) = await AddLinkedSurveyAsync();
+        var file = new FormFile(new MemoryStream([1, 2, 3]), 0, 3, "file", "photo.jpg");
+        var path = $"/files/survey-media/{survey.Id}/stored.jpg";
+        storage.Setup(item => item.StoreAsync(survey.Id, file, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoredSurveyMedia("photo.jpg", "stored.jpg", ".jpg", "image/jpeg", 3, path));
+        projectStorage.Setup(item => item.InspectExistingAsync(ProjectDocumentSourceModule.Survey, path, "photo.jpg",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoredProjectDocument(path, "photo.jpg", "application/octet-stream", 3, new string('a', 64)));
+
+        var response = await service.AddAsync(survey.Id, new SurveyMediaUploadRequest { File = file }, 7);
+
+        Assert.NotNull(response);
+        var sidecar = Assert.Single(db.ProjectDocuments);
+        Assert.Equal(project.Id, sidecar.OperationalProjectId);
+        Assert.Equal(ProjectDocumentCategory.CrmPreDesign, sidecar.Category);
+        Assert.Equal(ProjectDocumentSourceModule.Survey, sidecar.SourceModule);
+        Assert.Equal(ProjectDocumentSourceType.ExistingManagedFile, sidecar.SourceType);
+        Assert.Equal("SurveyMedia", sidecar.SourceEntityType);
+        Assert.Equal(SurveyMediaService.ProjectDocumentSlot, sidecar.SourceSlot);
+        Assert.Equal(response.Id, sidecar.SourceRecordId);
+        Assert.Equal(path, sidecar.LocalPath);
+    }
+
+    [Fact]
+    public async Task AddAsync_UnlinkedSurvey_RetainsLegacyPendingBehaviorWithoutSidecar()
+    {
+        var survey = await AddSurveyAsync();
+        var file = new FormFile(new MemoryStream([1]), 0, 1, "file", "photo.jpg");
+        var path = $"/files/survey-media/{survey.Id}/stored.jpg";
+        storage.Setup(item => item.StoreAsync(survey.Id, file, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoredSurveyMedia("photo.jpg", "stored.jpg", ".jpg", "image/jpeg", 1, path));
+
+        var response = await service.AddAsync(survey.Id, new SurveyMediaUploadRequest { File = file }, 7);
+
+        Assert.NotNull(response);
+        Assert.Equal(SurveyMediaSyncStatus.Pending.ToString(), response.SyncStatus);
+        Assert.Empty(db.ProjectDocuments);
+        projectStorage.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task AddAsync_PublicLinkedProject_DoesNotStageOperationalProjectSidecar()
+    {
+        var publicProject = new Project
+        {
+            Name = "Public portfolio project",
+            Slug = $"public-{Guid.NewGuid():N}",
+        };
+        db.Projects.Add(publicProject);
+        await db.SaveChangesAsync();
+        var survey = await AddSurveyAsync();
+        survey.LinkedProjectId = publicProject.Id;
+        await db.SaveChangesAsync();
+        var file = new FormFile(new MemoryStream([1]), 0, 1, "file", "photo.jpg");
+        var path = $"/files/survey-media/{survey.Id}/stored.jpg";
+        storage.Setup(item => item.StoreAsync(survey.Id, file, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StoredSurveyMedia("photo.jpg", "stored.jpg", ".jpg", "image/jpeg", 1, path));
+
+        var response = await service.AddAsync(survey.Id, new SurveyMediaUploadRequest { File = file }, 7);
+
+        Assert.NotNull(response);
+        Assert.Empty(db.ProjectDocuments);
+        projectStorage.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -148,6 +218,63 @@ public sealed class SurveyMediaServiceTests : IDisposable
 
         Assert.True(await db.SurveyMedia.AnyAsync(item => item.Id == media.Id));
         storage.Verify(store => store.Delete(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_LinkedOperationalProject_LocalCleanupFailurePreservesCommittedDelete()
+    {
+        var (survey, project) = await AddLinkedSurveyAsync();
+        var media = Media(survey.Id);
+        media.SyncStatus = SurveyMediaSyncStatus.Synced;
+        media.DriveFileId = "drive-file";
+        db.SurveyMedia.Add(media);
+        await db.SaveChangesAsync();
+        var sidecar = new ProjectDocument
+        {
+            OperationalProjectId = project.Id,
+            Category = ProjectDocumentCategory.CrmPreDesign,
+            SourceModule = ProjectDocumentSourceModule.Survey,
+            SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+            SourceEntityType = "SurveyMedia",
+            SourceSlot = SurveyMediaService.ProjectDocumentSlot,
+            SourceRecordId = media.Id,
+            LocalPath = media.RelativePath,
+            OriginalFileName = media.OriginalFileName,
+            Size = media.Size,
+            Sha256 = new string('a', 64),
+            DesiredOperation = ProjectDocumentDesiredOperation.None,
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+            DriveFileId = "drive-file",
+        };
+        db.ProjectDocuments.Add(sidecar);
+        await db.SaveChangesAsync();
+        storage.Setup(item => item.Delete(survey.Id, media.RelativePath))
+            .Throws(new UnauthorizedAccessException("cleanup blocked"));
+
+        Assert.True(await service.DeleteAsync(survey.Id, media.Id));
+
+        Assert.Equal(ProjectDocumentDesiredOperation.Delete, sidecar.DesiredOperation);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, sidecar.SyncStatus);
+        Assert.False(await db.SurveyMedia.AnyAsync(item => item.Id == media.Id));
+        drive.Verify(item => item.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        storage.Verify(item => item.Delete(survey.Id, media.RelativePath), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnlinkedSyncedMedia_RetainsLegacyDriveDeletion()
+    {
+        var survey = await AddSurveyAsync();
+        var media = Media(survey.Id);
+        media.SyncStatus = SurveyMediaSyncStatus.Synced;
+        media.DriveFileId = "legacy-drive-file";
+        db.SurveyMedia.Add(media);
+        await db.SaveChangesAsync();
+
+        Assert.True(await service.DeleteAsync(survey.Id, media.Id));
+
+        drive.Verify(item => item.DeleteAsync("legacy-drive-file", It.IsAny<CancellationToken>()), Times.Once);
+        storage.Verify(item => item.Delete(survey.Id, media.RelativePath), Times.Once);
+        Assert.Empty(db.ProjectDocuments);
     }
 
     [Fact]
@@ -344,6 +471,7 @@ public sealed class SurveyMediaServiceTests : IDisposable
             db,
             storage.Object,
             drive.Object,
+            CreateProjectDocumentService(),
             new TranslationService(db, cache),
             logger.Object);
 
@@ -358,6 +486,13 @@ public sealed class SurveyMediaServiceTests : IDisposable
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
     }
+
+    private ProjectDocumentService CreateProjectDocumentService() => new(
+        db,
+        projectStorage.Object,
+        drive.Object,
+        Mock.Of<IProjectDriveFolderService>(),
+        new GoogleDriveOptions());
 
     public void Dispose()
     {
@@ -394,6 +529,31 @@ public sealed class SurveyMediaServiceTests : IDisposable
         db.Surveys.Add(survey);
         await db.SaveChangesAsync();
         return survey;
+    }
+
+    private async Task<(Survey Survey, OperationalProject Project)> AddLinkedSurveyAsync()
+    {
+        var project = new OperationalProject { Code = $"OP-{Guid.NewGuid():N}", Name = "Linked project", CustomerId = 1 };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        var opportunity = new Opportunity
+        {
+            Name = "Linked opportunity",
+            CustomerId = 1,
+            OperationalProjectId = project.Id,
+        };
+        db.Opportunities.Add(opportunity);
+        await db.SaveChangesAsync();
+        var survey = new Survey
+        {
+            Code = $"SV-{Guid.NewGuid():N}",
+            Location = "Test",
+            SurveyDate = DateTime.UtcNow,
+            LinkedOpportunityId = opportunity.Id,
+        };
+        db.Surveys.Add(survey);
+        await db.SaveChangesAsync();
+        return (survey, project);
     }
 
     private static SurveyMedia Media(int surveyId, long size = 1) => new()

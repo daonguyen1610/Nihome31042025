@@ -38,7 +38,8 @@ public class QuoteService(
     AppDbContext db,
     INotificationService notifications,
     IQuoteDocumentService quoteDocuments,
-    ILogger<QuoteService> logger) : IQuoteService
+    ILogger<QuoteService> logger,
+    IProjectDocumentStagingService projectDocuments) : IQuoteService
 {
     private const int MaxPageSize = 100;
     private const int DefaultValidityDays = 30;
@@ -503,6 +504,18 @@ public class QuoteService(
         foreach (var opportunity in winningOpportunities)
         {
             opportunity.WonQuoteId = null;
+        }
+
+        if (quote.OperationalProjectId.HasValue)
+        {
+            var documents = await db.QuoteDocuments
+                .Where(document => document.QuoteId == id)
+                .ToListAsync(ct);
+            foreach (var document in documents)
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    quote.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
+                    nameof(QuoteDocument), "file", document.Id, document.FilePath,
+                    callerUserId, ct);
         }
 
         db.Quotes.Remove(quote);

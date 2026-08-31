@@ -20,9 +20,11 @@ public class BasicDesignDocServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly BasicDesignDocService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly string _contentRoot;
     private readonly int _userId;
     private readonly int _projectId;
+    private readonly int _operationalProjectId;
 
     public BasicDesignDocServiceTests()
     {
@@ -34,6 +36,7 @@ public class BasicDesignDocServiceTests : IDisposable
         _sut = new BasicDesignDocService(
             _db,
             NullLogger<BasicDesignDocService>.Instance,
+            _projectDocuments.Object,
             environment.Object);
 
         var user = new ApplicationUser
@@ -58,8 +61,18 @@ public class BasicDesignDocServiceTests : IDisposable
         _db.Customers.Add(customer);
         _db.SaveChanges();
 
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-BASIC",
+            Name = "Basic operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+
         var project = new DesignProject
         {
+            OperationalProjectId = operationalProject.Id,
             ProjectCode = "DP-2026-BD-TEST",
             Name = "Basic design fixture",
             CustomerId = customer.Id,
@@ -70,6 +83,7 @@ public class BasicDesignDocServiceTests : IDisposable
 
         _userId = user.Id;
         _projectId = project.Id;
+        _operationalProjectId = operationalProject.Id;
     }
 
     public void Dispose()
@@ -241,6 +255,16 @@ public class BasicDesignDocServiceTests : IDisposable
 
         Assert.True(await _sut.DeleteAsync(created.Id));
         Assert.False(File.Exists(replacementPath));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+            created.Id, first.FilePath!, _userId, It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _operationalProjectId, ProjectDocumentCategory.DesignBasic, ProjectDocumentSourceModule.Design,
+            nameof(BasicDesignDoc), "file", created.Id, replacement.FilePath!, "second.pdf",
+            It.IsAny<int?>(), It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+            created.Id, replacement.FilePath!, _userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

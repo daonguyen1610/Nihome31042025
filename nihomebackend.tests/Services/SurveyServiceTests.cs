@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -12,12 +13,13 @@ public class SurveyServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly SurveyService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly int _userId;
 
     public SurveyServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new SurveyService(_db, NullLogger<SurveyService>.Instance);
+        _sut = new SurveyService(_db, NullLogger<SurveyService>.Instance, _projectDocuments.Object);
 
         var user = new ApplicationUser
         {
@@ -287,6 +289,61 @@ public class SurveyServiceTests : IDisposable
         Assert.Null(updated!.ConstructionTypeCode);
         Assert.Null(updated.SurveyorUserId);
         Assert.Null(updated.Note);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ExplicitOpportunityUnlink_QueuesOldDeleteAndHandsMediaToLegacyWorker()
+    {
+        var customer = new Customer { Name = "Survey customer", Type = CustomerType.Company };
+        _db.Customers.Add(customer);
+        await _db.SaveChangesAsync();
+        var project = new OperationalProject { Code = "OP-SURVEY", Name = "Survey", CustomerId = customer.Id };
+        _db.OperationalProjects.Add(project);
+        await _db.SaveChangesAsync();
+        var opportunity = new Opportunity
+        {
+            Name = "Survey opportunity",
+            CustomerId = customer.Id,
+            OperationalProjectId = project.Id,
+        };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+        var create = ValidCreate();
+        create.LinkedOpportunityId = opportunity.Id;
+        var survey = await _sut.CreateAsync(create, _userId);
+        var media = new SurveyMedia
+        {
+            SurveyId = survey.Id,
+            OriginalFileName = "survey.jpg",
+            StoredFileName = "stored.jpg",
+            ContentType = "image/jpeg",
+            Extension = ".jpg",
+            Size = 10,
+            RelativePath = $"/files/survey-media/{survey.Id}/stored.jpg",
+            DriveFileId = "newer-drive-file",
+            DriveFolderId = "old-folder",
+            SyncStatus = SurveyMediaSyncStatus.Synced,
+            SyncAttemptCount = 2,
+        };
+        _db.SurveyMedia.Add(media);
+        await _db.SaveChangesAsync();
+
+        var request = ValidUpdate(survey.Id);
+        request.LinkedOpportunityId = null;
+        await _sut.UpdateAsync(survey.Id, request, _userId);
+
+        Assert.Null((await _db.Surveys.FindAsync(survey.Id))!.LinkedOpportunityId);
+        Assert.Equal(SurveyMediaSyncStatus.Pending, media.SyncStatus);
+        Assert.Equal(0, media.SyncAttemptCount);
+        Assert.Null(media.DriveFileId);
+        Assert.NotNull(media.NextSyncAttemptAt);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
+            project.Id, null,
+            It.Is<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(files => files.Count == 1 &&
+                files.Single().SourceEntityType == "SurveyMedia" &&
+                files.Single().SourceSlot == SurveyMediaService.ProjectDocumentSlot &&
+                files.Single().SourceRecordId == media.Id),
+            _userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]

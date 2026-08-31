@@ -29,7 +29,9 @@ public static class EntityTypes
     public const string CapabilityDocument = "CapabilityDocument";
     public const string Tender = "Tender";
     public const string Survey = "Survey";
+    public const string SurveyMedia = "SurveyMedia";
     public const string OperationalProject = "OperationalProject";
+    public const string ProjectDocument = "ProjectDocument";
     public const string DesignProject = "DesignProject";
     public const string PermitChecklistItem = "PermitChecklistItem";
     public const string ConceptOption = "ConceptOption";

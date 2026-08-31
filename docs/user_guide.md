@@ -133,7 +133,7 @@ The platform is being developed incrementally. The following components are curr
 | Procurement vendor management | Implemented |
 | Procurement BOQ, material requests, and warehouse | Not yet implemented |
 | Finance module | Partially implemented — contracts and variation orders are live; cash flow and P&L are pending |
-| Google Drive integration | Partially implemented — Survey media push is available through Google user OAuth |
+| Google Drive integration | Implemented for current Operational Project file sources; deployment activation and live credentials are required |
 | Dashboard and analytics | Partially implemented — operational dashboard exists; full cross-module reporting is pending |
 
 ---
@@ -169,6 +169,16 @@ business history. The customer cannot be changed after records are linked.
 Users normally see projects they created or manage. Portfolio roles with the
 `operations.projects.view.all` permission see all projects. Creating or editing
 requires `operations.projects.manage`.
+
+The detail view's **Project documents** section provides the project-wide file
+catalog. Users with view permission can inspect synchronization status,
+download private content, and open an available Drive copy. Users with manage
+permission can upload files up to 100 MiB into a category supplied by the
+server, retry an eligible synchronization, classify an unknown Drive import,
+confirm **Keep both** for concurrent changes, and delete manual uploads or
+Drive imports. Files owned by Quote, Contract, Survey, Design, Permit,
+Acceptance, As-Built, or Handover records must be replaced or deleted in that
+source screen; the generic catalog does not bypass the business record.
 
 ### 3.1 Module 1: CRM / Sale / Contract
 
@@ -241,15 +251,15 @@ Manage tender packages with deadlines and preparation status. Every document che
 
 Record site surveys linked to leads, opportunities, or projects. Capture photos and videos directly from the application. Upload drawings and survey documents. Record technical notes on site conditions. Synchronize data automatically to Google Drive (folder 01_Khao_sat). Manage survey folders by project. Access is controlled by `crm.surveys.view` and `crm.surveys.manage`; the default roles grant Sales both permissions and PM view-only access, while administrators can assign them to other roles.
 
-**Connecting the current Survey integration to Google Drive:**
+**Connecting the current Google Drive integration:**
 
-1. Ask the system administrator to authorize Google Drive as `kudung053@gmail.com` using OAuth 2.0. Do not provide or store the Gmail password in Nihome.
-2. While signed in as that account, create the target folder in **My Drive** and provide its folder URL to the administrator. The ID is the value after `/folders/` in the URL.
-3. The administrator places the OAuth client ID, client secret, refresh token, and folder ID in the protected deployed configuration, then restarts the application pool. Synchronization is always enabled; invalid configuration is shown as **Unavailable** and logged without stopping Nihome.
-4. Open a Survey detail page and select **Media**. In **Google Drive connection**, confirm that **Authenticated account** shows `kudung053@gmail.com`, storage shows **My Drive**, and status shows **Connected**.
+1. Ask the system administrator to authorize the approved Google Drive account using OAuth 2.0. Do not provide or store its password in Nicon.
+2. While signed in as that account, create the target folder in **My Drive** or an approved Shared Drive and provide its folder URL to the administrator. The ID is the value after `/folders/` in the URL.
+3. The administrator places the OAuth client ID, client secret, refresh token, root folder ID, and unique deployment identity in protected configuration, explicitly enables synchronization, then restarts the application pool. Disabled synchronization performs no Drive calls; invalid enabled configuration stops startup rather than running partially configured.
+4. Open a Survey detail page and select **Media**. In **Google Drive connection**, confirm that the authenticated account and storage type match the approved deployment and that status shows **Connected**.
 5. Upload a small test image. The media card changes from Pending/Processing to Synced and displays a Drive link. Use **Check connection** if it remains pending.
 
-The Survey integration is **push-only**. Files uploaded through Nihome are copied to Drive; files manually added or changed in Drive are not imported into Nihome. Deleting synchronized media through Nihome attempts to remove its Drive counterpart. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. Administrators should verify the displayed authenticated account against the deployment setup. The worker uploads only while the connection is `Connected`. It makes at most three claims per file; during retry backoff, **Retry** makes the next remaining claim eligible immediately, while a third failure is terminal. Retry and deletion are temporarily rejected while a file is actively synchronizing so the current upload cannot become untracked.
+Survey media linked through an Opportunity to an Operational Project uses the bidirectional project catalog. Unlinked Survey media retains the legacy push workflow. Reassigning a linked Survey queues old replicas and stages its current media in the new project; unlinking returns the media to the legacy workflow. Files added or changed directly in a managed project folder are reflected in the Nicon catalog. Deletion through Nicon moves the Drive replica to trash so it remains recoverable. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. The worker uploads only while the connection is `Connected`, makes at most three claims per file, and rejects retry or deletion while a file is actively synchronizing.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -576,20 +586,41 @@ Aggregate revenue by project. Aggregate material and subcontractor costs. Calcul
 
 **Objective**: Organize, secure, and provide rapid access to all project files.
 
-**Current delivered scope:** Google Drive synchronization is implemented for Survey media only. It pushes Nihome-managed files to the configured Drive root and exposes connection/sync status. Drive-to-Nihome pull, the general document repository, automatic eight-tier project folders, and cross-module synchronization described below remain planned capabilities unless separately marked as implemented.
+**Current delivered scope:** the Operational Project document catalog supports
+current project-linked Quote, Contract, Survey, Basic Design, Shop Drawing,
+Permit, Acceptance, As-Built, and Handover files, plus direct project uploads.
+Google Drive synchronization is disabled until an administrator supplies the
+OAuth, root-folder, and deployment identity configuration. Historical records
+are not imported automatically.
 
 #### 3.7.1 Automated Project Folder Structure
 
-Automatically create an 8-tier folder structure when a new project is created: CRM, Survey, Design, Legal, Construction, Acceptance, Finance, As-Built. Synchronize between the application and Google Drive. Control folder access by role (Admin, Sales, Engineering, Accounting). Track folder creation and modification history.
+Folders are created lazily when the first file in a category synchronizes. The
+server-defined paths are `01_CRM_PreDesign`, the three nested folders under
+`02_Thiet_ke`, `03_Xin_phep_Phap_ly`, `04_Thi_cong_Nghiem_thu`,
+`05_Cung_ung_Vat_tu`, and `06_Tai_chinh_Hop_dong`. Stable internal identity is
+independent of displayed project and folder names. Nicon permissions control
+access; Drive group sharing is not synchronized in the current release.
 
 #### 3.7.2 Document Digitization
 
-Upload and manage all project documents through the application. Synchronize files with Google Drive. Manage IFC drawings, signed acceptance records, and site photos/videos centrally. Control document versions. Share documents across departments with role-based access.
+Google Drive stores the content of manual project uploads; Nicon stores the
+catalog, access rules, and workflow metadata. Uploads go directly to the chosen
+project category without creating a second host copy, while authenticated
+downloads are proxied by Nicon. Files added or edited directly in a managed
+Drive category are reflected in the catalog, and files moved to Drive trash are
+marked deleted. Native Google Docs, Sheets, and Slides can be opened through
+their Drive link but cannot be downloaded through the binary-content action.
+Deleting through Nicon moves the Drive file to trash instead of permanently
+erasing it. Existing files owned by Quote, Contract, Survey, Design, Permit,
+Acceptance, As-Built, or Handover retain their source-module lifecycle during
+the compatibility migration; for those sidecars, remote deletion is restored
+and concurrent edits preserve both versions for confirmation.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
-| Folder Structure Configuration | Template setup, project folder creation, sync log | 3 days |
-| Document Repository | Tree view, search, role-based access | 2.5 days |
+| Folder Structure Configuration | Deployment-managed fixed category paths | Implemented |
+| Project Document Catalog | Responsive list, upload, status, download, classification, retry, conflict and delete controls | Implemented |
 
 ### 3.8 Module 8: Dashboard and Analytics
 

@@ -14,7 +14,8 @@ public class AsBuiltDocumentService(
     AppDbContext db,
     ILogger<AsBuiltDocumentService> logger,
     AsBuiltDocumentCategoryService categoryService,
-    IBusinessDocumentStorageService? documentStorage = null) : IAsBuiltDocumentService
+    IBusinessDocumentStorageService? documentStorage = null,
+    IProjectDocumentStagingService? projectDocuments = null) : IAsBuiltDocumentService
 {
     private const int MaxPageSize = 200;
     private const int MaxBulkDelete = 100;
@@ -111,8 +112,8 @@ public class AsBuiltDocumentService(
 
         var categoryId = await ResolveCategoryIdAsync(request.Category);
 
-        var projectExists = await db.DesignProjects.AnyAsync(dp => dp.Id == request.DesignProjectId, ct);
-        if (!projectExists)
+        var project = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == request.DesignProjectId, ct);
+        if (project is null)
         {
             throw new AsBuiltDocumentOperationException($"Dự án #{request.DesignProjectId} không tồn tại.");
         }
@@ -133,8 +134,23 @@ public class AsBuiltDocumentService(
             CreatedByUserId = callerUserId,
             UpdatedByUserId = callerUserId,
         };
-        db.AsBuiltDocuments.Add(entity);
-        await db.SaveChangesAsync(ct);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+        try
+        {
+            db.AsBuiltDocuments.Add(entity);
+            await db.SaveChangesAsync(ct);
+            await StageFileDiffAsync(project, entity.Id, null, entity.FileUrl, callerUserId, ct);
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            else await RollbackCreateAsync(entity, CancellationToken.None);
+            throw;
+        }
         logger.LogInformation("AsBuiltDocument {Id} ({Code}) created on project {ProjectId}",
             entity.Id, entity.DocumentCode, entity.DesignProjectId);
         return (await GetAsync(entity.Id, ct))!;
@@ -142,7 +158,7 @@ public class AsBuiltDocumentService(
 
     public async Task<AsBuiltDocumentResponse?> UpdateAsync(int id, UpdateAsBuiltDocumentRequest request, int callerUserId, CancellationToken ct = default)
     {
-        var entity = await db.AsBuiltDocuments.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var entity = await db.AsBuiltDocuments.Include(a => a.DesignProject).FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return null;
 
         if (entity.Status is AsBuiltStatus.Approved or AsBuiltStatus.Archived or AsBuiltStatus.Cancelled)
@@ -169,6 +185,8 @@ public class AsBuiltDocumentService(
         entity.Note = TrimOrNull(request.Note);
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
+        await StageFileDiffAsync(entity.DesignProject, entity.Id, previousFileUrl, entity.FileUrl,
+            callerUserId, ct);
         await db.SaveChangesAsync(ct);
         if (!string.Equals(previousFileUrl, entity.FileUrl, StringComparison.Ordinal))
             documentStorage?.Delete(previousFileUrl, BusinessDocumentArea.AsBuilt);
@@ -211,9 +229,12 @@ public class AsBuiltDocumentService(
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await db.AsBuiltDocuments.FirstOrDefaultAsync(a => a.Id == id, ct);
+        var entity = await db.AsBuiltDocuments.Include(a => a.DesignProject)
+            .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return false;
         var fileUrl = entity.FileUrl;
+        await StageFileDiffAsync(entity.DesignProject, entity.Id, fileUrl, null,
+            entity.UpdatedByUserId, ct);
         db.AsBuiltDocuments.Remove(entity);
         await db.SaveChangesAsync(ct);
         documentStorage?.Delete(fileUrl, BusinessDocumentArea.AsBuilt);
@@ -233,11 +254,14 @@ public class AsBuiltDocumentService(
                 $"Chỉ xoá tối đa {MaxBulkDelete} tài liệu mỗi lần.");
         }
 
-        var rows = await db.AsBuiltDocuments.Where(a => ids.Contains(a.Id)).ToListAsync(ct);
+        var rows = await db.AsBuiltDocuments.Include(a => a.DesignProject)
+            .Where(a => ids.Contains(a.Id)).ToListAsync(ct);
         var response = new AsBuiltDocumentBulkDeleteResponse();
         foreach (var row in rows)
         {
             response.DeletedIds.Add(row.Id);
+            await StageFileDiffAsync(row.DesignProject, row.Id, row.FileUrl, null,
+                row.UpdatedByUserId, ct);
             db.AsBuiltDocuments.Remove(row);
         }
         response.SkippedIds.AddRange(ids.Except(rows.Select(r => r.Id)));
@@ -250,6 +274,41 @@ public class AsBuiltDocumentService(
     // --------------------------------------------------------------------
     //  Helpers
     // --------------------------------------------------------------------
+
+    private async Task StageFileDiffAsync(DesignProject project, int recordId,
+        string? previous, string? current, int? userId, CancellationToken ct)
+    {
+        if (project.OperationalProjectId is not int projectId || projectDocuments is null) return;
+        var oldPath = ManagedPath(previous);
+        var newPath = ManagedPath(current);
+        if (oldPath is not null && !string.Equals(oldPath, newPath, StringComparison.Ordinal))
+            await projectDocuments.StageExistingManagedFileDeleteAsync(projectId,
+                ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument), "file",
+                recordId, oldPath, userId, ct);
+        if (newPath is not null && !string.Equals(oldPath, newPath, StringComparison.Ordinal))
+            await projectDocuments.StageExistingManagedFileAsync(projectId,
+                ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Acceptance,
+                nameof(AsBuiltDocument), "file", recordId, newPath, Path.GetFileName(newPath),
+                project.CustomerId, project.ContractId, userId, ct);
+    }
+
+    private static string? ManagedPath(string? path)
+    {
+        var value = path?.Trim();
+        return value?.StartsWith("/files/business-documents/as-built/", StringComparison.OrdinalIgnoreCase) == true
+            ? value
+            : null;
+    }
+
+    private async Task RollbackCreateAsync(AsBuiltDocument entity, CancellationToken ct)
+    {
+        db.ProjectDocuments.RemoveRange(db.ChangeTracker.Entries<ProjectDocument>()
+            .Where(entry => entry.Entity.SourceEntityType == nameof(AsBuiltDocument)
+                && entry.Entity.SourceRecordId == entity.Id)
+            .Select(entry => entry.Entity));
+        db.AsBuiltDocuments.Remove(entity);
+        await db.SaveChangesAsync(ct);
+    }
 
     private IQueryable<AsBuiltDocument> BuildFilteredQuery(AsBuiltDocumentListParams p)
     {

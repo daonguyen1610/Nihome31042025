@@ -54,11 +54,26 @@ public static class ServiceCollectionExtensions
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
         services.AddOptions<GoogleDriveOptions>()
             .Bind(configuration.GetSection(GoogleDriveOptions.SectionName))
-            .Validate(options => options.PollIntervalSeconds is >= 5 and <= 300,
+            .Validate(options => !options.Enabled || options.PollIntervalSeconds is >= 5 and <= 300,
                 "GoogleDrive:PollIntervalSeconds phải nằm trong khoảng 5 đến 300 giây.")
-            .Validate(options => options.Folders is not null &&
+            .Validate(options => !options.Enabled || options.Folders is not null &&
                                  !string.IsNullOrWhiteSpace(options.Folders.SurveyMedia),
                 "GoogleDrive:Folders:SurveyMedia không được để trống.")
+            .Validate(options => !options.Enabled || !string.IsNullOrWhiteSpace(options.InstanceId),
+                "GoogleDrive:InstanceId không được để trống.")
+            .Validate(options => !options.Enabled || new[]
+                {
+                    options.ClientId, options.ClientSecret, options.RefreshToken, options.RootFolderId,
+                }.All(folder => !string.IsNullOrWhiteSpace(folder)),
+                "GoogleDrive OAuth và RootFolderId phải được cấu hình đầy đủ khi tích hợp được bật.")
+            .Validate(options => !options.Enabled || options.Folders is not null && new[]
+                {
+                    options.Folders.CrmPreDesign, options.Folders.DesignConcept, options.Folders.DesignBasic,
+                    options.Folders.DesignShopDrawing, options.Folders.LegalPermits,
+                    options.Folders.ConstructionAcceptance, options.Folders.Procurement,
+                    options.Folders.FinanceContracts,
+                }.All(folder => !string.IsNullOrWhiteSpace(folder)),
+                "Tám đường dẫn thư mục tài liệu dự án trong GoogleDrive:Folders không được để trống.")
             .ValidateOnStart();
         services.AddSingleton(serviceProvider =>
             serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<GoogleDriveOptions>>().Value);
@@ -122,8 +137,16 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISurveyMediaService, SurveyMediaService>();
         services.AddScoped<ISurveyMediaStorageService, SurveyMediaStorageService>();
         services.AddScoped<ISurveyDriveSyncProcessor, SurveyDriveSyncProcessor>();
+        services.AddScoped<IProjectDriveSyncProcessor, ProjectDriveSyncProcessor>();
+        services.AddScoped<IProjectDriveFolderService, ProjectDriveFolderService>();
+        services.AddSingleton<IProjectDriveClaimRenewer, ProjectDriveClaimRenewer>();
+        services.AddSingleton<IProjectDriveClaimLease, ProjectDriveClaimLease>();
         services.AddSingleton<IGoogleDriveAdapter, GoogleDriveAdapter>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();
+        services.AddScoped<ProjectDocumentService>();
+        services.AddScoped<IProjectDocumentService>(provider => provider.GetRequiredService<ProjectDocumentService>());
+        services.AddScoped<IProjectDocumentStagingService>(provider => provider.GetRequiredService<ProjectDocumentService>());
+        services.AddScoped<IProjectDocumentStorageService, ProjectDocumentStorageService>();
         services.AddScoped<IDesignProjectService, DesignProjectService>();
         services.AddScoped<IBusinessDocumentStorageService, BusinessDocumentStorageService>();
         services.AddScoped<IPermitChecklistService, PermitChecklistService>();
@@ -166,6 +189,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<UploadedImageCleanupService>();
         services.AddHostedService<SurveyDriveSyncService>();
+        services.AddHostedService<ProjectDriveSyncService>();
 
         // Audit logging (non-blocking queue + background writer + retention sweeper)
         services.AddHttpContextAccessor();
