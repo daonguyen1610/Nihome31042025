@@ -636,13 +636,14 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
             foreach (var descriptor in services.Where(descriptor => descriptor.ServiceType == typeof(IHostedService) &&
                 descriptor.ImplementationType == typeof(ProjectDriveSyncService)).ToList())
                 services.Remove(descriptor);
-            services.RemoveAll<GoogleDriveOptions>();
-            services.AddSingleton(new GoogleDriveOptions
+            var driveOptions = new GoogleDriveOptions
             {
                 Enabled = true,
                 InstanceId = "integration-tests",
                 RootFolderId = "root",
-            });
+            };
+            services.RemoveAll<IGoogleDriveSettingsStore>();
+            services.AddSingleton<IGoogleDriveSettingsStore>(new ConfiguredSettingsStore(driveOptions));
             services.RemoveAll<IGoogleDriveAdapter>();
             services.AddSingleton<IGoogleDriveAdapter, InMemoryGoogleDriveAdapter>();
             services.RemoveAll<DbContextOptions<AppDbContext>>();
@@ -688,6 +689,27 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
                     property.ValueGenerated = ValueGenerated.Never;
             }
         }
+    }
+
+    private sealed class ConfiguredSettingsStore(GoogleDriveOptions options) : IGoogleDriveSettingsStore
+    {
+        public Task<GoogleDriveOptions> GetRuntimeAsync(CancellationToken ct = default) =>
+            Task.FromResult(options);
+
+        public Task<GoogleDriveAdminConfigurationResponse> GetAdminAsync(CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<GoogleDriveAdminConfigurationResponse> UpdateAsync(
+            UpdateGoogleDriveConfigurationRequest request,
+            int updatedByUserId,
+            CancellationToken ct = default) => throw new NotSupportedException();
+
+        public Task SaveRefreshTokenAsync(
+            string refreshToken,
+            string? accountEmail,
+            int connectedByUserId,
+            string expectedConfigurationVersion,
+            CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private sealed class InMemoryGoogleDriveAdapter : IGoogleDriveAdapter
