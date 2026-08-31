@@ -255,9 +255,9 @@ Record site surveys linked to leads, opportunities, or projects. Capture photos 
 
 1. Ask the system administrator to authorize the approved Google Drive account using OAuth 2.0. Do not provide or store its password in Nicon.
 2. While signed in as that account, create the target folder in **My Drive** or an approved Shared Drive and provide its folder URL to the administrator. The ID is the value after `/folders/` in the URL.
-3. The administrator places the OAuth client ID, client secret, refresh token, root folder ID, and unique deployment identity in protected configuration, explicitly enables synchronization, then restarts the application pool. Disabled synchronization performs no Drive calls; invalid enabled configuration stops startup rather than running partially configured.
-4. Open a Survey detail page and select **Media**. In **Google Drive connection**, confirm that the authenticated account and storage type match the approved deployment and that status shows **Connected**.
-5. Upload a small test image. The media card changes from Pending/Processing to Synced and displays a Drive link. Use **Check connection** if it remains pending.
+3. The system administrator configures the OAuth client identity, callback URL, root folder, and deployment identity in protected server settings, then enables synchronization.
+4. A user with `system.settings.manage` opens **Settings > Google Drive**, selects **Connect/Reconnect Google Drive**, signs in once as the approved account, and grants access. No refresh token is copied into an application settings file.
+5. Confirm that the authenticated account and status show **Connected**. Upload a small test image; the media card changes from Pending/Processing to Synced and displays a Drive link. Use **Check connection** if it remains pending.
 
 Survey media linked through an Opportunity to an Operational Project uses the bidirectional project catalog. Unlinked Survey media retains the legacy push workflow. Reassigning a linked Survey queues old replicas and stages its current media in the new project; unlinking returns the media to the legacy workflow. Files added or changed directly in a managed project folder are reflected in the Nicon catalog. Deletion through Nicon moves the Drive replica to trash so it remains recoverable. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. The worker uploads only while the connection is `Connected`, makes at most three claims per file, and rejects retry or deletion while a file is actively synchronizing.
 
@@ -590,7 +590,8 @@ Aggregate revenue by project. Aggregate material and subcontractor costs. Calcul
 current project-linked Quote, Contract, Survey, Basic Design, Shop Drawing,
 Permit, Acceptance, As-Built, and Handover files, plus direct project uploads.
 Google Drive synchronization is disabled until an administrator supplies the
-OAuth, root-folder, and deployment identity configuration. Historical records
+OAuth client, callback, root-folder, and deployment identity configuration and
+connects an approved account from **Settings > Google Drive**. Historical records
 are not imported automatically.
 
 #### 3.7.1 Automated Project Folder Structure

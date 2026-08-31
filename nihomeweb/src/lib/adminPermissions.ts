@@ -103,6 +103,7 @@ export const ADMIN_PERMS = {
   processes: "processes.view",
   processesManage: "processes.manage",
   settings: "system.settings.view",
+  settingsManage: "system.settings.manage",
   translations: "content.translations.view",
   translationsManage: "content.translations.manage",
   emailTemplates: "system.settings.manage",

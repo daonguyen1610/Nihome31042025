@@ -24,7 +24,7 @@ public sealed class GoogleDriveLiveSmokeTests
             ApplicationName = "Nicon Google Drive Live Smoke Test",
             SupportsAllDrives = true,
         };
-        using var drive = new GoogleDriveAdapter(options);
+        using var drive = new GoogleDriveAdapter(options, new ConfiguredCredentialStore(options));
         var connection = await drive.CheckConnectionAsync();
         Assert.True(connection.IsFolder);
         Assert.False(connection.IsTrashed);
@@ -72,6 +72,21 @@ public sealed class GoogleDriveLiveSmokeTests
         {
             if (!string.IsNullOrWhiteSpace(testRootId)) await drive.DeleteAsync(testRootId);
         }
+    }
+
+    private sealed class ConfiguredCredentialStore(GoogleDriveOptions options) : IGoogleDriveCredentialStore
+    {
+        public Task<string?> GetRefreshTokenAsync(CancellationToken ct = default) =>
+            Task.FromResult<string?>(options.RefreshToken);
+
+        public Task<GoogleDriveCredentialMetadata> GetMetadataAsync(CancellationToken ct = default) =>
+            Task.FromResult(new GoogleDriveCredentialMetadata(false, true, null, null));
+
+        public Task SaveAsync(
+            string refreshToken,
+            string? accountEmail,
+            int connectedByUserId,
+            CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private static string Required(string name) =>

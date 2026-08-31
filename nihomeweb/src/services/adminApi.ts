@@ -336,6 +336,22 @@ export interface UpdateMapEmbedRequest {
   mapEmbedUrl: string | null;
 }
 
+export interface GoogleDriveAdminStatusResponse {
+  status: "Disabled" | "Connected" | "ReadOnly" | "InvalidRoot" | "ReconnectRequired" | "Unavailable";
+  oauthConfigured: boolean;
+  hasStoredCredential: boolean;
+  usesConfiguredFallback: boolean;
+  accountEmail: string | null;
+  connectedAt: string | null;
+  rootFolderName: string | null;
+  rootFolderLink: string | null;
+  error: string | null;
+}
+
+export interface GoogleDriveOAuthStartResponse {
+  authorizationUrl: string;
+}
+
 export interface ContactMessageResponse {
   id: number;
   name: string;
@@ -1772,6 +1788,7 @@ export type SurveyDriveConnectionStatus =
   | "Connected"
   | "ReadOnly"
   | "InvalidRoot"
+  | "ReconnectRequired"
   | "Unavailable";
 
 export interface SurveyDriveConnectionStatusResponse {
@@ -3430,6 +3447,12 @@ export const adminApi = {
     api.get<MapEmbedResponse>("/site-settings/map-embed"),
   updateMapEmbed: (data: UpdateMapEmbedRequest) =>
     api.put<MapEmbedResponse>("/site-settings/map-embed", data),
+
+  // Google Drive OAuth administration
+  getGoogleDriveAdminStatus: () =>
+    api.get<GoogleDriveAdminStatusResponse>("/site-settings/google-drive/status"),
+  startGoogleDriveOAuth: () =>
+    api.post<GoogleDriveOAuthStartResponse>("/site-settings/google-drive/oauth/start"),
 
   // Contact messages
   getContacts: (replied?: boolean) => {

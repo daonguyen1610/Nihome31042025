@@ -352,13 +352,17 @@ public sealed class SurveyMediaService(
         }
         catch (Exception exception)
         {
+            var reconnectRequired = GoogleDriveAuthenticationErrors.IsInvalidGrant(exception);
             logger?.LogWarning(
-                "Google Drive connection validation failed ({ExceptionType}). Check OAuth settings, RootFolderId, Drive API access, and folder permissions.",
-                exception.GetType().Name);
+                "Google Drive connection validation failed ({ExceptionType}, reconnect required: {ReconnectRequired}). Check OAuth settings, RootFolderId, Drive API access, and folder permissions.",
+                exception.GetType().Name,
+                reconnectRequired);
             return new SurveyDriveConnectionStatusResponse
             {
-                Status = "Unavailable",
-                Error = "Không thể xác thực hoặc truy cập thư mục Google Drive đã cấu hình.",
+                Status = reconnectRequired ? "ReconnectRequired" : "Unavailable",
+                Error = reconnectRequired
+                    ? "Quyền truy cập Google Drive đã hết hạn hoặc bị thu hồi. Hãy kết nối lại trong Cài đặt."
+                    : "Không thể xác thực hoặc truy cập thư mục Google Drive đã cấu hình.",
             };
         }
     }

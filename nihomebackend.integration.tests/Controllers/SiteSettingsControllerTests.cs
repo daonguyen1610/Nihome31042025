@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -57,5 +58,62 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     public async Task GetEmailTemplates_WithoutAuth_ReturnsUnauthorized()
     {
         (await Client.GetAsync("/api/site-settings/email-templates")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetGoogleDriveStatus_WithoutAuth_ReturnsUnauthorized()
+    {
+        (await Client.GetAsync("/api/site-settings/google-drive/status"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task StartGoogleDriveOAuth_WithoutAuth_ReturnsUnauthorized()
+    {
+        (await Client.PostAsync("/api/site-settings/google-drive/oauth/start", null))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GoogleDriveAdministration_AsSalesRole_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+
+        (await Client.GetAsync("/api/site-settings/google-drive/status"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.PostAsync("/api/site-settings/google-drive/oauth/start", null))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GoogleDriveCallback_WithInvalidState_RedirectsToSafeFrontendResult()
+    {
+        using var noRedirectClient = Factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await noRedirectClient.GetAsync(
+            "/api/site-settings/google-drive/oauth/callback?code=test&state=invalid");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Redirect);
+        response.Headers.Location.Should().NotBeNull();
+        response.Headers.Location!.OriginalString.Should().Be(
+            "/admin/settings?tab=drive&driveOAuth=invalid_state");
+    }
+
+    [Fact]
+    public async Task GetGoogleDriveStatus_AsAdmin_ReturnsDisabledWithoutSecrets()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+
+        var response = await Client.GetAsync("/api/site-settings/google-drive/status");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("status").GetString().Should().Be("Disabled");
+        body.TryGetProperty("refreshToken", out _).Should().BeFalse();
     }
 }

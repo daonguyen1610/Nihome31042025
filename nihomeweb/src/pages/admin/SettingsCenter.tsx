@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Save, ShieldCheck, Map as MapIcon } from "lucide-react";
+import { ExternalLink, HardDrive, Map as MapIcon, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { adminApi, type OtpSettingsResponse } from "@/services/adminApi";
+import {
+  adminApi,
+  type GoogleDriveAdminStatusResponse,
+  type OtpSettingsResponse,
+} from "@/services/adminApi";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import SlideshowSettings from "./settings/SlideshowSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,14 +23,39 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // settings and thumbnail media settings used to live here but were
 // localStorage-only mocks; they were removed because they violated the
 // "no dead code / no hardcode" rule.
-type Tab = "security" | "slideshow" | "map";
+type Tab = "security" | "slideshow" | "map" | "drive";
 type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
   { key: "security", labelKey: "settings.tab.security" },
   { key: "slideshow", labelKey: "set.slideshow" },
   { key: "map", labelKey: "settings.map.tab" },
+  { key: "drive", labelKey: "settings.drive.tab" },
 ];
+
+const DRIVE_STATUS_KEYS: Record<GoogleDriveAdminStatusResponse["status"], string> = {
+  Disabled: "settings.drive.status.disabled",
+  Connected: "settings.drive.status.connected",
+  ReadOnly: "settings.drive.status.readOnly",
+  InvalidRoot: "settings.drive.status.invalidRoot",
+  ReconnectRequired: "settings.drive.status.reconnectRequired",
+  Unavailable: "settings.drive.status.unavailable",
+};
+
+const DRIVE_ERROR_KEYS: Partial<Record<GoogleDriveAdminStatusResponse["status"], string>> = {
+  InvalidRoot: "settings.drive.error.invalidRoot",
+  ReconnectRequired: "settings.drive.error.reconnectRequired",
+  Unavailable: "settings.drive.error.unavailable",
+};
+
+const DRIVE_OAUTH_RESULT_KEYS: Record<string, string> = {
+  denied: "settings.drive.oauth.denied",
+  invalid_state: "settings.drive.oauth.invalid_state",
+  authorization_expired: "settings.drive.oauth.authorization_expired",
+  missing_refresh_token: "settings.drive.oauth.missing_refresh_token",
+  root_validation_failed: "settings.drive.oauth.root_validation_failed",
+  failed: "settings.drive.oauth.failed",
+};
 
 const OtpToggleControl = ({
   label,
@@ -274,6 +305,148 @@ const MapTab = () => {
   );
 };
 
+const DriveTab = () => {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const { has } = usePermissions();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [status, setStatus] = useState<GoogleDriveAdminStatusResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const canManage = has(ADMIN_PERMS.settingsManage);
+
+  const loadStatus = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await adminApi.getGoogleDriveAdminStatus();
+      setStatus(data);
+    } catch {
+      setStatus(null);
+      toast({
+        title: t("common.error"),
+        description: t("settings.drive.loadError"),
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [t, toast]);
+
+  useEffect(() => {
+    void loadStatus();
+  }, [loadStatus]);
+
+  useEffect(() => {
+    const result = searchParams.get("driveOAuth");
+    if (!result) return;
+    const successful = result === "success";
+    toast({
+      title: t(successful ? "settings.drive.oauth.success" : "settings.drive.oauth.error"),
+      description: successful
+        ? undefined
+        : t(DRIVE_OAUTH_RESULT_KEYS[result] ?? "settings.drive.oauth.failed"),
+      variant: successful ? "default" : "destructive",
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete("driveOAuth");
+    next.set("tab", "drive");
+    setSearchParams(next, { replace: true });
+    if (successful) void loadStatus();
+  }, [loadStatus, searchParams, setSearchParams, t, toast]);
+
+  const connect = async () => {
+    setConnecting(true);
+    try {
+      const { data } = await adminApi.startGoogleDriveOAuth();
+      const authorizationUrl = new URL(data.authorizationUrl);
+      if (authorizationUrl.protocol !== "https:" || authorizationUrl.hostname !== "accounts.google.com")
+        throw new Error("Unexpected OAuth authorization URL");
+      window.location.assign(authorizationUrl.toString());
+    } catch {
+      setConnecting(false);
+      toast({
+        title: t("common.error"),
+        description: t("settings.drive.startError"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <section className="rounded-lg border bg-card p-4 sm:p-6">
+      <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <HardDrive className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <h2 className="text-lg font-semibold">{t("settings.drive.title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("settings.drive.description")}</p>
+          </div>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={loadStatus} disabled={loading}>
+          <RefreshCw className={`mr-1.5 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          {t("settings.drive.check")}
+        </Button>
+      </div>
+
+      {loading && !status ? (
+        <p className="pt-5 text-sm text-muted-foreground">{t("common.loading")}</p>
+      ) : !status ? (
+        <p className="pt-5 text-sm text-destructive">{t("settings.drive.loadError")}</p>
+      ) : (
+        <div className="space-y-5 pt-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs text-muted-foreground">{t("settings.drive.connectionStatus")}</p>
+              <p className="mt-1 font-medium">{t(DRIVE_STATUS_KEYS[status.status])}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <p className="text-xs text-muted-foreground">{t("settings.drive.account")}</p>
+              <p className="mt-1 break-all font-medium">{status.accountEmail || t("settings.drive.notAvailable")}</p>
+            </div>
+          </div>
+
+          {DRIVE_ERROR_KEYS[status.status] && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+              {t(DRIVE_ERROR_KEYS[status.status] as string)}
+            </div>
+          )}
+
+          {status.rootFolderName && (
+            <div className="flex flex-col gap-2 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{t("settings.drive.rootFolder")}</p>
+                <p className="mt-1 font-medium">{status.rootFolderName}</p>
+              </div>
+              {status.rootFolderLink && (
+                <Button asChild variant="ghost" size="sm">
+                  <a href={status.rootFolderLink} target="_blank" rel="noreferrer">
+                    <ExternalLink className="mr-1.5 h-4 w-4" />
+                    {t("settings.drive.openFolder")}
+                  </a>
+                </Button>
+              )}
+            </div>
+          )}
+
+          {canManage ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button type="button" onClick={connect} disabled={connecting || !status.oauthConfigured}>
+                <HardDrive className="mr-1.5 h-4 w-4" />
+                {connecting ? t("settings.drive.connecting") : t("settings.drive.reconnect")}
+              </Button>
+              {!status.oauthConfigured && (
+                <p className="text-xs text-destructive">{t("settings.drive.oauthNotConfigured")}</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("settings.drive.managePermissionRequired")}</p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
+
 /* ─── Settings Center ─── */
 const SettingsCenter = () => {
   const { t } = useI18n();
@@ -316,6 +489,7 @@ const SettingsCenter = () => {
         {activeTab === "security" && <SecurityTab />}
         {activeTab === "slideshow" && <SlideshowSettings />}
         {activeTab === "map" && <MapTab />}
+        {activeTab === "drive" && <DriveTab />}
       </div>
     </AdminLayout>
   );

@@ -76,6 +76,7 @@ const CONNECTION_BADGE: Record<SurveyDriveConnectionStatusResponse["status"], st
   Connected: "border-emerald-200 bg-emerald-50 text-emerald-700",
   ReadOnly: "border-amber-200 bg-amber-50 text-amber-700",
   InvalidRoot: "border-rose-200 bg-rose-50 text-rose-700",
+  ReconnectRequired: "border-rose-200 bg-rose-50 text-rose-700",
   Unavailable: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
