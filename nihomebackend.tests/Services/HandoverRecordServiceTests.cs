@@ -13,6 +13,7 @@ public class HandoverRecordServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly HandoverRecordService _sut;
     private readonly int _userId;
     private readonly int _projectId;
@@ -28,7 +29,8 @@ public class HandoverRecordServiceTests : IDisposable
             _db,
             NullLogger<HandoverRecordService>.Instance,
             categoryService,
-            _documentStorage.Object);
+            _documentStorage.Object,
+            _projectDocuments.Object);
         var user = new ApplicationUser
         {
             PhoneNumber = "0900000144",
@@ -49,6 +51,15 @@ public class HandoverRecordServiceTests : IDisposable
             ProjectManagerUserId = user.Id,
             CurrentStage = DesignProjectStage.Completed,
         };
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-HO-001",
+            Name = "Handover operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+        project.OperationalProjectId = operationalProject.Id;
         _db.DesignProjects.Add(project);
         _db.SaveChanges();
         _userId = user.Id;
@@ -78,6 +89,52 @@ public class HandoverRecordServiceTests : IDisposable
         Assert.Null(history.FromStatus);
         Assert.Equal("Draft", history.ToStatus);
         Assert.False(created.Readiness.IsReady);
+    }
+
+    [Fact]
+    public async Task Create_and_update_stage_document_diff_idempotently()
+    {
+        var request = Request();
+        request.Documents = ["/files/business-documents/handover/old.pdf"];
+        var created = await _sut.CreateAsync(request, _userId, false);
+        var update = new UpdateHandoverRecordRequest
+        {
+            Title = created.Title,
+            PlannedHandoverDate = created.PlannedHandoverDate,
+            ResponsibleUserId = created.ResponsibleUserId,
+            Documents = ["/files/business-documents/handover/new.pdf"],
+        };
+
+        await _sut.UpdateAsync(created.Id, update, _userId, false);
+        await _sut.UpdateAsync(created.Id, update, _userId, false);
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            It.IsAny<int>(), ProjectDocumentSourceModule.Handover, nameof(HandoverRecord), "documents",
+            created.Id, "/files/business-documents/handover/old.pdf", _userId,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            ProjectDocumentSourceModule.Handover, nameof(HandoverRecord), "documents", created.Id,
+            "/files/business-documents/handover/new.pdf", "new.pdf", It.IsAny<int?>(),
+            It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_staging_failure_rolls_back_record_and_history()
+    {
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentCategory>(), It.IsAny<ProjectDocumentSourceModule>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("staging failed"));
+        var request = Request();
+        request.Documents = ["/files/business-documents/handover/rollback.pdf"];
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sut.CreateAsync(request, _userId, false));
+
+        Assert.Empty(await _db.HandoverRecords.ToListAsync());
+        Assert.Empty(await _db.HandoverStatusHistory.ToListAsync());
     }
 
     [Fact]
@@ -282,6 +339,9 @@ public class HandoverRecordServiceTests : IDisposable
         Assert.True(await _db.Users.AnyAsync(user => user.Id == _userId));
         _documentStorage.Verify(storage => storage.Delete(
             request.Documents[0], BusinessDocumentArea.Handover), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            It.IsAny<int>(), ProjectDocumentSourceModule.Handover, nameof(HandoverRecord), "documents",
+            created.Id, request.Documents[0], _userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

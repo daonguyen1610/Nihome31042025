@@ -3104,6 +3104,263 @@ namespace nihomebackend.Migrations
                     b.ToTable("project_categories", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ProjectDocument", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("ClaimExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ClaimToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ConflictObservedDriveFileId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ConflictObservedDriveVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ConflictState")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long?>("ConflictWithDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("ContractId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DeletedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DesiredOperation")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("DriveFileId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DriveFolderId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("DriveModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DriveVersion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DriveWebViewLink")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<long>("Generation")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDownloadable")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastSyncAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LocalPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("NextSyncAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SourceEntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SourceModule")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<long?>("SourceRecordId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SourceSlot")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("SyncAttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SyncError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("SyncStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UnsupportedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClaimToken");
+
+                    b.HasIndex("DriveFileId")
+                        .IsUnique()
+                        .HasFilter("[DriveFileId] IS NOT NULL");
+
+                    b.HasIndex("SyncStatus", "NextSyncAttemptAt");
+
+                    b.HasIndex("ConflictWithDocumentId", "ConflictObservedDriveFileId", "ConflictObservedDriveVersion")
+                        .IsUnique()
+                        .HasFilter("[ConflictWithDocumentId] IS NOT NULL AND [ConflictObservedDriveFileId] IS NOT NULL AND [ConflictObservedDriveVersion] IS NOT NULL");
+
+                    b.HasIndex("OperationalProjectId", "Category", "UpdatedAt");
+
+                    b.HasIndex("OperationalProjectId", "SourceModule", "SourceEntityType", "SourceSlot", "SourceRecordId", "LocalPath")
+                        .IsUnique()
+                        .HasFilter("[SourceRecordId] IS NOT NULL");
+
+                    b.ToTable("project_documents", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectDriveFolder", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DriveFolderId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DriveWebViewLink")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("LastReconciledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReconciliationClaimExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReconciliationClaimToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DriveFolderId")
+                        .IsUnique();
+
+                    b.HasIndex("ReconciliationClaimExpiresAt");
+
+                    b.HasIndex("OperationalProjectId", "Category")
+                        .IsUnique();
+
+                    b.ToTable("project_drive_folders", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.PunchItem", b =>
                 {
                     b.Property<int>("Id")
@@ -5392,6 +5649,35 @@ namespace nihomebackend.Migrations
                     b.Navigation("CategoryRef");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ProjectDocument", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ProjectDocument", "ConflictWithDocument")
+                        .WithMany()
+                        .HasForeignKey("ConflictWithDocumentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany("Documents")
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ConflictWithDocument");
+
+                    b.Navigation("OperationalProject");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectDriveFolder", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany("DriveFolders")
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OperationalProject");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.PunchItem", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "Assignee")
@@ -5746,6 +6032,10 @@ namespace nihomebackend.Migrations
                     b.Navigation("Contracts");
 
                     b.Navigation("DesignProject");
+
+                    b.Navigation("Documents");
+
+                    b.Navigation("DriveFolders");
 
                     b.Navigation("Opportunities");
 

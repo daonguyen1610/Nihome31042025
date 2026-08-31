@@ -12,7 +12,8 @@ namespace NihomeBackend.Services;
 public class PermitChecklistService(
     AppDbContext db,
     IBusinessDocumentStorageService documentStorage,
-    ILogger<PermitChecklistService> logger) : IPermitChecklistService
+    ILogger<PermitChecklistService> logger,
+    IProjectDocumentStagingService projectDocuments) : IPermitChecklistService
 {
     private const int MaxPageSize = 200;
     private const string PermitTypeCategory = "permit_type";
@@ -282,7 +283,9 @@ public class PermitChecklistService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        var entity = await db.PermitChecklistItems.FirstOrDefaultAsync(x => x.Id == id, ct);
+        var entity = await db.PermitChecklistItems
+            .Include(item => item.DesignProject)
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (entity is null) return null;
 
         var uploaded = await documentStorage.StoreAsync(file, BusinessDocumentArea.Permits, ct);
@@ -299,7 +302,30 @@ public class PermitChecklistService(
         }
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            if (entity.DesignProject.OperationalProjectId.HasValue)
+            {
+                var slot = kind == PermitDocumentKind.SubmittedPackage ? "submittedPackage" : "issuedPermit";
+                if (!string.IsNullOrWhiteSpace(previousPath))
+                {
+                    await projectDocuments.StageExistingManagedFileDeleteAsync(
+                        entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                        nameof(PermitChecklistItem), slot, entity.Id, previousPath, callerUserId, ct);
+                }
+                await projectDocuments.StageExistingManagedFileAsync(
+                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentCategory.LegalPermits,
+                    ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem), slot, entity.Id,
+                    uploaded.Path, uploaded.OriginalFileName, entity.DesignProject.CustomerId,
+                    entity.DesignProject.ContractId, callerUserId, ct);
+            }
+            await db.SaveChangesAsync(ct);
+        }
+        catch
+        {
+            documentStorage.Delete(uploaded.Path, BusinessDocumentArea.Permits);
+            throw;
+        }
         documentStorage.Delete(previousPath, BusinessDocumentArea.Permits);
 
         logger.LogInformation(
@@ -315,9 +341,24 @@ public class PermitChecklistService(
         var response = await GetAsync(id, ct);
         if (response is null) return null;
 
-        var entity = await db.PermitChecklistItems.FirstAsync(x => x.Id == id, ct);
+        var entity = await db.PermitChecklistItems
+            .Include(item => item.DesignProject)
+            .FirstAsync(x => x.Id == id, ct);
         var submittedFilePath = entity.SubmittedFilePath;
         var issuedFilePath = entity.IssuedFilePath;
+        if (entity.DesignProject.OperationalProjectId.HasValue)
+        {
+            if (!string.IsNullOrWhiteSpace(submittedFilePath))
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                    nameof(PermitChecklistItem), "submittedPackage", entity.Id, submittedFilePath,
+                    entity.UpdatedByUserId, ct);
+            if (!string.IsNullOrWhiteSpace(issuedFilePath))
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                    nameof(PermitChecklistItem), "issuedPermit", entity.Id, issuedFilePath,
+                    entity.UpdatedByUserId, ct);
+        }
         db.PermitChecklistItems.Remove(entity);
         await db.SaveChangesAsync(ct);
         documentStorage.Delete(submittedFilePath, BusinessDocumentArea.Permits);

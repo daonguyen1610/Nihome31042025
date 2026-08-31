@@ -12,7 +12,8 @@ namespace NihomeBackend.Services;
 public class ContractAttachmentService(
     AppDbContext db,
     IWebHostEnvironment env,
-    ILogger<ContractAttachmentService> logger)
+    ILogger<ContractAttachmentService> logger,
+    IProjectDocumentStagingService projectDocuments)
     : IContractAttachmentService
 {
     public async Task<List<ContractAttachmentResponse>?> ListAsync(
@@ -53,8 +54,35 @@ public class ContractAttachmentService(
             Label = string.IsNullOrWhiteSpace(req.Label) ? null : req.Label.Trim(),
             UploadedByUserId = callerUserId,
         };
-        db.ContractAttachments.Add(entity);
-        await db.SaveChangesAsync(ct);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+        try
+        {
+            db.ContractAttachments.Add(entity);
+            await db.SaveChangesAsync(ct);
+            if (contract.OperationalProjectId.HasValue)
+            {
+                await projectDocuments.StageExistingManagedFileAsync(
+                    contract.OperationalProjectId.Value, ProjectDocumentCategory.FinanceContracts,
+                    ProjectDocumentSourceModule.Crm, nameof(ContractAttachment), "file", entity.Id,
+                    entity.FilePath, entity.OriginalFileName, contract.CustomerId, contract.Id,
+                    callerUserId, ct);
+                await db.SaveChangesAsync(ct);
+            }
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            else if (entity.Id > 0)
+            {
+                db.ContractAttachments.Remove(entity);
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+            DeleteManagedFile(ToManagedFullPath(entity.FilePath));
+            throw;
+        }
         logger.LogInformation("Registered attachment {Id} ({Kind}) for contract {Contract}", entity.Id, entity.Kind, contractId);
 
         var uploader = await db.Users.AsNoTracking()
@@ -95,6 +123,12 @@ public class ContractAttachmentService(
         if (entity == null) return false;
 
         var fullPath = ToManagedFullPath(entity.FilePath);
+        if (contract.OperationalProjectId.HasValue)
+        {
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                contract.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
+                nameof(ContractAttachment), "file", entity.Id, entity.FilePath, callerUserId, ct);
+        }
         db.ContractAttachments.Remove(entity);
         await db.SaveChangesAsync(ct);
         DeleteManagedFile(fullPath);

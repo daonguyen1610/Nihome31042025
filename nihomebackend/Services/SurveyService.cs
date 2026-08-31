@@ -13,7 +13,8 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class SurveyService(
     AppDbContext db,
-    ILogger<SurveyService> logger) : ISurveyService
+    ILogger<SurveyService> logger,
+    IProjectDocumentStagingService projectDocuments) : ISurveyService
 {
     private const int MaxPageSize = 100;
     private const string ConstructionTypeCategory = "construction_type";
@@ -262,9 +263,24 @@ public class SurveyService(
         }
         if (request.LinkedOpportunityId.HasValue &&
             !await db.Opportunities.AnyAsync(o => o.Id == request.LinkedOpportunityId.Value, ct))
-        {
             throw new SurveyOperationException($"Cơ hội #{request.LinkedOpportunityId} không tồn tại.");
-        }
+
+        var previousProjectId = entity.LinkedOpportunityId.HasValue
+            ? await db.Opportunities.AsNoTracking()
+                .Where(opportunity => opportunity.Id == entity.LinkedOpportunityId.Value)
+                .Select(opportunity => opportunity.OperationalProjectId)
+                .SingleAsync(ct)
+            : null;
+        var linkedOpportunity = request.LinkedOpportunityId.HasValue
+            ? await db.Opportunities.AsNoTracking()
+                .Where(opportunity => opportunity.Id == request.LinkedOpportunityId.Value)
+                .Select(opportunity => new { opportunity.OperationalProjectId, opportunity.CustomerId })
+                .SingleAsync(ct)
+            : null;
+        var newProjectId = linkedOpportunity?.OperationalProjectId;
+        await using var transaction = previousProjectId != newProjectId && db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
 
         entity.Location = location;
         entity.ConstructionTypeCode = TrimOrNull(request.ConstructionTypeCode);
@@ -276,7 +292,49 @@ public class SurveyService(
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
 
+        if (previousProjectId != newProjectId)
+        {
+            var media = await db.SurveyMedia.Where(item => item.SurveyId == entity.Id).ToListAsync(ct);
+            var files = media.Select(item => new ProjectDocumentMoveDescriptor(
+                ProjectDocumentCategory.CrmPreDesign,
+                ProjectDocumentSourceModule.Survey,
+                EntityTypes.SurveyMedia,
+                SurveyMediaService.ProjectDocumentSlot,
+                item.Id,
+                item.RelativePath,
+                item.OriginalFileName,
+                linkedOpportunity?.CustomerId,
+                null)).ToList();
+            await projectDocuments.StageExistingManagedFilesMoveAsync(
+                previousProjectId, newProjectId, files, callerUserId, ct);
+
+            var now = DateTime.UtcNow;
+            foreach (var item in media)
+            {
+                item.DriveFileId = null;
+                item.DriveFolderId = null;
+                item.DriveFolderLink = null;
+                item.SyncStatus = SurveyMediaSyncStatus.Pending;
+                item.SyncAttemptCount = 0;
+                item.SyncError = null;
+                item.NextSyncAttemptAt = now;
+                item.SyncStartedAt = null;
+                item.LastSyncAttemptAt = null;
+                item.SyncedAt = null;
+                item.ClaimToken = null;
+                item.ClaimExpiresAt = null;
+                item.UpdatedAt = now;
+                item.UpdatedByUserId = callerUserId;
+            }
+            entity.DriveSyncStatus = SurveyDriveSyncStatus.NotSynced;
+            entity.DriveSyncError = null;
+            entity.LastSyncedAt = null;
+            entity.DriveFolderId = null;
+            entity.DriveFolderLink = null;
+        }
+
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation("Survey {Id} updated by user {UserId}", id, callerUserId);
         return await GetAsync(id, ct);
     }

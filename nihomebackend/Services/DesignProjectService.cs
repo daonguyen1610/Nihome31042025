@@ -14,7 +14,8 @@ namespace NihomeBackend.Services;
 public class DesignProjectService(
     AppDbContext db,
     IPermitChecklistService permitChecklistService,
-    ILogger<DesignProjectService> logger) : IDesignProjectService
+    ILogger<DesignProjectService> logger,
+    IProjectDocumentStagingService projectDocuments) : IDesignProjectService
 {
     private const int MaxPageSize = 100;
 
@@ -145,8 +146,12 @@ public class DesignProjectService(
             throw new DesignProjectOperationException("Tên dự án là bắt buộc.");
         }
 
+        var previousProjectId = entity.OperationalProjectId;
         request.OperationalProjectId ??= entity.OperationalProjectId;
         await EnsureRelationsAsync(request, id, ct);
+        await using var transaction = previousProjectId != request.OperationalProjectId && db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
 
         entity.Name = name;
         entity.OperationalProjectId = request.OperationalProjectId;
@@ -178,7 +183,15 @@ public class DesignProjectService(
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
 
+        if (previousProjectId != entity.OperationalProjectId)
+        {
+            var files = await GetMoveDescriptorsAsync(entity, ct);
+            await projectDocuments.StageExistingManagedFilesMoveAsync(
+                previousProjectId, entity.OperationalProjectId, files, callerUserId, ct);
+        }
+
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation("DesignProject {Id} updated by user {UserId}", id, callerUserId);
         return await GetAsync(id, ct);
     }
@@ -188,7 +201,8 @@ public class DesignProjectService(
         var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
         if (entity is null) return false;
 
-        await AggregateDeletionService.DeleteDesignProjectsAsync(db, new[] { id }, ct);
+        await AggregateDeletionService.DeleteDesignProjectsAsync(
+            db, new[] { id }, projectDocuments, entity.UpdatedByUserId, ct);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("DesignProject {Id} deleted", id);
         return true;
@@ -244,6 +258,83 @@ public class DesignProjectService(
     }
 
     // ------------------------------ Helpers ---------------------------------
+
+    private async Task<IReadOnlyCollection<ProjectDocumentMoveDescriptor>> GetMoveDescriptorsAsync(
+        DesignProject project, CancellationToken ct)
+    {
+        var files = new List<ProjectDocumentMoveDescriptor>();
+        var basicDocuments = await db.BasicDesignDocs
+            .Where(document => document.DesignProjectId == project.Id && document.FilePath != null)
+            .ToListAsync(ct);
+        files.AddRange(basicDocuments.Select(document => new ProjectDocumentMoveDescriptor(
+                ProjectDocumentCategory.DesignBasic, ProjectDocumentSourceModule.Design,
+                nameof(BasicDesignDoc), "file", document.Id, document.FilePath!,
+                document.OriginalFileName ?? Path.GetFileName(document.FilePath!),
+                project.CustomerId, project.ContractId)));
+        var shopDrawings = await db.ShopDrawings
+            .Where(document => document.DesignProjectId == project.Id && document.FilePath != null)
+            .ToListAsync(ct);
+        files.AddRange(shopDrawings.Select(document => new ProjectDocumentMoveDescriptor(
+                ProjectDocumentCategory.DesignShopDrawing, ProjectDocumentSourceModule.Design,
+                nameof(ShopDrawing), "file", document.Id, document.FilePath!,
+                document.OriginalFileName ?? Path.GetFileName(document.FilePath!),
+                project.CustomerId, project.ContractId)));
+
+        var permits = await db.PermitChecklistItems
+            .Where(document => document.DesignProjectId == project.Id &&
+                (document.SubmittedFilePath != null || document.IssuedFilePath != null))
+            .ToListAsync(ct);
+        foreach (var permit in permits)
+        {
+            if (!string.IsNullOrWhiteSpace(permit.SubmittedFilePath))
+                files.Add(new(ProjectDocumentCategory.LegalPermits, ProjectDocumentSourceModule.Design,
+                    nameof(PermitChecklistItem), "submittedPackage", permit.Id, permit.SubmittedFilePath,
+                    Path.GetFileName(permit.SubmittedFilePath), project.CustomerId, project.ContractId));
+            if (!string.IsNullOrWhiteSpace(permit.IssuedFilePath))
+                files.Add(new(ProjectDocumentCategory.LegalPermits, ProjectDocumentSourceModule.Design,
+                    nameof(PermitChecklistItem), "issuedPermit", permit.Id, permit.IssuedFilePath,
+                    Path.GetFileName(permit.IssuedFilePath), project.CustomerId, project.ContractId));
+        }
+
+        var acceptanceRecords = await db.AcceptanceRecords
+            .Where(record => record.DesignProjectId == project.Id && record.Documents != null)
+            .ToListAsync(ct);
+        foreach (var record in acceptanceRecords)
+            foreach (var path in ManagedPaths(record.Documents, "/files/business-documents/acceptance/"))
+                files.Add(new(ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Acceptance,
+                    nameof(AcceptanceRecord), "documents", record.Id, path, Path.GetFileName(path),
+                    project.CustomerId, project.ContractId));
+
+        var asBuiltDocuments = await db.AsBuiltDocuments
+            .Where(document => document.DesignProjectId == project.Id && document.FileUrl != null)
+            .ToListAsync(ct);
+        foreach (var document in asBuiltDocuments)
+            if (document.FileUrl!.StartsWith("/files/business-documents/as-built/", StringComparison.OrdinalIgnoreCase))
+                files.Add(new(ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Acceptance,
+                    nameof(AsBuiltDocument), "file", document.Id, document.FileUrl,
+                    Path.GetFileName(document.FileUrl), project.CustomerId, project.ContractId));
+
+        var handovers = await db.HandoverRecords
+            .Where(record => record.DesignProjectId == project.Id && record.Documents != null)
+            .ToListAsync(ct);
+        foreach (var record in handovers)
+            foreach (var path in ManagedPaths(record.Documents, "/files/business-documents/handover/"))
+                files.Add(new(ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Handover,
+                    nameof(HandoverRecord), "documents", record.Id, path, Path.GetFileName(path),
+                    project.CustomerId, project.ContractId));
+        return files;
+    }
+
+    private static IEnumerable<string> ManagedPaths(string? json, string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(json)) yield break;
+        List<string>? paths;
+        try { paths = System.Text.Json.JsonSerializer.Deserialize<List<string>>(json); }
+        catch (System.Text.Json.JsonException) { yield break; }
+        if (paths is null) yield break;
+        foreach (var path in paths.Select(value => value?.Trim()).Where(value => !string.IsNullOrWhiteSpace(value)))
+            if (path!.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) yield return path;
+    }
 
     /// <summary>
     /// Auto-generate the M3 permit checklist for a freshly created design

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ArrowLeft, BriefcaseBusiness, CalendarClock, ExternalLink, FileText, Pencil, Plus, RefreshCcw, Search, ShoppingCart, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
@@ -268,7 +269,19 @@ const OperationalProjects = () => {
 
           {detail.note && <section className="rounded-lg border bg-card p-4"><h2 className="mb-2 font-medium">{t("operationalProjects.field.note")}</h2><p className="whitespace-pre-wrap text-sm text-muted-foreground">{detail.note}</p></section>}
 
-          <Accordion type="multiple" defaultValue={["timeline", "opportunities", "quotes", "contracts"]} className="space-y-3">
+          <Accordion type="multiple" defaultValue={["documents", "timeline", "opportunities", "quotes", "contracts"]} className="space-y-3">
+            <AccordionItem value="documents" className="rounded-lg border bg-card px-4">
+              <AccordionTrigger className="py-4 hover:no-underline" data-testid="project-documents-trigger">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{t("operationalProjects.documents.title")}</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                <ProjectDocumentsPanel projectId={detail.id} canManage={canManage} />
+              </AccordionContent>
+            </AccordionItem>
+
             <AccordionItem value="timeline" className="rounded-lg border bg-card px-4">
               <AccordionTrigger className="py-4 hover:no-underline">
                 <div className="flex items-center gap-3">

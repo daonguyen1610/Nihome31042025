@@ -22,9 +22,11 @@ public class ShopDrawingServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly ShopDrawingService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly string _contentRoot;
     private readonly int _userId;
     private readonly int _projectId;
+    private readonly int _operationalProjectId;
 
     public ShopDrawingServiceTests()
     {
@@ -36,6 +38,7 @@ public class ShopDrawingServiceTests : IDisposable
         _sut = new ShopDrawingService(
             _db,
             NullLogger<ShopDrawingService>.Instance,
+            _projectDocuments.Object,
             environment.Object);
 
         var user = new ApplicationUser
@@ -60,8 +63,18 @@ public class ShopDrawingServiceTests : IDisposable
         _db.Customers.Add(customer);
         _db.SaveChanges();
 
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-SHOP",
+            Name = "Shop operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+
         var project = new DesignProject
         {
+            OperationalProjectId = operationalProject.Id,
             ProjectCode = "DP-2026-SD-TEST",
             Name = "Shop drawing fixture",
             CustomerId = customer.Id,
@@ -72,6 +85,7 @@ public class ShopDrawingServiceTests : IDisposable
 
         _userId = user.Id;
         _projectId = project.Id;
+        _operationalProjectId = operationalProject.Id;
     }
 
     public void Dispose()
@@ -229,6 +243,16 @@ public class ShopDrawingServiceTests : IDisposable
 
         Assert.True(await _sut.DeleteAsync(created.Id));
         Assert.False(File.Exists(replacementPath));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+            created.Id, first.FilePath!, _userId, It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _operationalProjectId, ProjectDocumentCategory.DesignShopDrawing, ProjectDocumentSourceModule.Design,
+            nameof(ShopDrawing), "file", created.Id, replacement.FilePath!, "second.pdf",
+            It.IsAny<int?>(), It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+            created.Id, replacement.FilePath!, _userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -290,6 +314,10 @@ public class ShopDrawingServiceTests : IDisposable
         var b = await _sut.CreateAsync(ValidCreate(title: "B"), _userId);
         var c = await _sut.CreateAsync(ValidCreate(title: "C"), _userId);
 
+        var firstRow = await _db.ShopDrawings.FindAsync(a.Id);
+        firstRow!.FilePath = "/files/design/shop/bulk-a.pdf";
+        await _db.SaveChangesAsync();
+
         await Transition(c.Id, "InReview");
         var release = new IfcRelease
         {
@@ -327,6 +355,9 @@ public class ShopDrawingServiceTests : IDisposable
         Assert.Empty(await _db.IfcReleaseItems.ToListAsync());
         Assert.Empty(await _db.DrawingRevisions.ToListAsync());
         Assert.NotNull(await _db.IfcReleases.FindAsync(release.Id));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+            a.Id, "/files/design/shop/bulk-a.pdf", It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

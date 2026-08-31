@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -17,6 +18,7 @@ public class DesignProjectServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly DesignProjectService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly int _userId;
     private readonly int _customerId;
     private readonly int _contractId;
@@ -24,7 +26,11 @@ public class DesignProjectServiceTests : IDisposable
     public DesignProjectServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new DesignProjectService(_db, new NoopPermitChecklistService(), NullLogger<DesignProjectService>.Instance);
+        _sut = new DesignProjectService(
+            _db,
+            new NoopPermitChecklistService(),
+            NullLogger<DesignProjectService>.Instance,
+            _projectDocuments.Object);
 
         var user = new ApplicationUser
         {
@@ -215,6 +221,102 @@ public class DesignProjectServiceTests : IDisposable
             _sut.UpdateAsync(created.Id, req, _userId));
     }
 
+    [Fact]
+    public async Task UpdateAsync_ProjectChange_MovesEverySupportedAuthoritativeFileSlot()
+    {
+        var oldProject = new OperationalProject { Code = "OP-D-OLD", Name = "Old", CustomerId = _customerId };
+        var newProject = new OperationalProject { Code = "OP-D-NEW", Name = "New", CustomerId = _customerId };
+        _db.OperationalProjects.AddRange(oldProject, newProject);
+        await _db.SaveChangesAsync();
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var design = await _db.DesignProjects.FindAsync(created.Id);
+        design!.OperationalProjectId = oldProject.Id;
+        var category = new AsBuiltDocumentCategory
+        {
+            Code = "move",
+            Name = "Move",
+            NameVi = "Move",
+            NameEn = "Move",
+            NameZh = "Move",
+            NameJa = "Move",
+            IsActive = true,
+        };
+        _db.AsBuiltDocumentCategories.Add(category);
+        await _db.SaveChangesAsync();
+        _db.AddRange(
+            new BasicDesignDoc
+            {
+                DesignProjectId = created.Id,
+                DocumentCode = "BD-MOVE",
+                Title = "Basic",
+                DisciplineCode = "architecture",
+                FilePath = "/files/design/basic.pdf",
+                OriginalFileName = "basic.pdf",
+            },
+            new ShopDrawing
+            {
+                DesignProjectId = created.Id,
+                DrawingCode = "SD-MOVE",
+                Title = "Shop",
+                ConstructionItem = "Item",
+                DisciplineCode = "architecture",
+                FilePath = "/files/design/shop.pdf",
+                OriginalFileName = "shop.pdf",
+            },
+            new PermitChecklistItem
+            {
+                DesignProjectId = created.Id,
+                PermitTypeCode = "gpxd",
+                SubmittedFilePath = "/files/business-documents/permits/submitted.pdf",
+                IssuedFilePath = "/files/business-documents/permits/issued.pdf",
+            },
+            new AcceptanceRecord
+            {
+                DesignProjectId = created.Id,
+                AcceptanceCode = "AR-MOVE",
+                Title = "Acceptance",
+                AcceptanceDate = new DateOnly(2026, 8, 31),
+                Documents = "[\"/files/business-documents/acceptance/acceptance.pdf\"]",
+            },
+            new AsBuiltDocument
+            {
+                DesignProjectId = created.Id,
+                CategoryId = category.Id,
+                DocumentCode = "AB-MOVE",
+                Title = "As built",
+                FileUrl = "/files/business-documents/as-built/as-built.pdf",
+            },
+            new HandoverRecord
+            {
+                DesignProjectId = created.Id,
+                HandoverCode = "HR-MOVE",
+                Title = "Handover",
+                PlannedHandoverDate = new DateOnly(2026, 9, 1),
+                ResponsibleUserId = _userId,
+                Documents = "[\"/files/business-documents/handover/handover.pdf\"]",
+            });
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(created.Id, new UpdateDesignProjectRequest
+        {
+            Name = created.Name,
+            CustomerId = _customerId,
+            OperationalProjectId = newProject.Id,
+        }, _userId);
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
+            oldProject.Id, newProject.Id,
+            It.Is<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(files => files.Count == 7 &&
+                files.Any(file => file.SourceEntityType == nameof(BasicDesignDoc) && file.SourceSlot == "file" && file.Category == ProjectDocumentCategory.DesignBasic) &&
+                files.Any(file => file.SourceEntityType == nameof(ShopDrawing) && file.SourceSlot == "file" && file.Category == ProjectDocumentCategory.DesignShopDrawing) &&
+                files.Any(file => file.SourceEntityType == nameof(PermitChecklistItem) && file.SourceSlot == "submittedPackage" && file.Category == ProjectDocumentCategory.LegalPermits) &&
+                files.Any(file => file.SourceEntityType == nameof(PermitChecklistItem) && file.SourceSlot == "issuedPermit" && file.Category == ProjectDocumentCategory.LegalPermits) &&
+                files.Any(file => file.SourceEntityType == nameof(AcceptanceRecord) && file.SourceSlot == "documents" && file.SourceModule == ProjectDocumentSourceModule.Acceptance) &&
+                files.Any(file => file.SourceEntityType == nameof(AsBuiltDocument) && file.SourceSlot == "file" && file.SourceModule == ProjectDocumentSourceModule.Acceptance) &&
+                files.Any(file => file.SourceEntityType == nameof(HandoverRecord) && file.SourceSlot == "documents" && file.SourceModule == ProjectDocumentSourceModule.Handover)),
+            _userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // ---------------- Delete ----------------
 
     [Fact]
@@ -230,6 +332,17 @@ public class DesignProjectServiceTests : IDisposable
     public async Task DeleteAsync_BeyondConcept_RemovesBlockersAndPreservesExternalRows()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-AGGREGATE",
+            Name = "Aggregate delete project",
+            CustomerId = _customerId,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        await _db.SaveChangesAsync();
+        var createdEntity = await _db.DesignProjects.FindAsync(created.Id);
+        createdEntity!.OperationalProjectId = operationalProject.Id;
+        await _db.SaveChangesAsync();
         await _sut.UpdateAsync(created.Id, new UpdateDesignProjectRequest
         {
             Name = created.Name,
@@ -242,6 +355,7 @@ public class DesignProjectServiceTests : IDisposable
             DisciplineCode = "architecture",
             DocumentCode = "BD-DELETE-001",
             Title = "Basic cleanup",
+            FilePath = "/files/design/basic/aggregate-basic.pdf",
         };
         var shopDrawing = new ShopDrawing
         {
@@ -250,6 +364,14 @@ public class DesignProjectServiceTests : IDisposable
             ConstructionItem = "Cleanup",
             DrawingCode = "SD-DELETE-001",
             Title = "Shop cleanup",
+            FilePath = "/files/design/shop/aggregate-shop.pdf",
+        };
+        var permit = new PermitChecklistItem
+        {
+            DesignProjectId = created.Id,
+            PermitTypeCode = "gpxd",
+            SubmittedFilePath = "/files/business-documents/permits/aggregate-submitted.pdf",
+            IssuedFilePath = "/files/business-documents/permits/aggregate-issued.pdf",
         };
         var predecessor = new ConstructionTask
         {
@@ -267,7 +389,7 @@ public class DesignProjectServiceTests : IDisposable
             PlannedStart = new DateOnly(2026, 8, 3),
             PlannedEnd = new DateOnly(2026, 8, 4),
         };
-        _db.AddRange(basicDoc, shopDrawing, predecessor, successor);
+        _db.AddRange(basicDoc, shopDrawing, permit, predecessor, successor);
         await _db.SaveChangesAsync();
 
         var release = new IfcRelease
@@ -275,6 +397,46 @@ public class DesignProjectServiceTests : IDisposable
             DesignProjectId = created.Id,
             ReleaseNumber = "IFC-DELETE-001",
             Title = "Release cleanup",
+        };
+        var asBuiltCategory = new AsBuiltDocumentCategory
+        {
+            Code = "aggregate-delete",
+            Name = "Aggregate delete",
+            NameVi = "Aggregate delete",
+            NameEn = "Aggregate delete",
+            NameZh = "Aggregate delete",
+            NameJa = "Aggregate delete",
+            IsActive = true,
+        };
+        _db.AsBuiltDocumentCategories.Add(asBuiltCategory);
+        await _db.SaveChangesAsync();
+        var acceptance = new AcceptanceRecord
+        {
+            DesignProjectId = created.Id,
+            ConstructionTaskId = successor.Id,
+            AcceptanceCode = "A-DELETE-001",
+            Title = "Acceptance blocker",
+            AcceptanceDate = new DateOnly(2026, 8, 5),
+            Documents = "[\"/files/business-documents/acceptance/aggregate.pdf\"]",
+        };
+        var asBuilt = new AsBuiltDocument
+        {
+            DesignProjectId = created.Id,
+            CategoryId = asBuiltCategory.Id,
+            DocumentCode = "AB-DELETE-001",
+            Title = "As-built blocker",
+            FileUrl = "/files/business-documents/as-built/aggregate.pdf",
+        };
+        var handover = new HandoverRecord
+        {
+            DesignProjectId = created.Id,
+            HandoverCode = "H-DELETE-001",
+            Title = "Handover blocker",
+            PlannedHandoverDate = new DateOnly(2026, 8, 6),
+            ResponsibleUserId = _userId,
+            Documents = "[\"/files/business-documents/handover/aggregate.pdf\"]",
+            CreatedByUserId = _userId,
+            UpdatedByUserId = _userId,
         };
         _db.AddRange(
             new DrawingRevision
@@ -302,24 +464,9 @@ public class DesignProjectServiceTests : IDisposable
                 TaskId = successor.Id,
                 PredecessorTaskId = predecessor.Id,
             },
-            new AcceptanceRecord
-            {
-                DesignProjectId = created.Id,
-                ConstructionTaskId = successor.Id,
-                AcceptanceCode = "A-DELETE-001",
-                Title = "Acceptance blocker",
-                AcceptanceDate = new DateOnly(2026, 8, 5),
-            },
-            new HandoverRecord
-            {
-                DesignProjectId = created.Id,
-                HandoverCode = "H-DELETE-001",
-                Title = "Handover blocker",
-                PlannedHandoverDate = new DateOnly(2026, 8, 6),
-                ResponsibleUserId = _userId,
-                CreatedByUserId = _userId,
-                UpdatedByUserId = _userId,
-            },
+            acceptance,
+            asBuilt,
+            handover,
             release);
         await _db.SaveChangesAsync();
         _db.IfcReleaseItems.Add(new IfcReleaseItem
@@ -339,6 +486,32 @@ public class DesignProjectServiceTests : IDisposable
         Assert.NotNull(await _db.Customers.FindAsync(_customerId));
         Assert.NotNull(await _db.Contracts.FindAsync(_contractId));
         Assert.NotNull(await _db.Users.FindAsync(_userId));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+            basicDoc.Id, basicDoc.FilePath!, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+            shopDrawing.Id, shopDrawing.FilePath!, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            "submittedPackage", permit.Id, permit.SubmittedFilePath!, It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            "issuedPermit", permit.Id, permit.IssuedFilePath!, It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            operationalProject.Id, ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord),
+            "documents", acceptance.Id, "/files/business-documents/acceptance/aggregate.pdf",
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            operationalProject.Id, ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument),
+            "file", asBuilt.Id, asBuilt.FileUrl!, It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            operationalProject.Id, ProjectDocumentSourceModule.Handover, nameof(HandoverRecord),
+            "documents", handover.Id, "/files/business-documents/handover/aggregate.pdf",
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ---------------- Auto-create hook ----------------

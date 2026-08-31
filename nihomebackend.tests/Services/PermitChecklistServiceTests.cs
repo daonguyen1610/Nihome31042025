@@ -19,9 +19,11 @@ public class PermitChecklistServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly PermitChecklistService _sut;
     private readonly int _userId;
     private readonly int _designProjectId;
+    private readonly int _operationalProjectId;
 
     public PermitChecklistServiceTests()
     {
@@ -29,7 +31,8 @@ public class PermitChecklistServiceTests : IDisposable
         _sut = new PermitChecklistService(
             _db,
             _documentStorage.Object,
-            NullLogger<PermitChecklistService>.Instance);
+            NullLogger<PermitChecklistService>.Instance,
+            _projectDocuments.Object);
 
         var user = new ApplicationUser
         {
@@ -53,8 +56,18 @@ public class PermitChecklistServiceTests : IDisposable
         _db.Customers.Add(customer);
         _db.SaveChanges();
 
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-PERMIT",
+            Name = "Permit operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+
         var dp = new DesignProject
         {
+            OperationalProjectId = operationalProject.Id,
             ProjectCode = "DP-2026-TEST",
             Name = "Test project",
             CustomerId = customer.Id,
@@ -64,6 +77,7 @@ public class PermitChecklistServiceTests : IDisposable
 
         _userId = user.Id;
         _designProjectId = dp.Id;
+        _operationalProjectId = operationalProject.Id;
     }
 
     public void Dispose() => _db.Dispose();
@@ -173,6 +187,14 @@ public class PermitChecklistServiceTests : IDisposable
             "/files/business-documents/permits/submitted.pdf", BusinessDocumentArea.Permits), Times.Once);
         _documentStorage.Verify(storage => storage.Delete(
             "/files/business-documents/permits/issued.pdf", BusinessDocumentArea.Permits), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            "submittedPackage", created.Id, "/files/business-documents/permits/submitted.pdf",
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            "issuedPermit", created.Id, "/files/business-documents/permits/issued.pdf",
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ---------------- Update ----------------
@@ -237,7 +259,11 @@ public class PermitChecklistServiceTests : IDisposable
         var file = new FormFile(new MemoryStream("permit"u8.ToArray()), 0, 6, "file", "permit.pdf");
         _documentStorage
             .Setup(storage => storage.StoreAsync(file, BusinessDocumentArea.Permits, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BusinessDocumentUploadResponse { Path = "/files/business-documents/permits/permit.pdf" });
+            .ReturnsAsync(new BusinessDocumentUploadResponse
+            {
+                Path = "/files/business-documents/permits/permit.pdf",
+                OriginalFileName = "permit.pdf",
+            });
 
         var response = await _sut.UploadDocumentAsync(
             id, PermitDocumentKind.SubmittedPackage, file, _userId);
@@ -247,6 +273,15 @@ public class PermitChecklistServiceTests : IDisposable
         Assert.Null(response.IssuedFilePath);
         _documentStorage.Verify(storage => storage.Delete(
             "/files/business-documents/permits/old.pdf", BusinessDocumentArea.Permits), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
+            "submittedPackage", id, "/files/business-documents/permits/old.pdf",
+            _userId, It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _operationalProjectId, ProjectDocumentCategory.LegalPermits, ProjectDocumentSourceModule.Design,
+            nameof(PermitChecklistItem), "submittedPackage", id,
+            "/files/business-documents/permits/permit.pdf", "permit.pdf",
+            It.IsAny<int?>(), It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ---------------- Risk flags ----------------

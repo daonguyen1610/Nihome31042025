@@ -78,6 +78,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     // Internal project aggregate shared across operational modules (NIH-460).
     public DbSet<OperationalProject> OperationalProjects => Set<OperationalProject>();
+    public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
+    public DbSet<ProjectDriveFolder> ProjectDriveFolders => Set<ProjectDriveFolder>();
 
     // Procurement
     public DbSet<Vendor> Vendors => Set<Vendor>();
@@ -958,6 +960,61 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(p => p.ProjectManagerUserId);
             b.HasIndex(p => p.Status);
             b.HasIndex(p => p.UpdatedAt);
+        });
+
+        modelBuilder.Entity<ProjectDocument>(b =>
+        {
+            b.ToTable("project_documents");
+            b.HasKey(d => d.Id);
+            b.Property(d => d.Category).HasConversion<string>().HasMaxLength(30);
+            b.Property(d => d.SourceModule).HasConversion<string>().HasMaxLength(30);
+            b.Property(d => d.SourceType).HasConversion<string>().HasMaxLength(30);
+            b.Property(d => d.SourceEntityType).HasMaxLength(100);
+            b.Property(d => d.SourceSlot).HasMaxLength(100);
+            b.Property(d => d.LocalPath).HasMaxLength(500).IsRequired();
+            b.Property(d => d.OriginalFileName).HasMaxLength(260).IsRequired();
+            b.Property(d => d.ContentType).HasMaxLength(150).IsRequired();
+            b.Property(d => d.Sha256).HasMaxLength(64).IsRequired();
+            b.Property(d => d.Origin).HasConversion<string>().HasMaxLength(20);
+            b.Property(d => d.DesiredOperation).HasConversion<string>().HasMaxLength(20);
+            b.Property(d => d.SyncStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(d => d.SyncError).HasMaxLength(500);
+            b.Property(d => d.DriveFileId).HasMaxLength(200);
+            b.Property(d => d.DriveFolderId).HasMaxLength(200);
+            b.Property(d => d.DriveWebViewLink).HasMaxLength(1000);
+            b.Property(d => d.DriveVersion).HasMaxLength(100);
+            b.Property(d => d.UnsupportedReason).HasMaxLength(500);
+            b.Property(d => d.ConflictObservedDriveFileId).HasMaxLength(200);
+            b.Property(d => d.ConflictObservedDriveVersion).HasMaxLength(100);
+            b.Property(d => d.ConflictState).HasConversion<string>().HasMaxLength(30);
+            b.Property(d => d.RowVersion).IsRowVersion();
+            b.HasOne(d => d.OperationalProject).WithMany(p => p.Documents)
+                .HasForeignKey(d => d.OperationalProjectId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(d => d.ConflictWithDocument).WithMany()
+                .HasForeignKey(d => d.ConflictWithDocumentId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(d => new { d.OperationalProjectId, d.Category, d.UpdatedAt });
+            b.HasIndex(d => new { d.SyncStatus, d.NextSyncAttemptAt });
+            b.HasIndex(d => d.ClaimToken);
+            b.HasIndex(d => d.DriveFileId).IsUnique().HasFilter("[DriveFileId] IS NOT NULL");
+            b.HasIndex(d => new { d.OperationalProjectId, d.SourceModule, d.SourceEntityType, d.SourceSlot, d.SourceRecordId, d.LocalPath })
+                .IsUnique().HasFilter("[SourceRecordId] IS NOT NULL");
+            b.HasIndex(d => new { d.ConflictWithDocumentId, d.ConflictObservedDriveFileId, d.ConflictObservedDriveVersion })
+                .IsUnique().HasFilter("[ConflictWithDocumentId] IS NOT NULL AND [ConflictObservedDriveFileId] IS NOT NULL AND [ConflictObservedDriveVersion] IS NOT NULL");
+        });
+
+        modelBuilder.Entity<ProjectDriveFolder>(b =>
+        {
+            b.ToTable("project_drive_folders");
+            b.HasKey(f => f.Id);
+            b.Property(f => f.Category).HasConversion<string>().HasMaxLength(30);
+            b.Property(f => f.DriveFolderId).HasMaxLength(200).IsRequired();
+            b.Property(f => f.DriveWebViewLink).HasMaxLength(1000);
+            b.Property(f => f.RowVersion).IsRowVersion();
+            b.HasOne(f => f.OperationalProject).WithMany(p => p.DriveFolders)
+                .HasForeignKey(f => f.OperationalProjectId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(f => new { f.OperationalProjectId, f.Category }).IsUnique();
+            b.HasIndex(f => f.DriveFolderId).IsUnique();
+            b.HasIndex(f => f.ReconciliationClaimExpiresAt);
         });
 
         modelBuilder.Entity<DesignProject>(b =>

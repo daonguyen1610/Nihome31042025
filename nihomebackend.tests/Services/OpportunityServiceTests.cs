@@ -14,6 +14,7 @@ public class OpportunityServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
     private readonly Mock<IQuoteDocumentService> _quoteDocuments;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments;
     private readonly OpportunityService _sut;
 
     public OpportunityServiceTests()
@@ -21,11 +22,13 @@ public class OpportunityServiceTests : IDisposable
         _db = DbContextFactory.Create();
         _notifications = new Mock<INotificationService>();
         _quoteDocuments = new Mock<IQuoteDocumentService>();
+        _projectDocuments = new Mock<IProjectDocumentStagingService>();
         _sut = new OpportunityService(
             _db,
             _notifications.Object,
             _quoteDocuments.Object,
-            NullLogger<OpportunityService>.Instance);
+            NullLogger<OpportunityService>.Instance,
+            _projectDocuments.Object);
     }
 
     public void Dispose() => _db.Dispose();
@@ -194,6 +197,84 @@ public class OpportunityServiceTests : IDisposable
             canSeeAll: false));
 
         Assert.Contains("gán", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ProjectChange_MovesQuoteFilesAndUpdatesQuoteProject()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var oldProject = new OperationalProject { Code = "OP-OLD", Name = "Old", CustomerId = customer.Id };
+        var newProject = new OperationalProject { Code = "OP-NEW", Name = "New", CustomerId = customer.Id };
+        _db.OperationalProjects.AddRange(oldProject, newProject);
+        await _db.SaveChangesAsync();
+        var opportunity = await SeedOpportunityAsync(customer, user);
+        opportunity.OperationalProjectId = oldProject.Id;
+        var quote = new Quote
+        {
+            Code = "QT-MOVE",
+            OpportunityId = opportunity.Id,
+            OperationalProjectId = oldProject.Id,
+            OwnerUserId = user.Id,
+        };
+        _db.Quotes.Add(quote);
+        await _db.SaveChangesAsync();
+        var document = new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = "/files/quotes/move.pdf",
+            OriginalFileName = "move.pdf",
+        };
+        _db.QuoteDocuments.Add(document);
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(opportunity.Id, new UpdateOpportunityRequest
+        {
+            Name = opportunity.Name,
+            CustomerId = customer.Id,
+            OperationalProjectId = newProject.Id,
+            OwnerUserId = user.Id,
+            EstimatedValue = opportunity.EstimatedValue,
+            WinProbability = opportunity.WinProbability,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.Equal(newProject.Id, quote.OperationalProjectId);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
+            oldProject.Id, newProject.Id,
+            It.Is<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(files => files.Count == 1 &&
+                files.Single().SourceEntityType == nameof(QuoteDocument) &&
+                files.Single().SourceSlot == "file" &&
+                files.Single().SourceRecordId == document.Id &&
+                files.Single().Category == ProjectDocumentCategory.CrmPreDesign),
+            user.Id, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NullProject_PreservesProjectWithoutMovingFiles()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var project = new OperationalProject { Code = "OP-KEEP", Name = "Keep", CustomerId = customer.Id };
+        _db.OperationalProjects.Add(project);
+        await _db.SaveChangesAsync();
+        var opportunity = await SeedOpportunityAsync(customer, user);
+        opportunity.OperationalProjectId = project.Id;
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(opportunity.Id, new UpdateOpportunityRequest
+        {
+            Name = opportunity.Name,
+            CustomerId = customer.Id,
+            OperationalProjectId = null,
+            OwnerUserId = user.Id,
+            EstimatedValue = opportunity.EstimatedValue,
+            WinProbability = opportunity.WinProbability,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.Equal(project.Id, opportunity.OperationalProjectId);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
+            It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(),
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

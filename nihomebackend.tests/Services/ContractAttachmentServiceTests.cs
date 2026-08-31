@@ -13,7 +13,9 @@ public class ContractAttachmentServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly ContractAttachmentService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly Contract _contract;
+    private readonly int _projectId;
     private readonly string _contentRoot = Path.Combine(
         Path.GetTempPath(), $"nihome-contract-attachments-{Guid.NewGuid():N}");
 
@@ -23,6 +25,14 @@ public class ContractAttachmentServiceTests : IDisposable
         _db.Customers.Add(new Customer { Name = "C", Type = CustomerType.Company });
         _db.SaveChanges();
         var customerId = _db.Customers.Single().Id;
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-CONTRACT-ATT",
+            Name = "Contract attachment project",
+            CustomerId = customerId,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
 
         _contract = new Contract
         {
@@ -30,16 +40,19 @@ public class ContractAttachmentServiceTests : IDisposable
             CustomerId = customerId,
             OwnerUserId = 100,
             Value = 1_000_000m,
+            OperationalProjectId = operationalProject.Id,
         };
         _db.Contracts.Add(_contract);
         _db.SaveChanges();
+        _projectId = operationalProject.Id;
 
         Directory.CreateDirectory(_contentRoot);
         var environment = Mock.Of<IWebHostEnvironment>(item => item.ContentRootPath == _contentRoot);
         _sut = new ContractAttachmentService(
             _db,
             environment,
-            NullLogger<ContractAttachmentService>.Instance);
+            NullLogger<ContractAttachmentService>.Instance,
+            _projectDocuments.Object);
     }
 
     public void Dispose()
@@ -66,6 +79,10 @@ public class ContractAttachmentServiceTests : IDisposable
         Assert.NotNull(created);
         Assert.Equal(ContractAttachmentKind.SignedScan, created!.Kind);
         Assert.Single(_db.ContractAttachments);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _projectId, ProjectDocumentCategory.FinanceContracts, ProjectDocumentSourceModule.Crm,
+            nameof(ContractAttachment), "file", created.Id, "/files/contracts/x.pdf", "x.pdf",
+            _contract.CustomerId, _contract.Id, 100, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -90,6 +107,28 @@ public class ContractAttachmentServiceTests : IDisposable
         Assert.True(await _sut.DeleteAsync(_contract.Id, created!.Id, 100, true));
         Assert.Empty(_db.ContractAttachments);
         Assert.False(File.Exists(fullPath));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _projectId, ProjectDocumentSourceModule.Crm, nameof(ContractAttachment), "file",
+            created.Id, "/files/contracts/x.pdf", 100, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Create_StagingFails_RemovesGeneratedMetadataAndManagedFile()
+    {
+        var directory = Path.Combine(_contentRoot, "wwwroot", "files", "contracts");
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(Path.Combine(directory, "x.pdf"), "contract");
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentCategory>(), It.IsAny<ProjectDocumentSourceModule>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("staging failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _sut.CreateAsync(_contract.Id, Req(), 100, true));
+
+        Assert.Empty(_db.ContractAttachments);
+        Assert.False(File.Exists(Path.Combine(directory, "x.pdf")));
     }
 
     [Fact]

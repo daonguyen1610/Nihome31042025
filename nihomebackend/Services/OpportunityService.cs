@@ -11,7 +11,8 @@ public class OpportunityService(
     AppDbContext db,
     INotificationService notifications,
     IQuoteDocumentService quoteDocumentService,
-    ILogger<OpportunityService> logger) : IOpportunityService
+    ILogger<OpportunityService> logger,
+    IProjectDocumentStagingService projectDocuments) : IOpportunityService
 {
     private const int MaxPageSize = 100;
     private const string LostReasonMasterDataCategory = "opportunity_lost_reason";
@@ -221,11 +222,40 @@ public class OpportunityService(
         await EnsureProjectMatchesCustomerAsync(operationalProjectId, request.CustomerId, ct);
 
         var previousOwnerId = op.OwnerUserId;
+        var previousProjectId = op.OperationalProjectId;
 
         // Sales without view.all cannot reassign the opportunity to another user.
         if (!canSeeAll && request.OwnerUserId.HasValue && request.OwnerUserId.Value != callerUserId)
         {
             throw new OpportunityOperationException("Bạn không có quyền gán cơ hội cho người khác.");
+        }
+
+        await using var transaction = previousProjectId != operationalProjectId && db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+
+        if (previousProjectId != operationalProjectId)
+        {
+            var quotes = await db.Quotes
+                .Where(quote => quote.OpportunityId == op.Id)
+                .ToListAsync(ct);
+            var quoteIds = quotes.Select(quote => quote.Id).ToList();
+            var files = await db.QuoteDocuments
+                .Where(document => quoteIds.Contains(document.QuoteId))
+                .Select(document => new ProjectDocumentMoveDescriptor(
+                    ProjectDocumentCategory.CrmPreDesign,
+                    ProjectDocumentSourceModule.Crm,
+                    nameof(QuoteDocument),
+                    "file",
+                    document.Id,
+                    document.FilePath,
+                    document.OriginalFileName,
+                    request.CustomerId,
+                    null))
+                .ToListAsync(ct);
+            foreach (var quote in quotes) quote.OperationalProjectId = operationalProjectId;
+            await projectDocuments.StageExistingManagedFilesMoveAsync(
+                previousProjectId, operationalProjectId, files, callerUserId, ct);
         }
 
         op.Name = request.Name.Trim();
@@ -240,6 +270,7 @@ public class OpportunityService(
         op.UpdatedByUserId = callerUserId;
 
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
 
         if (op.OwnerUserId.HasValue
             && op.OwnerUserId.Value != previousOwnerId
@@ -384,7 +415,8 @@ public class OpportunityService(
 
         CrmConcurrency.Apply(db, op, rowVersion);
 
-        var quoteIds = await AggregateDeletionService.DeleteOpportunitiesAsync(db, new[] { id }, ct);
+        var quoteIds = await AggregateDeletionService.DeleteOpportunitiesAsync(
+            db, new[] { id }, projectDocuments, callerUserId, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         foreach (var quoteId in quoteIds) quoteDocumentService.DeleteQuoteFiles(quoteId);
         logger.LogInformation("Deleted opportunity {Id} and its dependent quote aggregates", id);

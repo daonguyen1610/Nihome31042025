@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.GoogleDrive;
 
 namespace NihomeBackend.Controllers;
 
@@ -17,9 +19,28 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class OperationalProjectsController(
     IOperationalProjectService service,
+    IProjectDocumentService documents,
     IPermissionService permissions,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    GoogleDriveOptions driveOptions) : ControllerBase
 {
+    [HttpGet("document-categories")]
+    [RequirePermission("operations.projects", "view")]
+    public ActionResult<IReadOnlyList<ProjectDocumentCategoryResponse>> GetDocumentCategories()
+    {
+        var categories = Enum.GetValues<ProjectDocumentCategory>()
+            .Where(category => category != ProjectDocumentCategory.Unclassified)
+            .OrderBy(category => (int)category)
+            .Select(category => new ProjectDocumentCategoryResponse
+            {
+                Value = category.ToString(),
+                FolderPath = driveOptions.Folders.For(category),
+                TranslationKey = $"operationalProjects.documents.category.{category}",
+            })
+            .ToList();
+        return Ok(categories);
+    }
+
     [HttpGet]
     [RequirePermission("operations.projects", "view")]
     public async Task<ActionResult<OperationalProjectListResponse>> List(
@@ -150,6 +171,146 @@ public class OperationalProjectsController(
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    [HttpGet("{id:int}/documents")]
+    [RequirePermission("operations.projects", "view")]
+    public async Task<ActionResult<IReadOnlyList<ProjectDocumentResponse>>> ListDocuments(int id, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        var result = await documents.ListAsync(id, scope.Value.UserId, scope.Value.CanSeeAll, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{id:int}/documents")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission("operations.projects", "manage")]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    public async Task<ActionResult<ProjectDocumentResponse>> UploadDocument(
+        int id, [FromForm] ProjectDocumentUploadRequest request, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        try
+        {
+            var result = await documents.UploadAsync(id, request, scope.Value.UserId, scope.Value.CanSeeAll, ct);
+            if (result is null) return NotFound();
+            AuditDocument("project-document.upload", id, result.Id, "uploaded", result);
+            return CreatedAtAction(nameof(GetDocumentContent), new { id, documentId = result.Id }, result);
+        }
+        catch (ProjectDocumentValidationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/documents/{documentId:long}/content")]
+    [RequirePermission("operations.projects", "view")]
+    public async Task<IActionResult> GetDocumentContent(int id, long documentId, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        var content = await documents.DownloadAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll, ct);
+        if (content is null) return NotFound();
+        Response.ContentType = content.ContentType;
+        Response.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+        {
+            FileNameStar = content.OriginalFileName,
+        }.ToString();
+        await content.WriteToAsync(Response.Body, ct);
+        return new EmptyResult();
+    }
+
+    [HttpDelete("{id:int}/documents/{documentId:long}")]
+    [RequirePermission("operations.projects", "manage")]
+    public async Task<IActionResult> DeleteDocument(int id, long documentId, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        try
+        {
+            if (!await documents.DeleteAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll, ct)) return NotFound();
+            AuditDocument("project-document.delete_requested", id, documentId, "queued for deletion");
+            return NoContent();
+        }
+        catch (ProjectDocumentValidationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (ProjectDocumentConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("{id:int}/documents/{documentId:long}/retry")]
+    [RequirePermission("operations.projects", "manage")]
+    public async Task<ActionResult<ProjectDocumentResponse>> RetryDocument(int id, long documentId, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        return await MutateDocumentAsync("project-document.retry", id, documentId,
+            () => documents.RetryAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll, ct));
+    }
+
+    [HttpPost("{id:int}/documents/{documentId:long}/classify")]
+    [RequirePermission("operations.projects", "manage")]
+    public async Task<ActionResult<ProjectDocumentResponse>> ClassifyDocument(
+        int id, long documentId, [FromBody] ClassifyProjectDocumentRequest request, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        return await MutateDocumentAsync("project-document.classify", id, documentId,
+            () => documents.ClassifyAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll, ct));
+    }
+
+    [HttpPost("{id:int}/documents/{documentId:long}/resolve-conflict")]
+    [RequirePermission("operations.projects", "manage")]
+    public async Task<ActionResult<ProjectDocumentResponse>> ResolveDocumentConflict(
+        int id, long documentId, [FromBody] ResolveProjectDocumentConflictRequest request, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        return await MutateDocumentAsync("project-document.resolve_conflict", id, documentId,
+            () => documents.ResolveConflictAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll, ct));
+    }
+
+    private async Task<ActionResult<ProjectDocumentResponse>> MutateDocumentAsync(
+        string action, int projectId, long documentId, Func<Task<ProjectDocumentResponse?>> mutation)
+    {
+        try
+        {
+            var result = await mutation();
+            if (result is null) return NotFound();
+            AuditDocument(action, projectId, documentId, "updated", result);
+            return Ok(result);
+        }
+        catch (ProjectDocumentValidationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (ProjectDocumentConflictException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+    }
+
+    private void AuditDocument(string action, int projectId, long documentId, string verb, object? value = null) =>
+        audit.Log(new AuditEvent
+        {
+            Action = action,
+            ResourceType = EntityTypes.ProjectDocument,
+            ResourceId = documentId.ToString(),
+            Message = $"Project document #{documentId} for operational project #{projectId} {verb}.",
+            NewValue = value,
+        });
+
+    private async Task<(int UserId, bool CanSeeAll)?> ResolveScopeAsync(CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return null;
+        return (userId.Value, await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct));
     }
 
     private int? GetUserId()

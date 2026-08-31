@@ -17,6 +17,7 @@ public class ContractService(
     AppDbContext db,
     IDesignProjectService designProjectService,
     ILogger<ContractService> logger,
+    IProjectDocumentStagingService projectDocuments,
     IWebHostEnvironment? env = null) : IContractService
 {
     private const int MaxPageSize = 100;
@@ -287,6 +288,7 @@ public class ContractService(
             req,
             entity.OperationalProjectId,
             ct);
+        var previousProjectId = entity.OperationalProjectId;
 
         var newNumber = string.IsNullOrWhiteSpace(req.ContractNumber)
             ? entity.ContractNumber
@@ -330,6 +332,38 @@ public class ContractService(
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
 
+        if (previousProjectId != operationalProjectId)
+        {
+            var attachmentRows = await db.ContractAttachments
+                .Where(attachment => attachment.ContractId == entity.Id)
+                .ToListAsync(ct);
+            var attachments = attachmentRows.Select(attachment => new ProjectDocumentMoveDescriptor(
+                    ProjectDocumentCategory.FinanceContracts,
+                    ProjectDocumentSourceModule.Crm,
+                    nameof(ContractAttachment),
+                    "file",
+                    attachment.Id,
+                    attachment.FilePath,
+                    attachment.OriginalFileName,
+                    entity.CustomerId,
+                    entity.Id)).ToList();
+            var appendixRows = await db.ContractAppendices
+                .Where(appendix => appendix.ContractId == entity.Id && appendix.FilePath != null)
+                .ToListAsync(ct);
+            var appendices = appendixRows.Select(appendix => new ProjectDocumentMoveDescriptor(
+                    ProjectDocumentCategory.FinanceContracts,
+                    ProjectDocumentSourceModule.Crm,
+                    nameof(ContractAppendix),
+                    "file",
+                    appendix.Id,
+                    appendix.FilePath!,
+                    appendix.OriginalFileName ?? Path.GetFileName(appendix.FilePath!),
+                    entity.CustomerId,
+                    entity.Id)).ToList();
+            await projectDocuments.StageExistingManagedFilesMoveAsync(
+                previousProjectId, operationalProjectId, [.. attachments, .. appendices], callerUserId, ct);
+        }
+
         await CrmConcurrency.SaveChangesAsync(db, ct);
 
         // Milestone list is only replaced when the caller sent a value.
@@ -355,17 +389,30 @@ public class ContractService(
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return false;
 
         CrmConcurrency.Apply(db, entity, rowVersion);
-        var managedFiles = await db.ContractAttachments
+        var attachments = await db.ContractAttachments
             .Where(attachment => attachment.ContractId == id)
-            .Select(attachment => attachment.FilePath)
-            .Concat(db.ContractAppendices
-                .Where(appendix => appendix.ContractId == id && appendix.FilePath != null)
-                .Select(appendix => appendix.FilePath!))
             .ToListAsync(ct);
+        var appendices = await db.ContractAppendices
+            .Where(appendix => appendix.ContractId == id && appendix.FilePath != null)
+            .ToListAsync(ct);
+        if (entity.OperationalProjectId.HasValue)
+        {
+            foreach (var attachment in attachments)
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    entity.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
+                    nameof(ContractAttachment), "file", attachment.Id, attachment.FilePath,
+                    callerUserId, ct);
+            foreach (var appendix in appendices)
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    entity.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
+                    nameof(ContractAppendix), "file", appendix.Id, appendix.FilePath!,
+                    callerUserId, ct);
+        }
 
         db.Contracts.Remove(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
-        foreach (var filePath in managedFiles) DeleteManagedFile(filePath);
+        foreach (var filePath in attachments.Select(item => item.FilePath)
+                     .Concat(appendices.Select(item => item.FilePath!))) DeleteManagedFile(filePath);
         logger.LogInformation("Deleted contract {Id} ({Number})", entity.Id, entity.ContractNumber);
         return true;
     }

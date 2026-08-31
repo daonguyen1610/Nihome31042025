@@ -23,7 +23,8 @@ public class CustomerServiceTests : IDisposable
             _db,
             Mock.Of<ICustomerDocumentService>(),
             _quoteDocuments.Object,
-            NullLogger<CustomerService>.Instance);
+            NullLogger<CustomerService>.Instance,
+            Mock.Of<IProjectDocumentStagingService>());
     }
 
     public void Dispose() => _db.Dispose();

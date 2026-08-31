@@ -14,7 +14,10 @@ public class QuoteDocumentServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly string _contentRoot;
     private readonly QuoteDocumentService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly int _quoteId;
+    private readonly int _projectId;
+    private readonly int _customerId;
 
     public QuoteDocumentServiceTests()
     {
@@ -24,15 +27,25 @@ public class QuoteDocumentServiceTests : IDisposable
 
         var customer = new Customer { Name = "Customer", OwnerUserId = 100 };
         var opportunity = new Opportunity { Name = "Opportunity", Customer = customer, OwnerUserId = 100 };
-        var quote = new Quote { Code = "QT-TEST", Opportunity = opportunity, OwnerUserId = 100 };
+        var project = new OperationalProject { Code = "OP-QUOTE", Name = "Quote project", Customer = customer };
+        var quote = new Quote
+        {
+            Code = "QT-TEST",
+            Opportunity = opportunity,
+            OperationalProject = project,
+            OwnerUserId = 100,
+        };
         _db.Quotes.Add(quote);
         _db.SaveChanges();
         _quoteId = quote.Id;
+        _projectId = project.Id;
+        _customerId = customer.Id;
 
         _sut = new QuoteDocumentService(
             _db,
             Mock.Of<IWebHostEnvironment>(environment => environment.ContentRootPath == _contentRoot),
-            NullLogger<QuoteDocumentService>.Instance);
+            NullLogger<QuoteDocumentService>.Instance,
+            _projectDocuments.Object);
     }
 
     public void Dispose()
@@ -58,6 +71,10 @@ public class QuoteDocumentServiceTests : IDisposable
             _quoteId.ToString(),
             Path.GetFileName(result.FilePath))));
         Assert.Single(_db.QuoteDocuments);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _projectId, ProjectDocumentCategory.CrmPreDesign, ProjectDocumentSourceModule.Crm,
+            nameof(QuoteDocument), "file", result.Id, result.FilePath, "quote.pdf",
+            _customerId, null, 100, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -108,6 +125,39 @@ public class QuoteDocumentServiceTests : IDisposable
         Assert.True(removed);
         Assert.Empty(_db.QuoteDocuments);
         Assert.False(File.Exists(fullPath));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _projectId, ProjectDocumentSourceModule.Crm, nameof(QuoteDocument), "file",
+            uploaded.Id, uploaded.FilePath, 100, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Upload_UnlinkedLegacyQuote_SkipsSidecarSafely()
+    {
+        var quote = await _db.Quotes.FindAsync(_quoteId);
+        quote!.OperationalProjectId = null;
+        await _db.SaveChangesAsync();
+
+        Assert.NotNull(await _sut.UploadAsync(
+            _quoteId, CreateFile("legacy.pdf"), null, 100, canSeeAll: false));
+
+        _projectDocuments.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Upload_StagingFails_RemovesGeneratedMetadataAndFile()
+    {
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentCategory>(), It.IsAny<ProjectDocumentSourceModule>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("staging failed"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.UploadAsync(
+            _quoteId, CreateFile("rollback.pdf"), null, 100, canSeeAll: false));
+
+        Assert.Empty(_db.QuoteDocuments);
+        Assert.Empty(Directory.GetFiles(Path.Combine(
+            _contentRoot, "wwwroot", "files", "quotes", _quoteId.ToString())));
     }
 
     [Fact]

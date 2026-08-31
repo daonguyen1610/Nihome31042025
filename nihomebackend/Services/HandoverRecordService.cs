@@ -11,7 +11,8 @@ public class HandoverRecordService(
     AppDbContext db,
     ILogger<HandoverRecordService> logger,
     AsBuiltDocumentCategoryService categoryService,
-    IBusinessDocumentStorageService? documentStorage = null) : IHandoverRecordService
+    IBusinessDocumentStorageService? documentStorage = null,
+    IProjectDocumentStagingService? projectDocuments = null) : IHandoverRecordService
 {
     private const int MaxPageSize = 200;
     private static readonly HandoverStatus[] EditableStatuses =
@@ -111,7 +112,7 @@ public class HandoverRecordService(
         ValidateRequest(request.Title, request.PlannedHandoverDate, request.Description,
             request.Location, request.CommissioningNotes, request.ChecklistItems,
             request.Documents, request.Signatories);
-        var project = await db.DesignProjects.AsNoTracking()
+        var project = await db.DesignProjects
             .FirstOrDefaultAsync(item => item.Id == request.DesignProjectId, ct)
             ?? throw new HandoverRecordOperationException($"Dự án #{request.DesignProjectId} không tồn tại.");
         await EnsureUserAsync(request.ResponsibleUserId, ct);
@@ -143,14 +144,28 @@ public class HandoverRecordService(
         };
         entity.StatusHistory.Add(NewHistory(null, HandoverStatus.Draft, callerUserId, null));
         db.HandoverRecords.Add(entity);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
         try
         {
             await db.SaveChangesAsync(ct);
+            await StageDocumentDiffAsync(project, entity.Id, [], request.Documents, callerUserId, ct);
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
         }
         catch (DbUpdateException exception)
         {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            else await RollbackCreateAsync(entity, CancellationToken.None);
             logger.LogWarning(exception, "Concurrent handover creation failed for project {ProjectId}", request.DesignProjectId);
             throw new HandoverRecordConflictException("Dự án đã có hồ sơ bàn giao hoặc mã bàn giao vừa được sử dụng. Vui lòng tải lại và thử lại.");
+        }
+        catch
+        {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            else await RollbackCreateAsync(entity, CancellationToken.None);
+            throw;
         }
         logger.LogInformation("HandoverRecord {Id} created for project {ProjectId}", entity.Id, entity.DesignProjectId);
         return (await GetAsync(entity.Id, callerUserId, true, ct))!;
@@ -194,6 +209,8 @@ public class HandoverRecordService(
         entity.Signatories = JsonSerializer.Serialize(request.Signatories.Select(item => item.Trim()));
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
+        await StageDocumentDiffAsync(entity.DesignProject, entity.Id, previousDocuments,
+            request.Documents, callerUserId, ct);
         await SaveWithConcurrencyAsync(ct);
         DeleteRemovedDocuments(previousDocuments, request.Documents);
         return await GetAsync(id, callerUserId, true, ct);
@@ -253,6 +270,8 @@ public class HandoverRecordService(
             .FirstOrDefaultAsync(row => row.Id == id, ct);
         if (entity is null) return false;
         var documents = DeserializeStrings(entity.Documents);
+        var project = await db.DesignProjects.FirstAsync(row => row.Id == entity.DesignProjectId, ct);
+        await StageDocumentDiffAsync(project, entity.Id, documents, [], callerUserId, ct);
         db.HandoverStatusHistory.RemoveRange(entity.StatusHistory);
         db.HandoverRecords.Remove(entity);
         await SaveWithConcurrencyAsync(ct);
@@ -273,6 +292,39 @@ public class HandoverRecordService(
         var retained = current.ToHashSet(StringComparer.Ordinal);
         foreach (var path in previous.Where(path => !retained.Contains(path)))
             documentStorage?.Delete(path, BusinessDocumentArea.Handover);
+    }
+
+    private async Task StageDocumentDiffAsync(DesignProject project, int recordId,
+        IEnumerable<string> previous, IEnumerable<string> current, int? userId, CancellationToken ct)
+    {
+        if (project.OperationalProjectId is not int projectId || projectDocuments is null) return;
+        var oldPaths = ManagedPaths(previous);
+        var newPaths = ManagedPaths(current);
+        foreach (var path in oldPaths.Except(newPaths, StringComparer.Ordinal))
+            await projectDocuments.StageExistingManagedFileDeleteAsync(projectId,
+                ProjectDocumentSourceModule.Handover, nameof(HandoverRecord), "documents",
+                recordId, path, userId, ct);
+        foreach (var path in newPaths.Except(oldPaths, StringComparer.Ordinal))
+            await projectDocuments.StageExistingManagedFileAsync(projectId,
+                ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Handover,
+                nameof(HandoverRecord), "documents", recordId, path, Path.GetFileName(path),
+                project.CustomerId, project.ContractId, userId, ct);
+    }
+
+    private static HashSet<string> ManagedPaths(IEnumerable<string> paths) => paths
+        .Select(path => path.Trim())
+        .Where(path => path.StartsWith("/files/business-documents/handover/", StringComparison.OrdinalIgnoreCase))
+        .ToHashSet(StringComparer.Ordinal);
+
+    private async Task RollbackCreateAsync(HandoverRecord entity, CancellationToken ct)
+    {
+        db.ProjectDocuments.RemoveRange(db.ChangeTracker.Entries<ProjectDocument>()
+            .Where(entry => entry.Entity.SourceEntityType == nameof(HandoverRecord)
+                && entry.Entity.SourceRecordId == entity.Id)
+            .Select(entry => entry.Entity));
+        db.HandoverStatusHistory.RemoveRange(entity.StatusHistory);
+        db.HandoverRecords.Remove(entity);
+        await db.SaveChangesAsync(ct);
     }
 
     private static IQueryable<HandoverRecord> ApplyScope(

@@ -19,6 +19,7 @@ public class AcceptanceRecordServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly Mock<IBusinessDocumentStorageService> _documentStorage = new();
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly AcceptanceRecordService _sut;
     private readonly int _userId;
     private readonly int _projectId;
@@ -30,7 +31,8 @@ public class AcceptanceRecordServiceTests : IDisposable
         _sut = new AcceptanceRecordService(
             _db,
             NullLogger<AcceptanceRecordService>.Instance,
-            _documentStorage.Object);
+            _documentStorage.Object,
+            _projectDocuments.Object);
 
         var user = new ApplicationUser
         {
@@ -53,6 +55,15 @@ public class AcceptanceRecordServiceTests : IDisposable
             CustomerId = customer.Id,
             CurrentStage = DesignProjectStage.ShopDrawing,
         };
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-ACC-001",
+            Name = "Acceptance operational project",
+            CustomerId = customer.Id,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
+        project.OperationalProjectId = operationalProject.Id;
         _db.DesignProjects.Add(project);
         _db.SaveChanges();
 
@@ -92,6 +103,68 @@ public class AcceptanceRecordServiceTests : IDisposable
         Assert.Equal("A-002", b.AcceptanceCode);
         Assert.Equal("A-003", c.AcceptanceCode);
         Assert.Equal("Draft", a.Status);
+    }
+
+    [Fact]
+    public async Task CreateAsync_stages_each_managed_document_with_record_identity()
+    {
+        var request = Req("Staged acceptance");
+        request.Documents = JsonSerializer.Serialize(new[]
+        {
+            "/files/business-documents/acceptance/minutes.pdf",
+            "/files/business-documents/acceptance/photos.zip",
+        });
+
+        var created = await _sut.CreateAsync(request, _userId);
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord), "documents",
+            created.Id, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<int?>(),
+            _userId, It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task CreateAsync_staging_failure_rolls_back_generated_record()
+    {
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentCategory>(), It.IsAny<ProjectDocumentSourceModule>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("staging failed"));
+        var request = Req("Rollback acceptance");
+        request.Documents = "[\"/files/business-documents/acceptance/rollback.pdf\"]";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CreateAsync(request, _userId));
+
+        Assert.Empty(await _db.AcceptanceRecords.ToListAsync());
+    }
+
+    [Fact]
+    public async Task UpdateAsync_stages_only_removed_and_added_paths_and_is_idempotent()
+    {
+        var request = Req("Acceptance diff");
+        request.Documents = "[\"/files/business-documents/acceptance/old.pdf\"]";
+        var created = await _sut.CreateAsync(request, _userId);
+        var update = new UpdateAcceptanceRecordRequest
+        {
+            Title = created.Title,
+            AcceptanceDate = created.AcceptanceDate,
+            Documents = "[\"/files/business-documents/acceptance/new.pdf\"]",
+        };
+
+        await _sut.UpdateAsync(created.Id, update, _userId);
+        await _sut.UpdateAsync(created.Id, update, _userId);
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            It.IsAny<int>(), ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord),
+            "documents", created.Id, "/files/business-documents/acceptance/old.pdf", _userId,
+            It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord), "documents",
+            created.Id, "/files/business-documents/acceptance/new.pdf", "new.pdf",
+            It.IsAny<int?>(), It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -235,6 +308,39 @@ public class AcceptanceRecordServiceTests : IDisposable
         });
         Assert.Equal(new[] { a1.Id, a2.Id }, res.DeletedIds.Order());
         Assert.Equal(new[] { 999 }, res.SkippedIds);
+    }
+
+    [Fact]
+    public async Task Delete_and_bulk_delete_stage_managed_document_deletes()
+    {
+        var firstRequest = Req("Delete staged");
+        firstRequest.Documents = "[\"/files/business-documents/acceptance/one.pdf\"]";
+        var first = await _sut.CreateAsync(firstRequest, _userId);
+        var secondRequest = Req("Bulk staged");
+        secondRequest.Documents = "[\"/files/business-documents/acceptance/two.pdf\"]";
+        var second = await _sut.CreateAsync(secondRequest, _userId);
+
+        await _sut.DeleteAsync(first.Id, _userId);
+        await _sut.BulkDeleteAsync(new BulkDeleteAcceptanceRecordsRequest { Ids = [second.Id] }, _userId);
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            It.IsAny<int>(), ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord),
+            "documents", It.IsAny<long>(), It.IsAny<string>(), _userId,
+            It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task CreateAsync_unlinked_legacy_project_skips_staging()
+    {
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.OperationalProjectId = null;
+        await _db.SaveChangesAsync();
+        var request = Req("Legacy unlinked");
+        request.Documents = "[\"/files/business-documents/acceptance/legacy.pdf\"]";
+
+        await _sut.CreateAsync(request, _userId);
+
+        _projectDocuments.VerifyNoOtherCalls();
     }
 
     [Fact]

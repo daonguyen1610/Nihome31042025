@@ -8,7 +8,8 @@ namespace NihomeBackend.Services;
 public class QuoteDocumentService(
     AppDbContext db,
     IWebHostEnvironment env,
-    ILogger<QuoteDocumentService> logger) : IQuoteDocumentService
+    ILogger<QuoteDocumentService> logger,
+    IProjectDocumentStagingService projectDocuments) : IQuoteDocumentService
 {
     private const long MaxFileSizeBytes = 20 * 1024 * 1024;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -59,7 +60,10 @@ public class QuoteDocumentService(
         var storedName = $"{Guid.NewGuid():N}{extension}";
         var fullPath = Path.Combine(storageRoot, storedName);
 
-        QuoteDocument entity;
+        QuoteDocument? entity = null;
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
         try
         {
             await using (var stream = new FileStream(fullPath, FileMode.CreateNew))
@@ -81,9 +85,28 @@ public class QuoteDocumentService(
             };
             db.QuoteDocuments.Add(entity);
             await db.SaveChangesAsync(ct);
+            var project = await db.Quotes.AsNoTracking()
+                .Where(quote => quote.Id == quoteId)
+                .Select(quote => new { quote.OperationalProjectId, quote.Opportunity.CustomerId })
+                .SingleAsync(ct);
+            if (project.OperationalProjectId.HasValue)
+            {
+                await projectDocuments.StageExistingManagedFileAsync(
+                    project.OperationalProjectId.Value, ProjectDocumentCategory.CrmPreDesign,
+                    ProjectDocumentSourceModule.Crm, nameof(QuoteDocument), "file", entity.Id,
+                    entity.FilePath, entity.OriginalFileName, project.CustomerId, null, callerUserId, ct);
+                await db.SaveChangesAsync(ct);
+            }
+            if (transaction is not null) await transaction.CommitAsync(ct);
         }
         catch
         {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            else if (entity?.Id > 0)
+            {
+                db.QuoteDocuments.Remove(entity);
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
             DeleteManagedFile(fullPath);
             throw;
         }
@@ -93,7 +116,7 @@ public class QuoteDocumentService(
             .Select(user => user.FullName)
             .FirstOrDefaultAsync(ct);
         logger.LogInformation("Uploaded quote document {DocumentId} for quote {QuoteId}", entity.Id, quoteId);
-        return Map(entity, uploaderName);
+        return Map(entity!, uploaderName);
     }
 
     public async Task<QuoteDocumentContent?> GetContentAsync(
@@ -130,6 +153,16 @@ public class QuoteDocumentService(
             .FirstOrDefaultAsync(document => document.Id == documentId && document.QuoteId == quoteId, ct);
         if (entity is null) return false;
 
+        var projectId = await db.Quotes.AsNoTracking()
+            .Where(quote => quote.Id == quoteId)
+            .Select(quote => quote.OperationalProjectId)
+            .SingleAsync(ct);
+        if (projectId.HasValue)
+        {
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectId.Value, ProjectDocumentSourceModule.Crm, nameof(QuoteDocument), "file",
+                entity.Id, entity.FilePath, callerUserId, ct);
+        }
         db.QuoteDocuments.Remove(entity);
         await db.SaveChangesAsync(ct);
         DeleteManagedFile(ToManagedFullPath(entity.FilePath, quoteId));

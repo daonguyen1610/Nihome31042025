@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -12,10 +13,12 @@ public sealed class SurveyMediaService(
     AppDbContext db,
     ISurveyMediaStorageService storage,
     IGoogleDriveAdapter drive,
+    IProjectDocumentStagingService projectDocuments,
     TranslationService translations,
     ILogger<SurveyMediaService>? logger = null) : ISurveyMediaService
 {
     public const int MaxSyncAttempts = 3;
+    internal const string ProjectDocumentSlot = "media";
     private static readonly HashSet<string> SupportedLanguages = ["vi", "en", "zh", "ja"];
 
     public async Task<SurveyMediaResponse?> AddAsync(
@@ -25,7 +28,6 @@ public sealed class SurveyMediaService(
         {
             throw new SurveyMediaValidationException("Vĩ độ và kinh độ phải được cung cấp cùng nhau, ví dụ 10.776900 và 106.700900.");
         }
-        if (!await db.Surveys.AnyAsync(s => s.Id == surveyId, ct)) return null;
         if (request.File is null || request.File.Length == 0)
         {
             throw new SurveyMediaValidationException("Tệp khảo sát là bắt buộc và không được để trống.");
@@ -34,6 +36,19 @@ public sealed class SurveyMediaService(
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
             : null;
+        var linkedProject = await db.Surveys.AsNoTracking()
+            .Where(s => s.Id == surveyId)
+            .Select(s => new
+            {
+                OperationalProjectId = s.LinkedOpportunity != null
+                    ? s.LinkedOpportunity.OperationalProjectId
+                    : null,
+                CustomerId = s.LinkedOpportunity != null
+                    ? (int?)s.LinkedOpportunity.CustomerId
+                    : null,
+            })
+            .FirstOrDefaultAsync(ct);
+        if (linkedProject is null) return null;
         var currentSize = await db.SurveyMedia
             .Where(m => m.SurveyId == surveyId)
             .SumAsync(m => (long?)m.Size, ct) ?? 0;
@@ -69,6 +84,22 @@ public sealed class SurveyMediaService(
             };
             db.SurveyMedia.Add(entity);
             await db.SaveChangesAsync(ct);
+            if (linkedProject.OperationalProjectId.HasValue)
+            {
+                await projectDocuments.StageExistingManagedFileAsync(
+                    linkedProject.OperationalProjectId.Value,
+                    ProjectDocumentCategory.CrmPreDesign,
+                    ProjectDocumentSourceModule.Survey,
+                    EntityTypes.SurveyMedia,
+                    ProjectDocumentSlot,
+                    entity.Id,
+                    entity.RelativePath,
+                    entity.OriginalFileName,
+                    linkedProject.CustomerId,
+                    null,
+                    userId,
+                    ct);
+            }
             await RecalculateAggregateAsync(surveyId, ct);
             await db.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
@@ -92,8 +123,11 @@ public sealed class SurveyMediaService(
 
     public async Task<bool> DeleteAsync(int surveyId, long mediaId, CancellationToken ct = default)
     {
-        var media = await db.SurveyMedia.FirstOrDefaultAsync(m => m.Id == mediaId && m.SurveyId == surveyId, ct);
+        var media = await db.SurveyMedia
+            .Include(m => m.Survey).ThenInclude(s => s.LinkedOpportunity)
+            .FirstOrDefaultAsync(m => m.Id == mediaId && m.SurveyId == surveyId, ct);
         if (media is null) return false;
+        var operationalProjectId = media.Survey.LinkedOpportunity?.OperationalProjectId;
 
         if (media.SyncStatus == SurveyMediaSyncStatus.Processing)
         {
@@ -101,7 +135,35 @@ public sealed class SurveyMediaService(
                 "Tệp đang được đồng bộ. Vui lòng chờ lần xử lý hiện tại hoàn tất trước khi xoá.");
         }
 
-        if (media.SyncStatus == SurveyMediaSyncStatus.Synced && !string.IsNullOrWhiteSpace(media.DriveFileId))
+        await using var transaction = operationalProjectId.HasValue && db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        if (operationalProjectId.HasValue)
+        {
+            bool staged;
+            try
+            {
+                staged = await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    operationalProjectId.Value,
+                    ProjectDocumentSourceModule.Survey,
+                    EntityTypes.SurveyMedia,
+                    ProjectDocumentSlot,
+                    media.Id,
+                    media.RelativePath,
+                    media.UpdatedByUserId,
+                    ct);
+            }
+            catch (ProjectDocumentConflictException exception)
+            {
+                throw new SurveyMediaConflictException(exception.Message);
+            }
+            if (!staged)
+            {
+                throw new SurveyMediaValidationException(
+                    "Không tìm thấy hàng đợi đồng bộ dự án của tệp khảo sát; dữ liệu được giữ nguyên để tránh bỏ sót tệp trên Google Drive.");
+            }
+        }
+        else if (media.SyncStatus == SurveyMediaSyncStatus.Synced && !string.IsNullOrWhiteSpace(media.DriveFileId))
         {
             try
             {
@@ -114,14 +176,17 @@ public sealed class SurveyMediaService(
             }
         }
 
-        try
+        if (!operationalProjectId.HasValue)
         {
-            storage.Delete(surveyId, media.RelativePath);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            throw new SurveyMediaValidationException(
-                "Không thể xoá tệp khỏi vùng lưu trữ riêng tư; dữ liệu được giữ nguyên để quản trị viên có thể xử lý lại.");
+            try
+            {
+                storage.Delete(surveyId, media.RelativePath);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                throw new SurveyMediaValidationException(
+                    "Không thể xoá tệp khỏi vùng lưu trữ riêng tư; dữ liệu được giữ nguyên để quản trị viên có thể xử lý lại.");
+            }
         }
 
         db.SurveyMedia.Remove(media);
@@ -141,13 +206,29 @@ public sealed class SurveyMediaService(
             survey.UpdatedAt = DateTime.UtcNow;
         }
         await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        if (operationalProjectId.HasValue)
+        {
+            try
+            {
+                storage.Delete(surveyId, media.RelativePath);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                logger?.LogWarning(exception,
+                    "Survey media {MediaId} was deleted from SQL but local cleanup failed for survey {SurveyId}",
+                    mediaId, surveyId);
+            }
+        }
         return true;
     }
 
     public async Task<SurveyMediaResponse?> RetryAsync(
         int surveyId, long mediaId, int userId, CancellationToken ct = default)
     {
-        var media = await db.SurveyMedia.FirstOrDefaultAsync(m => m.Id == mediaId && m.SurveyId == surveyId, ct);
+        var media = await db.SurveyMedia
+            .Include(m => m.Survey).ThenInclude(s => s.LinkedOpportunity)
+            .FirstOrDefaultAsync(m => m.Id == mediaId && m.SurveyId == surveyId, ct);
         if (media is null) return null;
         if (media.SyncStatus == SurveyMediaSyncStatus.Processing)
         {
@@ -161,6 +242,35 @@ public sealed class SurveyMediaService(
         if (media.SyncAttemptCount >= MaxSyncAttempts)
         {
             throw new SurveyMediaValidationException("Tệp đã dùng hết 3 lần đồng bộ. Vui lòng kiểm tra cấu hình Drive trước khi xử lý tiếp.");
+        }
+
+        var operationalProjectId = media.Survey.LinkedOpportunity?.OperationalProjectId;
+        if (operationalProjectId.HasValue)
+        {
+            try
+            {
+                if (!await projectDocuments.RetryExistingManagedFileAsync(
+                        operationalProjectId.Value,
+                        ProjectDocumentSourceModule.Survey,
+                        EntityTypes.SurveyMedia,
+                        ProjectDocumentSlot,
+                        media.Id,
+                        media.RelativePath,
+                        userId,
+                        ct))
+                {
+                    throw new SurveyMediaValidationException(
+                        "Không tìm thấy hàng đợi đồng bộ dự án của tệp khảo sát.");
+                }
+            }
+            catch (ProjectDocumentConflictException exception)
+            {
+                throw new SurveyMediaValidationException(exception.Message);
+            }
+            catch (ProjectDocumentValidationException exception)
+            {
+                throw new SurveyMediaValidationException(exception.Message);
+            }
         }
 
         media.SyncStatus = SurveyMediaSyncStatus.Pending;

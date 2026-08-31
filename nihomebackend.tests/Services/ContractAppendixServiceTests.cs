@@ -13,7 +13,9 @@ public class ContractAppendixServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly ContractAppendixService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly Contract _contract;
+    private readonly int _projectId;
     private readonly string _contentRoot;
 
     public ContractAppendixServiceTests()
@@ -22,6 +24,14 @@ public class ContractAppendixServiceTests : IDisposable
         _db.Customers.Add(new Customer { Name = "C", Type = CustomerType.Company });
         _db.SaveChanges();
         var customerId = _db.Customers.Single().Id;
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-CONTRACT-VO",
+            Name = "Contract appendix project",
+            CustomerId = customerId,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        _db.SaveChanges();
 
         _contract = new Contract
         {
@@ -29,9 +39,11 @@ public class ContractAppendixServiceTests : IDisposable
             CustomerId = customerId,
             OwnerUserId = 100,
             Value = 1_000_000m,
+            OperationalProjectId = operationalProject.Id,
         };
         _db.Contracts.Add(_contract);
         _db.SaveChanges();
+        _projectId = operationalProject.Id;
 
         _contentRoot = Path.Combine(Path.GetTempPath(), $"nihome-contract-appendix-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(_contentRoot, "wwwroot", "files", "contracts"));
@@ -40,6 +52,7 @@ public class ContractAppendixServiceTests : IDisposable
         _sut = new ContractAppendixService(
             _db,
             NullLogger<ContractAppendixService>.Instance,
+            _projectDocuments.Object,
             environment.Object);
     }
 
@@ -140,6 +153,14 @@ public class ContractAppendixServiceTests : IDisposable
 
         Assert.False(File.Exists(FullPath(previousPath)));
         Assert.True(File.Exists(FullPath(replacement.FilePath)));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _projectId, ProjectDocumentSourceModule.Crm, nameof(ContractAppendix), "file",
+            vo.Id, previousPath, 100, It.IsAny<CancellationToken>()), Times.Once);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _projectId, ProjectDocumentCategory.FinanceContracts, ProjectDocumentSourceModule.Crm,
+            nameof(ContractAppendix), "file", vo.Id, replacement.FilePath!,
+            Path.GetFileName(replacement.FilePath), _contract.CustomerId, _contract.Id, 100,
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Theory]
@@ -162,6 +183,9 @@ public class ContractAppendixServiceTests : IDisposable
         Assert.True(_db.Contracts.Any(c => c.Id == _contract.Id));
         Assert.True(_db.Customers.Any(c => c.Id == customerId));
         Assert.False(File.Exists(FullPath(request.FilePath)));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
+            _projectId, ProjectDocumentSourceModule.Crm, nameof(ContractAppendix), "file",
+            vo.Id, request.FilePath!, 100, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

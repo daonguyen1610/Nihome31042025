@@ -658,7 +658,7 @@ Direct static requests under `/files/quotes`, `/files/customers`, `/files/contra
 
 Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. Uploading before saving a two-step form can still leave an inaccessible, unreferenced physical file when the user cancels, because staged-file expiry/reconciliation is not yet implemented. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
 
-Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries, punch lists, and surveys are excluded because they do not currently expose a complete persisted document contract.
+Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries and punch lists are excluded because they do not currently expose a complete persisted document contract. Survey media linked through an Opportunity to an Operational Project is included in the project catalog; unlinked Survey media retains the legacy Survey synchronization path.
 
 ### 7.10 Central Operational Project API
 
@@ -672,6 +672,14 @@ it must not be confused with public portfolio content or the three-phase
 | `GET` | `/api/operational-projects` | `operations.projects.view` | List the caller's project scope with filters and rollup counts |
 | `GET` | `/api/operational-projects/{id}` | `operations.projects.view` | Read the customer, opportunity, quote, contract, and design rollup |
 | `GET` | `/api/operational-projects/{id}/timeline` | `operations.projects.view` | Read payment milestones from every Contract in the caller's project scope |
+| `GET` | `/api/operational-projects/document-categories` | `operations.projects.view` | Read the server-defined upload categories and Drive paths |
+| `GET` | `/api/operational-projects/{id}/documents` | `operations.projects.view` | List the caller's project document catalog |
+| `GET` | `/api/operational-projects/{id}/documents/{documentId}/content` | `operations.projects.view` | Download private document content through project scope |
+| `POST` | `/api/operational-projects/{id}/documents` | `operations.projects.manage` | Upload a private project document of at most 100 MiB |
+| `POST` | `/api/operational-projects/{id}/documents/{documentId}/retry` | `operations.projects.manage` | Retry an eligible pending synchronization attempt |
+| `POST` | `/api/operational-projects/{id}/documents/{documentId}/classify` | `operations.projects.manage` | Classify an unclassified Drive import |
+| `POST` | `/api/operational-projects/{id}/documents/{documentId}/resolve-conflict` | `operations.projects.manage` | Confirm that both concurrent versions must be retained |
+| `DELETE` | `/api/operational-projects/{id}/documents/{documentId}` | `operations.projects.manage` | Queue deletion of a manual upload or Drive import |
 | `POST` | `/api/operational-projects` | `operations.projects.manage` | Create a planning project with a generated `PJ-YYYY-NNNN` code |
 | `PUT` | `/api/operational-projects/{id}` | `operations.projects.manage` | Update metadata or perform an allowed lifecycle transition |
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
@@ -693,6 +701,41 @@ to `Pending` or `Requested` clears it. Existing rows remain nullable because the
 migration intentionally does not invent or backfill historical payment dates.
 Calls are naturally idempotent, and projects outside the caller's scope return
 `404` without disclosing their existence.
+
+`ProjectDocument` is the project-scoped catalog and synchronization sidecar.
+Manual catalog uploads stream directly into the configured Google Drive
+category folder; SQL stores catalog, permission, workflow, and Drive metadata,
+and no duplicate file is written under the application web root. Authenticated
+content requests proxy the Drive bytes so OAuth credentials and raw Drive
+permissions are not exposed to the browser. Source-owned files retain their
+existing module storage and lifecycle as a compatibility bridge. Quote,
+Contract attachment/appendix, Basic Design, Shop
+Drawing, Permit, Acceptance, As-Built, Handover, and Operational
+Project-linked Survey writes stage sidecars in the same database transaction as
+their authoritative record. Such source-owned catalog rows cannot be deleted
+through the generic endpoint; users must remove or replace the file in its
+source module. No migration backfills historical files automatically.
+
+Relationship changes are reconciled only on an explicit update that changes the
+resolved Operational Project. Linking or reassigning an Opportunity, Contract,
+or Design Project stages its currently supported source files in the destination
+and queues old replicas for deletion; a missing `OperationalProjectId` in those
+update contracts preserves the existing relationship. Survey updates support
+explicit unlinking through `LinkedOpportunityId = null`, which returns its media
+to the legacy Survey worker after the old project replicas are queued for
+deletion. This event-driven behavior does not scan or backfill untouched legacy
+records.
+
+The worker uses durable desired operations, bounded retries, claim tokens,
+generation fencing, SQL rowversion, and per-folder reconciliation leases for
+legacy source-owned sidecars. Drive is authoritative for manual catalog uploads
+and files created directly in managed folders: reconciliation catalogs them in
+their current category without downloading host copies, reflects remote edits,
+and marks remotely trashed files deleted. Native Google Workspace files remain
+metadata/link entries because Drive does not expose their native bytes through
+the normal download operation. For legacy source-owned sidecars only, external
+deletion queues restoration and concurrent remote edits preserve a separate
+conflict entry until an authorized user confirms **Keep both**.
 
 ### 7.11 BOQ Quotation Integrity
 
@@ -925,11 +968,11 @@ The production artifact includes `web.config` for the ASP.NET Core Module and se
 
 ### 10.3 Google Drive credentials on IIS
 
-Survey synchronization uses Google Drive API v3 with OAuth user authorization. The backend reads `ClientId`, `ClientSecret`, and `RefreshToken` directly from the `GoogleDrive` configuration section and does not read a runtime credential file. Never put Google passwords or OAuth values in source-controlled configuration, logs, screenshots, or support messages.
+Project document synchronization uses Google Drive API v3 with OAuth user authorization. The backend reads the `GoogleDrive` configuration section and does not read a runtime credential file. Never put Google passwords or OAuth values in source-controlled configuration, logs, screenshots, or support messages. Synchronization is opt-in: checked-in configuration sets `Enabled` to `false`, and workers perform no Drive I/O in that state.
 
 #### Create the OAuth credential
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), select the Nihome project and enable **Google Drive API**.
+1. In [Google Cloud Console](https://console.cloud.google.com/), select the Nicon project and enable **Google Drive API**.
 2. Configure Google Auth Platform with an External audience. While the app is in Testing, add the Google account that owns the target Drive folder as a test user.
 3. Add only the `https://www.googleapis.com/auth/drive` scope.
 4. Create a **Desktop app** OAuth client and download its client configuration to a temporary protected location as `oauth-client.json`.
@@ -943,7 +986,7 @@ Survey synchronization uses Google Drive API v3 with OAuth user authorization. T
 
 6. Sign in as the Google account that owns the target folder and approve access. Read `client_id`, `client_secret`, and `refresh_token` from the generated Application Default Credentials only on that trusted machine; place those values into the protected deployed configuration described below.
 7. Delete the generated credential file and temporary client download when they are no longer required. If a client secret or refresh token is exposed, revoke it and create a replacement before deployment.
-8. Copy `<FOLDER_ID>` from `https://drive.google.com/drive/folders/<FOLDER_ID>` for the folder that will contain Nihome survey media.
+8. Copy `<FOLDER_ID>` from `https://drive.google.com/drive/folders/<FOLDER_ID>` for the root that will contain Nicon project folders.
 
 The repository and release ZIP deliberately contain empty OAuth values. After extracting `publish-release.zip` on IIS:
 
@@ -952,29 +995,39 @@ The repository and release ZIP deliberately contain empty OAuth values. After ex
 
    ```json
    "GoogleDrive": {
+     "Enabled": true,
      "ClientId": "<OAUTH_CLIENT_ID>",
      "ClientSecret": "<OAUTH_CLIENT_SECRET>",
      "RefreshToken": "<OAUTH_REFRESH_TOKEN>",
      "RootFolderId": "<FOLDER_ID>",
-     "ApplicationName": "Nihome Google Drive Integration",
+     "InstanceId": "<DEPLOYMENT_UNIQUE_ID>",
+    "ApplicationName": "Nicon Google Drive Integration",
      "Folders": {
-       "SurveyMedia": "01_Khao_sat"
+       "SurveyMedia": "01_Khao_sat",
+       "CrmPreDesign": "01_CRM_PreDesign",
+       "DesignConcept": "02_Thiet_ke/01_So_bo_Concept",
+       "DesignBasic": "02_Thiet_ke/02_Co_so",
+       "DesignShopDrawing": "02_Thiet_ke/03_Chi_tiet_ShopDrawing",
+       "LegalPermits": "03_Xin_phep_Phap_ly",
+       "ConstructionAcceptance": "04_Thi_cong_Nghiem_thu",
+       "Procurement": "05_Cung_ung_Vat_tu",
+       "FinanceContracts": "06_Tai_chinh_Hop_dong"
      },
      "SupportsAllDrives": true,
      "PollIntervalSeconds": 15
    }
    ```
 
-  `Folders` is the centralized registry for module-specific paths beneath `RootFolderId`.
-  Each Drive-backed module must own a distinct key (for example `SurveyMedia`, `Contracts`,
-  or `DesignDocuments`) instead of embedding folder names in service code or adding unrelated
-  module settings directly to the shared OAuth options.
+  `InstanceId` must be stable and unique per deployment; it prevents one Nicon
+  environment from claiming another environment's Drive replicas. `Folders` is
+  the centralized registry beneath `RootFolderId`; nested values are resolved
+  segment by segment and must not be embedded in module code.
 
-3. Recycle the IIS application pool and check the Survey Media connection status and application logs. Drive is always enabled; missing/invalid OAuth values or folder ID are reported as `Unavailable` without stopping the application or consuming a media sync attempt.
+3. Recycle the IIS application pool and check application logs and a controlled project upload. Startup rejects incomplete OAuth, root, instance, or folder configuration when `Enabled` is `true`.
 
-As a safer alternative to storing secrets in the deployed JSON, IIS can provide `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, and `GoogleDrive__RootFolderId` as protected environment variables; module folders use the same hierarchy, for example `GoogleDrive__Folders__SurveyMedia`. ASP.NET Core maps them to the same options. Never commit real OAuth values or add them to `deployment-config`.
+As a safer alternative to storing secrets in the deployed JSON, IIS can provide `GoogleDrive__Enabled`, `GoogleDrive__ClientId`, `GoogleDrive__ClientSecret`, `GoogleDrive__RefreshToken`, `GoogleDrive__RootFolderId`, and `GoogleDrive__InstanceId` as protected environment variables; folder paths use the same hierarchy. ASP.NET Core maps them to the same options. Never commit real OAuth values or add them to `deployment-config`.
 
-Survey synchronization is push-only: Nihome uploads managed survey media to Drive and deletes its corresponding Drive file when the media is deleted through Nihome. It does not import files created or changed directly in Drive. The Survey Media tab calls `GET /api/surveys/drive-connection`, which uses Drive `about.get` to identify the authenticated account and `files.get` with `supportsAllDrives=true` to check the root MIME type, trash state, storage model, and `capabilities.canAddChildren`.
+Project document storage is Drive-primary. Nicon uploads manual project files directly to their configured Drive category, proxies authenticated downloads, and moves deleted files to Drive trash rather than permanently erasing them. SQL remains authoritative for catalog metadata, application authorization, claims, and workflow state, while Drive is authoritative for file content. Reconciliation catalogs unknown files without a host copy and reflects remote changes. Existing source-module files use a compatibility sidecar until those modules migrate their own storage contracts. Drive sharing and permission synchronization are intentionally disabled until IT supplies approved group mappings.
 
 The background worker performs the same validation before claiming a pending row. It uploads only while the result is `Connected`; a read-only folder, an invalid root, or an unavailable connection leaves the row pending without consuming an attempt. The connection response displays the authenticated account for administrators to verify against the deployment setup.
 
@@ -985,7 +1038,9 @@ Connection statuses have the following meanings:
 - `InvalidRoot`: `RootFolderId` points to a non-folder item or an item in trash.
 - `Unavailable`: authentication or folder access failed.
 
-Each media row permits at most three worker claims. During backoff after a failed claim, an authorized user can select **Retry** to make the next remaining claim eligible immediately. After the third failed claim the row is terminal; correct the Drive configuration and upload a replacement file if another three-attempt lifecycle is required.
+Each project document permits at most three worker claims. During backoff after a failed claim, an authorized user can select **Retry** to make the next remaining claim eligible immediately. After the third failed claim the row is terminal; correct the Drive configuration before replacing or restaging the source file.
+
+While a legacy sidecar upload is running, a separate scoped database heartbeat renews its claim every five minutes. Losing claim ownership cancels the Drive request and SQL generation fencing rejects stale completion. If a crash or network race still leaves multiple remote files with the same Nicon replica key and generation, reconciliation preserves the SQL-bound replica and moves the extras to Drive trash.
 
 If the application stops during an active claim, the expired lease resumes the same numbered attempt instead of consuming another one. This includes attempt three; the Drive idempotency property lets recovery reconcile a remote file that may already have been created.
 

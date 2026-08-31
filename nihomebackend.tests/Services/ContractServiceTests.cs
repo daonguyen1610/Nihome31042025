@@ -13,6 +13,7 @@ public class ContractServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
     private readonly ContractService _sut;
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly string _contentRoot;
     private int _customerA;
     private int _customerB;
@@ -28,6 +29,7 @@ public class ContractServiceTests : IDisposable
             _db,
             new NoopDesignProjectService(),
             NullLogger<ContractService>.Instance,
+            _projectDocuments.Object,
             environment.Object);
 
         _db.Customers.AddRange(
@@ -350,6 +352,49 @@ public class ContractServiceTests : IDisposable
         var req = Req(customerId: _customerB, number: "HD-A");
         await Assert.ThrowsAsync<ContractDuplicateNumberException>(
             () => _sut.UpdateAsync(b.Id, req, 1, canSeeAll: true, canReassignOwner: true));
+    }
+
+    [Fact]
+    public async Task Update_ProjectChange_MovesAttachmentAndAppendixSidecars()
+    {
+        var oldProject = new OperationalProject { Code = "OP-C-OLD", Name = "Old", CustomerId = _customerA };
+        var newProject = new OperationalProject { Code = "OP-C-NEW", Name = "New", CustomerId = _customerA };
+        _db.OperationalProjects.AddRange(oldProject, newProject);
+        await _db.SaveChangesAsync();
+        var create = Req(number: "HD-MOVE");
+        create.OperationalProjectId = oldProject.Id;
+        var contract = await _sut.CreateAsync(create, 1, canReassignOwner: true);
+        var attachment = new ContractAttachment
+        {
+            ContractId = contract.Id,
+            FilePath = "/files/contracts/attachment.pdf",
+            OriginalFileName = "attachment.pdf",
+        };
+        var appendix = new ContractAppendix
+        {
+            ContractId = contract.Id,
+            VoNumber = 1,
+            Title = "Move appendix",
+            Reason = "Project changed",
+            FilePath = "/files/contracts/appendix.pdf",
+        };
+        _db.AddRange(attachment, appendix);
+        await _db.SaveChangesAsync();
+        var update = Req(number: contract.ContractNumber);
+        update.OperationalProjectId = newProject.Id;
+
+        await _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true);
+
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
+            oldProject.Id, newProject.Id,
+            It.Is<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(files => files.Count == 2 &&
+                files.Any(file => file.SourceEntityType == nameof(ContractAttachment) &&
+                    file.SourceSlot == "file" && file.SourceRecordId == attachment.Id) &&
+                files.Any(file => file.SourceEntityType == nameof(ContractAppendix) &&
+                    file.SourceSlot == "file" && file.SourceRecordId == appendix.Id) &&
+                files.All(file => file.Category == ProjectDocumentCategory.FinanceContracts &&
+                    file.ContractId == contract.Id)),
+            1, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

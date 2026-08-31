@@ -13,6 +13,7 @@ namespace NihomeBackend.Services;
 public class BasicDesignDocService(
     AppDbContext db,
     ILogger<BasicDesignDocService> logger,
+    IProjectDocumentStagingService projectDocuments,
     IWebHostEnvironment? env = null) : IBasicDesignDocService
 {
     private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
@@ -254,6 +255,16 @@ public class BasicDesignDocService(
                 && revision.TargetId == id)
             .ToListAsync(ct);
         var managedFile = ToManagedFullPath(entity.FilePath);
+        var projectId = await db.DesignProjects.AsNoTracking()
+            .Where(project => project.Id == entity.DesignProjectId)
+            .Select(project => project.OperationalProjectId)
+            .SingleAsync(ct);
+        if (projectId.HasValue && !string.IsNullOrWhiteSpace(entity.FilePath))
+        {
+            await projectDocuments.StageExistingManagedFileDeleteAsync(
+                projectId.Value, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+                entity.Id, entity.FilePath, entity.UpdatedByUserId, ct);
+        }
         db.DrawingRevisions.RemoveRange(revisions);
         db.BasicDesignDocs.Remove(entity);
         await db.SaveChangesAsync(ct);
@@ -297,7 +308,8 @@ public class BasicDesignDocService(
         }
 
         var now = DateTime.UtcNow;
-        var previousFile = ToManagedFullPath(entity.FilePath);
+        var previousPath = entity.FilePath;
+        var previousFile = ToManagedFullPath(previousPath);
         var relativeDir = Path.Combine("files", "design", "basic");
         var uploadDir = Path.Combine(_contentRoot, "wwwroot", relativeDir);
         Directory.CreateDirectory(uploadDir);
@@ -323,6 +335,20 @@ public class BasicDesignDocService(
 
         try
         {
+            if (entity.DesignProject.OperationalProjectId.HasValue)
+            {
+                if (!string.IsNullOrWhiteSpace(previousPath))
+                {
+                    await projectDocuments.StageExistingManagedFileDeleteAsync(
+                        entity.DesignProject.OperationalProjectId.Value, ProjectDocumentSourceModule.Design,
+                        nameof(BasicDesignDoc), "file", entity.Id, previousPath, callerUserId, ct);
+                }
+                await projectDocuments.StageExistingManagedFileAsync(
+                    entity.DesignProject.OperationalProjectId.Value, ProjectDocumentCategory.DesignBasic,
+                    ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file", entity.Id,
+                    entity.FilePath, entity.OriginalFileName!, entity.DesignProject.CustomerId,
+                    entity.DesignProject.ContractId, callerUserId, ct);
+            }
             await db.SaveChangesAsync(ct);
         }
         catch

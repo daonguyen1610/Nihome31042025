@@ -17,7 +17,8 @@ namespace NihomeBackend.Services;
 public class AcceptanceRecordService(
     AppDbContext db,
     ILogger<AcceptanceRecordService> logger,
-    IBusinessDocumentStorageService? documentStorage = null) : IAcceptanceRecordService
+    IBusinessDocumentStorageService? documentStorage = null,
+    IProjectDocumentStagingService? projectDocuments = null) : IAcceptanceRecordService
 {
     private const int MaxPageSize = 200;
     private const int MaxBulkDelete = 100;
@@ -188,8 +189,23 @@ public class AcceptanceRecordService(
             CreatedByUserId = callerUserId,
             UpdatedByUserId = callerUserId,
         };
-        db.AcceptanceRecords.Add(entity);
-        await db.SaveChangesAsync(ct);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct)
+            : null;
+        try
+        {
+            db.AcceptanceRecords.Add(entity);
+            await db.SaveChangesAsync(ct);
+            await StageAddedDocumentsAsync(project, entity, [], DeserializeDocuments(entity.Documents), callerUserId, ct);
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            else await RollbackCreateAsync(entity, CancellationToken.None);
+            throw;
+        }
         logger.LogInformation("AcceptanceRecord {Id} ({Code}) created on project {ProjectId}",
             entity.Id, entity.AcceptanceCode, entity.DesignProjectId);
         return (await GetAsync(entity.Id, callerUserId, true, ct))!;
@@ -198,7 +214,7 @@ public class AcceptanceRecordService(
     public async Task<AcceptanceRecordResponse?> UpdateAsync(
         int id, UpdateAcceptanceRecordRequest request, int callerUserId, bool canSeeAll = true, CancellationToken ct = default)
     {
-        var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+        var entity = await ApplyScope(db.AcceptanceRecords.Include(a => a.DesignProject), callerUserId, canSeeAll)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return null;
 
@@ -239,6 +255,8 @@ public class AcceptanceRecordService(
         if (request.Documents is not null) entity.Documents = TrimOrNull(request.Documents);
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
+        await StageDocumentDiffAsync(entity.DesignProject, entity.Id, previousDocuments,
+            DeserializeDocuments(entity.Documents), callerUserId, ct);
         await db.SaveChangesAsync(ct);
         DeleteRemovedDocuments(previousDocuments, DeserializeDocuments(entity.Documents));
         return await GetAsync(id, callerUserId, true, ct);
@@ -287,10 +305,11 @@ public class AcceptanceRecordService(
 
     public async Task<bool> DeleteAsync(int id, int callerUserId = 0, bool canSeeAll = true, CancellationToken ct = default)
     {
-        var entity = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+        var entity = await ApplyScope(db.AcceptanceRecords.Include(a => a.DesignProject), callerUserId, canSeeAll)
             .FirstOrDefaultAsync(a => a.Id == id, ct);
         if (entity is null) return false;
         var documents = DeserializeDocuments(entity.Documents);
+        await StageDocumentDiffAsync(entity.DesignProject, entity.Id, documents, [], callerUserId, ct);
         db.AcceptanceRecords.Remove(entity);
         await db.SaveChangesAsync(ct);
         DeleteRemovedDocuments(documents, []);
@@ -311,12 +330,14 @@ public class AcceptanceRecordService(
                 $"Chỉ xoá tối đa {MaxBulkDelete} biên bản mỗi lần.");
         }
 
-        var rows = await ApplyScope(db.AcceptanceRecords, callerUserId, canSeeAll)
+        var rows = await ApplyScope(db.AcceptanceRecords.Include(a => a.DesignProject), callerUserId, canSeeAll)
             .Where(a => ids.Contains(a.Id)).ToListAsync(ct);
         var response = new AcceptanceRecordBulkDeleteResponse();
         foreach (var row in rows)
         {
             response.DeletedIds.Add(row.Id);
+            await StageDocumentDiffAsync(row.DesignProject, row.Id,
+                DeserializeDocuments(row.Documents), [], callerUserId, ct);
             db.AcceptanceRecords.Remove(row);
         }
         response.SkippedIds.AddRange(ids.Except(rows.Select(r => r.Id)));
@@ -348,6 +369,42 @@ public class AcceptanceRecordService(
         var retained = current.ToHashSet(StringComparer.Ordinal);
         foreach (var path in previous.Where(path => !retained.Contains(path)))
             documentStorage?.Delete(path, BusinessDocumentArea.Acceptance);
+    }
+
+    private Task StageAddedDocumentsAsync(DesignProject project, AcceptanceRecord entity,
+        IEnumerable<string> previous, IEnumerable<string> current, int? userId, CancellationToken ct) =>
+        StageDocumentDiffAsync(project, entity.Id, previous, current, userId, ct);
+
+    private async Task StageDocumentDiffAsync(DesignProject project, int recordId,
+        IEnumerable<string> previous, IEnumerable<string> current, int? userId, CancellationToken ct)
+    {
+        if (project.OperationalProjectId is not int projectId || projectDocuments is null) return;
+        var oldPaths = ManagedPaths(previous);
+        var newPaths = ManagedPaths(current);
+        foreach (var path in oldPaths.Except(newPaths, StringComparer.Ordinal))
+            await projectDocuments.StageExistingManagedFileDeleteAsync(projectId,
+                ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord), "documents",
+                recordId, path, userId, ct);
+        foreach (var path in newPaths.Except(oldPaths, StringComparer.Ordinal))
+            await projectDocuments.StageExistingManagedFileAsync(projectId,
+                ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Acceptance,
+                nameof(AcceptanceRecord), "documents", recordId, path, Path.GetFileName(path),
+                project.CustomerId, project.ContractId, userId, ct);
+    }
+
+    private static HashSet<string> ManagedPaths(IEnumerable<string> paths) => paths
+        .Select(path => path.Trim())
+        .Where(path => path.StartsWith("/files/business-documents/acceptance/", StringComparison.OrdinalIgnoreCase))
+        .ToHashSet(StringComparer.Ordinal);
+
+    private async Task RollbackCreateAsync(AcceptanceRecord entity, CancellationToken ct)
+    {
+        db.ProjectDocuments.RemoveRange(db.ChangeTracker.Entries<ProjectDocument>()
+            .Where(entry => entry.Entity.SourceEntityType == nameof(AcceptanceRecord)
+                && entry.Entity.SourceRecordId == entity.Id)
+            .Select(entry => entry.Entity));
+        db.AcceptanceRecords.Remove(entity);
+        await db.SaveChangesAsync(ct);
     }
 
     private static IQueryable<AcceptanceRecord> ApplyScope(

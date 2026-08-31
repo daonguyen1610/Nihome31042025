@@ -10,7 +10,8 @@ public class CustomerService(
     AppDbContext db,
     ICustomerDocumentService customerDocumentService,
     IQuoteDocumentService quoteDocumentService,
-    ILogger<CustomerService> logger) : ICustomerService
+    ILogger<CustomerService> logger,
+    IProjectDocumentStagingService projectDocuments) : ICustomerService
 {
     private const int MaxPageSize = 100;
     private const string SourceCategory = "customer_source";
@@ -266,7 +267,8 @@ public class CustomerService(
 
         CrmConcurrency.Apply(db, customer, rowVersion);
 
-        var quoteIds = await AggregateDeletionService.DeleteCustomerAsync(db, customer, ct);
+        var quoteIds = await AggregateDeletionService.DeleteCustomerAsync(
+            db, customer, projectDocuments, callerUserId, ct);
         try
         {
             await CrmConcurrency.SaveChangesAsync(db, ct);
