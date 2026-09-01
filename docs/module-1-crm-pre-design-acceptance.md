@@ -83,10 +83,21 @@ breaking persisted data and API clients. The customer-facing mapping is:
    `20260901171502_FinalizeModule1NewOnly` passed isolated SQL Server fresh- and
    draft-schema conversion assertions. Permission migration
    `20260902120000_AddScopedSurveyPermissions` passed fresh and existing paths;
-   Sales retained zero all-project grants. Guard migration
+   Sales retained zero all-project grants. Forward convergence migration
+   `20260902121500_NormalizeQuoteRateSource` repairs removed `ManualLegacy`
+   values and defaults in databases that recorded an earlier migration version,
+   preserving truthful pre-Module-1 override provenance. Guard migration
    `20260902123000_ValidateHistoricalSurveyProjectRouting` passed a fresh chain
    and rejected the existing three unresolved Surveys with SQL `51001` without
    recording the migration or changing the unresolved row count.
+- The rate-source convergence passed an isolated SQL Server clone matrix for
+   canonical `Catalog`/`Override`, `ManualLegacy`, arbitrary unknown values,
+   upper/lowercase variants, trailing-space variants, preserved existing
+   provenance, missing provenance backfill, snapshot conversion, and both
+   column defaults. Exact binary and byte-length comparisons prevent database
+   collation from accepting values that the .NET enum cannot deserialize.
+- Focused post-fix regression passed **50 Quote/seeder unit tests** and **32
+   Quote HTTP integration tests** with a zero-warning build and clean format.
 - A real application startup against a fresh SQL Server database completed all
    migrations and seeding; all five sample Surveys referenced valid Operational
    Projects.
