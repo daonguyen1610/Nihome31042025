@@ -120,6 +120,32 @@ Connection status troubleshooting:
 
 OAuth apps left in **Testing** can issue refresh tokens with a limited lifetime. Before production use, publish the app and complete any Google verification required for the Drive scope. See the [Google installed-app OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app) and [Drive scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) for current requirements.
 
+### Project document folder mapping
+
+Nicon stores Operational Project documents under the configured Drive root using this hierarchy:
+
+```text
+<Drive root>/<ProjectCode>_<ProjectName>/<Configured category path>/<File>
+```
+
+Administrators manage the folder paths at `/admin/settings?tab=drive`. Every category is also available for direct upload and catalog management from `/admin/operational-projects/{operationalProjectId}`. A source workflow stages its managed file automatically only when the source record is linked to an Operational Project.
+
+| Category | Default configured folder | Admin source page | Drive integration |
+|----------|---------------------------|-------------------|-------------------|
+| `Survey` | `01_Khao_sat` | `/admin/surveys` and `/admin/surveys/{id}` | Survey document workflow stages managed files automatically. |
+| `CrmPreDesign` | `01_CRM_PreDesign` | `/admin/quotes`, `/admin/quotes/{id}`, and related Opportunities | Quote documents stage automatically; reassignment moves their project-document sidecars. |
+| `DesignConcept` | `02_Thiet_ke/01_So_bo_Concept` | `/admin/design-projects/{id}` → **Concept** tab | Direct Operational Project upload only; Concept Options do not currently stage files automatically. |
+| `DesignBasic` | `02_Thiet_ke/02_Co_so` | `/admin/design-projects/{id}` → **Basic** tab | Basic Design uploads stage automatically. |
+| `DesignShopDrawing` | `02_Thiet_ke/03_Chi_tiet_ShopDrawing` | `/admin/design-projects/{id}` → **Shop** tab | Shop Drawing uploads stage automatically. |
+| `LegalPermits` | `03_Xin_phep_Phap_ly` | `/admin/permits` | Submitted-package and issued-permit files stage automatically. |
+| `ConstructionAcceptance` | `04_Thi_cong_Nghiem_thu` | `/admin/construction/acceptance`, `/admin/construction/asbuilt`, and `/admin/construction/handover` | Acceptance, as-built, and handover managed files stage automatically. Construction Tasks, Site Diary, and Punch List attachments are not included in this integration. |
+| `Procurement` | `05_Cung_ung_Vat_tu` | `/admin/vendors` and `/admin/vendors/{id}` | Direct Operational Project upload only; Vendor workflows do not currently stage files automatically. |
+| `FinanceContracts` | `06_Tai_chinh_Hop_dong` | `/admin/contracts` and `/admin/contracts/{id}` | Contract files, attachments, and appendices stage automatically. |
+
+Nested configured paths are created one segment at a time. For example, a `DesignBasic` file for project `PJ-001 / Sample House` is stored under `<Drive root>/PJ-001_Sample House/02_Thiet_ke/02_Co_so`.
+
+On September 1, 2026, the direct-upload flow was verified against a connected Drive account for all seven folders from `DesignConcept` through `FinanceContracts`. Each request returned HTTP `201` with status `Synced`; protected downloads matched the source SHA-256 hashes, and each filename appeared exactly once in the Operational Project catalog. The resulting test document IDs were `10004` through `10010` respectively. These IDs are environment-specific acceptance evidence and must not be used as seeded or production identifiers.
+
 ## Backend commands
 
 ```bash
