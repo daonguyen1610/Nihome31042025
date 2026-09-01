@@ -188,12 +188,23 @@ public class OperationalProjectsController(
     [HttpPost("{id:int}/documents")]
     [Consumes("multipart/form-data")]
     [RequirePermission("operations.projects", "manage")]
+    [Idempotency(
+        "operations.projects.documents.upload",
+        typeof(OperationalProjectIdempotencyGuard))]
     [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MultipartBodyLengthLimit)]
     public async Task<ActionResult<ProjectDocumentResponse>> UploadDocument(
         int id, [FromForm] ProjectDocumentUploadRequest request, CancellationToken ct)
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        if (await service.GetAsync(id, scope.Value.UserId, scope.Value.CanSeeAll, ct) is null) return NotFound();
+        if (!IdempotencyService.IsValidKey(Request.Headers["Idempotency-Key"].FirstOrDefault()))
+        {
+            return BadRequest(new
+            {
+                message = "Idempotency-Key là bắt buộc cho tải tệp dự án và không được dài quá 120 ký tự; ví dụ: 550e8400-e29b-41d4-a716-446655440000.",
+            });
+        }
         try
         {
             var result = await documents.UploadAsync(id, request, scope.Value.UserId, scope.Value.CanSeeAll, ct);

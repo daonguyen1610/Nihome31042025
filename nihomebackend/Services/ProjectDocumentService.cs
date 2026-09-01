@@ -376,7 +376,7 @@ public sealed class ProjectDocumentService(
     private static void ValidateCategory(ProjectDocumentCategory category, bool allowUnclassified)
     {
         if (!Enum.IsDefined(category) || !allowUnclassified && category == ProjectDocumentCategory.Unclassified)
-            throw new ProjectDocumentValidationException("Danh mục tệp không hợp lệ; vui lòng chọn một trong tám danh mục dự án.");
+            throw new ProjectDocumentValidationException("Danh mục tệp không hợp lệ; vui lòng chọn một trong chín danh mục dự án.");
     }
 
     private static ProjectDocument CreateDocument(int projectId, ProjectDocumentCategory category,

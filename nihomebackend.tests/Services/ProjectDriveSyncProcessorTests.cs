@@ -34,6 +34,10 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         };
         db.ProjectDriveFolders.Add(folder);
         db.SaveChanges();
+        drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveConnection(
+                "integration@nicon.test", "root", "https://drive.test/root",
+                true, false, false, true));
         claimLease.Setup(item => item.RunAsync(
                 It.IsAny<long>(), It.IsAny<Guid>(), It.IsAny<long>(),
                 It.IsAny<Func<CancellationToken, Task<DriveUpload>>>(), It.IsAny<CancellationToken>()))
@@ -55,6 +59,59 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         await disabled.ReconcileProjectAsync(project.Id);
 
         drive.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task NoDueWork_DoesNotCheckDriveConnection()
+    {
+        Assert.False(await processor.ProcessNextOutboundAsync());
+
+        drive.Verify(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    public async Task NonWritableConnection_DoesNotConsumePendingAttempt(
+        bool isFolder,
+        bool isTrashed)
+    {
+        var document = AddPendingDocument();
+        var nextAttemptAt = document.NextSyncAttemptAt;
+        var updatedAt = document.UpdatedAt;
+        drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DriveConnection(
+                "integration@nicon.test", "root", "https://drive.test/root",
+                isFolder, isTrashed, false, false));
+
+        Assert.False(await processor.ProcessNextOutboundAsync());
+
+        var persisted = db.ProjectDocuments.Single(item => item.Id == document.Id);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, persisted.SyncStatus);
+        Assert.Equal(0, persisted.SyncAttemptCount);
+        Assert.Null(persisted.LastSyncAttemptAt);
+        Assert.Equal(nextAttemptAt, persisted.NextSyncAttemptAt);
+        Assert.Equal(updatedAt, persisted.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task UnavailableConnection_DoesNotConsumePendingAttempt()
+    {
+        var document = AddPendingDocument();
+        var nextAttemptAt = document.NextSyncAttemptAt;
+        var updatedAt = document.UpdatedAt;
+        drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("credential details stay private"));
+
+        Assert.False(await processor.ProcessNextOutboundAsync());
+
+        var persisted = db.ProjectDocuments.Single(item => item.Id == document.Id);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, persisted.SyncStatus);
+        Assert.Equal(0, persisted.SyncAttemptCount);
+        Assert.Null(persisted.LastSyncAttemptAt);
+        Assert.Equal(nextAttemptAt, persisted.NextSyncAttemptAt);
+        Assert.Equal(updatedAt, persisted.UpdatedAt);
     }
 
     [Fact]
@@ -87,6 +144,32 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     {
         Assert.Equal("project-document:42", ProjectDriveSyncProcessor.ReplicaKey(42));
         Assert.Equal(ProjectDriveSyncProcessor.ReplicaKey(42), ProjectDriveSyncProcessor.ReplicaKey(42));
+    }
+
+    private ProjectDocument AddPendingDocument()
+    {
+        var document = new ProjectDocument
+        {
+            OperationalProjectId = project.Id,
+            Category = ProjectDocumentCategory.DesignBasic,
+            SourceModule = ProjectDocumentSourceModule.Design,
+            SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+            SourceEntityType = "BasicDesignDoc",
+            SourceSlot = "file",
+            SourceRecordId = 1,
+            LocalPath = "/files/design/basic/pending.pdf",
+            OriginalFileName = "pending.pdf",
+            ContentType = "application/pdf",
+            Size = 10,
+            Sha256 = "sha256",
+            Generation = 1,
+            DesiredOperation = ProjectDocumentDesiredOperation.Upsert,
+            SyncStatus = ProjectDocumentSyncStatus.Pending,
+            NextSyncAttemptAt = DateTime.UtcNow.AddMinutes(-1),
+        };
+        db.ProjectDocuments.Add(document);
+        db.SaveChanges();
+        return document;
     }
 
     [Fact]

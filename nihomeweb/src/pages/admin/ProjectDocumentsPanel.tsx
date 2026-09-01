@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
+import { newIdempotencyKey } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { formatFileSize } from "@/lib/numberFormat";
 import {
@@ -40,6 +41,7 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadIdempotencyKeyRef = useRef<string | null>(null);
   const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [categories, setCategories] = useState<ProjectDocumentCategoryResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,10 +78,12 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
   }, [onCountChange, projectId]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { uploadIdempotencyKeyRef.current = null; }, [projectId]);
 
   const selectFile = (selected?: File) => {
     if (!selected) {
       setFile(null);
+      uploadIdempotencyKeyRef.current = null;
       return;
     }
     if (!selected.name.trim() || selected.size === 0) {
@@ -95,6 +99,12 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
       return;
     }
     setFile(selected);
+    uploadIdempotencyKeyRef.current = null;
+  };
+
+  const selectCategory = (value: string) => {
+    setCategory(value);
+    uploadIdempotencyKeyRef.current = null;
   };
 
   const upload = async () => {
@@ -108,9 +118,12 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
     }
     setUploading(true);
     try {
-      await adminApi.uploadProjectDocument(projectId, file, category);
+      const idempotencyKey = uploadIdempotencyKeyRef.current ?? newIdempotencyKey();
+      uploadIdempotencyKeyRef.current = idempotencyKey;
+      await adminApi.uploadProjectDocument(projectId, file, category, idempotencyKey);
       setFile(null);
       setCategory("");
+      uploadIdempotencyKeyRef.current = null;
       if (fileInputRef.current) fileInputRef.current.value = "";
       toast({ title: t("operationalProjects.documents.uploaded") });
       await load();
@@ -198,7 +211,7 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
       <p className="text-sm text-muted-foreground">{t("operationalProjects.documents.description")}</p>
       {canManage && <div className="grid gap-3 rounded-md border bg-muted/30 p-4 md:grid-cols-[minmax(0,1fr)_minmax(13rem,0.65fr)_auto] md:items-end" data-testid="project-documents-upload">
         <div><Label htmlFor="project-document-file">{t("operationalProjects.documents.file")}</Label><Input ref={fileInputRef} id="project-document-file" type="file" className="mt-1" onChange={event => selectFile(event.target.files?.[0])} /></div>
-        <div><Label htmlFor="project-document-category">{t("operationalProjects.documents.field.category")}</Label><Select value={category} onValueChange={setCategory}><SelectTrigger id="project-document-category" className="mt-1"><SelectValue placeholder={t("operationalProjects.documents.selectCategory")} /></SelectTrigger><SelectContent>{categories.map(item => <SelectItem key={item.value} value={item.value}>{t(item.translationKey)} · {item.folderPath}</SelectItem>)}</SelectContent></Select></div>
+        <div><Label htmlFor="project-document-category">{t("operationalProjects.documents.field.category")}</Label><Select value={category} onValueChange={selectCategory}><SelectTrigger id="project-document-category" className="mt-1"><SelectValue placeholder={t("operationalProjects.documents.selectCategory")} /></SelectTrigger><SelectContent>{categories.map(item => <SelectItem key={item.value} value={item.value}>{t(item.translationKey)} · {item.folderPath}</SelectItem>)}</SelectContent></Select></div>
         <Button onClick={() => void upload()} disabled={uploading}>{uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}{t("operationalProjects.documents.upload")}</Button>
       </div>}
 

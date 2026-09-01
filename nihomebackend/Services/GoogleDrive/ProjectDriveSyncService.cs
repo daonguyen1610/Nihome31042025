@@ -39,6 +39,7 @@ public sealed class ProjectDriveSyncProcessor(
             .OrderBy(document => document.NextSyncAttemptAt ?? document.CreatedAt)
             .ThenBy(document => document.Id)
             .Select(document => document.Id).Take(10).ToListAsync(ct);
+        if (candidates.Count == 0 || !await HasWritableConnectionAsync(ct)) return false;
         foreach (var documentId in candidates)
         {
             var token = Guid.NewGuid();
@@ -51,6 +52,23 @@ public sealed class ProjectDriveSyncProcessor(
             if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
             await ProcessClaimAsync(documentId, token, generation.Value, ct);
             return true;
+        }
+        return false;
+    }
+
+    private async Task<bool> HasWritableConnectionAsync(CancellationToken ct)
+    {
+        try
+        {
+            var connection = await drive.CheckConnectionAsync(ct);
+            if (connection.IsFolder && !connection.IsTrashed && connection.CanAddChildren) return true;
+            logger.LogWarning(
+                "Project Drive synchronization paused because the configured root is not writable");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception,
+                "Project Drive synchronization paused because connection validation failed");
         }
         return false;
     }

@@ -12,9 +12,11 @@ namespace NihomeBackend.Services;
 /// when the second payload would otherwise fail validation.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
-public sealed class IdempotencyAttribute(string scope) : Attribute, IAsyncResourceFilter
+public sealed class IdempotencyAttribute(string scope, Type? requestGuardType = null)
+    : Attribute, IAsyncResourceFilter
 {
     public string Scope { get; } = scope;
+    public Type? RequestGuardType { get; } = requestGuardType;
 
     public async Task OnResourceExecutionAsync(
         ResourceExecutingContext context,
@@ -23,6 +25,21 @@ public sealed class IdempotencyAttribute(string scope) : Attribute, IAsyncResour
         var key = context.HttpContext.Request.Headers["Idempotency-Key"].FirstOrDefault();
         if (IdempotencyService.IsValidKey(key))
         {
+            if (RequestGuardType is not null)
+            {
+                var guard = context.HttpContext.RequestServices.GetRequiredService(RequestGuardType)
+                    as IIdempotencyRequestGuard
+                    ?? throw new InvalidOperationException(
+                        $"{RequestGuardType.Name} must implement {nameof(IIdempotencyRequestGuard)}.");
+                var rejection = await guard.ValidateAsync(
+                    context.HttpContext, context.HttpContext.RequestAborted);
+                if (rejection is not null)
+                {
+                    context.Result = rejection;
+                    return;
+                }
+            }
+
             var service = context.HttpContext.RequestServices.GetRequiredService<IdempotencyService>();
             var fingerprintService = context.HttpContext.RequestServices.GetRequiredService<FingerprintService>();
             var fingerprint = await fingerprintService.ComputeAsync(
