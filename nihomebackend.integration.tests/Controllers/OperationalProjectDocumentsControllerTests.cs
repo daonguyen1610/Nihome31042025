@@ -119,7 +119,8 @@ public sealed class OperationalProjectDocumentsControllerTests(
         var driveFilesBefore = factory.DriveFileCount;
         using var firstContent = CreateUploadContent("DesignBasic", "replayed.pdf", PdfBytes);
         using var firstRequest = new HttpRequestMessage(HttpMethod.Post,
-            $"/api/operational-projects/{projectId}/documents") { Content = firstContent };
+            $"/api/operational-projects/{projectId}/documents")
+        { Content = firstContent };
         firstRequest.Headers.Add("Idempotency-Key", key);
 
         var first = await Client.SendAsync(firstRequest);
@@ -127,7 +128,8 @@ public sealed class OperationalProjectDocumentsControllerTests(
 
         using var replayContent = CreateUploadContent("DesignBasic", "replayed.pdf", PdfBytes);
         using var replayRequest = new HttpRequestMessage(HttpMethod.Post,
-            $"/api/operational-projects/{projectId}/documents") { Content = replayContent };
+            $"/api/operational-projects/{projectId}/documents")
+        { Content = replayContent };
         replayRequest.Headers.Add("Idempotency-Key", key);
         var replay = await Client.SendAsync(replayRequest);
         var replayBody = await ReadJsonAsync(replay);
@@ -749,7 +751,8 @@ public sealed class OperationalProjectDocumentsControllerTests(
         string key)
     {
         var request = new HttpRequestMessage(HttpMethod.Post,
-            $"/api/operational-projects/{projectId}/documents") { Content = content };
+            $"/api/operational-projects/{projectId}/documents")
+        { Content = content };
         request.Headers.Add("Idempotency-Key", key);
         return request;
     }
