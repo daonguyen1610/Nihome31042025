@@ -120,10 +120,10 @@ The platform is being developed incrementally. The following components are curr
 | File upload (images, CV documents) | Implemented |
 | Site settings and email template configuration | Implemented |
 | In-app admin notifications | Implemented |
-| CRM module (customers, leads, opportunities) | Implemented |
+| CRM module (customers, leads, opportunities) | Partially implemented — corrected Opportunity sequencing is available; Lead segmentation and legacy-stage reconciliation remain pending |
 | Central operational projects (customer, sales, contract, and design rollup) | Implemented; remaining modules are connected by subsequent NIH-447 subtasks |
-| Quotations, capability documents, and tenders | Implemented |
-| Site survey digitization | Implemented — private media upload, geolocation, checklist, Drive sync status, and PDF export are available |
+| Quotations, capability documents, and tenders | Partially implemented — calculation and workflow are live; material-norm pricing, generated preliminary PDF, and tender bid estimate remain pending business definition |
+| Site survey digitization | Partially implemented — private media upload, geolocation, checklist, Drive sync status, and PDF export are available; structured right-of-way, elevation, and infrastructure capture is pending |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management (projects, concept, basic design, detail design, revisions, IFC) | Implemented |
 | Permitting checklists | Implemented |
@@ -198,6 +198,11 @@ Maintain individual and corporate customer records. Support multiple contact per
 
 Track inbound leads with source classification (marketing, referral, etc.). Assign leads to sales personnel. Maintain consultation history. Convert qualified leads to opportunities.
 
+Contact information, source, owner, status, notes, and consultation activities
+are currently available. Customer segmentation is not yet implemented because
+the approved segment taxonomy, whether a lead may have multiple segments, and
+the required reporting behavior have not been defined.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Lead List | Filter by source, status, assigned sales | 1.5 days |
@@ -206,7 +211,15 @@ Track inbound leads with source classification (marketing, referral, etc.). Assi
 
 #### 3.1.3 Opportunity Management
 
-Manage sales opportunities with deal value, probability, and stage tracking. Provide a Kanban/pipeline view for visual stage progression. Track win/loss outcomes with supporting documents.
+Manage sales opportunities with deal value, probability, and stage tracking.
+Every new opportunity starts at **Approach** and follows the sequence
+**Approach → Survey → Quotation/Tender → Negotiation → Contract signed**.
+Users cannot skip or move backward between these stages. **Lost** is an
+alternate terminal outcome from an open stage and requires a reason and note.
+Moving to **Contract signed** requires a linked Contract with a signed date and
+a non-draft, non-cancelled status. The API retains the legacy enum values
+`Prospecting`, `Qualification`, `Proposal`, `Negotiation`, and `Won` for stored
+data and client compatibility; the interface displays the customer terms.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -217,7 +230,13 @@ Manage sales opportunities with deal value, probability, and stage tracking. Pro
 
 #### 3.1.4 Direct Quotation
 
-Create quotations using investment rate or preliminary BOQ. Calculate discounts, VAT, and totals automatically. Manage quotation versions. Support internal approval workflow. Generate PDF output for client delivery. Track quotation status: sent, approved, rejected.
+Create quotations using a user-entered square-metre rate or preliminary BOQ.
+Calculate discounts, VAT, and totals automatically. Manage quotation versions
+and the internal workflow. The system does not yet derive the square-metre rate
+from an approved material-norm/rate catalog, and no generated preliminary quote
+PDF contract is currently proven. Product must define the norm source,
+effective dates, override authority, currency/VAT policy, and approved output
+template before those capabilities are implemented.
 
 For a BOQ quotation, add one or more rows and enter the item name, unit,
 quantity, and unit price. The form previews each calculation basis and the
@@ -240,6 +259,10 @@ request with its idempotency key does not create a duplicate quotation.
 
 Manage tender packages with deadlines and preparation status. Every document checklist item can use one existing document from the shared capability-document library or accept a new direct upload. The selected file is previewed securely inside the Tender detail page. Checklist status, ownership, deadlines, and files become read-only after the tender is Won, Lost, or Cancelled. Track tender results across preparation, submission, win, loss, and cancellation.
 
+The tender workflow does not yet contain a defined bid-estimate data model.
+Product must confirm whether the estimate represents internal cost, submitted
+bid price, or both, together with currency, VAT, versioning, and approval rules.
+
 | Page | Functions | Estimate |
 |------|-----------|----------|
 | Tender List | Status, deadline tracking | 1.5 days |
@@ -249,7 +272,14 @@ Manage tender packages with deadlines and preparation status. Every document che
 
 #### 3.1.6 Site Survey Digitization
 
-Record site surveys linked to leads, opportunities, or projects. Capture photos and videos directly from the application. Upload drawings and survey documents. Record technical notes on site conditions. Synchronize data automatically to Google Drive (folder 01_Khao_sat). Manage survey folders by project. Access is controlled by `crm.surveys.view` and `crm.surveys.manage`; the default roles grant Sales both permissions and PM view-only access, while administrators can assign them to other roles.
+Record site surveys linked to opportunities or projects. Capture photos and
+videos from the application, upload files, record technical notes, capture
+time, and store latitude/longitude coordinates. Structured right-of-way,
+elevation, and infrastructure fields are not yet available because their data
+shapes and units have not been approved. Access is controlled by
+`crm.surveys.view` and `crm.surveys.manage`; the default roles grant Sales both
+permissions and PM view-only access, while administrators can assign them to
+other roles.
 
 **Connecting the current Google Drive integration:**
 

@@ -78,6 +78,15 @@ const OPPORTUNITY_STAGE_DOT: Record<OpportunityStage, string> = {
   Lost: "bg-rose-500",
 };
 
+const NEXT_PIPELINE_STAGE: Partial<Record<OpportunityStage, OpportunityStage>> = {
+  Prospecting: "Qualification",
+  Qualification: "Proposal",
+  Proposal: "Negotiation",
+  Negotiation: "Won",
+};
+
+const isTerminalStage = (stage: OpportunityStage) => stage === "Won" || stage === "Lost";
+
 const emptyCreate = (): CreateOpportunityRequest => ({
   name: "",
   customerId: 0,
@@ -264,7 +273,6 @@ const AdminOpportunities = () => {
   const [changingStage, setChangingStage] = useState(false);
   const [lostReason, setLostReason] = useState<string>("");
   const [lostNote, setLostNote] = useState("");
-  const [wonQuote, setWonQuote] = useState<string>("");
 
   // Audit log tab — populated on demand when the detail dialog opens.
   const [auditItems, setAuditItems] = useState<AuditLogItem[]>([]);
@@ -296,7 +304,7 @@ const AdminOpportunities = () => {
     try {
       const { data } = await adminApi.getOpportunity(id);
       setDetail(data);
-      if (options.startEditing && canManage) {
+      if (options.startEditing && canManage && !isTerminalStage(data.stage)) {
         setEditForm({
           rowVersion: data.rowVersion,
           name: data.name,
@@ -339,7 +347,6 @@ const AdminOpportunities = () => {
     setStageTarget(null);
     setLostReason("");
     setLostNote("");
-    setWonQuote("");
     if (routeId) {
       // If opened via URL path like /admin/opportunities/6, navigate back to list
       navigate("/admin/opportunities", { replace: true });
@@ -411,7 +418,6 @@ const AdminOpportunities = () => {
     setStageTarget(target);
     setLostReason("");
     setLostNote("");
-    setWonQuote("");
   };
 
   const handleChangeStage = async () => {
@@ -421,7 +427,6 @@ const AdminOpportunities = () => {
       const { data } = await adminApi.changeOpportunityStage(detail.id, {
         rowVersion: detail.rowVersion,
         targetStage: stageTarget,
-        wonQuoteId: stageTarget === "Won" && wonQuote ? Number(wonQuote) : undefined,
         lostReasonCode: stageTarget === "Lost" ? lostReason : undefined,
         lostNote: stageTarget === "Lost" ? lostNote.trim() : undefined,
       });
@@ -649,15 +654,17 @@ const AdminOpportunities = () => {
                           className="mt-3 flex items-center justify-end gap-1 border-t pt-2"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => void openDetail(o.id, { startEditing: true })}
-                            title={t("common.edit")}
-                            aria-label={t("common.edit")}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          {!isTerminalStage(o.stage) && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => void openDetail(o.id, { startEditing: true })}
+                              title={t("common.edit")}
+                              aria-label={t("common.edit")}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -762,15 +769,17 @@ const AdminOpportunities = () => {
                         {canManage && (
                           <td className="px-3 py-3 text-right">
                             <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => { e.stopPropagation(); void openDetail(o.id, { startEditing: true }); }}
-                                title={t("common.edit")}
-                                aria-label={t("common.edit")}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              {!isTerminalStage(o.stage) && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => { e.stopPropagation(); void openDetail(o.id, { startEditing: true }); }}
+                                  title={t("common.edit")}
+                                  aria-label={t("common.edit")}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -950,17 +959,7 @@ const AdminOpportunities = () => {
               </div>
               <div>
                 <Label>{t("opportunities.field.stage")}</Label>
-                <Select
-                  value={createForm.stage ?? "Prospecting"}
-                  onValueChange={(v) => setCreateForm({ ...createForm, stage: v as OpportunityStage })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {OPPORTUNITY_STAGES.filter((s) => s !== "Won" && s !== "Lost").map((s) => (
-                      <SelectItem key={s} value={s}>{t(`opportunities.stage.${s}`)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input value={t("opportunities.stage.Prospecting")} disabled />
               </div>
             </div>
             <div>
@@ -1014,18 +1013,20 @@ const AdminOpportunities = () => {
                   {detail.customerName ?? customerLabel.get(detail.customerId) ?? `#${detail.customerId}`}
                   {detail.ownerName && <> · {detail.ownerName}</>}
                 </DialogDescription>
-                {/* NIH-90: prominent Won / Lost header actions — only rendered when
-                    the caller can manage AND the deal is still in an open stage. */}
+                {/* Terminal actions remain prominent, but Contract signed is valid
+                    only after the Opportunity reaches Negotiation. */}
                 {canManage && detail.stage !== "Won" && detail.stage !== "Lost" && (
                   <div className="flex flex-wrap gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      onClick={() => openStageChange("Won")}
-                      disabled={changingStage}
-                    >
-                      <Trophy className="mr-1.5 h-4 w-4" />
-                      {t("opportunities.action.markWon")}
-                    </Button>
+                    {detail.stage === "Negotiation" && (
+                      <Button
+                        size="sm"
+                        onClick={() => openStageChange("Won")}
+                        disabled={changingStage}
+                      >
+                        <Trophy className="mr-1.5 h-4 w-4" />
+                        {t("opportunities.action.markWon")}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="destructive"
@@ -1232,7 +1233,7 @@ const AdminOpportunities = () => {
                     <div className="rounded-md border p-3 space-y-2 bg-muted/30">
                       <div className="text-sm font-medium">{t("opportunities.stage.change")}</div>
                       <div className="flex flex-wrap gap-2">
-                        {OPPORTUNITY_STAGES.filter((s) => s !== detail.stage).map((s) => (
+                        {[NEXT_PIPELINE_STAGE[detail.stage], "Lost"].filter((s): s is OpportunityStage => Boolean(s)).map((s) => (
                           <Button
                             key={s}
                             size="sm"
@@ -1366,13 +1367,8 @@ const AdminOpportunities = () => {
               {stageTarget === "Won" ? t("opportunities.stage.won.description") : t("opportunities.stage.lost.description")}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {stageTarget === "Won" ? (
-              <div>
-                <Label>{t("opportunities.field.wonQuote")}</Label>
-                <Input type="number" min={0} value={wonQuote} onChange={(e) => setWonQuote(e.target.value)} placeholder="—" />
-              </div>
-            ) : (
+          {stageTarget === "Lost" && (
+            <div className="space-y-3">
               <>
                 <div>
                   <Label>{t("opportunities.field.lostReason")}</Label>
@@ -1390,8 +1386,8 @@ const AdminOpportunities = () => {
                   <Textarea rows={3} value={lostNote} onChange={(e) => setLostNote(e.target.value)} />
                 </div>
               </>
-            )}
-          </div>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setStageTarget(null)} disabled={changingStage}>{t("common.cancel")}</Button>
             <Button

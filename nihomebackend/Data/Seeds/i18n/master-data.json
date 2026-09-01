@@ -258,31 +258,31 @@
   {
     "key": "masterData.opportunity_stage.prospecting.label",
     "category": "masterData",
-    "vi": "Tìm hiểu",
-    "en": "Prospecting",
-    "zh": "开发中",
-    "ja": "見込み調査"
+    "vi": "Tiếp cận",
+    "en": "Approach",
+    "zh": "接洽",
+    "ja": "アプローチ"
   },
   {
     "key": "masterData.opportunity_stage.qualification.label",
     "category": "masterData",
-    "vi": "Đánh giá",
-    "en": "Qualification",
-    "zh": "评估",
-    "ja": "適格性判定"
+    "vi": "Khảo sát",
+    "en": "Survey",
+    "zh": "勘察",
+    "ja": "現地調査"
   },
   {
     "key": "masterData.opportunity_stage.proposal.label",
     "category": "masterData",
-    "vi": "Đề xuất",
-    "en": "Proposal",
-    "zh": "提案",
-    "ja": "提案"
+    "vi": "Báo giá / Đấu thầu",
+    "en": "Quotation / Tender",
+    "zh": "报价／投标",
+    "ja": "見積／入札"
   },
   {
     "key": "masterData.opportunity_stage.negotiation.label",
     "category": "masterData",
-    "vi": "Đàm phán",
+    "vi": "Thương thảo",
     "en": "Negotiation",
     "zh": "谈判",
     "ja": "交渉"
@@ -290,10 +290,10 @@
   {
     "key": "masterData.opportunity_stage.won.label",
     "category": "masterData",
-    "vi": "Thắng",
-    "en": "Won",
-    "zh": "赢单",
-    "ja": "受注"
+    "vi": "Ký hợp đồng",
+    "en": "Contract signed",
+    "zh": "合同已签署",
+    "ja": "契約締結"
   },
   {
     "key": "masterData.opportunity_stage.lost.label",

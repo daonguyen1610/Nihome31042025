@@ -444,9 +444,13 @@ public class TenderService(
 
         GuardNotTerminal(tender);
 
-        if (!await db.Opportunities.AnyAsync(o => o.Id == request.OpportunityId, ct))
+        if (!await db.Opportunities.AnyAsync(
+                opportunity => opportunity.Id == request.OpportunityId &&
+                    opportunity.CustomerId == tender.CustomerId,
+                ct))
         {
-            throw new TenderOperationException($"Cơ hội #{request.OpportunityId} không tồn tại.");
+            throw new TenderOperationException(
+                $"Cơ hội #{request.OpportunityId} không tồn tại hoặc không thuộc khách hàng của gói thầu.");
         }
 
         tender.Status = TenderStatus.Won;
