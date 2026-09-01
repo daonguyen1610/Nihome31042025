@@ -78,9 +78,6 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
       ),
       page.getByTestId("punch-new-save").click({ force: true }),
     ]);
-    await page.waitForResponse(
-      (r) => r.url().includes("/api/punch-items?") && r.request().method() === "GET",
-    );
     const row = page.locator('[data-testid^="punch-row-"]').filter({ hasText: titleText });
     await expect(row).toBeVisible();
     await expect(row.locator('[data-testid^="punch-view-"]')).toBeVisible();
