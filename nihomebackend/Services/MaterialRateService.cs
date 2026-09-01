@@ -232,17 +232,18 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
             ValidateText(unit, 30, "Unit", rowNumber, errors);
             if (code.Length > 0 && !codes.Add(code))
             {
-                errors.Add(Error(rowNumber, 1, $"MaterialCode '{code}' bị trùng trong tệp CSV."));
+                errors.Add(Error(rowNumber, 1, $"MaterialCode '{code}' bị trùng trong tệp CSV.",
+                    "materialRates.csvError.duplicateCode", new() { ["code"] = code }));
             }
 
             var norm = ParseDecimal(row["NormPerSqm"], "NormPerSqm", rowNumber, 4, 6, errors);
             var rate = ParseDecimal(row["UnitRate"], "UnitRate", rowNumber, 5, 4, errors);
             var waste = ParseDecimal(row["WastePercent"], "WastePercent", rowNumber, 6, 4, errors);
-            if (norm is <= 0) errors.Add(Error(rowNumber, 4, "NormPerSqm phải lớn hơn 0."));
-            if (norm is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "NormPerSqm vượt quá giới hạn lưu trữ."));
-            if (rate is < 0) errors.Add(Error(rowNumber, 5, "UnitRate không được nhỏ hơn 0."));
-            if (rate is > 99999999999999.9999m) errors.Add(Error(rowNumber, 5, "UnitRate vượt quá giới hạn lưu trữ."));
-            if (waste is < 0 or > 100) errors.Add(Error(rowNumber, 6, "WastePercent phải nằm trong khoảng từ 0 đến 100."));
+            if (norm is <= 0) errors.Add(Error(rowNumber, 4, "NormPerSqm phải lớn hơn 0.", "materialRates.csvError.normPositive"));
+            if (norm is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "NormPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.normMaximum"));
+            if (rate is < 0) errors.Add(Error(rowNumber, 5, "UnitRate không được nhỏ hơn 0.", "materialRates.csvError.rateNonNegative"));
+            if (rate is > 99999999999999.9999m) errors.Add(Error(rowNumber, 5, "UnitRate vượt quá giới hạn lưu trữ.", "materialRates.csvError.rateMaximum"));
+            if (waste is < 0 or > 100) errors.Add(Error(rowNumber, 6, "WastePercent phải nằm trong khoảng từ 0 đến 100.", "materialRates.csvError.wasteRange"));
 
             if (code.Length == 0 || name.Length == 0 || unit.Length == 0 || norm is null || rate is null || waste is null)
             {
@@ -254,7 +255,7 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
                 var amount = decimal.Round(norm.Value * rate.Value * (1m + waste.Value / 100m), 4, MidpointRounding.AwayFromZero);
                 if (amount > 99999999999999.9999m)
                 {
-                    errors.Add(Error(rowNumber, null, "AmountPerSqm vượt quá giới hạn lưu trữ."));
+                    errors.Add(Error(rowNumber, null, "AmountPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.amountMaximum"));
                     continue;
                 }
                 lines.Add(new MaterialRateLine
@@ -271,13 +272,13 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
             }
             catch (OverflowException)
             {
-                errors.Add(Error(rowNumber, null, "Giá trị dòng vượt quá giới hạn tính toán AmountPerSqm."));
+                errors.Add(Error(rowNumber, null, "Giá trị dòng vượt quá giới hạn tính toán AmountPerSqm.", "materialRates.csvError.calculationOverflow"));
             }
         }
 
         if (parsed.Rows.Count == 0)
         {
-            errors.Add(new CsvImportError { Row = 2, Message = "Tệp CSV phải có ít nhất một dòng dữ liệu." });
+            errors.Add(Error(2, null, "Tệp CSV phải có ít nhất một dòng dữ liệu.", "materialRates.csvError.dataRequired"));
         }
         if (errors.Count > 0) return new MaterialRateImportResponse { Errors = errors };
 
@@ -435,13 +436,15 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
     {
         if (!decimal.TryParse(value.Trim(), NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed))
         {
-            errors.Add(Error(row, column, $"{field} phải là số thập phân theo định dạng invariant, ví dụ: 12.5."));
+            errors.Add(Error(row, column, $"{field} phải là số thập phân theo định dạng invariant, ví dụ: 12.5.",
+                "materialRates.csvError.decimal", new() { ["field"] = field }));
             return null;
         }
         if (decimal.Round(parsed, maxScale) != parsed)
         {
             errors.Add(Error(row, column,
-                $"{field} chỉ được có tối đa {maxScale} chữ số thập phân, ví dụ: 12.5."));
+                $"{field} chỉ được có tối đa {maxScale} chữ số thập phân, ví dụ: 12.5.",
+                "materialRates.csvError.scale", new() { ["field"] = field, ["max"] = maxScale }));
             return null;
         }
         return parsed;
@@ -451,16 +454,29 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
     {
         if (value.Length == 0)
         {
-            errors.Add(Error(row, null, $"{field} không được để trống."));
+            errors.Add(Error(row, null, $"{field} không được để trống.",
+                "materialRates.csvError.required", new() { ["field"] = field }));
         }
         else if (value.Length > maxLength)
         {
-            errors.Add(Error(row, null, $"{field} không được vượt quá {maxLength} ký tự."));
+            errors.Add(Error(row, null, $"{field} không được vượt quá {maxLength} ký tự.",
+                "materialRates.csvError.maxLength", new() { ["field"] = field, ["max"] = maxLength }));
         }
     }
 
-    private static CsvImportError Error(int row, int? column, string message) =>
-        new() { Row = row, Column = column, Message = message };
+    private static CsvImportError Error(
+        int row,
+        int? column,
+        string message,
+        string messageKey,
+        Dictionary<string, object>? messageArgs = null) => new()
+        {
+            Row = row,
+            Column = column,
+            Message = message,
+            MessageKey = messageKey,
+            MessageArgs = messageArgs,
+        };
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

@@ -1616,6 +1616,8 @@ export interface CsvImportError {
   row?: number | null;
   column?: number | null;
   message: string;
+  messageKey?: string | null;
+  messageArgs?: Record<string, string | number> | null;
 }
 
 export interface MaterialRateImportResponse {
@@ -3909,6 +3911,11 @@ export const adminApi = {
     api.put<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`, body),
   downloadMaterialRateTemplate: () =>
     api.get<Blob>("/material-rate-catalogs/csv-template", { responseType: "blob" }),
+  downloadMaterialRateTemplatePackage: (language: "vi" | "en" | "zh" | "ja") =>
+    api.get<Blob>("/material-rate-catalogs/template-package", {
+      params: { language },
+      responseType: "blob",
+    }),
   listMaterialRateRevisions: (catalogId: number) =>
     api.get<MaterialRateRevisionResponse[]>(`/material-rate-catalogs/${catalogId}/revisions`),
   getMaterialRateRevision: (catalogId: number, revisionId: number) =>
