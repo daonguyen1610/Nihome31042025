@@ -251,7 +251,9 @@ test("manual disconnect warns when Google does not confirm revocation", async ({
   page.once("dialog", dialog => dialog.accept());
   await page.getByRole("button", { name: /Disconnect|Ngắt kết nối|断开连接|接続解除/i }).click();
 
-  await expect(page.getByText(/Google did not confirm revocation|Google chưa xác nhận thu hồi quyền|Google 未确认撤销授权|Google は取り消しを確認していません/i)).toBeVisible();
+  await expect(page.getByLabel("Notifications (F8)").getByText(
+    /Google did not confirm revocation|Google chưa xác nhận thu hồi quyền|Google 未确认撤销授权|Google は取り消しを確認していません/i,
+  )).toBeVisible();
   await expect(page.getByText("current@nicon.test")).not.toBeVisible();
   await expect(page.getByRole("button", { name: /Connect Google Drive|Kết nối Google Drive|连接 Google Drive|Google Drive に接続/i })).toBeVisible();
 });
