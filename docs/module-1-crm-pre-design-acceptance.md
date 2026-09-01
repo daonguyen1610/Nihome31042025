@@ -2,10 +2,12 @@
 
 ## Verdict
 
-**Approved by Business Analysis and conditionally approved by Functional QA —
-the complete Module 1 contract is implemented across the API, Admin UI,
-migrations, permissions, configurable master data, and customer-fillable CSV
-workflows. No open Blocker, High, or Medium functional defect remains.**
+**The implemented Module 1 contract is technically validated across the API,
+Admin UI, migrations, permissions, configurable master data, and
+customer-fillable CSV workflows. Material Rates release approval remains
+conditional on product-owner decisions for maker-checker separation and whether
+inactive catalogs may be approved while staged. No confirmed Blocker or High
+functional defect remains.**
 
 The system owns the import templates and validation contract; customer data can
 be loaded without waiting for an external template definition.
@@ -39,7 +41,7 @@ Module 1 must provide:
 | M1-07 | Contract signed completion gate | **Pass** | Completion requires a qualifying same-customer Contract. Contract update, transition, unlink, and delete cannot remove the final qualifying evidence from a Won Opportunity. | Retain closure-invariant regression tests. |
 | M1-08 | Lost opportunity branch | **Pass** | An open opportunity can move to Lost only with a reason code and note; probability becomes zero. | Confirm whether Lost may be reopened by a privileged role. Current behavior is terminal. |
 | M1-09 | Square-metre quotation calculation | **Pass** | Unit-cost quotes calculate area × effective catalog rate, discount, VAT, and total. Permission-gated overrides require a Vietnamese reason and retain provenance. | None. |
-| M1-10 | Material-norm-derived quotation rate | **Pass** | Versioned catalogs support strict atomic CSV import, effective periods, approval, immutable approved revisions, and `NormPerSqm × UnitRate × (1 + WastePercent/100)`. Quotes retain revision provenance and snapshots. | None. |
+| M1-10 | Material-norm-derived quotation rate | **Conditional** | A guided four-step workspace links catalog, Draft revision, localized customer ZIP package, explicit atomic-replacement confirmation, approval, catalog activation, and permission-aware Quote handoff. Versioned catalogs enforce `NormPerSqm × UnitRate × (1 + WastePercent/100)`; Quotes retain revision provenance and snapshots. | Product owner must confirm whether preparation and approval require different users and whether inactive catalogs may be approved while staged. |
 | M1-11 | Preliminary quotation output | **Pass** | Protected PDF export supports vi/en/zh/ja, Unicode, localized preliminary markers, customer/opportunity data, rate provenance, and totals. | Final branding can be changed through centralized translations. |
 | M1-12 | Tender preparation checklist | **Pass** | Submission requires a complete checklist and an approved estimate; terminal results lock mutable preparation data. | None. |
 | M1-13 | Tender deadline and result | **Pass** | Preparing → Submitted requires readiness; Won/Lost require Submitted; Won enforces same-customer Opportunity; cancellation is allowed only from open states. | Deadline escalation remains outside this contract. |
@@ -75,6 +77,15 @@ breaking persisted data and API clients. The customer-facing mapping is:
 - Customer CSV imports use strict UTF-8 and ordered headers, bounded byte/row
    reads, SQL-compatible decimal precision, atomic replacement, and persisted
    importer/provenance fields appropriate to each workflow.
+- Material Rates customer-package regression passed **16 parser/service unit
+   tests** and **13 HTTP integration tests**. The HTTP matrix downloads vi/en/zh/ja
+   ZIP packages from the production translation seed, extracts and imports each
+   packaged CSV, approves it, resolves it as effective, and verifies authentication
+   plus unsupported-language rejection.
+- Focused Material Rates Playwright acceptance passed against the live Docker
+   stack: package download, English localized validation failure, replacement
+   confirmation, successful browser import, approval, deactivate/reactivate,
+   Quote eligibility, Retired history, and 390 px responsive overflow were verified.
 - Frontend lint and production build: **passed**.
 - Focused Module 1 Playwright acceptance remains blocked by three historical
    Surveys in the local development database that have no deterministic project

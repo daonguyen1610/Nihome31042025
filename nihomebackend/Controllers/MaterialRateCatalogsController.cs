@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
@@ -15,8 +16,13 @@ namespace NihomeBackend.Controllers;
 [Route("api/material-rate-catalogs")]
 [Route("api/v1/material-rate-catalogs")]
 [Authorize]
-public sealed class MaterialRateCatalogsController(IMaterialRateService service, IAuditLogger audit) : ControllerBase
+public sealed class MaterialRateCatalogsController(
+    IMaterialRateService service,
+    TranslationService translations,
+    IAuditLogger audit) : ControllerBase
 {
+    private static readonly string[] SupportedLanguages = ["vi", "en", "zh", "ja"];
+
     [HttpGet]
     [RequirePermission("crm.material-rates", "view")]
     public async Task<ActionResult<List<MaterialRateCatalogResponse>>> List(
@@ -70,10 +76,66 @@ public sealed class MaterialRateCatalogsController(IMaterialRateService service,
     [RequirePermission("crm.material-rates", "view")]
     public IActionResult DownloadTemplate()
     {
-        var body = string.Join(',', MaterialRateService.CsvHeaders) + "\r\n"
-            + "VL-001,Keo dán gạch,kg,2.5,15000,5\r\n";
+        var body = CreateTemplateCsv();
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(body)).ToArray();
         return File(bytes, "text/csv; charset=utf-8", "material-rate-template.csv");
+    }
+
+    [HttpGet("template-package")]
+    [RequirePermission("crm.material-rates", "view")]
+    public async Task<IActionResult> DownloadTemplatePackage(
+        [FromQuery] string language = "vi",
+        CancellationToken ct = default)
+    {
+        _ = ct;
+        var normalizedLanguage = language.Trim().ToLowerInvariant();
+        if (!SupportedLanguages.Contains(normalizedLanguage, StringComparer.Ordinal))
+        {
+            return BadRequest(new { message = "Ngôn ngữ không hợp lệ. Chỉ chấp nhận vi, en, zh hoặc ja." });
+        }
+
+        var text = await translations.GetTranslationMapAsync(normalizedLanguage);
+        string T(string key, string fallback) => text.GetValueOrDefault(key, fallback);
+        var guide = string.Join("\r\n",
+        [
+            T("materialRates.package.title", "HƯỚNG DẪN NHẬP ĐỊNH MỨC VÀ ĐƠN GIÁ VẬT LIỆU"),
+            new string('=', 68),
+            "",
+            T("materialRates.package.purpose", "Mục đích: điền dữ liệu vào material-rates.csv để NICON tính đơn giá xây dựng trên mỗi m²."),
+            "",
+            T("materialRates.package.stepsTitle", "CÁC BƯỚC THỰC HIỆN"),
+            T("materialRates.package.step1", "1. Mở material-rates.csv bằng Excel, Numbers hoặc Google Sheets."),
+            T("materialRates.package.step2", "2. Xóa các dòng ví dụ và nhập mỗi vật liệu trên một dòng; không sửa tên hoặc thứ tự cột."),
+            T("materialRates.package.step3", "3. Lưu dưới định dạng CSV UTF-8, dùng dấu chấm cho phần thập phân và không thêm dấu phân cách hàng nghìn."),
+            T("materialRates.package.step4", "4. Gửi lại đúng file material-rates.csv. NICON sẽ kiểm tra toàn bộ file trước khi lưu."),
+            "",
+            T("materialRates.package.columnsTitle", "GIẢI THÍCH CÁC CỘT"),
+            T("materialRates.package.columnCode", "MaterialCode: mã vật liệu duy nhất trong file, tối đa 50 ký tự. Ví dụ: VL-XM-PC40."),
+            T("materialRates.package.columnName", "MaterialName: tên vật liệu, tối đa 200 ký tự."),
+            T("materialRates.package.columnUnit", "Unit: đơn vị tính, tối đa 30 ký tự. Ví dụ: kg, m3, m2."),
+            T("materialRates.package.columnNorm", "NormPerSqm: lượng vật liệu cần cho 1 m² xây dựng; phải lớn hơn 0, tối đa 6 số lẻ."),
+            T("materialRates.package.columnRate", "UnitRate: giá của 1 đơn vị vật liệu; không âm, tối đa 4 số lẻ."),
+            T("materialRates.package.columnWaste", "WastePercent: tỷ lệ hao hụt từ 0 đến 100; tối đa 4 số lẻ."),
+            "",
+            T("materialRates.package.formulaTitle", "CÔNG THỨC"),
+            T("materialRates.package.formula", "Thành tiền/m² = Định mức/m² × Đơn giá × (1 + Hao hụt/100). Tổng đơn giá/m² là tổng của tất cả các dòng."),
+            "",
+            T("materialRates.package.importantTitle", "LƯU Ý QUAN TRỌNG"),
+            T("materialRates.package.important1", "- File nhập sẽ thay thế toàn bộ các dòng đang có trong phiên bản Nháp được chọn."),
+            T("materialRates.package.important2", "- Nếu bất kỳ dòng nào sai, hệ thống không lưu dòng nào và trả về vị trí cần sửa."),
+            T("materialRates.package.important3", "- Chỉ phiên bản đã được phê duyệt, còn hiệu lực và thuộc danh mục đang hoạt động mới xuất hiện trong Báo giá suất đầu tư."),
+            T("materialRates.package.support", "Cần hỗ trợ: gửi lại file gốc cùng ảnh chụp lỗi cho người phụ trách NICON."),
+            "",
+        ]);
+
+        await using var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            WriteUtf8Entry(archive, "material-rates.csv", CreateTemplateCsv(), includeBom: true);
+            WriteUtf8Entry(archive, "README.txt", guide, includeBom: true);
+        }
+
+        return File(buffer.ToArray(), "application/zip", "material-rate-template-package.zip");
     }
 
     [HttpGet("{catalogId:int}/revisions")]
@@ -126,11 +188,26 @@ public sealed class MaterialRateCatalogsController(IMaterialRateService service,
         if (userId is null) return Unauthorized();
         if (file is null || file.Length == 0)
         {
-            return BadRequest(new { message = "Vui lòng chọn tệp CSV UTF-8 để nhập." });
+            return BadRequest(new MaterialRateImportResponse
+            {
+                Errors = [new CsvImportError
+                {
+                    Message = "Vui lòng chọn tệp CSV UTF-8 có dữ liệu để nhập.",
+                    MessageKey = "materialRates.validation.csvEmpty",
+                }],
+            });
         }
         if (file.Length > 2 * 1024 * 1024)
         {
-            return BadRequest(new { message = "Tệp CSV vượt quá dung lượng tối đa 2 MB." });
+            return BadRequest(new MaterialRateImportResponse
+            {
+                Errors = [new CsvImportError
+                {
+                    Message = "Tệp CSV vượt quá dung lượng tối đa 2 MB.",
+                    MessageKey = "csv.error.maxBytes",
+                    MessageArgs = new() { ["max"] = 2 },
+                }],
+            });
         }
 
         return await ExecuteAsync<MaterialRateImportResponse>(async () =>
@@ -237,5 +314,24 @@ public sealed class MaterialRateCatalogsController(IMaterialRateService service,
     {
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
         return int.TryParse(value, out var userId) ? userId : null;
+    }
+
+    private static string CreateTemplateCsv() =>
+        string.Join(',', MaterialRateService.CsvHeaders) + "\r\n"
+        + "VL-XM-PC40,Xi măng Portland PCB40,kg,12.5,1850,3\r\n"
+        + "VL-CAT-01,Cát xây tô,m3,0.025,420000,5\r\n"
+        + "VL-GACH-01,Gạch ống 8x8x18,viên,68,1450,4\r\n"
+        + "VL-THEP-D10,Thép cây D10,kg,4.2,16800,2.5\r\n"
+        + "VL-SON-01,Sơn nước nội thất,lít,0.35,95000,8\r\n";
+
+    private static void WriteUtf8Entry(ZipArchive archive, string name, string content, bool includeBom)
+    {
+        var entry = archive.CreateEntry(name, CompressionLevel.Optimal);
+        using var stream = entry.Open();
+        if (includeBom)
+        {
+            stream.Write(Encoding.UTF8.GetPreamble());
+        }
+        stream.Write(Encoding.UTF8.GetBytes(content));
     }
 }

@@ -40,10 +40,8 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
         }
         catch (CsvLimitException)
         {
-            result.Errors.Add(new CsvImportError
-            {
-                Message = $"Tệp CSV vượt quá dung lượng tối đa {maxBytes / 1024 / 1024} MB.",
-            });
+            result.Errors.Add(Error("csv.error.maxBytes", $"Tệp CSV vượt quá dung lượng tối đa {maxBytes / 1024 / 1024} MB.",
+                args: new() { ["max"] = maxBytes / 1024 / 1024 }));
             return result;
         }
 
@@ -54,7 +52,7 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
         }
         catch (DecoderFallbackException)
         {
-            result.Errors.Add(new CsvImportError { Message = "Tệp CSV phải được mã hóa UTF-8 hợp lệ." });
+            result.Errors.Add(Error("csv.error.utf8", "Tệp CSV phải được mã hóa UTF-8 hợp lệ."));
             return result;
         }
 
@@ -67,7 +65,7 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
         if (result.Errors.Count > 0) return result;
         if (parsedRows.Count == 0)
         {
-            result.Errors.Add(new CsvImportError { Row = 1, Message = "Tệp CSV phải có dòng tiêu đề." });
+            result.Errors.Add(Error("csv.error.headerRequired", "Tệp CSV phải có dòng tiêu đề.", row: 1));
             return result;
         }
 
@@ -75,28 +73,22 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
         result.Headers.AddRange(headers);
         if (!headers.SequenceEqual(expectedHeaders, StringComparer.Ordinal))
         {
-            result.Errors.Add(new CsvImportError
-            {
-                Row = 1,
-                Message = $"Tiêu đề CSV không hợp lệ. Thứ tự bắt buộc: {string.Join(',', expectedHeaders)}.",
-            });
+            result.Errors.Add(Error("csv.error.invalidHeaders", $"Tiêu đề CSV không hợp lệ. Thứ tự bắt buộc: {string.Join(',', expectedHeaders)}.",
+                row: 1, args: new() { ["headers"] = string.Join(',', expectedHeaders) }));
             return result;
         }
 
         if (headers.Distinct(StringComparer.Ordinal).Count() != headers.Count)
         {
-            result.Errors.Add(new CsvImportError { Row = 1, Message = "Tiêu đề CSV không được trùng lặp." });
+            result.Errors.Add(Error("csv.error.duplicateHeaders", "Tiêu đề CSV không được trùng lặp.", row: 1));
             return result;
         }
 
         var dataRows = parsedRows.Skip(1).ToList();
         if (dataRows.Count > maxRows)
         {
-            result.Errors.Add(new CsvImportError
-            {
-                Row = maxRows + 2,
-                Message = $"Tệp CSV chỉ được chứa tối đa {maxRows} dòng dữ liệu.",
-            });
+            result.Errors.Add(Error("csv.error.maxRows", $"Tệp CSV chỉ được chứa tối đa {maxRows} dòng dữ liệu.",
+                row: maxRows + 2, args: new() { ["max"] = maxRows }));
             return result;
         }
 
@@ -105,11 +97,8 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
             var values = dataRows[rowIndex];
             if (values.Count != headers.Count)
             {
-                result.Errors.Add(new CsvImportError
-                {
-                    Row = rowIndex + 2,
-                    Message = $"Dòng {rowIndex + 2} phải có đúng {headers.Count} cột.",
-                });
+                result.Errors.Add(Error("csv.error.columnCount", $"Dòng {rowIndex + 2} phải có đúng {headers.Count} cột.",
+                    row: rowIndex + 2, args: new() { ["count"] = headers.Count }));
                 continue;
             }
 
@@ -173,12 +162,7 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
 
             if (quoteClosed && current is not ',' and not '\r' and not '\n')
             {
-                errors.Add(new CsvImportError
-                {
-                    Row = rowNumber,
-                    Column = columnNumber,
-                    Message = "Không được có ký tự sau dấu ngoặc kép đóng của trường CSV.",
-                });
+                errors.Add(Error("csv.error.afterClosingQuote", "Không được có ký tự sau dấu ngoặc kép đóng của trường CSV.", rowNumber, columnNumber));
                 return rows;
             }
 
@@ -186,12 +170,7 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
             {
                 if (field.Length != 0)
                 {
-                    errors.Add(new CsvImportError
-                    {
-                        Row = rowNumber,
-                        Column = columnNumber,
-                        Message = "Dấu ngoặc kép chỉ được xuất hiện ở đầu trường CSV.",
-                    });
+                    errors.Add(Error("csv.error.quotePosition", "Dấu ngoặc kép chỉ được xuất hiện ở đầu trường CSV.", rowNumber, columnNumber));
                     return rows;
                 }
                 inQuotes = true;
@@ -213,7 +192,7 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
                 {
                     if (index + 1 >= content.Length || content[index + 1] != '\n')
                     {
-                        errors.Add(new CsvImportError { Row = rowNumber, Message = "CSV chỉ hỗ trợ xuống dòng LF hoặc CRLF." });
+                        errors.Add(Error("csv.error.lineEnding", "CSV chỉ hỗ trợ xuống dòng LF hoặc CRLF.", rowNumber));
                         return rows;
                     }
                     index++;
@@ -233,12 +212,7 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
 
         if (inQuotes)
         {
-            errors.Add(new CsvImportError
-            {
-                Row = rowNumber,
-                Column = columnNumber,
-                Message = "Trường CSV có dấu ngoặc kép chưa đóng.",
-            });
+            errors.Add(Error("csv.error.unclosedQuote", "Trường CSV có dấu ngoặc kép chưa đóng.", rowNumber, columnNumber));
             return rows;
         }
 
@@ -250,6 +224,20 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
 
         return rows;
     }
+
+    private static CsvImportError Error(
+        string messageKey,
+        string message,
+        int? row = null,
+        int? column = null,
+        Dictionary<string, object>? args = null) => new()
+        {
+            Row = row,
+            Column = column,
+            Message = message,
+            MessageKey = messageKey,
+            MessageArgs = args,
+        };
 
     private sealed class CsvLimitException : Exception
     {

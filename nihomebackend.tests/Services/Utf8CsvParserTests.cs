@@ -48,7 +48,9 @@ public class Utf8CsvParserTests
         var result = await _sut.ParseAsync(stream, Headers);
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, error => error.Message.Contains("UTF-8"));
+        var error = Assert.Single(result.Errors);
+        Assert.Contains("UTF-8", error.Message);
+        Assert.Equal("csv.error.utf8", error.MessageKey);
     }
 
     [Fact]

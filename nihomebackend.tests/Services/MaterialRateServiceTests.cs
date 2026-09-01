@@ -62,7 +62,10 @@ public class MaterialRateServiceTests : IDisposable
         var result = await ImportAsync(catalog.Id, revision.Id,
             $"MaterialCode,MaterialName,Unit,NormPerSqm,UnitRate,WastePercent\nNEW,Vật liệu,kg,{norm},{rate},{waste}");
 
-        Assert.Contains(result!.Errors, error => error.Message.Contains(field));
+        var error = Assert.Single(result!.Errors);
+        Assert.Contains(field, error.Message);
+        Assert.Equal("materialRates.csvError.scale", error.MessageKey);
+        Assert.Equal(field, error.MessageArgs!["field"]);
         Assert.Equal("OLD", Assert.Single(_db.MaterialRateLines).MaterialCode);
     }
 
