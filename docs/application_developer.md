@@ -1004,11 +1004,21 @@ The migration intentionally leaves upgraded installations disabled with empty de
 
 Project document storage is Drive-primary. Nicon uploads manual project files directly to their configured Drive category, proxies authenticated downloads, and moves deleted files to Drive trash rather than permanently erasing them. SQL remains authoritative for catalog metadata, application authorization, claims, and workflow state, while Drive is authoritative for file content. Reconciliation catalogs unknown files without a host copy and reflects remote changes. Existing source-module files use a compatibility sidecar until those modules migrate their own storage contracts. Drive sharing and permission synchronization are intentionally disabled until IT supplies approved group mappings.
 
-The background worker skips claims while synchronization is disabled. Once enabled,
-it claims a pending row and increments its attempt before provider operations;
-read-only, invalid-root, unavailable, or revoked-access failures can therefore
-consume one of the row's three attempts. Correct the connection before retrying
-affected rows. The connection response displays the authenticated account for
+Manual project uploads require an `Idempotency-Key`. Nicon fingerprints multipart
+fields and file bytes independently from the browser-generated boundary, so a
+sequential or concurrent retry of the same upload intent creates at most one SQL
+catalog row and one Drive object. Reusing the key with another payload returns
+`409`; the React upload form retains its key after a failed request and clears it
+when the selected file, category, or Operational Project changes. Current
+Operational Project scope is checked before fingerprint comparison or cached
+response replay. A caller whose project access was revoked receives `404` and
+cannot recover prior upload metadata by replaying or changing the payload.
+
+The background worker skips claims while synchronization is disabled. When due
+work exists, it validates that the configured root is a live writable folder
+before claiming a row. Read-only, invalid-root, unavailable, or revoked-access
+states leave pending rows unchanged without consuming one of their three
+attempts. The connection response displays the authenticated account for
 administrators to verify against the deployment setup.
 
 Connection statuses have the following meanings:
@@ -1036,8 +1046,9 @@ docker compose up -d --build --force-recreate nihomeBackend
 ```
 
 While synchronization is disabled, the worker leaves pending rows unclaimed at
-their current attempt count. Do not enable synchronization until OAuth values
-and `RootFolderId` are valid; provider failures after enablement can consume an
+their current attempt count. When enabled, connection validation also prevents
+claims until OAuth values and `RootFolderId` identify a writable folder. A
+provider failure after a successful validation and claim still consumes an
 attempt.
 
 OAuth apps left in Testing can issue refresh tokens with a limited lifetime. Before production use, move the app to Production and complete any Google verification required for the Drive scope. The Google SDK automatically exchanges the stored refresh token for short-lived access tokens. A revoked refresh token cannot be silently renewed; health status becomes `ReconnectRequired` and an administrator must approve access again.

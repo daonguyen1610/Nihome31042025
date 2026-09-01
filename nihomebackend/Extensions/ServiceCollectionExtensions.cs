@@ -97,6 +97,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<OtpService>();
         services.AddScoped<UserService>();
         services.AddScoped<IdempotencyService>();
+        services.AddScoped<OperationalProjectIdempotencyGuard>();
         services.AddSingleton<FingerprintService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IRoleService, RoleService>();

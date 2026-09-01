@@ -35,7 +35,7 @@ The requested outcome is:
 | AC-05 | Store Opportunity uploads in Drive | **Fail** | No direct Opportunity document upload exists. Opportunity reassignment only affects supported related records. | Define Opportunity document slots/categories and migration. |
 | AC-06 | Store Quote uploads in Drive | **Partial** | Managed Quote documents stage a project sidecar only after an Operational Project can be resolved. | Define behavior before project linkage and backfill existing records. |
 | AC-07 | Store Contract, attachment, and appendix uploads in Drive | **Partial** | Managed files stage sidecars when the Contract resolves to an Operational Project. No physical Contract folder exists. | Add approved contract hierarchy and pre-link behavior; backfill existing records. |
-| AC-08 | Store direct Operational Project uploads in Drive | **Pass — implemented subset** | Fake-adapter HTTP tests cover upload/download/delete behavior. The review operator also recorded a configured-Drive round-trip, but no retained artifact makes that run independent release evidence. | Add request idempotency before treating client retry as fully safe; satisfy AC-22 and AC-23 for release evidence. |
+| AC-08 | Store direct Operational Project uploads in Drive | **Pass — implemented subset** | Fake-adapter HTTP tests cover upload/download/delete, idempotent replay, and authorization revalidation before replay. The review operator also recorded a configured-Drive round-trip, but no retained artifact makes that run independent release evidence. | Satisfy AC-22 and AC-23 for release evidence. |
 | AC-09 | Store Concept, Basic, Shop Drawing, IFC, and related Design uploads in Drive | **Partial** | Basic Design and Shop Drawing managed files stage sidecars. Concept upload and IFC-specific staging are absent. | Implement Concept and IFC sources, then add source lifecycle and HTTP tests. |
 | AC-10 | Store Survey uploads in Drive | **Partial** | Linked Survey media uses the project `Survey` category. Unlinked Survey media retains a separate legacy root workflow. | Confirm whether unlinked Survey is an accepted exception or must be migrated into the universal catalog. |
 | AC-11 | Store Permit and legal uploads in Drive | **Partial** | Managed submitted and issued Permit files stage sidecars when linked to an Operational Project. | Backfill existing managed files and define pre-link behavior. |
@@ -47,7 +47,7 @@ The requested outcome is:
 | AC-17 | Prevent cross-project access | **Fail** | Centralized catalog isolation passes integration tests, but that narrow result does not prove the customer-wide criterion while source APIs lack equivalent project-scope enforcement. | Prove list/get/upload/download/preview/delete/retry isolation for every integrated source. |
 | AC-18 | In-app PDF, Word, Excel, image, and converted-DWG viewer | **Fail** | Reusable preview supports PDF, DOCX, images, and text on selected legacy screens. The project catalog only downloads or opens Drive externally. XLS/XLSX rendering and DWG conversion are absent. | Approve conversion/provider architecture, add protected preview endpoints, and integrate the viewer into the project catalog. |
 | AC-19 | Invalid file, network loss, or Drive permission loss leaves no orphan | **Fail** | Validation, bounded worker retry, claims, leases, and compensating trash after metadata-save failure exist. The absolute criterion is not met because cleanup failure has no durable orphan ledger and legacy two-step uploads can be abandoned. | Add durable cleanup/outbox handling and integration tests for provider failures at each boundary. |
-| AC-20 | Retry and idempotency | **Partial** | Sidecars have stable replica keys, generations, bounded retry, claim fencing, and reconciliation idempotency. Direct project upload creates a new random replica key per HTTP request. | Require an idempotency key for direct upload and prove repeated requests return one catalog row and one Drive object. |
+| AC-20 | Retry and idempotency | **Partial** | Sidecars have stable replica keys, generations, bounded retry, claim fencing, and reconciliation idempotency. Direct project upload now requires a stable upload-intent key; sequential and concurrent replay tests prove one catalog row and one Drive object, while changed payload reuse returns `409`. Current project scope is evaluated before replay or conflict disclosure. Unsupported source modules and unapproved backfill remain outside this proof. | Apply the same verified contract as each missing source module is integrated. |
 | AC-21 | Preserve existing data until migration/backfill is approved | **Partial** | Existing source storage remains authoritative while supported records use compatibility sidecars. Survey has a scoped repair migration, but no approved module-wide backfill or rollback evidence exists. | Do not remove local source files or claim universal Drive completion until module-specific backfills are reviewed and verified. |
 | AC-22 | Integration test the storage abstraction | **Partial** | Fake-adapter integration coverage proves API contracts; adapter behavior has unit coverage. No automated test combines the real configured adapter with the full application pipeline. | Add an opt-in, non-silent live integration gate that uses Admin-managed encrypted settings. |
 | AC-23 | Manually verify with a configured Drive account | **Unknown** | The review operator recorded a successful direct-project PDF upload, hash-matched protected download, HTTP 204 delete, and worker cleanup on 1 September 2026. No immutable sanitized artifact makes that transient execution independently reproducible. | Add a non-silent release gate and retain sanitized run metadata; repeat after each missing module is integrated. |
@@ -79,17 +79,23 @@ listed here must not be represented as Drive-integrated.
 
 ### Automated
 
-The review operator recorded these executions on 1 September 2026 against the
-reviewed working tree. No immutable test-result artifact was retained, so the
-independent BA and QA reviews treated these as supporting history rather than
-independent release evidence:
+The review operator recorded these executions against the reviewed working tree.
+No immutable test-result artifact was retained, so the independent BA and QA
+reviews treat them as supporting history rather than independent release evidence:
 
-- Supported Drive/source unit suites in the application Docker image: **393 passed, 0 failed**.
-- Affected HTTP integration suites in the application Docker image: **179 passed, 0 failed**.
+- Pre-remediation complete backend baseline in the application Docker image: **1,561 unit and 1,282 integration tests passed, 0 failed**.
+- Focused fingerprint and Drive worker unit suite: **36 passed, 0 failed**.
+- Focused Operational Project document HTTP suite: **21 passed, 0 failed**.
 - Frontend lint and production build: **passed**.
-- Workspace diagnostics reported by the review operator: **no errors**.
+- Backend build and `dotnet format --verify-no-changes`: **passed with 0 warnings and 0 errors**.
+- Pre-retry-scenario headed Operational Project document Playwright baseline: **1 passed, 0 failed**.
+- Failed-upload stable-key browser scenario: **implemented but not run; the current attempt failed at login with `ECONNREFUSED ::1:5043` after the Docker stack became unavailable**.
+- Current complete unit rerun in the plain .NET SDK image: **1,556 passed; 6 Survey PDF tests blocked because that image lacks the required Noto fonts**.
+- Current complete integration rerun: **not run because Docker Desktop's layer store returned input/output errors for both new and existing containers after the focused suites passed**.
 
-The same backend filters were first run in the plain .NET SDK image. All Drive-related assertions passed, but six unit and one integration Survey PDF assertions failed because that image lacks the required Noto fonts. Rerunning in the application image, which contains the production font packages, passed all 572 selected tests.
+The current focused suites contain the authorization-replay and worker failure
+changes. A clean complete rerun in the application image remains required after
+the Docker layer-store fault is repaired.
 
 ### Manual configured-Drive check
 
@@ -112,13 +118,12 @@ artifact is retained in this report:
 - Lead, Opportunity, Concept, IFC, Site Diary, Construction Task, Punch List, or Procurement uploads to Drive.
 - Historical module-wide backfill.
 - XLS/XLSX preview or DWG conversion.
-- Idempotent replay of direct HTTP upload.
 - Full application-pipeline live test using Admin-managed encrypted credentials.
 - Source-record existence and ownership validation for caller-supplied metadata.
-- Concurrent first-folder creation and direct-upload replay.
+- Concurrent first-folder creation.
 - Provider timeout after remote commit, SQL failure after upload, and subsequent cleanup failure.
 - Exact file-size boundaries, multipart overflow, spoofed signatures, and the approved malware policy.
-- Project member revocation and Drive ACL drift.
+- Drive ACL drift.
 
 ## Independent Review Findings
 
@@ -128,17 +133,17 @@ business owner has accepted the remaining requirement risks.
 ### Senior Business Analyst
 
 - Critical Drive ACL synchronization and customer-wide project authorization are absent.
-- Automatic hierarchy, universal source adoption, protected preview, idempotency, and durable orphan recovery are incomplete.
+- Automatic hierarchy, universal source adoption, protected preview, source-wide idempotency, and durable orphan recovery are incomplete.
 - Folder names, physical hierarchy lifecycle, disconnected-record behavior, Google identity mapping, viewer conversion, and backfill require owner decisions.
 - The approved QA gate was not met; the customer contract is not ready to be used as a completed acceptance baseline.
 
 ### Functional QA
 
 - Basic Design, Shop Drawing, Permit, and As-built routes require a project-scope authorization matrix and remediation.
-- Provider failure can consume a worker attempt after the row is claimed; documentation was corrected to match this behavior.
-- Direct upload replay can create duplicate rows/files, and failed compensation has no durable cleanup ledger.
+- The project worker validates a writable Drive root before claiming due work; tests prove precheck failures preserve retry state and post-claim provider failures consume one attempt with backoff.
+- Direct upload has required sequential/concurrent idempotency coverage and revalidates current project scope before replay; failed compensation still has no durable cleanup ledger.
 - The existing live adapter test bypasses the Admin-configured application pipeline and returns without provider calls when its opt-in flag is absent.
-- The reported 393 unit, 179 integration, frontend, and manual Drive results support the implemented subset but are not independent release evidence without retained artifacts.
+- The reported full backend, frontend, Playwright, and manual Drive results support the implemented subset but are not independent release evidence without retained artifacts.
 
 ## Required Decisions Before Implementation
 
@@ -154,7 +159,7 @@ business owner has accepted the remaining requirement risks.
 
 1. Approve hierarchy, disconnected-record, and ACL identity contracts.
 2. Add durable full-tree provisioning with observable status and retry.
-3. Add upload idempotency and durable orphan cleanup.
+3. Extend upload idempotency to each missing source and add durable orphan cleanup.
 4. Integrate missing source modules one at a time with source lifecycle tests.
 5. Build and verify migration/backfill per source; keep compatibility storage until sign-off.
 6. Implement ACL reconciliation and revocation after group mappings are approved.

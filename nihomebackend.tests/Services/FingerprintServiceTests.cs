@@ -48,6 +48,27 @@ public class FingerprintServiceTests
         Assert.Equal("{\"name\":\"A\"}", body);
     }
 
+    [Fact]
+    public async Task ComputeAsync_EquivalentMultipartWithDifferentBoundary_ProducesSameHash()
+    {
+        var first = await BuildMultipartRequest("boundary-one", "DesignBasic", "plan.pdf", "content"u8.ToArray());
+        var second = await BuildMultipartRequest("boundary-two", "DesignBasic", "plan.pdf", "content"u8.ToArray());
+
+        Assert.Equal(await _sut.ComputeAsync(first), await _sut.ComputeAsync(second));
+    }
+
+    [Fact]
+    public async Task ComputeAsync_MultipartFileOrFieldChange_ProducesDifferentHash()
+    {
+        var original = await BuildMultipartRequest("boundary-one", "DesignBasic", "plan.pdf", "content"u8.ToArray());
+        var changedFile = await BuildMultipartRequest("boundary-two", "DesignBasic", "plan.pdf", "changed"u8.ToArray());
+        var changedCategory = await BuildMultipartRequest("boundary-three", "Survey", "plan.pdf", "content"u8.ToArray());
+        var originalHash = await _sut.ComputeAsync(original);
+
+        Assert.NotEqual(originalHash, await _sut.ComputeAsync(changedFile));
+        Assert.NotEqual(originalHash, await _sut.ComputeAsync(changedCategory));
+    }
+
     private static HttpRequest BuildRequest(
         string method,
         string path,
@@ -61,6 +82,27 @@ public class FingerprintServiceTests
         context.Request.ContentType = "application/json";
         context.Request.Headers.AcceptLanguage = "vi-VN";
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(body));
+        return context.Request;
+    }
+
+    private static async Task<HttpRequest> BuildMultipartRequest(
+        string boundary,
+        string category,
+        string fileName,
+        byte[] bytes)
+    {
+        using var content = new MultipartFormDataContent(boundary);
+        content.Add(new StringContent(category), "category");
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        content.Add(file, "file", fileName);
+        var body = await content.ReadAsByteArrayAsync();
+        var context = new DefaultHttpContext();
+        context.Request.Method = "POST";
+        context.Request.Path = "/api/operational-projects/1/documents";
+        context.Request.ContentType = content.Headers.ContentType!.ToString();
+        context.Request.Body = new MemoryStream(body);
+        context.Request.ContentLength = body.Length;
         return context.Request;
     }
 }

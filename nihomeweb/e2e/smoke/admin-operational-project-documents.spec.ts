@@ -123,6 +123,7 @@ test("project manager operates the responsive Drive document catalog", async ({
       conflictState: "PendingConfirmation",
     }),
   ];
+  const uploadIdempotencyKeys: string[] = [];
 
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), route =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) }));
@@ -132,6 +133,15 @@ test("project manager operates the responsive Drive document catalog", async ({
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(categories) }));
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), async route => {
     if (route.request().method() === "POST") {
+      uploadIdempotencyKeys.push(route.request().headers()["idempotency-key"] ?? "");
+      if (uploadIdempotencyKeys.length === 1) {
+        await route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "Temporary upload failure" }),
+        });
+        return;
+      }
       documents.push(documentResponse({ id: 13, originalFileName: "new-plan.pdf" }));
       await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(documents.at(-1)) });
       return;
@@ -177,6 +187,13 @@ test("project manager operates the responsive Drive document catalog", async ({
   });
   await page.locator("#project-document-category").click();
   await page.getByRole("option", { name: /Thiết kế cơ sở|Basic design|基础设计|基本設計/i }).click();
-  await section.getByRole("button", { name: /^(Tải lên|Upload|上传|アップロード)$/i }).click();
+  const uploadButton = section.getByRole("button", { name: /^(Tải lên|Upload|上传|アップロード)$/i });
+  await uploadButton.click();
+  await expect.poll(() => uploadIdempotencyKeys.length).toBe(1);
+  await uploadButton.click();
   await expect(section.locator("article").filter({ hasText: "new-plan.pdf" })).toBeVisible();
+  expect(uploadIdempotencyKeys).toHaveLength(2);
+  expect(uploadIdempotencyKeys[0]).not.toBe("");
+  expect(uploadIdempotencyKeys[1]).toBe(uploadIdempotencyKeys[0]);
+  expect(documents.filter(document => document.id === 13)).toHaveLength(1);
 });

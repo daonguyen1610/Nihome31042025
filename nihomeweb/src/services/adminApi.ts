@@ -4298,11 +4298,15 @@ export const adminApi = {
     api.get<ProjectDocumentCategoryResponse[]>("/operational-projects/document-categories"),
   listProjectDocuments: (projectId: number) =>
     api.get<ProjectDocumentResponse[]>(`/operational-projects/${projectId}/documents`),
-  uploadProjectDocument: (projectId: number, file: File, category: string) => {
+  uploadProjectDocument: (projectId: number, file: File, category: string, idempotencyKey: string) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("category", category);
-    return api.post<ProjectDocumentResponse>(`/operational-projects/${projectId}/documents`, formData);
+    return api.post<ProjectDocumentResponse>(
+      `/operational-projects/${projectId}/documents`,
+      formData,
+      withIdempotencyKey(idempotencyKey),
+    );
   },
   downloadProjectDocument: (projectId: number, documentId: number) =>
     api.get<Blob>(`/operational-projects/${projectId}/documents/${documentId}/content`, {

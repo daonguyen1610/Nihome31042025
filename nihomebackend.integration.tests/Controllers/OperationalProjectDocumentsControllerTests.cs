@@ -74,7 +74,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
         var projectId = await CreateProjectAsync();
         using var uploadContent = CreateUploadContent("DesignBasic", "private-plan.pdf", PdfBytes);
 
-        var upload = await Client.PostAsync($"/api/operational-projects/{projectId}/documents", uploadContent);
+        var upload = await SendUploadAsync(projectId, uploadContent);
 
         upload.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await ReadJsonAsync(upload);
@@ -110,6 +110,187 @@ public sealed class OperationalProjectDocumentsControllerTests(
         (await download.Content.ReadAsByteArrayAsync()).Should().Equal(PdfBytes);
     }
 
+    [Fact]
+    public async Task Upload_SameIdempotencyKeyAndPayload_ReplaysWithoutDuplicate()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var key = $"project-upload-{Guid.NewGuid():N}";
+        var driveFilesBefore = factory.DriveFileCount;
+        using var firstContent = CreateUploadContent("DesignBasic", "replayed.pdf", PdfBytes);
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/documents") { Content = firstContent };
+        firstRequest.Headers.Add("Idempotency-Key", key);
+
+        var first = await Client.SendAsync(firstRequest);
+        var firstBody = await ReadJsonAsync(first);
+
+        using var replayContent = CreateUploadContent("DesignBasic", "replayed.pdf", PdfBytes);
+        using var replayRequest = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/documents") { Content = replayContent };
+        replayRequest.Headers.Add("Idempotency-Key", key);
+        var replay = await Client.SendAsync(replayRequest);
+        var replayBody = await ReadJsonAsync(replay);
+
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.Headers.GetValues("Idempotency-Replayed").Should().ContainSingle("true");
+        replayBody.GetProperty("id").GetInt64().Should().Be(firstBody.GetProperty("id").GetInt64());
+        (await CountDocumentsAsync(projectId)).Should().Be(1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+    }
+
+    [Fact]
+    public async Task Upload_AccessRevokedBeforeReplay_ReturnsNotFoundWithoutDisclosureOrDuplicate()
+    {
+        var saleUserId = await WithDbAsync(async db =>
+            await db.Users
+                .Where(user => user.PhoneNumber ==
+                    TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id)
+                .SingleAsync());
+        var projectId = await CreateProjectAsync(saleUserId);
+        await AuthenticateAsAsync("SALE");
+        var key = $"project-upload-{Guid.NewGuid():N}";
+        var driveFilesBefore = factory.DriveFileCount;
+        using var firstContent = CreateUploadContent("DesignBasic", "private.pdf", PdfBytes);
+        using var firstRequest = CreateUploadRequest(projectId, firstContent, key);
+
+        var first = await Client.SendAsync(firstRequest);
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        await WithDbAsync(async db =>
+        {
+            var superAdminId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = await db.OperationalProjects.SingleAsync(item => item.Id == projectId);
+            project.ProjectManagerUserId = superAdminId;
+            project.CreatedByUserId = superAdminId;
+            await db.SaveChangesAsync();
+        });
+
+        using var replayContent = CreateUploadContent("DesignBasic", "private.pdf", PdfBytes);
+        using var replayRequest = CreateUploadRequest(projectId, replayContent, key);
+        var replay = await Client.SendAsync(replayRequest);
+        using var changedContent = CreateUploadContent("Survey", "changed.pdf", PdfBytes);
+        using var changedRequest = CreateUploadRequest(projectId, changedContent, key);
+        var changed = await Client.SendAsync(changedRequest);
+
+        replay.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        changed.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        replay.Headers.Should().NotContain(header => header.Key == "Idempotency-Replayed");
+        changed.Headers.Should().NotContain(header => header.Key == "Idempotency-Replayed");
+        (await CountDocumentsAsync(projectId)).Should().Be(1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+    }
+
+    [Fact]
+    public async Task Upload_WithoutIdempotencyKey_ReturnsBadRequestWithoutSideEffects()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var driveFilesBefore = factory.DriveFileCount;
+        using var content = CreateUploadContent("DesignBasic", "missing-key.pdf", PdfBytes);
+
+        var response = await Client.PostAsync(
+            $"/api/operational-projects/{projectId}/documents", content);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("message").GetString()
+            .Should().Contain("Idempotency-Key");
+        (await CountDocumentsAsync(projectId)).Should().Be(0);
+        factory.DriveFileCount.Should().Be(driveFilesBefore);
+    }
+
+    [Fact]
+    public async Task Upload_SameIdempotencyKeyWithDifferentPayload_ReturnsConflictWithoutDuplicate()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var key = $"project-upload-{Guid.NewGuid():N}";
+        var driveFilesBefore = factory.DriveFileCount;
+        using var firstContent = CreateUploadContent("DesignBasic", "first.pdf", PdfBytes);
+        using var firstRequest = CreateUploadRequest(projectId, firstContent, key);
+        var first = await Client.SendAsync(firstRequest);
+
+        using var changedContent = CreateUploadContent("Survey", "changed.pdf", PdfBytes);
+        using var changedRequest = CreateUploadRequest(projectId, changedContent, key);
+        var changed = await Client.SendAsync(changedRequest);
+
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        changed.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await CountDocumentsAsync(projectId)).Should().Be(1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+    }
+
+    [Fact]
+    public async Task Upload_ConcurrentSameKey_CreatesAtMostOneDocumentAndDriveObject()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var key = $"project-upload-{Guid.NewGuid():N}";
+        var driveFilesBefore = factory.DriveFileCount;
+        using var firstContent = CreateUploadContent("DesignBasic", "concurrent.pdf", PdfBytes);
+        using var secondContent = CreateUploadContent("DesignBasic", "concurrent.pdf", PdfBytes);
+        using var firstRequest = CreateUploadRequest(projectId, firstContent, key);
+        using var secondRequest = CreateUploadRequest(projectId, secondContent, key);
+
+        var responses = await Task.WhenAll(
+            Client.SendAsync(firstRequest),
+            Client.SendAsync(secondRequest));
+
+        responses.Should().Contain(response => response.StatusCode == HttpStatusCode.Created);
+        responses.Should().OnlyContain(response =>
+            response.StatusCode == HttpStatusCode.Created || response.StatusCode == HttpStatusCode.Conflict);
+        responses.Count(response => response.StatusCode == HttpStatusCode.Created &&
+            !response.Headers.Contains("Idempotency-Replayed")).Should().Be(1);
+        (await CountDocumentsAsync(projectId)).Should().Be(1);
+        factory.DriveFileCount.Should().Be(driveFilesBefore + 1);
+        foreach (var response in responses) response.Dispose();
+    }
+
+    [Fact]
+    public async Task Worker_ProviderFailureAfterClaim_ConsumesAttemptAndSchedulesRetry()
+    {
+        await WithDbAsync(async db =>
+        {
+            var dueDocuments = await db.ProjectDocuments
+                .Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Pending ||
+                    item.SyncStatus == ProjectDocumentSyncStatus.Processing)
+                .ToListAsync();
+            foreach (var dueDocument in dueDocuments)
+            {
+                dueDocument.SyncStatus = ProjectDocumentSyncStatus.Synced;
+                dueDocument.DesiredOperation = ProjectDocumentDesiredOperation.None;
+                dueDocument.ClaimToken = null;
+                dueDocument.ClaimExpiresAt = null;
+            }
+            await db.SaveChangesAsync();
+        });
+        var projectId = await CreateProjectAsync();
+        var document = await AddDocumentAsync(
+            projectId,
+            ProjectDocumentCategory.DesignBasic,
+            syncStatus: ProjectDocumentSyncStatus.Pending);
+        var startedAt = DateTime.UtcNow;
+        factory.FailDriveUploadFor(document.Id);
+        using var scope = Factory.Services.CreateScope();
+        var processor = scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>();
+
+        (await processor.ProcessNextOutboundAsync()).Should().BeTrue();
+
+        var persisted = await LoadDocumentAsync(document.Id);
+        persisted.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
+        persisted.SyncAttemptCount.Should().Be(1);
+        persisted.LastSyncAttemptAt.Should().NotBeNull();
+        persisted.LastSyncAttemptAt.Should().BeOnOrAfter(startedAt);
+        persisted.NextSyncAttemptAt.Should().NotBeNull();
+        persisted.NextSyncAttemptAt.Should().BeAfter(persisted.LastSyncAttemptAt!.Value);
+        persisted.ClaimToken.Should().BeNull();
+        persisted.ClaimExpiresAt.Should().BeNull();
+    }
+
     [Theory]
     [InlineData("DesignBasic", "payload.exe")]
     [InlineData("Unclassified", "payload.pdf")]
@@ -122,7 +303,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
         var filesBefore = ProjectFiles(projectId);
         using var uploadContent = CreateUploadContent(category, fileName, PdfBytes);
 
-        var response = await Client.PostAsync($"/api/operational-projects/{projectId}/documents", uploadContent);
+        var response = await SendUploadAsync(projectId, uploadContent);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await ReadJsonAsync(response);
@@ -452,12 +633,14 @@ public sealed class OperationalProjectDocumentsControllerTests(
     private async Task AuthenticateAsAsync(string role) =>
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
 
-    private async Task<int> CreateProjectAsync()
+    private async Task<int> CreateProjectAsync(int? ownerUserId = null)
     {
         var projectId = await WithDbAsync(async db =>
         {
-            var ownerId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
-                .Select(user => user.Id).SingleAsync();
+            var ownerId = ownerUserId ?? await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
+                .Select(user => user.Id)
+                .SingleAsync();
             var customer = new Customer
             {
                 Name = $"Document customer {Guid.NewGuid():N}",
@@ -551,6 +734,26 @@ public sealed class OperationalProjectDocumentsControllerTests(
         return multipart;
     }
 
+    private async Task<HttpResponseMessage> SendUploadAsync(
+        int projectId,
+        MultipartFormDataContent content)
+    {
+        using var request = CreateUploadRequest(
+            projectId, content, $"project-upload-{Guid.NewGuid():N}");
+        return await Client.SendAsync(request);
+    }
+
+    private static HttpRequestMessage CreateUploadRequest(
+        int projectId,
+        MultipartFormDataContent content,
+        string key)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/documents") { Content = content };
+        request.Headers.Add("Idempotency-Key", key);
+        return request;
+    }
+
     private string FullPath(string localPath)
     {
         var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
@@ -629,6 +832,12 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
 {
     private readonly string databasePath = Path.Combine(
         Path.GetTempPath(), $"nihome-project-documents-{Guid.NewGuid():N}.db");
+    private readonly InMemoryGoogleDriveAdapter driveAdapter = new();
+
+    public int DriveFileCount => driveAdapter.ActiveFileCount;
+
+    public void FailDriveUploadFor(long documentId) =>
+        driveAdapter.FailUploadFor($"project-document:{documentId}");
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -647,7 +856,7 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
             services.RemoveAll<IGoogleDriveSettingsStore>();
             services.AddSingleton<IGoogleDriveSettingsStore>(new ConfiguredSettingsStore(driveOptions));
             services.RemoveAll<IGoogleDriveAdapter>();
-            services.AddSingleton<IGoogleDriveAdapter, InMemoryGoogleDriveAdapter>();
+            services.AddSingleton<IGoogleDriveAdapter>(driveAdapter);
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
             var connectionString = new SqliteConnectionStringBuilder
@@ -722,6 +931,12 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
     private sealed class InMemoryGoogleDriveAdapter : IGoogleDriveAdapter
     {
         private readonly ConcurrentDictionary<string, DriveEntry> files = new();
+        private string? failedReplicaKey;
+
+        public int ActiveFileCount => files.Count(entry => !entry.Value.IsTrashed);
+
+        public void FailUploadFor(string replicaKey) =>
+            Interlocked.Exchange(ref failedReplicaKey, replicaKey);
 
         public Task<DriveConnection> CheckConnectionAsync(CancellationToken ct = default) => Task.FromResult(
             new DriveConnection("integration@nicon.test", "root", "https://drive.test/root", true, false, false, true));
@@ -739,6 +954,11 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
         public async Task<DriveUpload> UploadAsync(string folderId, string replicaKey, long generation,
             string fileName, string contentType, Stream content, CancellationToken ct = default)
         {
+            if (string.Equals(
+                Interlocked.CompareExchange(ref failedReplicaKey, null, replicaKey),
+                replicaKey,
+                StringComparison.Ordinal))
+                throw new InvalidOperationException("Simulated Drive upload failure.");
             await using var buffer = new MemoryStream();
             await content.CopyToAsync(buffer, ct);
             var id = $"file-{Guid.NewGuid():N}";
