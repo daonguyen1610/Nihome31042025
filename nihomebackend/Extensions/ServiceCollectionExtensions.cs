@@ -110,17 +110,22 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICustomerDocumentService, CustomerDocumentService>();
         services.AddScoped<IVendorService, VendorService>();
         services.AddScoped<IOpportunityService, OpportunityService>();
+        services.AddScoped<IOpportunityClosureInvariantService, OpportunityClosureInvariantService>();
         services.AddScoped<IQuoteDocumentService, QuoteDocumentService>();
+        services.AddScoped<IQuotePdfService, QuotePdfService>();
         services.AddScoped<IQuoteService, QuoteService>();
+        services.AddSingleton<IUtf8CsvParser, Utf8CsvParser>();
+        services.AddScoped<IMaterialRateService, MaterialRateService>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<IContractAppendixService, ContractAppendixService>();
         services.AddScoped<IContractAttachmentService, ContractAttachmentService>();
         services.AddScoped<ICapabilityDocumentService, CapabilityDocumentService>();
         services.AddScoped<ITenderService, TenderService>();
+        services.AddScoped<ITenderEstimateService, TenderEstimateService>();
         services.AddScoped<ISurveyService, SurveyService>();
+        services.AddScoped<ISurveyConditionService, SurveyConditionService>();
         services.AddScoped<ISurveyMediaService, SurveyMediaService>();
         services.AddScoped<ISurveyMediaStorageService, SurveyMediaStorageService>();
-        services.AddScoped<ISurveyDriveSyncProcessor, SurveyDriveSyncProcessor>();
         services.AddScoped<IProjectDriveSyncProcessor, ProjectDriveSyncProcessor>();
         services.AddScoped<IProjectDriveFolderService, ProjectDriveFolderService>();
         services.AddSingleton<IProjectDriveClaimRenewer, ProjectDriveClaimRenewer>();
@@ -174,7 +179,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<EntityTranslationService>();
 
         services.AddHostedService<UploadedImageCleanupService>();
-        services.AddHostedService<SurveyDriveSyncService>();
         services.AddHostedService<ProjectDriveSyncService>();
 
         // Audit logging (non-blocking queue + background writer + retention sweeper)

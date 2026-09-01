@@ -15,6 +15,8 @@ public class QuoteServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
     private readonly QuoteService _sut;
+    private readonly int _rateCatalogId;
+    private readonly DateOnly _pricingDate = new(2026, 9, 1);
 
     public QuoteServiceTests()
     {
@@ -24,8 +26,39 @@ public class QuoteServiceTests : IDisposable
             _db,
             _notifications.Object,
             Mock.Of<IQuoteDocumentService>(),
+            Mock.Of<IQuotePdfService>(),
             NullLogger<QuoteService>.Instance,
             Mock.Of<IProjectDocumentStagingService>());
+        var catalog = new MaterialRateCatalog
+        {
+            Code = "RATE-TEST",
+            Name = "Test rate",
+            CreatedByUserId = 1,
+            UpdatedByUserId = 1,
+        };
+        var revision = new MaterialRateRevision
+        {
+            Catalog = catalog,
+            Version = 1,
+            Status = MaterialRateRevisionStatus.Approved,
+            EffectiveFrom = new DateOnly(2026, 1, 1),
+            CreatedByUserId = 1,
+            UpdatedByUserId = 1,
+            Lines =
+            [
+                new MaterialRateLine
+                {
+                    MaterialCode = "PACKAGE",
+                    MaterialName = "Gói tiêu chuẩn",
+                    Unit = "m2",
+                    AmountPerSqm = 10_000_000m,
+                },
+            ],
+        };
+        _db.MaterialRateCatalogs.Add(catalog);
+        _db.MaterialRateRevisions.Add(revision);
+        _db.SaveChanges();
+        _rateCatalogId = catalog.Id;
     }
 
     public void Dispose() => _db.Dispose();
@@ -122,6 +155,43 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_OrdinarySalesCannotAssignAnotherOwner()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var other = new ApplicationUser
+        {
+            PhoneNumber = Guid.NewGuid().ToString("N")[..12],
+            FullName = "Other owner",
+            Email = $"other-{Guid.NewGuid():N}@nihome.test",
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
+        };
+        _db.Users.Add(other);
+        await _db.SaveChangesAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.OwnerUserId = other.Id;
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
+            request, user.Id, canManage: true, canSeeAll: false));
+
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsUnknownOwnerEvenWithFullScope()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.OwnerUserId = int.MaxValue;
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
+            request, user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
     public async Task CreateAsync_UnitCost_ComputesTotalsAndAssignsCode()
     {
         var (user, opp) = await SeedOpportunityAsync();
@@ -132,6 +202,8 @@ public class QuoteServiceTests : IDisposable
             Method = QuoteMethod.UnitCost,
             AreaSqm = 100m,
             UnitPricePerSqm = 10_000_000m,
+            MaterialRateCatalogId = _rateCatalogId,
+            PricingEffectiveDate = _pricingDate,
             DiscountPercent = 10m,
             VatPercent = 8m,
         }, user.Id, canManage: true);
@@ -389,12 +461,14 @@ public class QuoteServiceTests : IDisposable
 
     // =========================== Helpers ===========================
 
-    private static CreateQuoteRequest NewUnitCostRequest(int oppId) => new()
+    private CreateQuoteRequest NewUnitCostRequest(int oppId) => new()
     {
         OpportunityId = oppId,
         Method = QuoteMethod.UnitCost,
         AreaSqm = 100m,
-        UnitPricePerSqm = 5_000_000m,
+        UnitPricePerSqm = 10_000_000m,
+        MaterialRateCatalogId = _rateCatalogId,
+        PricingEffectiveDate = _pricingDate,
         VatPercent = 8m,
     };
 
@@ -628,11 +702,163 @@ public class QuoteServiceTests : IDisposable
             Method = QuoteMethod.UnitCost,
             AreaSqm = 100m,
             UnitPricePerSqm = 10_000_000m,
+            MaterialRateCatalogId = _rateCatalogId,
+            PricingEffectiveDate = _pricingDate,
             DiscountPercent = 0m,
             VatPercent = 8m,
         }, user.Id, canManage: true);
 
         var quote = await _db.Quotes.FirstAsync(q => q.Id == created.Id);
         return (user, quote);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UnitCost_DerivesCatalogRateAndProvenance()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.UnitPricePerSqm = null;
+
+        var result = await _sut.CreateAsync(request, user.Id, canManage: true);
+
+        Assert.Equal(10_000_000m, result.UnitPricePerSqm);
+        Assert.Equal(10_000_000m, result.CatalogUnitPricePerSqm);
+        Assert.Equal(10_000_000m, await _db.MaterialRateRevisions
+            .Where(revision => revision.Id == result.MaterialRateRevisionId)
+            .SelectMany(revision => revision.Lines)
+            .SumAsync(line => line.AmountPerSqm));
+        Assert.Equal("Catalog", result.RateSource);
+        Assert.NotNull(result.MaterialRateRevisionId);
+        Assert.Equal(_pricingDate, result.PricingEffectiveDate);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DifferentRate_RequiresPermissionAndVietnameseReason()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.UnitPricePerSqm = 9_000_000m;
+        request.RateOverrideReason = "Điều chỉnh theo phạm vi thi công thực tế.";
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() =>
+            _sut.CreateAsync(request, user.Id, canManage: true));
+
+        var result = await _sut.CreateAsync(
+            request, user.Id, canManage: true, canOverrideRate: true);
+        Assert.Equal("Override", result.RateSource);
+        Assert.Equal(user.Id, result.RateOverrideByUserId);
+        Assert.Equal(request.RateOverrideReason, result.RateOverrideReason);
+        Assert.NotNull(result.RateOverrideAt);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UnitCost_RejectsDateWithoutApprovedEffectiveRevision()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.PricingEffectiveDate = new DateOnly(2025, 12, 31);
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() =>
+            _sut.CreateAsync(request, user.Id, canManage: true));
+
+        Assert.Contains("đã duyệt có hiệu lực", exception.Message);
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DifferentRate_RejectsNonVietnameseReasonWithPermission()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.UnitPricePerSqm = 9_000_000m;
+        request.RateOverrideReason = "Customer requested a lower rate.";
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() =>
+            _sut.CreateAsync(request, user.Id, canManage: true, canOverrideRate: true));
+
+        Assert.Contains("tiếng Việt", exception.Message);
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task MigratedUnitCostQuote_RemainsReadableAsOverrideAfterUpdate()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var migrated = new Quote
+        {
+            Code = "QT-MIGRATED-001",
+            OpportunityId = opportunity.Id,
+            OwnerUserId = user.Id,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            UnitPricePerSqm = 5_000_000m,
+            RateSource = QuoteRateSource.Override,
+            RateOverrideReason = "Giá được chuyển đổi từ dữ liệu trước Module 1.",
+            Subtotal = 500_000_000m,
+            VatPercent = 8m,
+            GrandTotal = 540_000_000m,
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Quotes.Add(migrated);
+        await _db.SaveChangesAsync();
+
+        var existing = await _sut.GetAsync(migrated.Id, user.Id, canSeeAll: false);
+        Assert.Equal("Override", existing!.RateSource);
+        Assert.Null(existing.MaterialRateRevisionId);
+        Assert.Null(existing.CatalogUnitPricePerSqm);
+
+        var updated = await _sut.UpdateAsync(migrated.Id, new UpdateQuoteRequest
+        {
+            AreaSqm = 120m,
+            UnitPricePerSqm = 5_000_000m,
+            DiscountPercent = 0m,
+            VatPercent = 8m,
+            ValidUntil = migrated.ValidUntil,
+        }, user.Id, canManage: true, canSeeAll: false);
+
+        Assert.Equal("Override", updated!.RateSource);
+        Assert.Null(updated.MaterialRateRevisionId);
+        Assert.Equal(648_000_000m, updated.GrandTotal);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AfterApproval_SnapshotKeepsOriginalRateProvenance()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.UnitPricePerSqm = 9_000_000m;
+        request.RateOverrideReason = "Điều chỉnh theo phạm vi thi công thực tế.";
+        var created = await _sut.CreateAsync(
+            request, user.Id, canManage: true, canOverrideRate: true);
+        var tracked = await _db.Quotes.SingleAsync(quote => quote.Id == created.Id);
+        tracked.Status = QuoteStatus.Approved;
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            AreaSqm = created.AreaSqm,
+            UnitPricePerSqm = created.CatalogUnitPricePerSqm,
+            MaterialRateCatalogId = _rateCatalogId,
+            PricingEffectiveDate = _pricingDate,
+            DiscountPercent = created.DiscountPercent,
+            VatPercent = created.VatPercent,
+            ValidUntil = created.ValidUntil,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var snapshot = await _db.QuoteVersionSnapshots.SingleAsync();
+        Assert.Equal(created.MaterialRateRevisionId, snapshot.MaterialRateRevisionId);
+        Assert.Equal(_pricingDate, snapshot.PricingEffectiveDate);
+        Assert.Equal(10_000_000m, snapshot.CatalogUnitPricePerSqm);
+        Assert.Equal(QuoteRateSource.Override, snapshot.RateSource);
+        Assert.Equal(request.RateOverrideReason, snapshot.RateOverrideReason);
+        Assert.Equal(user.Id, snapshot.RateOverrideByUserId);
+        Assert.Equal(created.RateOverrideAt, snapshot.RateOverrideAt);
+
+        var versions = await _sut.GetVersionsAsync(created.Id, user.Id, canSeeAll: true);
+        var original = Assert.Single(versions!.Versions, version => version.Version == 1);
+        Assert.Equal(_rateCatalogId, original.MaterialRateCatalogId);
+        Assert.Equal("RATE-TEST", original.MaterialRateCatalogCode);
+        Assert.Equal("Override", original.RateSource);
+        Assert.Equal(9_000_000m, original.UnitPricePerSqm);
     }
 }

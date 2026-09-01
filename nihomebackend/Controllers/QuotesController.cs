@@ -77,6 +77,25 @@ public class QuotesController(
         return found is null ? NotFound() : Ok(found);
     }
 
+    [HttpGet("{id:int}/export.pdf")]
+    [RequirePermission("crm.quotes", "view")]
+    public async Task<IActionResult> ExportPdf(
+        int id, [FromQuery] string lang = "vi", CancellationToken ct = default)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+        try
+        {
+            var pdf = await svc.ExportPdfAsync(id, userId.Value, canSeeAll, lang, ct);
+            return pdf is null ? NotFound() : File(pdf, "application/pdf", $"quote-{id}.pdf");
+        }
+        catch (QuoteOperationException ex)
+        {
+            return LogAndBadRequest("quote.export-pdf", ex, id).Result!;
+        }
+    }
+
     [HttpGet("{id:int}/documents")]
     [RequirePermission("crm.quotes", "view")]
     public async Task<ActionResult<List<QuoteDocumentResponse>>> ListDocuments(int id, CancellationToken ct)
@@ -170,7 +189,8 @@ public class QuotesController(
         {
             var canManage = await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct);
             var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
-            var response = await svc.CreateAsync(request, userId.Value, canManage, ct, canSeeAll);
+            var canOverrideRate = await permissions.HasAsync(userId.Value, "crm.quotes.rate-override", ct);
+            var response = await svc.CreateAsync(request, userId.Value, canManage, ct, canSeeAll, canOverrideRate);
             audit.Log(new AuditEvent
             {
                 Action = "quote.create",
@@ -200,7 +220,8 @@ public class QuotesController(
         {
             var canManage = await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct);
             var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
-            var response = await svc.UpdateAsync(id, request, userId.Value, canManage, canSeeAll, ct);
+            var canOverrideRate = await permissions.HasAsync(userId.Value, "crm.quotes.rate-override", ct);
+            var response = await svc.UpdateAsync(id, request, userId.Value, canManage, canSeeAll, ct, canOverrideRate);
             if (response is null) return NotFound();
             audit.Log(new AuditEvent
             {

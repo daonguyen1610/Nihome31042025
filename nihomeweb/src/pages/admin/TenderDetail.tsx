@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  FileSpreadsheet,
   History,
   Library,
   Loader2,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import TenderEstimatePanel from "./TenderEstimatePanel";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -1007,7 +1009,7 @@ const ResultTab = ({
           <p className="mt-2 text-sm text-slate-500">{t("tenders.detail.result.summaryOpen")}</p>
         )}
 
-        {!isTerminal && canMarkResult ? (
+        {!isTerminal && tender.status === "Submitted" && canMarkResult ? (
           <div className="mt-4 flex flex-wrap gap-2">
             <Button onClick={onMarkWonClick} size="sm">
               <Trophy className="mr-1 h-4 w-4" />
@@ -1024,7 +1026,11 @@ const ResultTab = ({
             </Button>
           </div>
         ) : !isTerminal ? (
-          <p className="mt-3 text-xs text-slate-500">{t("tenders.detail.markResultForbidden")}</p>
+          <p className="mt-3 text-xs text-slate-500">
+            {tender.status === "Preparing"
+              ? t("tenders.lifecycle.resultRequiresSubmitted")
+              : t("tenders.detail.markResultForbidden")}
+          </p>
         ) : null}
       </div>
 
@@ -1092,6 +1098,7 @@ const AdminTenderDetail = () => {
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.tendersManage);
   const canMarkResult = has(ADMIN_PERMS.tendersMarkResult);
+  const canApproveEstimate = has(ADMIN_PERMS.tendersApproveEstimate);
   const navigate = useNavigate();
 
   const [tender, setTender] = useState<TenderResponse | null>(null);
@@ -1258,6 +1265,10 @@ const AdminTenderDetail = () => {
                   <Library className="mr-1 h-4 w-4" />
                   {t("tenders.detail.tab.checklist")}
                 </TabsTrigger>
+                <TabsTrigger value="estimate" data-testid="tender-estimate-tab">
+                  <FileSpreadsheet className="mr-1 h-4 w-4" />
+                  {t("tenders.estimate.title")}
+                </TabsTrigger>
                 <TabsTrigger value="result">
                   <Trophy className="mr-1 h-4 w-4" />
                   {t("tenders.detail.tab.result")}
@@ -1276,6 +1287,15 @@ const AdminTenderDetail = () => {
                   onUpload={handleUpload}
                   onOpenLibrary={setLibraryTargetItemId}
                   isTerminal={!!isTerminal}
+                />
+              </TabsContent>
+
+              <TabsContent value="estimate" className="mt-3">
+                <TenderEstimatePanel
+                  tender={tender}
+                  canManage={canManage}
+                  canApprove={canApproveEstimate}
+                  onTenderChanged={setTender}
                 />
               </TabsContent>
 

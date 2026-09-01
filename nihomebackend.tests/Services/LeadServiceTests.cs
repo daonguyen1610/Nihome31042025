@@ -1200,6 +1200,79 @@ public class LeadServiceTests : IDisposable
 
     // ---------------- Helpers ----------------
 
+    [Fact]
+    public async Task CreateAsync_RejectsInactiveSegment()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        _db.MasterDataOptions.Single(option => option.Category == "lead_segment").IsActive = false;
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<LeadOperationException>(() => _sut.CreateAsync(
+            new CreateLeadRequest
+            {
+                Name = "Ms. Nga",
+                Phone = "0900000000",
+                SourceCode = "marketing",
+                SegmentCode = "unclassified",
+            },
+            sales.Id,
+            canManage: true));
+
+        Assert.Contains("Phân khúc Lead", exception.Message);
+        Assert.Empty(_db.Leads);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ValidatesAndPersistsActiveSegment()
+    {
+        var sales = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        _db.MasterDataOptions.Add(new MasterDataOption
+        {
+            Category = "lead_segment",
+            Code = "commercial",
+            Name = "Thương mại",
+            IsActive = true,
+        });
+        var lead = await SeedLeadAsync(ownerId: sales.Id);
+
+        var response = await _sut.UpdateAsync(
+            lead.Id,
+            new UpdateLeadRequest
+            {
+                Name = lead.Name,
+                Phone = lead.Phone,
+                SourceCode = lead.SourceCode,
+                SegmentCode = "commercial",
+                Status = LeadStatus.Contacted,
+                OwnerUserId = sales.Id,
+            },
+            sales.Id,
+            canManage: true,
+            canSeeAll: false);
+
+        Assert.Equal("commercial", response!.SegmentCode);
+        Assert.Equal("commercial", (await _db.Leads.FindAsync(lead.Id))!.SegmentCode);
+    }
+
+    [Fact]
+    public async Task ListAsync_FiltersBySegmentAndReturnsSegmentCode()
+    {
+        var manager = await SeedUserAsync(UserRole.USER);
+        SeedSource("marketing");
+        _db.Leads.AddRange(
+            new Lead { Name = "A", Phone = "1", SourceCode = "marketing", SegmentCode = "unclassified" },
+            new Lead { Name = "B", Phone = "2", SourceCode = "marketing", SegmentCode = "commercial" });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.ListAsync(manager.Id, canSeeAll: true, segmentCode: "commercial");
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal("B", item.Name);
+        Assert.Equal("commercial", item.SegmentCode);
+    }
+
     private async Task<ApplicationUser> SeedUserAsync(UserRole role, bool isActive = true)
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
@@ -1219,6 +1292,19 @@ public class LeadServiceTests : IDisposable
 
     private void SeedSource(string code, bool isActive = true)
     {
+        if (!_db.MasterDataOptions.Any(o => o.Category == "lead_segment" && o.Code == "unclassified"))
+        {
+            _db.MasterDataOptions.Add(new MasterDataOption
+            {
+                Category = "lead_segment",
+                Code = "unclassified",
+                Name = "Chưa phân loại",
+                SortOrder = 1,
+                IsActive = true,
+            });
+            _db.SaveChanges();
+        }
+
         if (_db.MasterDataOptions.Any(o => o.Category == "customer_source" && o.Code == code))
         {
             return;

@@ -14,6 +14,7 @@ const PAGES = [
   "/admin/customers",
   "/admin/opportunities",
   "/admin/quotes",
+  "/admin/material-rates",
   "/admin/contracts",
   "/admin/design-projects",
   "/admin/tenders",

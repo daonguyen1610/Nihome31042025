@@ -95,6 +95,9 @@ public interface ITenderService
     Task<TenderResponse?> MarkLostAsync(int tenderId, MarkTenderLostRequest request,
         int callerUserId, CancellationToken ct = default);
 
+    Task<TenderResponse?> TransitionAsync(int tenderId, TransitionTenderRequest request,
+        int callerUserId, CancellationToken ct = default);
+
     /// <summary>
     /// Ordered (newest-first) audit-log slice for the History tab.
     /// Returns <c>null</c> when the tender doesn't exist so the controller

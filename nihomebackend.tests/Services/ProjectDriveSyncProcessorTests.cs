@@ -207,7 +207,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task PropagateSurveySuccessAsync_UpdatesLegacyMediaAndAggregate()
+    public async Task PropagateSurveySuccessAsync_UpdatesMediaAndAggregate()
     {
         var (survey, media, document) = AddSurveySidecar();
         document.SyncAttemptCount = 1;
@@ -229,7 +229,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task PropagateSurveyFailureAsync_UpdatesLegacyMediaAndAggregate()
+    public async Task PropagateSurveyFailureAsync_UpdatesMediaAndAggregate()
     {
         var (survey, media, document) = AddSurveySidecar();
         document.SyncAttemptCount = 3;
@@ -250,7 +250,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task PropagateSurveyDeleteAsync_ClearsLegacyDriveMetadataAndAggregate()
+    public async Task PropagateSurveyDeleteAsync_ClearsDriveMetadataAndAggregate()
     {
         var (survey, media, document) = AddSurveySidecar();
         var syncedAt = DateTime.UtcNow.AddMinutes(-1);
@@ -288,15 +288,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         var newProject = new OperationalProject { Code = "OP-MOVED", Name = "Moved", CustomerId = customer.Id };
         db.OperationalProjects.Add(newProject);
         db.SaveChanges();
-        var opportunity = new Opportunity
-        {
-            Name = "Moved opportunity",
-            CustomerId = customer.Id,
-            OperationalProjectId = newProject.Id,
-        };
-        db.Opportunities.Add(opportunity);
-        db.SaveChanges();
-        survey.LinkedOpportunityId = opportunity.Id;
+        survey.OperationalProjectId = newProject.Id;
         media.DriveFileId = "new-project-file";
         media.DriveFolderId = "new-project-folder";
         media.DriveFolderLink = "https://drive.test/new-project-folder";
@@ -311,20 +303,20 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task PropagateSurveyDeleteAsync_UnlinkedLegacyUpload_DoesNotClearNewMetadata()
+    public async Task PropagateSurveyDeleteAsync_StaleFileCallback_DoesNotClearNewMetadata()
     {
         var (_, media, oldDocument) = AddSurveySidecar();
         oldDocument.DriveFileId = "old-project-file";
-        media.DriveFileId = "new-legacy-file";
-        media.DriveFolderId = "new-legacy-folder";
-        media.DriveFolderLink = "https://drive.test/new-legacy-folder";
+        media.DriveFileId = "new-current-file";
+        media.DriveFolderId = "new-current-folder";
+        media.DriveFolderLink = "https://drive.test/new-current-folder";
         media.SyncStatus = SurveyMediaSyncStatus.Synced;
         db.SaveChanges();
 
         await processor.PropagateSurveyDeleteAsync(oldDocument, CancellationToken.None);
 
-        Assert.Equal("new-legacy-file", media.DriveFileId);
-        Assert.Equal("new-legacy-folder", media.DriveFolderId);
+        Assert.Equal("new-current-file", media.DriveFileId);
+        Assert.Equal("new-current-folder", media.DriveFolderId);
         Assert.Equal(SurveyMediaSyncStatus.Synced, media.SyncStatus);
     }
 
@@ -688,6 +680,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
             Code = $"SV-{Guid.NewGuid():N}",
             Location = "Project sync status",
             SurveyDate = DateTime.UtcNow,
+            OperationalProjectId = project.Id,
         };
         db.Surveys.Add(survey);
         db.SaveChanges();

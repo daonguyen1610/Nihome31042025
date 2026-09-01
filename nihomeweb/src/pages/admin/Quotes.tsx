@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +25,7 @@ import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { calculateQuoteTotals, MAX_QUOTE_QUANTITY, validateQuoteValues } from "@/lib/quoteTotals";
+import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -57,6 +59,7 @@ import {
   type QuoteListParams,
   type QuoteMethod,
   type QuoteStatus,
+  type MaterialRateRevisionResponse,
 } from "@/services/adminApi";
 
 // -------- Static styling --------
@@ -89,6 +92,9 @@ const emptyCreate = (): CreateQuoteRequest => ({
   method: "UnitCost",
   areaSqm: null,
   unitPricePerSqm: null,
+  materialRateCatalogId: null,
+  pricingEffectiveDate: new Date().toISOString().slice(0, 10),
+  rateOverrideReason: null,
   packageDescription: "",
   items: [],
   discountPercent: 0,
@@ -109,6 +115,7 @@ const AdminQuotes = () => {
   const canManage = has(ADMIN_PERMS.quotesManage);
   const canApprove = has(ADMIN_PERMS.quotesApprove);
   const canSend = has(ADMIN_PERMS.quotesSend);
+  const canOverrideRate = has(ADMIN_PERMS.quotesRateOverride);
 
   // ---------- list state ----------
   const [rows, setRows] = useState<QuoteListItemResponse[]>([]);
@@ -183,6 +190,7 @@ const AdminQuotes = () => {
   const [createForm, setCreateForm] = useState<CreateQuoteRequest>(emptyCreate());
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
   const createTotals = useMemo(
     () => calculateQuoteTotals(createForm.method, createForm),
     [createForm],
@@ -192,6 +200,7 @@ const AdminQuotes = () => {
   const openCreate = (opportunityId = 0) => {
     setCreateForm({ ...emptyCreate(), opportunityId });
     setCreateError(null);
+    setEffectiveRevision(null);
     setCreating(true);
   };
 
@@ -226,6 +235,25 @@ const AdminQuotes = () => {
     if (!createForm.opportunityId) {
       setCreateError(t("quotes.validation.pickOpportunity"));
       return;
+    }
+    if (createForm.method === "UnitCost") {
+      if (!createForm.materialRateCatalogId || !createForm.pricingEffectiveDate) {
+        setCreateError(t("quotes.validation.rateSelectionRequired"));
+        return;
+      }
+      if (!effectiveRevision) {
+        setCreateError(t("quotes.validation.noEffectiveRate"));
+        return;
+      }
+      const isOverride = createForm.unitPricePerSqm !== effectiveRevision.totalRatePerSqm;
+      if (isOverride && !canOverrideRate) {
+        setCreateError(t("quotes.validation.overridePermission"));
+        return;
+      }
+      if (isOverride && !isValidVietnameseOverrideReason(createForm.rateOverrideReason)) {
+        setCreateError(t("quotes.validation.overrideReason"));
+        return;
+      }
     }
     const validationIssue = validateQuoteValues(createForm.method, createForm);
     if (validationIssue) {
@@ -669,38 +697,23 @@ const AdminQuotes = () => {
             </div>
             {createForm.method === "UnitCost" ? (
               <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>{t("quotes.field.areaSqm")}</Label>
-                    <Input
-                      inputMode="decimal"
-                      value={createForm.areaSqm ?? ""}
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          areaSqm: e.target.value ? Number(e.target.value) : null,
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label>{t("quotes.field.unitPricePerSqm")}</Label>
-                    <Input
-                      inputMode="numeric"
-                      value={
-                        createForm.unitPricePerSqm
-                          ? formatVnd(createForm.unitPricePerSqm)
-                          : ""
-                      }
-                      onChange={(e) =>
-                        setCreateForm({
-                          ...createForm,
-                          unitPricePerSqm: parseVnd(e.target.value) || null,
-                        })
-                      }
-                    />
-                  </div>
+                <div>
+                  <Label>{t("quotes.field.areaSqm")}</Label>
+                  <Input
+                    inputMode="decimal"
+                    value={createForm.areaSqm ?? ""}
+                    onChange={(e) => setCreateForm((current) => ({ ...current, areaSqm: e.target.value ? Number(e.target.value) : null }))}
+                  />
                 </div>
+                <QuoteRateFields
+                  catalogId={createForm.materialRateCatalogId}
+                  pricingDate={createForm.pricingEffectiveDate}
+                  unitPrice={createForm.unitPricePerSqm}
+                  overrideReason={createForm.rateOverrideReason}
+                  canOverride={canOverrideRate}
+                  onEffectiveRevisionChange={setEffectiveRevision}
+                  onChange={(patch) => setCreateForm((current) => ({ ...current, ...patch }))}
+                />
                 <div>
                   <Label>{t("quotes.field.packageDescription")}</Label>
                   <Textarea

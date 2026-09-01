@@ -153,6 +153,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           { to: "/admin/customers", label: t("nav.customers"), icon: UserRound, permission: ADMIN_PERMS.customers },
           { to: "/admin/opportunities", label: t("nav.opportunities"), icon: Target, permission: ADMIN_PERMS.opportunities },
           { to: "/admin/quotes", label: t("nav.quotes"), icon: FileSpreadsheet, permission: ADMIN_PERMS.quotes },
+          { to: "/admin/material-rates", label: t("nav.materialRates"), icon: Database, permission: ADMIN_PERMS.materialRates },
           { to: "/admin/contracts", label: t("nav.contracts"), icon: FileText, permission: ADMIN_PERMS.contracts },
           { to: "/admin/tenders", label: t("nav.tenders"), icon: Briefcase, permission: ADMIN_PERMS.tenders },
           { to: "/admin/surveys", label: t("nav.surveys"), icon: ClipboardList, permission: ADMIN_PERMS.surveys },

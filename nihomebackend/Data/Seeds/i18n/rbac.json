@@ -1456,6 +1456,22 @@
     "ja": "落札/失注を登録し、案件と紐付けて契約を生成することを許可します。"
   },
   {
+    "key": "rbac.perm.crm.tenders.approve-estimate.label",
+    "category": "rbac",
+    "vi": "Phê duyệt dự toán thầu",
+    "en": "Approve tender estimates",
+    "zh": "审批投标估算",
+    "ja": "入札見積を承認"
+  },
+  {
+    "key": "rbac.perm.crm.tenders.approve-estimate.description",
+    "category": "rbac",
+    "vi": "Cho phép phê duyệt hoặc từ chối phiên bản dự toán của gói thầu.",
+    "en": "Allows approving or rejecting tender estimate revisions.",
+    "zh": "允许审批或拒绝投标估算版本。",
+    "ja": "入札見積の版を承認または却下できます。"
+  },
+  {
     "key": "rbac.perm.crm.capability-docs.view.label",
     "category": "rbac",
     "vi": "Xem hồ sơ năng lực",
@@ -1498,10 +1514,26 @@
   {
     "key": "rbac.perm.crm.surveys.view.description",
     "category": "rbac",
-    "vi": "Cho phép xem phiếu khảo sát hiện trường và media đính kèm.",
-    "en": "Allows viewing site surveys and attached media.",
-    "zh": "允许查看现场勘察记录和附加媒体。",
-    "ja": "現場調査記録と添付メディアの閲覧を許可します。"
+    "vi": "Cho phép xem phiếu khảo sát và media trong phạm vi phiếu được giao hoặc dự án do người dùng tạo/phụ trách.",
+    "en": "Allows viewing surveys and media assigned to the user or within projects they created or manage.",
+    "zh": "允许查看分配给用户或属于其创建或管理项目的勘察及媒体。",
+    "ja": "ユーザーに割り当てられた調査、または作成・管理するプロジェクト内の調査とメディアの閲覧を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.view.all.label",
+    "category": "rbac",
+    "vi": "Xem toàn bộ phiếu khảo sát",
+    "en": "View all site surveys",
+    "zh": "查看全部现场勘察",
+    "ja": "すべての現場調査を表示"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.view.all.description",
+    "category": "rbac",
+    "vi": "Cho phép xem, tải media và xuất PDF của mọi phiếu khảo sát không giới hạn theo dự án.",
+    "en": "Allows viewing, downloading media, and exporting PDFs for every survey without project scope.",
+    "zh": "允许不受项目范围限制地查看、下载媒体和导出所有勘察的 PDF。",
+    "ja": "プロジェクト範囲に関係なく、すべての調査の閲覧、メディアのダウンロード、PDF出力を許可します。"
   },
   {
     "key": "rbac.perm.crm.surveys.manage.label",
@@ -1514,10 +1546,26 @@
   {
     "key": "rbac.perm.crm.surveys.manage.description",
     "category": "rbac",
-    "vi": "Cho phép tạo/sửa phiếu khảo sát và đồng bộ file lên Drive.",
-    "en": "Allows creating/editing surveys and syncing media to Drive.",
-    "zh": "允许创建、编辑勘察并将文件同步至云盘。",
-    "ja": "現場調査の作成・編集及びファイルのDrive同期を許可します。"
+    "vi": "Cho phép tạo/sửa phiếu khảo sát và đồng bộ file trong phạm vi phiếu được giao hoặc dự án do người dùng tạo/phụ trách.",
+    "en": "Allows creating and editing surveys and syncing media within assigned or created/managed project scope.",
+    "zh": "允许在已分配或用户创建/管理的项目范围内创建、编辑勘察并同步媒体。",
+    "ja": "割り当て済み、または作成・管理するプロジェクト範囲内で調査の作成・編集とメディア同期を許可します。"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.manage.all.label",
+    "category": "rbac",
+    "vi": "Quản lý toàn bộ phiếu khảo sát",
+    "en": "Manage all site surveys",
+    "zh": "管理全部现场勘察",
+    "ja": "すべての現場調査を管理"
+  },
+  {
+    "key": "rbac.perm.crm.surveys.manage.all.description",
+    "category": "rbac",
+    "vi": "Cho phép cập nhật, nhập dữ liệu, quản lý media và xóa mọi phiếu khảo sát không giới hạn theo dự án.",
+    "en": "Allows updating, importing data, managing media, and deleting every survey without project scope.",
+    "zh": "允许不受项目范围限制地更新、导入数据、管理媒体和删除所有勘察。",
+    "ja": "プロジェクト範囲に関係なく、すべての調査の更新、データ取込、メディア管理、削除を許可します。"
   },
   {
     "key": "rbac.perm.crm.contracts.view.label",
@@ -2378,5 +2426,13 @@
   { "key": "adminRbac.filter.module", "category": "adminRbac", "vi": "Nhóm chức năng", "en": "Module", "zh": "功能模块", "ja": "モジュール" },
   { "key": "adminRbac.filter.allModules", "category": "adminRbac", "vi": "Tất cả", "en": "All", "zh": "全部", "ja": "すべて" },
   { "key": "adminRbac.filter.roles", "category": "adminRbac", "vi": "Vai trò hiển thị", "en": "Visible roles", "zh": "显示的角色", "ja": "表示する役割" },
-  { "key": "adminRbac.filter.showing", "category": "adminRbac", "vi": "Đang hiện {shown}/{total} quyền.", "en": "Showing {shown} of {total} permissions.", "zh": "显示 {shown}/{total} 项权限。", "ja": "{total} 件中 {shown} 件の権限を表示中。" }
+  { "key": "adminRbac.filter.showing", "category": "adminRbac", "vi": "Đang hiện {shown}/{total} quyền.", "en": "Showing {shown} of {total} permissions.", "zh": "显示 {shown}/{total} 项权限。", "ja": "{total} 件中 {shown} 件の権限を表示中。" },
+  {"key":"rbac.perm.crm.material-rates.view.label","category":"rbac","vi":"Xem đơn giá vật liệu","en":"View material rates","zh":"查看材料单价","ja":"材料単価を表示"},
+  {"key":"rbac.perm.crm.material-rates.view.description","category":"rbac","vi":"Xem danh mục, phiên bản và đơn giá vật liệu có hiệu lực.","en":"View material-rate catalogs, revisions, and effective rates.","zh":"查看材料单价目录、版本和生效单价。","ja":"材料単価カタログ、版、適用中の単価を表示します。"},
+  {"key":"rbac.perm.crm.material-rates.manage.label","category":"rbac","vi":"Quản lý đơn giá vật liệu","en":"Manage material rates","zh":"管理材料单价","ja":"材料単価を管理"},
+  {"key":"rbac.perm.crm.material-rates.manage.description","category":"rbac","vi":"Tạo danh mục, phiên bản và nhập định mức vật liệu từ CSV.","en":"Create catalogs and revisions and import material norms from CSV.","zh":"创建目录和版本，并从 CSV 导入材料定额。","ja":"カタログと版を作成し、CSVから材料基準量を取り込みます。"},
+  {"key":"rbac.perm.crm.material-rates.approve.label","category":"rbac","vi":"Duyệt đơn giá vật liệu","en":"Approve material rates","zh":"批准材料单价","ja":"材料単価を承認"},
+  {"key":"rbac.perm.crm.material-rates.approve.description","category":"rbac","vi":"Phê duyệt, từ chối hoặc ngừng áp dụng phiên bản đơn giá vật liệu.","en":"Approve, reject, or retire material-rate revisions.","zh":"批准、拒绝或停用材料单价版本。","ja":"材料単価の版を承認、却下、または適用終了します。"},
+  {"key":"rbac.perm.crm.quotes.rate-override.label","category":"rbac","vi":"Ghi đè đơn giá báo giá","en":"Override quote rate","zh":"覆盖报价单价","ja":"見積単価を上書き"},
+  {"key":"rbac.perm.crm.quotes.rate-override.description","category":"rbac","vi":"Cho phép áp dụng đơn giá khác danh mục khi có lý do tiếng Việt hợp lệ.","en":"Apply a rate different from the catalog with a valid Vietnamese reason.","zh":"在提供有效越南语原因时应用不同于目录的单价。","ja":"有効なベトナム語理由によりカタログと異なる単価を適用します。"}
 ]

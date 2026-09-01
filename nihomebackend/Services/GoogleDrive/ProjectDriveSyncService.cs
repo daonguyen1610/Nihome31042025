@@ -511,11 +511,10 @@ public sealed class ProjectDriveSyncProcessor(
         var now = DateTime.UtcNow;
         var media = await db.SurveyMedia
             .Include(item => item.Survey)
-            .ThenInclude(survey => survey.LinkedOpportunity)
             .FirstOrDefaultAsync(item => item.Id == document.SourceRecordId, ct);
         if (media is null) return;
-        var currentProjectId = media.Survey.LinkedOpportunity?.OperationalProjectId;
-        if (currentProjectId.HasValue && currentProjectId != document.OperationalProjectId) return;
+        var currentProjectId = media.Survey.OperationalProjectId;
+        if (currentProjectId != document.OperationalProjectId) return;
         if (!string.IsNullOrWhiteSpace(media.DriveFileId) &&
             !string.Equals(media.DriveFileId, document.DriveFileId, StringComparison.Ordinal)) return;
         media.DriveFileId = null;

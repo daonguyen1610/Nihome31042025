@@ -28,7 +28,8 @@ public class OpportunityServiceTests : IDisposable
             _notifications.Object,
             _quoteDocuments.Object,
             NullLogger<OpportunityService>.Instance,
-            _projectDocuments.Object);
+            _projectDocuments.Object,
+            new OpportunityClosureInvariantService(_db));
     }
 
     public void Dispose() => _db.Dispose();
@@ -111,7 +112,8 @@ public class OpportunityServiceTests : IDisposable
                 WinProbability = 30,
             },
             caller.Id,
-            canManage: true);
+            canManage: true,
+            canSeeAll: false);
 
         Assert.Equal(caller.Id, response.OwnerUserId);
         Assert.Equal(OpportunityStage.Prospecting, response.Stage);
@@ -134,7 +136,8 @@ public class OpportunityServiceTests : IDisposable
                 WinProbability = 10,
             },
             caller.Id,
-            canManage: true);
+            canManage: true,
+            canSeeAll: true);
 
         _notifications.Verify(n => n.NotifyFromTemplateAsync(
                 owner.Id,
@@ -145,6 +148,74 @@ public class OpportunityServiceTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<string>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OrdinarySalesCannotAssignAnotherOwner()
+    {
+        var caller = await SeedUserAsync();
+        var owner = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(caller.Id);
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.CreateAsync(
+            new CreateOpportunityRequest
+            {
+                Name = "Foreign owner deal",
+                CustomerId = customer.Id,
+                OwnerUserId = owner.Id,
+                EstimatedValue = 1000,
+                WinProbability = 10,
+            },
+            caller.Id,
+            canManage: true,
+            canSeeAll: false));
+
+        Assert.Empty(_db.Opportunities);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OrdinarySalesCannotUseAnotherOwnersCustomer()
+    {
+        var caller = await SeedUserAsync();
+        var customerOwner = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(customerOwner.Id);
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.CreateAsync(
+            new CreateOpportunityRequest
+            {
+                Name = "Foreign customer deal",
+                CustomerId = customer.Id,
+                EstimatedValue = 1000,
+                WinProbability = 10,
+            },
+            caller.Id,
+            canManage: true,
+            canSeeAll: false,
+            canSeeAllCustomers: false));
+
+        Assert.Empty(_db.Opportunities);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsUnknownOwnerEvenWithFullScope()
+    {
+        var caller = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(caller.Id);
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.CreateAsync(
+            new CreateOpportunityRequest
+            {
+                Name = "Unknown owner deal",
+                CustomerId = customer.Id,
+                OwnerUserId = int.MaxValue,
+                EstimatedValue = 1000,
+                WinProbability = 10,
+            },
+            caller.Id,
+            canManage: true,
+            canSeeAll: true));
+
+        Assert.Empty(_db.Opportunities);
     }
 
     // ---------------- Owner scoping (List / Get / Update / Delete) ----------------
@@ -200,6 +271,60 @@ public class OpportunityServiceTests : IDisposable
             canSeeAll: false));
 
         Assert.Contains("gán", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_OrdinarySalesCannotUseAnotherOwnersCustomer()
+    {
+        var caller = await SeedUserAsync();
+        var customerOwner = await SeedUserAsync();
+        var ownCustomer = await SeedCustomerAsync(caller.Id);
+        var foreignCustomer = await SeedCustomerAsync(customerOwner.Id);
+        var opportunity = await SeedOpportunityAsync(ownCustomer, caller);
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.UpdateAsync(
+            opportunity.Id,
+            new UpdateOpportunityRequest
+            {
+                Name = "Changed",
+                CustomerId = foreignCustomer.Id,
+                EstimatedValue = opportunity.EstimatedValue,
+                WinProbability = opportunity.WinProbability,
+            },
+            caller.Id,
+            canManage: true,
+            canSeeAll: false,
+            canSeeAllCustomers: false));
+
+        var persisted = await _db.Opportunities.AsNoTracking().SingleAsync(item => item.Id == opportunity.Id);
+        Assert.Equal(ownCustomer.Id, persisted.CustomerId);
+        Assert.Equal(opportunity.Name, persisted.Name);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_OmittedOwner_PreservesCurrentOwner()
+    {
+        var caller = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(caller.Id);
+        var opportunity = await SeedOpportunityAsync(customer, caller);
+
+        await _sut.UpdateAsync(
+            opportunity.Id,
+            new UpdateOpportunityRequest
+            {
+                Name = "Updated",
+                CustomerId = customer.Id,
+                OwnerUserId = null,
+                EstimatedValue = opportunity.EstimatedValue,
+                WinProbability = opportunity.WinProbability,
+            },
+            caller.Id,
+            canManage: true,
+            canSeeAll: false,
+            canSeeAllCustomers: false);
+
+        var persisted = await _db.Opportunities.AsNoTracking().SingleAsync(item => item.Id == opportunity.Id);
+        Assert.Equal(caller.Id, persisted.OwnerUserId);
     }
 
     [Fact]
@@ -485,6 +610,84 @@ public class OpportunityServiceTests : IDisposable
         Assert.Equal(OpportunityStage.Won, response!.Stage);
         Assert.Equal(100, response.WinProbability);
         Assert.NotNull(response.ClosedAt);
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_ToWon_WithUnrelatedQuote_IsRejected()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(customer, user, OpportunityStage.Negotiation);
+        var unrelatedOpportunity = await SeedOpportunityAsync(customer, user, OpportunityStage.Proposal);
+        _db.Contracts.Add(new Contract
+        {
+            ContractNumber = $"HD-{Guid.NewGuid():N}",
+            CustomerId = customer.Id,
+            OpportunityId = opportunity.Id,
+            Status = ContractStatus.Signed,
+            SignedDate = DateTime.UtcNow,
+            Value = 1_000_000m,
+        });
+        var quote = new Quote
+        {
+            Code = $"QT-{Guid.NewGuid():N}",
+            OpportunityId = unrelatedOpportunity.Id,
+        };
+        _db.Quotes.Add(quote);
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(
+            opportunity.Id,
+            new ChangeOpportunityStageRequest
+            {
+                TargetStage = OpportunityStage.Won,
+                WonQuoteId = quote.Id,
+            },
+            user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Equal(OpportunityStage.Negotiation,
+            (await _db.Opportunities.FindAsync(opportunity.Id))!.Stage);
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_ToWon_WithUnrelatedTender_IsRejected()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(customer, user, OpportunityStage.Negotiation);
+        var otherCustomer = await SeedCustomerAsync(user.Id);
+        _db.Contracts.Add(new Contract
+        {
+            ContractNumber = $"HD-{Guid.NewGuid():N}",
+            CustomerId = customer.Id,
+            OpportunityId = opportunity.Id,
+            Status = ContractStatus.Signed,
+            SignedDate = DateTime.UtcNow,
+            Value = 1_000_000m,
+        });
+        var tender = new Tender
+        {
+            Code = $"TD-{Guid.NewGuid():N}",
+            Name = "Unrelated tender",
+            CustomerId = otherCustomer.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(1),
+            WonOpportunityId = opportunity.Id,
+            Status = TenderStatus.Won,
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(
+            opportunity.Id,
+            new ChangeOpportunityStageRequest
+            {
+                TargetStage = OpportunityStage.Won,
+                WonTenderId = tender.Id,
+            },
+            user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Equal(OpportunityStage.Negotiation,
+            (await _db.Opportunities.FindAsync(opportunity.Id))!.Stage);
     }
 
     [Fact]

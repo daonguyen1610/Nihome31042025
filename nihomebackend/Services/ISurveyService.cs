@@ -16,11 +16,16 @@ public class SurveyOperationException(string message) : Exception(message)
 /// </summary>
 public interface ISurveyService
 {
-    Task<SurveyListResponse> ListAsync(SurveyListParams parameters, CancellationToken ct = default);
+    Task<SurveyListResponse> ListAsync(
+        SurveyListParams parameters, int callerUserId, bool canViewAll,
+        CancellationToken ct = default);
 
-    Task<SurveyResponse?> GetAsync(int id, CancellationToken ct = default);
+    Task<SurveyResponse?> GetAsync(
+        int id, int callerUserId, bool canViewAll, CancellationToken ct = default);
 
-    Task<SurveyResponse> CreateAsync(CreateSurveyRequest request, int callerUserId, CancellationToken ct = default);
+    Task<SurveyResponse> CreateAsync(
+        CreateSurveyRequest request, int callerUserId, bool canManageAll = false,
+        CancellationToken ct = default);
 
     /// <summary>
     /// Update a survey. Every text field on the request is applied; the
@@ -28,18 +33,26 @@ public interface ISurveyService
     /// fields are managed by NIH-101 endpoints, not by this write path.
     /// Returns <c>null</c> when the row does not exist.
     /// </summary>
-    Task<SurveyResponse?> UpdateAsync(int id, UpdateSurveyRequest request, int callerUserId, CancellationToken ct = default);
+    Task<SurveyResponse?> UpdateAsync(
+        int id, UpdateSurveyRequest request, int callerUserId, bool canManageAll = false,
+        CancellationToken ct = default);
 
     /// <summary>
     /// Deletes a survey after all managed media has been removed through its
     /// resource-bound endpoint. Returns <c>false</c> when the row does not exist.
     /// </summary>
-    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(
+        int id, int callerUserId, bool canManageAll, CancellationToken ct = default);
 
     /// <summary>
     /// Ordered (newest-first) audit-log slice for the NIH-101 History tab.
     /// Returns <c>null</c> when the survey does not exist so the controller
     /// can 404 without leaking existence.
     /// </summary>
-    Task<List<SurveyTimelineEvent>?> GetTimelineAsync(int id, int limit, CancellationToken ct = default);
+    Task<List<SurveyTimelineEvent>?> GetTimelineAsync(
+        int id, int limit, int callerUserId, bool canViewAll,
+        CancellationToken ct = default);
+
+    Task<bool> CanAccessAsync(
+        int id, int callerUserId, bool canAccessAll, CancellationToken ct = default);
 }

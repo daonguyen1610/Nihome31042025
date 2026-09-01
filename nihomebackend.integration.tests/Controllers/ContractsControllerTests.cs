@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -649,5 +650,47 @@ public class ContractsControllerTests : IntegrationTestBase
         var res = await Client.GetAsync($"/api/contracts/{contractId}/timeline");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(res)).ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
+    }
+
+    [Fact]
+    public async Task WonOpportunity_LastQualifyingContract_CannotBeCancelledOrDeleted()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var ids = await WithDbAsync(async db =>
+        {
+            var customer = new Customer { Name = "Won customer", Type = CustomerType.Company, SourceCode = "marketing" };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var opportunity = new Opportunity
+            {
+                Name = "Won deal",
+                CustomerId = customer.Id,
+                Stage = OpportunityStage.Won,
+            };
+            db.Opportunities.Add(opportunity);
+            await db.SaveChangesAsync();
+            var contract = new Contract
+            {
+                ContractNumber = "HD-WON-" + Guid.NewGuid().ToString("N")[..8],
+                CustomerId = customer.Id,
+                OpportunityId = opportunity.Id,
+                Status = ContractStatus.Signed,
+                SignedDate = DateTime.UtcNow,
+                Value = 1_000_000m,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            return (ContractId: contract.Id, OpportunityId: opportunity.Id);
+        });
+
+        (await Client.PostAsJsonAsync($"/api/contracts/{ids.ContractId}/transition", new { newStatus = "Cancelled" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.DeleteAsync($"/api/contracts/{ids.ContractId}"))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var status = await WithDbAsync(db => db.Contracts
+            .Where(item => item.Id == ids.ContractId)
+            .Select(item => item.Status)
+            .SingleAsync());
+        status.Should().Be(ContractStatus.Signed);
     }
 }

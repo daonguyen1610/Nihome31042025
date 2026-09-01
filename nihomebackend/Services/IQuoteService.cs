@@ -29,7 +29,8 @@ public interface IQuoteService
         int callerUserId,
         bool canManage,
         CancellationToken ct = default,
-        bool canSeeAll = false);
+        bool canSeeAll = false,
+        bool canOverrideRate = false);
 
     Task<QuoteResponse?> UpdateAsync(
         int id,
@@ -37,7 +38,8 @@ public interface IQuoteService
         int callerUserId,
         bool canManage,
         bool canSeeAll,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        bool canOverrideRate = false);
 
     Task<QuoteResponse?> SubmitAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
     Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canApprove, CancellationToken ct = default);
@@ -51,4 +53,5 @@ public interface IQuoteService
     Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
 
     Task<QuoteVersionsResponse?> GetVersionsAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+    Task<byte[]?> ExportPdfAsync(int id, int callerUserId, bool canSeeAll, string languageCode, CancellationToken ct = default);
 }

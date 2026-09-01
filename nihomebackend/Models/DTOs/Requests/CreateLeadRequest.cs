@@ -23,6 +23,11 @@ public class CreateLeadRequest
     [StringLength(60, MinimumLength = 1)]
     public string SourceCode { get; set; } = string.Empty;
 
+    /// <summary>Master-data code from category <c>lead_segment</c>.</summary>
+    [Required(ErrorMessage = "Vui lòng chọn phân khúc Lead, ví dụ: unclassified.")]
+    [StringLength(60, MinimumLength = 1, ErrorMessage = "Mã phân khúc Lead phải có từ 1 đến 60 ký tự, ví dụ: residential.")]
+    public string SegmentCode { get; set; } = "unclassified";
+
     /// <summary>Optional explicit owner. If null, service auto-assigns round-robin.</summary>
     public int? OwnerUserId { get; set; }
 

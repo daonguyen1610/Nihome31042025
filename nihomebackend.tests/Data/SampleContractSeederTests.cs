@@ -48,6 +48,14 @@ public class SampleContractSeederTests : IDisposable
         Assert.Contains(ContractStatus.Completed, statuses);
         Assert.Equal(6, contracts.Count);
 
+        Assert.NotEmpty(_db.Surveys);
+        Assert.All(_db.Surveys, survey =>
+        {
+            Assert.True(survey.OperationalProjectId > 0);
+            Assert.Contains(_db.OperationalProjects,
+                project => project.Id == survey.OperationalProjectId);
+        });
+
         Assert.All(contracts, contract =>
         {
             var opportunity = _db.Opportunities.Single(item => item.Id == contract.OpportunityId);

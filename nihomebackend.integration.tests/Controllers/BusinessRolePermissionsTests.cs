@@ -15,6 +15,7 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
     public static readonly TheoryData<string, string[], string[]> RoleExpectations = new()
     {
         // role, mustInclude, mustExclude
+        { "SUPER_ADMIN", new[] { "dashboard.view" }, Array.Empty<string>() },
         { "SALE",       new[] { "dashboard.view", "contacts.view", "contacts.manage", "recruitment.applications.view", "profile.me.view", "crm.leads.view", "crm.leads.manage", "crm.customers.view", "crm.customers.manage", "crm.opportunities.view", "crm.opportunities.manage" },
                         new[] { "users.view", "users.manage", "content.news.manage", "processes.manage", "crm.leads.view.all", "crm.customers.view.all", "crm.opportunities.view.all" } },
         { "SALES_MANAGER", new[] { "dashboard.view", "contacts.view", "crm.leads.view", "crm.leads.manage", "crm.leads.view.all", "crm.customers.view", "crm.customers.manage", "crm.customers.view.all", "crm.opportunities.view", "crm.opportunities.manage", "crm.opportunities.view.all", "profile.me.view" },

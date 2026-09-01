@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Plus, Search, Trash2, ArrowRight, RefreshCw } from "lucide-react";
+import { Plus, Search, Trash2, ArrowRight, RefreshCw, Pencil, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
+import { validateContact } from "@/lib/validation";
 import { PageLoading, PageError } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
@@ -36,6 +37,7 @@ import {
 import {
   adminApi,
   type CreateLeadRequest,
+  type UpdateLeadRequest,
   type LeadListParams,
   type LeadResponse,
   type LeadStatus,
@@ -80,8 +82,22 @@ const emptyCreate: CreateLeadRequest = {
   phone: "",
   email: "",
   sourceCode: "",
+  segmentCode: "unclassified",
   note: "",
 };
+
+const toLeadEditForm = (lead: LeadResponse): UpdateLeadRequest => ({
+  rowVersion: lead.rowVersion,
+  name: lead.name,
+  companyName: lead.companyName ?? "",
+  phone: lead.phone ?? "",
+  email: lead.email ?? "",
+  sourceCode: lead.sourceCode,
+  segmentCode: lead.segmentCode,
+  status: lead.status,
+  ownerUserId: lead.ownerUserId ?? null,
+  note: lead.note ?? "",
+});
 
 const AdminLeads = () => {
   const { t, lang } = useI18n();
@@ -98,8 +114,10 @@ const AdminLeads = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [sources, setSources] = useState<MasterDataOption[]>([]);
+  const [segments, setSegments] = useState<MasterDataOption[]>([]);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "">("");
   const [sourceFilter, setSourceFilter] = useState<string>("");
+  const [segmentFilter, setSegmentFilter] = useState<string>("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -121,6 +139,10 @@ const AdminLeads = () => {
 
   const [detail, setDetail] = useState<LeadResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<UpdateLeadRequest | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
   const [activityType, setActivityType] = useState<LeadActivityType>("Call");
   const [activityContent, setActivityContent] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
@@ -147,6 +169,7 @@ const AdminLeads = () => {
       const params: LeadListParams = { page, pageSize };
       if (statusFilter) params.status = statusFilter;
       if (sourceFilter) params.sourceCode = sourceFilter;
+      if (segmentFilter) params.segmentCode = segmentFilter;
       if (search.trim()) params.search = search.trim();
       const { data } = await adminApi.listLeads(params);
       setLeads(data.items);
@@ -156,7 +179,7 @@ const AdminLeads = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, sourceFilter, search]);
+  }, [page, statusFilter, sourceFilter, segmentFilter, search]);
 
   useEffect(() => {
     void fetchList();
@@ -167,8 +190,14 @@ const AdminLeads = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("customer_source");
-        if (!cancelled) setSources(data);
+        const [sourceResponse, segmentResponse] = await Promise.all([
+          adminApi.getMasterDataOptions("customer_source"),
+          adminApi.getMasterDataOptions("lead_segment"),
+        ]);
+        if (!cancelled) {
+          setSources(sourceResponse.data);
+          setSegments(segmentResponse.data);
+        }
       } catch {
         // Non-fatal — form will still show but with an empty source dropdown.
       }
@@ -184,6 +213,8 @@ const AdminLeads = () => {
     try {
       const { data } = await adminApi.getLead(id);
       setDetail(data);
+      setEditForm(toLeadEditForm(data));
+      setEditing(false);
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     } finally {
@@ -205,17 +236,21 @@ const AdminLeads = () => {
 
   const closeDetail = () => {
     setDetail(null);
+    setEditForm(null);
+    setEditing(false);
+    setEditError(null);
     setActivityContent("");
   };
 
   const handleCreate = async () => {
     setCreateError(null);
-    if (!createForm.name.trim() || !createForm.sourceCode) {
+    if (!createForm.name.trim() || !createForm.sourceCode || !createForm.segmentCode) {
       setCreateError(t("leads.validation.missingFields"));
       return;
     }
-    if (!createForm.phone?.trim() && !createForm.email?.trim()) {
-      setCreateError(t("leads.field.contactRequired"));
+    const contactIssue = validateContact(createForm.phone, createForm.email);
+    if (contactIssue) {
+      setCreateError(t(contactIssue === "missing" ? "leads.field.contactRequired" : `validation.${contactIssue}.invalid`));
       return;
     }
     setSaving(true);
@@ -226,6 +261,7 @@ const AdminLeads = () => {
         phone: createForm.phone?.trim() || undefined,
         email: createForm.email?.trim() || undefined,
         sourceCode: createForm.sourceCode,
+        segmentCode: createForm.segmentCode,
         note: createForm.note?.trim() || undefined,
       });
       toast({ title: t("leads.created") });
@@ -236,6 +272,41 @@ const AdminLeads = () => {
       setCreateError(extractApiError(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!detail || !editForm) return;
+    setEditError(null);
+    if (!editForm.name.trim() || !editForm.sourceCode || !editForm.segmentCode) {
+      setEditError(t("leads.validation.missingFields"));
+      return;
+    }
+    const contactIssue = validateContact(editForm.phone, editForm.email);
+    if (contactIssue) {
+      setEditError(t(contactIssue === "missing" ? "leads.field.contactRequired" : `validation.${contactIssue}.invalid`));
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const { data } = await adminApi.updateLead(detail.id, {
+        ...editForm,
+        name: editForm.name.trim(),
+        companyName: editForm.companyName?.trim() || undefined,
+        phone: editForm.phone?.trim() || undefined,
+        email: editForm.email?.trim() || undefined,
+        note: editForm.note?.trim() || undefined,
+      });
+      setDetail(data);
+      setEditForm(toLeadEditForm(data));
+      setEditing(false);
+      toast({ title: t("leads.updated") });
+      await fetchList();
+    } catch (err) {
+      setEditError(extractApiError(err));
+      if (isConcurrencyConflict(err)) await openDetail(detail.id);
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -274,7 +345,7 @@ const AdminLeads = () => {
 
   useEffect(() => {
     clearSelection();
-  }, [page, statusFilter, sourceFilter, search, clearSelection]);
+  }, [page, statusFilter, sourceFilter, segmentFilter, search, clearSelection]);
 
   const handleAddActivity = async () => {
     if (!detail || !activityContent.trim()) return;
@@ -368,6 +439,12 @@ const AdminLeads = () => {
     return map;
   }, [sources]);
 
+  const segmentLabelByCode = useMemo(() => {
+    const map = new Map<string, string>();
+    segments.forEach((segment) => map.set(segment.code, segment.name));
+    return map;
+  }, [segments]);
+
   return (
     <AdminLayout>
       <div className="space-y-4 p-4 sm:p-6">
@@ -392,7 +469,7 @@ const AdminLeads = () => {
           </div>
         </header>
 
-        <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <div>
             <Label className="text-xs" htmlFor="lead-search">{t("leads.filter.search")}</Label>
             <div className="relative">
@@ -449,6 +526,17 @@ const AdminLeads = () => {
                     {s.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs">{t("leads.filter.segment")}</Label>
+            <Select value={segmentFilter || "__all"} onValueChange={(value) => { setPage(1); setSegmentFilter(value === "__all" ? "" : value); }}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all">{t("leads.filter.all")}</SelectItem>
+                {segments.map((segment) => <SelectItem key={segment.code} value={segment.code}>{segment.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -560,6 +648,10 @@ const AdminLeads = () => {
                       <dd className="font-medium">{sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}</dd>
                     </div>
                     <div>
+                      <dt className="text-muted-foreground">{t("leads.field.segment")}</dt>
+                      <dd className="font-medium">{segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}</dd>
+                    </div>
+                    <div>
                       <dt className="text-muted-foreground">{t("leads.field.createdAt")}</dt>
                       <dd className="font-medium">{new Date(lead.createdAt).toLocaleDateString()}</dd>
                     </div>
@@ -614,6 +706,7 @@ const AdminLeads = () => {
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.company")}</th>
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.phone")} / {t("leads.field.email")}</th>
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.source")}</th>
+                  <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.segment")}</th>
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.status")}</th>
                   {canSeeAll && (
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.owner")}</th>
@@ -650,6 +743,7 @@ const AdminLeads = () => {
                     <td className="px-3 py-3 text-xs">
                       {sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode}
                     </td>
+                    <td className="px-3 py-3 text-xs">{segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode}</td>
                     <td className="px-3 py-3">
                       <Badge
                         variant="outline"
@@ -784,6 +878,13 @@ const AdminLeads = () => {
               </Select>
             </div>
             <div>
+              <Label>{t("leads.field.segment")} *</Label>
+              <Select value={createForm.segmentCode} onValueChange={(value) => setCreateForm({ ...createForm, segmentCode: value })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{segments.map((segment) => <SelectItem key={segment.code} value={segment.code}>{segment.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label>{t("leads.field.note")}</Label>
               <Textarea
                 value={createForm.note ?? ""}
@@ -841,7 +942,21 @@ const AdminLeads = () => {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              {editing && editForm ? (
+                <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div><Label>{t("leads.field.name")} *</Label><Input value={editForm.name} onChange={(event) => setEditForm({ ...editForm, name: event.target.value })} /></div>
+                    <div><Label>{t("leads.field.company")}</Label><Input value={editForm.companyName ?? ""} onChange={(event) => setEditForm({ ...editForm, companyName: event.target.value })} /></div>
+                    <div><Label>{t("leads.field.phone")}</Label><Input value={editForm.phone ?? ""} onChange={(event) => setEditForm({ ...editForm, phone: event.target.value })} /></div>
+                    <div><Label>{t("leads.field.email")}</Label><Input type="email" value={editForm.email ?? ""} onChange={(event) => setEditForm({ ...editForm, email: event.target.value })} /></div>
+                    <div><Label>{t("leads.field.source")} *</Label><Select value={editForm.sourceCode} onValueChange={(value) => setEditForm({ ...editForm, sourceCode: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{sources.map((source) => <SelectItem key={source.code} value={source.code}>{source.name}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>{t("leads.field.segment")} *</Label><Select value={editForm.segmentCode} onValueChange={(value) => setEditForm({ ...editForm, segmentCode: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{segments.map((segment) => <SelectItem key={segment.code} value={segment.code}>{segment.name}</SelectItem>)}</SelectContent></Select></div>
+                    <div><Label>{t("leads.field.status")}</Label><Select value={editForm.status} onValueChange={(value) => setEditForm({ ...editForm, status: value as LeadStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{STATUSES.filter((status) => status !== "Converted").map((status) => <SelectItem key={status} value={status}>{t(`leads.status.${status}`)}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="sm:col-span-2"><Label>{t("leads.field.note")}</Label><Textarea rows={3} value={editForm.note ?? ""} onChange={(event) => setEditForm({ ...editForm, note: event.target.value })} /></div>
+                  </div>
+                  {editError && <p className="text-sm text-destructive">{editError}</p>}
+                </div>
+              ) : <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <div className="text-xs text-muted-foreground">{t("leads.field.phone")}</div>
                   <div>{detail.phone || "—"}</div>
@@ -853,6 +968,10 @@ const AdminLeads = () => {
                 <div>
                   <div className="text-xs text-muted-foreground">{t("leads.field.owner")}</div>
                   <div>{detail.ownerName || `#${detail.ownerUserId ?? "—"}`}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">{t("leads.field.segment")}</div>
+                  <div>{segmentLabelByCode.get(detail.segmentCode) ?? detail.segmentCode}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">{t("leads.field.createdAt")}</div>
@@ -903,7 +1022,7 @@ const AdminLeads = () => {
                     )}
                   </div>
                 )}
-              </div>
+              </div>}
 
               {/* Timeline */}
               <div className="mt-4">
@@ -964,6 +1083,7 @@ const AdminLeads = () => {
               </div>
 
               <DialogFooter className="flex-col-reverse gap-2 sm:flex-row-reverse sm:justify-start">
+                {canManage && detail.status !== "Converted" && (editing ? <><Button onClick={() => void handleUpdate()} disabled={editSaving}><Save className="mr-1.5 h-4 w-4" />{t("common.save")}</Button><Button variant="outline" onClick={() => { setEditForm(toLeadEditForm(detail)); setEditing(false); setEditError(null); }}>{t("common.cancel")}</Button></> : <Button variant="outline" onClick={() => setEditing(true)}><Pencil className="mr-1.5 h-4 w-4" />{t("common.edit")}</Button>)}
                 {canConvert && detail.status !== "Converted" && detail.status !== "Junk" && detail.status !== "NotInterested" && (
                   <Button onClick={openConvertDialog}>
                     <ArrowRight className="mr-1.5 h-4 w-4" /> {t("leads.convert.button")}

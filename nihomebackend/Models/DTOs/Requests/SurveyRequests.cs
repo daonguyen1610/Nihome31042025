@@ -19,6 +19,9 @@ public class CreateSurveyRequest
 
     public int? LinkedProjectId { get; set; }
     public int? LinkedOpportunityId { get; set; }
+    [Required(ErrorMessage = "Vui lòng chọn Dự án vận hành.")]
+    [Range(1, int.MaxValue, ErrorMessage = "Dự án vận hành không hợp lệ. Hãy chọn một dự án có mã số lớn hơn 0, ví dụ 1.")]
+    public int? OperationalProjectId { get; set; }
 
     [StringLength(4000)]
     public string? Note { get; set; }
@@ -83,4 +86,40 @@ public class UpdateSurveyChecklistResultRequest
 
     [Range(0, 10000)]
     public int SortOrder { get; set; }
+}
+
+public sealed class ReplaceSurveySiteConditionsRequest
+{
+    [Required]
+    [MinLength(1)]
+    public List<SurveySiteConditionRequest> Conditions { get; set; } = [];
+}
+
+public sealed class SurveySiteConditionRequest
+{
+    [Required]
+    [StringLength(40)]
+    public string Category { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(80)]
+    public string Code { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(40)]
+    public string StatusCode { get; set; } = string.Empty;
+
+    public decimal? NumericValue { get; set; }
+
+    [StringLength(20)]
+    public string? UnitCode { get; set; }
+
+    [StringLength(80)]
+    public string? ReferenceCode { get; set; }
+
+    [StringLength(1000)]
+    public string? Description { get; set; }
+
+    [StringLength(2000)]
+    public string? Note { get; set; }
 }

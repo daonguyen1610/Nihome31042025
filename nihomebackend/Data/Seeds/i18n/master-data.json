@@ -32,6 +32,14 @@
     "ja": "リードステータス"
   },
   {
+    "key": "masterData.category.lead_segment.title",
+    "category": "masterData",
+    "vi": "Phân khúc Lead",
+    "en": "Lead segment",
+    "zh": "线索细分",
+    "ja": "リードセグメント"
+  },
+  {
     "key": "masterData.category.opportunity_stage.title",
     "category": "masterData",
     "vi": "Giai đoạn cơ hội",
@@ -214,6 +222,38 @@
     "en": "New",
     "zh": "新的",
     "ja": "新規"
+  },
+  {
+    "key": "masterData.lead_segment.unclassified.label",
+    "category": "masterData",
+    "vi": "Chưa phân loại",
+    "en": "Unclassified",
+    "zh": "未分类",
+    "ja": "未分類"
+  },
+  {
+    "key": "masterData.lead_segment.residential.label",
+    "category": "masterData",
+    "vi": "Nhà ở",
+    "en": "Residential",
+    "zh": "住宅",
+    "ja": "住宅"
+  },
+  {
+    "key": "masterData.lead_segment.commercial.label",
+    "category": "masterData",
+    "vi": "Thương mại",
+    "en": "Commercial",
+    "zh": "商业",
+    "ja": "商業"
+  },
+  {
+    "key": "masterData.lead_segment.hospitality.label",
+    "category": "masterData",
+    "vi": "Lưu trú",
+    "en": "Hospitality",
+    "zh": "酒店及住宿",
+    "ja": "ホスピタリティ"
   },
   {
     "key": "masterData.lead_status.contacted.label",
@@ -998,6 +1038,54 @@
     "en": "Water supply",
     "zh": "供水",
     "ja": "給水"
+  },
+  {
+    "key": "masterData.category.survey_infrastructure_type.title",
+    "category": "masterData",
+    "vi": "Loại hạ tầng khảo sát",
+    "en": "Survey infrastructure type",
+    "zh": "勘察基础设施类型",
+    "ja": "調査インフラ種別"
+  },
+  {
+    "key": "masterData.survey_infrastructure_type.electricity.label",
+    "category": "masterData",
+    "vi": "Cấp điện",
+    "en": "Electricity",
+    "zh": "供电",
+    "ja": "電力"
+  },
+  {
+    "key": "masterData.survey_infrastructure_type.water-supply.label",
+    "category": "masterData",
+    "vi": "Cấp nước",
+    "en": "Water supply",
+    "zh": "供水",
+    "ja": "給水"
+  },
+  {
+    "key": "masterData.survey_infrastructure_type.drainage.label",
+    "category": "masterData",
+    "vi": "Thoát nước",
+    "en": "Drainage",
+    "zh": "排水",
+    "ja": "排水"
+  },
+  {
+    "key": "masterData.survey_infrastructure_type.telecom.label",
+    "category": "masterData",
+    "vi": "Viễn thông",
+    "en": "Telecommunications",
+    "zh": "通信",
+    "ja": "通信"
+  },
+  {
+    "key": "masterData.survey_infrastructure_type.road-access.label",
+    "category": "masterData",
+    "vi": "Đường giao thông vào",
+    "en": "Road access",
+    "zh": "道路通行",
+    "ja": "道路アクセス"
   },
   {
     "key": "masterData.survey_checklist_default.drainage.label",

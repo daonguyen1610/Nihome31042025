@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Info,
   Loader2,
+  Route,
   UserRound,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -34,6 +35,7 @@ import {
 import { extractApiError } from "@/lib/apiError";
 import { usePermissions } from "@/hooks/usePermissions";
 import SurveyMediaPanel from "./SurveyMediaPanel";
+import SurveyConditionsPanel from "./SurveyConditionsPanel";
 
 // ---------------------------- shared ----------------------------
 
@@ -181,6 +183,7 @@ const AdminSurveyDetail = () => {
       [t("surveys.field.surveyor"), survey.surveyorName ?? "—"],
       [t("surveys.field.linkedProject"), survey.linkedProjectName ?? "—"],
       [t("surveys.field.linkedOpportunity"), survey.linkedOpportunityName ?? "—"],
+      [t("surveys.field.operationalProject"), survey.operationalProjectName ?? "—"],
       [t("surveys.detail.info.createdAt"), formatDateTime(survey.createdAt)],
       [t("surveys.detail.info.updatedAt"), formatDateTime(survey.updatedAt)],
       [t("surveys.detail.info.lastSyncedAt"), formatDateTime(survey.lastSyncedAt)],
@@ -243,9 +246,13 @@ const AdminSurveyDetail = () => {
                   <Info className="mr-1 h-4 w-4" />
                   {t("surveys.detail.tab.info")}
                 </TabsTrigger>
-                <TabsTrigger value="media">
+                <TabsTrigger value="media" data-testid="survey-media-tab">
                   <ImageIcon className="mr-1 h-4 w-4" />
                   {t("surveys.detail.tab.media")}
+                </TabsTrigger>
+                <TabsTrigger value="conditions" data-testid="survey-conditions-tab">
+                  <Route className="mr-1 h-4 w-4" />
+                  {t("surveys.detail.tab.conditions")}
                 </TabsTrigger>
                 <TabsTrigger value="timeline">
                   <History className="mr-1 h-4 w-4" />
@@ -284,6 +291,14 @@ const AdminSurveyDetail = () => {
                   canManage={canManage}
                   onRefresh={fetchSurvey}
                   formatDateTime={formatDateTime}
+                />
+              </TabsContent>
+
+              <TabsContent value="conditions" className="mt-3">
+                <SurveyConditionsPanel
+                  survey={survey}
+                  canManage={canManage}
+                  onRefresh={fetchSurvey}
                 />
               </TabsContent>
 

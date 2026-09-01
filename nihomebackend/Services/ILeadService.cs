@@ -21,6 +21,7 @@ public interface ILeadService
         bool canSeeAll,
         LeadStatus? status = null,
         string? sourceCode = null,
+        string? segmentCode = null,
         int? ownerUserId = null,
         string? search = null,
         int page = 1,

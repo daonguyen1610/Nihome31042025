@@ -142,9 +142,11 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
         using var created = await manager.PostAsJsonAsync("/api/quotes", new
         {
             opportunityId,
-            method = "UnitCost",
-            areaSqm = 100m,
-            unitPricePerSqm = 5_000_000m,
+            method = "Boq",
+            items = new[]
+            {
+                new { name = "Concurrency item", unit = "lot", quantity = 1m, unitPrice = 500_000_000m },
+            },
             discountPercent = 0m,
             vatPercent = 8m,
         });
@@ -160,16 +162,20 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
             new
             {
                 rowVersion,
-                areaSqm = 110m,
-                unitPricePerSqm = 5_000_000m,
+                items = new[]
+                {
+                    new { name = "Concurrency item", unit = "lot", quantity = 1m, unitPrice = 500_000_000m },
+                },
                 discountPercent = 0m,
                 vatPercent = 8m,
                 note = "Quote manager winner",
             },
             new
             {
-                areaSqm = 120m,
-                unitPricePerSqm = 5_000_000m,
+                items = new[]
+                {
+                    new { name = "Concurrency item", unit = "lot", quantity = 1m, unitPrice = 500_000_000m },
+                },
                 discountPercent = 0m,
                 vatPercent = 8m,
                 note = "Quote admin winner",

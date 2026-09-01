@@ -25,9 +25,12 @@ public static class EntityTypes
     public const string OpportunityActivity = "OpportunityActivity";
     public const string Quote = "Quote";
     public const string QuoteDocument = "QuoteDocument";
+    public const string MaterialRateCatalog = "MaterialRateCatalog";
+    public const string MaterialRateRevision = "MaterialRateRevision";
     public const string Contract = "Contract";
     public const string CapabilityDocument = "CapabilityDocument";
     public const string Tender = "Tender";
+    public const string TenderEstimateRevision = "TenderEstimateRevision";
     public const string Survey = "Survey";
     public const string SurveyMedia = "SurveyMedia";
     public const string OperationalProject = "OperationalProject";

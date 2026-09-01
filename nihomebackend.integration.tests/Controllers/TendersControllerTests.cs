@@ -115,7 +115,26 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_Submitted_RemovesTenderAndChecklistButPreservesCustomer()
+    public async Task Update_WhilePreparing_BlankNameIsBadRequestAndPreservesTender()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateTenderAsync();
+        var original = await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == id));
+
+        var response = await Client.PutAsJsonAsync($"/api/tenders/{id}", new
+        {
+            name = "   ",
+            submissionDeadline = DateTime.UtcNow.AddDays(30),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var saved = await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == id));
+        saved.Name.Should().Be(original.Name);
+        saved.SubmissionDeadline.Should().Be(original.SubmissionDeadline);
+    }
+
+    [Fact]
+    public async Task Delete_Submitted_IsBadRequestAndPreservesTenderAndChecklist()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateTenderAsync();
@@ -127,10 +146,10 @@ public class TendersControllerTests : IntegrationTestBase
             return tender.CustomerId;
         });
 
-        (await Client.DeleteAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await Client.GetAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.GetAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.GetAsync($"/api/customers/{customerId}")).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await WithDbAsync(db => db.TenderChecklistItems.AnyAsync(i => i.TenderId == id))).Should().BeFalse();
+        (await WithDbAsync(db => db.TenderChecklistItems.AnyAsync(i => i.TenderId == id))).Should().BeTrue();
     }
 
     [Fact]
@@ -442,7 +461,10 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
-        var oppId = await CreateOpportunityAsync();
+        await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
+        var customerId = await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
+            .Select(item => item.CustomerId).SingleAsync());
+        var oppId = await CreateOpportunityAsync(customerId);
 
         var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new
         {
@@ -486,6 +508,7 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
+        await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
         var reasonCode = await FirstOpportunityLostReasonAsync();
 
         var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-lost", new
@@ -504,6 +527,7 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
+        await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
         var res = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-lost", new
         {
             reasonCode = "definitely-not-a-real-reason",
@@ -516,7 +540,10 @@ public class TendersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var tenderId = await CreateTenderAsync();
-        var oppId = await CreateOpportunityAsync();
+        await SetTenderStatusAsync(tenderId, TenderStatus.Submitted);
+        var customerId = await WithDbAsync(db => db.Tenders.Where(item => item.Id == tenderId)
+            .Select(item => item.CustomerId).SingleAsync());
+        var oppId = await CreateOpportunityAsync(customerId);
         (await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/mark-won", new { opportunityId = oppId }))
             .EnsureSuccessStatusCode();
 
@@ -565,9 +592,9 @@ public class TendersControllerTests : IntegrationTestBase
         return items[0].GetProperty("id").GetInt32();
     }
 
-    private async Task<int> CreateOpportunityAsync()
+    private async Task<int> CreateOpportunityAsync(int? existingCustomerId = null)
     {
-        var customerId = await CreateCustomerAsync();
+        var customerId = existingCustomerId ?? await CreateCustomerAsync();
         var res = await Client.PostAsJsonAsync("/api/opportunities", new
         {
             name = "Opp " + Guid.NewGuid().ToString("N")[..6],
@@ -616,4 +643,11 @@ public class TendersControllerTests : IntegrationTestBase
                 .FirstAsync();
             return opt.Code;
         });
+
+    private Task SetTenderStatusAsync(int tenderId, TenderStatus status) => WithDbAsync(async db =>
+    {
+        var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
+        tender.Status = status;
+        await db.SaveChangesAsync();
+    });
 }

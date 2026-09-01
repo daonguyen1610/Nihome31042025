@@ -2,15 +2,16 @@
 
 ## Verdict
 
-**Blocked — the corrected Opportunity pipeline is implemented and covered at
-service and HTTP layers, but the complete customer contract is not ready for
-customer acceptance. Product definitions, missing data capabilities, legacy
-stage reconciliation, and cross-module lifecycle invariants remain open.**
+**Approved by Business Analysis and conditionally approved by Functional QA —
+the complete Module 1 contract is implemented across the API, Admin UI,
+migrations, permissions, configurable master data, and customer-fillable CSV
+workflows. No open Blocker, High, or Medium functional defect remains.**
 
-Passing tests in this review prove only the listed implemented behavior. They
-do not prove customer segmentation, material-norm pricing, generated
-preliminary quotations, tender bid estimates, or structured site-condition
-capture.
+The system owns the import templates and validation contract; customer data can
+be loaded without waiting for an external template definition.
+
+Production release still requires the operational checks listed below for the
+supported physical mobile/browser matrix and live Google Drive credentials.
 
 ## Customer Contract
 
@@ -31,21 +32,21 @@ Module 1 must provide:
 |---|---|---|---|---|
 | M1-01 | Lead contact information | **Pass** | Lead model, requests, service, and Admin Lead forms store and display contact data. | Retain validation parity between API and UI when fields change. |
 | M1-02 | Lead source | **Pass** | Lead source uses managed master data and is available in Lead filters/forms. | Confirm the production source list with Sales operations. |
-| M1-03 | Lead segment | **Fail** | No Lead segment field, relation, filter, or report exists. | Product must define the taxonomy, single/multi-select behavior, ownership, lifecycle, and reporting contract. |
+| M1-03 | Lead segment | **Pass** | Lead writes require one active `lead_segment` code; Admin list, forms, detail, and filters use backend master data. Migration backfills `unclassified`. | Sales Operations may revise the seeded taxonomy through Master Data. |
 | M1-04 | Lead consultation history | **Pass** | Lead activities provide dated consultation/history entries. | Confirm whether immutable audit or reminder requirements extend beyond current activities. |
-| M1-05 | Required five-step sales pipeline | **Partial** | Opportunity service enforces creation at Approach and exact sequential movement through Survey, Quotation/Tender, Negotiation, and Contract signed. UI labels are localized in Vietnamese, English, Chinese, and Japanese. Existing persisted stages have not been semantically reconciled. | Approve the legacy-data reconciliation strategy, deploy translations, and verify cached translations after release. |
+| M1-05 | Required five-step sales pipeline | **Pass** | Service and UI enforce the five stages. Deployment converts historical rows directly to current semantics: contract-backed Won is preserved, unsupported Won becomes Negotiation, and Lost metadata is normalized. | Review the migration report before production rollout. |
 | M1-06 | Prevent skipped and backward pipeline movement | **Pass in change set** | Unit and HTTP integration tests reject skipped/backward transitions and preserve stored state. | Retain these tests for every lifecycle change. |
-| M1-07 | Contract signed completion gate | **Partial** | Transition requires a same-customer Contract linked to the Opportunity, a signed date, and status other than Draft or Cancelled. Terminal Opportunity edits are blocked. A later Contract update/delete can still invalidate the completion evidence. | Define and enforce the invariant across Contract update, status transition, unlink, and delete operations. Confirm whether approvals or mandatory documents are also required. |
+| M1-07 | Contract signed completion gate | **Pass** | Completion requires a qualifying same-customer Contract. Contract update, transition, unlink, and delete cannot remove the final qualifying evidence from a Won Opportunity. | Retain closure-invariant regression tests. |
 | M1-08 | Lost opportunity branch | **Pass** | An open opportunity can move to Lost only with a reason code and note; probability becomes zero. | Confirm whether Lost may be reopened by a privileged role. Current behavior is terminal. |
-| M1-09 | Square-metre quotation calculation | **Partial** | Unit-cost quotation calculates area × a user-entered square-metre rate. | Define whether and when manual override is allowed. |
-| M1-10 | Material-norm-derived quotation rate | **Fail** | No authoritative material-norm/rate catalog or effective-dated pricing source is used. | Approve norm source, package applicability, effective dates, rate provenance, override authority, currency, and VAT rules. |
-| M1-11 | Preliminary quotation output | **Unknown / not proven** | BOQ totals and workflow exist, but no generated preliminary-quote PDF endpoint or approved template was found. | Approve output format/template and acceptance criteria before implementation. |
-| M1-12 | Tender preparation checklist | **Partial** | Tender checklist items support shared capability documents or direct upload and lock after terminal result. Tender result currently does not require checklist completion. | Confirm mandatory templates and result preconditions by tender type. |
-| M1-13 | Tender deadline and result | **Partial** | Deadline and Won/Lost results are implemented; Won now rejects an Opportunity from another customer. Complete Preparing/Submitted/Cancelled transition behavior is not proven. | Define the transition matrix, timezone, overdue escalation, and cancellation policy. |
-| M1-14 | Tender bid estimate | **Fail** | No bid-estimate amount, currency, version, or approval model exists. | Define internal cost vs submitted bid vs both, VAT, versions, approvals, and visibility. |
-| M1-15 | Mobile survey media and coordinates | **Partial** | Responsive Survey UI supports private photo/video/file upload, capture notes/time, and latitude/longitude. | Run device acceptance on the supported mobile/browser matrix. |
-| M1-16 | Structured right-of-way, elevation, and infrastructure | **Fail** | These site conditions are not represented as structured fields. | Define field types, units, required/optional rules, option lists, and edit history. |
-| M1-17 | Automatic project `01_Khao_sat` Drive sync | **Partial** | Survey media stages to the project Survey category only when the Survey's linked Opportunity has an Operational Project. Unlinked surveys use a legacy root workflow. | Decide whether project linkage is mandatory before upload and approve migration/backfill behavior. |
+| M1-09 | Square-metre quotation calculation | **Pass** | Unit-cost quotes calculate area × effective catalog rate, discount, VAT, and total. Permission-gated overrides require a Vietnamese reason and retain provenance. | None. |
+| M1-10 | Material-norm-derived quotation rate | **Pass** | Versioned catalogs support strict atomic CSV import, effective periods, approval, immutable approved revisions, and `NormPerSqm × UnitRate × (1 + WastePercent/100)`. Quotes retain revision provenance and snapshots. | None. |
+| M1-11 | Preliminary quotation output | **Pass** | Protected PDF export supports vi/en/zh/ja, Unicode, localized preliminary markers, customer/opportunity data, rate provenance, and totals. | Final branding can be changed through centralized translations. |
+| M1-12 | Tender preparation checklist | **Pass** | Submission requires a complete checklist and an approved estimate; terminal results lock mutable preparation data. | None. |
+| M1-13 | Tender deadline and result | **Pass** | Preparing → Submitted requires readiness; Won/Lost require Submitted; Won enforces same-customer Opportunity; cancellation is allowed only from open states. | Deadline escalation remains outside this contract. |
+| M1-14 | Tender bid estimate | **Pass** | Downloadable CSV creates atomic, hashed revisions with cost, bid, VAT, totals, and Draft → Submitted → Approved/Rejected governance. | None. |
+| M1-15 | Mobile survey media and coordinates | **Partial** | Responsive Survey UI supports private photo/video/file upload, capture notes/time, and latitude/longitude. Survey access is limited to the surveyor, Survey creator, Operational Project manager/creator, or explicitly elevated `view.all`/`manage.all` users; inaccessible records and subresources return `404`. | Run device acceptance on the supported mobile/browser matrix. |
+| M1-16 | Structured right-of-way, elevation, and infrastructure | **Pass** | Responsive condition editors and atomic CSV/JSON replacement use stable categories, controlled statuses/units, required access-width/elevation rows, managed infrastructure types, audit fields, and localized PDF output. | Row-level historical versions are outside this contract. |
+| M1-17 | Automatic project `01_Khao_sat` Drive sync | **Pass** | Every Survey requires an Operational Project; consistency is enforced and media routes through the project Survey category. Migration backfills from linked Opportunities and aborts atomically if any Survey cannot be routed. | Preflight production data for unmappable Surveys and verify deployment Drive credentials. |
 
 ## Compatibility Decision
 
@@ -61,37 +62,46 @@ breaking persisted data and API clients. The customer-facing mapping is:
 | `Won` | Contract signed / Ký hợp đồng |
 | `Lost` | Lost / Thất bại (alternate terminal branch) |
 
-## Validation Evidence
+## Verification
 
-- Focused Opportunity and Tender service unit tests: **101 passed, 0 failed**.
-- Focused Opportunity and Quote HTTP integration tests: **47 passed, 0 failed**.
-- Focused Opportunity browser/deployment acceptance tests: **6 passed, 0 failed**.
-- Frontend lint: **passed**.
-- Frontend production build: **passed** with existing non-blocking bundle-size
-  and Tailwind ambiguity warnings.
-- No database migration is required for the pipeline correction.
+- Backend builds: **passed**; format verification is rerun before release.
+- Full backend unit suite in the production-equivalent font image: **1,643 passed**.
+- Full HTTP integration suite: **1,368 passed**.
+- Functional QA focused regression: **394 unit and 185 HTTP integration tests passed**.
+- Survey anti-enumeration integration coverage includes list, detail, timeline,
+   PDF, JSON/CSV conditions, media upload/content/delete/retry, checklist,
+   sync log, update, and delete. Explicit surveyor assignment grants scoped
+   access without granting global access.
+- Customer CSV imports use strict UTF-8 and ordered headers, bounded byte/row
+   reads, SQL-compatible decimal precision, atomic replacement, and persisted
+   importer/provenance fields appropriate to each workflow.
+- Frontend lint and production build: **passed**.
+- Focused Module 1 Playwright acceptance remains blocked by three historical
+   Surveys in the local development database that have no deterministic project
+   route; no relationship is inferred or invented.
+- Migrations `20260901141836_CompleteModule1CrmPreDesign` and
+   `20260901171502_FinalizeModule1NewOnly` passed isolated SQL Server fresh- and
+   draft-schema conversion assertions. Permission migration
+   `20260902120000_AddScopedSurveyPermissions` passed fresh and existing paths;
+   Sales retained zero all-project grants. Guard migration
+   `20260902123000_ValidateHistoricalSurveyProjectRouting` passed a fresh chain
+   and rejected the existing three unresolved Surveys with SQL `51001` without
+   recording the migration or changing the unresolved row count.
+- A real application startup against a fresh SQL Server database completed all
+   migrations and seeding; all five sample Surveys referenced valid Operational
+   Projects.
 
-The BA review was performed in a separate read-only agent context against the
-source diff. It rejected customer readiness because passing tests cover only
-the implemented subset and do not resolve the blockers below.
+## Assumptions and Operational Risks
 
-## Required Product Decisions
-
-The following decisions are blockers and must be approved by the product or
-business owner before implementation:
-
-1. Lead segment taxonomy and cardinality.
-2. Material-norm source, rate governance, overrides, currency, VAT, and quote
-   output template.
-3. Tender bid-estimate meaning, versions, approvals, and visibility.
-4. Survey field definitions and units for right-of-way, elevation, and
-   infrastructure.
-5. Whether project linkage is mandatory before survey media upload, including
-   migration and failure behavior.
-6. Entry/exit evidence for Survey and Quotation/Tender pipeline stages, legacy
-   stage reconciliation, and whether existing `Won` records require backfill.
-7. Whether Contract updates/deletion may invalidate a Contract signed
-   Opportunity, and the required recovery path if evidence is revoked.
-
-Until those decisions are approved and implemented, Module 1 must not be
-represented as fully customer-ready.
+1. Lead segmentation is single-select; administrators own taxonomy changes.
+2. Tender estimates store both internal cost and submitted bid values in VND by
+   default; each imported revision uses one VAT percentage.
+3. Stable Opportunity enum names remain an API/storage contract, but no legacy
+   runtime mode remains after migration.
+4. Any historical Survey that cannot be deterministically mapped blocks the
+   migration; the data owner must assign its linked Opportunity/project before
+   retrying deployment.
+5. Live Drive delivery still depends on valid deployment OAuth credentials and
+   write access to the configured project folder.
+6. Project Managers are intentionally Survey read-only unless they also have a
+   manage permission or are assigned another role with that capability.

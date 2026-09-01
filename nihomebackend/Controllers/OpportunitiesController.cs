@@ -97,9 +97,11 @@ public class OpportunitiesController(
         if (userId is null) return Unauthorized();
 
         var canManage = await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct);
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
+        var canSeeAllCustomers = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         try
         {
-            var response = await svc.CreateAsync(request, userId.Value, canManage, ct);
+            var response = await svc.CreateAsync(request, userId.Value, canManage, ct, canSeeAll, canSeeAllCustomers);
             audit.Log(new AuditEvent
             {
                 Action = "opportunity.create",
@@ -137,11 +139,12 @@ public class OpportunitiesController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
+        var canSeeAllCustomers = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         var canManage = await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct);
         request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
-            var response = await svc.UpdateAsync(id, request, userId.Value, canManage, canSeeAll, ct);
+            var response = await svc.UpdateAsync(id, request, userId.Value, canManage, canSeeAll, ct, canSeeAllCustomers);
             if (response is null) return NotFound();
 
             audit.Log(new AuditEvent

@@ -8,6 +8,7 @@ public class LeadResponse
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string SourceCode { get; set; } = string.Empty;
+    public string SegmentCode { get; set; } = "unclassified";
     public LeadStatus Status { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }

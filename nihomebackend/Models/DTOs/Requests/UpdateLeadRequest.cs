@@ -24,6 +24,10 @@ public class UpdateLeadRequest : IConcurrencyRequest
     [StringLength(60, MinimumLength = 1)]
     public string SourceCode { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "Vui lòng chọn phân khúc Lead, ví dụ: unclassified.")]
+    [StringLength(60, MinimumLength = 1, ErrorMessage = "Mã phân khúc Lead phải có từ 1 đến 60 ký tự, ví dụ: residential.")]
+    public string SegmentCode { get; set; } = "unclassified";
+
     /// <summary>New status. <c>NotInterested</c> and <c>Junk</c> require
     /// the <c>crm.leads.manage</c> permission — the service enforces this.</summary>
     [Required]

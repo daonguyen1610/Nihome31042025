@@ -6,6 +6,7 @@ import {
   Calendar,
   CheckCheck,
   Clipboard,
+  Download,
   FileText,
   History,
   ListChecks,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +33,7 @@ import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize, formatVnd, parseVnd } from "@/lib/numberFormat";
 import { calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
+import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +58,7 @@ import {
   type QuoteVersionResponse,
   type QuoteVersionsResponse,
   type UpdateQuoteRequest,
+  type MaterialRateRevisionResponse,
 } from "@/services/adminApi";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
@@ -102,6 +106,9 @@ function toFormState(q: QuoteResponse): UpdateQuoteRequest {
     ownerUserId: q.ownerUserId ?? null,
     areaSqm: q.areaSqm ?? null,
     unitPricePerSqm: q.unitPricePerSqm ?? null,
+    materialRateCatalogId: q.materialRateCatalogId ?? null,
+    pricingEffectiveDate: q.pricingEffectiveDate ?? null,
+    rateOverrideReason: q.rateOverrideReason ?? null,
     packageDescription: q.packageDescription ?? "",
     items: q.items.map((i) => ({
       itemCode: i.itemCode ?? null,
@@ -132,13 +139,14 @@ const AdminQuoteDetail = () => {
   const { id } = useParams();
   const quoteId = Number(id);
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
 
   const canManage = has(ADMIN_PERMS.quotesManage);
   const canApprove = has(ADMIN_PERMS.quotesApprove);
   const canSend = has(ADMIN_PERMS.quotesSend);
+  const canOverrideRate = has(ADMIN_PERMS.quotesRateOverride);
 
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,6 +155,8 @@ const AdminQuoteDetail = () => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<UpdateQuoteRequest | null>(null);
   const [saving, setSaving] = useState(false);
+  const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -284,6 +294,25 @@ const AdminQuoteDetail = () => {
       });
       return;
     }
+    if (quote.method === "UnitCost") {
+      if (!form.materialRateCatalogId || !form.pricingEffectiveDate) {
+        toast({ title: t("common.error"), description: t("quotes.validation.rateSelectionRequired"), variant: "destructive" });
+        return;
+      }
+      if (!effectiveRevision) {
+        toast({ title: t("common.error"), description: t("quotes.validation.noEffectiveRate"), variant: "destructive" });
+        return;
+      }
+      const isOverride = form.unitPricePerSqm !== effectiveRevision.totalRatePerSqm;
+      if (isOverride && !canOverrideRate) {
+        toast({ title: t("common.error"), description: t("quotes.validation.overridePermission"), variant: "destructive" });
+        return;
+      }
+      if (isOverride && !isValidVietnameseOverrideReason(form.rateOverrideReason)) {
+        toast({ title: t("common.error"), description: t("quotes.validation.overrideReason"), variant: "destructive" });
+        return;
+      }
+    }
     setSaving(true);
     try {
       const { data } = await adminApi.updateQuote(quote.id, {
@@ -307,6 +336,24 @@ const AdminQuoteDetail = () => {
       if (isConcurrencyConflict(err)) await load();
     } finally {
       setSaving(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!quote) return;
+    setExportingPdf(true);
+    try {
+      const { data } = await adminApi.exportQuotePdf(quote.id, lang);
+      const url = URL.createObjectURL(data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${quote.code}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+    } finally {
+      setExportingPdf(false);
     }
   };
 
@@ -477,6 +524,12 @@ const AdminQuoteDetail = () => {
         </div>
 
         <div className="flex flex-wrap gap-1.5">
+          {!editing && (
+            <Button variant="outline" onClick={() => void downloadPdf()} disabled={exportingPdf}>
+              {exportingPdf ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+              {t("quotes.action.downloadPdf")}
+            </Button>
+          )}
           {showEditToggle && (
             <Button variant="outline" onClick={() => setEditing(true)}>
               <Pencil className="mr-1.5 h-4 w-4" />
@@ -602,7 +655,8 @@ const AdminQuoteDetail = () => {
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-6">
             <div className="min-w-0 space-y-4">
               {quote.method === "UnitCost" ? (
-                <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4">
+                <div className="space-y-3 rounded-lg border bg-card p-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <FormField label={t("quotes.field.areaSqm")}>
                     <Input
                       inputMode="decimal"
@@ -611,15 +665,22 @@ const AdminQuoteDetail = () => {
                       onChange={(e) => setForm({ ...form, areaSqm: e.target.value ? Number(e.target.value) : null })}
                     />
                   </FormField>
-                  <FormField label={t("quotes.field.unitPricePerSqm")}>
-                    <Input
-                      inputMode="numeric"
-                      value={form.unitPricePerSqm ? formatVnd(form.unitPricePerSqm) : ""}
-                      disabled={!editing}
-                      onChange={(e) => setForm({ ...form, unitPricePerSqm: parseVnd(e.target.value) || null })}
+                  </div>
+                  {editing ? (
+                    <QuoteRateFields
+                      catalogId={form.materialRateCatalogId}
+                      pricingDate={form.pricingEffectiveDate}
+                      unitPrice={form.unitPricePerSqm}
+                      overrideReason={form.rateOverrideReason}
+                      rateSource={quote.rateSource}
+                      canOverride={canOverrideRate}
+                      onEffectiveRevisionChange={setEffectiveRevision}
+                      onChange={(patch) => setForm((current) => current ? { ...current, ...patch } : current)}
                     />
-                  </FormField>
-                  <div className="col-span-2">
+                  ) : (
+                    <RateProvenance value={quote} t={t} />
+                  )}
+                  <div>
                     <FormField label={t("quotes.field.packageDescription")}>
                       <Textarea
                         rows={3}
@@ -1093,6 +1154,7 @@ const QuoteVersionDetails = ({
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{t("quotes.field.packageDescription")}</div>
           <div className="mt-1 whitespace-pre-wrap">{version.packageDescription || "—"}</div>
         </div>
+        <div className="sm:col-span-2"><RateProvenance value={version} t={t} /></div>
       </div>
     ) : (
       <div className="rounded-lg border bg-card">
@@ -1147,6 +1209,24 @@ const QuoteVersionDetails = ({
       <span className="text-xl font-bold text-primary">{formatVnd(version.grandTotal)} ₫</span>
     </div>
   </div>
+);
+
+type RateProvenanceValue = Pick<QuoteResponse | QuoteVersionResponse,
+  "materialRateCatalogCode" | "materialRateCatalogName" | "materialRateRevisionVersion" |
+  "pricingEffectiveDate" | "catalogUnitPricePerSqm" | "unitPricePerSqm" | "rateSource" |
+  "rateOverrideReason"
+>;
+
+const RateProvenance = ({ value, t }: { value: RateProvenanceValue; t: (key: string) => string }) => (
+  <dl className="grid gap-2 rounded-md border bg-muted/20 p-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.materialRateCatalog")}</dt><dd className="font-medium">{value.materialRateCatalogCode ? `${value.materialRateCatalogCode} · ${value.materialRateCatalogName ?? ""}` : "—"}</dd></div>
+    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.materialRateRevision")}</dt><dd className="font-medium">{value.materialRateRevisionVersion != null ? `V${value.materialRateRevisionVersion}` : "—"}</dd></div>
+    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.pricingEffectiveDate")}</dt><dd className="font-medium">{value.pricingEffectiveDate ?? "—"}</dd></div>
+    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.catalogRate")}</dt><dd className="font-medium">{value.catalogUnitPricePerSqm != null ? `${formatVnd(value.catalogUnitPricePerSqm)} ₫/m²` : "—"}</dd></div>
+    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.appliedRate")}</dt><dd className="font-medium">{value.unitPricePerSqm != null ? `${formatVnd(value.unitPricePerSqm)} ₫/m²` : "—"}</dd></div>
+    <div><dt className="text-xs text-muted-foreground">{t("quotes.field.rateSource")}</dt><dd className="font-medium">{t(`quotes.rateSource.${value.rateSource}`)}</dd></div>
+    {value.rateOverrideReason && <div className="sm:col-span-2 lg:col-span-3"><dt className="text-xs text-muted-foreground">{t("quotes.field.rateOverrideReason")}</dt><dd>{value.rateOverrideReason}</dd></div>}
+  </dl>
 );
 
 const BoqTable = ({

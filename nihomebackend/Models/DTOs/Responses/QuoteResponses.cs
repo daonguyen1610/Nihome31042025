@@ -45,6 +45,17 @@ public class QuoteVersionResponse
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
+    public int? MaterialRateRevisionId { get; set; }
+    public int? MaterialRateCatalogId { get; set; }
+    public string? MaterialRateCatalogCode { get; set; }
+    public string? MaterialRateCatalogName { get; set; }
+    public int? MaterialRateRevisionVersion { get; set; }
+    public DateOnly? PricingEffectiveDate { get; set; }
+    public decimal? CatalogUnitPricePerSqm { get; set; }
+    public string RateSource { get; set; } = QuoteRateSource.Override.ToString();
+    public string? RateOverrideReason { get; set; }
+    public int? RateOverrideByUserId { get; set; }
+    public DateTime? RateOverrideAt { get; set; }
     public decimal Subtotal { get; set; }
     public decimal DiscountPercent { get; set; }
     public decimal VatPercent { get; set; }
@@ -72,6 +83,17 @@ public class QuoteResponse
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
+    public int? MaterialRateRevisionId { get; set; }
+    public int? MaterialRateCatalogId { get; set; }
+    public string? MaterialRateCatalogCode { get; set; }
+    public string? MaterialRateCatalogName { get; set; }
+    public int? MaterialRateRevisionVersion { get; set; }
+    public DateOnly? PricingEffectiveDate { get; set; }
+    public decimal? CatalogUnitPricePerSqm { get; set; }
+    public string RateSource { get; set; } = QuoteRateSource.Override.ToString();
+    public string? RateOverrideReason { get; set; }
+    public int? RateOverrideByUserId { get; set; }
+    public DateTime? RateOverrideAt { get; set; }
 
     public decimal Subtotal { get; set; }
     public decimal DiscountPercent { get; set; }

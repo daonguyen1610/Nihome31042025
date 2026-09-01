@@ -21,6 +21,9 @@ public class SurveyResponse
     public int? LinkedOpportunityId { get; set; }
     public string? LinkedOpportunityName { get; set; }
 
+    public int OperationalProjectId { get; set; }
+    public string? OperationalProjectName { get; set; }
+
     public string? Note { get; set; }
 
     public string DriveSyncStatus { get; set; } = string.Empty;
@@ -29,6 +32,7 @@ public class SurveyResponse
     public string? DriveFolderLink { get; set; }
     public List<SurveyMediaResponse> Media { get; set; } = new();
     public List<SurveyChecklistResultResponse> ChecklistResults { get; set; } = new();
+    public List<SurveySiteConditionResponse> SiteConditions { get; set; } = new();
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -54,6 +58,9 @@ public class SurveyListItemResponse
 
     public int? LinkedOpportunityId { get; set; }
     public string? LinkedOpportunityName { get; set; }
+
+    public int OperationalProjectId { get; set; }
+    public string? OperationalProjectName { get; set; }
 
     public string DriveSyncStatus { get; set; } = string.Empty;
     public string? DriveSyncError { get; set; }
@@ -140,4 +147,25 @@ public class SurveyDriveConnectionStatusResponse
     public string? RootFolderName { get; set; }
     public string? RootFolderLink { get; set; }
     public string? Error { get; set; }
+}
+
+public sealed class SurveySiteConditionResponse
+{
+    public long Id { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string StatusCode { get; set; } = string.Empty;
+    public decimal? NumericValue { get; set; }
+    public string? UnitCode { get; set; }
+    public string? ReferenceCode { get; set; }
+    public string? Description { get; set; }
+    public string? Note { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+
+public sealed class SurveySiteConditionImportResponse
+{
+    public List<SurveySiteConditionResponse> Conditions { get; set; } = [];
+    public List<CsvImportError> Errors { get; set; } = [];
 }
