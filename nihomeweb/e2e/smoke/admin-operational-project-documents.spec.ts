@@ -122,8 +122,16 @@ test("project manager operates the responsive Drive document catalog", async ({
       nextSyncAttemptAt: null,
       conflictState: "PendingConfirmation",
     }),
+    documentResponse({
+      id: 14,
+      originalFileName: "delete-without-refresh.pdf",
+      syncStatus: "Synced",
+      desiredOperation: "None",
+      nextSyncAttemptAt: null,
+    }),
   ];
   const uploadIdempotencyKeys: string[] = [];
+  let deleteRequested = false;
 
   await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), route =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(detail) }));
@@ -160,6 +168,10 @@ test("project manager operates the responsive Drive document catalog", async ({
       : document);
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(documents.find(document => document.id === 12)) });
   });
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents/14$`), async route => {
+    deleteRequested = true;
+    await route.fulfill({ status: 204 });
+  });
 
   await page.goto(`${baseURL}/admin/operational-projects/${projectId}`, { waitUntil: "networkidle" });
   const section = page.getByTestId("project-documents-section");
@@ -179,6 +191,13 @@ test("project manager operates the responsive Drive document catalog", async ({
   const conflictCard = section.locator("article").filter({ hasText: "drive-conflict.pdf" });
   await conflictCard.getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i }).click();
   await expect(conflictCard.getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i })).toHaveCount(0);
+
+  page.once("dialog", dialog => dialog.accept());
+  const deletedCard = section.locator("article").filter({ hasText: "delete-without-refresh.pdf" });
+  await deletedCard.getByRole("button", { name: /^(Xoá|Delete|删除).*|.*削除$/i }).click();
+  await expect(deletedCard).toHaveCount(0);
+  expect(deleteRequested).toBe(true);
+  expect(documents.some(document => document.id === 14)).toBe(true);
 
   await page.locator("#project-document-file").setInputFiles({
     name: "new-plan.pdf",

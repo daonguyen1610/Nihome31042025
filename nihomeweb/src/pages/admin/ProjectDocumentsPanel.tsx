@@ -149,7 +149,13 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
       if (action === "resolve") await adminApi.resolveProjectDocumentKeepBoth(projectId, document.id);
       if (action === "delete") await adminApi.deleteProjectDocument(projectId, document.id);
       toast({ title: t(`operationalProjects.documents.${action}Success`) });
-      await load();
+      if (action === "delete") {
+        const nextDocuments = documents.filter(item => item.id !== document.id);
+        setDocuments(nextDocuments);
+        onCountChange?.(nextDocuments.length);
+      } else {
+        await load();
+      }
     } catch (reason) {
       toast({ title: t("common.error"), description: extractApiError(reason), variant: "destructive" });
     } finally {
