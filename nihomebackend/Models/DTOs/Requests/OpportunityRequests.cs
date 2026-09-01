@@ -25,7 +25,7 @@ public class CreateOpportunityRequest
 
     public DateTime? ExpectedCloseDate { get; set; }
 
-    /// <summary>Initial stage. Defaults to Prospecting; cannot be Won/Lost on create.</summary>
+    /// <summary>Initial stage. New opportunities must start at Prospecting (Approach).</summary>
     public OpportunityStage Stage { get; set; } = OpportunityStage.Prospecting;
 
     [StringLength(4000)]
@@ -61,8 +61,8 @@ public class UpdateOpportunityRequest : IConcurrencyRequest
 
 /// <summary>
 /// Dedicated payload for stage transitions — captured via
-/// <c>PATCH /api/opportunities/{id}/stage</c>. Won requires at least one of
-/// WonQuoteId / WonTenderId; Lost requires LostReasonCode + LostNote.
+/// <c>PATCH /api/opportunities/{id}/stage</c>. Won (Contract signed) requires
+/// a linked signed Contract; Lost requires LostReasonCode + LostNote.
 /// </summary>
 public class ChangeOpportunityStageRequest : IConcurrencyRequest
 {

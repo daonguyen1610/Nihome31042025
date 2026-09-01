@@ -8,7 +8,7 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 
 /// <summary>
 /// End-to-end coverage for <c>OpportunitiesController</c> (NIH-83): RBAC
-/// scoping, stage transition rules (Won requires side-payload, Lost
+/// scoping, stage transition rules (Won requires a signed contract, Lost
 /// requires reason + note, terminal stages cannot revert), and Kanban
 /// pipeline aggregation.
 /// </summary>
@@ -66,7 +66,7 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_TerminalStage_IsBadRequest()
+    public async Task Create_StageAfterProspecting_IsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
@@ -117,15 +117,42 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task ChangeStage_ToWon_SetsProbability100()
+    public async Task ChangeStage_ToWon_RequiresSignedContractAndSetsProbability100()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var opId = await CreateOpportunityAsync();
 
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opId);
+            opportunity.Stage = OpportunityStage.Negotiation;
+            await db.SaveChangesAsync();
+        });
+
+        var missingContract = await Client.PatchAsJsonAsync($"/api/opportunities/{opId}/stage", new
+        {
+            targetStage = "Won",
+        });
+        missingContract.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opId);
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = UniqueSlug("HD-OP-SIGNED"),
+                CustomerId = opportunity.CustomerId,
+                OpportunityId = opportunity.Id,
+                Status = ContractStatus.Signed,
+                SignedDate = DateTime.UtcNow,
+                Value = 1_000_000m,
+            });
+            await db.SaveChangesAsync();
+        });
+
         var res = await Client.PatchAsJsonAsync($"/api/opportunities/{opId}/stage", new
         {
             targetStage = "Won",
-            wonQuoteId = 1,
         });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -140,14 +167,49 @@ public class OpportunitiesControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var opId = await CreateOpportunityAsync();
 
-        // Move to Won first
-        (await Client.PatchAsJsonAsync($"/api/opportunities/{opId}/stage",
-            new { targetStage = "Won", wonQuoteId = 1 })).EnsureSuccessStatusCode();
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opId);
+            opportunity.Stage = OpportunityStage.Won;
+            opportunity.ClosedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
 
         // Try to move back
         var reject = await Client.PatchAsJsonAsync($"/api/opportunities/{opId}/stage",
             new { targetStage = "Negotiation" });
         reject.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ChangeStage_SkippingPipelineStage_IsBadRequestAndPreservesState()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opId = await CreateOpportunityAsync();
+
+        var response = await Client.PatchAsJsonAsync($"/api/opportunities/{opId}/stage",
+            new { targetStage = "Proposal" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await WithDbAsync(async db =>
+            (await db.Opportunities.SingleAsync(item => item.Id == opId)).Stage
+                .Should().Be(OpportunityStage.Prospecting));
+    }
+
+    [Fact]
+    public async Task ChangeStage_WithoutPermission_IsForbiddenAndPreservesState()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opId = await CreateOpportunityAsync();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var response = await Client.PatchAsJsonAsync($"/api/opportunities/{opId}/stage",
+            new { targetStage = "Qualification" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await WithDbAsync(async db =>
+            (await db.Opportunities.SingleAsync(item => item.Id == opId)).Stage
+                .Should().Be(OpportunityStage.Prospecting));
     }
 
     [Fact]
@@ -260,6 +322,40 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Update_TerminalOpportunity_IsBadRequestAndPreservesState()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        string originalName = null!;
+        int customerId = 0;
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opportunityId);
+            originalName = opportunity.Name;
+            customerId = opportunity.CustomerId;
+            opportunity.Stage = OpportunityStage.Lost;
+            opportunity.ClosedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+
+        var response = await Client.PutAsJsonAsync($"/api/opportunities/{opportunityId}", new
+        {
+            name = "Changed after close",
+            customerId,
+            estimatedValue = 1m,
+            winProbability = 0,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opportunityId);
+            opportunity.Name.Should().Be(originalName);
+            opportunity.Stage.Should().Be(OpportunityStage.Lost);
+        });
+    }
+
+    [Fact]
     public async Task Delete_UnknownId_Returns404()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -288,12 +384,19 @@ public class OpportunitiesControllerTests : IntegrationTestBase
             customerId,
             estimatedValue = 10_000_000m,
             winProbability = 25,
-            stage = "Qualification",
+            stage = "Prospecting",
         }).ContinueWith(t =>
         {
             t.Result.EnsureSuccessStatusCode();
             var body = t.Result.Content.ReadFromJsonAsync<JsonElement>().Result;
             return body.GetProperty("id").GetInt32();
+        });
+
+        await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == qualifiedId);
+            opportunity.Stage = OpportunityStage.Qualification;
+            await db.SaveChangesAsync();
         });
 
         var filtered = await Client.GetAsync("/api/opportunities?stage=Prospecting&minValue=1000000");

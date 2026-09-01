@@ -47,11 +47,11 @@
     {
       "category": "opportunity_stage",
       "options": [
-        { "code": "prospecting",   "name": "Tìm hiểu", "sortOrder": 1 },
-        { "code": "qualification", "name": "Đánh giá", "sortOrder": 2 },
-        { "code": "proposal",      "name": "Đề xuất", "sortOrder": 3 },
-        { "code": "negotiation",   "name": "Đàm phán", "sortOrder": 4 },
-        { "code": "won",           "name": "Thắng", "sortOrder": 5 },
+        { "code": "prospecting",   "name": "Tiếp cận", "sortOrder": 1 },
+        { "code": "qualification", "name": "Khảo sát", "sortOrder": 2 },
+        { "code": "proposal",      "name": "Báo giá / Đấu thầu", "sortOrder": 3 },
+        { "code": "negotiation",   "name": "Thương thảo", "sortOrder": 4 },
+        { "code": "won",           "name": "Ký hợp đồng", "sortOrder": 5 },
         { "code": "lost",          "name": "Thua", "sortOrder": 6 }
       ]
     },

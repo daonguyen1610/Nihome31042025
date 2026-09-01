@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -212,10 +213,13 @@ public class QuotesControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var oppId = await CreateOpportunityAsync();
-        (await Client.PatchAsJsonAsync($"/api/opportunities/{oppId}/stage", new
+        await WithDbAsync(async db =>
         {
-            targetStage = "Won",
-        })).EnsureSuccessStatusCode();
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == oppId);
+            opportunity.Stage = OpportunityStage.Won;
+            opportunity.ClosedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
 
         var payload = new
         {

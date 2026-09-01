@@ -156,10 +156,10 @@ public class OpportunityService(
             throw new OpportunityOperationException("Không có quyền tạo cơ hội.");
         }
 
-        if (request.Stage is OpportunityStage.Won or OpportunityStage.Lost)
+        if (request.Stage != OpportunityStage.Prospecting)
         {
             throw new OpportunityOperationException(
-                "Cơ hội mới phải khởi tạo ở giai đoạn Prospecting/Qualification/Proposal/Negotiation. Dùng đổi giai đoạn để chuyển sang Won/Lost.");
+            "Cơ hội mới phải bắt đầu ở giai đoạn Tiếp cận.");
         }
 
         var customer = await db.Customers.AsNoTracking()
@@ -212,6 +212,11 @@ public class OpportunityService(
         var op = await db.Opportunities.FirstOrDefaultAsync(o => o.Id == id, ct);
         if (op is null) return null;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return null;
+        if (op.Stage is OpportunityStage.Won or OpportunityStage.Lost)
+        {
+            throw new OpportunityOperationException(
+                "Cơ hội đã kết thúc, không thể chỉnh sửa thông tin.");
+        }
 
         CrmConcurrency.Apply(db, op, request.RowVersion);
 
@@ -314,14 +319,25 @@ public class OpportunityService(
                 $"Cơ hội đã ở giai đoạn {from}. Không thể chuyển sang giai đoạn khác.");
         }
 
+        if (to != OpportunityStage.Lost && (int)to != (int)from + 1)
+        {
+            throw new OpportunityOperationException(
+                "Cơ hội chỉ được chuyển tuần tự: Tiếp cận → Khảo sát → Báo giá/Đấu thầu → Thương thảo → Ký hợp đồng.");
+        }
+
         if (to is OpportunityStage.Won)
         {
-            // Spec: Won requires linking a Quote or a Tender. Quote/Tender modules
-            // ship in NIH-84/NIH-85 — until they exist we accept but do not enforce
-            // one of the ids. Once those modules ship, uncomment the guard below.
-            //
-            // if (!request.WonQuoteId.HasValue && !request.WonTenderId.HasValue)
-            //     throw new OpportunityOperationException("Won cần chọn Báo giá hoặc Gói thầu trúng.");
+            var hasSignedContract = await db.Contracts.AsNoTracking().AnyAsync(contract =>
+                contract.OpportunityId == op.Id &&
+                contract.CustomerId == op.CustomerId &&
+                contract.SignedDate.HasValue &&
+                contract.Status != ContractStatus.Draft &&
+                contract.Status != ContractStatus.Cancelled, ct);
+            if (!hasSignedContract)
+            {
+                throw new OpportunityOperationException(
+                    "Không thể chuyển sang Ký hợp đồng: cơ hội chưa có hợp đồng đã ký hợp lệ.");
+            }
 
             op.WonQuoteId = request.WonQuoteId;
             op.WonTenderId = request.WonTenderId;

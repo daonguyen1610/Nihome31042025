@@ -593,6 +593,37 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkWonAsync_OpportunityForDifferentCustomer_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var otherCustomer = new Customer
+        {
+            Name = "Other customer",
+            Type = CustomerType.Company,
+            SourceCode = "referral",
+        };
+        _db.Customers.Add(otherCustomer);
+        await _db.SaveChangesAsync();
+        var opportunity = new Opportunity
+        {
+            CustomerId = otherCustomer.Id,
+            Name = "Other customer opportunity",
+            Stage = OpportunityStage.Prospecting,
+        };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest
+            {
+                OpportunityId = opportunity.Id,
+            }, _userId));
+
+        Assert.Contains("không thuộc khách hàng", exception.Message);
+        Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
+    }
+
+    [Fact]
     public async Task MarkWonAsync_AlreadyClosed_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);

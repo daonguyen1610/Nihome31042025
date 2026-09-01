@@ -73,9 +73,12 @@ public class OpportunityServiceTests : IDisposable
     }
 
     [Theory]
+    [InlineData(OpportunityStage.Qualification)]
+    [InlineData(OpportunityStage.Proposal)]
+    [InlineData(OpportunityStage.Negotiation)]
     [InlineData(OpportunityStage.Won)]
     [InlineData(OpportunityStage.Lost)]
-    public async Task CreateAsync_RejectsTerminalStagesOnCreate(OpportunityStage stage)
+    public async Task CreateAsync_RejectsAnyStageAfterProspecting(OpportunityStage stage)
     {
         var user = await SeedUserAsync();
         var customer = await SeedCustomerAsync(user.Id);
@@ -277,6 +280,33 @@ public class OpportunityServiceTests : IDisposable
             It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData(OpportunityStage.Won)]
+    [InlineData(OpportunityStage.Lost)]
+    public async Task UpdateAsync_TerminalOpportunity_IsRejected(OpportunityStage stage)
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(customer, user, stage);
+
+        var exception = await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.UpdateAsync(
+            opportunity.Id,
+            new UpdateOpportunityRequest
+            {
+                Name = "Changed after close",
+                CustomerId = customer.Id,
+                OwnerUserId = user.Id,
+                EstimatedValue = opportunity.EstimatedValue,
+                WinProbability = opportunity.WinProbability,
+            },
+            user.Id,
+            canManage: true,
+            canSeeAll: true));
+
+        Assert.Contains("đã kết thúc", exception.Message);
+        Assert.Equal(opportunity.Name, (await _db.Opportunities.FindAsync(opportunity.Id))!.Name);
+    }
+
     [Fact]
     public async Task DeleteAsync_SalesUser_CannotDeleteOtherOwnersOpportunity()
     {
@@ -292,20 +322,45 @@ public class OpportunityServiceTests : IDisposable
 
     // ---------------- Stage transitions ----------------
 
-    [Fact]
-    public async Task ChangeStageAsync_ForwardTransition_PersistsAndAddsActivity()
+    [Theory]
+    [InlineData(OpportunityStage.Prospecting, OpportunityStage.Qualification)]
+    [InlineData(OpportunityStage.Qualification, OpportunityStage.Proposal)]
+    [InlineData(OpportunityStage.Proposal, OpportunityStage.Negotiation)]
+    public async Task ChangeStageAsync_ForwardTransition_PersistsAndAddsActivity(
+        OpportunityStage from, OpportunityStage to)
     {
         var user = await SeedUserAsync();
         var customer = await SeedCustomerAsync(user.Id);
-        var op = await SeedOpportunityAsync(customer, user, OpportunityStage.Prospecting);
+        var op = await SeedOpportunityAsync(customer, user, from);
 
         var response = await _sut.ChangeStageAsync(op.Id,
-            new ChangeOpportunityStageRequest { TargetStage = OpportunityStage.Qualification },
+            new ChangeOpportunityStageRequest { TargetStage = to },
             user.Id, canManage: true, canSeeAll: true);
 
         Assert.NotNull(response);
-        Assert.Equal(OpportunityStage.Qualification, response!.Stage);
+        Assert.Equal(to, response!.Stage);
         Assert.Single(_db.OpportunityActivities.Where(a => a.Type == OpportunityActivityType.StageChange));
+    }
+
+    [Theory]
+    [InlineData(OpportunityStage.Prospecting, OpportunityStage.Proposal)]
+    [InlineData(OpportunityStage.Qualification, OpportunityStage.Prospecting)]
+    [InlineData(OpportunityStage.Proposal, OpportunityStage.Won)]
+    public async Task ChangeStageAsync_SkippedOrBackwardTransition_IsRejected(
+        OpportunityStage from, OpportunityStage to)
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var op = await SeedOpportunityAsync(customer, user, from);
+
+        var exception = await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(
+            op.Id,
+            new ChangeOpportunityStageRequest { TargetStage = to },
+            user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Contains("tuần tự", exception.Message);
+        Assert.Equal(from, (await _db.Opportunities.FindAsync(op.Id))!.Stage);
+        Assert.Empty(_db.OpportunityActivities);
     }
 
     [Theory]
@@ -333,24 +388,102 @@ public class OpportunityServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ChangeStageAsync_ToWon_SetsProbability100AndClosedAt()
+    public async Task ChangeStageAsync_ToWon_WithoutSignedContract_IsRejected()
     {
         var user = await SeedUserAsync();
         var customer = await SeedCustomerAsync(user.Id);
         var op = await SeedOpportunityAsync(customer, user, OpportunityStage.Negotiation);
 
-        var response = await _sut.ChangeStageAsync(op.Id,
+        var exception = await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(op.Id,
             new ChangeOpportunityStageRequest
             {
                 TargetStage = OpportunityStage.Won,
-                WonQuoteId = 42,
             },
+            user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Contains("hợp đồng đã ký", exception.Message);
+        Assert.Equal(OpportunityStage.Negotiation, (await _db.Opportunities.FindAsync(op.Id))!.Stage);
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_ToWon_WithDifferentCustomerContract_IsRejected()
+    {
+        var user = await SeedUserAsync();
+        var opportunityCustomer = await SeedCustomerAsync(user.Id);
+        var contractCustomer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(
+            opportunityCustomer, user, OpportunityStage.Negotiation);
+        _db.Contracts.Add(new Contract
+        {
+            ContractNumber = $"HD-{Guid.NewGuid():N}",
+            CustomerId = contractCustomer.Id,
+            OpportunityId = opportunity.Id,
+            Status = ContractStatus.Signed,
+            SignedDate = DateTime.UtcNow,
+            Value = 1_000_000m,
+        });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(
+            opportunity.Id,
+            new ChangeOpportunityStageRequest { TargetStage = OpportunityStage.Won },
+            user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Equal(OpportunityStage.Negotiation,
+            (await _db.Opportunities.FindAsync(opportunity.Id))!.Stage);
+    }
+
+    [Theory]
+    [InlineData(ContractStatus.Draft, true)]
+    [InlineData(ContractStatus.Cancelled, true)]
+    [InlineData(ContractStatus.Signed, false)]
+    public async Task ChangeStageAsync_ToWon_WithInvalidContractEvidence_IsRejected(
+        ContractStatus status, bool hasSignedDate)
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(customer, user, OpportunityStage.Negotiation);
+        _db.Contracts.Add(new Contract
+        {
+            ContractNumber = $"HD-{Guid.NewGuid():N}",
+            CustomerId = customer.Id,
+            OpportunityId = opportunity.Id,
+            Status = status,
+            SignedDate = hasSignedDate ? DateTime.UtcNow : null,
+            Value = 1_000_000m,
+        });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(
+            opportunity.Id,
+            new ChangeOpportunityStageRequest { TargetStage = OpportunityStage.Won },
+            user.Id, canManage: true, canSeeAll: true));
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_ToWon_WithSignedContract_SetsProbability100AndClosedAt()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var op = await SeedOpportunityAsync(customer, user, OpportunityStage.Negotiation);
+        _db.Contracts.Add(new Contract
+        {
+            ContractNumber = $"HD-{Guid.NewGuid():N}",
+            CustomerId = customer.Id,
+            OpportunityId = op.Id,
+            Status = ContractStatus.Signed,
+            SignedDate = DateTime.UtcNow,
+            Value = 1_000_000m,
+        });
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.ChangeStageAsync(op.Id,
+            new ChangeOpportunityStageRequest { TargetStage = OpportunityStage.Won },
             user.Id, canManage: true, canSeeAll: true);
 
         Assert.NotNull(response);
         Assert.Equal(OpportunityStage.Won, response!.Stage);
         Assert.Equal(100, response.WinProbability);
-        Assert.Equal(42, response.WonQuoteId);
         Assert.NotNull(response.ClosedAt);
     }
 
@@ -381,6 +514,47 @@ public class OpportunityServiceTests : IDisposable
                 TargetStage = OpportunityStage.Lost,
                 LostReasonCode = "does-not-exist",
                 LostNote = "n/a",
+            },
+            user.Id, canManage: true, canSeeAll: true));
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_ToLost_WithInactiveReason_IsRejected()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(customer, user);
+        SeedLostReason("inactive");
+        var reason = await _db.MasterDataOptions.SingleAsync(item => item.Code == "inactive");
+        reason.IsActive = false;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(
+            opportunity.Id,
+            new ChangeOpportunityStageRequest
+            {
+                TargetStage = OpportunityStage.Lost,
+                LostReasonCode = reason.Code,
+                LostNote = "Không còn sử dụng",
+            },
+            user.Id, canManage: true, canSeeAll: true));
+    }
+
+    [Fact]
+    public async Task ChangeStageAsync_ToLost_WithoutNote_IsRejected()
+    {
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+        var opportunity = await SeedOpportunityAsync(customer, user);
+        SeedLostReason("price");
+
+        await Assert.ThrowsAsync<OpportunityOperationException>(() => _sut.ChangeStageAsync(
+            opportunity.Id,
+            new ChangeOpportunityStageRequest
+            {
+                TargetStage = OpportunityStage.Lost,
+                LostReasonCode = "price",
+                LostNote = " ",
             },
             user.Id, canManage: true, canSeeAll: true));
     }

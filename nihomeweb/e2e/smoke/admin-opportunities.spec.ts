@@ -84,7 +84,7 @@ test("SALE can CRUD only their own opportunities", async ({ api, loginAs }) => {
     expect(stillThere.status()).toBe(200);
 });
 
-test("Stage transition rules — Won requires no server-side reason, Lost requires master-data reason + note", async ({ api, loginAs }) => {
+test("Stage transition deployment smoke — next stage succeeds and Lost requires reason + note", async ({ api, loginAs }) => {
     const token = await loginAs(TEST_USERS.salesManager);
     const customerId = await createCustomer(api, token);
     const c = authed(api, token);
@@ -115,18 +115,11 @@ test("Stage transition rules — Won requires no server-side reason, Lost requir
     });
     expect(okLost.status()).toBe(200);
 
-    // Path 3 — Won side-effect (probability=100, ClosedAt set) + terminal-freeze.
+    // Path 3 — skipping directly to Won is blocked because the sequential stages
+    // and a linked signed contract are required.
     const opC = await createOpportunity(api, token, customerId);
-    const won = await c.patch(`/api/opportunities/${opC}/stage`, { targetStage: "Won", wonQuoteId: 999 });
-    expect(won.status()).toBe(200);
-    const wonBody = await won.json();
-    expect(wonBody.stage).toBe("Won");
-    expect(wonBody.winProbability).toBe(100);
-    expect(wonBody.closedAt).toBeTruthy();
-
-    // Cannot revert once terminal.
-    const revert = await c.patch(`/api/opportunities/${opC}/stage`, { targetStage: "Negotiation" });
-    expect(revert.status()).toBe(400);
+    const skipped = await c.patch(`/api/opportunities/${opC}/stage`, { targetStage: "Won" });
+    expect(skipped.status()).toBe(400);
 
     // Clean up.
     await c.del(`/api/opportunities/${opA}`);
@@ -179,4 +172,53 @@ test("SPA renders /admin/opportunities without console errors for SALES_MANAGER"
     await expect(page.getByRole("button", { name: /^Pipeline$/ })).toBeVisible();
 
     expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
+});
+
+test("Opportunity actions follow the sequential and terminal UI contract", async ({
+    api,
+    page,
+    loginAs,
+    loginInBrowserAs,
+    baseURL,
+}) => {
+    const token = await loginAs(TEST_USERS.salesManager);
+    const customerId = await createCustomer(api, token);
+    const opportunityId = await createOpportunity(api, token, customerId);
+    const client = authed(api, token);
+    const contractSignedAction = page.getByRole("button", {
+        name: /Xác nhận ký hợp đồng|Confirm contract signed/i,
+    });
+
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.goto(`${baseURL}/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
+    await expect(contractSignedAction).toHaveCount(0);
+
+    for (const targetStage of ["Qualification", "Proposal", "Negotiation"]) {
+        const response = await client.patch(`/api/opportunities/${opportunityId}/stage`, { targetStage });
+        expect(response.status(), `move opportunity to ${targetStage}`).toBe(200);
+    }
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(contractSignedAction).toBeVisible();
+
+    const lost = await client.patch(`/api/opportunities/${opportunityId}/stage`, {
+        targetStage: "Lost",
+        lostReasonCode: "price",
+        lostNote: "E2E: kết thúc cơ hội để xác minh chế độ chỉ đọc.",
+    });
+    expect(lost.status()).toBe(200);
+    const terminalDetail = await client.get(`/api/opportunities/${opportunityId}`);
+    const opportunityName = ((await terminalDetail.json()) as { name: string }).name;
+
+    await page.goto(`${baseURL}/admin/opportunities`, { waitUntil: "networkidle" });
+    await page.getByLabel(/Tìm kiếm|Search/i).fill(opportunityName);
+    const desktopRow = page.getByRole("row").filter({ hasText: opportunityName });
+    await expect(desktopRow).toBeVisible();
+    await expect(desktopRow.getByRole("button", { name: /^Sửa$|^Edit$/i })).toHaveCount(0);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileCard = page.locator("ul.lg\\:hidden > li").filter({ hasText: opportunityName });
+    await expect(mobileCard).toBeVisible();
+    await expect(mobileCard.getByRole("button", { name: /^Sửa$|^Edit$/i })).toHaveCount(0);
+
+    await client.del(`/api/opportunities/${opportunityId}`);
 });

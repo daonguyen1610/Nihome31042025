@@ -64,8 +64,10 @@ public class Opportunity : IConcurrencyTracked
 }
 
 /// <summary>
-/// Six-stage opportunity pipeline. Order is meaningful — service enforces
-/// forward-only progression once a terminal stage (Won/Lost) is reached.
+/// Customer sales pipeline plus the Lost terminal branch. Enum names and
+/// numeric values remain stable for API and persisted-data compatibility:
+/// Prospecting=Approach, Qualification=Survey, Proposal=Quotation/Tender,
+/// Negotiation=Negotiation, and Won=Contract signed.
 /// </summary>
 public enum OpportunityStage
 {
