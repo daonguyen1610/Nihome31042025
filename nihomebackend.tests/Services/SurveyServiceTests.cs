@@ -15,6 +15,7 @@ public class SurveyServiceTests : IDisposable
     private readonly SurveyService _sut;
     private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly int _userId;
+    private readonly int _projectId;
 
     public SurveyServiceTests()
     {
@@ -31,6 +32,17 @@ public class SurveyServiceTests : IDisposable
             PasswordHash = "x",
         };
         _db.Users.Add(user);
+        var customer = new Customer { Name = "Survey test customer", Type = CustomerType.Company };
+        _db.Customers.Add(customer);
+        _db.SaveChanges();
+        var project = new OperationalProject
+        {
+            Code = "OP-SURVEY-TEST",
+            Name = "Survey test project",
+            CustomerId = customer.Id,
+            ProjectManagerUserId = user.Id,
+        };
+        _db.OperationalProjects.Add(project);
         _db.MasterDataOptions.AddRange(
             new MasterDataOption { Category = "construction_type", Code = "residential", Name = "Nhà ở dân dụng", IsActive = true, SortOrder = 1 },
             new MasterDataOption { Category = "construction_type", Code = "commercial", Name = "Thương mại", IsActive = true, SortOrder = 2 },
@@ -38,6 +50,7 @@ public class SurveyServiceTests : IDisposable
         );
         _db.SaveChanges();
         _userId = user.Id;
+        _projectId = project.Id;
     }
 
     public void Dispose() => _db.Dispose();
@@ -50,6 +63,7 @@ public class SurveyServiceTests : IDisposable
             ConstructionTypeCode = typeCode,
             SurveyDate = date ?? DateTime.UtcNow.AddDays(-2),
             SurveyorUserId = _userId,
+            OperationalProjectId = _projectId,
         };
 
     // ---------------- Create ----------------
@@ -69,6 +83,46 @@ public class SurveyServiceTests : IDisposable
     {
         await Assert.ThrowsAsync<SurveyOperationException>(() =>
             _sut.CreateAsync(ValidCreate(location: "  "), _userId));
+    }
+
+    [Fact]
+    public async Task CreateAsync_MissingOperationalProject_ThrowsActionableError()
+    {
+        var request = ValidCreate();
+        request.OperationalProjectId = null;
+
+        var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.CreateAsync(request, _userId));
+
+        Assert.Contains("Dự án vận hành", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OpportunityProjectMismatch_Throws()
+    {
+        var otherProject = new OperationalProject
+        {
+            Code = "OP-SURVEY-OTHER",
+            Name = "Other survey project",
+            CustomerId = (await _db.OperationalProjects.FindAsync(_projectId))!.CustomerId,
+        };
+        _db.OperationalProjects.Add(otherProject);
+        await _db.SaveChangesAsync();
+        var opportunity = new Opportunity
+        {
+            Name = "Mismatched opportunity",
+            CustomerId = otherProject.CustomerId,
+            OperationalProjectId = otherProject.Id,
+        };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+        var request = ValidCreate();
+        request.LinkedOpportunityId = opportunity.Id;
+
+        var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.CreateAsync(request, _userId));
+
+        Assert.Contains("không khớp", exception.Message);
     }
 
     [Fact]
@@ -109,7 +163,7 @@ public class SurveyServiceTests : IDisposable
     public async Task GetAsync_ResolvesConstructionLabel()
     {
         var created = await _sut.CreateAsync(ValidCreate(typeCode: "commercial"), _userId);
-        var got = await _sut.GetAsync(created.Id);
+        var got = await _sut.GetAsync(created.Id, _userId, false);
         Assert.NotNull(got);
         Assert.Equal("Thương mại", got!.ConstructionTypeLabel);
     }
@@ -117,7 +171,7 @@ public class SurveyServiceTests : IDisposable
     [Fact]
     public async Task GetAsync_UnknownReturnsNull()
     {
-        Assert.Null(await _sut.GetAsync(99999));
+        Assert.Null(await _sut.GetAsync(99999, _userId, false));
     }
 
     [Fact]
@@ -126,7 +180,7 @@ public class SurveyServiceTests : IDisposable
         var older = await _sut.CreateAsync(ValidCreate(date: DateTime.UtcNow.AddDays(-30)), _userId);
         var newer = await _sut.CreateAsync(ValidCreate(date: DateTime.UtcNow.AddDays(-1)), _userId);
 
-        var list = await _sut.ListAsync(new SurveyListParams { PageSize = 50 });
+        var list = await _sut.ListAsync(new SurveyListParams { PageSize = 50 }, _userId, false);
         Assert.Equal(2, list.Total);
         Assert.Equal(newer.Id, list.Items[0].Id);
         Assert.Equal(older.Id, list.Items[1].Id);
@@ -138,11 +192,12 @@ public class SurveyServiceTests : IDisposable
         await _sut.CreateAsync(ValidCreate(location: "Alpha site"), _userId);
         await _sut.CreateAsync(ValidCreate(location: "Beta site", typeCode: "commercial"), _userId);
 
-        var searched = await _sut.ListAsync(new SurveyListParams { Search = "Alpha" });
+        var searched = await _sut.ListAsync(new SurveyListParams { Search = "Alpha" }, _userId, false);
         Assert.Single(searched.Items);
         Assert.Contains("Alpha", searched.Items[0].Location);
 
-        var byType = await _sut.ListAsync(new SurveyListParams { ConstructionTypeCode = "commercial" });
+        var byType = await _sut.ListAsync(
+            new SurveyListParams { ConstructionTypeCode = "commercial" }, _userId, false);
         Assert.Single(byType.Items);
         Assert.Equal("commercial", byType.Items[0].ConstructionTypeCode);
     }
@@ -157,7 +212,7 @@ public class SurveyServiceTests : IDisposable
         {
             DateFrom = DateTime.UtcNow.AddDays(-10),
             DateTo = DateTime.UtcNow,
-        });
+        }, _userId, false);
         Assert.Single(list.Items);
         Assert.Equal(inside.Id, list.Items[0].Id);
     }
@@ -173,12 +228,99 @@ public class SurveyServiceTests : IDisposable
         rawB.DriveSyncStatus = SurveyDriveSyncStatus.Failed;
         await _db.SaveChangesAsync();
 
-        var list = await _sut.ListAsync(new SurveyListParams { DriveSyncStatus = "Synced,Failed" });
+        var list = await _sut.ListAsync(
+            new SurveyListParams { DriveSyncStatus = "Synced,Failed" }, _userId, false);
         Assert.Equal(2, list.Total);
 
-        var syncedOnly = await _sut.ListAsync(new SurveyListParams { DriveSyncStatus = "Synced" });
+        var syncedOnly = await _sut.ListAsync(
+            new SurveyListParams { DriveSyncStatus = "Synced" }, _userId, false);
         Assert.Single(syncedOnly.Items);
         Assert.Equal(a.Id, syncedOnly.Items[0].Id);
+    }
+
+    [Fact]
+    public async Task ListAndGetAsync_ScopedUserCannotSeeUnassignedSurvey()
+    {
+        var otherUser = AddUser("0900000011", "other.surveyor@example.com");
+        var otherProject = AddProject("OP-SURVEY-PRIVATE", otherUser.Id);
+        var privateSurvey = AddSurvey("SV-PRIVATE", otherProject.Id, otherUser.Id, otherUser.Id);
+        await _db.SaveChangesAsync();
+
+        var list = await _sut.ListAsync(new SurveyListParams { PageSize = 100 }, _userId, false);
+
+        Assert.DoesNotContain(list.Items, item => item.Id == privateSurvey.Id);
+        Assert.Null(await _sut.GetAsync(privateSurvey.Id, _userId, false));
+        Assert.False(await _sut.CanAccessAsync(privateSurvey.Id, _userId, false));
+    }
+
+    [Fact]
+    public async Task ListAndGetAsync_ViewAllUserCanSeeUnassignedSurvey()
+    {
+        var otherUser = AddUser("0900000012", "all.scope.owner@example.com");
+        var otherProject = AddProject("OP-SURVEY-ALL", otherUser.Id);
+        var privateSurvey = AddSurvey("SV-ALL", otherProject.Id, otherUser.Id, otherUser.Id);
+        await _db.SaveChangesAsync();
+
+        var list = await _sut.ListAsync(new SurveyListParams { PageSize = 100 }, _userId, true);
+
+        Assert.Contains(list.Items, item => item.Id == privateSurvey.Id);
+        Assert.NotNull(await _sut.GetAsync(privateSurvey.Id, _userId, true));
+        Assert.True(await _sut.CanAccessAsync(privateSurvey.Id, _userId, true));
+    }
+
+    [Fact]
+    public async Task CreateAsync_ScopedUserCannotCreateInAnotherUsersProject()
+    {
+        var otherUser = AddUser("0900000013", "foreign.project@example.com");
+        var otherProject = AddProject("OP-SURVEY-FOREIGN", otherUser.Id);
+        await _db.SaveChangesAsync();
+        var request = ValidCreate();
+        request.OperationalProjectId = otherProject.Id;
+
+        var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.CreateAsync(request, _userId));
+
+        Assert.Contains("dự án do mình tạo hoặc phụ trách", exception.Message);
+        Assert.False(await _db.Surveys.AnyAsync(survey => survey.OperationalProjectId == otherProject.Id));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ScopedUserCannotMoveSurveyToAnotherUsersProject()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(location: "Original scoped site"), _userId);
+        var otherUser = AddUser("0900000014", "foreign.destination@example.com");
+        var otherProject = AddProject("OP-SURVEY-DESTINATION", otherUser.Id);
+        await _db.SaveChangesAsync();
+        var request = ValidUpdate(created.Id, location: "Must not move");
+        request.OperationalProjectId = otherProject.Id;
+
+        var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(created.Id, request, _userId));
+
+        Assert.Contains("chuyển phiếu khảo sát", exception.Message);
+        var persisted = await _db.Surveys.AsNoTracking().SingleAsync(survey => survey.Id == created.Id);
+        Assert.Equal(_projectId, persisted.OperationalProjectId);
+        Assert.Equal("Original scoped site", persisted.Location);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AssignedSurveyorCannotTransferAssignmentWithoutProjectLeadership()
+    {
+        var projectOwner = AddUser("0900000015", "project.owner@example.com");
+        var replacement = AddUser("0900000016", "replacement.surveyor@example.com");
+        var project = AddProject("OP-SURVEY-ASSIGNED", projectOwner.Id);
+        var survey = AddSurvey("SV-ASSIGNED", project.Id, _userId, projectOwner.Id);
+        await _db.SaveChangesAsync();
+        var request = ValidUpdate(survey.Id, location: "Must not transfer", surveyorId: replacement.Id);
+        request.OperationalProjectId = project.Id;
+
+        var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(survey.Id, request, _userId));
+
+        Assert.Contains("phân công người khảo sát khác", exception.Message);
+        var persisted = await _db.Surveys.AsNoTracking().SingleAsync(item => item.Id == survey.Id);
+        Assert.Equal(_userId, persisted.SurveyorUserId);
+        Assert.Equal("SV-ASSIGNED", persisted.Location);
     }
 
     // ---------------- NIH-100 Update / Delete ----------------
@@ -191,6 +333,7 @@ public class SurveyServiceTests : IDisposable
             ConstructionTypeCode = typeCode,
             SurveyDate = date ?? DateTime.UtcNow.AddDays(-1),
             SurveyorUserId = surveyorId ?? _userId,
+            OperationalProjectId = _projectId,
             Note = note,
         };
 
@@ -292,12 +435,18 @@ public class SurveyServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_ExplicitOpportunityUnlink_QueuesOldDeleteAndHandsMediaToLegacyWorker()
+    public async Task UpdateAsync_ExplicitOpportunityUnlink_PreservesPersistedProjectRouting()
     {
         var customer = new Customer { Name = "Survey customer", Type = CustomerType.Company };
         _db.Customers.Add(customer);
         await _db.SaveChangesAsync();
-        var project = new OperationalProject { Code = "OP-SURVEY", Name = "Survey", CustomerId = customer.Id };
+        var project = new OperationalProject
+        {
+            Code = "OP-SURVEY",
+            Name = "Survey",
+            CustomerId = customer.Id,
+            ProjectManagerUserId = _userId,
+        };
         _db.OperationalProjects.Add(project);
         await _db.SaveChangesAsync();
         var opportunity = new Opportunity
@@ -309,6 +458,7 @@ public class SurveyServiceTests : IDisposable
         _db.Opportunities.Add(opportunity);
         await _db.SaveChangesAsync();
         var create = ValidCreate();
+        create.OperationalProjectId = project.Id;
         create.LinkedOpportunityId = opportunity.Id;
         var survey = await _sut.CreateAsync(create, _userId);
         var media = new SurveyMedia
@@ -330,20 +480,75 @@ public class SurveyServiceTests : IDisposable
 
         var request = ValidUpdate(survey.Id);
         request.LinkedOpportunityId = null;
+        request.OperationalProjectId = null;
         await _sut.UpdateAsync(survey.Id, request, _userId);
 
         Assert.Null((await _db.Surveys.FindAsync(survey.Id))!.LinkedOpportunityId);
-        Assert.Equal(SurveyMediaSyncStatus.Pending, media.SyncStatus);
-        Assert.Equal(0, media.SyncAttemptCount);
-        Assert.Null(media.DriveFileId);
-        Assert.NotNull(media.NextSyncAttemptAt);
+        Assert.Equal(project.Id, (await _db.Surveys.FindAsync(survey.Id))!.OperationalProjectId);
+        Assert.Equal(SurveyMediaSyncStatus.Synced, media.SyncStatus);
         _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
-            project.Id, null,
+            It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(),
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ChangingOperationalProject_StagesExistingMediaMove()
+    {
+        var customerId = (await _db.OperationalProjects.FindAsync(_projectId))!.CustomerId;
+        var previousProject = new OperationalProject
+        {
+            Code = "OP-SURVEY-PREVIOUS",
+            Name = "Previous survey project",
+            CustomerId = customerId,
+            ProjectManagerUserId = _userId,
+        };
+        _db.OperationalProjects.Add(previousProject);
+        await _db.SaveChangesAsync();
+        var survey = new Survey
+        {
+            Code = "SV-PROJECT-MOVE",
+            Location = "Project move site",
+            SurveyDate = DateTime.UtcNow,
+            OperationalProjectId = previousProject.Id,
+        };
+        _db.Surveys.Add(survey);
+        await _db.SaveChangesAsync();
+        var media = new SurveyMedia
+        {
+            SurveyId = survey.Id,
+            OriginalFileName = "move.jpg",
+            StoredFileName = "move.jpg",
+            ContentType = "image/jpeg",
+            Extension = ".jpg",
+            Size = 10,
+            RelativePath = $"/files/survey-media/{survey.Id}/move.jpg",
+        };
+        _db.SurveyMedia.Add(media);
+        await _db.SaveChangesAsync();
+
+        await _sut.UpdateAsync(survey.Id, ValidUpdate(survey.Id), _userId);
+
+        Assert.Equal(_projectId, survey.OperationalProjectId);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
+            previousProject.Id, _projectId,
             It.Is<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(files => files.Count == 1 &&
-                files.Single().SourceEntityType == "SurveyMedia" &&
-                files.Single().SourceSlot == SurveyMediaService.ProjectDocumentSlot &&
+                files.Single().Category == ProjectDocumentCategory.Survey &&
                 files.Single().SourceRecordId == media.Id),
             _userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ZeroOperationalProject_IsBlockedWithoutMutation()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(location: "Original site"), _userId);
+        var request = ValidUpdate(created.Id, location: "Must not be saved");
+        request.OperationalProjectId = 0;
+
+        var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.UpdateAsync(created.Id, request, _userId));
+
+        Assert.Contains("Dự án vận hành là bắt buộc", exception.Message);
+        Assert.Equal("Original site", (await _db.Surveys.FindAsync(created.Id))!.Location);
     }
 
     [Theory]
@@ -358,7 +563,7 @@ public class SurveyServiceTests : IDisposable
         raw.DriveSyncStatus = status;
         await _db.SaveChangesAsync();
 
-        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.True(await _sut.DeleteAsync(created.Id, _userId, false));
         Assert.False(await _db.Surveys.AnyAsync(s => s.Id == created.Id));
         Assert.True(await _db.Users.AnyAsync(u => u.Id == _userId));
     }
@@ -366,7 +571,7 @@ public class SurveyServiceTests : IDisposable
     [Fact]
     public async Task DeleteAsync_UnknownId_ReturnsFalse()
     {
-        Assert.False(await _sut.DeleteAsync(99999));
+        Assert.False(await _sut.DeleteAsync(99999, _userId, false));
     }
 
     // ---------------- NIH-101 Timeline ----------------
@@ -374,7 +579,7 @@ public class SurveyServiceTests : IDisposable
     [Fact]
     public async Task GetTimelineAsync_ReturnsNullWhenMissing()
     {
-        Assert.Null(await _sut.GetTimelineAsync(99999, 50));
+        Assert.Null(await _sut.GetTimelineAsync(99999, 50, _userId, false));
     }
 
     [Fact]
@@ -402,10 +607,56 @@ public class SurveyServiceTests : IDisposable
             });
         _db.SaveChanges();
 
-        var events = await _sut.GetTimelineAsync(created.Id, 50);
+        var events = await _sut.GetTimelineAsync(created.Id, 50, _userId, false);
         Assert.NotNull(events);
         Assert.Equal(2, events!.Count);
         Assert.Equal("newer", events[0].Message);
         Assert.Equal("older", events[1].Message);
+    }
+
+    private ApplicationUser AddUser(string phoneNumber, string email)
+    {
+        var user = new ApplicationUser
+        {
+            PhoneNumber = phoneNumber,
+            FullName = email,
+            Email = email,
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
+        };
+        _db.Users.Add(user);
+        _db.SaveChanges();
+        return user;
+    }
+
+    private OperationalProject AddProject(string code, int managerUserId)
+    {
+        var project = new OperationalProject
+        {
+            Code = code,
+            Name = code,
+            CustomerId = _db.OperationalProjects.Single(project => project.Id == _projectId).CustomerId,
+            ProjectManagerUserId = managerUserId,
+            CreatedByUserId = managerUserId,
+        };
+        _db.OperationalProjects.Add(project);
+        _db.SaveChanges();
+        return project;
+    }
+
+    private Survey AddSurvey(string code, int projectId, int surveyorUserId, int createdByUserId)
+    {
+        var survey = new Survey
+        {
+            Code = code,
+            Location = code,
+            SurveyDate = DateTime.UtcNow,
+            OperationalProjectId = projectId,
+            SurveyorUserId = surveyorUserId,
+            CreatedByUserId = createdByUserId,
+        };
+        _db.Surveys.Add(survey);
+        return survey;
     }
 }

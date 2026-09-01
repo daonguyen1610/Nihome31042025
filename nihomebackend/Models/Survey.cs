@@ -34,6 +34,10 @@ public class Survey
     public int? LinkedOpportunityId { get; set; }
     public Opportunity? LinkedOpportunity { get; set; }
 
+    /// <summary>Internal project used as the immutable routing source for Survey documents.</summary>
+    public int OperationalProjectId { get; set; }
+    public OperationalProject OperationalProject { get; set; } = null!;
+
     /// <summary>Free-text working note.</summary>
     public string? Note { get; set; }
 
@@ -52,6 +56,7 @@ public class Survey
 
     public List<SurveyMedia> Media { get; set; } = new();
     public List<SurveyChecklistResult> ChecklistResults { get; set; } = new();
+    public List<SurveySiteCondition> SiteConditions { get; set; } = new();
 
     // --- Audit ---
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

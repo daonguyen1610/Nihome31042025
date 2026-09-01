@@ -54,6 +54,7 @@ import {
   SURVEY_DRIVE_STATUSES,
   type CreateSurveyRequest,
   type MasterDataOption,
+  type OperationalProjectListItemResponse,
   type OpportunityResponse,
   type SurveyDriveSyncStatus,
   type SurveyListItemResponse,
@@ -100,6 +101,7 @@ const emptyForm = (): CreateSurveyRequest => ({
   surveyorUserId: null,
   linkedProjectId: null,
   linkedOpportunityId: null,
+  operationalProjectId: null,
   note: "",
 });
 
@@ -183,25 +185,28 @@ const AdminSurveys = () => {
   const [constructionTypes, setConstructionTypes] = useState<MasterDataOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [operationalProjects, setOperationalProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [ctResp, projResp, oppResp] = await Promise.all([
+        const [ctResp, projResp, operationalResp, oppResp] = await Promise.all([
           adminApi.getMasterDataOptions("construction_type"),
           contentApi.getProjects().catch(() => ({ data: [] })),
+          adminApi.listOperationalProjects({ pageSize: 100 }).catch(() => ({
+            data: { total: 0, page: 1, pageSize: 100, items: [] },
+          })),
           adminApi.listOpportunities({ pageSize: 200 }).catch(() => ({
             data: { total: 0, page: 1, pageSize: 200, items: [] },
           })),
         ]);
         if (cancelled) return;
         setConstructionTypes((ctResp.data ?? []).filter((o) => o.isActive));
-        // Projects endpoint is anonymous and returns full content rows;
-        // we only need { id, name } for the filter dropdown.
         const projectRows = Array.isArray(projResp.data) ? projResp.data : [];
-        setProjects(projectRows.map((p) => ({ id: p.id, name: p.name ?? `#${p.id}` })));
+        setProjects(projectRows.map((project) => ({ id: project.id, name: project.name ?? `#${project.id}` })));
+        setOperationalProjects(operationalResp.data.items ?? []);
         setOpportunities(oppResp.data.items ?? []);
 
         if (canPickSurveyor) {
@@ -293,6 +298,13 @@ const AdminSurveys = () => {
     () => projects.map((p) => ({ value: String(p.id), label: p.name })),
     [projects],
   );
+  const operationalProjectOptions = useMemo(
+    () => operationalProjects.map((project) => ({
+      value: String(project.id),
+      label: `${project.code} · ${project.name}`,
+    })),
+    [operationalProjects],
+  );
 
   const openDetail = (id: number) => navigate(`/admin/surveys/${id}`);
 
@@ -336,6 +348,7 @@ const AdminSurveys = () => {
         surveyorUserId: data.surveyorUserId ?? null,
         linkedProjectId: data.linkedProjectId ?? null,
         linkedOpportunityId: data.linkedOpportunityId ?? null,
+        operationalProjectId: data.operationalProjectId,
         note: data.note ?? "",
       });
       setFormError(null);
@@ -361,6 +374,16 @@ const AdminSurveys = () => {
       setFormError(t("surveys.form.surveyDateRequired"));
       return;
     }
+    const selectedOpportunity = opportunities.find((item) => item.id === form.linkedOpportunityId);
+    if (!form.operationalProjectId) {
+      setFormError(t("surveys.form.operationalProjectRequired"));
+      return;
+    }
+    if (selectedOpportunity?.operationalProjectId != null &&
+        selectedOpportunity.operationalProjectId !== form.operationalProjectId) {
+      setFormError(t("surveys.form.projectOpportunityMismatch"));
+      return;
+    }
     setSaving(true);
     try {
       const payload: CreateSurveyRequest = {
@@ -370,6 +393,7 @@ const AdminSurveys = () => {
         surveyorUserId: form.surveyorUserId ?? null,
         linkedProjectId: form.linkedProjectId ?? null,
         linkedOpportunityId: form.linkedOpportunityId ?? null,
+        operationalProjectId: form.operationalProjectId,
         note: form.note?.trim() || null,
       };
       if (isEdit) {
@@ -876,22 +900,31 @@ const AdminSurveys = () => {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <Label>{t("surveys.field.linkedProject")}</Label>
+                <Label>{t("surveys.field.operationalProject")} *</Label>
                 <SearchableSelect
-                  value={form.linkedProjectId != null ? String(form.linkedProjectId) : ""}
-                  onChange={(v) => setForm({ ...form, linkedProjectId: v ? Number(v) : null })}
+                  value={form.operationalProjectId != null ? String(form.operationalProjectId) : ""}
+                  onChange={(v) => setForm({ ...form, operationalProjectId: v ? Number(v) : null })}
                   options={[
-                    { value: "", label: t("surveys.form.linkedProjectNone") },
-                    ...projectOptions,
+                    { value: "", label: t("surveys.form.operationalProjectPlaceholder") },
+                    ...operationalProjectOptions,
                   ]}
-                  placeholder={t("surveys.form.linkedProjectNone")}
+                  placeholder={t("surveys.form.operationalProjectPlaceholder")}
                 />
               </div>
               <div className="space-y-1">
                 <Label>{t("surveys.field.linkedOpportunity")}</Label>
                 <SearchableSelect
                   value={form.linkedOpportunityId != null ? String(form.linkedOpportunityId) : ""}
-                  onChange={(v) => setForm({ ...form, linkedOpportunityId: v ? Number(v) : null })}
+                  onChange={(v) => {
+                    const opportunityId = v ? Number(v) : null;
+                    const opportunity = opportunities.find((item) => item.id === opportunityId);
+                    setForm({
+                      ...form,
+                      linkedOpportunityId: opportunityId,
+                      operationalProjectId: opportunity?.operationalProjectId ?? form.operationalProjectId,
+                    });
+                    setFormError(null);
+                  }}
                   options={[
                     { value: "", label: t("surveys.form.linkedOpportunityNone") },
                     ...opportunities.map((o) => ({ value: String(o.id), label: o.name })),

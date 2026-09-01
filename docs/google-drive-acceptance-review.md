@@ -37,7 +37,7 @@ The requested outcome is:
 | AC-07 | Store Contract, attachment, and appendix uploads in Drive | **Partial** | Managed files stage sidecars when the Contract resolves to an Operational Project. No physical Contract folder exists. | Add approved contract hierarchy and pre-link behavior; backfill existing records. |
 | AC-08 | Store direct Operational Project uploads in Drive | **Pass — implemented subset** | Fake-adapter HTTP tests cover upload/download/delete, idempotent replay, and authorization revalidation before replay. The review operator also recorded a configured-Drive round-trip, but no retained artifact makes that run independent release evidence. | Satisfy AC-22 and AC-23 for release evidence. |
 | AC-09 | Store Concept, Basic, Shop Drawing, IFC, and related Design uploads in Drive | **Partial** | Basic Design and Shop Drawing managed files stage sidecars. Concept upload and IFC-specific staging are absent. | Implement Concept and IFC sources, then add source lifecycle and HTTP tests. |
-| AC-10 | Store Survey uploads in Drive | **Partial** | Linked Survey media uses the project `Survey` category. Unlinked Survey media retains a separate legacy root workflow. | Confirm whether unlinked Survey is an accepted exception or must be migrated into the universal catalog. |
+| AC-10 | Store Survey uploads in Drive | **Pass** | Every Survey requires an Operational Project, and Survey media uses that project's `Survey` category and synchronization worker. | Maintain required project routing on every Survey write and migration path. |
 | AC-11 | Store Permit and legal uploads in Drive | **Partial** | Managed submitted and issued Permit files stage sidecars when linked to an Operational Project. | Backfill existing managed files and define pre-link behavior. |
 | AC-12 | Store Construction diary, task, punch-list, and acceptance uploads in Drive | **Partial** | Managed Acceptance files stage sidecars. Site Diary, Construction Task, and Punch List attachments are not implemented. | Implement missing construction upload models and Drive staging. |
 | AC-13 | Store As-built and Handover uploads in Drive | **Partial** | Managed As-built and Handover files stage sidecars when linked. | Add approved backfill and prove all legacy paths. |
@@ -66,7 +66,7 @@ The requested outcome is:
 | Basic Design document | Compatibility sidecar when project-linked |
 | Shop Drawing | Compatibility sidecar when project-linked |
 | Permit submitted/issued file | Compatibility sidecar when project-linked |
-| Survey media | Project sidecar when linked; legacy worker when unlinked |
+| Survey media | Required Operational Project catalog and project Drive worker |
 | Acceptance document | Compatibility sidecar when project-linked |
 | As-built document | Compatibility sidecar when project-linked |
 | Handover document | Compatibility sidecar when project-linked |

@@ -509,7 +509,7 @@ const AdminOpportunities = () => {
           </div>
         </header>
 
-        <section className="grid items-end gap-3 rounded-lg border bg-card p-3 md:grid-cols-6">
+        <section className="grid items-end gap-3 rounded-lg border bg-card p-3 md:grid-cols-7">
           <div className="md:col-span-2">
             <Label className="text-xs" htmlFor="opportunity-search">{t("opportunities.filter.search")}</Label>
             <div className="relative">

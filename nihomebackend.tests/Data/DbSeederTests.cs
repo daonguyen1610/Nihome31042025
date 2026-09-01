@@ -127,6 +127,13 @@ public class DbSeederTests : IDisposable
             Assert.NotNull(q.Note);
             Assert.StartsWith("[SAMPLE_QUOTE]", q.Note);
         });
+        Assert.All(quotes.Where(q => q.Method == QuoteMethod.UnitCost), q =>
+        {
+            Assert.Equal(QuoteRateSource.Override, q.RateSource);
+            Assert.False(string.IsNullOrWhiteSpace(q.RateOverrideReason));
+            Assert.NotNull(q.RateOverrideByUserId);
+            Assert.NotNull(q.RateOverrideAt);
+        });
         // Every declared QuoteStatus (bar Draft, which we intentionally have
         // two of) must be present at least once for the filter/badge demo.
         var statuses = quotes.Select(q => q.Status).ToHashSet();
@@ -139,7 +146,17 @@ public class DbSeederTests : IDisposable
         Assert.Contains(QuoteStatus.Expired, statuses);
         Assert.Contains(QuoteStatus.Cancelled, statuses);
         // A version snapshot exists so the Versions tab has V1 + V2.
-        Assert.NotEmpty(_db.QuoteVersionSnapshots.ToList());
+        var snapshots = _db.QuoteVersionSnapshots.ToList();
+        Assert.NotEmpty(snapshots);
+        var unitCostSnapshots = snapshots.Where(s => s.Method == QuoteMethod.UnitCost).ToList();
+        Assert.NotEmpty(unitCostSnapshots);
+        Assert.All(unitCostSnapshots, snapshot =>
+        {
+            Assert.Equal(QuoteRateSource.Override, snapshot.RateSource);
+            Assert.False(string.IsNullOrWhiteSpace(snapshot.RateOverrideReason));
+            Assert.NotNull(snapshot.RateOverrideByUserId);
+            Assert.NotNull(snapshot.RateOverrideAt);
+        });
     }
 
     [Fact]

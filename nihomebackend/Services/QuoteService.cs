@@ -38,6 +38,7 @@ public class QuoteService(
     AppDbContext db,
     INotificationService notifications,
     IQuoteDocumentService quoteDocuments,
+    IQuotePdfService quotePdf,
     ILogger<QuoteService> logger,
     IProjectDocumentStagingService projectDocuments) : IQuoteService
 {
@@ -124,6 +125,7 @@ public class QuoteService(
             .AsNoTracking()
             .Include(q => q.Opportunity).ThenInclude(o => o.Customer)
             .Include(q => q.Owner)
+            .Include(q => q.MaterialRateRevision).ThenInclude(revision => revision!.Catalog)
             .Include(q => q.Items)
             .Include(q => q.ApprovalLogs).ThenInclude(l => l.By)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
@@ -139,7 +141,8 @@ public class QuoteService(
         int callerUserId,
         bool canManage,
         CancellationToken ct = default,
-        bool canSeeAll = false)
+        bool canSeeAll = false,
+        bool canOverrideRate = false)
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền tạo báo giá.");
         request.Items ??= new List<QuoteItemInput>();
@@ -151,6 +154,11 @@ public class QuoteService(
         {
             throw new QuoteOperationException("Không tìm thấy Cơ hội trong phạm vi được phân công.");
         }
+        if (!canSeeAll && request.OwnerUserId.HasValue && request.OwnerUserId.Value != callerUserId)
+            throw new QuoteOperationException("Bạn không có quyền gán báo giá cho người khác.");
+        if (request.OwnerUserId.HasValue &&
+            !await db.Users.AsNoTracking().AnyAsync(user => user.Id == request.OwnerUserId.Value && user.IsActive, ct))
+            throw new QuoteOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại hoặc đã ngừng hoạt động.");
 
         // A lost opportunity remains closed. A won opportunity without a winning
         // quote is the supported recovery path from the demo defect (NIH-449):
@@ -168,9 +176,14 @@ public class QuoteService(
                 $"Cơ hội #{opportunity.Id} đã có báo giá thắng #{opportunity.WonQuoteId.Value}.");
         }
 
-        ValidateMethodPayload(request.Method, request.AreaSqm, request.UnitPricePerSqm, request.Items);
-
         var now = DateTime.UtcNow;
+        var rate = request.Method == QuoteMethod.UnitCost
+            ? await ResolveNewRateAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate,
+                request.UnitPricePerSqm, request.RateOverrideReason, callerUserId, canOverrideRate, ct)
+            : null;
+        var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
+        ValidateMethodPayload(request.Method, request.AreaSqm, appliedUnitPrice, request.Items);
+
         var ownerId = request.OwnerUserId ?? opportunity.OwnerUserId ?? callerUserId;
         var validUntil = request.ValidUntil ?? now.AddDays(DefaultValidityDays);
         if (validUntil < now.Date)
@@ -187,10 +200,19 @@ public class QuoteService(
             Method = request.Method,
             Version = 1,
             AreaSqm = request.Method == QuoteMethod.UnitCost ? request.AreaSqm : null,
-            UnitPricePerSqm = request.Method == QuoteMethod.UnitCost ? request.UnitPricePerSqm : null,
+            UnitPricePerSqm = request.Method == QuoteMethod.UnitCost ? appliedUnitPrice : null,
             PackageDescription = request.Method == QuoteMethod.UnitCost
                 ? request.PackageDescription?.Trim()
                 : null,
+            MaterialRateRevisionId = rate?.Revision.Id,
+            PricingEffectiveDate = rate?.EffectiveDate,
+            CatalogUnitPricePerSqm = rate?.CatalogUnitPrice,
+            RateSource = rate?.Source ?? QuoteRateSource.Override,
+            RateOverrideReason = rate is null
+                ? "Giá nhập trực tiếp theo quy trình hiện hành."
+                : rate.OverrideReason,
+            RateOverrideByUserId = rate?.OverrideByUserId,
+            RateOverrideAt = rate?.OverrideAt,
             DiscountPercent = request.DiscountPercent,
             VatPercent = request.VatPercent,
             ValidUntil = validUntil,
@@ -243,7 +265,8 @@ public class QuoteService(
         int callerUserId,
         bool canManage,
         bool canSeeAll,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool canOverrideRate = false)
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền chỉnh sửa báo giá.");
         request.Items ??= new List<QuoteItemInput>();
@@ -265,10 +288,26 @@ public class QuoteService(
         {
             throw new QuoteOperationException("Bạn không có quyền gán báo giá cho người khác.");
         }
+        if (request.OwnerUserId.HasValue &&
+            !await db.Users.AsNoTracking().AnyAsync(user => user.Id == request.OwnerUserId.Value && user.IsActive, ct))
+            throw new QuoteOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại hoặc đã ngừng hoạt động.");
 
-        ValidateMethodPayload(quote.Method, request.AreaSqm, request.UnitPricePerSqm, request.Items);
+        var rate = quote.Method == QuoteMethod.UnitCost
+            ? await ResolveUpdatedRateAsync(quote, request, callerUserId, canOverrideRate, ct)
+            : null;
+        var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
+        ValidateMethodPayload(quote.Method, request.AreaSqm, appliedUnitPrice, request.Items);
+        if (quote.Method == QuoteMethod.UnitCost) request.UnitPricePerSqm = appliedUnitPrice;
 
         var changes = DetectChanges(quote, request);
+        if (rate is not null && (quote.MaterialRateRevisionId != rate.Revision.Id ||
+            quote.PricingEffectiveDate != rate.EffectiveDate ||
+            quote.CatalogUnitPricePerSqm != rate.CatalogUnitPrice ||
+            quote.RateSource != rate.Source ||
+            quote.RateOverrideReason != rate.OverrideReason))
+        {
+            changes = new QuoteChangeSet(Any: true, Material: true);
+        }
 
         // Return before touching the entity at all. Not merely to avoid a stray log:
         // the write path below calls QuoteItems.RemoveRange and rebuilds every BOQ
@@ -316,6 +355,16 @@ public class QuoteService(
         quote.PackageDescription = quote.Method == QuoteMethod.UnitCost
             ? request.PackageDescription?.Trim()
             : null;
+        if (rate is not null)
+        {
+            quote.MaterialRateRevisionId = rate.Revision.Id;
+            quote.PricingEffectiveDate = rate.EffectiveDate;
+            quote.CatalogUnitPricePerSqm = rate.CatalogUnitPrice;
+            quote.RateSource = rate.Source;
+            quote.RateOverrideReason = rate.OverrideReason;
+            quote.RateOverrideByUserId = rate.OverrideByUserId;
+            quote.RateOverrideAt = rate.OverrideAt;
+        }
         quote.DiscountPercent = request.DiscountPercent;
         quote.VatPercent = request.VatPercent;
         if (request.ValidUntil.HasValue) quote.ValidUntil = request.ValidUntil.Value;
@@ -531,26 +580,54 @@ public class QuoteService(
         var quote = await db.Quotes.AsNoTracking()
             .Include(q => q.Items)
             .Include(q => q.VersionSnapshots)
+            .Include(q => q.MaterialRateRevision).ThenInclude(revision => revision!.Catalog)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
 
+        var snapshotRevisionIds = quote.VersionSnapshots
+            .Where(snapshot => snapshot.MaterialRateRevisionId.HasValue)
+            .Select(snapshot => snapshot.MaterialRateRevisionId!.Value)
+            .Distinct()
+            .ToList();
+        var snapshotRevisions = await db.MaterialRateRevisions.AsNoTracking()
+            .Include(revision => revision.Catalog)
+            .Where(revision => snapshotRevisionIds.Contains(revision.Id))
+            .ToDictionaryAsync(revision => revision.Id, ct);
+
         var versions = quote.VersionSnapshots
             .OrderBy(s => s.VersionNumber)
-            .Select(s => new QuoteVersionResponse
+            .Select(s =>
             {
-                Version = s.VersionNumber,
-                Method = s.Method.ToString(),
-                AreaSqm = s.AreaSqm,
-                UnitPricePerSqm = s.UnitPricePerSqm,
-                PackageDescription = s.PackageDescription,
-                Subtotal = s.Subtotal,
-                DiscountPercent = s.DiscountPercent,
-                VatPercent = s.VatPercent,
-                GrandTotal = s.GrandTotal,
-                Items = DeserializeItems(s.ItemsJson),
-                CapturedAt = s.CreatedAt,
-                IsCurrent = false,
+                MaterialRateRevision? revision = null;
+                if (s.MaterialRateRevisionId.HasValue)
+                    snapshotRevisions.TryGetValue(s.MaterialRateRevisionId.Value, out revision);
+                return new QuoteVersionResponse
+                {
+                    Version = s.VersionNumber,
+                    Method = s.Method.ToString(),
+                    AreaSqm = s.AreaSqm,
+                    UnitPricePerSqm = s.UnitPricePerSqm,
+                    PackageDescription = s.PackageDescription,
+                    MaterialRateRevisionId = s.MaterialRateRevisionId,
+                    MaterialRateCatalogId = revision?.CatalogId,
+                    MaterialRateCatalogCode = revision?.Catalog.Code,
+                    MaterialRateCatalogName = revision?.Catalog.Name,
+                    MaterialRateRevisionVersion = revision?.Version,
+                    PricingEffectiveDate = s.PricingEffectiveDate,
+                    CatalogUnitPricePerSqm = s.CatalogUnitPricePerSqm,
+                    RateSource = s.RateSource.ToString(),
+                    RateOverrideReason = s.RateOverrideReason,
+                    RateOverrideByUserId = s.RateOverrideByUserId,
+                    RateOverrideAt = s.RateOverrideAt,
+                    Subtotal = s.Subtotal,
+                    DiscountPercent = s.DiscountPercent,
+                    VatPercent = s.VatPercent,
+                    GrandTotal = s.GrandTotal,
+                    Items = DeserializeItems(s.ItemsJson),
+                    CapturedAt = s.CreatedAt,
+                    IsCurrent = false,
+                };
             }).ToList();
 
         versions.Add(new QuoteVersionResponse
@@ -560,6 +637,17 @@ public class QuoteService(
             AreaSqm = quote.AreaSqm,
             UnitPricePerSqm = quote.UnitPricePerSqm,
             PackageDescription = quote.PackageDescription,
+            MaterialRateRevisionId = quote.MaterialRateRevisionId,
+            MaterialRateCatalogId = quote.MaterialRateRevision?.CatalogId,
+            MaterialRateCatalogCode = quote.MaterialRateRevision?.Catalog?.Code,
+            MaterialRateCatalogName = quote.MaterialRateRevision?.Catalog?.Name,
+            MaterialRateRevisionVersion = quote.MaterialRateRevision?.Version,
+            PricingEffectiveDate = quote.PricingEffectiveDate,
+            CatalogUnitPricePerSqm = quote.CatalogUnitPricePerSqm,
+            RateSource = quote.RateSource.ToString(),
+            RateOverrideReason = quote.RateOverrideReason,
+            RateOverrideByUserId = quote.RateOverrideByUserId,
+            RateOverrideAt = quote.RateOverrideAt,
             Subtotal = quote.Subtotal,
             DiscountPercent = quote.DiscountPercent,
             VatPercent = quote.VatPercent,
@@ -570,6 +658,13 @@ public class QuoteService(
         });
 
         return new QuoteVersionsResponse { QuoteId = quote.Id, Versions = versions };
+    }
+
+    public async Task<byte[]?> ExportPdfAsync(
+        int id, int callerUserId, bool canSeeAll, string languageCode, CancellationToken ct = default)
+    {
+        var quote = await GetAsync(id, callerUserId, canSeeAll, ct);
+        return quote is null ? null : await quotePdf.CreateAsync(quote, languageCode, ct);
     }
 
     // ============================== Internals ==============================
@@ -749,6 +844,95 @@ public class QuoteService(
         }
         return $"{prefix}{next:D4}";
     }
+
+    private sealed record ResolvedRate(
+        MaterialRateRevision Revision,
+        DateOnly EffectiveDate,
+        decimal CatalogUnitPrice,
+        decimal AppliedUnitPrice,
+        QuoteRateSource Source,
+        string? OverrideReason,
+        int? OverrideByUserId,
+        DateTime? OverrideAt);
+
+    private async Task<ResolvedRate> ResolveNewRateAsync(
+        int? catalogId,
+        DateOnly? effectiveDate,
+        decimal? requestedUnitPrice,
+        string? overrideReason,
+        int callerUserId,
+        bool canOverrideRate,
+        CancellationToken ct)
+    {
+        if (!catalogId.HasValue)
+            throw new QuoteOperationException("Báo giá Suất đầu tư phải chọn danh mục đơn giá vật liệu.");
+        if (!effectiveDate.HasValue)
+            throw new QuoteOperationException("Báo giá Suất đầu tư phải chọn ngày áp dụng đơn giá.");
+        return await ResolveCatalogRateAsync(catalogId.Value, effectiveDate.Value, requestedUnitPrice,
+            overrideReason, callerUserId, canOverrideRate, ct);
+    }
+
+    private async Task<ResolvedRate?> ResolveUpdatedRateAsync(
+        Quote quote,
+        UpdateQuoteRequest request,
+        int callerUserId,
+        bool canOverrideRate,
+        CancellationToken ct)
+    {
+        if (!quote.MaterialRateRevisionId.HasValue && !request.MaterialRateCatalogId.HasValue)
+            return null;
+
+        var catalogId = request.MaterialRateCatalogId ?? await db.MaterialRateRevisions.AsNoTracking()
+            .Where(revision => revision.Id == quote.MaterialRateRevisionId)
+            .Select(revision => (int?)revision.CatalogId)
+            .SingleOrDefaultAsync(ct)
+            ?? throw new QuoteOperationException("Không tìm thấy nguồn đơn giá của báo giá.");
+        var effectiveDate = request.PricingEffectiveDate ?? quote.PricingEffectiveDate
+            ?? throw new QuoteOperationException("Báo giá thiếu ngày áp dụng đơn giá.");
+        return await ResolveCatalogRateAsync(catalogId, effectiveDate, request.UnitPricePerSqm,
+            request.RateOverrideReason, callerUserId, canOverrideRate, ct);
+    }
+
+    private async Task<ResolvedRate> ResolveCatalogRateAsync(
+        int catalogId,
+        DateOnly effectiveDate,
+        decimal? requestedUnitPrice,
+        string? overrideReason,
+        int callerUserId,
+        bool canOverrideRate,
+        CancellationToken ct)
+    {
+        var revision = await db.MaterialRateRevisions.AsNoTracking()
+            .Include(item => item.Catalog)
+            .Include(item => item.Lines)
+            .Where(item => item.CatalogId == catalogId && item.Catalog.IsActive &&
+                item.Status == MaterialRateRevisionStatus.Approved &&
+                item.EffectiveFrom <= effectiveDate &&
+                (!item.EffectiveTo.HasValue || item.EffectiveTo.Value >= effectiveDate))
+            .OrderByDescending(item => item.EffectiveFrom)
+            .ThenByDescending(item => item.Version)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new QuoteOperationException("Không có phiên bản đơn giá đã duyệt có hiệu lực cho ngày đã chọn.");
+        var catalogUnitPrice = RoundMoney(revision.TotalRatePerSqm);
+        if (catalogUnitPrice <= 0)
+            throw new QuoteOperationException("Phiên bản đơn giá có hiệu lực phải có tổng đơn giá/m² lớn hơn 0.");
+
+        var appliedUnitPrice = requestedUnitPrice ?? catalogUnitPrice;
+        if (appliedUnitPrice == catalogUnitPrice)
+            return new ResolvedRate(revision, effectiveDate, catalogUnitPrice, appliedUnitPrice,
+                QuoteRateSource.Catalog, null, null, null);
+
+        if (!canOverrideRate)
+            throw new QuoteOperationException("Không có quyền ghi đè đơn giá danh mục.");
+        var reason = overrideReason?.Trim();
+        if (reason is null || reason.Length is < 10 or > 500 || !ContainsVietnamese(reason))
+            throw new QuoteOperationException("Lý do ghi đè đơn giá phải bằng tiếng Việt và dài từ 10 đến 500 ký tự.");
+        return new ResolvedRate(revision, effectiveDate, catalogUnitPrice, appliedUnitPrice,
+            QuoteRateSource.Override, reason, callerUserId, DateTime.UtcNow);
+    }
+
+    private static bool ContainsVietnamese(string value) => value.Any(character =>
+        "ăâđêôơưĂÂĐÊÔƠƯáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵÁÀẢÃẠẤẦẨẪẬẮẰẲẴẶÉÈẺẼẸẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌỐỒỔỖỘỚỜỞỠỢÚÙỦŨỤỨỪỬỮỰÝỲỶỸỴ".Contains(character));
 
     /// <summary>
     /// Whether the payload differs from the stored quote at all, and whether it
@@ -935,6 +1119,13 @@ public class QuoteService(
         AreaSqm = q.AreaSqm,
         UnitPricePerSqm = q.UnitPricePerSqm,
         PackageDescription = q.PackageDescription,
+        MaterialRateRevisionId = q.MaterialRateRevisionId,
+        PricingEffectiveDate = q.PricingEffectiveDate,
+        CatalogUnitPricePerSqm = q.CatalogUnitPricePerSqm,
+        RateSource = q.RateSource,
+        RateOverrideReason = q.RateOverrideReason,
+        RateOverrideByUserId = q.RateOverrideByUserId,
+        RateOverrideAt = q.RateOverrideAt,
         Subtotal = q.Subtotal,
         DiscountPercent = q.DiscountPercent,
         VatPercent = q.VatPercent,
@@ -984,6 +1175,17 @@ public class QuoteService(
         AreaSqm = q.AreaSqm,
         UnitPricePerSqm = q.UnitPricePerSqm,
         PackageDescription = q.PackageDescription,
+        MaterialRateRevisionId = q.MaterialRateRevisionId,
+        MaterialRateCatalogId = q.MaterialRateRevision?.CatalogId,
+        MaterialRateCatalogCode = q.MaterialRateRevision?.Catalog?.Code,
+        MaterialRateCatalogName = q.MaterialRateRevision?.Catalog?.Name,
+        MaterialRateRevisionVersion = q.MaterialRateRevision?.Version,
+        PricingEffectiveDate = q.PricingEffectiveDate,
+        CatalogUnitPricePerSqm = q.CatalogUnitPricePerSqm,
+        RateSource = q.RateSource.ToString(),
+        RateOverrideReason = q.RateOverrideReason,
+        RateOverrideByUserId = q.RateOverrideByUserId,
+        RateOverrideAt = q.RateOverrideAt,
         Subtotal = q.Subtotal,
         DiscountPercent = q.DiscountPercent,
         VatPercent = q.VatPercent,

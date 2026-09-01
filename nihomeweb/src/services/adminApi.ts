@@ -442,6 +442,7 @@ export interface LeadResponse {
   phone?: string;
   email?: string;
   sourceCode: string;
+  segmentCode: string;
   status: LeadStatus;
   ownerUserId?: number;
   ownerName?: string;
@@ -468,6 +469,7 @@ export interface CreateLeadRequest {
   phone?: string;
   email?: string;
   sourceCode: string;
+  segmentCode: string;
   ownerUserId?: number | null;
   note?: string;
 }
@@ -479,6 +481,7 @@ export interface UpdateLeadRequest {
   phone?: string;
   email?: string;
   sourceCode: string;
+  segmentCode: string;
   status: LeadStatus;
   ownerUserId?: number | null;
   note?: string;
@@ -512,6 +515,7 @@ export interface CreateLeadActivityRequest {
 export interface LeadListParams {
   status?: LeadStatus;
   sourceCode?: string;
+  segmentCode?: string;
   ownerUserId?: number;
   search?: string;
   page?: number;
@@ -1396,6 +1400,17 @@ export interface QuoteVersionResponse {
   areaSqm?: number;
   unitPricePerSqm?: number;
   packageDescription?: string;
+  materialRateRevisionId?: number | null;
+  materialRateCatalogId?: number | null;
+  materialRateCatalogCode?: string | null;
+  materialRateCatalogName?: string | null;
+  materialRateRevisionVersion?: number | null;
+  pricingEffectiveDate?: string | null;
+  catalogUnitPricePerSqm?: number | null;
+  rateSource: "Catalog" | "Override";
+  rateOverrideReason?: string | null;
+  rateOverrideByUserId?: number | null;
+  rateOverrideAt?: string | null;
   subtotal: number;
   discountPercent: number;
   vatPercent: number;
@@ -1420,6 +1435,17 @@ export interface QuoteResponse {
   areaSqm?: number;
   unitPricePerSqm?: number;
   packageDescription?: string;
+  materialRateRevisionId?: number | null;
+  materialRateCatalogId?: number | null;
+  materialRateCatalogCode?: string | null;
+  materialRateCatalogName?: string | null;
+  materialRateRevisionVersion?: number | null;
+  pricingEffectiveDate?: string | null;
+  catalogUnitPricePerSqm?: number | null;
+  rateSource: "Catalog" | "Override";
+  rateOverrideReason?: string | null;
+  rateOverrideByUserId?: number | null;
+  rateOverrideAt?: string | null;
   subtotal: number;
   discountPercent: number;
   vatPercent: number;
@@ -1489,6 +1515,9 @@ export interface CreateQuoteRequest {
   method: QuoteMethod;
   areaSqm?: number | null;
   unitPricePerSqm?: number | null;
+  materialRateCatalogId?: number | null;
+  pricingEffectiveDate?: string | null;
+  rateOverrideReason?: string | null;
   packageDescription?: string;
   items?: QuoteItemInput[];
   discountPercent: number;
@@ -1502,6 +1531,9 @@ export interface UpdateQuoteRequest {
   ownerUserId?: number | null;
   areaSqm?: number | null;
   unitPricePerSqm?: number | null;
+  materialRateCatalogId?: number | null;
+  pricingEffectiveDate?: string | null;
+  rateOverrideReason?: string | null;
   packageDescription?: string;
   items?: QuoteItemInput[];
   discountPercent: number;
@@ -1519,6 +1551,76 @@ export interface ExtendQuoteValidityRequest {
   rowVersion?: string;
   newValidUntil: string;
   note?: string;
+}
+
+export type MaterialRateRevisionStatus = "Draft" | "Approved" | "Rejected" | "Retired";
+
+export interface MaterialRateCatalogResponse {
+  id: number;
+  code: string;
+  name: string;
+  description?: string | null;
+  currency: string;
+  isActive: boolean;
+  revisionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaterialRateLineResponse {
+  id: number;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  normPerSqm: number;
+  unitRate: number;
+  wastePercent: number;
+  amountPerSqm: number;
+  sortOrder: number;
+}
+
+export interface MaterialRateRevisionResponse {
+  id: number;
+  catalogId: number;
+  catalogCode: string;
+  catalogName: string;
+  currency: string;
+  version: number;
+  status: MaterialRateRevisionStatus;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  note?: string | null;
+  decisionNote?: string | null;
+  decidedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  totalRatePerSqm: number;
+  lines: MaterialRateLineResponse[];
+}
+
+export interface UpsertMaterialRateCatalogRequest {
+  code: string;
+  name: string;
+  description?: string | null;
+  currency: string;
+  isActive: boolean;
+}
+
+export interface CreateMaterialRateRevisionRequest {
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  note?: string | null;
+}
+
+export interface CsvImportError {
+  row?: number | null;
+  column?: number | null;
+  message: string;
+}
+
+export interface MaterialRateImportResponse {
+  importedCount: number;
+  errors: CsvImportError[];
 }
 
 export interface QuoteListParams {
@@ -1776,6 +1878,65 @@ export interface TenderTimelineEvent {
   userName?: string | null;
 }
 
+export type TenderEstimateStatus = "Draft" | "Submitted" | "Approved" | "Rejected";
+
+export interface CsvImportError {
+  row?: number | null;
+  column?: number | null;
+  message: string;
+}
+
+export interface TenderEstimateLineResponse {
+  id: number;
+  itemCode: string;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitCost: number;
+  bidUnitPrice: number;
+  costAmount: number;
+  bidAmount: number;
+  note?: string | null;
+  sortOrder: number;
+}
+
+export interface TenderEstimateRevisionResponse {
+  id: number;
+  tenderId: number;
+  versionNumber: number;
+  status: TenderEstimateStatus;
+  currency: string;
+  vatPercent: number;
+  costSubtotal: number;
+  bidSubtotal: number;
+  vatAmount: number;
+  grandBidTotal: number;
+  sourceFileName: string;
+  sourceSha256: string;
+  importedByUserId: number;
+  importedAt: string;
+  submittedByUserId?: number | null;
+  submittedAt?: string | null;
+  approvedByUserId?: number | null;
+  approvedAt?: string | null;
+  rejectedByUserId?: number | null;
+  rejectedAt?: string | null;
+  note?: string | null;
+  lines: TenderEstimateLineResponse[];
+}
+
+export interface TenderEstimateImportResponse {
+  revision?: TenderEstimateRevisionResponse | null;
+  errors: CsvImportError[];
+}
+
+export interface TransitionTenderRequest {
+  status: TenderStatus;
+  opportunityId?: number | null;
+  reasonCode?: string | null;
+  note?: string | null;
+}
+
 // ─── Surveys (NIH-86 / NIH-99) ────────────────────────
 
 export type SurveyDriveSyncStatus = "NotSynced" | "Syncing" | "Synced" | "Failed";
@@ -1877,6 +2038,8 @@ export interface SurveyResponse {
   linkedProjectName?: string | null;
   linkedOpportunityId?: number | null;
   linkedOpportunityName?: string | null;
+  operationalProjectId: number;
+  operationalProjectName?: string | null;
   note?: string | null;
   driveSyncStatus: SurveyDriveSyncStatus;
   driveSyncError?: string | null;
@@ -1884,6 +2047,7 @@ export interface SurveyResponse {
   driveFolderLink?: string | null;
   media: SurveyMediaResponse[];
   checklistResults: SurveyChecklistResultResponse[];
+  siteConditions: SurveySiteConditionResponse[];
   createdAt: string;
   updatedAt: string;
 }
@@ -1901,6 +2065,8 @@ export interface SurveyListItemResponse {
   linkedProjectName?: string | null;
   linkedOpportunityId?: number | null;
   linkedOpportunityName?: string | null;
+  operationalProjectId: number;
+  operationalProjectName?: string | null;
   driveSyncStatus: SurveyDriveSyncStatus;
   driveSyncError?: string | null;
   lastSyncedAt?: string | null;
@@ -1934,7 +2100,33 @@ export interface CreateSurveyRequest {
   surveyorUserId?: number | null;
   linkedProjectId?: number | null;
   linkedOpportunityId?: number | null;
+  operationalProjectId?: number | null;
   note?: string | null;
+}
+
+export type SurveyConditionCategory = "RightOfWay" | "Elevation" | "Infrastructure";
+export type SurveyConditionStatus = "Unknown" | "Available" | "Unavailable" | "NeedsInvestigation";
+
+export interface SurveySiteConditionRequest {
+  category: SurveyConditionCategory;
+  code: string;
+  statusCode: SurveyConditionStatus;
+  numericValue?: number | null;
+  unitCode?: string | null;
+  referenceCode?: string | null;
+  description?: string | null;
+  note?: string | null;
+}
+
+export interface SurveySiteConditionResponse extends SurveySiteConditionRequest {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SurveySiteConditionImportResponse {
+  conditions: SurveySiteConditionResponse[];
+  errors: CsvImportError[];
 }
 
 export interface SurveyTimelineEvent {
@@ -3527,6 +3719,7 @@ export const adminApi = {
     const query = new URLSearchParams();
     if (params.status) query.append("status", params.status);
     if (params.sourceCode) query.append("sourceCode", params.sourceCode);
+    if (params.segmentCode) query.append("segmentCode", params.segmentCode);
     if (params.ownerUserId != null) query.append("ownerUserId", String(params.ownerUserId));
     if (params.search) query.append("search", params.search);
     if (params.page) query.append("page", String(params.page));
@@ -3666,6 +3859,8 @@ export const adminApi = {
   },
   getQuote: (id: number) => api.get<QuoteResponse>(`/quotes/${id}`),
   getQuoteVersions: (id: number) => api.get<QuoteVersionsResponse>(`/quotes/${id}/versions`),
+  exportQuotePdf: (id: number, lang: string) =>
+    api.get<Blob>(`/quotes/${id}/export.pdf`, { params: { lang }, responseType: "blob" }),
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
   updateQuote: (id: number, body: UpdateQuoteRequest) => api.put<QuoteResponse>(`/quotes/${id}`, body),
   submitQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
@@ -3700,6 +3895,53 @@ export const adminApi = {
     api.delete(`/quotes/${id}/documents/${documentId}`),
   deleteQuote: (id: number, rowVersion?: string) =>
     api.delete(`/quotes/${id}`, withIfMatch(rowVersion)),
+
+  // Material rate catalogs
+  listMaterialRateCatalogs: (search?: string, includeInactive = false) =>
+    api.get<MaterialRateCatalogResponse[]>("/material-rate-catalogs", {
+      params: { search: search?.trim() || undefined, includeInactive },
+    }),
+  getMaterialRateCatalog: (id: number) =>
+    api.get<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`),
+  createMaterialRateCatalog: (body: UpsertMaterialRateCatalogRequest) =>
+    api.post<MaterialRateCatalogResponse>("/material-rate-catalogs", body),
+  updateMaterialRateCatalog: (id: number, body: UpsertMaterialRateCatalogRequest) =>
+    api.put<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`, body),
+  downloadMaterialRateTemplate: () =>
+    api.get<Blob>("/material-rate-catalogs/csv-template", { responseType: "blob" }),
+  listMaterialRateRevisions: (catalogId: number) =>
+    api.get<MaterialRateRevisionResponse[]>(`/material-rate-catalogs/${catalogId}/revisions`),
+  getMaterialRateRevision: (catalogId: number, revisionId: number) =>
+    api.get<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}`),
+  getEffectiveMaterialRateRevision: (catalogId: number, onDate: string) =>
+    api.get<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/effective`, {
+      params: { onDate },
+    }),
+  createMaterialRateRevision: (catalogId: number, body: CreateMaterialRateRevisionRequest) =>
+    api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions`, body),
+  importMaterialRateRevision: (catalogId: number, revisionId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<MaterialRateImportResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/import`,
+      formData,
+    );
+  },
+  approveMaterialRateRevision: (catalogId: number, revisionId: number, note?: string) =>
+    api.post<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/approve`,
+      { note: note?.trim() || null },
+    ),
+  rejectMaterialRateRevision: (catalogId: number, revisionId: number, note: string) =>
+    api.post<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/reject`,
+      { note: note.trim() },
+    ),
+  retireMaterialRateRevision: (catalogId: number, revisionId: number, note?: string) =>
+    api.post<MaterialRateRevisionResponse>(
+      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/retire`,
+      { note: note?.trim() || null },
+    ),
 
   // Capability documents (NIH-98)
   listCapabilityDocuments: (params: CapabilityDocumentListParams = {}) => {
@@ -3786,6 +4028,25 @@ export const adminApi = {
     api.post<TenderResponse>(`/tenders/${tenderId}/mark-lost`, body),
   getTenderTimeline: (tenderId: number, limit = 100) =>
     api.get<TenderTimelineEvent[]>(`/tenders/${tenderId}/timeline`, { params: { limit } }),
+  transitionTender: (tenderId: number, body: TransitionTenderRequest) =>
+    api.post<TenderResponse>(`/tenders/${tenderId}/transition`, body),
+  downloadTenderEstimateTemplate: (tenderId: number) =>
+    api.get<Blob>(`/tenders/${tenderId}/estimates/template`, { responseType: "blob" }),
+  listTenderEstimates: (tenderId: number) =>
+    api.get<TenderEstimateRevisionResponse[]>(`/tenders/${tenderId}/estimates`),
+  getTenderEstimate: (tenderId: number, revisionId: number) =>
+    api.get<TenderEstimateRevisionResponse>(`/tenders/${tenderId}/estimates/${revisionId}`),
+  importTenderEstimate: (tenderId: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post<TenderEstimateImportResponse>(`/tenders/${tenderId}/estimates/import`, form);
+  },
+  submitTenderEstimate: (tenderId: number, revisionId: number, note?: string | null) =>
+    api.post<TenderEstimateRevisionResponse>(`/tenders/${tenderId}/estimates/${revisionId}/submit`, { note }),
+  approveTenderEstimate: (tenderId: number, revisionId: number, note?: string | null) =>
+    api.post<TenderEstimateRevisionResponse>(`/tenders/${tenderId}/estimates/${revisionId}/approve`, { note }),
+  rejectTenderEstimate: (tenderId: number, revisionId: number, note?: string | null) =>
+    api.post<TenderEstimateRevisionResponse>(`/tenders/${tenderId}/estimates/${revisionId}/reject`, { note }),
 
   // Surveys (NIH-99)
   listSurveys: (params: SurveyListParams = {}) => {
@@ -3835,6 +4096,15 @@ export const adminApi = {
     api.get<SurveyDriveConnectionStatusResponse>("/surveys/drive-connection"),
   exportSurveyPdf: (id: number, lang: "vi" | "en" | "zh" | "ja") =>
     api.get<Blob>(`/surveys/${id}/export.pdf`, { params: { lang }, responseType: "blob" }),
+  downloadSurveyConditionsTemplate: () =>
+    api.get<Blob>("/surveys/conditions/template.csv", { responseType: "blob" }),
+  replaceSurveyConditions: (id: number, conditions: SurveySiteConditionRequest[]) =>
+    api.put<SurveySiteConditionResponse[]>(`/surveys/${id}/conditions`, { conditions }),
+  importSurveyConditions: (id: number, file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api.post<SurveySiteConditionImportResponse>(`/surveys/${id}/conditions/import`, form);
+  },
 
   // Design projects (NIH-113)
   listDesignProjects: (params: DesignProjectListParams = {}) => {

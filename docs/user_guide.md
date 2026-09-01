@@ -120,10 +120,10 @@ The platform is being developed incrementally. The following components are curr
 | File upload (images, CV documents) | Implemented |
 | Site settings and email template configuration | Implemented |
 | In-app admin notifications | Implemented |
-| CRM module (customers, leads, opportunities) | Partially implemented — corrected Opportunity sequencing is available; Lead segmentation and legacy-stage reconciliation remain pending |
+| CRM module (customers, leads, opportunities) | Implemented, including configurable Lead segments and the controlled five-step sales pipeline |
 | Central operational projects (customer, sales, contract, and design rollup) | Implemented; remaining modules are connected by subsequent NIH-447 subtasks |
-| Quotations, capability documents, and tenders | Partially implemented — calculation and workflow are live; material-norm pricing, generated preliminary PDF, and tender bid estimate remain pending business definition |
-| Site survey digitization | Partially implemented — private media upload, geolocation, checklist, Drive sync status, and PDF export are available; structured right-of-way, elevation, and infrastructure capture is pending |
+| Quotations, capability documents, and tenders | Implemented, including governed material-rate pricing, localized preliminary PDF, and versioned Tender estimates |
+| Site survey digitization | Implemented, including project routing, structured conditions, CSV import, media/geolocation, Drive sync, and PDF export |
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management (projects, concept, basic design, detail design, revisions, IFC) | Implemented |
 | Permitting checklists | Implemented |
@@ -198,10 +198,10 @@ Maintain individual and corporate customer records. Support multiple contact per
 
 Track inbound leads with source classification (marketing, referral, etc.). Assign leads to sales personnel. Maintain consultation history. Convert qualified leads to opportunities.
 
-Contact information, source, owner, status, notes, and consultation activities
-are currently available. Customer segmentation is not yet implemented because
-the approved segment taxonomy, whether a lead may have multiple segments, and
-the required reporting behavior have not been defined.
+Each Lead has one segment selected from managed `lead_segment` master data. The
+seeded values are Unclassified, Residential, Commercial, and Hospitality;
+administrators can maintain this taxonomy centrally. Lists and forms support
+segment filtering while consultation activities retain the care history.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -217,9 +217,15 @@ Every new opportunity starts at **Approach** and follows the sequence
 Users cannot skip or move backward between these stages. **Lost** is an
 alternate terminal outcome from an open stage and requires a reason and note.
 Moving to **Contract signed** requires a linked Contract with a signed date and
-a non-draft, non-cancelled status. The API retains the legacy enum values
+a non-draft, non-cancelled status. The API retains the stable enum values
 `Prospecting`, `Qualification`, `Proposal`, `Negotiation`, and `Won` for stored
 data and client compatibility; the interface displays the customer terms.
+Historical records are converted once during deployment: valid contract-backed
+Won rows remain Contract signed, unsupported Won rows become Negotiation, and
+Lost rows receive complete controlled reason metadata. There is no separate
+legacy workflow or reconciliation queue. The final qualifying Contract of a
+Contract-signed Opportunity cannot be cancelled, unlinked, invalidated, or
+deleted unless another qualifying Contract remains.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -230,13 +236,16 @@ data and client compatibility; the interface displays the customer terms.
 
 #### 3.1.4 Direct Quotation
 
-Create quotations using a user-entered square-metre rate or preliminary BOQ.
-Calculate discounts, VAT, and totals automatically. Manage quotation versions
-and the internal workflow. The system does not yet derive the square-metre rate
-from an approved material-norm/rate catalog, and no generated preliminary quote
-PDF contract is currently proven. Product must define the norm source,
-effective dates, override authority, currency/VAT policy, and approved output
-template before those capabilities are implemented.
+Create quotations using an approved material-rate revision or a preliminary
+BOQ. In **Material norms & rates**, download the UTF-8 CSV template, fill in
+material code/name, unit, norm per m², unit rate, and waste percentage, then
+import it into a Draft revision. Import is atomic and computes each rate as
+`NormPerSqm × UnitRate × (1 + WastePercent / 100)`. Approve non-overlapping
+effective revisions before use. Unit-cost quotations select a catalog and
+pricing date, retain the chosen revision and catalog rate, and calculate
+discount, VAT, and totals automatically. Authorized overrides require a
+Vietnamese reason and remain visible in versions and the PDF. Downloadable
+preliminary PDFs are localized in Vietnamese, English, Chinese, or Japanese.
 
 For a BOQ quotation, add one or more rows and enter the item name, unit,
 quantity, and unit price. The form previews each calculation basis and the
@@ -259,9 +268,14 @@ request with its idempotency key does not create a duplicate quotation.
 
 Manage tender packages with deadlines and preparation status. Every document checklist item can use one existing document from the shared capability-document library or accept a new direct upload. The selected file is previewed securely inside the Tender detail page. Checklist status, ownership, deadlines, and files become read-only after the tender is Won, Lost, or Cancelled. Track tender results across preparation, submission, win, loss, and cancellation.
 
-The tender workflow does not yet contain a defined bid-estimate data model.
-Product must confirm whether the estimate represents internal cost, submitted
-bid price, or both, together with currency, VAT, versioning, and approval rules.
+The **Estimate** tab provides a customer-fillable UTF-8 CSV template containing
+item code, description, unit, quantity, internal unit cost, bid unit price, VAT,
+and note. Each valid import atomically creates a hashed Draft revision and
+calculates cost subtotal, bid subtotal, VAT, and grand bid total. Submit the
+revision for approval; authorized users approve or reject it with a reason.
+The Tender can move from Preparing to Submitted only when every checklist item
+is ready and an approved estimate exists. Won and Lost are available only from
+Submitted; Won requires an Opportunity for the same customer.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|
@@ -274,9 +288,11 @@ bid price, or both, together with currency, VAT, versioning, and approval rules.
 
 Record site surveys linked to opportunities or projects. Capture photos and
 videos from the application, upload files, record technical notes, capture
-time, and store latitude/longitude coordinates. Structured right-of-way,
-elevation, and infrastructure fields are not yet available because their data
-shapes and units have not been approved. Access is controlled by
+time, and store latitude/longitude coordinates. The Conditions tab records
+right-of-way, elevation, and managed infrastructure statuses through responsive
+editors or an atomic UTF-8 CSV import. Required access-width and site-elevation
+rows use metres; the generated Survey PDF includes all structured conditions.
+Access is controlled by
 `crm.surveys.view` and `crm.surveys.manage`; the default roles grant Sales both
 permissions and PM view-only access, while administrators can assign them to
 other roles.
@@ -291,7 +307,7 @@ other roles.
 
 To change accounts, select **Disconnect** and then **Connect Google Drive**, or select **Switch Google account** to disconnect first and immediately open Google's account chooser. If the replacement sign-in is cancelled or fails, Nicon remains disconnected. Disconnecting removes Nicon's stored access but does not sign the user out of their broader Google browser session.
 
-Survey media linked through an Opportunity to an Operational Project uses the bidirectional project catalog and is stored in that project's configured `01_Khao_sat` category. Unlinked Survey media retains the legacy push workflow under the root `01_Khao_sat` hierarchy. Reassigning a linked Survey queues old replicas and stages its current media in the new project; unlinking returns the media to the legacy workflow. Files added or changed directly in a managed project folder are reflected in the Nicon catalog. Deletion through Nicon moves the Drive replica to trash so it remains recoverable. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. The worker uploads only while the connection is `Connected`, makes at most three claims per file, and rejects retry or deletion while a file is actively synchronizing.
+Every Survey persists an Operational Project and stores media in that project's configured `01_Khao_sat` category. Opportunity, project, and customer relationships must agree. Reassigning a Survey stages current media into the new project. Deployment backfills historical Surveys from their linked Opportunity and aborts atomically if any row cannot be routed; unrouted Surveys are not supported at runtime. Files added or changed directly in a managed project folder are reflected in the Nicon catalog. Deletion through Nicon moves the Drive replica to trash so it remains recoverable. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. The worker uploads only while the connection is `Connected`, makes at most three claims per file, and rejects retry or deletion while a file is actively synchronizing.
 
 | Page | Functions | Estimate |
 |------|-----------|----------|

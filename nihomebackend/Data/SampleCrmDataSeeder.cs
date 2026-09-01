@@ -38,6 +38,7 @@ public static class SampleCrmDataSeeder
         SeedContracts(db, owner, now, webRootPath);
         SeedCapabilityDocuments(db, owner, now, webRootPath);
         SeedTenders(db, owner, now);
+        SeedOperationalProjects(db, owner, projectManager, now);
         SeedSurveys(db, owner, now);
         SeedDesignProjects(db, owner, now);
         SeedPermitChecklists(db, legalOwner, now);
@@ -55,7 +56,6 @@ public static class SampleCrmDataSeeder
         SeedAsBuiltDocumentCategories(db);
         SeedAsBuiltDocuments(db, projectManager, now, webRootPath);
         SeedHandoverRecords(db, projectManager, now);
-        SeedOperationalProjects(db, owner, projectManager, now);
         RepairSampleRelationships(db, owner);
         LinkOperationalProjectRelationships(db, owner);
     }
@@ -429,7 +429,7 @@ public static class SampleCrmDataSeeder
             .DefaultIfEmpty(0)
             .Max());
 
-        var lastCreatedId = 0;
+        var snapshotQuoteId = 0;
         for (var i = 0; i < seeds.Length; i++)
         {
             var (oppIdx, method, status, validDays, label) = seeds[i];
@@ -462,6 +462,10 @@ public static class SampleCrmDataSeeder
                 quote.AreaSqm = 100m + i * 20m;
                 quote.UnitPricePerSqm = 6_500_000m + i * 800_000m;
                 quote.PackageDescription = "Gói mẫu bao gồm thi công phần thô + hoàn thiện cơ bản.";
+                quote.RateSource = QuoteRateSource.Override;
+                quote.RateOverrideReason = "Đơn giá minh họa được xác lập bởi dữ liệu mẫu.";
+                quote.RateOverrideByUserId = owner.Id;
+                quote.RateOverrideAt = quote.CreatedAt;
             }
             else
             {
@@ -480,17 +484,20 @@ public static class SampleCrmDataSeeder
 
             db.Quotes.Add(quote);
             db.SaveChanges();
-            lastCreatedId = quote.Id;
+            if (method == QuoteMethod.UnitCost)
+            {
+                snapshotQuoteId = quote.Id;
+            }
 
             WriteApprovalLogs(db, quote, owner.Id, now);
             db.SaveChanges();
         }
 
-        // Bonus: give the LAST seeded quote a V2 snapshot so the /versions
+        // Bonus: give a unit-cost seeded quote a V2 snapshot so the /versions
         // tab and diff have something to render out of the box.
-        if (lastCreatedId > 0)
+        if (snapshotQuoteId > 0)
         {
-            AttachVersionSnapshot(db, lastCreatedId, owner.Id, now);
+            AttachVersionSnapshot(db, snapshotQuoteId, owner.Id, now);
         }
     }
 
@@ -617,6 +624,13 @@ public static class SampleCrmDataSeeder
             AreaSqm = quote.AreaSqm,
             UnitPricePerSqm = quote.UnitPricePerSqm,
             PackageDescription = quote.PackageDescription,
+            MaterialRateRevisionId = quote.MaterialRateRevisionId,
+            PricingEffectiveDate = quote.PricingEffectiveDate,
+            CatalogUnitPricePerSqm = quote.CatalogUnitPricePerSqm,
+            RateSource = quote.RateSource,
+            RateOverrideReason = quote.RateOverrideReason,
+            RateOverrideByUserId = quote.RateOverrideByUserId,
+            RateOverrideAt = quote.RateOverrideAt,
             Subtotal = quote.Subtotal,
             DiscountPercent = quote.DiscountPercent,
             VatPercent = quote.VatPercent,
@@ -1364,6 +1378,15 @@ public static class SampleCrmDataSeeder
             .Where(o => o.Name.StartsWith(SampleTag))
             .OrderBy(o => o.Id)
             .ToList();
+        var operationalProjects = db.OperationalProjects
+            .Where(project => project.Code.StartsWith("PJ-SAMPLE-"))
+            .OrderBy(project => project.Id)
+            .ToList();
+        if (operationalProjects.Count == 0)
+        {
+            throw new InvalidOperationException(
+                "Không thể tạo dữ liệu khảo sát mẫu vì chưa có Dự án vận hành mẫu.");
+        }
 
         // Projects are content-side and not always available on a bare seed
         // — pick the first row if present, else leave the link empty.
@@ -1392,6 +1415,10 @@ public static class SampleCrmDataSeeder
             {
                 linkedOppId = sampleOpportunities[oppIdx.Value].Id;
             }
+            var operationalProjectId = linkedOppId.HasValue
+                ? sampleOpportunities[oppIdx!.Value].OperationalProjectId
+                : null;
+            operationalProjectId ??= operationalProjects[i % operationalProjects.Count].Id;
 
             var survey = new Survey
             {
@@ -1400,6 +1427,7 @@ public static class SampleCrmDataSeeder
                 ConstructionTypeCode = code,
                 SurveyDate = now.AddDays(-daysAgo),
                 SurveyorUserId = owner.Id,
+                OperationalProjectId = operationalProjectId.Value,
                 LinkedProjectId = linkProject ? sampleProject?.Id : null,
                 LinkedOpportunityId = linkedOppId,
                 Note = $"{SampleSurveyMarker} Sample survey for demo.",

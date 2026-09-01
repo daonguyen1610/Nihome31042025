@@ -63,6 +63,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
     public DbSet<QuoteDocument> QuoteDocuments => Set<QuoteDocument>();
+    public DbSet<MaterialRateCatalog> MaterialRateCatalogs => Set<MaterialRateCatalog>();
+    public DbSet<MaterialRateRevision> MaterialRateRevisions => Set<MaterialRateRevision>();
+    public DbSet<MaterialRateLine> MaterialRateLines => Set<MaterialRateLine>();
     public DbSet<Contract> Contracts => Set<Contract>();
     public DbSet<ContractPaymentMilestone> ContractPaymentMilestones => Set<ContractPaymentMilestone>();
     public DbSet<ContractAppendix> ContractAppendices => Set<ContractAppendix>();
@@ -71,10 +74,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CapabilityDocumentVersion> CapabilityDocumentVersions => Set<CapabilityDocumentVersion>();
     public DbSet<Tender> Tenders => Set<Tender>();
     public DbSet<TenderChecklistItem> TenderChecklistItems => Set<TenderChecklistItem>();
+    public DbSet<TenderEstimateRevision> TenderEstimateRevisions => Set<TenderEstimateRevision>();
+    public DbSet<TenderEstimateLine> TenderEstimateLines => Set<TenderEstimateLine>();
 
     public DbSet<Survey> Surveys => Set<Survey>();
     public DbSet<SurveyMedia> SurveyMedia => Set<SurveyMedia>();
     public DbSet<SurveyChecklistResult> SurveyChecklistResults => Set<SurveyChecklistResult>();
+    public DbSet<SurveySiteCondition> SurveySiteConditions => Set<SurveySiteCondition>();
 
     // Internal project aggregate shared across operational modules (NIH-460).
     public DbSet<OperationalProject> OperationalProjects => Set<OperationalProject>();
@@ -372,10 +378,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(l => l.Phone).HasMaxLength(30);
             b.Property(l => l.Email).HasMaxLength(150);
             b.Property(l => l.SourceCode).HasMaxLength(60).IsRequired();
+            b.Property(l => l.SegmentCode).HasMaxLength(60).HasDefaultValue("unclassified").IsRequired();
             b.Property(l => l.Status).HasConversion<string>().HasMaxLength(30);
             b.HasIndex(l => l.Status);
             b.HasIndex(l => l.OwnerUserId);
             b.HasIndex(l => l.SourceCode);
+            b.HasIndex(l => l.SegmentCode);
             b.HasIndex(l => l.CreatedAt);
             b.HasOne(l => l.Owner)
                 .WithMany()
@@ -400,6 +408,51 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(a => a.LeadId);
             b.HasIndex(a => a.CreatedAt);
+        });
+
+        modelBuilder.Entity<MaterialRateCatalog>(b =>
+        {
+            b.ToTable("material_rate_catalogs");
+            b.HasKey(catalog => catalog.Id);
+            b.Property(catalog => catalog.Code).HasMaxLength(50).IsRequired();
+            b.Property(catalog => catalog.Name).HasMaxLength(200).IsRequired();
+            b.Property(catalog => catalog.Description).HasMaxLength(1000);
+            b.Property(catalog => catalog.Currency).HasMaxLength(3).IsRequired();
+            b.HasIndex(catalog => catalog.Code).IsUnique();
+            b.HasIndex(catalog => catalog.IsActive);
+        });
+
+        modelBuilder.Entity<MaterialRateRevision>(b =>
+        {
+            b.ToTable("material_rate_revisions");
+            b.HasKey(revision => revision.Id);
+            b.Property(revision => revision.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(revision => revision.Note).HasMaxLength(1000);
+            b.Property(revision => revision.DecisionNote).HasMaxLength(1000);
+            b.HasIndex(revision => new { revision.CatalogId, revision.Version }).IsUnique();
+            b.HasIndex(revision => new { revision.CatalogId, revision.Status, revision.EffectiveFrom });
+            b.HasOne(revision => revision.Catalog)
+                .WithMany(catalog => catalog.Revisions)
+                .HasForeignKey(revision => revision.CatalogId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MaterialRateLine>(b =>
+        {
+            b.ToTable("material_rate_lines");
+            b.HasKey(line => line.Id);
+            b.Property(line => line.MaterialCode).HasMaxLength(50).IsRequired();
+            b.Property(line => line.MaterialName).HasMaxLength(200).IsRequired();
+            b.Property(line => line.Unit).HasMaxLength(30).IsRequired();
+            b.Property(line => line.NormPerSqm).HasPrecision(18, 6);
+            b.Property(line => line.UnitRate).HasPrecision(18, 4);
+            b.Property(line => line.WastePercent).HasPrecision(9, 4);
+            b.Property(line => line.AmountPerSqm).HasPrecision(18, 4);
+            b.HasIndex(line => new { line.RevisionId, line.MaterialCode }).IsUnique();
+            b.HasOne(line => line.Revision)
+                .WithMany(revision => revision.Lines)
+                .HasForeignKey(line => line.RevisionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Customer>(b =>
@@ -566,6 +619,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(q => q.Note).HasMaxLength(4000);
             b.Property(q => q.AreaSqm).HasColumnType("decimal(18,2)");
             b.Property(q => q.UnitPricePerSqm).HasColumnType("decimal(18,2)");
+            b.Property(q => q.CatalogUnitPricePerSqm).HasColumnType("decimal(18,2)");
+            b.Property(q => q.RateSource)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(QuoteRateSource.Override)
+                .HasSentinel((QuoteRateSource)0);
+            b.Property(q => q.RateOverrideReason).HasMaxLength(500);
             b.Property(q => q.Subtotal).HasColumnType("decimal(18,2)");
             b.Property(q => q.DiscountPercent).HasColumnType("decimal(5,2)");
             b.Property(q => q.VatPercent).HasColumnType("decimal(5,2)");
@@ -582,12 +642,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(q => q.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(q => q.MaterialRateRevision)
+                .WithMany()
+                .HasForeignKey(q => q.MaterialRateRevisionId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(q => q.OpportunityId);
             b.HasIndex(q => q.OperationalProjectId);
             b.HasIndex(q => q.OwnerUserId);
             b.HasIndex(q => q.Status);
             b.HasIndex(q => q.ValidUntil);
             b.HasIndex(q => q.CreatedAt);
+            b.HasIndex(q => q.MaterialRateRevisionId);
             b.Property(q => q.RowVersion).IsRowVersion();
         });
 
@@ -656,6 +721,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(s => s.ItemsJson).HasColumnType("nvarchar(max)");
             b.Property(s => s.AreaSqm).HasColumnType("decimal(18,2)");
             b.Property(s => s.UnitPricePerSqm).HasColumnType("decimal(18,2)");
+            b.Property(s => s.CatalogUnitPricePerSqm).HasColumnType("decimal(18,2)");
+            b.Property(s => s.RateSource)
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(QuoteRateSource.Override)
+                .HasSentinel((QuoteRateSource)0);
+            b.Property(s => s.RateOverrideReason).HasMaxLength(500);
             b.Property(s => s.Subtotal).HasColumnType("decimal(18,2)");
             b.Property(s => s.DiscountPercent).HasColumnType("decimal(5,2)");
             b.Property(s => s.VatPercent).HasColumnType("decimal(5,2)");
@@ -865,6 +937,50 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(i => new { i.TenderId, i.SortOrder });
         });
 
+        modelBuilder.Entity<TenderEstimateRevision>(b =>
+        {
+            b.ToTable("tender_estimate_revisions");
+            b.HasKey(revision => revision.Id);
+            b.Property(revision => revision.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(revision => revision.Currency).HasMaxLength(3).IsRequired();
+            b.Property(revision => revision.VatPercent).HasPrecision(9, 4);
+            b.Property(revision => revision.CostSubtotal).HasPrecision(18, 4);
+            b.Property(revision => revision.BidSubtotal).HasPrecision(18, 4);
+            b.Property(revision => revision.VatAmount).HasPrecision(18, 4);
+            b.Property(revision => revision.GrandBidTotal).HasPrecision(18, 4);
+            b.Property(revision => revision.SourceFileName).HasMaxLength(300).IsRequired();
+            b.Property(revision => revision.SourceSha256).HasMaxLength(64).IsRequired();
+            b.Property(revision => revision.Note).HasMaxLength(2000);
+            b.HasOne(revision => revision.Tender)
+                .WithMany(tender => tender.EstimateRevisions)
+                .HasForeignKey(revision => revision.TenderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(revision => new { revision.TenderId, revision.VersionNumber }).IsUnique();
+            b.HasIndex(revision => new { revision.TenderId, revision.Status });
+            b.HasIndex(revision => revision.SourceSha256);
+        });
+
+        modelBuilder.Entity<TenderEstimateLine>(b =>
+        {
+            b.ToTable("tender_estimate_lines");
+            b.HasKey(line => line.Id);
+            b.Property(line => line.ItemCode).HasMaxLength(80).IsRequired();
+            b.Property(line => line.Description).HasMaxLength(500).IsRequired();
+            b.Property(line => line.Unit).HasMaxLength(50).IsRequired();
+            b.Property(line => line.Quantity).HasPrecision(18, 6);
+            b.Property(line => line.UnitCost).HasPrecision(18, 4);
+            b.Property(line => line.BidUnitPrice).HasPrecision(18, 4);
+            b.Property(line => line.CostAmount).HasPrecision(18, 4);
+            b.Property(line => line.BidAmount).HasPrecision(18, 4);
+            b.Property(line => line.Note).HasMaxLength(1000);
+            b.HasOne(line => line.Revision)
+                .WithMany(revision => revision.Lines)
+                .HasForeignKey(line => line.RevisionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(line => new { line.RevisionId, line.ItemCode }).IsUnique();
+            b.HasIndex(line => new { line.RevisionId, line.SortOrder });
+        });
+
         modelBuilder.Entity<Survey>(b =>
         {
             b.ToTable("surveys");
@@ -890,9 +1006,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(s => s.LinkedOpportunityId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(s => s.OperationalProject)
+                .WithMany()
+                .HasForeignKey(s => s.OperationalProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(s => s.SurveyorUserId);
             b.HasIndex(s => s.LinkedProjectId);
             b.HasIndex(s => s.LinkedOpportunityId);
+            b.HasIndex(s => s.OperationalProjectId);
             b.HasIndex(s => s.SurveyDate);
             b.HasIndex(s => s.DriveSyncStatus);
         });
@@ -937,6 +1058,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(r => new { r.SurveyId, r.TemplateCode }).IsUnique();
             b.HasIndex(r => new { r.SurveyId, r.SortOrder });
+        });
+
+        modelBuilder.Entity<SurveySiteCondition>(b =>
+        {
+            b.ToTable("survey_site_conditions");
+            b.HasKey(condition => condition.Id);
+            b.Property(condition => condition.Category).HasConversion<string>().HasMaxLength(40);
+            b.Property(condition => condition.Code).HasMaxLength(80).IsRequired();
+            b.Property(condition => condition.Status).HasConversion<string>().HasMaxLength(40);
+            b.Property(condition => condition.NumericValue).HasPrecision(18, 6);
+            b.Property(condition => condition.UnitCode).HasMaxLength(20);
+            b.Property(condition => condition.ReferenceCode).HasMaxLength(80);
+            b.Property(condition => condition.Description).HasMaxLength(1000);
+            b.Property(condition => condition.Note).HasMaxLength(2000);
+            b.HasOne(condition => condition.Survey)
+                .WithMany(survey => survey.SiteConditions)
+                .HasForeignKey(condition => condition.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(condition => new { condition.SurveyId, condition.Category, condition.Code }).IsUnique();
         });
 
         modelBuilder.Entity<OperationalProject>(b =>

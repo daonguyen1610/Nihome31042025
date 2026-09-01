@@ -17,6 +17,7 @@ public class LeadService(
     private const int MaxPageSize = 100;
     private const string LeadAssignedTemplate = "lead.assigned";
     private const string SourceMasterDataCategory = "customer_source";
+    private const string SegmentMasterDataCategory = "lead_segment";
     private const string ManageLeadsPermission = "crm.leads.manage";
 
     public async Task<LeadListResponse> ListAsync(
@@ -24,6 +25,7 @@ public class LeadService(
         bool canSeeAll,
         LeadStatus? status = null,
         string? sourceCode = null,
+        string? segmentCode = null,
         int? ownerUserId = null,
         string? search = null,
         int page = 1,
@@ -55,6 +57,12 @@ public class LeadService(
         {
             var normalized = sourceCode.Trim();
             query = query.Where(l => l.SourceCode == normalized);
+        }
+
+        if (!string.IsNullOrWhiteSpace(segmentCode))
+        {
+            var normalized = segmentCode.Trim();
+            query = query.Where(l => l.SegmentCode == normalized);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -124,6 +132,7 @@ public class LeadService(
 
         ValidateContact(request.Phone, request.Email);
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
+        var segmentCode = await ValidateSegmentCodeAsync(request.SegmentCode, ct);
 
         int? ownerId = request.OwnerUserId;
         if (ownerId is null)
@@ -156,6 +165,7 @@ public class LeadService(
             Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
             Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
             SourceCode = sourceCode,
+            SegmentCode = segmentCode,
             Status = LeadStatus.New,
             OwnerUserId = ownerId,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
@@ -227,6 +237,7 @@ public class LeadService(
 
         ValidateContact(request.Phone, request.Email);
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
+        var segmentCode = await ValidateSegmentCodeAsync(request.SegmentCode, ct);
 
         var previousOwnerId = lead.OwnerUserId;
         int? newOwnerId = request.OwnerUserId;
@@ -247,6 +258,7 @@ public class LeadService(
         lead.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
         lead.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
         lead.SourceCode = sourceCode;
+        lead.SegmentCode = segmentCode;
         lead.Status = request.Status;
         lead.OwnerUserId = newOwnerId;
         lead.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
@@ -765,6 +777,23 @@ public class LeadService(
         return normalized;
     }
 
+    private async Task<string> ValidateSegmentCodeAsync(string segmentCode, CancellationToken ct)
+    {
+        var normalized = (segmentCode ?? string.Empty).Trim();
+        if (normalized.Length == 0)
+        {
+            throw new LeadOperationException("Vui lòng chọn phân khúc Lead, ví dụ: unclassified.");
+        }
+
+        var exists = await db.MasterDataOptions.AsNoTracking().AnyAsync(option =>
+            option.Category == SegmentMasterDataCategory && option.Code == normalized && option.IsActive, ct);
+        if (!exists)
+        {
+            throw new LeadOperationException($"Phân khúc Lead '{normalized}' không tồn tại hoặc đã ngừng hoạt động.");
+        }
+        return normalized;
+    }
+
     private async Task<int?> PickOwnerViaRoundRobinAsync(CancellationToken ct)
     {
         // Candidates = users whose effective permission set includes crm.leads.manage
@@ -866,6 +895,7 @@ public class LeadService(
             Phone = lead.Phone,
             Email = lead.Email,
             SourceCode = lead.SourceCode,
+            SegmentCode = lead.SegmentCode,
             Status = lead.Status,
             OwnerUserId = lead.OwnerUserId,
             OwnerName = ownerName,

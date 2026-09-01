@@ -30,6 +30,7 @@ public class ContractServiceTests : IDisposable
             new NoopDesignProjectService(),
             NullLogger<ContractService>.Instance,
             _projectDocuments.Object,
+            new OpportunityClosureInvariantService(_db),
             environment.Object);
 
         _db.Customers.AddRange(
@@ -909,6 +910,109 @@ public class ContractServiceTests : IDisposable
 
         var bareRow = list.Items.Single(i => i.Id == bare.Id);
         Assert.Null(bareRow.DesignProjectId);
+    }
+
+    [Theory]
+    [InlineData("unlink")]
+    [InlineData("customer")]
+    [InlineData("signed-date")]
+    [InlineData("draft")]
+    [InlineData("cancelled")]
+    public async Task UpdateAsync_LastQualifyingContract_CannotBeInvalidated(string mutation)
+    {
+        var opportunity = SeedWonOpportunity();
+        var request = Req(status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        request.OpportunityId = opportunity.Id;
+        var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        switch (mutation)
+        {
+            case "unlink": request.OpportunityId = null; break;
+            case "customer": request.CustomerId = _customerB; break;
+            case "signed-date": request.SignedDate = null; break;
+            case "draft": request.Status = ContractStatus.Draft; break;
+            case "cancelled": request.Status = ContractStatus.Cancelled; break;
+        }
+
+        var exception = await Assert.ThrowsAsync<ContractValidationException>(() => _sut.UpdateAsync(
+            contract.Id, request, 1, canSeeAll: true, canReassignOwner: true));
+
+        var saved = _db.Contracts.Single(item => item.Id == contract.Id);
+        Assert.Contains("hợp đồng hợp lệ cuối cùng", exception.Message);
+        Assert.Equal(opportunity.Id, saved.OpportunityId);
+        Assert.Equal(_customerA, saved.CustomerId);
+        Assert.Equal(ContractStatus.Signed, saved.Status);
+        Assert.NotNull(saved.SignedDate);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_LastQualifyingContract_IsRejected()
+    {
+        var opportunity = SeedWonOpportunity();
+        var request = Req(status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        request.OpportunityId = opportunity.Id;
+        var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.DeleteAsync(contract.Id, 1, canSeeAll: true));
+        Assert.NotNull(_db.Contracts.Find(contract.Id));
+    }
+
+    [Fact]
+    public async Task TransitionStatusAsync_LastQualifyingContract_CannotBeCancelled()
+    {
+        var opportunity = SeedWonOpportunity();
+        var request = Req(status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        request.OpportunityId = opportunity.Id;
+        var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+
+        await Assert.ThrowsAsync<ContractValidationException>(() => _sut.TransitionStatusAsync(
+            contract.Id, ContractStatus.Cancelled, 1, canSeeAll: true));
+        Assert.Equal(ContractStatus.Signed, _db.Contracts.Find(contract.Id)!.Status);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenAnotherQualifyingContractRemains_IsAllowed()
+    {
+        var opportunity = SeedWonOpportunity();
+        var firstRequest = Req(number: "HD-WON-1", status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        firstRequest.OpportunityId = opportunity.Id;
+        var secondRequest = Req(number: "HD-WON-2", status: ContractStatus.InProgress, signed: DateTime.UtcNow);
+        secondRequest.OpportunityId = opportunity.Id;
+        var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
+        await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
+
+        Assert.True(await _sut.DeleteAsync(first.Id, 1, canSeeAll: true));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenAnotherQualifyingContractRemains_CanUnlinkCurrentContract()
+    {
+        var opportunity = SeedWonOpportunity();
+        var firstRequest = Req(number: "HD-WON-UPDATE-1", status: ContractStatus.Signed, signed: DateTime.UtcNow);
+        firstRequest.OpportunityId = opportunity.Id;
+        var secondRequest = Req(number: "HD-WON-UPDATE-2", status: ContractStatus.InProgress, signed: DateTime.UtcNow);
+        secondRequest.OpportunityId = opportunity.Id;
+        var first = await _sut.CreateAsync(firstRequest, 1, canReassignOwner: true);
+        await _sut.CreateAsync(secondRequest, 1, canReassignOwner: true);
+        firstRequest.OpportunityId = null;
+
+        var updated = await _sut.UpdateAsync(
+            first.Id, firstRequest, 1, canSeeAll: true, canReassignOwner: true);
+
+        Assert.Null(updated!.OpportunityId);
+    }
+
+    private Opportunity SeedWonOpportunity()
+    {
+        var opportunity = new Opportunity
+        {
+            Name = "Won opportunity",
+            CustomerId = _customerA,
+            Stage = OpportunityStage.Won,
+        };
+        _db.Opportunities.Add(opportunity);
+        _db.SaveChanges();
+        return opportunity;
     }
 
     private sealed class NoopDesignProjectService : IDesignProjectService

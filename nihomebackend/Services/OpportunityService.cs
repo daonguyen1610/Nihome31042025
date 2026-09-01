@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
@@ -12,7 +13,8 @@ public class OpportunityService(
     INotificationService notifications,
     IQuoteDocumentService quoteDocumentService,
     ILogger<OpportunityService> logger,
-    IProjectDocumentStagingService projectDocuments) : IOpportunityService
+    IProjectDocumentStagingService projectDocuments,
+    IOpportunityClosureInvariantService closureInvariant) : IOpportunityService
 {
     private const int MaxPageSize = 100;
     private const string LostReasonMasterDataCategory = "opportunity_lost_reason";
@@ -149,7 +151,9 @@ public class OpportunityService(
         CreateOpportunityRequest request,
         int callerUserId,
         bool canManage,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool canSeeAll = false,
+        bool canSeeAllCustomers = false)
     {
         if (!canManage)
         {
@@ -165,7 +169,14 @@ public class OpportunityService(
         var customer = await db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
+        EnsureCustomerAccess(customer, callerUserId, canSeeAllCustomers);
         await EnsureProjectMatchesCustomerAsync(request.OperationalProjectId, request.CustomerId, ct);
+
+        if (!canSeeAll && request.OwnerUserId.HasValue && request.OwnerUserId.Value != callerUserId)
+            throw new OpportunityOperationException("Bạn không có quyền gán cơ hội cho người khác.");
+        if (request.OwnerUserId.HasValue &&
+            !await db.Users.AsNoTracking().AnyAsync(user => user.Id == request.OwnerUserId.Value && user.IsActive, ct))
+            throw new OpportunityOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại hoặc đã ngừng hoạt động.");
 
         var now = DateTime.UtcNow;
         var ownerId = request.OwnerUserId ?? callerUserId;
@@ -205,7 +216,8 @@ public class OpportunityService(
         int callerUserId,
         bool canManage,
         bool canSeeAll,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool canSeeAllCustomers = false)
     {
         if (!canManage) throw new OpportunityOperationException("Không có quyền chỉnh sửa cơ hội.");
 
@@ -223,6 +235,7 @@ public class OpportunityService(
         var customer = await db.Customers.AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new OpportunityOperationException($"Không tìm thấy khách hàng #{request.CustomerId}.");
+        EnsureCustomerAccess(customer, callerUserId, canSeeAllCustomers);
         var operationalProjectId = request.OperationalProjectId ?? op.OperationalProjectId;
         await EnsureProjectMatchesCustomerAsync(operationalProjectId, request.CustomerId, ct);
 
@@ -234,6 +247,9 @@ public class OpportunityService(
         {
             throw new OpportunityOperationException("Bạn không có quyền gán cơ hội cho người khác.");
         }
+        if (request.OwnerUserId.HasValue &&
+            !await db.Users.AsNoTracking().AnyAsync(user => user.Id == request.OwnerUserId.Value && user.IsActive, ct))
+            throw new OpportunityOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại hoặc đã ngừng hoạt động.");
 
         await using var transaction = previousProjectId != operationalProjectId && db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
@@ -266,7 +282,7 @@ public class OpportunityService(
         op.Name = request.Name.Trim();
         op.CustomerId = request.CustomerId;
         op.OperationalProjectId = operationalProjectId;
-        op.OwnerUserId = request.OwnerUserId;
+        op.OwnerUserId = request.OwnerUserId ?? previousOwnerId;
         op.EstimatedValue = request.EstimatedValue;
         op.WinProbability = request.WinProbability;
         op.ExpectedCloseDate = request.ExpectedCloseDate;
@@ -299,6 +315,9 @@ public class OpportunityService(
     {
         if (!canManage) throw new OpportunityOperationException("Không có quyền đổi giai đoạn cơ hội.");
 
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
         var op = await db.Opportunities.FirstOrDefaultAsync(o => o.Id == id, ct);
         if (op is null) return null;
         if (!canSeeAll && op.OwnerUserId != callerUserId) return null;
@@ -327,18 +346,14 @@ public class OpportunityService(
 
         if (to is OpportunityStage.Won)
         {
-            var hasSignedContract = await db.Contracts.AsNoTracking().AnyAsync(contract =>
-                contract.OpportunityId == op.Id &&
-                contract.CustomerId == op.CustomerId &&
-                contract.SignedDate.HasValue &&
-                contract.Status != ContractStatus.Draft &&
-                contract.Status != ContractStatus.Cancelled, ct);
+            var hasSignedContract = await closureInvariant.HasQualifyingContractAsync(op.Id, op.CustomerId, ct: ct);
             if (!hasSignedContract)
             {
                 throw new OpportunityOperationException(
                     "Không thể chuyển sang Ký hợp đồng: cơ hội chưa có hợp đồng đã ký hợp lệ.");
             }
 
+            await ValidateWinningReferencesAsync(op, request, ct);
             op.WonQuoteId = request.WonQuoteId;
             op.WonTenderId = request.WonTenderId;
             op.LostReasonCode = null;
@@ -400,6 +415,7 @@ public class OpportunityService(
         });
 
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
 
         if (to is OpportunityStage.Won or OpportunityStage.Lost && op.OwnerUserId.HasValue)
         {
@@ -411,6 +427,30 @@ public class OpportunityService(
         }
 
         return await GetAsync(op.Id, callerUserId, canSeeAll: true, ct);
+    }
+
+    private async Task ValidateWinningReferencesAsync(
+        Opportunity opportunity,
+        ChangeOpportunityStageRequest request,
+        CancellationToken ct)
+    {
+        if (request.WonQuoteId.HasValue && !await db.Quotes.AsNoTracking().AnyAsync(
+                quote => quote.Id == request.WonQuoteId.Value && quote.OpportunityId == opportunity.Id,
+                ct))
+        {
+            throw new OpportunityOperationException(
+                $"Báo giá #{request.WonQuoteId.Value} không thuộc cơ hội đang chuyển sang Ký hợp đồng.");
+        }
+
+        if (request.WonTenderId.HasValue && !await db.Tenders.AsNoTracking().AnyAsync(
+                tender => tender.Id == request.WonTenderId.Value &&
+                    tender.CustomerId == opportunity.CustomerId &&
+                    tender.WonOpportunityId == opportunity.Id,
+                ct))
+        {
+            throw new OpportunityOperationException(
+                $"Gói thầu #{request.WonTenderId.Value} không thuộc khách hàng hoặc chưa được đánh dấu thắng cho cơ hội này.");
+        }
     }
 
     // -------- Delete --------
@@ -685,6 +725,14 @@ public class OpportunityService(
         {
             throw new OpportunityOperationException(
                 "Cơ hội và Dự án phải thuộc cùng một Khách hàng.");
+        }
+    }
+
+    private static void EnsureCustomerAccess(Customer customer, int callerUserId, bool canSeeAllCustomers)
+    {
+        if (!canSeeAllCustomers && customer.OwnerUserId != callerUserId)
+        {
+            throw new OpportunityOperationException("Khách hàng nằm ngoài phạm vi phụ trách của bạn.");
         }
     }
 }

@@ -45,6 +45,16 @@
     },
 
     {
+      "category": "lead_segment",
+      "options": [
+        { "code": "unclassified", "name": "Chưa phân loại", "sortOrder": 1 },
+        { "code": "residential",  "name": "Nhà ở", "sortOrder": 2 },
+        { "code": "commercial",   "name": "Thương mại", "sortOrder": 3 },
+        { "code": "hospitality",  "name": "Lưu trú", "sortOrder": 4 }
+      ]
+    },
+
+    {
       "category": "opportunity_stage",
       "options": [
         { "code": "prospecting",   "name": "Tiếp cận", "sortOrder": 1 },
@@ -139,6 +149,17 @@
         { "code": "site-access",      "name": "Giao thông tiếp cận",        "sortOrder": 5 },
         { "code": "surroundings",     "name": "Xung quanh",                 "sortOrder": 6 },
         { "code": "preliminary-legal", "name": "Vướng mắc pháp lý sơ bộ",   "sortOrder": 7 }
+      ]
+    },
+
+    {
+      "category": "survey_infrastructure_type",
+      "options": [
+        { "code": "electricity",  "name": "Cấp điện",             "sortOrder": 1 },
+        { "code": "water-supply", "name": "Cấp nước",             "sortOrder": 2 },
+        { "code": "drainage",     "name": "Thoát nước",           "sortOrder": 3 },
+        { "code": "telecom",      "name": "Viễn thông",           "sortOrder": 4 },
+        { "code": "road-access",  "name": "Đường giao thông vào", "sortOrder": 5 }
       ]
     },
 

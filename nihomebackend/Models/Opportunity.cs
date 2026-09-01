@@ -78,3 +78,5 @@ public enum OpportunityStage
     Won = 4,
     Lost = 5,
 }
+
+

@@ -159,6 +159,23 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateAsync_WhilePreparing_RejectsBlankNameAndPreservesTender()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.UpdateAsync(created.Id, new UpdateTenderRequest
+        {
+            Name = "   ",
+            SubmissionDeadline = DateTime.UtcNow.AddDays(30),
+            PreparerUserId = _userId,
+        }, _userId));
+
+        var saved = await _db.Tenders.AsNoTracking().SingleAsync(tender => tender.Id == created.Id);
+        Assert.Equal(created.Name, saved.Name);
+        Assert.Equal(created.SubmissionDeadline, saved.SubmissionDeadline);
+    }
+
+    [Fact]
     public async Task UpdateAsync_AfterSubmitted_OnlyNoteChanges()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
@@ -229,13 +246,24 @@ public class TenderServiceTests : IDisposable
 
     // ---------------- Delete ----------------
 
+    [Fact]
+    public async Task DeleteAsync_Preparing_RemovesTenderAndChecklist()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+        Assert.False(await _db.Tenders.AnyAsync(t => t.Id == created.Id));
+        Assert.False(await _db.TenderChecklistItems.AnyAsync(i => i.TenderId == created.Id));
+        Assert.True(await _db.Customers.AnyAsync(c => c.Id == _customerId));
+        Assert.True(await _db.Users.AnyAsync(u => u.Id == _userId));
+    }
+
     [Theory]
-    [InlineData(TenderStatus.Preparing)]
     [InlineData(TenderStatus.Submitted)]
     [InlineData(TenderStatus.Won)]
     [InlineData(TenderStatus.Lost)]
     [InlineData(TenderStatus.Cancelled)]
-    public async Task DeleteAsync_AnyStatus_RemovesTenderAndChecklist(TenderStatus status)
+    public async Task DeleteAsync_NonPreparing_IsRejectedAndPreservesData(TenderStatus status)
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var raw = await _db.Tenders.FirstAsync(t => t.Id == created.Id);
@@ -250,11 +278,11 @@ public class TenderServiceTests : IDisposable
         _db.Opportunities.Add(opportunity);
         await _db.SaveChangesAsync();
 
-        Assert.True(await _sut.DeleteAsync(created.Id));
-        Assert.False(await _db.Tenders.AnyAsync(t => t.Id == created.Id));
-        Assert.False(await _db.TenderChecklistItems.AnyAsync(i => i.TenderId == created.Id));
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.DeleteAsync(created.Id));
+        Assert.True(await _db.Tenders.AnyAsync(t => t.Id == created.Id));
+        Assert.True(await _db.TenderChecklistItems.AnyAsync(i => i.TenderId == created.Id));
         Assert.True(await _db.Opportunities.AnyAsync(item => item.Id == opportunity.Id));
-        Assert.Null((await _db.Opportunities.FindAsync(opportunity.Id))!.WonTenderId);
+        Assert.Equal(created.Id, (await _db.Opportunities.FindAsync(opportunity.Id))!.WonTenderId);
         Assert.True(await _db.Customers.AnyAsync(c => c.Id == _customerId));
         Assert.True(await _db.Users.AnyAsync(u => u.Id == _userId));
     }
@@ -569,6 +597,7 @@ public class TenderServiceTests : IDisposable
     public async Task MarkWonAsync_HappyPath_SetsStatusAndOpportunity()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
         var oppId = SeedOpportunity();
 
         var updated = await _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest
@@ -588,6 +617,7 @@ public class TenderServiceTests : IDisposable
     public async Task MarkWonAsync_UnknownOpportunity_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
         await Assert.ThrowsAsync<TenderOperationException>(() =>
             _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { OpportunityId = 9999 }, _userId));
     }
@@ -596,6 +626,7 @@ public class TenderServiceTests : IDisposable
     public async Task MarkWonAsync_OpportunityForDifferentCustomer_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
         var otherCustomer = new Customer
         {
             Name = "Other customer",
@@ -620,13 +651,14 @@ public class TenderServiceTests : IDisposable
             }, _userId));
 
         Assert.Contains("không thuộc khách hàng", exception.Message);
-        Assert.Equal("Preparing", (await _sut.GetAsync(created.Id))!.Status);
+        Assert.Equal("Submitted", (await _sut.GetAsync(created.Id))!.Status);
     }
 
     [Fact]
     public async Task MarkWonAsync_AlreadyClosed_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
         var oppId = SeedOpportunity();
         await _sut.MarkWonAsync(created.Id, new MarkTenderWonRequest { OpportunityId = oppId }, _userId);
 
@@ -638,6 +670,7 @@ public class TenderServiceTests : IDisposable
     public async Task MarkLostAsync_HappyPath()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
         _db.MasterDataOptions.Add(new MasterDataOption
         {
             Category = "opportunity_lost_reason",
@@ -664,8 +697,16 @@ public class TenderServiceTests : IDisposable
     public async Task MarkLostAsync_UnknownReason_Throws()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await SetTenderStatusAsync(created.Id, TenderStatus.Submitted);
         await Assert.ThrowsAsync<TenderOperationException>(() =>
             _sut.MarkLostAsync(created.Id, new MarkTenderLostRequest { ReasonCode = "no-such-reason" }, _userId));
+    }
+
+    private async Task SetTenderStatusAsync(int tenderId, TenderStatus status)
+    {
+        var tender = await _db.Tenders.SingleAsync(item => item.Id == tenderId);
+        tender.Status = status;
+        await _db.SaveChangesAsync();
     }
 
     // ---------------- Timeline ----------------

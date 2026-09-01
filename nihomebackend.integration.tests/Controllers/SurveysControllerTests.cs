@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 using NihomeBackend.Services.GoogleDrive;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
@@ -46,19 +47,195 @@ public class SurveysControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Sales_ScopeHidesAnotherProjectAcrossSurveyEndpoints_UntilAssignedAsSurveyor()
+    {
+        var context = await WithDbAsync(async db =>
+        {
+            var salesUser = await db.Users.SingleAsync(user =>
+                user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"]);
+            var projectManager = await db.Users.SingleAsync(user =>
+                user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"]);
+            var customer = new Customer
+            {
+                Name = $"Scoped survey customer {Guid.NewGuid():N}",
+                Type = CustomerType.Company,
+                OwnerUserId = projectManager.Id,
+            };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = $"OP-{Guid.NewGuid():N}",
+                Name = "Private customer project",
+                CustomerId = customer.Id,
+                ProjectManagerUserId = projectManager.Id,
+                CreatedByUserId = projectManager.Id,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var survey = new Survey
+            {
+                Code = $"SV-SCOPE-{Guid.NewGuid():N}"[..30],
+                Location = "Private customer site",
+                SurveyDate = DateTime.UtcNow.AddDays(-1),
+                OperationalProjectId = project.Id,
+                CreatedByUserId = projectManager.Id,
+            };
+            db.Surveys.Add(survey);
+            await db.SaveChangesAsync();
+            return (SurveyId: survey.Id, ProjectId: project.Id, SalesUserId: salesUser.Id);
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+
+        var list = await ReadJsonAsync(await Client.GetAsync("/api/surveys?pageSize=100"));
+        list.GetProperty("items").EnumerateArray().Should()
+            .NotContain(item => item.GetProperty("id").GetInt32() == context.SurveyId);
+        (await Client.GetAsync($"/api/surveys/{context.SurveyId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/surveys/{context.SurveyId}/timeline")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/surveys/{context.SurveyId}/export.pdf")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var conditionResponse = await Client.PutAsJsonAsync($"/api/surveys/{context.SurveyId}/conditions", new
+        {
+            conditions = new[]
+            {
+                new { category = "RightOfWay", code = "access-width", statusCode = "Unknown", unitCode = "m" },
+            },
+        });
+        conditionResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using (var csv = new MultipartFormDataContent())
+        {
+            csv.Add(new ByteArrayContent(Encoding.UTF8.GetBytes(
+                "Category,Code,Status,Value,Unit,InfrastructureTypeCode,Note\nRightOfWay,access-width,Unknown,,m,,")),
+                "file", "survey-conditions.csv");
+            (await Client.PostAsync($"/api/surveys/{context.SurveyId}/conditions/import", csv))
+                .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+        using (var media = new MultipartFormDataContent())
+        {
+            media.Add(new ByteArrayContent([1, 2, 3]), "file", "private.jpg");
+            (await Client.PostAsync($"/api/surveys/{context.SurveyId}/media", media))
+                .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+        (await Client.GetAsync($"/api/surveys/{context.SurveyId}/media/999/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/surveys/{context.SurveyId}/media/999"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.PostAsync($"/api/surveys/{context.SurveyId}/media/999/retry-sync", null))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.PutAsJsonAsync($"/api/surveys/{context.SurveyId}/checklist/999", new
+        {
+            status = "NeedsAttention",
+            note = "Must remain private",
+        })).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/surveys/{context.SurveyId}/sync-log"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var updateResponse = await Client.PutAsJsonAsync($"/api/surveys/{context.SurveyId}", new
+        {
+            location = "Must remain private",
+            surveyDate = DateTime.UtcNow,
+            operationalProjectId = context.ProjectId,
+        });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync($"/api/surveys/{context.SurveyId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await WithDbAsync(async db =>
+        {
+            var survey = await db.Surveys.SingleAsync(item => item.Id == context.SurveyId);
+            survey.SurveyorUserId = context.SalesUserId;
+            await db.SaveChangesAsync();
+        });
+
+        (await Client.GetAsync($"/api/surveys/{context.SurveyId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var assignedUpdate = await Client.PutAsJsonAsync($"/api/surveys/{context.SurveyId}", new
+        {
+            location = "Assigned surveyor update",
+            surveyDate = DateTime.UtcNow.AddDays(-1),
+            surveyorUserId = context.SalesUserId,
+            operationalProjectId = context.ProjectId,
+        });
+        assignedUpdate.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(assignedUpdate)).GetProperty("location").GetString()
+            .Should().Be("Assigned surveyor update");
+    }
+
+    [Fact]
     public async Task Create_HappyPath_ReturnsAutoCode()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var operationalProjectId = await CreateOperationalProjectAsync();
         var res = await Client.PostAsJsonAsync("/api/surveys", new
         {
             location = "Lô A5, KCN Bắc Ninh " + Guid.NewGuid().ToString("N")[..4],
             constructionTypeCode = "industrial",
             surveyDate = DateTime.UtcNow.AddDays(-1),
+            operationalProjectId,
         });
         res.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await ReadJsonAsync(res);
         body.GetProperty("code").GetString().Should().StartWith("SV-");
         body.GetProperty("driveSyncStatus").GetString().Should().Be("NotSynced");
+        body.GetProperty("operationalProjectId").GetInt32().Should().Be(operationalProjectId);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    public async Task Create_WithoutValidOperationalProject_IsBadRequest(int? operationalProjectId)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var res = await Client.PostAsJsonAsync("/api/surveys", new
+        {
+            location = "Invalid project routing",
+            constructionTypeCode = "industrial",
+            surveyDate = DateTime.UtcNow.AddDays(-1),
+            operationalProjectId,
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_WithMismatchedOpportunityProject_IsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var context = await WithDbAsync(async db =>
+        {
+            var customer = new Customer { Name = $"Survey mismatch {Guid.NewGuid():N}", Type = CustomerType.Company };
+            db.Customers.Add(customer);
+            await db.SaveChangesAsync();
+            var opportunityProject = new OperationalProject
+            {
+                Code = $"OP-{Guid.NewGuid():N}", Name = "Opportunity project", CustomerId = customer.Id,
+            };
+            var suppliedProject = new OperationalProject
+            {
+                Code = $"OP-{Guid.NewGuid():N}", Name = "Supplied project", CustomerId = customer.Id,
+            };
+            db.OperationalProjects.AddRange(opportunityProject, suppliedProject);
+            await db.SaveChangesAsync();
+            var opportunity = new Opportunity
+            {
+                Name = "Survey mismatch opportunity",
+                CustomerId = customer.Id,
+                OperationalProjectId = opportunityProject.Id,
+            };
+            db.Opportunities.Add(opportunity);
+            await db.SaveChangesAsync();
+            return (OpportunityId: opportunity.Id, ProjectId: suppliedProject.Id);
+        });
+
+        var response = await Client.PostAsJsonAsync("/api/surveys", new
+        {
+            location = "Mismatched routing",
+            surveyDate = DateTime.UtcNow,
+            linkedOpportunityId = context.OpportunityId,
+            operationalProjectId = context.ProjectId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("message").GetString().Should().Contain("không khớp");
     }
 
     [Fact]
@@ -125,12 +302,14 @@ public class SurveysControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateSurveyAsync("Old location " + Guid.NewGuid().ToString("N")[..4], "residential");
+        var operationalProjectId = await GetOperationalProjectIdAsync(id);
 
         var res = await Client.PutAsJsonAsync($"/api/surveys/{id}", new
         {
             location = "Updated location",
             constructionTypeCode = "commercial",
             surveyDate = DateTime.UtcNow.AddDays(-2),
+            operationalProjectId,
             note = "Ghi chú",
         });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -144,11 +323,13 @@ public class SurveysControllerTests : IntegrationTestBase
     public async Task Update_UnknownId_Is404()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var operationalProjectId = await CreateOperationalProjectAsync();
         var res = await Client.PutAsJsonAsync("/api/surveys/9999999", new
         {
             location = "x",
             constructionTypeCode = "residential",
             surveyDate = DateTime.UtcNow,
+            operationalProjectId,
         });
         res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -158,11 +339,13 @@ public class SurveysControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateSurveyAsync("Bad update", "residential");
+        var operationalProjectId = await GetOperationalProjectIdAsync(id);
         var res = await Client.PutAsJsonAsync($"/api/surveys/{id}", new
         {
             location = "Bad update",
             constructionTypeCode = "definitely-not-real",
             surveyDate = DateTime.UtcNow,
+            operationalProjectId,
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -231,11 +414,13 @@ public class SurveysControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateSurveyAsync("Timeline probe", "residential");
+        var operationalProjectId = await GetOperationalProjectIdAsync(id);
         // Fire an auditable action so the timeline has content queued.
         await Client.PutAsJsonAsync($"/api/surveys/{id}", new
         {
             location = "Timeline probe (updated)",
             surveyDate = DateTime.UtcNow.AddDays(-1),
+            operationalProjectId,
         });
 
         var res = await Client.GetAsync($"/api/surveys/{id}/timeline");
@@ -255,15 +440,37 @@ public class SurveysControllerTests : IntegrationTestBase
 
     private async Task<int> CreateSurveyAsync(string location, string type)
     {
+        var operationalProjectId = await CreateOperationalProjectAsync();
         var res = await Client.PostAsJsonAsync("/api/surveys", new
         {
             location,
             constructionTypeCode = type,
             surveyDate = DateTime.UtcNow.AddDays(-1),
+            operationalProjectId,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
+
+    private Task<int> GetOperationalProjectIdAsync(int surveyId) => WithDbAsync(db =>
+        db.Surveys.AsNoTracking()
+            .Where(survey => survey.Id == surveyId)
+            .Select(survey => survey.OperationalProjectId)
+            .SingleAsync());
+
+    private Task<int> CreateOperationalProjectAsync() => WithDbAsync(async db =>
+    {
+        var customer = new Customer { Name = $"Survey customer {Guid.NewGuid():N}", Type = CustomerType.Company };
+        db.Customers.Add(customer);
+        await db.SaveChangesAsync();
+        var project = new OperationalProject
+        {
+            Code = $"OP-{Guid.NewGuid():N}", Name = "Survey project", CustomerId = customer.Id,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        return project.Id;
+    });
 }
 
 public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
@@ -334,6 +541,10 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         persisted.SyncStatus.Should().Be(SurveyMediaSyncStatus.Pending);
         persisted.SyncAttemptCount.Should().Be(0);
         persisted.DriveFileId.Should().BeNull();
+        var staged = await WithDbAsync(db => db.ProjectDocuments.AsNoTracking()
+            .SingleAsync(document => document.SourceModule == ProjectDocumentSourceModule.Survey &&
+                document.SourceRecordId == mediaId));
+        staged.Category.Should().Be(ProjectDocumentCategory.Survey);
 
         var detailResponse = await Client.GetAsync($"/api/surveys/{surveyId}");
         detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -393,6 +604,75 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         pdfText.Should().Contain("SURVEY REPORT");
         pdfText.Should().Contain("Geology");
         pdfText.Should().Contain(note);
+    }
+
+    [Fact]
+    public async Task Conditions_TemplateAtomicImportJsonReplaceAndPdf_AllWork()
+    {
+        await AuthenticateAsSalesManagerAsync();
+        var template = await Client.GetAsync("/api/surveys/conditions/template.csv");
+        template.StatusCode.Should().Be(HttpStatusCode.OK);
+        var templateText = await template.Content.ReadAsStringAsync();
+        templateText.Should().Contain("RightOfWay,access-width,Unknown,,m")
+            .And.Contain("Elevation,site-elevation,Unknown,,m")
+            .And.Contain("Infrastructure,electricity");
+
+        var surveyId = await CreateSurveyAsync("Structured conditions");
+        await WithDbAsync(async db =>
+        {
+            db.SurveySiteConditions.Add(new SurveySiteCondition
+            {
+                SurveyId = surveyId,
+                Category = SurveySiteConditionCategory.RightOfWay,
+                Code = "access-width",
+                Status = SurveySiteConditionStatus.Available,
+                NumericValue = 4,
+                UnitCode = "m",
+            });
+            await db.SaveChangesAsync();
+        });
+        using (var invalidForm = CreateCsvForm(ValidConditionsCsv().Replace(",6.5,m,", ",6.5,yard,")))
+        {
+            var invalid = await Client.PostAsync($"/api/surveys/{surveyId}/conditions/import", invalidForm);
+            invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+        var preserved = await WithDbAsync(db => db.SurveySiteConditions.AsNoTracking()
+            .SingleAsync(condition => condition.SurveyId == surveyId));
+        preserved.NumericValue.Should().Be(4);
+
+        using (var validForm = CreateCsvForm(ValidConditionsCsv()))
+        {
+            var valid = await Client.PostAsync($"/api/surveys/{surveyId}/conditions/import", validForm);
+            valid.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(valid)).GetProperty("conditions").GetArrayLength().Should().Be(3);
+        }
+        var jsonReplace = await Client.PutAsJsonAsync($"/api/surveys/{surveyId}/conditions", new
+        {
+            conditions = new object[]
+            {
+                new { category = "RightOfWay", code = "access-width", statusCode = "Available", numericValue = 7.2m, unitCode = "m" },
+                new { category = "Elevation", code = "site-elevation", statusCode = "Available", numericValue = 2.1m, unitCode = "m", description = "Finished floor benchmark" },
+                new { category = "Infrastructure", code = "electricity", statusCode = "Available", referenceCode = "electricity", description = "Grid at boundary" },
+            },
+        });
+        jsonReplace.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/surveys/{surveyId}"));
+        detail.GetProperty("siteConditions").GetArrayLength().Should().Be(3);
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var translations = scope.ServiceProvider.GetRequiredService<TranslationService>();
+            await translations.UpsertPairAsync(
+                "surveys.pdf.conditions",
+                "ĐIỀU KIỆN HIỆN TRƯỜNG",
+                new Dictionary<string, string> { ["en"] = "SITE CONDITIONS" },
+                "surveys");
+        }
+        var pdfResponse = await Client.GetAsync($"/api/surveys/{surveyId}/export.pdf?lang=en");
+        pdfResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var pdf = PdfDocument.Open(await pdfResponse.Content.ReadAsByteArrayAsync());
+        var pdfText = string.Join('\n', pdf.GetPages().Select(page => ContentOrderTextExtractor.GetText(page)));
+        pdfText.Should().Contain("SITE CONDITIONS").And.Contain("access-width").And.Contain("7.2 m");
     }
 
     [Fact]
@@ -583,6 +863,8 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
             db.SurveyMedia.RemoveRange(db.SurveyMedia.Where(media => createdSurveyIds.Contains(media.SurveyId)));
             db.SurveyChecklistResults.RemoveRange(
                 db.SurveyChecklistResults.Where(result => createdSurveyIds.Contains(result.SurveyId)));
+            db.SurveySiteConditions.RemoveRange(
+                db.SurveySiteConditions.Where(condition => createdSurveyIds.Contains(condition.SurveyId)));
             db.Surveys.RemoveRange(db.Surveys.Where(survey => createdSurveyIds.Contains(survey.Id)));
             await db.SaveChangesAsync();
         });
@@ -601,11 +883,13 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
 
     private async Task<int> CreateSurveyAsync(string prefix)
     {
+        var operationalProjectId = await CreateOperationalProjectAsync();
         var response = await Client.PostAsJsonAsync("/api/surveys", new
         {
             location = $"{prefix} {Guid.NewGuid():N}"[..Math.Min(60, prefix.Length + 33)],
             constructionTypeCode = "industrial",
             surveyDate = DateTime.UtcNow.AddDays(-1),
+            operationalProjectId,
         });
         response.EnsureSuccessStatusCode();
         var surveyId = (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
@@ -659,6 +943,33 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         if (longitude.HasValue) form.Add(new StringContent(longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)), "longitude");
         return form;
     }
+
+    private static MultipartFormDataContent CreateCsvForm(string csv)
+    {
+        var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent(Encoding.UTF8.GetBytes(csv)), "file", "conditions.csv");
+        return form;
+    }
+
+    private static string ValidConditionsCsv() =>
+        "Category,Code,StatusCode,NumericValue,UnitCode,ReferenceCode,Description,Note\r\n" +
+        "RightOfWay,access-width,Available,6.5,m,,Truck access,\r\n" +
+        "Elevation,site-elevation,NeedsInvestigation,,m,,Survey benchmark required,\r\n" +
+        "Infrastructure,electricity,Available,,,electricity,Grid at boundary,\r\n";
+
+    private Task<int> CreateOperationalProjectAsync() => WithDbAsync(async db =>
+    {
+        var customer = new Customer { Name = $"Survey media customer {Guid.NewGuid():N}", Type = CustomerType.Company };
+        db.Customers.Add(customer);
+        await db.SaveChangesAsync();
+        var project = new OperationalProject
+        {
+            Code = $"OP-{Guid.NewGuid():N}", Name = "Survey media project", CustomerId = customer.Id,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        return project.Id;
+    });
 
     private static async Task UpsertTranslationAsync(
         NihomeBackend.Data.AppDbContext db,

@@ -213,6 +213,8 @@ public class TenderService(
         var entity = await db.Tenders.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return null;
 
+        GuardNotTerminal(entity, "chỉnh sửa");
+
         if (request.SubmissionDeadline <= DateTime.UtcNow && entity.Status == TenderStatus.Preparing)
         {
             throw new TenderOperationException("Deadline nộp phải lớn hơn hiện tại.");
@@ -229,7 +231,10 @@ public class TenderService(
         var previousPreparerId = entity.PreparerUserId;
         if (entity.Status == TenderStatus.Preparing)
         {
-            entity.Name = request.Name.Trim();
+            var name = (request.Name ?? string.Empty).Trim();
+            if (name.Length == 0)
+                throw new TenderOperationException("Tên gói thầu là bắt buộc, ví dụ: Gói thầu xây dựng nhà máy A.");
+            entity.Name = name;
             entity.OpeningDate = request.OpeningDate;
             entity.SubmissionDeadline = request.SubmissionDeadline;
             entity.PreparerUserId = request.PreparerUserId;
@@ -261,6 +266,10 @@ public class TenderService(
             .Include(t => t.ChecklistItems)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return false;
+        if (entity.Status != TenderStatus.Preparing)
+        {
+            throw new TenderOperationException("Chỉ gói thầu đang Chuẩn bị mới có thể bị xóa.");
+        }
 
         var winningOpportunities = await db.Opportunities
             .Where(opportunity => opportunity.WonTenderId == id)
@@ -436,77 +445,104 @@ public class TenderService(
         return await GetAsync(tenderId, ct);
     }
 
-    public async Task<TenderResponse?> MarkWonAsync(int tenderId, MarkTenderWonRequest request,
+    public Task<TenderResponse?> MarkWonAsync(int tenderId, MarkTenderWonRequest request,
+        int callerUserId, CancellationToken ct = default) => TransitionAsync(tenderId, new TransitionTenderRequest
+        {
+            Status = nameof(TenderStatus.Won),
+            OpportunityId = request.OpportunityId,
+            Note = request.Note,
+        }, callerUserId, ct);
+
+    public Task<TenderResponse?> MarkLostAsync(int tenderId, MarkTenderLostRequest request,
+        int callerUserId, CancellationToken ct = default) => TransitionAsync(tenderId, new TransitionTenderRequest
+        {
+            Status = nameof(TenderStatus.Lost),
+            ReasonCode = request.ReasonCode,
+            Note = request.Note,
+        }, callerUserId, ct);
+
+    public async Task<TenderResponse?> TransitionAsync(int tenderId, TransitionTenderRequest request,
         int callerUserId, CancellationToken ct = default)
     {
         var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
         if (tender is null) return null;
-
-        GuardNotTerminal(tender);
-
-        if (!await db.Opportunities.AnyAsync(
-                opportunity => opportunity.Id == request.OpportunityId &&
-                    opportunity.CustomerId == tender.CustomerId,
-                ct))
+        GuardNotTerminal(tender, "chuyển trạng thái");
+        if (!Enum.TryParse<TenderStatus>(request.Status, true, out var nextStatus))
         {
-            throw new TenderOperationException(
-                $"Cơ hội #{request.OpportunityId} không tồn tại hoặc không thuộc khách hàng của gói thầu.");
+            throw new TenderOperationException($"Trạng thái gói thầu '{request.Status}' không hợp lệ.");
+        }
+        var allowed = tender.Status switch
+        {
+            TenderStatus.Preparing => nextStatus is TenderStatus.Submitted or TenderStatus.Cancelled,
+            TenderStatus.Submitted => nextStatus is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled,
+            _ => false,
+        };
+        if (!allowed)
+        {
+            throw new TenderOperationException($"Không thể chuyển gói thầu từ {tender.Status} sang {nextStatus}.");
         }
 
-        tender.Status = TenderStatus.Won;
-        tender.WonOpportunityId = request.OpportunityId;
-        tender.LostReasonCode = null;
-        tender.LostNote = null;
-        if (!string.IsNullOrWhiteSpace(request.Note))
+        if (nextStatus == TenderStatus.Submitted)
+        {
+            var allChecklistComplete = await db.TenderChecklistItems
+                .Where(item => item.TenderId == tenderId)
+                .AllAsync(item => item.Status == TenderChecklistItemStatus.Done ||
+                    item.Status == TenderChecklistItemStatus.Submitted, ct);
+            var hasChecklist = await db.TenderChecklistItems.AnyAsync(item => item.TenderId == tenderId, ct);
+            if (!hasChecklist || !allChecklistComplete)
+            {
+                throw new TenderOperationException("Phải hoàn tất tất cả mục checklist trước khi nộp gói thầu.");
+            }
+            if (!await db.TenderEstimateRevisions.AnyAsync(revision =>
+                    revision.TenderId == tenderId && revision.Status == TenderEstimateRevisionStatus.Approved, ct))
+            {
+                throw new TenderOperationException("Phải có ít nhất một dự toán đã được phê duyệt trước khi nộp gói thầu.");
+            }
+        }
+        else if (nextStatus == TenderStatus.Won)
+        {
+            if (!request.OpportunityId.HasValue || !await db.Opportunities.AnyAsync(
+                    opportunity => opportunity.Id == request.OpportunityId.Value &&
+                        opportunity.CustomerId == tender.CustomerId,
+                    ct))
+            {
+                throw new TenderOperationException(
+                    $"Cơ hội #{request.OpportunityId} không tồn tại hoặc không thuộc khách hàng của gói thầu.");
+            }
+            tender.WonOpportunityId = request.OpportunityId;
+            tender.LostReasonCode = null;
+            tender.LostNote = null;
+        }
+        else if (nextStatus == TenderStatus.Lost)
+        {
+            var reasonCode = (request.ReasonCode ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(reasonCode))
+            {
+                throw new TenderOperationException("Vui lòng chọn lý do trượt thầu.");
+            }
+            if (!await db.MasterDataOptions.AnyAsync(option => option.Category == "opportunity_lost_reason" &&
+                    option.Code == reasonCode && option.IsActive, ct))
+            {
+                throw new TenderOperationException($"Lý do '{reasonCode}' không hợp lệ.");
+            }
+            tender.LostReasonCode = reasonCode;
+            tender.LostNote = TrimOrNull(request.Note);
+            tender.WonOpportunityId = null;
+        }
+
+        var previousStatus = tender.Status;
+        tender.Status = nextStatus;
+        if (!string.IsNullOrWhiteSpace(request.Note) && nextStatus != TenderStatus.Lost)
         {
             tender.Note = request.Note.Trim();
         }
         var now = DateTime.UtcNow;
-        tender.ClosedAt = now;
+        tender.ClosedAt = nextStatus is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled ? now : null;
         tender.UpdatedAt = now;
         tender.UpdatedByUserId = callerUserId;
-
         await db.SaveChangesAsync(ct);
-        logger.LogInformation("Tender {TenderId} marked WON by user {UserId} (opportunity {OppId})",
-            tenderId, callerUserId, request.OpportunityId);
-        return await GetAsync(tenderId, ct);
-    }
-
-    public async Task<TenderResponse?> MarkLostAsync(int tenderId, MarkTenderLostRequest request,
-        int callerUserId, CancellationToken ct = default)
-    {
-        var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
-        if (tender is null) return null;
-
-        GuardNotTerminal(tender);
-
-        var reasonCode = (request.ReasonCode ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(reasonCode))
-        {
-            throw new TenderOperationException("Vui lòng chọn lý do trượt thầu.");
-        }
-
-        // Reasons come from the shared opportunity_lost_reason master data
-        // category so wording stays consistent with the CRM funnel.
-        var reasonExists = await db.MasterDataOptions.AnyAsync(m =>
-            m.Category == "opportunity_lost_reason" && m.Code == reasonCode && m.IsActive, ct);
-        if (!reasonExists)
-        {
-            throw new TenderOperationException($"Lý do '{reasonCode}' không hợp lệ.");
-        }
-
-        tender.Status = TenderStatus.Lost;
-        tender.LostReasonCode = reasonCode;
-        tender.LostNote = TrimOrNull(request.Note);
-        tender.WonOpportunityId = null;
-        var now = DateTime.UtcNow;
-        tender.ClosedAt = now;
-        tender.UpdatedAt = now;
-        tender.UpdatedByUserId = callerUserId;
-
-        await db.SaveChangesAsync(ct);
-        logger.LogInformation("Tender {TenderId} marked LOST by user {UserId} (reason={Reason})",
-            tenderId, callerUserId, reasonCode);
+        logger.LogInformation("Tender {TenderId} transitioned from {PreviousStatus} to {NextStatus} by user {UserId}",
+            tenderId, previousStatus, nextStatus, callerUserId);
         return await GetAsync(tenderId, ct);
     }
 
@@ -558,11 +594,11 @@ public class TenderService(
         }
     }
 
-    private static void GuardNotTerminal(Tender tender)
+    private static void GuardNotTerminal(Tender tender, string action)
     {
         if (tender.Status is TenderStatus.Won or TenderStatus.Lost or TenderStatus.Cancelled)
         {
-            throw new TenderOperationException("Gói thầu đã ở trạng thái kết thúc, không thể đánh dấu lại.");
+            throw new TenderOperationException($"Gói thầu đã ở trạng thái kết thúc, không thể {action}.");
         }
     }
 

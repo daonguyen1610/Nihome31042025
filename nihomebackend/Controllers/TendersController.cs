@@ -328,6 +328,33 @@ public class TendersController(
         }
     }
 
+    [HttpPost("{id:int}/transition")]
+    [RequirePermission("crm.tenders", "mark-result")]
+    public async Task<ActionResult<TenderResponse>> Transition(
+        int id, [FromBody] TransitionTenderRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var updated = await svc.TransitionAsync(id, request, userId.Value, ct);
+            if (updated is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "tender.transition",
+                ResourceType = EntityTypes.Tender,
+                ResourceId = id.ToString(),
+                Message = $"Tender #{id} → {updated.Status}.",
+                NewValue = updated,
+            });
+            return Ok(updated);
+        }
+        catch (TenderOperationException ex)
+        {
+            return LogAndBadRequest("tender.transition", ex, id);
+        }
+    }
+
     [HttpGet("{id:int}/timeline")]
     [RequirePermission("crm.tenders", "view")]
     public async Task<ActionResult<List<TenderTimelineEvent>>> Timeline(

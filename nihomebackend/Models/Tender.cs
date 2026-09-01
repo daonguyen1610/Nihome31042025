@@ -59,6 +59,7 @@ public class Tender
     public int? UpdatedByUserId { get; set; }
 
     public List<TenderChecklistItem> ChecklistItems { get; set; } = new();
+    public List<TenderEstimateRevision> EstimateRevisions { get; set; } = new();
 }
 
 /// <summary>

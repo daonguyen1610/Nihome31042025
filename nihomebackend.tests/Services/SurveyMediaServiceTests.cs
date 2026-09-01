@@ -56,51 +56,35 @@ public sealed class SurveyMediaServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task AddAsync_UnlinkedSurvey_RetainsLegacyPendingBehaviorWithoutSidecar()
+    public async Task AddAsync_ZeroOperationalProject_IsBlockedBeforeStorage()
     {
-        var survey = await AddSurveyAsync();
-        var file = new FormFile(new MemoryStream([1]), 0, 1, "file", "photo.jpg");
-        var path = $"/files/survey-media/{survey.Id}/stored.jpg";
-        storage.Setup(item => item.StoreAsync(survey.Id, file, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StoredSurveyMedia("photo.jpg", "stored.jpg", ".jpg", "image/jpeg", 1, path));
-
-        var response = await service.AddAsync(survey.Id, new SurveyMediaUploadRequest { File = file }, 7);
-
-        Assert.NotNull(response);
-        Assert.Equal(SurveyMediaSyncStatus.Pending.ToString(), response.SyncStatus);
-        Assert.Empty(db.ProjectDocuments);
-        projectStorage.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public async Task AddAsync_PublicLinkedProject_DoesNotStageOperationalProjectSidecar()
-    {
-        var publicProject = new Project
+        var survey = new Survey
         {
-            Name = "Public portfolio project",
-            Slug = $"public-{Guid.NewGuid():N}",
+            Code = $"SV-{Guid.NewGuid():N}",
+            Location = "Invalid routing",
+            SurveyDate = DateTime.UtcNow,
+            OperationalProjectId = 0,
         };
-        db.Projects.Add(publicProject);
-        await db.SaveChangesAsync();
-        var survey = await AddSurveyAsync();
-        survey.LinkedProjectId = publicProject.Id;
+        db.Surveys.Add(survey);
         await db.SaveChangesAsync();
         var file = new FormFile(new MemoryStream([1]), 0, 1, "file", "photo.jpg");
         var path = $"/files/survey-media/{survey.Id}/stored.jpg";
         storage.Setup(item => item.StoreAsync(survey.Id, file, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new StoredSurveyMedia("photo.jpg", "stored.jpg", ".jpg", "image/jpeg", 1, path));
 
-        var response = await service.AddAsync(survey.Id, new SurveyMediaUploadRequest { File = file }, 7);
+        var exception = await Assert.ThrowsAsync<SurveyMediaValidationException>(() =>
+            service.AddAsync(survey.Id, new SurveyMediaUploadRequest { File = file }, 7));
 
-        Assert.NotNull(response);
+        Assert.Contains("mã số lớn hơn 0", exception.Message);
         Assert.Empty(db.ProjectDocuments);
+        storage.Verify(item => item.StoreAsync(It.IsAny<int>(), It.IsAny<IFormFile>(), It.IsAny<CancellationToken>()), Times.Never);
         projectStorage.VerifyNoOtherCalls();
     }
 
     [Fact]
     public async Task AddAsync_TotalWouldExceed2GiB_RejectsWithoutWritingFile()
     {
-        var survey = await AddSurveyAsync();
+        var (survey, _) = await AddLinkedSurveyAsync();
         db.SurveyMedia.Add(Media(survey.Id, size: SurveyMediaStorageService.MaxSurveySize - 5));
         await db.SaveChangesAsync();
         var file = new FormFile(Stream.Null, 0, 10, "file", "photo.jpg");
@@ -115,7 +99,7 @@ public sealed class SurveyMediaServiceTests : IDisposable
     [Fact]
     public async Task RetryAsync_ThirdAttempt_RemainsTerminal()
     {
-        var survey = await AddSurveyAsync();
+        var (survey, _) = await AddLinkedSurveyAsync();
         var media = Media(survey.Id);
         media.SyncStatus = SurveyMediaSyncStatus.Failed;
         media.SyncAttemptCount = 3;
@@ -132,7 +116,7 @@ public sealed class SurveyMediaServiceTests : IDisposable
     [Fact]
     public async Task RetryAsync_ProcessingMedia_PreservesActiveClaim()
     {
-        var survey = await AddSurveyAsync();
+        var (survey, _) = await AddLinkedSurveyAsync();
         var claimToken = Guid.NewGuid();
         var claimExpiresAt = DateTime.UtcNow.AddMinutes(15);
         var media = Media(survey.Id);
@@ -203,24 +187,6 @@ public sealed class SurveyMediaServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemoteDeleteFailure_RetainsSyncedRecord()
-    {
-        var survey = await AddSurveyAsync();
-        var media = Media(survey.Id);
-        media.SyncStatus = SurveyMediaSyncStatus.Synced;
-        media.DriveFileId = "drive-file";
-        db.SurveyMedia.Add(media);
-        await db.SaveChangesAsync();
-        drive.Setup(adapter => adapter.DeleteAsync("drive-file", It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new IOException("Drive down"));
-
-        await Assert.ThrowsAsync<SurveyMediaValidationException>(() => service.DeleteAsync(survey.Id, media.Id));
-
-        Assert.True(await db.SurveyMedia.AnyAsync(item => item.Id == media.Id));
-        storage.Verify(store => store.Delete(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
     public async Task DeleteAsync_LinkedOperationalProject_LocalCleanupFailurePreservesCommittedDelete()
     {
         var (survey, project) = await AddLinkedSurveyAsync();
@@ -261,44 +227,9 @@ public sealed class SurveyMediaServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_UnlinkedSyncedMedia_RetainsLegacyDriveDeletion()
-    {
-        var survey = await AddSurveyAsync();
-        var media = Media(survey.Id);
-        media.SyncStatus = SurveyMediaSyncStatus.Synced;
-        media.DriveFileId = "legacy-drive-file";
-        db.SurveyMedia.Add(media);
-        await db.SaveChangesAsync();
-
-        Assert.True(await service.DeleteAsync(survey.Id, media.Id));
-
-        drive.Verify(item => item.DeleteAsync("legacy-drive-file", It.IsAny<CancellationToken>()), Times.Once);
-        storage.Verify(item => item.Delete(survey.Id, media.RelativePath), Times.Once);
-        Assert.Empty(db.ProjectDocuments);
-    }
-
-    [Fact]
-    public async Task DeleteAsync_LocalDeleteFailure_RetainsRecordAndReportsActionableError()
-    {
-        var survey = await AddSurveyAsync();
-        var media = Media(survey.Id);
-        db.SurveyMedia.Add(media);
-        await db.SaveChangesAsync();
-        storage.Setup(store => store.Delete(survey.Id, media.RelativePath))
-            .Throws(new UnauthorizedAccessException("private path details"));
-
-        var exception = await Assert.ThrowsAsync<SurveyMediaValidationException>(() =>
-            service.DeleteAsync(survey.Id, media.Id));
-
-        Assert.Contains("vùng lưu trữ riêng tư", exception.Message);
-        Assert.DoesNotContain("private path details", exception.Message);
-        Assert.True(await db.SurveyMedia.AnyAsync(item => item.Id == media.Id));
-    }
-
-    [Fact]
     public async Task DeleteAsync_ProcessingMedia_PreservesActiveClaimAndFiles()
     {
-        var survey = await AddSurveyAsync();
+        var (survey, _) = await AddLinkedSurveyAsync();
         var claimToken = Guid.NewGuid();
         var claimExpiresAt = DateTime.UtcNow.AddMinutes(15);
         var media = Media(survey.Id);
@@ -346,6 +277,33 @@ public sealed class SurveyMediaServiceTests : IDisposable
         var pdf = await service.ExportPdfAsync(9999999, "en");
 
         Assert.Null(pdf);
+    }
+
+    [Fact]
+    public async Task ExportPdfAsync_IncludesLocalizedStructuredConditionsTable()
+    {
+        var survey = await AddSurveyAsync();
+        db.SurveySiteConditions.Add(new SurveySiteCondition
+        {
+            SurveyId = survey.Id,
+            Category = SurveySiteConditionCategory.RightOfWay,
+            Code = "access-width",
+            Status = SurveySiteConditionStatus.Available,
+            NumericValue = 6.5m,
+            UnitCode = "m",
+            Description = "Truck access",
+        });
+        AddTranslation("surveys.pdf.conditions", "en", "SITE CONDITIONS");
+        AddTranslation("surveys.conditions.category.RightOfWay", "en", "Right of way");
+        AddTranslation("surveys.conditions.status.Available", "en", "Available");
+        await db.SaveChangesAsync();
+
+        var pdf = await service.ExportPdfAsync(survey.Id, "en");
+        var document = string.Join('\n', ExtractPdfPages(pdf!));
+
+        Assert.Contains("SITE CONDITIONS", document);
+        Assert.Contains("Right of way | access-width | Available | 6.5 m", document);
+        Assert.Contains("Truck access", document);
     }
 
     [Theory]
@@ -519,12 +477,21 @@ public sealed class SurveyMediaServiceTests : IDisposable
 
     private async Task<Survey> AddSurveyAsync(SurveyDriveSyncStatus status = SurveyDriveSyncStatus.NotSynced)
     {
+        var project = new OperationalProject
+        {
+            Code = $"OP-{Guid.NewGuid():N}",
+            Name = "Survey project",
+            CustomerId = 1,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
         var survey = new Survey
         {
             Code = $"SV-{Guid.NewGuid():N}",
             Location = "Test",
             SurveyDate = DateTime.UtcNow,
             DriveSyncStatus = status,
+            OperationalProjectId = project.Id,
         };
         db.Surveys.Add(survey);
         await db.SaveChangesAsync();
@@ -550,6 +517,7 @@ public sealed class SurveyMediaServiceTests : IDisposable
             Location = "Test",
             SurveyDate = DateTime.UtcNow,
             LinkedOpportunityId = opportunity.Id,
+            OperationalProjectId = project.Id,
         };
         db.Surveys.Add(survey);
         await db.SaveChangesAsync();

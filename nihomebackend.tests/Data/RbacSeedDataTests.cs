@@ -23,6 +23,14 @@ public class RbacSeedDataTests
     }
 
     [Fact]
+    public void Default_DoesNotExposeRemovedOpportunityReconciliationPermission()
+    {
+        var bundle = RbacSeedData.Default;
+
+        Assert.DoesNotContain(bundle.BaseCatalog, entry => entry.Code == "crm.opportunities.reconcile");
+    }
+
+    [Fact]
     public void Default_DerivesPermissionDescriptionKeysByConvention()
     {
         var bundle = RbacSeedData.Default;
@@ -90,7 +98,7 @@ public class RbacSeedDataTests
         "crm.quotes.view", "crm.quotes.manage", "crm.quotes.approve", "crm.quotes.send",
         "crm.tenders.view", "crm.tenders.manage", "crm.tenders.mark-result",
         "crm.capability-docs.view", "crm.capability-docs.manage",
-        "crm.surveys.view", "crm.surveys.manage",
+        "crm.surveys.view", "crm.surveys.view.all", "crm.surveys.manage", "crm.surveys.manage.all",
         "crm.contracts.view", "crm.contracts.manage", "crm.contracts.activate", "crm.contracts.appendix-manage",
         // M2 Design
         "design.projects.view", "design.projects.manage",
@@ -139,6 +147,10 @@ public class RbacSeedDataTests
         Assert.Contains("crm.quotes.send", expanded);
         Assert.DoesNotContain("crm.quotes.approve", expanded);
         Assert.DoesNotContain("crm.contracts.activate", expanded);
+        Assert.Contains("crm.surveys.view", expanded);
+        Assert.Contains("crm.surveys.manage", expanded);
+        Assert.DoesNotContain("crm.surveys.view.all", expanded);
+        Assert.DoesNotContain("crm.surveys.manage.all", expanded);
     }
 
     [Fact]

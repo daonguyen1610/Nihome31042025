@@ -47,6 +47,38 @@ public class LeadsControllerTests : IntegrationTestBase
         body.GetProperty("name").GetString().Should().Be(payload.name);
         body.GetProperty("status").GetString().Should().Be("New");
         body.GetProperty("sourceCode").GetString().Should().Be("marketing");
+        body.GetProperty("segmentCode").GetString().Should().Be("unclassified");
+    }
+
+    [Fact]
+    public async Task Create_RejectsUnknownSegment_AndListFiltersBySegment()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+
+        var invalid = await Client.PostAsJsonAsync("/api/leads", new
+        {
+            name = "Invalid segment",
+            phone = "0900000000",
+            sourceCode = "marketing",
+            segmentCode = "unknown-segment",
+        });
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var created = await Client.PostAsJsonAsync("/api/leads", new
+        {
+            name = "Commercial " + Guid.NewGuid().ToString("N")[..6],
+            phone = "0900000000",
+            sourceCode = "marketing",
+            segmentCode = "commercial",
+        });
+        created.EnsureSuccessStatusCode();
+        var leadId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+
+        var list = await Client.GetAsync("/api/leads?segmentCode=commercial&pageSize=100");
+        list.EnsureSuccessStatusCode();
+        var ids = (await ReadJsonAsync(list)).GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetInt32());
+        ids.Should().Contain(leadId);
     }
 
     [Fact]

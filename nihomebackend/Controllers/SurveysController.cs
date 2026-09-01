@@ -20,14 +20,18 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class SurveysController(
     ISurveyService svc,
+    ISurveyConditionService conditionSvc,
     ISurveyMediaService mediaSvc,
+    IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("crm.surveys", "view")]
     public async Task<ActionResult<SurveyListResponse>> List([FromQuery] SurveyListParams parameters, CancellationToken ct)
     {
-        var result = await svc.ListAsync(parameters, ct);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await svc.ListAsync(parameters, userId.Value, await CanViewAllAsync(userId.Value, ct), ct);
         return Ok(result);
     }
 
@@ -35,7 +39,9 @@ public class SurveysController(
     [RequirePermission("crm.surveys", "view")]
     public async Task<ActionResult<SurveyResponse>> Get(int id, CancellationToken ct)
     {
-        var found = await svc.GetAsync(id, ct);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var found = await svc.GetAsync(id, userId.Value, await CanViewAllAsync(userId.Value, ct), ct);
         return found is null ? NotFound() : Ok(found);
     }
 
@@ -47,7 +53,8 @@ public class SurveysController(
         if (userId is null) return Unauthorized();
         try
         {
-            var response = await svc.CreateAsync(request, userId.Value, ct);
+            var response = await svc.CreateAsync(
+                request, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
             audit.Log(new AuditEvent
             {
                 Action = "survey.create",
@@ -80,7 +87,8 @@ public class SurveysController(
         if (userId is null) return Unauthorized();
         try
         {
-            var response = await svc.UpdateAsync(id, request, userId.Value, ct);
+            var response = await svc.UpdateAsync(
+                id, request, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
             if (response is null) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -111,9 +119,12 @@ public class SurveysController(
     [RequirePermission("crm.surveys", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
         try
         {
-            var removed = await svc.DeleteAsync(id, ct);
+            var removed = await svc.DeleteAsync(
+                id, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
             if (!removed) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -144,8 +155,75 @@ public class SurveysController(
     public async Task<ActionResult<List<SurveyTimelineEvent>>> Timeline(
         int id, [FromQuery] int limit = 100, CancellationToken ct = default)
     {
-        var events = await svc.GetTimelineAsync(id, limit, ct);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var events = await svc.GetTimelineAsync(
+            id, limit, userId.Value, await CanViewAllAsync(userId.Value, ct), ct);
         return events is null ? NotFound() : Ok(events);
+    }
+
+    [HttpGet("conditions/template.csv")]
+    [RequirePermission("crm.surveys", "view")]
+    public IActionResult DownloadConditionsTemplate() => File(
+        SurveyConditionService.CreateTemplate(),
+        "text/csv; charset=utf-8",
+        "survey-site-conditions-template.csv");
+
+    [HttpPut("{id:int}/conditions")]
+    [RequirePermission("crm.surveys", "manage")]
+    public async Task<ActionResult<List<SurveySiteConditionResponse>>> ReplaceConditions(
+        int id, [FromBody] ReplaceSurveySiteConditionsRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanManageAsync(id, userId.Value, ct)) return NotFound();
+        try
+        {
+            var conditions = await conditionSvc.ReplaceAsync(id, request.Conditions, userId.Value, ct);
+            if (conditions is null) return NotFound();
+            audit.Log("survey.conditions.replace", EntityTypes.Survey, id.ToString(),
+                $"Replaced {conditions.Count} structured site conditions.");
+            return Ok(conditions);
+        }
+        catch (SurveyOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("{id:int}/conditions/import")]
+    [RequirePermission("crm.surveys", "manage")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(3 * 1024 * 1024)]
+    public async Task<ActionResult<SurveySiteConditionImportResponse>> ImportConditions(
+        int id, [FromForm] IFormFile? file, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanManageAsync(id, userId.Value, ct)) return NotFound();
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new { message = "Vui lòng chọn tệp CSV UTF-8 chứa điều kiện khảo sát." });
+        }
+        if (file.Length > 2 * 1024 * 1024)
+        {
+            return BadRequest(new { message = "Tệp CSV điều kiện khảo sát không được vượt quá 2 MB." });
+        }
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await conditionSvc.ImportAsync(id, stream, userId.Value, ct);
+            if (result is null) return NotFound();
+            if (result.Errors.Count > 0) return BadRequest(result);
+            audit.Log("survey.conditions.import", EntityTypes.Survey, id.ToString(),
+                $"Imported {result.Conditions.Count} structured site conditions.");
+            return Ok(result);
+        }
+        catch (SurveyOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
     }
 
     [HttpPost("{id:int}/media")]
@@ -157,6 +235,7 @@ public class SurveysController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanManageAsync(id, userId.Value, ct)) return NotFound();
         try
         {
             var media = await mediaSvc.AddAsync(id, request, userId.Value, ct);
@@ -182,6 +261,9 @@ public class SurveysController(
     [RequirePermission("crm.surveys", "view")]
     public async Task<IActionResult> GetMediaContent(int id, long mediaId, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewAsync(id, userId.Value, ct)) return NotFound();
         var content = await mediaSvc.GetContentAsync(id, mediaId, ct);
         return content is null
             ? NotFound()
@@ -192,6 +274,9 @@ public class SurveysController(
     [RequirePermission("crm.surveys", "manage")]
     public async Task<IActionResult> DeleteMedia(int id, long mediaId, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanManageAsync(id, userId.Value, ct)) return NotFound();
         try
         {
             if (!await mediaSvc.DeleteAsync(id, mediaId, ct)) return NotFound();
@@ -207,7 +292,7 @@ public class SurveysController(
         catch (SurveyMediaValidationException exception)
         {
             AuditMediaFailure("survey.media.remove", id, exception.Message);
-            return StatusCode(StatusCodes.Status502BadGateway, new { message = exception.Message });
+            return BadRequest(new { message = exception.Message });
         }
     }
 
@@ -218,6 +303,7 @@ public class SurveysController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanManageAsync(id, userId.Value, ct)) return NotFound();
         try
         {
             var media = await mediaSvc.RetryAsync(id, mediaId, userId.Value, ct);
@@ -240,6 +326,7 @@ public class SurveysController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanManageAsync(id, userId.Value, ct)) return NotFound();
         try
         {
             var result = await mediaSvc.UpdateChecklistAsync(id, resultId, request, userId.Value, ct);
@@ -258,6 +345,9 @@ public class SurveysController(
     [RequirePermission("crm.surveys", "view")]
     public async Task<ActionResult<List<SurveySyncLogResponse>>> SyncLog(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewAsync(id, userId.Value, ct)) return NotFound();
         var log = await mediaSvc.GetSyncLogAsync(id, ct);
         return log is null ? NotFound() : Ok(log);
     }
@@ -274,6 +364,9 @@ public class SurveysController(
     public async Task<IActionResult> ExportPdf(
         int id, [FromQuery] string lang = "vi", CancellationToken ct = default)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewAsync(id, userId.Value, ct)) return NotFound();
         try
         {
             var pdf = await mediaSvc.ExportPdfAsync(id, lang, ct);
@@ -290,6 +383,18 @@ public class SurveysController(
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
     }
+
+    private Task<bool> CanViewAllAsync(int userId, CancellationToken ct) =>
+        permissions.HasAsync(userId, "crm.surveys.view.all", ct);
+
+    private Task<bool> CanManageAllAsync(int userId, CancellationToken ct) =>
+        permissions.HasAsync(userId, "crm.surveys.manage.all", ct);
+
+    private async Task<bool> CanViewAsync(int surveyId, int userId, CancellationToken ct) =>
+        await svc.CanAccessAsync(surveyId, userId, await CanViewAllAsync(userId, ct), ct);
+
+    private async Task<bool> CanManageAsync(int surveyId, int userId, CancellationToken ct) =>
+        await svc.CanAccessAsync(surveyId, userId, await CanManageAllAsync(userId, ct), ct);
 
     private void AuditMediaFailure(string action, int surveyId, string message) => audit.Log(new AuditEvent
     {

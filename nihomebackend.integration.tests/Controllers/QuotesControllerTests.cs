@@ -2,7 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -33,6 +37,7 @@ public class QuotesControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
         var oppId = await CreateOpportunityAsync();
+        var rateCatalogId = await CreateRateCatalogAsync(8_000_000m);
 
         var res = await Client.PostAsJsonAsync("/api/quotes", new
         {
@@ -40,6 +45,8 @@ public class QuotesControllerTests : IntegrationTestBase
             method = "UnitCost",
             areaSqm = 50m,
             unitPricePerSqm = 8_000_000m,
+            materialRateCatalogId = rateCatalogId,
+            pricingEffectiveDate = "2026-09-01",
             discountPercent = 5m,
             vatPercent = 10m,
         });
@@ -53,6 +60,31 @@ public class QuotesControllerTests : IntegrationTestBase
         body.GetProperty("version").GetInt32().Should().Be(1);
         body.GetProperty("code").GetString().Should().StartWith("QT-");
         body.GetProperty("grandTotalInWords").GetString().Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Create_AsSale_CannotAssignAnotherOwner()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var opportunityId = await CreateOpportunityAsync();
+        var foreignOwnerId = await WithDbAsync(db => db.Users.AsNoTracking()
+            .Where(user => user.IsActive && user.PhoneNumber != TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+            .Select(user => user.Id)
+            .FirstAsync());
+
+        var response = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            ownerUserId = foreignOwnerId,
+            method = "Boq",
+            items = new[] { new { name = "Concrete", unit = "m3", quantity = 1m, unitPrice = 100m } },
+            discountPercent = 0m,
+            vatPercent = 10m,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Quotes.AnyAsync(item => item.OpportunityId == opportunityId)))
+            .Should().BeFalse();
     }
 
     [Fact]
@@ -213,6 +245,7 @@ public class QuotesControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var oppId = await CreateOpportunityAsync();
+        var rateCatalogId = await CreateRateCatalogAsync(8_000_000m);
         await WithDbAsync(async db =>
         {
             var opportunity = await db.Opportunities.SingleAsync(item => item.Id == oppId);
@@ -227,6 +260,8 @@ public class QuotesControllerTests : IntegrationTestBase
             method = "UnitCost",
             areaSqm = 50m,
             unitPricePerSqm = 8_000_000m,
+            materialRateCatalogId = rateCatalogId,
+            pricingEffectiveDate = "2026-09-01",
             discountPercent = 0m,
             vatPercent = 8m,
         };
@@ -284,6 +319,7 @@ public class QuotesControllerTests : IntegrationTestBase
         {
             areaSqm = 200m,
             unitPricePerSqm = 10_000_000m,
+            rateOverrideReason = "Điều chỉnh đơn giá cho phiên bản báo giá mới.",
             discountPercent = 0m,
             vatPercent = 8m,
         });
@@ -449,6 +485,189 @@ public class QuotesControllerTests : IntegrationTestBase
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    [Fact]
+    public async Task UnitCost_ExposesProvenanceAndRejectsUnauthorizedOverride()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var opportunityId = await CreateOpportunityAsync();
+        var catalogId = await CreateRateCatalogAsync(7_500_000m);
+        var denied = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "UnitCost",
+            areaSqm = 20m,
+            unitPricePerSqm = 7_000_000m,
+            materialRateCatalogId = catalogId,
+            pricingEffectiveDate = "2026-09-01",
+            rateOverrideReason = "Điều chỉnh theo phạm vi thi công thực tế.",
+        });
+        denied.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var created = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "UnitCost",
+            areaSqm = 20m,
+            materialRateCatalogId = catalogId,
+            pricingEffectiveDate = "2026-09-01",
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await ReadJsonAsync(created);
+        body.GetProperty("rateSource").GetString().Should().Be("Catalog");
+        body.GetProperty("catalogUnitPricePerSqm").GetDecimal().Should().Be(7_500_000m);
+        body.GetProperty("materialRateRevisionId").GetInt32().Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task UnitCost_RejectsDateWithoutApprovedEffectiveRevision()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var opportunityId = await CreateOpportunityAsync();
+        var catalogId = await CreateRateCatalogAsync(7_500_000m);
+
+        var response = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "UnitCost",
+            areaSqm = 20m,
+            materialRateCatalogId = catalogId,
+            pricingEffectiveDate = "2025-12-31",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("message").GetString()
+            .Should().Contain("đã duyệt có hiệu lực");
+    }
+
+    [Fact]
+    public async Task UnitCost_SalesManagerCanOverrideWithVietnameseReason()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var catalogId = await CreateRateCatalogAsync(7_500_000m);
+
+        var response = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "UnitCost",
+            areaSqm = 20m,
+            unitPricePerSqm = 7_000_000m,
+            materialRateCatalogId = catalogId,
+            pricingEffectiveDate = "2026-09-01",
+            rateOverrideReason = "Điều chỉnh theo phạm vi thi công thực tế.",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("rateSource").GetString().Should().Be("Override");
+        body.GetProperty("unitPricePerSqm").GetDecimal().Should().Be(7_000_000m);
+        body.GetProperty("catalogUnitPricePerSqm").GetDecimal().Should().Be(7_500_000m);
+        body.GetProperty("rateOverrideByUserId").GetInt32().Should().BeGreaterThan(0);
+        body.GetProperty("rateOverrideAt").GetDateTime().Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task ExportPdf_ReturnsPreliminaryPdfAndRequiresAuthentication()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var translations = scope.ServiceProvider.GetRequiredService<TranslationService>();
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.title", "PRELIMINARY QUOTATION");
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.preliminaryWatermark", "PRELIMINARY");
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.customerOpportunity", "CUSTOMER / OPPORTUNITY");
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.area", "Area");
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.catalogRate", "Catalog rate/m²");
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.appliedRate", "Applied rate/m²");
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.discount", "Discount");
+            await UpsertEnglishPdfTranslationAsync(translations, "quotes.pdf.grandTotal", "GRAND TOTAL");
+        }
+        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf?lang=en");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/pdf");
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        bytes[..5].Should().Equal("%PDF-"u8.ToArray());
+        using var document = PdfDocument.Open(bytes);
+        var text = string.Join('\n', document.GetPages()
+            .Select(page => ContentOrderTextExtractor.GetText(page)));
+        text.Should().Contain("PRELIMINARY");
+        text.Should().Contain("PRELIMINARY QUOTATION");
+        text.Should().Contain("CUSTOMER / OPPORTUNITY");
+        text.Should().Contain("Area");
+        text.Should().Contain("Catalog rate/m²");
+        text.Should().Contain("Applied rate/m²");
+        text.Should().Contain("Discount");
+        text.Should().Contain("VAT");
+        text.Should().Contain("GRAND TOTAL");
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        (await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Theory]
+    [InlineData("vi", "BÁO GIÁ SƠ BỘ", "SƠ BỘ")]
+    [InlineData("en", "PRELIMINARY QUOTATION", "PRELIMINARY")]
+    [InlineData("zh", "初步报价单", "初步")]
+    [InlineData("ja", "概算見積書", "概算")]
+    public async Task ExportPdf_SupportsLocalizedUnicodeText(string language, string title, string watermark)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var translations = scope.ServiceProvider.GetRequiredService<TranslationService>();
+            await translations.UpsertPairAsync(
+                "quotes.pdf.title",
+                language == "vi" ? title : "BÁO GIÁ SƠ BỘ",
+                language == "vi"
+                    ? new Dictionary<string, string>()
+                    : new Dictionary<string, string> { [language] = title },
+                "quotes");
+            await translations.UpsertPairAsync(
+                "quotes.pdf.preliminaryWatermark",
+                language == "vi" ? watermark : "SƠ BỘ",
+                language == "vi"
+                    ? new Dictionary<string, string>()
+                    : new Dictionary<string, string> { [language] = watermark },
+                "quotes");
+        }
+
+        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf?lang={language}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var document = PdfDocument.Open(await response.Content.ReadAsByteArrayAsync());
+        var text = string.Join('\n', document.GetPages().Select(page => ContentOrderTextExtractor.GetText(page)));
+        text.Should().Contain(title).And.Contain(watermark);
+    }
+
+    [Fact]
+    public async Task ExportPdf_RejectsUnsupportedLanguage()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+
+        var response = await Client.GetAsync($"/api/quotes/{quoteId}/export.pdf?lang=fr");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("message").GetString()
+            .Should().Contain("vi, en, zh hoặc ja");
+    }
+
+    private static Task UpsertEnglishPdfTranslationAsync(
+        TranslationService translations,
+        string key,
+        string value) => translations.UpsertPairAsync(
+            key,
+            value,
+            new Dictionary<string, string> { ["en"] = value },
+            "quotes");
+
     // ---------- helpers ----------
 
     private async Task<HttpResponseMessage> UploadDocumentAsync(int quoteId, string fileName, string? label)
@@ -496,16 +715,51 @@ public class QuotesControllerTests : IntegrationTestBase
     private async Task<int> CreateQuoteAsync()
     {
         var oppId = await CreateOpportunityAsync();
+        var rateCatalogId = await CreateRateCatalogAsync(5_000_000m);
         var res = await Client.PostAsJsonAsync("/api/quotes", new
         {
             opportunityId = oppId,
             method = "UnitCost",
             areaSqm = 100m,
             unitPricePerSqm = 5_000_000m,
+            materialRateCatalogId = rateCatalogId,
+            pricingEffectiveDate = "2026-09-01",
             discountPercent = 0m,
             vatPercent = 8m,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
+
+    private Task<int> CreateRateCatalogAsync(decimal amountPerSqm) => WithDbAsync(async db =>
+    {
+        var catalog = new MaterialRateCatalog
+        {
+            Code = "RATE-" + Guid.NewGuid().ToString("N")[..10],
+            Name = "Integration rate",
+            CreatedByUserId = 1,
+            UpdatedByUserId = 1,
+        };
+        catalog.Revisions.Add(new MaterialRateRevision
+        {
+            Version = 1,
+            Status = MaterialRateRevisionStatus.Approved,
+            EffectiveFrom = new DateOnly(2026, 1, 1),
+            CreatedByUserId = 1,
+            UpdatedByUserId = 1,
+            Lines =
+            [
+                new MaterialRateLine
+                {
+                    MaterialCode = "PACKAGE",
+                    MaterialName = "Standard package",
+                    Unit = "m2",
+                    AmountPerSqm = amountPerSqm,
+                },
+            ],
+        });
+        db.MaterialRateCatalogs.Add(catalog);
+        await db.SaveChangesAsync();
+        return catalog.Id;
+    });
 }

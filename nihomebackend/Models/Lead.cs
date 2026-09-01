@@ -26,6 +26,9 @@ public class Lead : IConcurrencyTracked
     /// </summary>
     public string SourceCode { get; set; } = string.Empty;
 
+    /// <summary>Master-data code from category <c>lead_segment</c>.</summary>
+    public string SegmentCode { get; set; } = "unclassified";
+
     public LeadStatus Status { get; set; } = LeadStatus.New;
 
     /// <summary>User currently responsible for the lead. Null while unassigned.</summary>

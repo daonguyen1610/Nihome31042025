@@ -658,7 +658,7 @@ Direct static requests under `/files/quotes`, `/files/customers`, `/files/contra
 
 Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. Uploading before saving a two-step form can still leave an inaccessible, unreferenced physical file when the user cancels, because staged-file expiry/reconciliation is not yet implemented. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
 
-Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries and punch lists are excluded because they do not currently expose a complete persisted document contract. Survey media linked through an Opportunity to an Operational Project is included in the project catalog; unlinked Survey media retains the legacy Survey synchronization path.
+Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries and punch lists are excluded because they do not currently expose a complete persisted document contract. Every Survey requires an Operational Project, and its media is synchronized only through that project's catalog and Drive worker.
 
 ### 7.10 Central Operational Project API
 
@@ -729,10 +729,10 @@ resolved Operational Project. Linking or reassigning an Opportunity, Contract,
 or Design Project stages its currently supported source files in the destination
 and queues old replicas for deletion; a missing `OperationalProjectId` in those
 update contracts preserves the existing relationship. Survey updates support
-explicit unlinking through `LinkedOpportunityId = null`, which returns its media
-to the legacy Survey worker after the old project replicas are queued for
-deletion. This event-driven behavior does not scan or backfill untouched legacy
-records.
+explicit Opportunity unlinking through `LinkedOpportunityId = null`, but every
+Survey retains a required `OperationalProjectId`. Project reassignment queues
+old replicas for deletion and stages media in the destination project's Survey
+category. This event-driven behavior does not scan unrelated source records.
 
 The worker uses durable desired operations, bounded retries, claim tokens,
 generation fencing, SQL rowversion, and per-folder reconciliation leases for

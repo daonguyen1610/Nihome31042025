@@ -50,6 +50,50 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_AsSale_CannotAssignAnotherOwner()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var customerId = await CreateCustomerAsync();
+        var foreignOwnerId = await WithDbAsync(db => db.Users.AsNoTracking()
+            .Where(user => user.IsActive && user.PhoneNumber != TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+            .Select(user => user.Id)
+            .FirstAsync());
+
+        var response = await Client.PostAsJsonAsync("/api/opportunities", new
+        {
+            name = "Foreign owner opportunity",
+            customerId,
+            ownerUserId = foreignOwnerId,
+            estimatedValue = 100m,
+            winProbability = 10,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Opportunities.AnyAsync(item => item.Name == "Foreign owner opportunity")))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Create_AsSale_CannotUseAnotherOwnersCustomer()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var foreignCustomerId = await CreateCustomerAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        var response = await Client.PostAsJsonAsync("/api/opportunities", new
+        {
+            name = "Foreign customer opportunity",
+            customerId = foreignCustomerId,
+            estimatedValue = 100m,
+            winProbability = 10,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Opportunities.AnyAsync(item => item.Name == "Foreign customer opportunity")))
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Create_WithUnknownCustomer_IsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -352,6 +396,56 @@ public class OpportunitiesControllerTests : IntegrationTestBase
             var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opportunityId);
             opportunity.Name.Should().Be(originalName);
             opportunity.Stage.Should().Be(OpportunityStage.Lost);
+        });
+    }
+
+    [Fact]
+    public async Task Update_AsSale_RejectsForeignCustomerAndOmittedOwnerPreservesOwnership()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var ownCustomerId = await CreateCustomerAsync();
+        var createResponse = await Client.PostAsJsonAsync("/api/opportunities", new
+        {
+            name = "Scoped opportunity",
+            customerId = ownCustomerId,
+            estimatedValue = 100m,
+            winProbability = 10,
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await ReadJsonAsync(createResponse);
+        var opportunityId = created.GetProperty("id").GetInt32();
+        var ownerUserId = created.GetProperty("ownerUserId").GetInt32();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var foreignCustomerId = await CreateCustomerAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        var rejected = await Client.PutAsJsonAsync($"/api/opportunities/{opportunityId}", new
+        {
+            name = "Cross-customer update",
+            customerId = foreignCustomerId,
+            estimatedValue = 200m,
+            winProbability = 20,
+        });
+        rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var accepted = await Client.PutAsJsonAsync($"/api/opportunities/{opportunityId}", new
+        {
+            name = "Owner-preserving update",
+            customerId = ownCustomerId,
+            estimatedValue = 200m,
+            winProbability = 20,
+        });
+        accepted.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await ReadJsonAsync(accepted);
+        updated.GetProperty("ownerUserId").GetInt32().Should().Be(ownerUserId);
+
+        await WithDbAsync(async db =>
+        {
+            var persisted = await db.Opportunities.AsNoTracking().SingleAsync(item => item.Id == opportunityId);
+            persisted.CustomerId.Should().Be(ownCustomerId);
+            persisted.OwnerUserId.Should().Be(ownerUserId);
+            persisted.Name.Should().Be("Owner-preserving update");
         });
     }
 

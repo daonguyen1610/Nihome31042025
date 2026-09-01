@@ -35,6 +35,7 @@ public class LeadsController(
     public async Task<ActionResult<LeadListResponse>> List(
         [FromQuery] LeadStatus? status,
         [FromQuery] string? sourceCode,
+        [FromQuery] string? segmentCode,
         [FromQuery] int? ownerUserId,
         [FromQuery] string? search,
         [FromQuery] int page = 1,
@@ -45,7 +46,7 @@ public class LeadsController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.leads.view.all", ct);
-        var result = await svc.ListAsync(userId.Value, canSeeAll, status, sourceCode, ownerUserId, search, page, pageSize, ct);
+        var result = await svc.ListAsync(userId.Value, canSeeAll, status, sourceCode, segmentCode, ownerUserId, search, page, pageSize, ct);
         return Ok(result);
     }
 

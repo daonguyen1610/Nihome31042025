@@ -35,6 +35,14 @@ public class Quote : IConcurrencyTracked
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
+    public int? MaterialRateRevisionId { get; set; }
+    public MaterialRateRevision? MaterialRateRevision { get; set; }
+    public DateOnly? PricingEffectiveDate { get; set; }
+    public decimal? CatalogUnitPricePerSqm { get; set; }
+    public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;
+    public string? RateOverrideReason { get; set; }
+    public int? RateOverrideByUserId { get; set; }
+    public DateTime? RateOverrideAt { get; set; }
 
     // --- Totals (always populated, derived from Method) ---
     public decimal Subtotal { get; set; }
@@ -122,6 +130,13 @@ public class QuoteVersionSnapshot
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
+    public int? MaterialRateRevisionId { get; set; }
+    public DateOnly? PricingEffectiveDate { get; set; }
+    public decimal? CatalogUnitPricePerSqm { get; set; }
+    public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;
+    public string? RateOverrideReason { get; set; }
+    public int? RateOverrideByUserId { get; set; }
+    public DateTime? RateOverrideAt { get; set; }
     public decimal Subtotal { get; set; }
     public decimal DiscountPercent { get; set; }
     public decimal VatPercent { get; set; }
@@ -138,6 +153,12 @@ public enum QuoteMethod
 {
     UnitCost = 0,
     Boq = 1,
+}
+
+public enum QuoteRateSource
+{
+    Catalog = 1,
+    Override = 2,
 }
 
 public enum QuoteStatus

@@ -48,7 +48,9 @@ public interface IOpportunityService
         CreateOpportunityRequest request,
         int callerUserId,
         bool canManage,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        bool canSeeAll = false,
+        bool canSeeAllCustomers = false);
 
     Task<OpportunityResponse?> UpdateAsync(
         int id,
@@ -56,7 +58,8 @@ public interface IOpportunityService
         int callerUserId,
         bool canManage,
         bool canSeeAll,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        bool canSeeAllCustomers = false);
 
     Task<OpportunityResponse?> ChangeStageAsync(
         int id,

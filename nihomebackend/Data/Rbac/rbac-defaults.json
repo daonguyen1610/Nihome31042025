@@ -85,13 +85,20 @@
     { "module": "crm.quotes", "action": "manage" },
     { "module": "crm.quotes", "action": "approve" },
     { "module": "crm.quotes", "action": "send" },
+    { "module": "crm.quotes", "action": "rate-override" },
+    { "module": "crm.material-rates", "action": "view" },
+    { "module": "crm.material-rates", "action": "manage" },
+    { "module": "crm.material-rates", "action": "approve" },
     { "module": "crm.tenders", "action": "view" },
     { "module": "crm.tenders", "action": "manage" },
     { "module": "crm.tenders", "action": "mark-result" },
+    { "module": "crm.tenders", "action": "approve-estimate" },
     { "module": "crm.capability-docs", "action": "view" },
     { "module": "crm.capability-docs", "action": "manage" },
     { "module": "crm.surveys", "action": "view" },
+    { "module": "crm.surveys", "action": "view.all" },
     { "module": "crm.surveys", "action": "manage" },
+    { "module": "crm.surveys", "action": "manage.all" },
     { "module": "crm.contracts", "action": "view" },
     { "module": "crm.contracts", "action": "view.all" },
     { "module": "crm.contracts", "action": "manage" },
@@ -187,9 +194,10 @@
         "crm.customers.view", "crm.customers.manage",
         "crm.opportunities.view", "crm.opportunities.manage",
         "crm.quotes.view", "crm.quotes.manage", "crm.quotes.send",
+        "crm.material-rates.view", "crm.material-rates.manage",
         "crm.tenders.view", "crm.tenders.manage",
         "crm.capability-docs.view",
-        "crm.surveys.**",
+        "crm.surveys.view", "crm.surveys.manage",
         "crm.contracts.view", "crm.contracts.manage",
         "operations.projects.view", "operations.projects.manage",
         "profile.me.*"
@@ -393,7 +401,7 @@
       "patterns": ["dashboard.view", "processes.view", "master-data.view", "workflow.view", "operations.projects.view", "proc.vendors.view", "profile.me.*"]
     },
     "BGD": {
-      "patterns": ["dashboard.view", "**.view", "**.view.all", "system.audit.view", "profile.me.*"]
+      "patterns": ["dashboard.view", "**.view", "**.view.all", "crm.tenders.approve-estimate", "system.audit.view", "profile.me.*"]
     }
   }
 }

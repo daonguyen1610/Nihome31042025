@@ -41,6 +41,12 @@ public class CreateQuoteRequest
     [Range(0, double.MaxValue)]
     public decimal? UnitPricePerSqm { get; set; }
 
+    public int? MaterialRateCatalogId { get; set; }
+    public DateOnly? PricingEffectiveDate { get; set; }
+
+    [StringLength(500, MinimumLength = 10)]
+    public string? RateOverrideReason { get; set; }
+
     [StringLength(2000)]
     public string? PackageDescription { get; set; }
 
@@ -69,6 +75,11 @@ public class UpdateQuoteRequest : IConcurrencyRequest
     // Method is immutable after create — spec NIH-93 step 1.
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
+    public int? MaterialRateCatalogId { get; set; }
+    public DateOnly? PricingEffectiveDate { get; set; }
+
+    [StringLength(500, MinimumLength = 10)]
+    public string? RateOverrideReason { get; set; }
 
     [StringLength(2000)]
     public string? PackageDescription { get; set; }

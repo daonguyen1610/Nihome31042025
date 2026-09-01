@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -18,6 +19,7 @@ public class ContractService(
     IDesignProjectService designProjectService,
     ILogger<ContractService> logger,
     IProjectDocumentStagingService projectDocuments,
+    IOpportunityClosureInvariantService closureInvariant,
     IWebHostEnvironment? env = null) : IContractService
 {
     private const int MaxPageSize = 100;
@@ -269,6 +271,9 @@ public class ContractService(
     public async Task<ContractResponse?> UpdateAsync(
         int id, UpsertContractRequest req, int callerUserId, bool canSeeAll, bool canReassignOwner, CancellationToken ct = default)
     {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
@@ -279,9 +284,8 @@ public class ContractService(
             ValidatePaymentMilestones(req.PaymentMilestones);
         }
 
-        await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct)
-            : null;
+        await closureInvariant.EnsureContractMutationPreservesWonAsync(
+            entity, req.OpportunityId, req.CustomerId, req.Status, req.SignedDate, deleting: false, ct: ct);
 
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
         var operationalProjectId = await ResolveOperationalProjectIdAsync(
@@ -384,11 +388,16 @@ public class ContractService(
 
     public async Task<bool> DeleteAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return false;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return false;
 
         CrmConcurrency.Apply(db, entity, rowVersion);
+        await closureInvariant.EnsureContractMutationPreservesWonAsync(
+            entity, entity.OpportunityId, entity.CustomerId, entity.Status, entity.SignedDate, deleting: true, ct: ct);
         var attachments = await db.ContractAttachments
             .Where(attachment => attachment.ContractId == id)
             .ToListAsync(ct);
@@ -411,6 +420,7 @@ public class ContractService(
 
         db.Contracts.Remove(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         foreach (var filePath in attachments.Select(item => item.FilePath)
                      .Concat(appendices.Select(item => item.FilePath!))) DeleteManagedFile(filePath);
         logger.LogInformation("Deleted contract {Id} ({Number})", entity.Id, entity.ContractNumber);
@@ -440,6 +450,9 @@ public class ContractService(
     public async Task<ContractResponse?> TransitionStatusAsync(
         int id, ContractStatus newStatus, int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
         var entity = await db.Contracts.FindAsync(new object?[] { id }, ct);
         if (entity == null) return null;
         if (!canSeeAll && entity.OwnerUserId != callerUserId) return null;
@@ -464,10 +477,14 @@ public class ContractService(
             entity.SignedDate = DateTime.UtcNow;
         }
 
+        await closureInvariant.EnsureContractMutationPreservesWonAsync(
+            entity, entity.OpportunityId, entity.CustomerId, newStatus, entity.SignedDate, deleting: false, ct: ct);
+
         entity.Status = newStatus;
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
         await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation("Transitioned contract {Id} to {Status}", entity.Id, newStatus);
 
         // NIH-113 AC #1: opening execution of a contract seeds a design
