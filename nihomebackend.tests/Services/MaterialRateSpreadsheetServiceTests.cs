@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using ClosedXML.Excel;
+using NihomeBackend.Models;
 using NihomeBackend.Services;
 
 namespace nihomebackend.tests.Services;
@@ -85,6 +86,18 @@ public class MaterialRateSpreadsheetServiceTests
         var result = _sut.Parse(changed);
 
         Assert.Equal("materialRates.excel.invalidStructure", Assert.Single(result.Errors).MessageKey);
+    }
+
+    [Fact]
+    public void Parse_RejectsInvestmentRateWorkbookForBoqCatalog()
+    {
+        var bytes = _sut.CreateTemplate(new Dictionary<string, string>(), MaterialRateCatalogType.InvestmentRate);
+        using var stream = new MemoryStream(bytes);
+
+        var result = _sut.Parse(stream, MaterialRateCatalogType.Boq);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("materialRates.excel.wrongCatalogType", Assert.Single(result.Errors).MessageKey);
     }
 
     [Fact]

@@ -415,11 +415,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.ToTable("material_rate_catalogs");
             b.HasKey(catalog => catalog.Id);
             b.Property(catalog => catalog.Code).HasMaxLength(50).IsRequired();
+            b.Property(catalog => catalog.CatalogType).HasConversion<string>().HasMaxLength(30);
             b.Property(catalog => catalog.Name).HasMaxLength(200).IsRequired();
             b.Property(catalog => catalog.Description).HasMaxLength(1000);
             b.Property(catalog => catalog.Currency).HasMaxLength(3).IsRequired();
             b.HasIndex(catalog => catalog.Code).IsUnique();
             b.HasIndex(catalog => catalog.IsActive);
+            b.HasIndex(catalog => catalog.CatalogType);
         });
 
         modelBuilder.Entity<MaterialRateRevision>(b =>
@@ -441,9 +443,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             b.ToTable("material_rate_lines");
             b.HasKey(line => line.Id);
-            b.Property(line => line.MaterialCode).HasMaxLength(50).IsRequired();
-            b.Property(line => line.MaterialName).HasMaxLength(200).IsRequired();
+            b.Property(line => line.MaterialCode).HasMaxLength(60).IsRequired();
+            b.Property(line => line.MaterialName).HasMaxLength(300).IsRequired();
             b.Property(line => line.Unit).HasMaxLength(30).IsRequired();
+            b.Property(line => line.Quantity).HasPrecision(18, 6);
             b.Property(line => line.NormPerSqm).HasPrecision(18, 6);
             b.Property(line => line.UnitRate).HasPrecision(18, 4);
             b.Property(line => line.WastePercent).HasPrecision(9, 4);

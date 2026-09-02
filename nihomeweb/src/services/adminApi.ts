@@ -1554,9 +1554,11 @@ export interface ExtendQuoteValidityRequest {
 }
 
 export type MaterialRateRevisionStatus = "Draft" | "Approved" | "Rejected" | "Retired";
+export type MaterialRateCatalogType = "InvestmentRate" | "Boq";
 
 export interface MaterialRateCatalogResponse {
   id: number;
+  catalogType: MaterialRateCatalogType;
   code: string;
   name: string;
   description?: string | null;
@@ -1572,6 +1574,7 @@ export interface MaterialRateLineResponse {
   materialCode: string;
   materialName: string;
   unit: string;
+  quantity: number;
   normPerSqm: number;
   unitRate: number;
   wastePercent: number;
@@ -1582,6 +1585,7 @@ export interface MaterialRateLineResponse {
 export interface MaterialRateRevisionResponse {
   id: number;
   catalogId: number;
+  catalogType: MaterialRateCatalogType;
   catalogCode: string;
   catalogName: string;
   currency: string;
@@ -1595,10 +1599,12 @@ export interface MaterialRateRevisionResponse {
   createdAt: string;
   updatedAt: string;
   totalRatePerSqm: number;
+  totalAmount: number;
   lines: MaterialRateLineResponse[];
 }
 
 export interface UpsertMaterialRateCatalogRequest {
+  catalogType: MaterialRateCatalogType;
   code: string;
   name: string;
   description?: string | null;
@@ -3899,9 +3905,9 @@ export const adminApi = {
     api.delete(`/quotes/${id}`, withIfMatch(rowVersion)),
 
   // Material rate catalogs
-  listMaterialRateCatalogs: (search?: string, includeInactive = false) =>
+  listMaterialRateCatalogs: (search?: string, includeInactive = false, catalogType?: MaterialRateCatalogType) =>
     api.get<MaterialRateCatalogResponse[]>("/material-rate-catalogs", {
-      params: { search: search?.trim() || undefined, includeInactive },
+      params: { search: search?.trim() || undefined, includeInactive, catalogType },
     }),
   getMaterialRateCatalog: (id: number) =>
     api.get<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`),
@@ -3909,16 +3915,16 @@ export const adminApi = {
     api.post<MaterialRateCatalogResponse>("/material-rate-catalogs", body),
   updateMaterialRateCatalog: (id: number, body: UpsertMaterialRateCatalogRequest) =>
     api.put<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`, body),
-  downloadMaterialRateTemplate: () =>
-    api.get<Blob>("/material-rate-catalogs/csv-template", { responseType: "blob" }),
-  downloadMaterialRateExcelTemplate: (language: "vi" | "en" | "zh" | "ja") =>
+  downloadMaterialRateTemplate: (catalogType: MaterialRateCatalogType = "InvestmentRate") =>
+    api.get<Blob>("/material-rate-catalogs/csv-template", { params: { catalogType }, responseType: "blob" }),
+  downloadMaterialRateExcelTemplate: (language: "vi" | "en" | "zh" | "ja", catalogType: MaterialRateCatalogType = "InvestmentRate") =>
     api.get<Blob>("/material-rate-catalogs/excel-template", {
-      params: { language },
+      params: { language, catalogType },
       responseType: "blob",
     }),
-  downloadMaterialRateTemplatePackage: (language: "vi" | "en" | "zh" | "ja") =>
+  downloadMaterialRateTemplatePackage: (language: "vi" | "en" | "zh" | "ja", catalogType: MaterialRateCatalogType = "InvestmentRate") =>
     api.get<Blob>("/material-rate-catalogs/template-package", {
-      params: { language },
+      params: { language, catalogType },
       responseType: "blob",
     }),
   listMaterialRateRevisions: (catalogId: number) =>

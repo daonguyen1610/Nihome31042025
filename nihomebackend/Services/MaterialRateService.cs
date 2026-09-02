@@ -10,7 +10,7 @@ namespace NihomeBackend.Services;
 
 public interface IMaterialRateService
 {
-    Task<List<MaterialRateCatalogResponse>> ListCatalogsAsync(string? search, bool includeInactive, CancellationToken ct = default);
+    Task<List<MaterialRateCatalogResponse>> ListCatalogsAsync(string? search, bool includeInactive, MaterialRateCatalogType? catalogType = null, CancellationToken ct = default);
     Task<MaterialRateCatalogResponse?> GetCatalogAsync(int id, CancellationToken ct = default);
     Task<MaterialRateCatalogResponse> CreateCatalogAsync(UpsertMaterialRateCatalogRequest request, int userId, CancellationToken ct = default);
     Task<MaterialRateCatalogResponse?> UpdateCatalogAsync(int id, UpsertMaterialRateCatalogRequest request, int userId, CancellationToken ct = default);
@@ -45,13 +45,24 @@ public sealed class MaterialRateService(
         "WastePercent",
     ];
 
+    public static readonly IReadOnlyList<string> BoqCsvHeaders =
+    [
+        "ItemCode",
+        "ItemName",
+        "Unit",
+        "Quantity",
+        "UnitPrice",
+    ];
+
     public Task<List<MaterialRateCatalogResponse>> ListCatalogsAsync(
         string? search,
         bool includeInactive,
+        MaterialRateCatalogType? catalogType = null,
         CancellationToken ct = default)
     {
         var query = db.MaterialRateCatalogs.AsNoTracking().AsQueryable();
         if (!includeInactive) query = query.Where(catalog => catalog.IsActive);
+        if (catalogType.HasValue) query = query.Where(catalog => catalog.CatalogType == catalogType.Value);
         if (!string.IsNullOrWhiteSpace(search))
         {
             var pattern = $"%{search.Trim()}%";
@@ -64,6 +75,7 @@ public sealed class MaterialRateService(
             .Select(catalog => new MaterialRateCatalogResponse
             {
                 Id = catalog.Id,
+                CatalogType = catalog.CatalogType,
                 Code = catalog.Code,
                 Name = catalog.Name,
                 Description = catalog.Description,
@@ -100,6 +112,7 @@ public sealed class MaterialRateService(
         var now = DateTime.UtcNow;
         var catalog = new MaterialRateCatalog
         {
+            CatalogType = request.CatalogType,
             Code = code,
             Name = request.Name.Trim(),
             Description = Clean(request.Description),
@@ -133,11 +146,13 @@ public sealed class MaterialRateService(
         var currency = request.Currency.Trim().ToUpperInvariant();
         if (catalog.Revisions.Any(revision => revision.Status is MaterialRateRevisionStatus.Approved or MaterialRateRevisionStatus.Retired) &&
             (!string.Equals(catalog.Code, code, StringComparison.Ordinal) ||
-             !string.Equals(catalog.Currency, currency, StringComparison.Ordinal)))
+             !string.Equals(catalog.Currency, currency, StringComparison.Ordinal) ||
+             catalog.CatalogType != request.CatalogType))
         {
-            throw new MaterialRateOperationException("Không được đổi mã danh mục hoặc tiền tệ sau khi đã có phiên bản được duyệt.");
+            throw new MaterialRateOperationException("Không được đổi loại, mã danh mục hoặc tiền tệ sau khi đã có phiên bản được duyệt.");
         }
 
+        catalog.CatalogType = request.CatalogType;
         catalog.Code = code;
         catalog.Name = request.Name.Trim();
         catalog.Description = Clean(request.Description);
@@ -215,6 +230,7 @@ public sealed class MaterialRateService(
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
             : null;
         var revision = await db.MaterialRateRevisions
+            .Include(item => item.Catalog)
             .Include(item => item.Lines)
             .FirstOrDefaultAsync(item => item.Id == revisionId && item.CatalogId == catalogId, ct);
         if (revision is null) return null;
@@ -224,9 +240,10 @@ public sealed class MaterialRateService(
         }
 
         var isExcel = Path.GetExtension(fileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
+        var headers = revision.Catalog.CatalogType == MaterialRateCatalogType.Boq ? BoqCsvHeaders : CsvHeaders;
         var parsed = isExcel
-            ? spreadsheetService.Parse(stream)
-            : await csvParser.ParseAsync(stream, CsvHeaders, maxBytes: 5 * 1024 * 1024, ct: ct);
+            ? spreadsheetService.Parse(stream, revision.Catalog.CatalogType)
+            : await csvParser.ParseAsync(stream, headers, maxBytes: 5 * 1024 * 1024, ct: ct);
         if (!parsed.IsValid) return new MaterialRateImportResponse { Errors = parsed.Errors };
 
         var errors = new List<CsvImportError>();
@@ -236,39 +253,50 @@ public sealed class MaterialRateService(
         {
             var rowNumber = index < parsed.SourceRowNumbers.Count ? parsed.SourceRowNumbers[index] : index + 2;
             var row = parsed.Rows[index];
-            var code = row["MaterialCode"].Trim();
-            var name = row["MaterialName"].Trim();
+            var isBoq = revision.Catalog.CatalogType == MaterialRateCatalogType.Boq;
+            var codeField = isBoq ? "ItemCode" : "MaterialCode";
+            var nameField = isBoq ? "ItemName" : "MaterialName";
+            var code = row[codeField].Trim();
+            var name = row[nameField].Trim();
             var unit = row["Unit"].Trim();
 
-            ValidateText(code, 50, "MaterialCode", rowNumber, errors);
-            ValidateText(name, 200, "MaterialName", rowNumber, errors);
+            ValidateText(code, isBoq ? 60 : 50, codeField, rowNumber, errors);
+            ValidateText(name, isBoq ? 300 : 200, nameField, rowNumber, errors);
             ValidateText(unit, 30, "Unit", rowNumber, errors);
             if (code.Length > 0 && !codes.Add(code))
             {
-                errors.Add(Error(rowNumber, 1, $"MaterialCode '{code}' bị trùng trong tệp.",
+                errors.Add(Error(rowNumber, 1, $"{codeField} '{code}' bị trùng trong tệp.",
                     "materialRates.csvError.duplicateCode", new() { ["code"] = code }));
             }
 
-            var norm = ParseDecimal(row["NormPerSqm"], "NormPerSqm", rowNumber, 4, 6, errors);
-            var rate = ParseDecimal(row["UnitRate"], "UnitRate", rowNumber, 5, 4, errors);
-            var waste = ParseDecimal(row["WastePercent"], "WastePercent", rowNumber, 6, 4, errors);
-            if (norm is <= 0) errors.Add(Error(rowNumber, 4, "NormPerSqm phải lớn hơn 0.", "materialRates.csvError.normPositive", new() { ["field"] = "NormPerSqm" }));
-            if (norm is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "NormPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.normMaximum", new() { ["field"] = "NormPerSqm" }));
-            if (rate is < 0) errors.Add(Error(rowNumber, 5, "UnitRate không được nhỏ hơn 0.", "materialRates.csvError.rateNonNegative", new() { ["field"] = "UnitRate" }));
-            if (rate is > 99999999999999.9999m) errors.Add(Error(rowNumber, 5, "UnitRate vượt quá giới hạn lưu trữ.", "materialRates.csvError.rateMaximum", new() { ["field"] = "UnitRate" }));
-            if (waste is < 0 or > 100) errors.Add(Error(rowNumber, 6, "WastePercent phải nằm trong khoảng từ 0 đến 100.", "materialRates.csvError.wasteRange", new() { ["field"] = "WastePercent" }));
+            var quantity = isBoq ? ParseDecimal(row["Quantity"], "Quantity", rowNumber, 4, 6, errors) : 0m;
+            var norm = isBoq ? 0m : ParseDecimal(row["NormPerSqm"], "NormPerSqm", rowNumber, 4, 6, errors);
+            var rateField = isBoq ? "UnitPrice" : "UnitRate";
+            var rate = ParseDecimal(row[rateField], rateField, rowNumber, 5, 4, errors);
+            var waste = isBoq ? 0m : ParseDecimal(row["WastePercent"], "WastePercent", rowNumber, 6, 4, errors);
+            if (isBoq && quantity is <= 0) errors.Add(Error(rowNumber, 4, "Quantity phải lớn hơn 0.", "materialRates.csvError.quantityPositive", new() { ["field"] = "Quantity" }));
+            if (isBoq && quantity is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "Quantity vượt quá giới hạn lưu trữ.", "materialRates.csvError.quantityMaximum", new() { ["field"] = "Quantity" }));
+            if (!isBoq && norm is <= 0) errors.Add(Error(rowNumber, 4, "NormPerSqm phải lớn hơn 0.", "materialRates.csvError.normPositive", new() { ["field"] = "NormPerSqm" }));
+            if (!isBoq && norm is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "NormPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.normMaximum", new() { ["field"] = "NormPerSqm" }));
+            if (rate is < 0) errors.Add(Error(rowNumber, 5, $"{rateField} không được nhỏ hơn 0.", "materialRates.csvError.rateNonNegative", new() { ["field"] = rateField }));
+            if (rate is > 99999999999999.9999m) errors.Add(Error(rowNumber, 5, $"{rateField} vượt quá giới hạn lưu trữ.", "materialRates.csvError.rateMaximum", new() { ["field"] = rateField }));
+            if (!isBoq && waste is (< 0 or > 100)) errors.Add(Error(rowNumber, 6, "WastePercent phải nằm trong khoảng từ 0 đến 100.", "materialRates.csvError.wasteRange", new() { ["field"] = "WastePercent" }));
 
-            if (code.Length == 0 || name.Length == 0 || unit.Length == 0 || norm is null || rate is null || waste is null)
+            if (code.Length == 0 || name.Length == 0 || unit.Length == 0 || quantity is null || norm is null || rate is null || waste is null)
             {
                 continue;
             }
 
             try
             {
-                var amount = decimal.Round(norm.Value * rate.Value * (1m + waste.Value / 100m), 4, MidpointRounding.AwayFromZero);
+                var amount = decimal.Round(
+                    isBoq ? quantity.Value * rate.Value : norm.Value * rate.Value * (1m + waste.Value / 100m),
+                    4,
+                    MidpointRounding.AwayFromZero);
                 if (amount > 99999999999999.9999m)
                 {
-                    errors.Add(Error(rowNumber, null, "AmountPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.amountMaximum", new() { ["field"] = "AmountPerSqm" }));
+                    var amountField = isBoq ? "TotalAmount" : "AmountPerSqm";
+                    errors.Add(Error(rowNumber, null, $"{amountField} vượt quá giới hạn lưu trữ.", "materialRates.csvError.amountMaximum", new() { ["field"] = amountField }));
                     continue;
                 }
                 lines.Add(new MaterialRateLine
@@ -276,6 +304,7 @@ public sealed class MaterialRateService(
                     MaterialCode = code,
                     MaterialName = name,
                     Unit = unit,
+                    Quantity = quantity.Value,
                     NormPerSqm = norm.Value,
                     UnitRate = rate.Value,
                     WastePercent = waste.Value,
@@ -497,6 +526,7 @@ public sealed class MaterialRateService(
     private static MaterialRateCatalogResponse MapCatalog(MaterialRateCatalog catalog) => new()
     {
         Id = catalog.Id,
+        CatalogType = catalog.CatalogType,
         Code = catalog.Code,
         Name = catalog.Name,
         Description = catalog.Description,
@@ -513,6 +543,7 @@ public sealed class MaterialRateService(
         CatalogId = revision.CatalogId,
         CatalogCode = revision.Catalog.Code,
         CatalogName = revision.Catalog.Name,
+        CatalogType = revision.Catalog.CatalogType,
         Currency = revision.Catalog.Currency,
         Version = revision.Version,
         Status = revision.Status,
@@ -524,6 +555,7 @@ public sealed class MaterialRateService(
         CreatedAt = revision.CreatedAt,
         UpdatedAt = revision.UpdatedAt,
         TotalRatePerSqm = revision.TotalRatePerSqm,
+        TotalAmount = revision.Lines.Sum(line => line.AmountPerSqm),
         Lines = revision.Lines
             .OrderBy(line => line.SortOrder)
             .Select(line => new MaterialRateLineResponse
@@ -532,6 +564,7 @@ public sealed class MaterialRateService(
                 MaterialCode = line.MaterialCode,
                 MaterialName = line.MaterialName,
                 Unit = line.Unit,
+                Quantity = line.Quantity,
                 NormPerSqm = line.NormPerSqm,
                 UnitRate = line.UnitRate,
                 WastePercent = line.WastePercent,

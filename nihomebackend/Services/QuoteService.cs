@@ -181,6 +181,9 @@ public class QuoteService(
             ? await ResolveNewRateAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate,
                 request.UnitPricePerSqm, request.RateOverrideReason, callerUserId, canOverrideRate, ct)
             : null;
+        var boqRevision = request.Method == QuoteMethod.Boq
+            ? await ResolveBoqRevisionAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate, required: false, ct)
+            : null;
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
         ValidateMethodPayload(request.Method, request.AreaSqm, appliedUnitPrice, request.Items);
 
@@ -204,13 +207,13 @@ public class QuoteService(
             PackageDescription = request.Method == QuoteMethod.UnitCost
                 ? request.PackageDescription?.Trim()
                 : null,
-            MaterialRateRevisionId = rate?.Revision.Id,
-            PricingEffectiveDate = rate?.EffectiveDate,
+            MaterialRateRevisionId = rate?.Revision.Id ?? boqRevision?.Revision.Id,
+            PricingEffectiveDate = rate?.EffectiveDate ?? boqRevision?.EffectiveDate,
             CatalogUnitPricePerSqm = rate?.CatalogUnitPrice,
-            RateSource = rate?.Source ?? QuoteRateSource.Override,
-            RateOverrideReason = rate is null
+            RateSource = rate?.Source ?? (boqRevision is not null ? QuoteRateSource.Catalog : QuoteRateSource.Override),
+            RateOverrideReason = request.Method == QuoteMethod.UnitCost && rate is null
                 ? "Giá nhập trực tiếp theo quy trình hiện hành."
-                : rate.OverrideReason,
+                : rate?.OverrideReason,
             RateOverrideByUserId = rate?.OverrideByUserId,
             RateOverrideAt = rate?.OverrideAt,
             DiscountPercent = request.DiscountPercent,
@@ -295,6 +298,9 @@ public class QuoteService(
         var rate = quote.Method == QuoteMethod.UnitCost
             ? await ResolveUpdatedRateAsync(quote, request, callerUserId, canOverrideRate, ct)
             : null;
+        var boqRevision = quote.Method == QuoteMethod.Boq
+            ? await ResolveUpdatedBoqRevisionAsync(quote, request, ct)
+            : null;
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
         ValidateMethodPayload(quote.Method, request.AreaSqm, appliedUnitPrice, request.Items);
         if (quote.Method == QuoteMethod.UnitCost) request.UnitPricePerSqm = appliedUnitPrice;
@@ -305,6 +311,11 @@ public class QuoteService(
             quote.CatalogUnitPricePerSqm != rate.CatalogUnitPrice ||
             quote.RateSource != rate.Source ||
             quote.RateOverrideReason != rate.OverrideReason))
+        {
+            changes = new QuoteChangeSet(Any: true, Material: true);
+        }
+        if (boqRevision is not null && (quote.MaterialRateRevisionId != boqRevision.Revision.Id ||
+            quote.PricingEffectiveDate != boqRevision.EffectiveDate))
         {
             changes = new QuoteChangeSet(Any: true, Material: true);
         }
@@ -364,6 +375,16 @@ public class QuoteService(
             quote.RateOverrideReason = rate.OverrideReason;
             quote.RateOverrideByUserId = rate.OverrideByUserId;
             quote.RateOverrideAt = rate.OverrideAt;
+        }
+        else if (boqRevision is not null)
+        {
+            quote.MaterialRateRevisionId = boqRevision.Revision.Id;
+            quote.PricingEffectiveDate = boqRevision.EffectiveDate;
+            quote.CatalogUnitPricePerSqm = null;
+            quote.RateSource = QuoteRateSource.Catalog;
+            quote.RateOverrideReason = null;
+            quote.RateOverrideByUserId = null;
+            quote.RateOverrideAt = null;
         }
         quote.DiscountPercent = request.DiscountPercent;
         quote.VatPercent = request.VatPercent;
@@ -855,6 +876,8 @@ public class QuoteService(
         int? OverrideByUserId,
         DateTime? OverrideAt);
 
+    private sealed record ResolvedBoqRevision(MaterialRateRevision Revision, DateOnly EffectiveDate);
+
     private async Task<ResolvedRate> ResolveNewRateAsync(
         int? catalogId,
         DateOnly? effectiveDate,
@@ -905,7 +928,8 @@ public class QuoteService(
         var revision = await db.MaterialRateRevisions.AsNoTracking()
             .Include(item => item.Catalog)
             .Include(item => item.Lines)
-            .Where(item => item.CatalogId == catalogId && item.Catalog.IsActive &&
+            .Where(item => item.CatalogId == catalogId &&
+                item.Catalog.CatalogType == MaterialRateCatalogType.InvestmentRate && item.Catalog.IsActive &&
                 item.Status == MaterialRateRevisionStatus.Approved &&
                 item.EffectiveFrom <= effectiveDate &&
                 (!item.EffectiveTo.HasValue || item.EffectiveTo.Value >= effectiveDate))
@@ -929,6 +953,77 @@ public class QuoteService(
             throw new QuoteOperationException("Lý do ghi đè đơn giá phải bằng tiếng Việt và dài từ 10 đến 500 ký tự.");
         return new ResolvedRate(revision, effectiveDate, catalogUnitPrice, appliedUnitPrice,
             QuoteRateSource.Override, reason, callerUserId, DateTime.UtcNow);
+    }
+
+    private async Task<ResolvedBoqRevision?> ResolveUpdatedBoqRevisionAsync(
+        Quote quote,
+        UpdateQuoteRequest request,
+        CancellationToken ct)
+    {
+        if (!request.MaterialRateCatalogId.HasValue)
+        {
+            return null;
+        }
+        if (!request.PricingEffectiveDate.HasValue)
+        {
+            throw new QuoteOperationException("Báo giá BOQ phải chọn ngày áp dụng khi sử dụng danh mục BOQ.");
+        }
+
+        if (quote.MaterialRateRevisionId.HasValue &&
+            quote.PricingEffectiveDate == request.PricingEffectiveDate)
+        {
+            var existingCatalogId = await db.MaterialRateRevisions.AsNoTracking()
+                .Where(revision => revision.Id == quote.MaterialRateRevisionId.Value)
+                .Select(revision => (int?)revision.CatalogId)
+                .SingleOrDefaultAsync(ct);
+            if (existingCatalogId == request.MaterialRateCatalogId)
+            {
+                var existing = await db.MaterialRateRevisions.AsNoTracking()
+                    .Include(revision => revision.Catalog)
+                    .FirstAsync(revision => revision.Id == quote.MaterialRateRevisionId.Value, ct);
+                if (existing.Catalog.CatalogType != MaterialRateCatalogType.Boq)
+                {
+                    throw new QuoteOperationException("Danh mục đã chọn không phải danh mục đơn giá BOQ.");
+                }
+                return new ResolvedBoqRevision(existing, request.PricingEffectiveDate.Value);
+            }
+        }
+
+        return await ResolveBoqRevisionAsync(
+            request.MaterialRateCatalogId,
+            request.PricingEffectiveDate,
+            required: true,
+            ct);
+    }
+
+    private async Task<ResolvedBoqRevision?> ResolveBoqRevisionAsync(
+        int? catalogId,
+        DateOnly? effectiveDate,
+        bool required,
+        CancellationToken ct)
+    {
+        if (!catalogId.HasValue)
+        {
+            if (required || effectiveDate.HasValue)
+                throw new QuoteOperationException("Báo giá BOQ phải chọn danh mục đơn giá BOQ.");
+            return null;
+        }
+        if (!effectiveDate.HasValue)
+            throw new QuoteOperationException("Báo giá BOQ phải chọn ngày áp dụng đơn giá.");
+
+        var revision = await db.MaterialRateRevisions.AsNoTracking()
+            .Include(item => item.Catalog)
+            .Where(item => item.CatalogId == catalogId.Value &&
+                item.Catalog.CatalogType == MaterialRateCatalogType.Boq && item.Catalog.IsActive &&
+                item.Status == MaterialRateRevisionStatus.Approved &&
+                item.EffectiveFrom <= effectiveDate.Value &&
+                (!item.EffectiveTo.HasValue || item.EffectiveTo.Value >= effectiveDate.Value))
+            .OrderByDescending(item => item.EffectiveFrom)
+            .ThenByDescending(item => item.Version)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new QuoteOperationException("Không có phiên bản danh mục BOQ đã duyệt có hiệu lực cho ngày đã chọn.");
+
+        return new ResolvedBoqRevision(revision, effectiveDate.Value);
     }
 
     private static bool ContainsVietnamese(string value) => value.Any(character =>

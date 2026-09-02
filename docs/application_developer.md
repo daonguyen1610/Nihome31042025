@@ -747,6 +747,13 @@ conflict entry until an authorized user confirms **Keep both**.
 
 ### 7.11 BOQ Quotation Integrity
 
+Material-rate catalogs are discriminated as `InvestmentRate` or `Boq`; existing
+rows migrate to `InvestmentRate`. Unit-cost quote resolution only accepts an
+Approved effective Investment-rate revision. A BOQ catalog revision stores item
+code/name, unit, quantity, and unit price. Applying it copies editable quote
+items while persisting `MaterialRateRevisionId` and `PricingEffectiveDate` as
+provenance; the approved source revision remains immutable.
+
 BOQ quotations use the same server calculation on create and update: each line
 amount is `quantity × unit price`, subtotal is the sum of rounded line amounts,
 discount is applied before VAT, and the grand total is rounded to two decimal

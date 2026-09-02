@@ -18,6 +18,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
+import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -255,6 +256,29 @@ const AdminQuotes = () => {
       ...current,
       method,
       items: method === "UnitCost" ? [] : current.items,
+      materialRateCatalogId: null,
+      pricingEffectiveDate: method === "UnitCost" ? new Date().toISOString().slice(0, 10) : null,
+      unitPricePerSqm: null,
+      rateOverrideReason: null,
+    }));
+  };
+
+  const applyBoqCatalog = (revision: MaterialRateRevisionResponse, pricingDate: string) => {
+    if ((createForm.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boqCatalog.replaceConfirm"))) return;
+    setCreateForm((current) => ({
+      ...current,
+      materialRateCatalogId: revision.catalogId,
+      pricingEffectiveDate: pricingDate,
+      unitPricePerSqm: null,
+      rateOverrideReason: null,
+      items: revision.lines.map((line, index) => ({
+        itemCode: line.materialCode,
+        name: line.materialName,
+        unit: line.unit,
+        quantity: line.quantity,
+        unitPrice: line.unitRate,
+        sortOrder: index + 1,
+      })),
     }));
   };
 
@@ -757,6 +781,11 @@ const AdminQuotes = () => {
               </>
             ) : (
               <div className="space-y-3 rounded-md border p-3">
+                <BoqCatalogFields
+                  catalogId={createForm.materialRateCatalogId}
+                  pricingDate={createForm.pricingEffectiveDate}
+                  onApply={applyBoqCatalog}
+                />
                 <div className="flex items-center justify-between gap-2">
                   <Label>{t("quotes.boq.title")}</Label>
                   <div className="flex gap-1.5">

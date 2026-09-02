@@ -13,12 +13,16 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
   const headers = { Authorization: `Bearer ${token}` };
   const suffix = uid();
   const catalogCode = `RATE-${suffix}`;
+  const boqCatalogCode = `BOQ-RATE-${suffix}`;
   const maxLengthItemCode = "C".repeat(60);
   let customerId = 0;
   let opportunityId = 0;
   let boqQuoteId = 0;
+  let manualBoqQuoteId = 0;
+  let catalogBoqQuoteId = 0;
   let unitCostQuoteId = 0;
   let catalogId = 0;
+  let boqCatalogId = 0;
 
   try {
     const customerResponse = await api.post("/api/customers", {
@@ -52,7 +56,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
 
     const catalogResponse = await api.post("/api/material-rate-catalogs", {
       headers,
-      data: { code: catalogCode, name: `Rate catalog ${suffix}`, currency: "VND", isActive: true },
+      data: { catalogType: "InvestmentRate", code: catalogCode, name: `Rate catalog ${suffix}`, currency: "VND", isActive: true },
     });
     expect(catalogResponse.status(), await catalogResponse.text()).toBe(201);
     catalogId = (await catalogResponse.json()).id as number;
@@ -83,6 +87,38 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
       data: { note: "Browser pricing workflow" },
     })).status()).toBe(200);
 
+    const boqCatalogResponse = await api.post("/api/material-rate-catalogs", {
+      headers,
+      data: { catalogType: "Boq", code: boqCatalogCode, name: `BOQ catalog ${suffix}`, currency: "VND", isActive: true },
+    });
+    expect(boqCatalogResponse.status(), await boqCatalogResponse.text()).toBe(201);
+    boqCatalogId = (await boqCatalogResponse.json()).id as number;
+    const boqRevisionResponse = await api.post(`/api/material-rate-catalogs/${boqCatalogId}/revisions`, {
+      headers,
+      data: { effectiveFrom: "2036-01-01", effectiveTo: "2036-12-31" },
+    });
+    expect(boqRevisionResponse.status(), await boqRevisionResponse.text()).toBe(201);
+    const boqRevisionId = (await boqRevisionResponse.json()).id as number;
+    const boqCatalogCsv = [
+      "ItemCode,ItemName,Unit,Quantity,UnitPrice",
+      "CAT-BOQ-01,Hạng mục từ danh mục,m2,3,250000",
+      "",
+    ].join("\r\n");
+    const boqImportResponse = await api.post(
+      `/api/material-rate-catalogs/${boqCatalogId}/revisions/${boqRevisionId}/import`,
+      {
+        headers,
+        multipart: {
+          file: { name: "boq-rate-data.csv", mimeType: "text/csv", buffer: Buffer.from(boqCatalogCsv) },
+        },
+      },
+    );
+    expect(boqImportResponse.status(), await boqImportResponse.text()).toBe(200);
+    expect((await api.post(`/api/material-rate-catalogs/${boqCatalogId}/revisions/${boqRevisionId}/approve`, {
+      headers,
+      data: { note: "Browser BOQ catalog workflow" },
+    })).status()).toBe(200);
+
     const boqResponse = await api.post("/api/quotes", {
       headers,
       data: {
@@ -104,7 +140,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
     await page.goto(`${baseURL}/admin/quotes/${boqQuoteId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-edit").click();
-    await expect(page.getByText(/chỉ áp dụng cho báo giá Suất đầu tư/i)).toBeVisible();
+    await expect(page.getByTestId("quote-boq-catalog-fields")).toBeVisible();
     await page.getByTestId("boq-remove-desktop-1").click();
 
     await page.getByTestId("boq-paste-open").click();
@@ -150,19 +186,81 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     ]));
 
     await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
-  await page.getByTestId("quote-method").click();
-  await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
-  await page.getByTestId("quote-create-boq-paste").click();
-  await page.getByTestId("boq-paste-input").fill("BOQ-NEW\tDòng tạo mới\tm2\t2\t500.000");
-  await page.getByTestId("boq-paste-confirm").click();
-  await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Dòng tạo mới");
+    await page.getByTestId("quote-method").click();
+    await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
+    await page.getByTestId("quote-create-boq-paste").click();
+    await page.getByTestId("boq-paste-input").fill("BOQ-MANUAL\tDòng BOQ thủ công\tm2\t2\t500.000");
+    await page.getByTestId("boq-paste-confirm").click();
+    const manualCreateResponsePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
+    );
+    await page.getByTestId("quote-create-save").click();
+    const manualCreateResponse = await manualCreateResponsePromise;
+    expect(manualCreateResponse.status(), await manualCreateResponse.text()).toBe(201);
+    const manualBoqQuote = await manualCreateResponse.json();
+    manualBoqQuoteId = manualBoqQuote.id as number;
+    expect(manualBoqQuote).toEqual(expect.objectContaining({
+      materialRateCatalogId: null,
+      pricingEffectiveDate: null,
+      rateSource: "Override",
+    }));
+
+    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
+    await page.getByTestId("quote-method").click();
+    await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
+    await page.getByTestId("quote-boq-catalog-date").fill("2036-06-15");
+    await page.getByTestId("quote-boq-catalog").click();
+    await page.getByRole("option", { name: new RegExp(boqCatalogCode) }).click();
+    await expect(page.getByTestId("quote-boq-catalog-apply")).toBeEnabled();
+    await page.getByTestId("quote-boq-catalog-apply").click();
+    await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục từ danh mục");
+    await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục đã chỉnh sửa");
+    await page.getByTestId("quote-create-boq-paste").click();
+    await page.getByTestId("boq-paste-input").fill("BOQ-NEW\tDòng tạo mới\tm2\t2\t500.000");
+    await page.getByTestId("boq-paste-confirm").click();
+    await expect(page.getByTestId("quote-create-boq-name-1")).toHaveValue("Dòng tạo mới");
     await page.getByTestId("quote-discount").fill("7");
     await page.getByTestId("quote-vat").fill("9");
     page.once("dialog", async (dialog) => dialog.dismiss());
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Suất đầu tư/i }).click();
     await expect(page.getByTestId("quote-method")).toContainText(/Bảng khối lượng/i);
-    await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Dòng tạo mới");
+    await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục danh mục đã chỉnh sửa");
+    page.once("dialog", async (dialog) => {
+      expect(dialog.message()).toContain("thay thế toàn bộ dòng BOQ");
+      await dialog.accept();
+    });
+    await page.getByTestId("quote-boq-catalog-apply").click();
+    await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục từ danh mục");
+    await expect(page.getByTestId("quote-create-boq-name-1")).toHaveCount(0);
+    await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục sau thay thế");
+    const catalogBoqCreateResponsePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
+    );
+    await page.getByTestId("quote-create-save").click();
+    const catalogBoqCreateResponse = await catalogBoqCreateResponsePromise;
+    expect(catalogBoqCreateResponse.status(), await catalogBoqCreateResponse.text()).toBe(201);
+    const catalogBoqQuote = await catalogBoqCreateResponse.json();
+    catalogBoqQuoteId = catalogBoqQuote.id as number;
+    expect(catalogBoqQuote).toEqual(expect.objectContaining({
+      materialRateCatalogId: boqCatalogId,
+      materialRateRevisionId: boqRevisionId,
+      pricingEffectiveDate: "2036-06-15",
+      rateSource: "Catalog",
+      rateOverrideReason: null,
+    }));
+    await page.goto(`${baseURL}/admin/quotes/${catalogBoqQuoteId}`, { waitUntil: "networkidle" });
+    await expect(page.getByText(boqCatalogCode)).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Hạng mục danh mục sau thay thế", exact: true })).toBeVisible();
+
+    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
+    await page.getByTestId("quote-method").click();
+    await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
+    await page.getByTestId("quote-create-boq-paste").click();
+    await page.getByTestId("boq-paste-input").fill("BOQ-SWITCH\tDòng kiểm thử chuyển phương thức\tm2\t1\t100.000");
+    await page.getByTestId("boq-paste-confirm").click();
+    await page.getByTestId("quote-discount").fill("7");
+    await page.getByTestId("quote-vat").fill("9");
     page.once("dialog", async (dialog) => {
       expect(dialog.message()).toContain("xóa các dòng BOQ");
       await dialog.accept();
@@ -199,13 +297,21 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     }));
   } finally {
     if (unitCostQuoteId) await api.delete(`/api/quotes/${unitCostQuoteId}`, { headers });
+    if (catalogBoqQuoteId) await api.delete(`/api/quotes/${catalogBoqQuoteId}`, { headers });
+    if (manualBoqQuoteId) await api.delete(`/api/quotes/${manualBoqQuoteId}`, { headers });
     if (boqQuoteId) await api.delete(`/api/quotes/${boqQuoteId}`, { headers });
     if (opportunityId) await api.delete(`/api/opportunities/${opportunityId}`, { headers });
     if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
     if (catalogId) {
       await api.put(`/api/material-rate-catalogs/${catalogId}`, {
         headers,
-        data: { code: catalogCode, name: `Rate catalog ${suffix}`, currency: "VND", isActive: false },
+        data: { catalogType: "InvestmentRate", code: catalogCode, name: `Rate catalog ${suffix}`, currency: "VND", isActive: false },
+      });
+    }
+    if (boqCatalogId) {
+      await api.put(`/api/material-rate-catalogs/${boqCatalogId}`, {
+        headers,
+        data: { catalogType: "Boq", code: boqCatalogCode, name: `BOQ catalog ${suffix}`, currency: "VND", isActive: false },
       });
     }
   }

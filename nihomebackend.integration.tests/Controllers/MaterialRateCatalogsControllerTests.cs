@@ -41,6 +41,122 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task List_WithCatalogType_ReturnsOnlyMatchingCatalogsAndSerializesType()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var suffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var investmentCode = $"INV-{suffix}";
+        var boqCode = $"BOQ-{suffix}";
+
+        (await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "InvestmentRate",
+            code = investmentCode,
+            name = "Suất đầu tư kiểm thử",
+            currency = "VND",
+        })).StatusCode.Should().Be(HttpStatusCode.Created);
+        var createBoqResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "Boq",
+            code = boqCode,
+            name = "BOQ kiểm thử",
+            currency = "VND",
+        });
+        createBoqResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await ReadJsonAsync(createBoqResponse)).GetProperty("catalogType").GetString().Should().Be("Boq");
+
+        var response = await Client.GetAsync("/api/material-rate-catalogs?catalogType=Boq");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var catalogs = await ReadJsonAsync(response);
+        catalogs.EnumerateArray().Should().OnlyContain(catalog =>
+            catalog.GetProperty("catalogType").GetString() == "Boq");
+        catalogs.EnumerateArray().Should().Contain(catalog =>
+            catalog.GetProperty("code").GetString() == boqCode);
+        catalogs.EnumerateArray().Should().NotContain(catalog =>
+            catalog.GetProperty("code").GetString() == investmentCode);
+    }
+
+    [Fact]
+    public async Task CsvTemplate_ForBoq_ReturnsBoqHeaders()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+
+        var response = await Client.GetAsync("/api/material-rate-catalogs/csv-template?catalogType=Boq");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/csv");
+        response.Content.Headers.ContentDisposition?.FileNameStar.Should().Be("boq-rate-template.csv");
+        (await response.Content.ReadAsStringAsync()).TrimStart('\uFEFF').Should()
+            .Be("ItemCode,ItemName,Unit,Quantity,UnitPrice\r\n");
+    }
+
+    [Fact]
+    public async Task Create_WithUnsupportedCatalogType_ReturnsBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+
+        var response = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = 99,
+            code = "INVALID-TYPE",
+            name = "Danh mục sai loại",
+            currency = "VND",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task BoqLifecycle_ImportsApprovesAndReturnsTypedEffectiveRevision()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var code = "BOQ-LIFE-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var catalogResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "Boq",
+            code,
+            name = "Danh mục BOQ kiểm thử",
+            currency = "VND",
+        });
+        catalogResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var catalogId = (await ReadJsonAsync(catalogResponse)).GetProperty("id").GetInt32();
+
+        var revisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2026-09-01",
+            effectiveTo = "2026-12-31",
+        });
+        revisionResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var revision = await ReadJsonAsync(revisionResponse);
+        revision.GetProperty("catalogType").GetString().Should().Be("Boq");
+        var revisionId = revision.GetProperty("id").GetInt32();
+
+        const string csv = "ItemCode,ItemName,Unit,Quantity,UnitPrice\r\nBOQ-01,Concrete,m3,2.5,160\r\n";
+        using var multipart = new MultipartFormDataContent();
+        multipart.Add(new StringContent(csv, Encoding.UTF8, "text/csv"), "file", "boq-rates.csv");
+        var importResponse = await Client.PostAsync(
+            $"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/import",
+            multipart);
+        importResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(importResponse)).GetProperty("importedCount").GetInt32().Should().Be(1);
+
+        (await Client.PostAsJsonAsync(
+            $"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/approve",
+            new { note = "Đã kiểm tra BOQ" })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var effectiveResponse = await Client.GetAsync(
+            $"/api/material-rate-catalogs/{catalogId}/effective?onDate=2026-09-01");
+        effectiveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var effective = await ReadJsonAsync(effectiveResponse);
+        effective.GetProperty("catalogType").GetString().Should().Be("Boq");
+        effective.GetProperty("status").GetString().Should().Be("Approved");
+        effective.GetProperty("totalAmount").GetDecimal().Should().Be(400m);
+        effective.GetProperty("lines")[0].GetProperty("quantity").GetDecimal().Should().Be(2.5m);
+        effective.GetProperty("lines")[0].GetProperty("amountPerSqm").GetDecimal().Should().Be(400m);
+    }
+
+    [Fact]
     public async Task Lifecycle_ImportsApprovesAndReturnsEffectiveRevision()
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
