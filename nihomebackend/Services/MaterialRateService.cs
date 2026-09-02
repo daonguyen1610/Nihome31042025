@@ -269,10 +269,10 @@ public sealed class MaterialRateService(
                     "materialRates.csvError.duplicateCode", new() { ["code"] = code }));
             }
 
-            var quantity = isBoq ? ParseDecimal(row["Quantity"], "Quantity", rowNumber, 4, 6, errors) : 0m;
+            var quantity = isBoq ? ParseDecimal(row["Quantity"], "Quantity", rowNumber, 4, 4, errors) : 0m;
             var norm = isBoq ? 0m : ParseDecimal(row["NormPerSqm"], "NormPerSqm", rowNumber, 4, 6, errors);
             var rateField = isBoq ? "UnitPrice" : "UnitRate";
-            var rate = ParseDecimal(row[rateField], rateField, rowNumber, 5, 4, errors);
+            var rate = ParseDecimal(row[rateField], rateField, rowNumber, 5, isBoq ? 2 : 4, errors);
             var waste = isBoq ? 0m : ParseDecimal(row["WastePercent"], "WastePercent", rowNumber, 6, 4, errors);
             if (isBoq && quantity is <= 0) errors.Add(Error(rowNumber, 4, "Quantity phải lớn hơn 0.", "materialRates.csvError.quantityPositive", new() { ["field"] = "Quantity" }));
             if (isBoq && quantity is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "Quantity vượt quá giới hạn lưu trữ.", "materialRates.csvError.quantityMaximum", new() { ["field"] = "Quantity" }));

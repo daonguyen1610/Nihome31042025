@@ -261,7 +261,9 @@ For a BOQ quotation, either select an active BOQ catalog and pricing date or add
 rows manually. Applying an Approved effective BOQ revision replaces the current
 rows after confirmation, copies its items into the quote, and retains catalog,
 revision, and date provenance. The copied name, unit, quantity, and unit price
-remain editable without changing the approved catalog revision. To paste
+remain editable without changing the approved catalog revision; the quote marks
+this source as an editable catalog reference rather than an exact catalog price.
+BOQ quantities support up to four decimal places and unit prices up to two. To paste
 multiple Excel rows, copy columns in the order
 `[optional code] / item name / unit / quantity / unit price`, open **Paste from
 Excel**, paste with `Cmd+V` or `Ctrl+V`, review any invalid row numbers, and

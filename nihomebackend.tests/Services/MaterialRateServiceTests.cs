@@ -83,6 +83,27 @@ public class MaterialRateServiceTests : IDisposable
         Assert.Equal(18_750_003.125m, detail!.TotalAmount);
     }
 
+    [Theory]
+    [InlineData("1.00001", "100", "Quantity")]
+    [InlineData("1", "100.001", "UnitPrice")]
+    public async Task ImportAsync_BoqRejectsPrecisionThatQuoteItemsCannotPersist(
+        string quantity,
+        string unitPrice,
+        string field)
+    {
+        var (catalog, revision) = await CreateDraftAsync(
+            new DateOnly(2026, 9, 1), catalogType: MaterialRateCatalogType.Boq);
+
+        var result = await ImportAsync(catalog.Id, revision.Id,
+            $"ItemCode,ItemName,Unit,Quantity,UnitPrice\nBOQ-01,Hạng mục,m2,{quantity},{unitPrice}");
+
+        var error = Assert.Single(result!.Errors);
+        Assert.Equal("materialRates.csvError.scale", error.MessageKey);
+        Assert.NotNull(error.MessageArgs);
+        Assert.Equal(field, error.MessageArgs!["field"]);
+        Assert.Empty(_db.MaterialRateLines);
+    }
+
     [Fact]
     public async Task ImportAsync_InvalidRowIsAtomicAndPreservesExistingLines()
     {

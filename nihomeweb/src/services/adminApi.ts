@@ -1407,7 +1407,7 @@ export interface QuoteVersionResponse {
   materialRateRevisionVersion?: number | null;
   pricingEffectiveDate?: string | null;
   catalogUnitPricePerSqm?: number | null;
-  rateSource: "Catalog" | "Override";
+  rateSource: "Catalog" | "Override" | "CatalogReference";
   rateOverrideReason?: string | null;
   rateOverrideByUserId?: number | null;
   rateOverrideAt?: string | null;
@@ -1442,7 +1442,7 @@ export interface QuoteResponse {
   materialRateRevisionVersion?: number | null;
   pricingEffectiveDate?: string | null;
   catalogUnitPricePerSqm?: number | null;
-  rateSource: "Catalog" | "Override";
+  rateSource: "Catalog" | "Override" | "CatalogReference";
   rateOverrideReason?: string | null;
   rateOverrideByUserId?: number | null;
   rateOverrideAt?: string | null;

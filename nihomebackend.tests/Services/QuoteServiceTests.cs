@@ -327,7 +327,7 @@ public class QuoteServiceTests : IDisposable
         Assert.Equal(revision.Id, updated!.MaterialRateRevisionId);
         Assert.Equal(catalog.Id, updated.MaterialRateCatalogId);
         Assert.Equal(_pricingDate, updated.PricingEffectiveDate);
-        Assert.Equal("Catalog", updated.RateSource);
+        Assert.Equal("CatalogReference", updated.RateSource);
         Assert.Null(updated.RateOverrideReason);
         var item = Assert.Single(updated.Items);
         Assert.Equal("PACKAGE", item.ItemCode);
@@ -336,8 +336,93 @@ public class QuoteServiceTests : IDisposable
         Assert.Equal(1_600_000m, item.UnitPrice);
         Assert.Equal(19_200_000m, item.Amount);
         Assert.Equal(21_120_000m, updated.GrandTotal);
-        Assert.Equal("Catalog", createdRateSource);
+        Assert.Equal("CatalogReference", createdRateSource);
         Assert.Null(created.RateOverrideReason);
+    }
+
+    [Theory]
+    [InlineData(1.00001, 100)]
+    [InlineData(1, 100.001)]
+    public async Task CreateAsync_BoqRejectsValuesThatExceedStoredDecimalScale(
+        decimal quantity,
+        decimal unitPrice)
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.Boq,
+            Items =
+            [
+                new QuoteItemInput
+                {
+                    Name = "Hạng mục kiểm thử",
+                    Unit = "m2",
+                    Quantity = quantity,
+                    UnitPrice = unitPrice,
+                },
+            ],
+        }, user.Id, canManage: true));
+
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task CreateAsync_BoqRoundsMidpointAwayFromZeroUsingPersistedValues()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+
+        var result = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.Boq,
+            Items =
+            [
+                new QuoteItemInput
+                {
+                    Name = "Hạng mục làm tròn",
+                    Unit = "m2",
+                    Quantity = 1.005m,
+                    UnitPrice = 1m,
+                },
+            ],
+            DiscountPercent = 0m,
+            VatPercent = 0m,
+        }, user.Id, canManage: true);
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal(1.005m, item.Quantity);
+        Assert.Equal(1m, item.UnitPrice);
+        Assert.Equal(1.01m, item.Amount);
+        Assert.Equal(1.01m, result.Subtotal);
+        Assert.Equal(1.01m, result.GrandTotal);
+    }
+
+    [Theory]
+    [InlineData("area")]
+    [InlineData("unitPrice")]
+    [InlineData("discount")]
+    [InlineData("vat")]
+    public async Task CreateAsync_RejectsFixedScaleValuesThatSqlWouldRound(string field)
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.UnitCost,
+            MaterialRateCatalogId = _rateCatalogId,
+            PricingEffectiveDate = _pricingDate,
+            AreaSqm = field == "area" ? 100.001m : 100m,
+            UnitPricePerSqm = field == "unitPrice" ? 10_000_000.001m : 10_000_000m,
+            RateOverrideReason = "Điều chỉnh đơn giá kiểm thử",
+            DiscountPercent = field == "discount" ? 1.001m : 0m,
+            VatPercent = field == "vat" ? 1.001m : 0m,
+        }, user.Id, canManage: true, canOverrideRate: true));
+
+        Assert.Contains("tối đa 2 số lẻ", exception.Message);
+        Assert.Empty(_db.Quotes);
     }
 
     [Theory]
@@ -891,6 +976,23 @@ public class QuoteServiceTests : IDisposable
         Assert.Equal("Catalog", result.RateSource);
         Assert.NotNull(result.MaterialRateRevisionId);
         Assert.Equal(_pricingDate, result.PricingEffectiveDate);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UnitCostRoundsFractionalCatalogTotalToStoredMoneyScale()
+    {
+        var line = await _db.MaterialRateLines.SingleAsync();
+        line.AmountPerSqm = 10_000_000.005m;
+        await _db.SaveChangesAsync();
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var request = NewUnitCostRequest(opportunity.Id);
+        request.UnitPricePerSqm = null;
+
+        var result = await _sut.CreateAsync(request, user.Id, canManage: true);
+
+        Assert.Equal(10_000_000.01m, result.UnitPricePerSqm);
+        Assert.Equal(10_000_000.01m, result.CatalogUnitPricePerSqm);
+        Assert.Equal("Catalog", result.RateSource);
     }
 
     [Fact]

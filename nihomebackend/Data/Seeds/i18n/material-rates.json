@@ -16,6 +16,8 @@
   {"key":"materialRates.import.action","category":"materialRates","vi":"Nhập dữ liệu đơn giá","en":"Import rate data","zh":"导入单价数据","ja":"単価データをインポート"},
   {"key":"materialRates.field.materialCode","category":"materialRates","vi":"Mã vật liệu","en":"Material code","zh":"材料代码","ja":"材料コード"},
   {"key":"materialRates.field.materialName","category":"materialRates","vi":"Tên vật liệu","en":"Material name","zh":"材料名称","ja":"材料名"},
+  {"key":"materialRates.field.itemCode","category":"materialRates","vi":"Mã hạng mục","en":"Item code","zh":"项目代码","ja":"項目コード"},
+  {"key":"materialRates.field.itemName","category":"materialRates","vi":"Tên hạng mục","en":"Item name","zh":"项目名称","ja":"項目名"},
   {"key":"materialRates.field.unit","category":"materialRates","vi":"Đơn vị","en":"Unit","zh":"单位","ja":"単位"},
   {"key":"materialRates.field.quantity","category":"materialRates","vi":"Khối lượng","en":"Quantity","zh":"数量","ja":"数量"},
   {"key":"materialRates.field.totalAmount","category":"materialRates","vi":"Thành tiền","en":"Amount","zh":"金额","ja":"金額"},
@@ -185,8 +187,8 @@
   {"key":"materialRates.package.boq.step2","category":"materialRates","vi":"2. Nhập mỗi hạng mục trên một dòng; không sửa tên hoặc thứ tự cột.","en":"2. Enter one item per row; do not change column names or order.","zh":"2. 每行输入一个项目；请勿更改列名或顺序。","ja":"2. 1行に1項目を入力し、列名や順序を変更しないでください。"},
   {"key":"materialRates.package.boq.columnCode","category":"materialRates","vi":"ItemCode: mã hạng mục duy nhất trong file, tối đa 60 ký tự.","en":"ItemCode: a unique item code in the file, up to 60 characters.","zh":"ItemCode：文件内唯一的项目代码，最多 60 个字符。","ja":"ItemCode：ファイル内で一意の項目コード（最大60文字）。"},
   {"key":"materialRates.package.boq.columnName","category":"materialRates","vi":"ItemName: tên hoặc mô tả hạng mục, tối đa 300 ký tự.","en":"ItemName: item name or description, up to 300 characters.","zh":"ItemName：项目名称或说明，最多 300 个字符。","ja":"ItemName：項目名または説明（最大300文字）。"},
-  {"key":"materialRates.package.boq.columnQuantity","category":"materialRates","vi":"Quantity: khối lượng của hạng mục; phải lớn hơn 0, tối đa 6 số lẻ.","en":"Quantity: item quantity; greater than 0 with up to 6 decimal places.","zh":"Quantity：项目数量；必须大于 0，最多 6 位小数。","ja":"Quantity：項目数量。0より大きく、小数点以下6桁まで。"},
-  {"key":"materialRates.package.boq.columnPrice","category":"materialRates","vi":"UnitPrice: đơn giá của một đơn vị; không âm, tối đa 4 số lẻ.","en":"UnitPrice: price per unit; non-negative with up to 4 decimal places.","zh":"UnitPrice：单位价格；不得为负数，最多 4 位小数。","ja":"UnitPrice：単位当たり価格。0以上、小数点以下4桁まで。"},
+  {"key":"materialRates.package.boq.columnQuantity","category":"materialRates","vi":"Quantity: khối lượng của hạng mục; phải lớn hơn 0, tối đa 4 số lẻ.","en":"Quantity: item quantity; greater than 0 with up to 4 decimal places.","zh":"Quantity：项目数量；必须大于 0，最多 4 位小数。","ja":"Quantity：項目数量。0より大きく、小数点以下4桁まで。"},
+  {"key":"materialRates.package.boq.columnPrice","category":"materialRates","vi":"UnitPrice: đơn giá của một đơn vị; không âm, tối đa 2 số lẻ.","en":"UnitPrice: price per unit; non-negative with up to 2 decimal places.","zh":"UnitPrice：单位价格；不得为负数，最多 2 位小数。","ja":"UnitPrice：単位当たり価格。0以上、小数点以下2桁まで。"},
   {"key":"materialRates.package.boq.formula","category":"materialRates","vi":"Thành tiền = Khối lượng × Đơn giá. Tổng giá trị BOQ là tổng của tất cả các dòng.","en":"Amount = Quantity × Unit price. Total BOQ value is the sum of all rows.","zh":"金额 = 数量 × 单价。BOQ 总金额为所有行的合计。","ja":"金額 = 数量 × 単価。BOQ合計金額は全行の合計です。"},
   {"key":"materialRates.package.boq.important3","category":"materialRates","vi":"- Chỉ phiên bản đã duyệt, còn hiệu lực và thuộc danh mục đang hoạt động mới có thể áp dụng vào Báo giá BOQ.","en":"- Only an approved, effective revision in an active catalog can be applied to a Quote BOQ.","zh":"- 只有启用目录中已批准且有效的版本才能应用于报价 BOQ。","ja":"- 有効なカタログの承認済み・適用期間内の版だけを見積BOQへ適用できます。"}
 ]

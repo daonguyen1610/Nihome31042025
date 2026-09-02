@@ -752,7 +752,14 @@ rows migrate to `InvestmentRate`. Unit-cost quote resolution only accepts an
 Approved effective Investment-rate revision. A BOQ catalog revision stores item
 code/name, unit, quantity, and unit price. Applying it copies editable quote
 items while persisting `MaterialRateRevisionId` and `PricingEffectiveDate` as
-provenance; the approved source revision remains immutable.
+provenance and `CatalogReference` as the source; the approved source revision
+remains immutable while copied quote rows may be edited. BOQ catalog quantity
+and unit-price inputs are limited to the Quote storage scales of four and two
+decimal places respectively so persisted amounts remain reproducible. The
+`NormalizeBoqCatalogReferenceSource` migration normalizes earlier BOQ catalog
+rows to those scales and reconciles persisted BOQ quote and snapshot totals.
+Back up the database before deployment: its `Down` operation restores source
+labels but cannot restore discarded extra decimal precision or former totals.
 
 BOQ quotations use the same server calculation on create and update: each line
 amount is `quantity × unit price`, subtotal is the sum of rounded line amounts,

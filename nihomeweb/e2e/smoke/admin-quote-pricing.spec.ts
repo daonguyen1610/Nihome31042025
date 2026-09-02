@@ -69,7 +69,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     const revisionId = (await revisionResponse.json()).id as number;
     const csv = [
       "MaterialCode,MaterialName,Unit,NormPerSqm,UnitRate,WastePercent",
-      "VL-E2E,Vật liệu kiểm thử,kg,2,100000,0",
+      "VL-E2E,Vật liệu kiểm thử,kg,2,100000.0025,0",
       "",
     ].join("\r\n");
     const importResponse = await api.post(
@@ -189,7 +189,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await page.getByTestId("quote-method").click();
     await page.getByRole("option", { name: /Bảng khối lượng/i }).click();
     await page.getByTestId("quote-create-boq-paste").click();
-    await page.getByTestId("boq-paste-input").fill("BOQ-MANUAL\tDòng BOQ thủ công\tm2\t2\t500.000");
+    await page.getByTestId("boq-paste-input").fill("BOQ-MANUAL\tDòng BOQ thủ công\tm2\t1.0050\t1,00");
     await page.getByTestId("boq-paste-confirm").click();
     const manualCreateResponsePromise = page.waitForResponse((response) =>
       new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
@@ -203,6 +203,8 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
       materialRateCatalogId: null,
       pricingEffectiveDate: null,
       rateSource: "Override",
+      subtotal: 1.01,
+      grandTotal: 1.09,
     }));
 
     await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
@@ -234,6 +236,8 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục từ danh mục");
     await expect(page.getByTestId("quote-create-boq-name-1")).toHaveCount(0);
     await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục sau thay thế");
+    await page.getByTestId("quote-create-boq-price-0").fill("");
+    await page.getByTestId("quote-create-boq-price-0").pressSequentially("250000.25");
     const catalogBoqCreateResponsePromise = page.waitForResponse((response) =>
       new URL(response.url()).pathname === "/api/quotes" && response.request().method() === "POST",
     );
@@ -246,8 +250,13 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
       materialRateCatalogId: boqCatalogId,
       materialRateRevisionId: boqRevisionId,
       pricingEffectiveDate: "2036-06-15",
-      rateSource: "Catalog",
+      rateSource: "CatalogReference",
       rateOverrideReason: null,
+      subtotal: 750_000.75,
+    }));
+    expect(catalogBoqQuote.items[0]).toEqual(expect.objectContaining({
+      unitPrice: 250_000.25,
+      amount: 750_000.75,
     }));
     await page.goto(`${baseURL}/admin/quotes/${catalogBoqQuoteId}`, { waitUntil: "networkidle" });
     await expect(page.getByText(boqCatalogCode)).toBeVisible();
@@ -277,7 +286,11 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await page.getByTestId("quote-rate-catalog").click();
     await page.getByRole("option", { name: new RegExp(catalogCode) }).click();
     expect((await effectiveResponsePromise).status()).toBe(200);
-    await expect(page.getByTestId("quote-applied-rate")).toHaveValue("200.000");
+    await expect(page.getByTestId("quote-applied-rate")).toHaveValue("200000.01");
+    await page.getByTestId("quote-applied-rate").press(process.platform === "darwin" ? "Meta+A" : "Control+A");
+    await page.getByTestId("quote-applied-rate").pressSequentially("200000.02");
+    await expect(page.getByTestId("quote-applied-rate")).toHaveValue("200000.02");
+    await page.getByTestId("quote-applied-rate").fill("200000.01");
     await page.getByTestId("quote-area").fill("100");
 
     const createResponsePromise = page.waitForResponse((response) =>
@@ -290,9 +303,9 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     unitCostQuoteId = unitCostQuote.id as number;
     expect(unitCostQuote).toEqual(expect.objectContaining({
       materialRateCatalogId: catalogId,
-      catalogUnitPricePerSqm: 200_000,
-      unitPricePerSqm: 200_000,
-      subtotal: 20_000_000,
+      catalogUnitPricePerSqm: 200_000.01,
+      unitPricePerSqm: 200_000.01,
+      subtotal: 20_000_001,
       rateSource: "Catalog",
     }));
   } finally {
