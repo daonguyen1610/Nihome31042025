@@ -2,9 +2,15 @@ import { useCallback, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 
-interface BulkDeleteResult {
+export interface BulkDeleteFailure<TId extends string | number> {
+  id: TId;
+  reason: unknown;
+}
+
+export interface BulkDeleteResult<TId extends string | number> {
   success: number;
   failed: number;
+  failures: BulkDeleteFailure<TId>[];
 }
 
 export interface UseBulkSelectionOptions<TId extends string | number> {
@@ -15,8 +21,9 @@ export interface UseBulkSelectionOptions<TId extends string | number> {
    * counted as a failure.
    */
   deleteOne: (id: TId) => Promise<unknown>;
+  confirmMessage?: string;
   /** Called once after all deletions attempt, e.g. to reload the list. */
-  onAfter?: (result: BulkDeleteResult) => void | Promise<void>;
+  onAfter?: (result: BulkDeleteResult<TId>) => void | Promise<void>;
 }
 
 /**
@@ -29,6 +36,7 @@ export interface UseBulkSelectionOptions<TId extends string | number> {
 export function useBulkSelection<TId extends string | number>({
   visibleIds,
   deleteOne,
+  confirmMessage,
   onAfter,
 }: UseBulkSelectionOptions<TId>) {
   const { t } = useI18n();
@@ -72,18 +80,21 @@ export function useBulkSelection<TId extends string | number>({
   const handleBulkDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
     const ids = Array.from(selectedIds);
-    const confirmMessage = t("common.confirmDeleteMany").replace(
+    const resolvedConfirmMessage = (confirmMessage ?? t("common.confirmDeleteMany")).replace(
       "{count}",
       ids.length.toString(),
     );
-    if (!window.confirm(confirmMessage)) return;
+    if (!window.confirm(resolvedConfirmMessage)) return;
     setBulkDeleting(true);
     try {
       const results = await Promise.allSettled(ids.map((id) => deleteOne(id)));
-      const failed = results.filter((r) => r.status === "rejected").length;
+      const failures = results.flatMap((result, index) => result.status === "rejected"
+        ? [{ id: ids[index], reason: result.reason }]
+        : []);
+      const failed = failures.length;
       const success = results.length - failed;
-      setSelectedIds(new Set());
-      await onAfter?.({ success, failed });
+      setSelectedIds(new Set(failures.map((failure) => failure.id)));
+      await onAfter?.({ success, failed, failures });
       if (failed === 0) {
         toast({
           title: t("common.bulkDeleteSuccess").replace(
@@ -102,7 +113,7 @@ export function useBulkSelection<TId extends string | number>({
     } finally {
       setBulkDeleting(false);
     }
-  }, [selectedIds, deleteOne, onAfter, t, toast]);
+  }, [selectedIds, deleteOne, confirmMessage, onAfter, t, toast]);
 
   return {
     selectedIds,

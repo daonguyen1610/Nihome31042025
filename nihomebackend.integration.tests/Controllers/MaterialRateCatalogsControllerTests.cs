@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using ClosedXML.Excel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Data;
 
@@ -38,6 +39,98 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
             new { note = "Không có quyền" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        (await Client.DeleteAsync("/api/material-rate-catalogs/1"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Delete_AsRoleWithoutManagePermission_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+
+        (await Client.DeleteAsync("/api/material-rate-catalogs/1"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_UnreferencedCatalog_RemovesAggregateAndReturnsNoContent()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var code = "DELETE-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var createResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            code,
+            name = "Danh mục cần xoá",
+            currency = "VND",
+        });
+        var catalogId = (await ReadJsonAsync(createResponse)).GetProperty("id").GetInt32();
+        var revisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2026-09-01",
+        });
+        var revisionId = (await ReadJsonAsync(revisionResponse)).GetProperty("id").GetInt32();
+
+        var response = await Client.DeleteAsync($"/api/material-rate-catalogs/{catalogId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"/api/material-rate-catalogs/{catalogId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await WithDbAsync(async db =>
+        {
+            (await db.MaterialRateRevisions.AnyAsync(item => item.Id == revisionId)).Should().BeFalse();
+            (await db.MaterialRateLines.AnyAsync(item => item.RevisionId == revisionId)).Should().BeFalse();
+        });
+    }
+
+    [Fact]
+    public async Task Delete_MissingCatalog_ReturnsNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+
+        (await Client.DeleteAsync("/api/material-rate-catalogs/2147483647"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_CatalogUsedByQuote_ReturnsLocalizedConflictAndPreservesCatalog()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var code = "DELETE-BLOCK-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var createResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            code,
+            name = "Danh mục đang được sử dụng",
+            currency = "VND",
+        });
+        var catalogId = (await ReadJsonAsync(createResponse)).GetProperty("id").GetInt32();
+        var revisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2026-09-01",
+        });
+        var revisionId = (await ReadJsonAsync(revisionResponse)).GetProperty("id").GetInt32();
+        await WithDbAsync(async db =>
+        {
+            db.Quotes.Add(new NihomeBackend.Models.Quote
+            {
+                Code = "QT-DELETE-BLOCK-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant(),
+                OpportunityId = 1,
+                MaterialRateRevisionId = revisionId,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var response = await Client.DeleteAsync($"/api/material-rate-catalogs/{catalogId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(response)).GetProperty("messageKey").GetString()
+            .Should().Be("materialRates.catalog.deleteBlocked");
+        (await Client.GetAsync($"/api/material-rate-catalogs/{catalogId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

@@ -767,6 +767,17 @@ discount is applied before VAT, and the grand total is rounded to two decimal
 places away from zero. The React create/edit preview mirrors this formula via
 `src/lib/quoteTotals.ts`; the API remains authoritative.
 
+Users with `crm.material-rates:manage` may permanently delete a Material Rate
+catalog. The delete removes its revisions and lines as one aggregate. The API
+returns `409 Conflict` with `materialRates.catalog.deleteBlocked` when any
+current Quote or immutable Quote version snapshot references a revision, so
+pricing provenance cannot be removed. Historical `Retired` revisions remain
+readable, although the active management UI uses hard deletion instead of the
+retire action. The `crm.material-rates:manage` permission therefore includes
+irreversible catalog deletion, not only catalog editing and import. Bulk delete
+uses best-effort processing; successful IDs are cleared while failed IDs remain
+selected with their catalog names and localized API reasons for review or retry.
+
 The server rejects missing rows, blank names/units, non-positive quantities,
 negative prices, percentages outside 0–100, and values that cannot fit the SQL
 `decimal(18,*)` columns. A scoped Sales user cannot create a quotation for
