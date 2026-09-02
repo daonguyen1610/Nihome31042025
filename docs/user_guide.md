@@ -251,8 +251,20 @@ discount, VAT, and totals automatically. Authorized overrides require a
 Vietnamese reason and remain visible in versions and the PDF. Downloadable
 preliminary PDFs are localized in Vietnamese, English, Chinese, or Japanese.
 
+To apply the catalog on **Quotes**, create a quote with the **Unit Cost** method,
+enter the area, select an active catalog, and choose a date covered by an
+Approved revision. The system resolves the total catalog rate per square metre
+automatically. A **BOQ** quote is a different pricing method and is not populated
+from this aggregate rate.
+
 For a BOQ quotation, add one or more rows and enter the item name, unit,
-quantity, and unit price. The form previews each calculation basis and the
+quantity, and unit price. To paste multiple Excel rows, copy columns in the order
+`[optional code] / item name / unit / quantity / unit price`, open **Paste from
+Excel**, paste with `Cmd+V` or `Ctrl+V`, review any invalid row numbers, and
+confirm. This does not require browser clipboard permission and accepts common
+Vietnamese and English number formats. An ambiguous quantity with one separator
+and exactly three following digits, such as `1.234`, is rejected; use `1234` for
+a whole number or `1.2340` for a decimal. The form previews each calculation basis and the
 subtotal, discount, VAT, and grand total before saving. Blank rows, quantities
 at or below zero, negative prices, invalid percentages, and values above the
 supported accounting range are rejected in both the browser and API. Reopening
