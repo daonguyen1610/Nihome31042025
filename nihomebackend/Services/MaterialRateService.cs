@@ -14,6 +14,7 @@ public interface IMaterialRateService
     Task<MaterialRateCatalogResponse?> GetCatalogAsync(int id, CancellationToken ct = default);
     Task<MaterialRateCatalogResponse> CreateCatalogAsync(UpsertMaterialRateCatalogRequest request, int userId, CancellationToken ct = default);
     Task<MaterialRateCatalogResponse?> UpdateCatalogAsync(int id, UpsertMaterialRateCatalogRequest request, int userId, CancellationToken ct = default);
+    Task<MaterialRateCatalogResponse?> DeleteCatalogAsync(int id, CancellationToken ct = default);
     Task<List<MaterialRateRevisionResponse>?> ListRevisionsAsync(int catalogId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> GetRevisionAsync(int catalogId, int revisionId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> CreateRevisionAsync(int catalogId, CreateMaterialRateRevisionRequest request, int userId, CancellationToken ct = default);
@@ -162,6 +163,41 @@ public sealed class MaterialRateService(
         catalog.UpdatedByUserId = userId;
         await db.SaveChangesAsync(ct);
         return MapCatalog(catalog);
+    }
+
+    public async Task<MaterialRateCatalogResponse?> DeleteCatalogAsync(int id, CancellationToken ct = default)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        var catalog = await db.MaterialRateCatalogs
+            .Include(item => item.Revisions)
+            .ThenInclude(revision => revision.Lines)
+            .FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (catalog is null) return null;
+
+        var revisionIds = catalog.Revisions.Select(revision => revision.Id).ToList();
+        if (revisionIds.Count > 0 &&
+            (await db.Quotes.AnyAsync(quote =>
+                 quote.MaterialRateRevisionId.HasValue && revisionIds.Contains(quote.MaterialRateRevisionId.Value), ct) ||
+             await db.QuoteVersionSnapshots.AnyAsync(snapshot =>
+                 snapshot.MaterialRateRevisionId.HasValue && revisionIds.Contains(snapshot.MaterialRateRevisionId.Value), ct)))
+        {
+            throw DeleteBlocked();
+        }
+
+        var response = MapCatalog(catalog);
+        db.MaterialRateCatalogs.Remove(catalog);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            throw DeleteBlocked();
+        }
+        return response;
     }
 
     public async Task<List<MaterialRateRevisionResponse>?> ListRevisionsAsync(int catalogId, CancellationToken ct = default)
@@ -523,6 +559,10 @@ public sealed class MaterialRateService(
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    private static MaterialRateOperationException DeleteBlocked() => new(
+        "Không thể xoá danh mục đơn giá đã được sử dụng trong Báo giá hoặc lịch sử phiên bản Báo giá.",
+        "materialRates.catalog.deleteBlocked");
+
     private static MaterialRateCatalogResponse MapCatalog(MaterialRateCatalog catalog) => new()
     {
         Id = catalog.Id,
@@ -575,4 +615,7 @@ public sealed class MaterialRateService(
     };
 }
 
-public sealed class MaterialRateOperationException(string message) : InvalidOperationException(message);
+public class MaterialRateOperationException(string message, string? messageKey = null) : InvalidOperationException(message)
+{
+    public string? MessageKey { get; } = messageKey;
+}

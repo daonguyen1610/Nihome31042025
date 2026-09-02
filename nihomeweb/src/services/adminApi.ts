@@ -3915,6 +3915,8 @@ export const adminApi = {
     api.post<MaterialRateCatalogResponse>("/material-rate-catalogs", body),
   updateMaterialRateCatalog: (id: number, body: UpsertMaterialRateCatalogRequest) =>
     api.put<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`, body),
+  deleteMaterialRateCatalog: (id: number) =>
+    api.delete(`/material-rate-catalogs/${id}`),
   downloadMaterialRateTemplate: (catalogType: MaterialRateCatalogType = "InvestmentRate") =>
     api.get<Blob>("/material-rate-catalogs/csv-template", { params: { catalogType }, responseType: "blob" }),
   downloadMaterialRateExcelTemplate: (language: "vi" | "en" | "zh" | "ja", catalogType: MaterialRateCatalogType = "InvestmentRate") =>

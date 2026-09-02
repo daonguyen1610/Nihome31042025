@@ -228,6 +228,62 @@ public class MaterialRateServiceTests : IDisposable
         Assert.Equal(MaterialRateRevisionStatus.Draft, (await _db.MaterialRateRevisions.FindAsync(revision.Id))!.Status);
     }
 
+    [Fact]
+    public async Task DeleteCatalogAsync_RemovesCatalogRevisionsAndLines()
+    {
+        var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 1, 1));
+        await ImportValidAsync(catalog.Id, revision.Id, "DELETE-ME");
+
+        var deleted = await _sut.DeleteCatalogAsync(catalog.Id);
+
+        Assert.Equal(catalog.Id, deleted!.Id);
+        Assert.Empty(_db.MaterialRateCatalogs);
+        Assert.Empty(_db.MaterialRateRevisions);
+        Assert.Empty(_db.MaterialRateLines);
+    }
+
+    [Fact]
+    public async Task DeleteCatalogAsync_WhenQuoteReferencesRevision_IsRejectedWithoutDeletingData()
+    {
+        var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 1, 1));
+        _db.Quotes.Add(new Quote
+        {
+            Code = "QT-RATE-REFERENCE",
+            OpportunityId = 1,
+            OwnerUserId = 1,
+            MaterialRateRevisionId = revision.Id,
+            CreatedByUserId = 1,
+            UpdatedByUserId = 1,
+        });
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.DeleteCatalogAsync(catalog.Id));
+
+        Assert.Equal("materialRates.catalog.deleteBlocked", exception.MessageKey);
+        Assert.Single(_db.MaterialRateCatalogs);
+        Assert.Single(_db.MaterialRateRevisions);
+    }
+
+    [Fact]
+    public async Task DeleteCatalogAsync_WhenQuoteSnapshotReferencesRevision_IsRejected()
+    {
+        var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 1, 1));
+        _db.QuoteVersionSnapshots.Add(new QuoteVersionSnapshot
+        {
+            QuoteId = 1,
+            VersionNumber = 1,
+            MaterialRateRevisionId = revision.Id,
+        });
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.DeleteCatalogAsync(catalog.Id));
+
+        Assert.Equal("materialRates.catalog.deleteBlocked", exception.MessageKey);
+        Assert.Single(_db.MaterialRateCatalogs);
+    }
+
     private async Task<(MaterialRateCatalog Catalog, MaterialRateRevision Revision)> CreateDraftAsync(
         DateOnly from,
         DateOnly? to = null,

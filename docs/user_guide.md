@@ -248,6 +248,13 @@ Return and import the same `.xlsx` file into a Draft revision. UTF-8 CSV remains
 available for system compatibility. Import is atomic. Investment rates calculate
 `NormPerSqm × UnitRate × (1 + WastePercent / 100)`; BOQ lines calculate
 `Quantity × UnitPrice`. Approve non-overlapping effective revisions before use.
+Authorized users can select one or more catalogs for permanent deletion. This
+irreversible action removes every revision and rate line in each selected
+catalog. A catalog already used by a Quote or Quote version history cannot be
+deleted, preserving the quotation's pricing source and audit trail. If only
+some selected catalogs can be deleted, the unsuccessful catalogs remain
+selected and the page lists each catalog with its reason so the user can review
+or retry it.
 
 To apply the catalog on **Quotes**, create a quote with the **Unit Cost** method,
 enter the area, select an active catalog, and choose a date covered by an

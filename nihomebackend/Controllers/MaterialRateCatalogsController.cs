@@ -75,6 +75,23 @@ public sealed class MaterialRateCatalogsController(
         });
     }
 
+    [HttpDelete("{id:int}")]
+    [RequirePermission("crm.material-rates", "manage")]
+    public async Task<ActionResult<MaterialRateCatalogResponse>> Delete(int id, CancellationToken ct)
+    {
+        try
+        {
+            var result = await service.DeleteCatalogAsync(id, ct);
+            if (result is null) return NotFound();
+            Audit("material-rate-catalog.delete", id, result);
+            return NoContent();
+        }
+        catch (MaterialRateOperationException exception)
+        {
+            return Conflict(new { message = exception.Message, messageKey = exception.MessageKey });
+        }
+    }
+
     [HttpGet("csv-template")]
     [RequirePermission("crm.material-rates", "view")]
     public IActionResult DownloadTemplate([FromQuery] MaterialRateCatalogType catalogType = MaterialRateCatalogType.InvestmentRate)
@@ -133,8 +150,8 @@ public sealed class MaterialRateCatalogsController(
                 T("materialRates.package.boq.columnCode", "ItemCode: mã hạng mục duy nhất trong file, tối đa 60 ký tự."),
                 T("materialRates.package.boq.columnName", "ItemName: tên hoặc mô tả hạng mục, tối đa 300 ký tự."),
                 T("materialRates.package.columnUnit", "Unit: đơn vị tính, tối đa 30 ký tự. Ví dụ: kg, m3, m2."),
-                T("materialRates.package.boq.columnQuantity", "Quantity: khối lượng của hạng mục; phải lớn hơn 0, tối đa 6 số lẻ."),
-                T("materialRates.package.boq.columnPrice", "UnitPrice: đơn giá của một đơn vị; không âm, tối đa 4 số lẻ."),
+                T("materialRates.package.boq.columnQuantity", "Quantity: khối lượng của hạng mục; phải lớn hơn 0, tối đa 4 số lẻ."),
+                T("materialRates.package.boq.columnPrice", "UnitPrice: đơn giá của một đơn vị; không âm, tối đa 2 số lẻ."),
                 "",
                 T("materialRates.package.formulaTitle", "CÔNG THỨC"),
                 T("materialRates.package.boq.formula", "Thành tiền = Khối lượng × Đơn giá. Tổng giá trị BOQ là tổng của tất cả các dòng."),
@@ -364,7 +381,7 @@ public sealed class MaterialRateCatalogsController(
         }
         catch (MaterialRateOperationException exception)
         {
-            return BadRequest(new { message = exception.Message });
+            return BadRequest(new { message = exception.Message, messageKey = exception.MessageKey });
         }
     }
 

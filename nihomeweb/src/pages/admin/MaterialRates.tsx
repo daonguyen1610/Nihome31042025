@@ -14,10 +14,12 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
   UploadCloud,
   XCircle,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
@@ -107,11 +110,18 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   const [loading, setLoading] = useState(true);
   const [revisionLoading, setRevisionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bulkDeleteFailures, setBulkDeleteFailures] = useState<Array<{ id: number; name: string; message: string }>>([]);
+
+  const apiErrorMessage = useCallback((err: unknown) => {
+    const responseData = (err as { response?: { data?: { messageKey?: string } } }).response?.data;
+    return responseData?.messageKey ? t(responseData.messageKey) : extractApiError(err);
+  }, [t]);
 
   const selectedCatalog = useMemo(
     () => catalogs.find((catalog) => catalog.id === selectedCatalogId) ?? null,
     [catalogs, selectedCatalogId],
   );
+  const visibleCatalogIds = useMemo(() => catalogs.map((catalog) => catalog.id), [catalogs]);
 
   const loadCatalogs = useCallback(async () => {
     setLoading(true);
@@ -147,6 +157,33 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     }
   }, [t, toast]);
 
+  const deleteCatalogRequest = useCallback(
+    (id: number) => adminApi.deleteMaterialRateCatalog(id),
+    [],
+  );
+  const {
+    selectedIds,
+    bulkDeleting,
+    allVisibleSelected,
+    someVisibleSelected,
+    toggleAllVisible,
+    toggleOne,
+    clearSelection,
+    handleBulkDelete,
+  } = useBulkSelection({
+    visibleIds: visibleCatalogIds,
+    deleteOne: deleteCatalogRequest,
+    confirmMessage: t("materialRates.catalog.deleteManyConfirm"),
+    onAfter: async ({ failures }) => {
+      setBulkDeleteFailures(failures.map(({ id, reason }) => ({
+        id,
+        name: catalogs.find((catalog) => catalog.id === id)?.name ?? String(id),
+        message: apiErrorMessage(reason),
+      })));
+      await loadCatalogs();
+    },
+  });
+
   useEffect(() => {
     const timer = window.setTimeout(() => void loadCatalogs(), 300);
     return () => window.clearTimeout(timer);
@@ -159,6 +196,11 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       setSelectedRevision(null);
     }
   }, [loadRevisions, selectedCatalogId]);
+
+  useEffect(() => {
+    clearSelection();
+    setBulkDeleteFailures([]);
+  }, [catalogType, clearSelection, includeInactive, search]);
 
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogForm, setCatalogForm] = useState<UpsertMaterialRateCatalogRequest>(emptyCatalog(catalogType));
@@ -323,7 +365,29 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     }
   };
 
-  const [decision, setDecision] = useState<"approve" | "reject" | "retire" | null>(null);
+  const [deleteCatalogOpen, setDeleteCatalogOpen] = useState(false);
+  const [deleteCatalogBusy, setDeleteCatalogBusy] = useState(false);
+  const [deleteCatalogError, setDeleteCatalogError] = useState<string | null>(null);
+  const deleteSelectedCatalog = async () => {
+    if (!selectedCatalog) return;
+    setDeleteCatalogBusy(true);
+    setDeleteCatalogError(null);
+    try {
+      await deleteCatalogRequest(selectedCatalog.id);
+      setDeleteCatalogOpen(false);
+      setSelectedCatalogId(null);
+      setRevisions([]);
+      setSelectedRevision(null);
+      toast({ title: t("materialRates.catalog.deleted") });
+      await loadCatalogs();
+    } catch (err) {
+      setDeleteCatalogError(apiErrorMessage(err));
+    } finally {
+      setDeleteCatalogBusy(false);
+    }
+  };
+
+  const [decision, setDecision] = useState<"approve" | "reject" | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
   const [decisionBusy, setDecisionBusy] = useState(false);
   const runDecision = async () => {
@@ -341,10 +405,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     try {
       if (decision === "approve") {
         await adminApi.approveMaterialRateRevision(selectedCatalogId, selectedRevision.id, decisionNote);
-      } else if (decision === "reject") {
-        await adminApi.rejectMaterialRateRevision(selectedCatalogId, selectedRevision.id, decisionNote);
       } else {
-        await adminApi.retireMaterialRateRevision(selectedCatalogId, selectedRevision.id, decisionNote);
+        await adminApi.rejectMaterialRateRevision(selectedCatalogId, selectedRevision.id, decisionNote);
       }
       toast({ title: t(`materialRates.action.${decision}Done`) });
       setDecision(null);
@@ -369,7 +431,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     { icon: FileSpreadsheet, title: t("materialRates.workflow.catalog"), detail: t("materialRates.workflow.catalogHint") },
     { icon: RefreshCw, title: t("materialRates.workflow.revision"), detail: t("materialRates.workflow.revisionHint") },
     { icon: UploadCloud, title: t("materialRates.workflow.import"), detail: t("materialRates.workflow.importHint") },
-    { icon: ShieldCheck, title: t("materialRates.workflow.approve"), detail: t("materialRates.workflow.approveHint") },
+    { icon: ShieldCheck, title: t("materialRates.workflow.approve"), detail: t(catalogType === "Boq" ? "materialRates.boq.workflow.approveHint" : "materialRates.workflow.approveHint") },
   ];
   const importErrorMessage = (item: CsvImportError) => {
     if (!item.messageKey) return item.message;
@@ -446,7 +508,34 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                 <Checkbox data-testid="material-rates-include-inactive" checked={includeInactive} onCheckedChange={(value) => setIncludeInactive(value === true)} />
                 {t("materialRates.catalog.includeInactive")}
               </label>
+              {canManage && catalogs.length > 0 && (
+                <label className="mt-3 flex items-center gap-2 border-t pt-3 text-sm text-muted-foreground">
+                  <Checkbox
+                    data-testid="material-rates-select-all"
+                    aria-label={t("common.selectAll")}
+                    checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
+                    onCheckedChange={(value) => toggleAllVisible(value === true)}
+                  />
+                  {allVisibleSelected ? t("common.deselectAll") : t("common.selectAll")}
+                </label>
+              )}
             </div>
+            {canManage && (
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                bulkDeleting={bulkDeleting}
+                onClear={() => { clearSelection(); setBulkDeleteFailures([]); }}
+                onBulkDelete={() => { setBulkDeleteFailures([]); void handleBulkDelete(); }}
+              />
+            )}
+            {bulkDeleteFailures.length > 0 && (
+              <div data-testid="material-rates-bulk-delete-errors" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive" role="alert">
+                <p className="font-medium">{t("materialRates.catalog.bulkDeleteFailed")}</p>
+                <ul className="mt-2 space-y-1">
+                  {bulkDeleteFailures.map((failure) => <li key={failure.id}><span className="font-medium">{failure.name}:</span> {failure.message}</li>)}
+                </ul>
+              </div>
+            )}
             {loading ? <PageLoading /> : error ? <PageError message={error} onRetry={() => void loadCatalogs()} /> : catalogs.length === 0 ? (
               <div className="rounded-lg border border-dashed px-4 py-10 text-center">
                 <FileSpreadsheet className="mx-auto h-9 w-9 text-muted-foreground/60" />
@@ -457,13 +546,24 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
             ) : (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
                 {catalogs.map((catalog) => (
-                  <button key={catalog.id} type="button" onClick={() => setSelectedCatalogId(catalog.id)} className={cn("rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary/50", selectedCatalogId === catalog.id && "border-primary bg-primary/5")}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0"><p className="truncate font-semibold">{catalog.name}</p><p className="text-xs text-muted-foreground">{catalog.code} · {catalog.currency}</p></div>
-                      {!catalog.isActive && <Badge variant="secondary">{t("materialRates.catalog.inactive")}</Badge>}
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">{t("materialRates.catalog.revisionCount", { count: catalog.revisionCount })}</p>
-                  </button>
+                  <div key={catalog.id} className={cn("flex items-start gap-3 rounded-lg border bg-card p-3 transition-colors hover:border-primary/50", selectedCatalogId === catalog.id && "border-primary bg-primary/5")}>
+                    {canManage && (
+                      <Checkbox
+                        className="mt-0.5 shrink-0"
+                        data-testid={`material-rates-select-${catalog.id}`}
+                        aria-label={`${t("common.selectAll")} · ${catalog.name}`}
+                        checked={selectedIds.has(catalog.id)}
+                        onCheckedChange={(value) => toggleOne(catalog.id, value === true)}
+                      />
+                    )}
+                    <button type="button" onClick={() => setSelectedCatalogId(catalog.id)} className="min-w-0 flex-1 text-left">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0"><p className="truncate font-semibold">{catalog.name}</p><p className="text-xs text-muted-foreground">{catalog.code} · {catalog.currency}</p></div>
+                        {!catalog.isActive && <Badge variant="secondary">{t("materialRates.catalog.inactive")}</Badge>}
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">{t("materialRates.catalog.revisionCount", { count: catalog.revisionCount })}</p>
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -474,7 +574,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
               <>
                 <div className="flex flex-col gap-2 rounded-lg border bg-card p-4 sm:flex-row sm:items-start sm:justify-between">
                   <div><h2 className="text-lg font-semibold">{selectedCatalog.name}</h2><p className="text-sm text-muted-foreground">{selectedCatalog.code} · {selectedCatalog.currency}</p>{selectedCatalog.description && <p className="mt-2 text-sm">{selectedCatalog.description}</p>}</div>
-                  {canManage && <div className="flex gap-2"><Button size="sm" variant="outline" data-testid="material-rates-edit-catalog" onClick={openCatalogEdit}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button><Button size="sm" onClick={() => { setEffectiveFrom(today()); setEffectiveTo(""); setRevisionNote(""); setFormError(null); setRevisionOpen(true); }}><Plus className="mr-1 h-4 w-4" />{t("materialRates.revision.new")}</Button></div>}
+                  {canManage && <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" data-testid="material-rates-edit-catalog" onClick={openCatalogEdit}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button><Button size="sm" variant="destructive" data-testid="material-rates-delete-catalog" onClick={() => { setDeleteCatalogError(null); setDeleteCatalogOpen(true); }}><Trash2 className="mr-1 h-4 w-4" />{t("materialRates.catalog.delete")}</Button><Button size="sm" data-testid="material-rates-new-revision" onClick={() => { setEffectiveFrom(today()); setEffectiveTo(""); setRevisionNote(""); setFormError(null); setRevisionOpen(true); }}><Plus className="mr-1 h-4 w-4" />{t("materialRates.revision.new")}</Button></div>}
                 </div>
 
                 {revisionLoading ? <PageLoading /> : revisions.length === 0 ? (
@@ -536,16 +636,15 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
 
                         {importedCount !== null && (
                           <div className="flex flex-col gap-3 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex gap-2"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="text-sm font-semibold">{t("materialRates.import.result", { count: importedCount })}</p><p className="text-xs">{t("materialRates.import.nextStep")}</p></div></div>
+                            <div className="flex gap-2"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="text-sm font-semibold">{t("materialRates.import.result", { count: importedCount })}</p><p className="text-xs">{t(catalogType === "Boq" ? "materialRates.boq.import.nextStep" : "materialRates.import.nextStep")}</p></div></div>
                             <p className="whitespace-nowrap text-sm font-bold">{formatVnd(catalogType === "Boq" ? selectedRevision.totalAmount : selectedRevision.totalRatePerSqm)} {selectedRevision.currency}{catalogType === "InvestmentRate" ? "/m²" : ""}</p>
                           </div>
                         )}
 
                         <div className="flex flex-wrap items-center gap-2 border-y py-3">
                           {canApprove && selectedRevision.status === "Draft" && <><Button size="sm" data-testid="material-rates-approve" disabled={selectedRevision.lines.length === 0} title={selectedRevision.lines.length === 0 ? t("materialRates.action.approveDisabled") : undefined} onClick={() => { setDecision("approve"); setDecisionNote(""); setFormError(null); }}><CheckCircle2 className="mr-1 h-4 w-4" />{t("materialRates.action.approve")}</Button><Button size="sm" variant="outline" onClick={() => { setDecision("reject"); setDecisionNote(""); setFormError(null); }}><XCircle className="mr-1 h-4 w-4" />{t("materialRates.action.reject")}</Button></>}
-                          {canApprove && selectedRevision.status === "Approved" && <Button size="sm" variant="outline" data-testid="material-rates-retire" onClick={() => { setDecision("retire"); setDecisionNote(""); setFormError(null); }}>{t("materialRates.action.retire")}</Button>}
                           {selectedRevision.status === "Approved" && selectedCatalog.isActive && canViewQuotes && <Button size="sm" asChild><Link to="/admin/quotes" data-testid="material-rates-open-quotes">{t("materialRates.quote.open")}<ArrowRight className="ml-1.5 h-4 w-4" /></Link></Button>}
-                          {selectedRevision.status === "Approved" && <p className="basis-full text-xs text-muted-foreground">{selectedCatalog.isActive ? t("materialRates.quote.hint") : t("materialRates.quote.inactiveHint")}</p>}
+                          {selectedRevision.status === "Approved" && <p className="basis-full text-xs text-muted-foreground">{selectedCatalog.isActive ? t(catalogType === "Boq" ? "materialRates.boq.quote.hint" : "materialRates.quote.hint") : t("materialRates.quote.inactiveHint")}</p>}
                         </div>
 
                         {importErrors.length > 0 && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="mb-2 text-sm font-medium text-destructive">{t("materialRates.import.errors")}</p><ul className="space-y-1 text-xs text-destructive">{importErrors.map((item, index) => <li key={`${item.row}-${item.column}-${index}`}>{item.row ? t("materialRates.import.errorLocation", { row: item.row, column: item.column ?? "—" }) : ""} {importErrorMessage(item)}</li>)}</ul></div>}
@@ -559,16 +658,18 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                   </div>
                 )}
               </>
-            ) : !loading && <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">{t("materialRates.catalog.select")}</p>}
+            ) : !loading && <div data-testid="material-rates-empty-detail" className="flex min-h-60 items-center justify-center rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">{t("materialRates.catalog.select")}</div>}
           </section>
         </div>
       </div>
 
-      <Dialog open={catalogOpen} onOpenChange={setCatalogOpen}><DialogContent><DialogHeader><DialogTitle>{t(editingCatalogId ? "materialRates.catalog.edit" : "materialRates.catalog.new")}</DialogTitle><DialogDescription>{t("materialRates.catalog.formHint")}</DialogDescription></DialogHeader><div className="space-y-3"><div><Label>{t("materialRates.catalog.code")} *</Label><Input maxLength={50} value={catalogForm.code} onChange={(event) => setCatalogForm({ ...catalogForm, code: event.target.value })} /></div><div><Label>{t("materialRates.catalog.name")} *</Label><Input maxLength={200} value={catalogForm.name} onChange={(event) => setCatalogForm({ ...catalogForm, name: event.target.value })} /></div><div><Label>{t("materialRates.catalog.currency")} *</Label><Input maxLength={3} value={catalogForm.currency} onChange={(event) => setCatalogForm({ ...catalogForm, currency: event.target.value })} /></div><div><Label>{t("materialRates.catalog.description")}</Label><Textarea maxLength={1000} value={catalogForm.description ?? ""} onChange={(event) => setCatalogForm({ ...catalogForm, description: event.target.value })} /></div><Label className="flex items-center gap-2"><Checkbox data-testid="material-rates-catalog-active" checked={catalogForm.isActive} onCheckedChange={(value) => setCatalogForm({ ...catalogForm, isActive: value === true })} />{t("materialRates.catalog.active")}</Label>{formError && <p className="text-sm text-destructive">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={() => setCatalogOpen(false)}>{t("common.cancel")}</Button><Button data-testid="material-rates-catalog-save" onClick={() => void saveCatalog()} disabled={catalogSaving}>{catalogSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={catalogOpen} onOpenChange={setCatalogOpen}><DialogContent><DialogHeader><DialogTitle>{t(editingCatalogId ? "materialRates.catalog.edit" : "materialRates.catalog.new")}</DialogTitle><DialogDescription>{t("materialRates.catalog.formHint")}</DialogDescription></DialogHeader><div className="space-y-3"><div><Label>{t("materialRates.catalog.code")} *</Label><Input data-testid="material-rates-catalog-code" maxLength={50} value={catalogForm.code} onChange={(event) => setCatalogForm({ ...catalogForm, code: event.target.value })} /></div><div><Label>{t("materialRates.catalog.name")} *</Label><Input data-testid="material-rates-catalog-name" maxLength={200} value={catalogForm.name} onChange={(event) => setCatalogForm({ ...catalogForm, name: event.target.value })} /></div><div><Label>{t("materialRates.catalog.currency")} *</Label><Input data-testid="material-rates-catalog-currency" maxLength={3} value={catalogForm.currency} onChange={(event) => setCatalogForm({ ...catalogForm, currency: event.target.value })} /></div><div><Label>{t("materialRates.catalog.description")}</Label><Textarea data-testid="material-rates-catalog-description" maxLength={1000} value={catalogForm.description ?? ""} onChange={(event) => setCatalogForm({ ...catalogForm, description: event.target.value })} /></div><Label className="flex items-center gap-2"><Checkbox data-testid="material-rates-catalog-active" checked={catalogForm.isActive} onCheckedChange={(value) => setCatalogForm({ ...catalogForm, isActive: value === true })} />{t("materialRates.catalog.active")}</Label>{formError && <p className="text-sm text-destructive">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={() => setCatalogOpen(false)}>{t("common.cancel")}</Button><Button data-testid="material-rates-catalog-save" onClick={() => void saveCatalog()} disabled={catalogSaving}>{catalogSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
 
-      <Dialog open={revisionOpen} onOpenChange={setRevisionOpen}><DialogContent><DialogHeader><DialogTitle>{t("materialRates.revision.new")}</DialogTitle><DialogDescription>{selectedCatalog?.name}</DialogDescription></DialogHeader><div className="space-y-3"><div className="grid grid-cols-2 gap-3"><div><Label>{t("materialRates.revision.effectiveFrom")} *</Label><Input type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} /></div><div><Label>{t("materialRates.revision.effectiveTo")}</Label><Input type="date" value={effectiveTo} min={effectiveFrom} onChange={(event) => setEffectiveTo(event.target.value)} /></div></div><div><Label>{t("materialRates.revision.note")}</Label><Textarea maxLength={1000} value={revisionNote} onChange={(event) => setRevisionNote(event.target.value)} /></div>{formError && <p className="text-sm text-destructive">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={() => setRevisionOpen(false)}>{t("common.cancel")}</Button><Button onClick={() => void createRevision()} disabled={revisionSaving}>{revisionSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
+      <Dialog open={revisionOpen} onOpenChange={setRevisionOpen}><DialogContent><DialogHeader><DialogTitle>{t("materialRates.revision.new")}</DialogTitle><DialogDescription>{selectedCatalog?.name}</DialogDescription></DialogHeader><div className="space-y-3"><div className="grid grid-cols-2 gap-3"><div><Label>{t("materialRates.revision.effectiveFrom")} *</Label><Input data-testid="material-rates-effective-from" type="date" value={effectiveFrom} onChange={(event) => setEffectiveFrom(event.target.value)} /></div><div><Label>{t("materialRates.revision.effectiveTo")}</Label><Input data-testid="material-rates-effective-to" type="date" value={effectiveTo} min={effectiveFrom} onChange={(event) => setEffectiveTo(event.target.value)} /></div></div><div><Label>{t("materialRates.revision.note")}</Label><Textarea data-testid="material-rates-revision-note" maxLength={1000} value={revisionNote} onChange={(event) => setRevisionNote(event.target.value)} /></div>{formError && <p className="text-sm text-destructive">{formError}</p>}</div><DialogFooter><Button variant="outline" onClick={() => setRevisionOpen(false)}>{t("common.cancel")}</Button><Button data-testid="material-rates-revision-save" onClick={() => void createRevision()} disabled={revisionSaving}>{revisionSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.save")}</Button></DialogFooter></DialogContent></Dialog>
 
       <Dialog open={importConfirmOpen} onOpenChange={setImportConfirmOpen}><DialogContent><DialogHeader><DialogTitle>{t("materialRates.import.confirmTitle")}</DialogTitle><DialogDescription>{t("materialRates.import.confirmDescription", { file: pendingImportFile?.name ?? "", version: selectedRevision?.version ?? "" })}</DialogDescription></DialogHeader><div className="rounded-md border border-amber-300/70 bg-amber-50 p-3 text-sm leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">{t("materialRates.import.replaceWarning")}</div><DialogFooter><Button variant="outline" onClick={() => setImportConfirmOpen(false)}>{t("common.cancel")}</Button><Button data-testid="material-rates-import-confirm" onClick={() => void importCsv()} disabled={importing}>{importing && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("materialRates.import.confirmAction")}</Button></DialogFooter></DialogContent></Dialog>
+
+      <Dialog open={deleteCatalogOpen} onOpenChange={(open) => { if (!deleteCatalogBusy) setDeleteCatalogOpen(open); }}><DialogContent><DialogHeader><DialogTitle>{t("materialRates.catalog.deleteTitle")}</DialogTitle><DialogDescription>{t("materialRates.catalog.deleteConfirm", { name: selectedCatalog?.name ?? "" })}</DialogDescription></DialogHeader><div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{t("materialRates.catalog.deleteWarning")}</div>{deleteCatalogError && <p className="text-sm text-destructive" data-testid="material-rates-delete-error">{deleteCatalogError}</p>}<DialogFooter><Button variant="outline" onClick={() => setDeleteCatalogOpen(false)} disabled={deleteCatalogBusy}>{t("common.cancel")}</Button><Button variant="destructive" data-testid="material-rates-delete-confirm" onClick={() => void deleteSelectedCatalog()} disabled={deleteCatalogBusy}>{deleteCatalogBusy && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("materialRates.catalog.delete")}</Button></DialogFooter></DialogContent></Dialog>
 
       <Dialog open={decision !== null} onOpenChange={(open) => !open && setDecision(null)}><DialogContent><DialogHeader><DialogTitle>{decision && t(`materialRates.action.${decision}`)}</DialogTitle><DialogDescription>{t("materialRates.action.decisionHint")}</DialogDescription></DialogHeader><div><Label>{t("materialRates.revision.decisionNote")}{decision === "reject" ? " *" : ""}</Label><Textarea maxLength={1000} value={decisionNote} onChange={(event) => setDecisionNote(event.target.value)} /></div>{formError && <p className="text-sm text-destructive">{formError}</p>}<DialogFooter><Button variant="outline" onClick={() => setDecision(null)}>{t("common.cancel")}</Button><Button data-testid="material-rates-decision-confirm" onClick={() => void runDecision()} disabled={decisionBusy}>{decisionBusy && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.confirm")}</Button></DialogFooter></DialogContent></Dialog>
     </AdminLayout>
