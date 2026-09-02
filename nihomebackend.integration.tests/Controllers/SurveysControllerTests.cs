@@ -207,11 +207,15 @@ public class SurveysControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
             var opportunityProject = new OperationalProject
             {
-                Code = $"OP-{Guid.NewGuid():N}", Name = "Opportunity project", CustomerId = customer.Id,
+                Code = $"OP-{Guid.NewGuid():N}",
+                Name = "Opportunity project",
+                CustomerId = customer.Id,
             };
             var suppliedProject = new OperationalProject
             {
-                Code = $"OP-{Guid.NewGuid():N}", Name = "Supplied project", CustomerId = customer.Id,
+                Code = $"OP-{Guid.NewGuid():N}",
+                Name = "Supplied project",
+                CustomerId = customer.Id,
             };
             db.OperationalProjects.AddRange(opportunityProject, suppliedProject);
             await db.SaveChangesAsync();
@@ -465,7 +469,9 @@ public class SurveysControllerTests : IntegrationTestBase
         await db.SaveChangesAsync();
         var project = new OperationalProject
         {
-            Code = $"OP-{Guid.NewGuid():N}", Name = "Survey project", CustomerId = customer.Id,
+            Code = $"OP-{Guid.NewGuid():N}",
+            Name = "Survey project",
+            CustomerId = customer.Id,
         };
         db.OperationalProjects.Add(project);
         await db.SaveChangesAsync();
@@ -964,7 +970,9 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         await db.SaveChangesAsync();
         var project = new OperationalProject
         {
-            Code = $"OP-{Guid.NewGuid():N}", Name = "Survey media project", CustomerId = customer.Id,
+            Code = $"OP-{Guid.NewGuid():N}",
+            Name = "Survey media project",
+            CustomerId = customer.Id,
         };
         db.OperationalProjects.Add(project);
         await db.SaveChangesAsync();
