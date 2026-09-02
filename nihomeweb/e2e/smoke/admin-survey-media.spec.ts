@@ -19,12 +19,22 @@ async function createSurvey(
   api: APIRequestContext,
   authHeader: { Authorization: string },
 ) {
-  const location = `E2E Survey Media ${uid()}`;
+  const suffix = uid();
+  const projectsResponse = await api.get("/api/operational-projects?page=1&pageSize=100", {
+    headers: authHeader,
+  });
+  expect(projectsResponse.status(), await projectsResponse.text()).toBe(200);
+  const projects = (await projectsResponse.json()) as { items: Array<{ id: number }> };
+  expect(projects.items.length, "Survey Media E2E requires a seeded Operational Project").toBeGreaterThan(0);
+  const operationalProjectId = [...projects.items].sort((left, right) => left.id - right.id)[0].id;
+
+  const location = `E2E Survey Media ${suffix}`;
   const response = await api.post("/api/surveys", {
     headers: authHeader,
     data: {
       location,
       surveyDate: new Date().toISOString(),
+      operationalProjectId,
       note: "Playwright Survey Media verification",
     },
   });
@@ -71,7 +81,7 @@ async function getSurveyDetail(
   return (await response.json()) as SurveyDetail;
 }
 
-test.describe("NIH-101 — Survey Media browser flow", () => {
+test.describe.serial("NIH-101 — Survey Media browser flow", () => {
   test.afterEach(async ({ api, loginAs }) => {
     if (createdSurveyIds.size === 0) return;
     const token = await loginAs(TEST_USERS.superAdmin);

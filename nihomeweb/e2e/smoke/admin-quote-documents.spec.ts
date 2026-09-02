@@ -1,6 +1,10 @@
 /// <reference types="node" />
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import JSZip from "jszip";
+import {
+  createApprovedInvestmentRate,
+  retireInvestmentRate,
+} from "../fixtures/materialRate";
 
 const DOCX_CONTENT = "NIH-430 DOCX preview evidence";
 const UNSAFE_LINK_TEXT = "Unsafe DOCX link";
@@ -70,6 +74,7 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
   let opportunityId = 0;
   let quoteId = 0;
   let quoteCode = "";
+  let investmentRate: Awaited<ReturnType<typeof createApprovedInvestmentRate>> | null = null;
   const packageDescription = `NIH-430 complete quote view ${unique}`;
   const currentPackageDescription = `NIH-430 current quote view ${unique}`;
 
@@ -103,6 +108,7 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
     expect(opportunityResponse.status(), await opportunityResponse.text()).toBe(201);
     opportunityId = ((await opportunityResponse.json()).id as number);
 
+    investmentRate = await createApprovedInvestmentRate(api, headers, unique, 4_300_000);
     const quoteResponse = await api.post("/api/quotes", {
       headers,
       data: {
@@ -110,6 +116,8 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
         method: "UnitCost",
         areaSqm: 100,
         unitPricePerSqm: 4_300_000,
+        materialRateCatalogId: investmentRate.catalogId,
+        pricingEffectiveDate: investmentRate.pricingEffectiveDate,
         packageDescription,
         discountPercent: 0,
         vatPercent: 8,
@@ -138,6 +146,7 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
       data: {
         areaSqm: 120,
         unitPricePerSqm: 4_500_000,
+        rateOverrideReason: "Điều chỉnh đơn giá theo phạm vi hồ sơ cập nhật",
         packageDescription: currentPackageDescription,
         items: [],
         discountPercent: 0,
@@ -226,6 +235,7 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
     if (quoteId) await api.delete(`/api/quotes/${quoteId}`, { headers });
     if (opportunityId) await api.delete(`/api/opportunities/${opportunityId}`, { headers });
     if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
+    if (investmentRate) await retireInvestmentRate(api, headers, investmentRate);
   }
 });
 
