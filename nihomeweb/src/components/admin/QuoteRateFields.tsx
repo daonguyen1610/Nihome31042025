@@ -64,7 +64,7 @@ const QuoteRateFields = ({
 
   useEffect(() => {
     let cancelled = false;
-    void adminApi.listMaterialRateCatalogs(undefined, false)
+    void adminApi.listMaterialRateCatalogs(undefined, false, "InvestmentRate")
       .then(({ data }) => { if (!cancelled) setCatalogs(data); })
       .catch((err) => { if (!cancelled) setError(extractApiError(err)); });
     return () => { cancelled = true; };
@@ -113,7 +113,7 @@ const QuoteRateFields = ({
     <div className="space-y-3 rounded-md border bg-muted/20 p-3">
       <div className="text-xs leading-relaxed text-muted-foreground">
         {t("quotes.rate.usageHint")}{" "}
-        <Link className="font-medium text-primary underline underline-offset-2" to="/admin/material-rates">
+        <Link className="font-medium text-primary underline underline-offset-2" to="/admin/material-rates/investment">
           {t("quotes.rate.manageCatalogs")}
         </Link>
       </div>

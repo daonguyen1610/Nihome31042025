@@ -1,14 +1,15 @@
 using System.Globalization;
 using System.IO.Compression;
 using ClosedXML.Excel;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
 public interface IMaterialRateSpreadsheetService
 {
-    byte[] CreateTemplate(IReadOnlyDictionary<string, string> text);
-    CsvImportResult Parse(Stream stream);
+    byte[] CreateTemplate(IReadOnlyDictionary<string, string> text, MaterialRateCatalogType catalogType = MaterialRateCatalogType.InvestmentRate);
+    CsvImportResult Parse(Stream stream, MaterialRateCatalogType expectedCatalogType = MaterialRateCatalogType.InvestmentRate);
 }
 
 public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetService
@@ -20,7 +21,9 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
     private const int MaximumArchiveEntries = 100;
     private const long MaximumExpandedBytes = 25 * 1024 * 1024;
 
-    public byte[] CreateTemplate(IReadOnlyDictionary<string, string> text)
+    public byte[] CreateTemplate(
+        IReadOnlyDictionary<string, string> text,
+        MaterialRateCatalogType catalogType = MaterialRateCatalogType.InvestmentRate)
     {
         string T(string key, string fallback) => text.GetValueOrDefault(key, fallback);
         using var workbook = new XLWorkbook();
@@ -28,14 +31,16 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
         var guideSheet = workbook.Worksheets.Add(T("materialRates.excel.guideSheet", "Hướng dẫn & ví dụ"));
         var metadataSheet = workbook.Worksheets.Add("_NICON");
 
-        BuildEntrySheet(entrySheet, T);
-        BuildGuideSheet(guideSheet, T);
+        BuildEntrySheet(entrySheet, T, catalogType);
+        BuildGuideSheet(guideSheet, T, catalogType);
         metadataSheet.Cell("A1").Value = TemplateMarker;
         metadataSheet.Cell("A2").Value = "1";
         metadataSheet.Cell("A3").Value = entrySheet.Name;
-        for (var index = 0; index < MaterialRateService.CsvHeaders.Count; index++)
+        metadataSheet.Cell("A4").Value = catalogType.ToString();
+        var headers = HeadersFor(catalogType);
+        for (var index = 0; index < headers.Count; index++)
         {
-            metadataSheet.Cell(index + 1, 2).Value = MaterialRateService.CsvHeaders[index];
+            metadataSheet.Cell(index + 1, 2).Value = headers[index];
             metadataSheet.Cell(index + 1, 3).Value = entrySheet.Cell(HeaderRow, index + 1).GetString();
         }
         metadataSheet.Visibility = XLWorksheetVisibility.VeryHidden;
@@ -45,7 +50,9 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
         return output.ToArray();
     }
 
-    public CsvImportResult Parse(Stream stream)
+    public CsvImportResult Parse(
+        Stream stream,
+        MaterialRateCatalogType expectedCatalogType = MaterialRateCatalogType.InvestmentRate)
     {
         try
         {
@@ -56,16 +63,25 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
             {
                 return Invalid("materialRates.excel.invalidTemplate", "Tệp Excel không phải biểu mẫu đơn giá NICON hợp lệ.");
             }
+            if (!Enum.TryParse<MaterialRateCatalogType>(metadata.Cell("A4").GetString(), out var catalogType))
+            {
+                catalogType = MaterialRateCatalogType.InvestmentRate;
+            }
+            if (catalogType != expectedCatalogType)
+            {
+                return Invalid("materialRates.excel.wrongCatalogType", "Biểu mẫu Excel không đúng loại danh mục đã chọn.");
+            }
 
             var entrySheetName = metadata.Cell("A3").GetString();
             var entrySheet = workbook.Worksheets.FirstOrDefault(sheet => sheet.Name == entrySheetName);
-            if (entrySheet is null || !HasExpectedColumns(entrySheet, metadata))
+            if (entrySheet is null || !HasExpectedColumns(entrySheet, metadata, catalogType))
             {
                 return Invalid("materialRates.excel.invalidStructure", "Cấu trúc cột của biểu mẫu Excel đã bị thay đổi.");
             }
 
+            var headers = HeadersFor(catalogType);
             var overflowRow = entrySheet.RowsUsed(row => row.RowNumber() > LastDataRow)
-                .FirstOrDefault(row => Enumerable.Range(1, 6).Any(column => !row.Cell(column).IsEmpty()));
+                .FirstOrDefault(row => Enumerable.Range(1, headers.Count).Any(column => !row.Cell(column).IsEmpty()));
             if (overflowRow is not null)
             {
                 return new CsvImportResult
@@ -81,15 +97,15 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
             }
 
             var result = new CsvImportResult();
-            result.Headers.AddRange(MaterialRateService.CsvHeaders);
+            result.Headers.AddRange(headers);
             for (var rowNumber = FirstDataRow; rowNumber <= LastDataRow; rowNumber++)
             {
-                var values = Enumerable.Range(1, 6)
+                var values = Enumerable.Range(1, headers.Count)
                     .Select(column => ReadCell(entrySheet.Cell(rowNumber, column)))
                     .ToArray();
                 if (values.All(string.IsNullOrWhiteSpace)) continue;
 
-                result.Rows.Add(MaterialRateService.CsvHeaders
+                result.Rows.Add(headers
                     .Select((header, index) => (header, value: values[index]))
                     .ToDictionary(item => item.header, item => item.value, StringComparer.Ordinal));
                 result.SourceRowNumbers.Add(rowNumber);
@@ -102,8 +118,16 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
         }
     }
 
-    private static void BuildEntrySheet(IXLWorksheet sheet, Func<string, string, string> text)
+    private static void BuildEntrySheet(
+        IXLWorksheet sheet,
+        Func<string, string, string> text,
+        MaterialRateCatalogType catalogType)
     {
+        if (catalogType == MaterialRateCatalogType.Boq)
+        {
+            BuildBoqEntrySheet(sheet, text);
+            return;
+        }
         sheet.ShowGridLines = false;
         sheet.SheetView.FreezeRows(HeaderRow);
         sheet.Range("A1:G1").Merge().Value = text("materialRates.excel.title", "BIỂU MẪU ĐỊNH MỨC VÀ ĐƠN GIÁ VẬT LIỆU");
@@ -173,8 +197,16 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
         sheet.PageSetup.PrintAreas.Add($"A1:G{LastDataRow}");
     }
 
-    private static void BuildGuideSheet(IXLWorksheet sheet, Func<string, string, string> text)
+    private static void BuildGuideSheet(
+        IXLWorksheet sheet,
+        Func<string, string, string> text,
+        MaterialRateCatalogType catalogType)
     {
+        if (catalogType == MaterialRateCatalogType.Boq)
+        {
+            BuildBoqGuideSheet(sheet, text);
+            return;
+        }
         sheet.ShowGridLines = false;
         sheet.Range("A1:G1").Merge().Value = text("materialRates.excel.guideTitle", "HƯỚNG DẪN SỬ DỤNG BIỂU MẪU");
         sheet.Range("A1:G1").Style
@@ -238,17 +270,82 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
         return cell.GetString().Trim();
     }
 
-    private static bool HasExpectedColumns(IXLWorksheet sheet, IXLWorksheet metadata)
+    private static bool HasExpectedColumns(
+        IXLWorksheet sheet,
+        IXLWorksheet metadata,
+        MaterialRateCatalogType catalogType)
     {
-        for (var index = 0; index < MaterialRateService.CsvHeaders.Count; index++)
+        var headers = HeadersFor(catalogType);
+        for (var index = 0; index < headers.Count; index++)
         {
-            if (metadata.Cell(index + 1, 2).GetString() != MaterialRateService.CsvHeaders[index] ||
+            if (metadata.Cell(index + 1, 2).GetString() != headers[index] ||
                 metadata.Cell(index + 1, 3).GetString() != sheet.Cell(HeaderRow, index + 1).GetString())
             {
                 return false;
             }
         }
         return true;
+    }
+
+    private static IReadOnlyList<string> HeadersFor(MaterialRateCatalogType catalogType) =>
+        catalogType == MaterialRateCatalogType.Boq
+            ? MaterialRateService.BoqCsvHeaders
+            : MaterialRateService.CsvHeaders;
+
+    private static void BuildBoqEntrySheet(IXLWorksheet sheet, Func<string, string, string> text)
+    {
+        sheet.ShowGridLines = false;
+        sheet.SheetView.FreezeRows(HeaderRow);
+        sheet.Range("A1:F1").Merge().Value = text("materialRates.boq.excel.title", "BIỂU MẪU ĐƠN GIÁ BOQ");
+        sheet.Range("A2:F2").Merge().Value = text("materialRates.boq.excel.entryHint", "Nhập mỗi hạng mục trên một dòng. Không thêm, xóa hoặc đổi thứ tự cột.");
+        sheet.Range("A1:F1").Style.Font.SetBold().Font.SetFontSize(16).Font.SetFontColor(XLColor.White)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#17365D"))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+        sheet.Range("A2:F2").Style.Font.SetItalic().Fill.SetBackgroundColor(XLColor.FromHtml("#D9EAF7"))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center);
+        var headers = new[]
+        {
+            text("materialRates.boq.field.itemCode", "Mã công việc *"),
+            text("materialRates.boq.field.itemName", "Tên công việc *"),
+            text("materialRates.field.unit", "Đơn vị *"),
+            text("materialRates.boq.field.quantity", "Khối lượng *"),
+            text("materialRates.boq.field.unitPrice", "Đơn giá *"),
+            text("materialRates.boq.field.amount", "Thành tiền"),
+        };
+        for (var index = 0; index < headers.Length; index++) sheet.Cell(HeaderRow, index + 1).Value = headers[index];
+        sheet.Range(HeaderRow, 1, HeaderRow, 6).Style.Font.SetBold().Font.SetFontColor(XLColor.White)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#2F75B5"))
+            .Alignment.SetHorizontal(XLAlignmentHorizontalValues.Center)
+            .Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.SetInsideBorder(XLBorderStyleValues.Thin);
+        sheet.Range(FirstDataRow, 1, LastDataRow, 5).Style.Fill.SetBackgroundColor(XLColor.FromHtml("#FFFDEB"));
+        sheet.Range(FirstDataRow, 6, LastDataRow, 6).Style.Fill.SetBackgroundColor(XLColor.FromHtml("#E2F0D9"));
+        sheet.Range(FirstDataRow, 4, LastDataRow, 4).Style.NumberFormat.Format = "0.######";
+        sheet.Range(FirstDataRow, 5, LastDataRow, 6).Style.NumberFormat.Format = "#,##0.####";
+        for (var row = FirstDataRow; row <= LastDataRow; row++)
+        {
+            sheet.Cell(row, 6).FormulaA1 = $"=IF(COUNTA(A{row}:E{row})=0,\"\",D{row}*E{row})";
+        }
+        sheet.Column(1).Width = 20;
+        sheet.Column(2).Width = 42;
+        sheet.Column(3).Width = 14;
+        sheet.Columns(4, 6).Width = 18;
+        sheet.Range(HeaderRow, 1, LastDataRow, 6).SetAutoFilter();
+    }
+
+    private static void BuildBoqGuideSheet(IXLWorksheet sheet, Func<string, string, string> text)
+    {
+        sheet.ShowGridLines = false;
+        sheet.Range("A1:F1").Merge().Value = text("materialRates.excel.guideTitle", "HƯỚNG DẪN SỬ DỤNG BIỂU MẪU");
+        sheet.Range("A1:F1").Style.Font.SetBold().Font.SetFontSize(16).Font.SetFontColor(XLColor.White)
+            .Fill.SetBackgroundColor(XLColor.FromHtml("#17365D"));
+        sheet.Range("A3:F3").Merge().Value = text("materialRates.boq.excel.guide", "Nhập mã công việc, tên công việc, đơn vị, khối lượng mẫu và đơn giá. Thành tiền được tự động tính bằng Khối lượng × Đơn giá.");
+        sheet.Range("A3:F3").Style.Alignment.SetWrapText().Fill.SetBackgroundColor(XLColor.FromHtml("#D9EAF7"));
+        sheet.Row(3).Height = 42;
+        sheet.Range("A5:F5").Merge().Value = text("materialRates.excel.exampleTitle", "VÍ DỤ THAM KHẢO — KHÔNG CẦN XÓA");
+        sheet.Range("A5:F5").Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#E2F0D9"));
+        var example = new object[] { "CV-BT-01", text("materialRates.boq.excel.example", "Bê tông móng"), "m3", 10, 1500000, 15000000 };
+        for (var column = 0; column < example.Length; column++) sheet.Cell(6, column + 1).Value = XLCellValue.FromObject(example[column]);
+        sheet.Columns(1, 6).AdjustToContents(1, 6);
     }
 
     private static MemoryStream CopyAndValidateArchive(Stream stream)

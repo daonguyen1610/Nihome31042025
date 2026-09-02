@@ -182,6 +182,8 @@ const App = () => (
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.materialRates} />}>
                 <Route path="/admin/material-rates" element={<AdminMaterialRates />} />
+                <Route path="/admin/material-rates/investment" element={<AdminMaterialRates catalogType="InvestmentRate" />} />
+                <Route path="/admin/material-rates/boq" element={<AdminMaterialRates catalogType="Boq" />} />
               </Route>
               <Route element={<RequirePermission code={ADMIN_PERMS.capabilityDocs} />}>
                 <Route path="/admin/capability-documents" element={<AdminCapabilityDocuments />} />

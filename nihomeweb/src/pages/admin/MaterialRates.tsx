@@ -43,6 +43,7 @@ import { cn } from "@/lib/utils";
 import {
   adminApi,
   type CsvImportError,
+  type MaterialRateCatalogType,
   type MaterialRateCatalogResponse,
   type MaterialRateRevisionResponse,
   type MaterialRateRevisionStatus,
@@ -56,7 +57,8 @@ const STATUS_STYLES: Record<MaterialRateRevisionStatus, string> = {
   Retired: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
-const emptyCatalog = (): UpsertMaterialRateCatalogRequest => ({
+const emptyCatalog = (catalogType: MaterialRateCatalogType): UpsertMaterialRateCatalogRequest => ({
+  catalogType,
   code: "",
   name: "",
   description: "",
@@ -71,15 +73,24 @@ const formatFileSize = (bytes: number) => bytes < 1024 * 1024
 
 const IMPORT_FIELD_KEYS: Record<string, string> = {
   MaterialCode: "materialRates.field.materialCode",
+  ItemCode: "materialRates.field.materialCode",
   MaterialName: "materialRates.field.materialName",
+  ItemName: "materialRates.field.materialName",
   Unit: "materialRates.field.unit",
+  Quantity: "materialRates.field.quantity",
   NormPerSqm: "materialRates.field.normPerSqm",
   UnitRate: "materialRates.field.unitRate",
+  UnitPrice: "materialRates.field.unitRate",
   WastePercent: "materialRates.field.wastePercent",
   AmountPerSqm: "materialRates.field.amountPerSqm",
+  TotalAmount: "materialRates.field.totalAmount",
 };
 
-const AdminMaterialRates = () => {
+interface AdminMaterialRatesProps {
+  catalogType?: MaterialRateCatalogType;
+}
+
+const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRatesProps) => {
   const { lang, t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -106,7 +117,7 @@ const AdminMaterialRates = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await adminApi.listMaterialRateCatalogs(search, includeInactive);
+      const { data } = await adminApi.listMaterialRateCatalogs(search, includeInactive, catalogType);
       setCatalogs(data);
       setSelectedCatalogId((current) => {
         if (current && data.some((catalog) => catalog.id === current)) return current;
@@ -117,7 +128,7 @@ const AdminMaterialRates = () => {
     } finally {
       setLoading(false);
     }
-  }, [includeInactive, search]);
+  }, [catalogType, includeInactive, search]);
 
   const loadRevisions = useCallback(async (catalogId: number) => {
     setRevisionLoading(true);
@@ -150,14 +161,14 @@ const AdminMaterialRates = () => {
   }, [loadRevisions, selectedCatalogId]);
 
   const [catalogOpen, setCatalogOpen] = useState(false);
-  const [catalogForm, setCatalogForm] = useState<UpsertMaterialRateCatalogRequest>(emptyCatalog());
+  const [catalogForm, setCatalogForm] = useState<UpsertMaterialRateCatalogRequest>(emptyCatalog(catalogType));
   const [editingCatalogId, setEditingCatalogId] = useState<number | null>(null);
   const [catalogSaving, setCatalogSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const openCatalogForm = () => {
     setEditingCatalogId(null);
-    setCatalogForm(emptyCatalog());
+    setCatalogForm(emptyCatalog(catalogType));
     setFormError(null);
     setCatalogOpen(true);
   };
@@ -166,6 +177,7 @@ const AdminMaterialRates = () => {
     if (!selectedCatalog) return;
     setEditingCatalogId(selectedCatalog.id);
     setCatalogForm({
+      catalogType,
       code: selectedCatalog.code,
       name: selectedCatalog.name,
       description: selectedCatalog.description,
@@ -298,11 +310,11 @@ const AdminMaterialRates = () => {
 
   const downloadTemplatePackage = async () => {
     try {
-      const { data } = await adminApi.downloadMaterialRateExcelTemplate(lang);
+      const { data } = await adminApi.downloadMaterialRateExcelTemplate(lang, catalogType);
       const url = URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = t("materialRates.excel.fileName");
+      link.download = t(catalogType === "Boq" ? "materialRates.excel.boqFileName" : "materialRates.excel.fileName");
       link.click();
       URL.revokeObjectURL(url);
       toast({ title: t("materialRates.package.downloaded") });
@@ -373,8 +385,8 @@ const AdminMaterialRates = () => {
       <div className="space-y-4" data-testid="material-rates-page">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{t("materialRates.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("materialRates.subtitle")}</p>
+            <h1 className="text-2xl font-semibold tracking-tight">{t(catalogType === "Boq" ? "materialRates.boq.title" : "materialRates.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t(catalogType === "Boq" ? "materialRates.boq.subtitle" : "materialRates.subtitle")}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" data-testid="material-rates-download-package" onClick={() => void downloadTemplatePackage()}>
@@ -387,6 +399,11 @@ const AdminMaterialRates = () => {
             )}
           </div>
         </header>
+
+        <nav className="flex w-fit rounded-lg border bg-muted/30 p-1" aria-label={t("materialRates.catalogType.navigation")}>
+          <Button variant={catalogType === "InvestmentRate" ? "secondary" : "ghost"} size="sm" asChild><Link to="/admin/material-rates/investment">{t("materialRates.catalogType.investment")}</Link></Button>
+          <Button variant={catalogType === "Boq" ? "secondary" : "ghost"} size="sm" asChild><Link to="/admin/material-rates/boq">{t("materialRates.catalogType.boq")}</Link></Button>
+        </nav>
 
         <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-4 sm:px-5">
@@ -474,7 +491,7 @@ const AdminMaterialRates = () => {
                         <button key={revision.id} type="button" onClick={() => { setSelectedRevision(revision); setImportErrors([]); setPendingImportFile(null); setImportedCount(null); }} className={cn("w-full rounded-lg border bg-card p-3 text-left hover:border-primary/50", selectedRevision?.id === revision.id && "border-primary bg-primary/5")}>
                           <div className="flex items-center justify-between gap-2"><span className="font-medium">V{revision.version}</span><Badge variant="outline" className={STATUS_STYLES[revision.status]}>{t(`materialRates.status.${revision.status}`)}</Badge></div>
                           <p className="mt-2 text-xs text-muted-foreground">{revision.effectiveFrom} → {revision.effectiveTo || "∞"}</p>
-                          <p className="mt-1 text-sm font-semibold">{formatVnd(revision.totalRatePerSqm)} {revision.currency}/m²</p>
+                          <p className="mt-1 text-sm font-semibold">{formatVnd(catalogType === "Boq" ? revision.totalAmount : revision.totalRatePerSqm)} {revision.currency}{catalogType === "InvestmentRate" ? "/m²" : ""}</p>
                         </button>
                       ))}
                     </div>
@@ -482,7 +499,7 @@ const AdminMaterialRates = () => {
                       <div className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div><h3 className="font-semibold">{t("materialRates.revision.version")} V{selectedRevision.version}</h3><p className="text-sm text-muted-foreground">{selectedRevision.effectiveFrom} → {selectedRevision.effectiveTo || "∞"}</p></div>
-                          <div className="text-right"><p className="text-xs text-muted-foreground">{t("materialRates.revision.totalRate")}</p><p className="text-lg font-bold text-primary">{formatVnd(selectedRevision.totalRatePerSqm)} {selectedRevision.currency}/m²</p></div>
+                          <div className="text-right"><p className="text-xs text-muted-foreground">{t(catalogType === "Boq" ? "materialRates.revision.totalAmount" : "materialRates.revision.totalRate")}</p><p className="text-lg font-bold text-primary">{formatVnd(catalogType === "Boq" ? selectedRevision.totalAmount : selectedRevision.totalRatePerSqm)} {selectedRevision.currency}{catalogType === "InvestmentRate" ? "/m²" : ""}</p></div>
                         </div>
                         {selectedRevision.note && <p className="text-sm">{selectedRevision.note}</p>}
                         {selectedRevision.decisionNote && <p className="rounded bg-muted p-2 text-xs">{selectedRevision.decisionNote}</p>}
@@ -520,7 +537,7 @@ const AdminMaterialRates = () => {
                         {importedCount !== null && (
                           <div className="flex flex-col gap-3 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
                             <div className="flex gap-2"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="text-sm font-semibold">{t("materialRates.import.result", { count: importedCount })}</p><p className="text-xs">{t("materialRates.import.nextStep")}</p></div></div>
-                            <p className="whitespace-nowrap text-sm font-bold">{formatVnd(selectedRevision.totalRatePerSqm)} {selectedRevision.currency}/m²</p>
+                            <p className="whitespace-nowrap text-sm font-bold">{formatVnd(catalogType === "Boq" ? selectedRevision.totalAmount : selectedRevision.totalRatePerSqm)} {selectedRevision.currency}{catalogType === "InvestmentRate" ? "/m²" : ""}</p>
                           </div>
                         )}
 
@@ -534,8 +551,8 @@ const AdminMaterialRates = () => {
                         {importErrors.length > 0 && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="mb-2 text-sm font-medium text-destructive">{t("materialRates.import.errors")}</p><ul className="space-y-1 text-xs text-destructive">{importErrors.map((item, index) => <li key={`${item.row}-${item.column}-${index}`}>{item.row ? t("materialRates.import.errorLocation", { row: item.row, column: item.column ?? "—" }) : ""} {importErrorMessage(item)}</li>)}</ul></div>}
 
                         {selectedRevision.lines.length === 0 ? <p className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">{t("materialRates.lines.empty")}</p> : <>
-                          <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[720px] divide-y text-sm"><thead className="bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-2 py-2 text-left">{t("materialRates.field.materialCode")}</th><th className="px-2 py-2 text-left">{t("materialRates.field.materialName")}</th><th className="px-2 py-2 text-left">{t("materialRates.field.unit")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.normPerSqm")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.wastePercent")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.amountPerSqm")}</th></tr></thead><tbody className="divide-y">{selectedRevision.lines.map((line) => <tr key={line.id}><td className="px-2 py-2">{line.materialCode}</td><td className="px-2 py-2 font-medium">{line.materialName}</td><td className="px-2 py-2">{line.unit}</td><td className="px-2 py-2 text-right">{line.normPerSqm}</td><td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td><td className="px-2 py-2 text-right">{line.wastePercent}%</td><td className="px-2 py-2 text-right font-medium">{formatVnd(line.amountPerSqm)}</td></tr>)}</tbody></table></div>
-                          <ul className="grid gap-2 md:hidden">{selectedRevision.lines.map((line) => <li key={line.id} className="rounded border p-3 text-sm"><div className="flex justify-between gap-2"><span className="font-medium">{line.materialName}</span><span className="font-semibold">{formatVnd(line.amountPerSqm)}</span></div><p className="text-xs text-muted-foreground">{line.materialCode} · {line.normPerSqm} {line.unit}/m² · {formatVnd(line.unitRate)} · {line.wastePercent}%</p></li>)}</ul>
+                          <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[720px] divide-y text-sm"><thead className="bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-2 py-2 text-left">{t("materialRates.field.materialCode")}</th><th className="px-2 py-2 text-left">{t("materialRates.field.materialName")}</th><th className="px-2 py-2 text-left">{t("materialRates.field.unit")}</th>{catalogType === "Boq" ? <><th className="px-2 py-2 text-right">{t("materialRates.field.quantity")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.totalAmount")}</th></> : <><th className="px-2 py-2 text-right">{t("materialRates.field.normPerSqm")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.wastePercent")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.amountPerSqm")}</th></>}</tr></thead><tbody className="divide-y">{selectedRevision.lines.map((line) => <tr key={line.id}><td className="px-2 py-2">{line.materialCode}</td><td className="px-2 py-2 font-medium">{line.materialName}</td><td className="px-2 py-2">{line.unit}</td>{catalogType === "Boq" ? <><td className="px-2 py-2 text-right">{line.quantity}</td><td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td><td className="px-2 py-2 text-right font-medium">{formatVnd(line.quantity * line.unitRate)}</td></> : <><td className="px-2 py-2 text-right">{line.normPerSqm}</td><td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td><td className="px-2 py-2 text-right">{line.wastePercent}%</td><td className="px-2 py-2 text-right font-medium">{formatVnd(line.amountPerSqm)}</td></>}</tr>)}</tbody></table></div>
+                          <ul className="grid gap-2 md:hidden">{selectedRevision.lines.map((line) => <li key={line.id} className="rounded border p-3 text-sm"><div className="flex justify-between gap-2"><span className="font-medium">{line.materialName}</span><span className="font-semibold">{formatVnd(catalogType === "Boq" ? line.quantity * line.unitRate : line.amountPerSqm)}</span></div><p className="text-xs text-muted-foreground">{catalogType === "Boq" ? `${line.materialCode} · ${line.quantity} ${line.unit} · ${formatVnd(line.unitRate)}` : `${line.materialCode} · ${line.normPerSqm} ${line.unit}/m² · ${formatVnd(line.unitRate)} · ${line.wastePercent}%`}</p></li>)}</ul>
                         </>}
                       </div>
                     )}

@@ -3,6 +3,7 @@ namespace NihomeBackend.Models;
 public class MaterialRateCatalog
 {
     public int Id { get; set; }
+    public MaterialRateCatalogType CatalogType { get; set; } = MaterialRateCatalogType.InvestmentRate;
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
@@ -44,6 +45,7 @@ public class MaterialRateLine
     public string MaterialCode { get; set; } = string.Empty;
     public string MaterialName { get; set; } = string.Empty;
     public string Unit { get; set; } = string.Empty;
+    public decimal Quantity { get; set; }
     public decimal NormPerSqm { get; set; }
     public decimal UnitRate { get; set; }
     public decimal WastePercent { get; set; }
@@ -57,4 +59,10 @@ public enum MaterialRateRevisionStatus
     Approved = 1,
     Rejected = 2,
     Retired = 3,
+}
+
+public enum MaterialRateCatalogType
+{
+    InvestmentRate = 0,
+    Boq = 1,
 }

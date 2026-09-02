@@ -22,6 +22,35 @@ public class MaterialRateServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public async Task ListCatalogsAsync_FiltersByCatalogTypeAndReturnsPersistedType()
+    {
+        await _sut.CreateCatalogAsync(new UpsertMaterialRateCatalogRequest
+        {
+            CatalogType = MaterialRateCatalogType.InvestmentRate,
+            Code = "INVESTMENT-TEST",
+            Name = "Danh mục suất đầu tư",
+            Currency = "VND",
+            IsActive = true,
+        }, 1);
+        var boq = await _sut.CreateCatalogAsync(new UpsertMaterialRateCatalogRequest
+        {
+            CatalogType = MaterialRateCatalogType.Boq,
+            Code = "BOQ-TEST",
+            Name = "Danh mục BOQ",
+            Currency = "VND",
+            IsActive = true,
+        }, 1);
+
+        var result = await _sut.ListCatalogsAsync(null, includeInactive: false, MaterialRateCatalogType.Boq);
+
+        var catalog = Assert.Single(result);
+        Assert.Equal(boq.Id, catalog.Id);
+        Assert.Equal(MaterialRateCatalogType.Boq, catalog.CatalogType);
+        Assert.Equal(MaterialRateCatalogType.Boq,
+            (await _db.MaterialRateCatalogs.SingleAsync(item => item.Id == boq.Id)).CatalogType);
+    }
+
+    [Fact]
     public async Task ImportAsync_ComputesAmountPerSqmUsingInvariantDecimals()
     {
         var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 9, 1));
@@ -33,6 +62,25 @@ public class MaterialRateServiceTests : IDisposable
         Assert.Equal(1, result.ImportedCount);
         var line = Assert.Single(_db.MaterialRateLines);
         Assert.Equal(39375.6563m, line.AmountPerSqm);
+    }
+
+    [Fact]
+    public async Task ImportAsync_BoqCsvPersistsQuantityUnitPriceAndTotalAmount()
+    {
+        var (catalog, revision) = await CreateDraftAsync(
+            new DateOnly(2026, 9, 1), catalogType: MaterialRateCatalogType.Boq);
+
+        var result = await ImportAsync(catalog.Id, revision.Id,
+            "ItemCode,ItemName,Unit,Quantity,UnitPrice\nCV-BT-01,Bê tông móng,m3,12.5,1500000.25");
+
+        Assert.Empty(result!.Errors);
+        Assert.Equal(1, result.ImportedCount);
+        var line = Assert.Single(_db.MaterialRateLines);
+        Assert.Equal(12.5m, line.Quantity);
+        Assert.Equal(1_500_000.25m, line.UnitRate);
+        Assert.Equal(18_750_003.125m, line.AmountPerSqm);
+        var detail = await _sut.GetRevisionAsync(catalog.Id, revision.Id);
+        Assert.Equal(18_750_003.125m, detail!.TotalAmount);
     }
 
     [Fact]
@@ -161,10 +209,12 @@ public class MaterialRateServiceTests : IDisposable
 
     private async Task<(MaterialRateCatalog Catalog, MaterialRateRevision Revision)> CreateDraftAsync(
         DateOnly from,
-        DateOnly? to = null)
+        DateOnly? to = null,
+        MaterialRateCatalogType catalogType = MaterialRateCatalogType.InvestmentRate)
     {
         var catalog = new MaterialRateCatalog
         {
+            CatalogType = catalogType,
             Code = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
             Name = "Danh mục thử nghiệm",
             Currency = "VND",

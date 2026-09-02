@@ -25,6 +25,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
+import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -263,6 +264,26 @@ const AdminQuoteDetail = () => {
     const items = normalizeBoqSortOrder([...existingItems, ...pastedItems]);
     setForm({ ...form, items });
     toast({ title: t("quotes.paste.ok"), description: `+${pastedItems.length}` });
+  };
+
+  const applyBoqCatalog = (revision: MaterialRateRevisionResponse, pricingDate: string) => {
+    if (!form) return;
+    if ((form.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boqCatalog.replaceConfirm"))) return;
+    setForm({
+      ...form,
+      materialRateCatalogId: revision.catalogId,
+      pricingEffectiveDate: pricingDate,
+      unitPricePerSqm: null,
+      rateOverrideReason: null,
+      items: revision.lines.map((line, index) => ({
+        itemCode: line.materialCode,
+        name: line.materialName,
+        unit: line.unit,
+        quantity: line.quantity,
+        unitPrice: line.unitRate,
+        sortOrder: index + 1,
+      })),
+    });
   };
 
   // ---------- save + workflow ----------
@@ -676,15 +697,26 @@ const AdminQuoteDetail = () => {
                   </div>
                 </div>
               ) : (
-                <BoqTable
-                  form={form}
-                  editing={editing}
-                  onAdd={addBoqRow}
-                  onRemove={removeBoqRow}
-                  onChange={updateBoqRow}
-                  onPaste={() => setBoqPasteOpen(true)}
-                  t={t}
-                />
+                <div className="space-y-4">
+                  {editing ? (
+                    <BoqCatalogFields
+                      catalogId={form.materialRateCatalogId}
+                      pricingDate={form.pricingEffectiveDate}
+                      onApply={applyBoqCatalog}
+                    />
+                  ) : quote.materialRateCatalogId ? (
+                    <RateProvenance value={quote} t={t} />
+                  ) : null}
+                  <BoqTable
+                    form={form}
+                    editing={editing}
+                    onAdd={addBoqRow}
+                    onRemove={removeBoqRow}
+                    onChange={updateBoqRow}
+                    onPaste={() => setBoqPasteOpen(true)}
+                    t={t}
+                  />
+                </div>
               )}
 
               <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 sm:grid-cols-4">
@@ -1213,7 +1245,7 @@ const BoqTable = ({
       </div>
       <div className="border-b bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-900">
         {t("quotes.boq.materialRateHint")} {t("quotes.boq.materialRateExistingQuote")}{" "}
-        <Link className="font-medium underline underline-offset-2" to="/admin/material-rates">
+        <Link className="font-medium underline underline-offset-2" to="/admin/material-rates/boq">
           {t("quotes.boq.openMaterialRates")}
         </Link>
       </div>

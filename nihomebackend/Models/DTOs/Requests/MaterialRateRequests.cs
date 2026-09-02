@@ -4,6 +4,10 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 public sealed class UpsertMaterialRateCatalogRequest
 {
+    [Required(ErrorMessage = "Vui lòng chọn loại danh mục đơn giá.")]
+    [EnumDataType(typeof(MaterialRateCatalogType), ErrorMessage = "Loại danh mục đơn giá không hợp lệ. Chỉ chấp nhận InvestmentRate hoặc Boq.")]
+    public MaterialRateCatalogType CatalogType { get; set; } = MaterialRateCatalogType.InvestmentRate;
+
     [Required(ErrorMessage = "Vui lòng nhập mã danh mục đơn giá.")]
     [StringLength(50, MinimumLength = 1, ErrorMessage = "Mã danh mục đơn giá phải có từ 1 đến 50 ký tự.")]
     [RegularExpression("^[A-Za-z0-9][A-Za-z0-9._-]*$", ErrorMessage = "Mã danh mục đơn giá chỉ gồm chữ, số, dấu chấm, gạch ngang hoặc gạch dưới, ví dụ: NOI-THAT-2026.")]

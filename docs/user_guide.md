@@ -237,28 +237,32 @@ deleted unless another qualifying Contract remains.
 #### 3.1.4 Direct Quotation
 
 Create quotations using an approved material-rate revision or a preliminary
-BOQ. In **Material norms & rates**, download the localized Excel form, open the
-**Entry** sheet, and fill in material code/name, unit, norm per m², unit rate,
-and waste percentage. The workbook provides customer-facing column names,
+BOQ. **Material norms & rates** has separate **Investment rate** and **BOQ**
+pages. Download the localized Excel form from the intended page, open the
+**Entry** sheet, and retain its column names and order. Investment-rate forms
+use material code/name, unit, norm per m², unit rate, and waste percentage; BOQ
+forms use item code/name, unit, quantity, and unit price. The workbook provides
 number formats, an automatic amount formula, and a separate guide with examples;
 the customer does not need to delete the examples or convert the file to CSV.
 Return and import the same `.xlsx` file into a Draft revision. UTF-8 CSV remains
-available for system compatibility. Import is atomic and computes each rate as
-`NormPerSqm × UnitRate × (1 + WastePercent / 100)`. Approve non-overlapping
-effective revisions before use. Unit-cost quotations select a catalog and
-pricing date, retain the chosen revision and catalog rate, and calculate
-discount, VAT, and totals automatically. Authorized overrides require a
-Vietnamese reason and remain visible in versions and the PDF. Downloadable
-preliminary PDFs are localized in Vietnamese, English, Chinese, or Japanese.
+available for system compatibility. Import is atomic. Investment rates calculate
+`NormPerSqm × UnitRate × (1 + WastePercent / 100)`; BOQ lines calculate
+`Quantity × UnitPrice`. Approve non-overlapping effective revisions before use.
 
 To apply the catalog on **Quotes**, create a quote with the **Unit Cost** method,
 enter the area, select an active catalog, and choose a date covered by an
 Approved revision. The system resolves the total catalog rate per square metre
-automatically. A **BOQ** quote is a different pricing method and is not populated
-from this aggregate rate.
+automatically. Only Investment-rate catalogs are available for this method.
+Authorized overrides require a Vietnamese reason and remain visible in versions
+and the PDF. Downloadable preliminary PDFs are localized in Vietnamese, English,
+Chinese, or Japanese.
 
-For a BOQ quotation, add one or more rows and enter the item name, unit,
-quantity, and unit price. To paste multiple Excel rows, copy columns in the order
+For a BOQ quotation, either select an active BOQ catalog and pricing date or add
+rows manually. Applying an Approved effective BOQ revision replaces the current
+rows after confirmation, copies its items into the quote, and retains catalog,
+revision, and date provenance. The copied name, unit, quantity, and unit price
+remain editable without changing the approved catalog revision. To paste
+multiple Excel rows, copy columns in the order
 `[optional code] / item name / unit / quantity / unit price`, open **Paste from
 Excel**, paste with `Cmd+V` or `Ctrl+V`, review any invalid row numbers, and
 confirm. This does not require browser clipboard permission and accepts common

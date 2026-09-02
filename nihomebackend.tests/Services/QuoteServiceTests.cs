@@ -255,6 +255,129 @@ public class QuoteServiceTests : IDisposable
         }, user.Id, canManage: true));
     }
 
+    [Fact]
+    public async Task CreateAsync_UnitCost_RejectsBoqCatalog()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var (catalog, _) = await SeedApprovedRateRevisionAsync(MaterialRateCatalogType.Boq);
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            MaterialRateCatalogId = catalog.Id,
+            PricingEffectiveDate = _pricingDate,
+        }, user.Id, canManage: true));
+
+        Assert.Contains("đã duyệt có hiệu lực", exception.Message);
+        Assert.Empty(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task CreateAndUpdateAsync_BoqCatalogPreservesRevisionProvenanceAndEditableCopiedItems()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var (catalog, revision) = await SeedApprovedRateRevisionAsync(MaterialRateCatalogType.Boq);
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.Boq,
+            MaterialRateCatalogId = catalog.Id,
+            PricingEffectiveDate = _pricingDate,
+            DiscountPercent = 0m,
+            VatPercent = 10m,
+            Items =
+            [
+                new QuoteItemInput
+                {
+                    ItemCode = "PACKAGE",
+                    Name = "Gói tiêu chuẩn",
+                    Unit = "m2",
+                    Quantity = 10m,
+                    UnitPrice = 1_500_000m,
+                    SortOrder = 1,
+                },
+            ],
+        }, user.Id, canManage: true);
+        var createdRateSource = created.RateSource;
+
+        var updated = await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            MaterialRateCatalogId = catalog.Id,
+            PricingEffectiveDate = _pricingDate,
+            DiscountPercent = 0m,
+            VatPercent = 10m,
+            ValidUntil = created.ValidUntil,
+            Items =
+            [
+                new QuoteItemInput
+                {
+                    ItemCode = "PACKAGE",
+                    Name = "Gói tiêu chuẩn đã chỉnh sửa",
+                    Unit = "m2",
+                    Quantity = 12m,
+                    UnitPrice = 1_600_000m,
+                    SortOrder = 1,
+                },
+            ],
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.NotNull(updated);
+        Assert.Equal(revision.Id, updated!.MaterialRateRevisionId);
+        Assert.Equal(catalog.Id, updated.MaterialRateCatalogId);
+        Assert.Equal(_pricingDate, updated.PricingEffectiveDate);
+        Assert.Equal("Catalog", updated.RateSource);
+        Assert.Null(updated.RateOverrideReason);
+        var item = Assert.Single(updated.Items);
+        Assert.Equal("PACKAGE", item.ItemCode);
+        Assert.Equal("Gói tiêu chuẩn đã chỉnh sửa", item.Name);
+        Assert.Equal(12m, item.Quantity);
+        Assert.Equal(1_600_000m, item.UnitPrice);
+        Assert.Equal(19_200_000m, item.Amount);
+        Assert.Equal(21_120_000m, updated.GrandTotal);
+        Assert.Equal("Catalog", createdRateSource);
+        Assert.Null(created.RateOverrideReason);
+    }
+
+    [Theory]
+    [InlineData(MaterialRateCatalogType.InvestmentRate, MaterialRateRevisionStatus.Approved, true, "2026-09-01")]
+    [InlineData(MaterialRateCatalogType.Boq, MaterialRateRevisionStatus.Draft, true, "2026-09-01")]
+    [InlineData(MaterialRateCatalogType.Boq, MaterialRateRevisionStatus.Approved, false, "2026-09-01")]
+    [InlineData(MaterialRateCatalogType.Boq, MaterialRateRevisionStatus.Approved, true, "2027-01-01")]
+    public async Task CreateAsync_BoqCatalogRejectsWrongTypeUnavailableOrIneffectiveRevision(
+        MaterialRateCatalogType catalogType,
+        MaterialRateRevisionStatus status,
+        bool isActive,
+        string pricingDate)
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var (catalog, revision) = await SeedApprovedRateRevisionAsync(catalogType);
+        catalog.IsActive = isActive;
+        revision.Status = status;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.Boq,
+            MaterialRateCatalogId = catalog.Id,
+            PricingEffectiveDate = DateOnly.Parse(pricingDate),
+            Items =
+            [
+                new QuoteItemInput
+                {
+                    Name = "Hạng mục kiểm thử",
+                    Unit = "m2",
+                    Quantity = 1m,
+                    UnitPrice = 100m,
+                },
+            ],
+        }, user.Id, canManage: true));
+
+        Assert.Empty(_db.Quotes);
+    }
+
     // ---------------- Workflow state machine ----------------
 
     [Fact]
@@ -655,6 +778,44 @@ public class QuoteServiceTests : IDisposable
         _db.Opportunities.Add(opp);
         await _db.SaveChangesAsync();
         return (user, opp);
+    }
+
+    private async Task<(MaterialRateCatalog Catalog, MaterialRateRevision Revision)> SeedApprovedRateRevisionAsync(
+        MaterialRateCatalogType catalogType)
+    {
+        var catalog = new MaterialRateCatalog
+        {
+            CatalogType = catalogType,
+            Code = $"{catalogType.ToString().ToUpperInvariant()}-{Guid.NewGuid():N}"[..30],
+            Name = $"{catalogType} test catalog",
+            IsActive = true,
+            CreatedByUserId = 1,
+            UpdatedByUserId = 1,
+        };
+        var revision = new MaterialRateRevision
+        {
+            Catalog = catalog,
+            Version = 1,
+            Status = MaterialRateRevisionStatus.Approved,
+            EffectiveFrom = new DateOnly(2026, 1, 1),
+            EffectiveTo = new DateOnly(2026, 12, 31),
+            CreatedByUserId = 1,
+            UpdatedByUserId = 1,
+            Lines =
+            [
+                new MaterialRateLine
+                {
+                    MaterialCode = "PACKAGE",
+                    MaterialName = "Gói tiêu chuẩn",
+                    Unit = "m2",
+                    Quantity = catalogType == MaterialRateCatalogType.Boq ? 10m : 0m,
+                    AmountPerSqm = catalogType == MaterialRateCatalogType.Boq ? 15_000_000m : 10_000_000m,
+                },
+            ],
+        };
+        _db.MaterialRateRevisions.Add(revision);
+        await _db.SaveChangesAsync();
+        return (catalog, revision);
     }
 
     /// <summary>Unit-cost quote pushed straight to Approved, the state where the

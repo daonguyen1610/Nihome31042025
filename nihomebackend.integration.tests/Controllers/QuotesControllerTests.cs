@@ -148,6 +148,43 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Boq_CreateWithCatalogRevision_ReturnsCatalogProvenance()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var catalog = await CreateBoqRateCatalogAsync();
+
+        var response = await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "Boq",
+            materialRateCatalogId = catalog.CatalogId,
+            pricingEffectiveDate = "2026-09-01",
+            items = new[]
+            {
+                new { itemCode = "BOQ-CAT-01", name = "Concrete", unit = "m3", quantity = 2.5m, unitPrice = 160m },
+            },
+            discountPercent = 0m,
+            vatPercent = 10m,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("method").GetString().Should().Be("Boq");
+        body.GetProperty("materialRateCatalogId").GetInt32().Should().Be(catalog.CatalogId);
+        body.GetProperty("materialRateRevisionId").GetInt32().Should().Be(catalog.RevisionId);
+        body.GetProperty("materialRateCatalogCode").GetString().Should().Be(catalog.Code);
+        body.GetProperty("materialRateCatalogName").GetString().Should().Be(catalog.Name);
+        body.GetProperty("materialRateRevisionVersion").GetInt32().Should().Be(1);
+        body.GetProperty("pricingEffectiveDate").GetString().Should().Be("2026-09-01");
+        body.GetProperty("rateSource").GetString().Should().Be("Catalog");
+        body.GetProperty("rateOverrideReason").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
+        body.GetProperty("subtotal").GetDecimal().Should().Be(400m);
+        body.GetProperty("grandTotal").GetDecimal().Should().Be(440m);
+        body.GetProperty("items")[0].GetProperty("itemCode").GetString().Should().Be("BOQ-CAT-01");
+    }
+
+    [Fact]
     public async Task Boq_InvalidOrOverflowingRows_AreRejected()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -762,4 +799,31 @@ public class QuotesControllerTests : IntegrationTestBase
         await db.SaveChangesAsync();
         return catalog.Id;
     });
+
+    private Task<(int CatalogId, int RevisionId, string Code, string Name)> CreateBoqRateCatalogAsync() =>
+        WithDbAsync(async db =>
+        {
+            var catalog = new MaterialRateCatalog
+            {
+                CatalogType = MaterialRateCatalogType.Boq,
+                Code = "BOQ-RATE-" + Guid.NewGuid().ToString("N")[..8],
+                Name = "Integration BOQ rate",
+                CreatedByUserId = 1,
+                UpdatedByUserId = 1,
+                Revisions =
+                [
+                    new MaterialRateRevision
+                    {
+                        Version = 1,
+                        Status = MaterialRateRevisionStatus.Approved,
+                        EffectiveFrom = new DateOnly(2026, 1, 1),
+                        CreatedByUserId = 1,
+                        UpdatedByUserId = 1,
+                    },
+                ],
+            };
+            db.MaterialRateCatalogs.Add(catalog);
+            await db.SaveChangesAsync();
+            return (catalog.Id, catalog.Revisions[0].Id, catalog.Code, catalog.Name);
+        });
 }
