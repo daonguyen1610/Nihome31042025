@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
@@ -40,4 +41,17 @@ public sealed class DecideMaterialRateRevisionRequest
 {
     [StringLength(1000, ErrorMessage = "Ghi chú quyết định không được vượt quá 1000 ký tự.")]
     public string? Note { get; set; }
+}
+
+public sealed class UpsertBoqMaterialRateLineRequest
+{
+    public string? ItemCode { get; set; }
+    public string? ItemName { get; set; }
+    public string? Unit { get; set; }
+
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public decimal? Quantity { get; set; }
+
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public decimal? UnitPrice { get; set; }
 }

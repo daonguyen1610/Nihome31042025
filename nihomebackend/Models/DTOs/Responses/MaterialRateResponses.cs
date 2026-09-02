@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using NihomeBackend.Infrastructure.Serialization;
+
 namespace NihomeBackend.Models.DTOs.Responses;
 
 public sealed class MaterialRateCatalogResponse
@@ -31,7 +34,9 @@ public sealed class MaterialRateRevisionResponse
     public DateTime? DecidedAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal TotalRatePerSqm { get; init; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal TotalAmount { get; init; }
     public List<MaterialRateLineResponse> Lines { get; init; } = [];
 }
@@ -42,10 +47,15 @@ public sealed class MaterialRateLineResponse
     public string MaterialCode { get; init; } = string.Empty;
     public string MaterialName { get; init; } = string.Empty;
     public string Unit { get; init; } = string.Empty;
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal Quantity { get; init; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal NormPerSqm { get; init; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal UnitRate { get; init; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal WastePercent { get; init; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal AmountPerSqm { get; init; }
     public int SortOrder { get; init; }
 }

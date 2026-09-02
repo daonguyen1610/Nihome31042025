@@ -767,6 +767,18 @@ discount is applied before VAT, and the grand total is rounded to two decimal
 places away from zero. The React create/edit preview mirrors this formula via
 `src/lib/quoteTotals.ts`; the API remains authoritative.
 
+Users with `crm.material-rates:manage` may create, update, and delete individual
+lines in a Draft `Boq` revision through nested revision routes. The service
+enforces trimmed field limits, case-insensitive item-code uniqueness, quantity
+scale four, unit-price scale two, and four-decimal line-amount rounding away
+from zero. Create appends sort order, update preserves it, and delete compacts
+the remaining order. Every mutation returns the refreshed revision so React
+uses server-calculated lines and totals. Investment-rate and non-Draft
+revisions reject these mutations. Material Rate revision and line decimal
+fields are serialized as JSON strings; clients must preserve those strings
+while editing and only convert at explicit numeric boundaries so JavaScript
+cannot silently alter supported decimal values.
+
 Users with `crm.material-rates:manage` may permanently delete a Material Rate
 catalog. The delete removes its revisions and lines as one aggregate. The API
 returns `409 Conflict` with `materialRates.catalog.deleteBlocked` when any

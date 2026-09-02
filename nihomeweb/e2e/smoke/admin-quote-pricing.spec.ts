@@ -102,6 +102,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     const boqCatalogCsv = [
       "ItemCode,ItemName,Unit,Quantity,UnitPrice",
       "CAT-BOQ-01,Hạng mục từ danh mục,m2,3,250000",
+      "CAT-BOQ-MAX,Kiểm tra đơn giá biên,item,0.0001,99999999999999.99",
       "",
     ].join("\r\n");
     const boqImportResponse = await api.post(
@@ -180,8 +181,8 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     expect(updatedQuote.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ itemCode: "OLD-1", sortOrder: 1 }),
       expect.objectContaining({ itemCode: "OLD-3", sortOrder: 2 }),
-      expect.objectContaining({ itemCode: "BOQ-01", quantity: 25, unitPrice: 1_450_000, sortOrder: 3 }),
-      expect.objectContaining({ itemCode: "BOQ-02", quantity: 1234.56, unitPrice: 85000.5, sortOrder: 4 }),
+      expect.objectContaining({ itemCode: "BOQ-01", quantity: "25", unitPrice: "1450000", sortOrder: 3 }),
+      expect.objectContaining({ itemCode: "BOQ-02", quantity: "1234.56", unitPrice: "85000.5", sortOrder: 4 }),
       expect.objectContaining({ itemCode: maxLengthItemCode, unit: "u".repeat(30), sortOrder: 5 }),
     ]));
 
@@ -220,7 +221,8 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await page.getByTestId("quote-create-boq-paste").click();
     await page.getByTestId("boq-paste-input").fill("BOQ-NEW\tDòng tạo mới\tm2\t2\t500.000");
     await page.getByTestId("boq-paste-confirm").click();
-    await expect(page.getByTestId("quote-create-boq-name-1")).toHaveValue("Dòng tạo mới");
+    await expect(page.getByTestId("quote-create-boq-name-1")).toHaveValue("Kiểm tra đơn giá biên");
+    await expect(page.getByTestId("quote-create-boq-name-2")).toHaveValue("Dòng tạo mới");
     await page.getByTestId("quote-discount").fill("7");
     await page.getByTestId("quote-vat").fill("9");
     page.once("dialog", async (dialog) => dialog.dismiss());
@@ -234,7 +236,9 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     });
     await page.getByTestId("quote-boq-catalog-apply").click();
     await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Hạng mục từ danh mục");
-    await expect(page.getByTestId("quote-create-boq-name-1")).toHaveCount(0);
+    await expect(page.getByTestId("quote-create-boq-name-1")).toHaveValue("Kiểm tra đơn giá biên");
+    await expect(page.getByTestId("quote-create-boq-price-1")).toHaveValue("99999999999999.99");
+    await expect(page.getByTestId("quote-create-boq-name-2")).toHaveCount(0);
     await page.getByTestId("quote-create-boq-name-0").fill("Hạng mục danh mục sau thay thế");
     await page.getByTestId("quote-create-boq-price-0").fill("");
     await page.getByTestId("quote-create-boq-price-0").pressSequentially("250000.25");
@@ -244,6 +248,10 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
     await page.getByTestId("quote-create-save").click();
     const catalogBoqCreateResponse = await catalogBoqCreateResponsePromise;
     expect(catalogBoqCreateResponse.status(), await catalogBoqCreateResponse.text()).toBe(201);
+    expect(catalogBoqCreateResponse.request().postDataJSON().items[1]).toEqual(expect.objectContaining({
+      quantity: "0.0001",
+      unitPrice: "99999999999999.99",
+    }));
     const catalogBoqQuote = await catalogBoqCreateResponse.json();
     catalogBoqQuoteId = catalogBoqQuote.id as number;
     expect(catalogBoqQuote).toEqual(expect.objectContaining({
@@ -252,15 +260,34 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
       pricingEffectiveDate: "2036-06-15",
       rateSource: "CatalogReference",
       rateOverrideReason: null,
-      subtotal: 750_000.75,
+      subtotal: 10_000_750_000.75,
     }));
     expect(catalogBoqQuote.items[0]).toEqual(expect.objectContaining({
-      unitPrice: 250_000.25,
-      amount: 750_000.75,
+      unitPrice: "250000.25",
+      amount: "750000.75",
+    }));
+    expect(catalogBoqQuote.items[1]).toEqual(expect.objectContaining({
+      quantity: "0.0001",
+      unitPrice: "99999999999999.99",
+      amount: "10000000000",
     }));
     await page.goto(`${baseURL}/admin/quotes/${catalogBoqQuoteId}`, { waitUntil: "networkidle" });
     await expect(page.getByText(boqCatalogCode)).toBeVisible();
     await expect(page.getByRole("cell", { name: "Hạng mục danh mục sau thay thế", exact: true })).toBeVisible();
+    await page.getByTestId("quote-edit").click();
+    const exactQuoteRow = page.locator("tbody tr").filter({ has: page.locator('input[value="Kiểm tra đơn giá biên"]') });
+    await expect(exactQuoteRow.locator('input[type="number"]')).toHaveValue("99999999999999.99");
+    await exactQuoteRow.locator("input").nth(1).fill("Kiểm tra đơn giá biên sau tải lại");
+    const exactQuoteUpdatePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/quotes/${catalogBoqQuoteId}` && response.request().method() === "PUT",
+    );
+    await page.getByTestId("quote-save").click();
+    const exactQuoteUpdateResponse = await exactQuoteUpdatePromise;
+    expect(exactQuoteUpdateResponse.status(), await exactQuoteUpdateResponse.text()).toBe(200);
+    expect(exactQuoteUpdateResponse.request().postDataJSON().items[1]).toEqual(expect.objectContaining({
+      unitPrice: "99999999999999.99",
+    }));
+    expect(await exactQuoteUpdateResponse.text()).toContain('"unitPrice":"99999999999999.99"');
 
     await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-method").click();

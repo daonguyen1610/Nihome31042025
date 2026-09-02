@@ -247,7 +247,11 @@ the customer does not need to delete the examples or convert the file to CSV.
 Return and import the same `.xlsx` file into a Draft revision. UTF-8 CSV remains
 available for system compatibility. Import is atomic. Investment rates calculate
 `NormPerSqm × UnitRate × (1 + WastePercent / 100)`; BOQ lines calculate
-`Quantity × UnitPrice`. Approve non-overlapping effective revisions before use.
+`Quantity × UnitPrice`. In a Draft BOQ revision, authorized users may also add
+items manually and edit or delete individual imported or manual rows. These
+actions recalculate the BOQ total immediately, avoiding a full-file re-import
+for small corrections. Approved, Rejected, and Retired revisions remain
+read-only. Approve non-overlapping effective revisions before use.
 Authorized users can select one or more catalogs for permanent deletion. This
 irreversible action removes every revision and rate line in each selected
 catalog. A catalog already used by a Quote or Quote version history cannot be

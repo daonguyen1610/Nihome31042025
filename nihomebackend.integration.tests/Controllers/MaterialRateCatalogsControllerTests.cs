@@ -1,11 +1,14 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Data;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -244,9 +247,236 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
         var effective = await ReadJsonAsync(effectiveResponse);
         effective.GetProperty("catalogType").GetString().Should().Be("Boq");
         effective.GetProperty("status").GetString().Should().Be("Approved");
-        effective.GetProperty("totalAmount").GetDecimal().Should().Be(400m);
-        effective.GetProperty("lines")[0].GetProperty("quantity").GetDecimal().Should().Be(2.5m);
-        effective.GetProperty("lines")[0].GetProperty("amountPerSqm").GetDecimal().Should().Be(400m);
+        ReadDecimalString(effective.GetProperty("totalAmount")).Should().Be(400m);
+        ReadDecimalString(effective.GetProperty("lines")[0].GetProperty("quantity")).Should().Be(2.5m);
+        ReadDecimalString(effective.GetProperty("lines")[0].GetProperty("amountPerSqm")).Should().Be(400m);
+    }
+
+    [Fact]
+    public async Task BoqLines_CreateUpdateDelete_RoundTripsAuthoritativeRevision()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var catalogResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "Boq",
+            code = "BOQ-LINES-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            name = "BOQ thi công móng nhà phố",
+            currency = "VND",
+        });
+        var catalogId = (await ReadJsonAsync(catalogResponse)).GetProperty("id").GetInt32();
+        var revisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2027-01-01",
+        });
+        var revisionId = (await ReadJsonAsync(revisionResponse)).GetProperty("id").GetInt32();
+        var lineUrl = $"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/lines";
+
+        var createConcreteResponse = await Client.PostAsJsonAsync(lineUrl, new
+        {
+            itemCode = "BT-MONG-M300",
+            itemName = "Bê tông móng đá 1x2 mác 300",
+            unit = "m3",
+            quantity = "12.3456",
+            unitPrice = "1500000.25",
+        });
+        createConcreteResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createConcreteResponse);
+        ReadDecimalString(created.GetProperty("totalAmount")).Should().Be(18_518_403.0864m);
+        var concreteLineId = created.GetProperty("lines")[0].GetProperty("id").GetInt32();
+        var createSteelResponse = await Client.PostAsJsonAsync(lineUrl, new
+        {
+            itemCode = "CT-THEP-MONG",
+            itemName = "Gia công, lắp dựng cốt thép móng",
+            unit = "kg",
+            quantity = 850.25m,
+            unitPrice = 18_750.50m,
+        });
+        createSteelResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var updateResponse = await Client.PutAsJsonAsync($"{lineUrl}/{concreteLineId}", new
+        {
+            itemCode = "BT-MONG-M300",
+            itemName = "Bê tông móng đá 1x2 mác 300, bơm cần",
+            unit = "m3",
+            quantity = 12.5m,
+            unitPrice = 1_520_000m,
+        });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await ReadJsonAsync(updateResponse);
+        updated.GetProperty("lines")[0].GetProperty("sortOrder").GetInt32().Should().Be(1);
+        ReadDecimalString(updated.GetProperty("lines")[0].GetProperty("amountPerSqm")).Should().Be(19_000_000m);
+
+        var deleteResponse = await Client.DeleteAsync($"{lineUrl}/{concreteLineId}");
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var afterDelete = await ReadJsonAsync(deleteResponse);
+        afterDelete.GetProperty("lines").GetArrayLength().Should().Be(1);
+        afterDelete.GetProperty("lines")[0].GetProperty("materialCode").GetString().Should().Be("CT-THEP-MONG");
+        afterDelete.GetProperty("lines")[0].GetProperty("sortOrder").GetInt32().Should().Be(1);
+        ReadDecimalString(afterDelete.GetProperty("totalAmount")).Should().Be(15_942_612.625m);
+        await WithDbAsync(async db =>
+        {
+            var persisted = await db.MaterialRateLines.SingleAsync(item => item.RevisionId == revisionId);
+            persisted.MaterialCode.Should().Be("CT-THEP-MONG");
+            persisted.SortOrder.Should().Be(1);
+            (await db.MaterialRateLines.AnyAsync(item => item.Id == concreteLineId)).Should().BeFalse();
+        });
+
+        var expectedActions = new[] { "material-rate-line.create", "material-rate-line.update", "material-rate-line.delete" };
+        IReadOnlyList<AuditLog> auditRows = [];
+        for (var attempt = 0; attempt < 20 && auditRows.Count < expectedActions.Length; attempt++)
+        {
+            await Task.Delay(250);
+            await WithDbAsync(async db =>
+            {
+                auditRows = await db.AuditLogs.AsNoTracking()
+                    .Where(item => item.ResourceId == revisionId.ToString() && expectedActions.Contains(item.Action))
+                    .ToListAsync();
+            });
+        }
+        foreach (var expectedAction in expectedActions)
+        {
+            auditRows.Should().Contain(item => item.Action == expectedAction);
+        }
+        auditRows.Should().OnlyContain(item => item.ActorUserId.HasValue && item.ResourceType == "MaterialRateRevision");
+        auditRows.Should().OnlyContain(item => !string.IsNullOrWhiteSpace(item.NewValueJson));
+    }
+
+    [Fact]
+    public async Task BoqLineMutations_AsRoleWithoutManagePermission_ReturnForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+
+        var request = new
+        {
+            itemCode = "BT-MONG",
+            itemName = "Bê tông móng",
+            unit = "m3",
+            quantity = 1,
+            unitPrice = 1,
+        };
+
+        (await Client.PostAsJsonAsync("/api/material-rate-catalogs/1/revisions/1/lines", request))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.PutAsJsonAsync("/api/material-rate-catalogs/1/revisions/1/lines/1", request))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.DeleteAsync("/api/material-rate-catalogs/1/revisions/1/lines/1"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task CreateBoqLine_OnApprovedRevision_ReturnsLocalizedBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var catalogResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "Boq",
+            code = "BOQ-LOCK-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            name = "BOQ đã chốt",
+            currency = "VND",
+        });
+        var catalogId = (await ReadJsonAsync(catalogResponse)).GetProperty("id").GetInt32();
+        var revisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2027-02-01",
+        });
+        var revisionId = (await ReadJsonAsync(revisionResponse)).GetProperty("id").GetInt32();
+        var lineUrl = $"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/lines";
+        (await Client.PostAsJsonAsync(lineUrl, new
+        {
+            itemCode = "CT-DAT",
+            itemName = "Đào đất móng bằng máy",
+            unit = "m3",
+            quantity = 25.5m,
+            unitPrice = 85_000m,
+        })).StatusCode.Should().Be(HttpStatusCode.Created);
+        (await Client.PostAsJsonAsync(
+            $"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/approve",
+            new { note = "Khóa BOQ sau kiểm tra" })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var response = await Client.PostAsJsonAsync(lineUrl, new
+        {
+            itemCode = "BT-LOT",
+            itemName = "Bê tông lót móng",
+            unit = "m3",
+            quantity = 2,
+            unitPrice = 1_100_000m,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("messageKey").GetString()
+            .Should().Be("materialRates.line.draftOnly");
+    }
+
+    [Fact]
+    public async Task CreateBoqLine_WithMissingField_ReturnsLocalizedBusinessKey()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var catalogResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "Boq",
+            code = "BOQ-VALIDATION-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            name = "BOQ kiểm tra dữ liệu",
+            currency = "VND",
+        });
+        var catalogId = (await ReadJsonAsync(catalogResponse)).GetProperty("id").GetInt32();
+        var revisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2027-03-01",
+        });
+        var revisionId = (await ReadJsonAsync(revisionResponse)).GetProperty("id").GetInt32();
+
+        var response = await Client.PostAsJsonAsync(
+            $"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/lines",
+            new { itemName = "Bê tông móng", unit = "m3", quantity = 1, unitPrice = 1 });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("messageKey").GetString()
+            .Should().Be("materialRates.line.validation.code");
+    }
+
+    [Fact]
+    public async Task BoqLineMutations_WithMismatchedNestedIds_ReturnNotFound()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var catalogResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "Boq",
+            code = "BOQ-IDS-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            name = "BOQ kiểm tra định danh",
+            currency = "VND",
+        });
+        var catalogId = (await ReadJsonAsync(catalogResponse)).GetProperty("id").GetInt32();
+        var firstRevisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2027-04-01",
+        });
+        var firstRevisionId = (await ReadJsonAsync(firstRevisionResponse)).GetProperty("id").GetInt32();
+        var request = new
+        {
+            itemCode = "BT-MONG",
+            itemName = "Bê tông móng",
+            unit = "m3",
+            quantity = 1,
+            unitPrice = 1_000_000,
+        };
+        var createLineResponse = await Client.PostAsJsonAsync(
+            $"/api/material-rate-catalogs/{catalogId}/revisions/{firstRevisionId}/lines", request);
+        var lineId = (await ReadJsonAsync(createLineResponse)).GetProperty("lines")[0].GetProperty("id").GetInt32();
+        var secondRevisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2028-04-01",
+        });
+        var secondRevisionId = (await ReadJsonAsync(secondRevisionResponse)).GetProperty("id").GetInt32();
+
+        (await Client.PostAsJsonAsync(
+            $"/api/material-rate-catalogs/{int.MaxValue}/revisions/{firstRevisionId}/lines", request))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.PutAsJsonAsync(
+            $"/api/material-rate-catalogs/{catalogId}/revisions/{secondRevisionId}/lines/{lineId}", request))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync(
+            $"/api/material-rate-catalogs/{catalogId}/revisions/{secondRevisionId}/lines/{lineId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -293,7 +523,7 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
         effectiveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var effective = await ReadJsonAsync(effectiveResponse);
         effective.GetProperty("status").GetString().Should().Be("Approved");
-        effective.GetProperty("lines")[0].GetProperty("amountPerSqm").GetDecimal().Should().Be(39375m);
+        ReadDecimalString(effective.GetProperty("lines")[0].GetProperty("amountPerSqm")).Should().Be(39375m);
     }
 
     [Theory]
@@ -374,7 +604,7 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
         effectiveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var effective = await ReadJsonAsync(effectiveResponse);
         effective.GetProperty("lines").GetArrayLength().Should().Be(1);
-        effective.GetProperty("lines")[0].GetProperty("amountPerSqm").GetDecimal().Should().Be(39375m);
+        ReadDecimalString(effective.GetProperty("lines")[0].GetProperty("amountPerSqm")).Should().Be(39375m);
     }
 
     [Fact]
@@ -451,5 +681,11 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
         var detail = await Client.GetAsync($"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}");
         detail.EnsureSuccessStatusCode();
         (await ReadJsonAsync(detail)).GetProperty("lines").GetArrayLength().Should().Be(0);
+    }
+
+    private static decimal ReadDecimalString(JsonElement element)
+    {
+        element.ValueKind.Should().Be(JsonValueKind.String);
+        return decimal.Parse(element.GetString()!, CultureInfo.InvariantCulture);
     }
 }

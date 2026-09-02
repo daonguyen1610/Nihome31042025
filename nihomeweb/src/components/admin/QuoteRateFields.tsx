@@ -86,16 +86,14 @@ const QuoteRateFields = ({
     void adminApi.getEffectiveMaterialRateRevision(catalogId, pricingDate)
       .then(({ data }) => {
         if (cancelled) return;
-        const quoteRevision = {
-          ...data,
-          totalRatePerSqm: roundQuoteMoney(data.totalRatePerSqm),
-        };
+        const quoteRate = roundQuoteMoney(Number(data.totalRatePerSqm));
+        const quoteRevision = { ...data, totalRatePerSqm: String(quoteRate) };
         const selectionChanged = lastResolvedKey.current !== null && lastResolvedKey.current !== key;
         lastResolvedKey.current = key;
         setRevision(quoteRevision);
         onEffectiveRevisionChangeRef.current?.(quoteRevision);
         if (!canOverride || unitPrice == null || (selectionChanged && rateSource !== "Override")) {
-          onChangeRef.current({ unitPricePerSqm: quoteRevision.totalRatePerSqm, rateOverrideReason: null });
+          onChangeRef.current({ unitPricePerSqm: quoteRate, rateOverrideReason: null });
         }
       })
       .catch((err) => {
@@ -112,7 +110,7 @@ const QuoteRateFields = ({
     return () => { cancelled = true; };
   }, [canOverride, catalogId, pricingDate, rateSource, t, unitPrice]);
 
-  const isOverride = Boolean(revision && unitPrice != null && unitPrice !== revision.totalRatePerSqm);
+  const isOverride = Boolean(revision && unitPrice != null && unitPrice !== roundQuoteMoney(Number(revision.totalRatePerSqm)));
 
   return (
     <div className="space-y-3 rounded-md border bg-muted/20 p-3">

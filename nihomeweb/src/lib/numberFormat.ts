@@ -6,16 +6,38 @@
 
 const vndFormatter = new Intl.NumberFormat("vi-VN");
 
-/** Format an integer VND amount as "1.234.567" (no currency symbol). */
-export function formatVnd(value: number | null | undefined): string {
-    if (value == null || Number.isNaN(value)) return "—";
+function formatDecimalString(value: string): string | null {
+    const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
+    if (!match) return null;
+
+    const [, sign, integerDigits, fractionDigits = ""] = match;
+    let integer = BigInt(integerDigits);
+    let fraction = fractionDigits.slice(0, 3);
+    if (fractionDigits.length > 3 && fractionDigits[3] >= "5") {
+        const rounded = BigInt(fraction || "0") + 1n;
+        if (rounded === 1000n) {
+            integer += 1n;
+            fraction = "";
+        } else {
+            fraction = rounded.toString().padStart(3, "0");
+        }
+    }
+    fraction = fraction.replace(/0+$/, "");
+    const formattedInteger = vndFormatter.format(sign ? -integer : integer);
+    return fraction ? `${formattedInteger},${fraction}` : formattedInteger;
+}
+
+/** Format a VND amount without losing decimal-string precision. */
+export function formatVnd(value: number | string | null | undefined): string {
+    if (value == null || (typeof value === "number" && Number.isNaN(value))) return "—";
+    if (typeof value === "string") return formatDecimalString(value) ?? "—";
     return vndFormatter.format(value);
 }
 
 /** Format an integer VND amount as "1.234.567 ₫" for headings / totals. */
-export function formatVndWithSymbol(value: number | null | undefined): string {
-    if (value == null || Number.isNaN(value)) return "—";
-    return `${vndFormatter.format(value)} ₫`;
+export function formatVndWithSymbol(value: number | string | null | undefined): string {
+    const formatted = formatVnd(value);
+    return formatted === "—" ? formatted : `${formatted} ₫`;
 }
 
 export function formatFileSize(bytes: number): string {
