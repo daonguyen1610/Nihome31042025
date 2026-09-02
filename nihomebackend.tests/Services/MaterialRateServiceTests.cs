@@ -1,4 +1,5 @@
 using System.Text;
+using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -15,7 +16,7 @@ public class MaterialRateServiceTests : IDisposable
 
     public MaterialRateServiceTests()
     {
-        _sut = new MaterialRateService(_db, new Utf8CsvParser());
+        _sut = new MaterialRateService(_db, new Utf8CsvParser(), new MaterialRateSpreadsheetService());
     }
 
     public void Dispose() => _db.Dispose();
@@ -66,6 +67,34 @@ public class MaterialRateServiceTests : IDisposable
         Assert.Contains(field, error.Message);
         Assert.Equal("materialRates.csvError.scale", error.MessageKey);
         Assert.Equal(field, error.MessageArgs!["field"]);
+        Assert.Equal("OLD", Assert.Single(_db.MaterialRateLines).MaterialCode);
+    }
+
+    [Fact]
+    public async Task ImportAsync_InvalidExcelRowReportsWorksheetRowAndPreservesExistingLines()
+    {
+        var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 9, 1));
+        await ImportValidAsync(catalog.Id, revision.Id, "OLD");
+        var spreadsheet = new MaterialRateSpreadsheetService();
+        var bytes = spreadsheet.CreateTemplate(new Dictionary<string, string>());
+        using var source = new MemoryStream(bytes);
+        using var workbook = new XLWorkbook(source);
+        var entry = workbook.Worksheets.First(sheet => sheet.Visibility == XLWorksheetVisibility.Visible);
+        entry.Cell("A12").Value = "NEW";
+        entry.Cell("B12").Value = "Vật liệu lỗi";
+        entry.Cell("C12").Value = "kg";
+        entry.Cell("D12").Value = "abc";
+        entry.Cell("E12").Value = 100;
+        entry.Cell("F12").Value = 0;
+        using var invalidForm = new MemoryStream();
+        workbook.SaveAs(invalidForm);
+        invalidForm.Position = 0;
+
+        var result = await _sut.ImportAsync(catalog.Id, revision.Id, invalidForm, 1, "customer-form.xlsx");
+
+        var error = Assert.Single(result!.Errors);
+        Assert.Equal(12, error.Row);
+        Assert.Equal("materialRates.csvError.decimal", error.MessageKey);
         Assert.Equal("OLD", Assert.Single(_db.MaterialRateLines).MaterialCode);
     }
 

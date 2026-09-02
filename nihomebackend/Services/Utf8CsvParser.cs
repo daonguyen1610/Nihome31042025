@@ -105,6 +105,7 @@ public sealed class Utf8CsvParser : IUtf8CsvParser
             result.Rows.Add(headers
                 .Select((header, columnIndex) => new { header, value = values[columnIndex] })
                 .ToDictionary(item => item.header, item => item.value, StringComparer.Ordinal));
+            result.SourceRowNumbers.Add(rowIndex + 2);
         }
 
         return result;

@@ -17,14 +17,23 @@ public interface IMaterialRateService
     Task<List<MaterialRateRevisionResponse>?> ListRevisionsAsync(int catalogId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> GetRevisionAsync(int catalogId, int revisionId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> CreateRevisionAsync(int catalogId, CreateMaterialRateRevisionRequest request, int userId, CancellationToken ct = default);
-    Task<MaterialRateImportResponse?> ImportAsync(int catalogId, int revisionId, Stream stream, int userId, CancellationToken ct = default);
+    Task<MaterialRateImportResponse?> ImportAsync(
+        int catalogId,
+        int revisionId,
+        Stream stream,
+        int userId,
+        string fileName = "upload.csv",
+        CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> ApproveAsync(int catalogId, int revisionId, string? note, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> RejectAsync(int catalogId, int revisionId, string? note, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> RetireAsync(int catalogId, int revisionId, string? note, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> GetEffectiveAsync(int catalogId, DateOnly effectiveDate, CancellationToken ct = default);
 }
 
-public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParser) : IMaterialRateService
+public sealed class MaterialRateService(
+    AppDbContext db,
+    IUtf8CsvParser csvParser,
+    IMaterialRateSpreadsheetService spreadsheetService) : IMaterialRateService
 {
     public static readonly IReadOnlyList<string> CsvHeaders =
     [
@@ -199,6 +208,7 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
         int revisionId,
         Stream stream,
         int userId,
+        string fileName = "upload.csv",
         CancellationToken ct = default)
     {
         await using var transaction = db.Database.IsRelational()
@@ -210,10 +220,13 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
         if (revision is null) return null;
         if (revision.Status != MaterialRateRevisionStatus.Draft)
         {
-            throw new MaterialRateOperationException("Chỉ phiên bản Nháp mới được phép nhập dữ liệu CSV.");
+            throw new MaterialRateOperationException("Chỉ phiên bản Nháp mới được phép nhập dữ liệu đơn giá.");
         }
 
-        var parsed = await csvParser.ParseAsync(stream, CsvHeaders, ct: ct);
+        var isExcel = Path.GetExtension(fileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase);
+        var parsed = isExcel
+            ? spreadsheetService.Parse(stream)
+            : await csvParser.ParseAsync(stream, CsvHeaders, maxBytes: 5 * 1024 * 1024, ct: ct);
         if (!parsed.IsValid) return new MaterialRateImportResponse { Errors = parsed.Errors };
 
         var errors = new List<CsvImportError>();
@@ -221,7 +234,7 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
         var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < parsed.Rows.Count; index++)
         {
-            var rowNumber = index + 2;
+            var rowNumber = index < parsed.SourceRowNumbers.Count ? parsed.SourceRowNumbers[index] : index + 2;
             var row = parsed.Rows[index];
             var code = row["MaterialCode"].Trim();
             var name = row["MaterialName"].Trim();
@@ -232,18 +245,18 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
             ValidateText(unit, 30, "Unit", rowNumber, errors);
             if (code.Length > 0 && !codes.Add(code))
             {
-                errors.Add(Error(rowNumber, 1, $"MaterialCode '{code}' bị trùng trong tệp CSV.",
+                errors.Add(Error(rowNumber, 1, $"MaterialCode '{code}' bị trùng trong tệp.",
                     "materialRates.csvError.duplicateCode", new() { ["code"] = code }));
             }
 
             var norm = ParseDecimal(row["NormPerSqm"], "NormPerSqm", rowNumber, 4, 6, errors);
             var rate = ParseDecimal(row["UnitRate"], "UnitRate", rowNumber, 5, 4, errors);
             var waste = ParseDecimal(row["WastePercent"], "WastePercent", rowNumber, 6, 4, errors);
-            if (norm is <= 0) errors.Add(Error(rowNumber, 4, "NormPerSqm phải lớn hơn 0.", "materialRates.csvError.normPositive"));
-            if (norm is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "NormPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.normMaximum"));
-            if (rate is < 0) errors.Add(Error(rowNumber, 5, "UnitRate không được nhỏ hơn 0.", "materialRates.csvError.rateNonNegative"));
-            if (rate is > 99999999999999.9999m) errors.Add(Error(rowNumber, 5, "UnitRate vượt quá giới hạn lưu trữ.", "materialRates.csvError.rateMaximum"));
-            if (waste is < 0 or > 100) errors.Add(Error(rowNumber, 6, "WastePercent phải nằm trong khoảng từ 0 đến 100.", "materialRates.csvError.wasteRange"));
+            if (norm is <= 0) errors.Add(Error(rowNumber, 4, "NormPerSqm phải lớn hơn 0.", "materialRates.csvError.normPositive", new() { ["field"] = "NormPerSqm" }));
+            if (norm is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "NormPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.normMaximum", new() { ["field"] = "NormPerSqm" }));
+            if (rate is < 0) errors.Add(Error(rowNumber, 5, "UnitRate không được nhỏ hơn 0.", "materialRates.csvError.rateNonNegative", new() { ["field"] = "UnitRate" }));
+            if (rate is > 99999999999999.9999m) errors.Add(Error(rowNumber, 5, "UnitRate vượt quá giới hạn lưu trữ.", "materialRates.csvError.rateMaximum", new() { ["field"] = "UnitRate" }));
+            if (waste is < 0 or > 100) errors.Add(Error(rowNumber, 6, "WastePercent phải nằm trong khoảng từ 0 đến 100.", "materialRates.csvError.wasteRange", new() { ["field"] = "WastePercent" }));
 
             if (code.Length == 0 || name.Length == 0 || unit.Length == 0 || norm is null || rate is null || waste is null)
             {
@@ -255,7 +268,7 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
                 var amount = decimal.Round(norm.Value * rate.Value * (1m + waste.Value / 100m), 4, MidpointRounding.AwayFromZero);
                 if (amount > 99999999999999.9999m)
                 {
-                    errors.Add(Error(rowNumber, null, "AmountPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.amountMaximum"));
+                    errors.Add(Error(rowNumber, null, "AmountPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.amountMaximum", new() { ["field"] = "AmountPerSqm" }));
                     continue;
                 }
                 lines.Add(new MaterialRateLine
@@ -278,7 +291,8 @@ public sealed class MaterialRateService(AppDbContext db, IUtf8CsvParser csvParse
 
         if (parsed.Rows.Count == 0)
         {
-            errors.Add(Error(2, null, "Tệp CSV phải có ít nhất một dòng dữ liệu.", "materialRates.csvError.dataRequired"));
+            var firstDataRow = isExcel ? 5 : 2;
+            errors.Add(Error(firstDataRow, null, "Tệp phải có ít nhất một dòng dữ liệu.", "materialRates.csvError.dataRequired"));
         }
         if (errors.Count > 0) return new MaterialRateImportResponse { Errors = errors };
 

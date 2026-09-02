@@ -1,4 +1,5 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { readFile } from "node:fs/promises";
 
 const uid = () => Math.random().toString(36).slice(2, 10).toUpperCase();
 
@@ -47,7 +48,9 @@ test.describe("Material rate customer import workflow", () => {
     const downloadPromise = page.waitForEvent("download");
     await page.getByTestId("material-rates-download-package").click();
     const download = await downloadPromise;
-    expect(download.suggestedFilename()).toBe("material-rate-template-package.zip");
+    expect(download.suggestedFilename()).toBe("NICON-Material-Rate-Form.xlsx");
+    const downloadedFormPath = await download.path();
+    expect(downloadedFormPath).not.toBeNull();
 
     const searchResponse = page.waitForResponse((response) => {
       const url = new URL(response.url());
@@ -59,13 +62,27 @@ test.describe("Material rate customer import workflow", () => {
     await searchResponse;
     await page.getByRole("button", { name: new RegExp(catalogName) }).click();
 
+    await page.getByTestId("material-rates-import-file").setInputFiles({
+      name: download.suggestedFilename(),
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await readFile(downloadedFormPath!),
+    });
+    await page.getByTestId("material-rates-import-review").click();
+    const emptyFormResponse = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/import`
+      && response.request().method() === "POST",
+    );
+    await page.getByTestId("material-rates-import-confirm").click();
+    expect((await emptyFormResponse).status()).toBe(400);
+    await expect(page.getByText(/must contain at least one data row/i)).toBeVisible();
+
     const invalidCsv = [
       "MaterialCode,MaterialName,Unit,NormPerSqm,UnitRate,WastePercent",
       "VL-BAD,Invalid decimal,kg,abc,100,0",
       "",
     ].join("\r\n");
     await page.getByTestId("material-rates-import-file").setInputFiles({
-      name: "invalid-material-rates.csv",
+      name: "invalid-customer-form.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(invalidCsv, "utf8"),
     });
@@ -76,7 +93,7 @@ test.describe("Material rate customer import workflow", () => {
     );
     await page.getByTestId("material-rates-import-confirm").click();
     expect((await invalidImportResponse).status()).toBe(400);
-    await expect(page.getByText(/NormPerSqm must be a decimal using a period/i)).toBeVisible();
+    await expect(page.getByText(/Norm\/m² must be a decimal using a period/i)).toBeVisible();
     await expect(page.locator("body")).not.toContainText("phải là số thập phân");
 
     const csv = [
@@ -86,12 +103,12 @@ test.describe("Material rate customer import workflow", () => {
       "",
     ].join("\r\n");
     await page.getByTestId("material-rates-import-file").setInputFiles({
-      name: "customer-material-rates.csv",
+      name: "customer-rate-data.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csv, "utf8"),
     });
     await expect(page.getByTestId("material-rates-selected-file")).toBeVisible();
-    await expect(page.getByTestId("material-rates-selected-file")).toContainText("customer-material-rates.csv");
+    await expect(page.getByTestId("material-rates-selected-file")).toContainText("customer-rate-data.csv");
     await page.getByTestId("material-rates-import-review").click();
     await expect(page.getByRole("dialog")).toContainText(/thay thế toàn bộ|replaces every existing line/i);
 

@@ -17,6 +17,7 @@ public class Utf8CsvParserTests
 
         Assert.True(result.IsValid);
         var row = Assert.Single(result.Rows);
+        Assert.Equal(2, Assert.Single(result.SourceRowNumbers));
         Assert.Equal("A-1", row["Code"]);
         Assert.Equal("Keo, loại \"tốt\"", row["Name"]);
         Assert.Equal("12.5", row["Rate"]);
