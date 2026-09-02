@@ -297,7 +297,7 @@ const AdminQuotes = () => {
         setCreateError(t("quotes.validation.noEffectiveRate"));
         return;
       }
-      const isOverride = createForm.unitPricePerSqm !== effectiveRevision.totalRatePerSqm;
+      const isOverride = createForm.unitPricePerSqm !== Number(effectiveRevision.totalRatePerSqm);
       if (isOverride && !canOverrideRate) {
         setCreateError(t("quotes.validation.overridePermission"));
         return;
@@ -878,7 +878,7 @@ const AdminQuotes = () => {
                               />
                             </div>
                           </div>
-                          {item.quantity > 0 && item.unitPrice > 0 && (
+                          {Number(item.quantity) > 0 && Number(item.unitPrice) > 0 && (
                             <div className="text-right text-sm font-medium">
                               {t("quotes.boq.amount")}: {formatVnd(calculateQuoteLineAmount(item.quantity, item.unitPrice))} ₫
                             </div>

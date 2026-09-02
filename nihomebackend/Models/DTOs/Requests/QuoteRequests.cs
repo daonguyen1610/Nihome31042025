@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
@@ -16,9 +17,11 @@ public class QuoteItemInput
     public string Unit { get; set; } = string.Empty;
 
     [Range(0, double.MaxValue)]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal Quantity { get; set; }
 
     [Range(0, double.MaxValue)]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal UnitPrice { get; set; }
 
     public int SortOrder { get; set; }

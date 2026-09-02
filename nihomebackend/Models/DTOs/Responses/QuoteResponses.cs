@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using NihomeBackend.Infrastructure.Serialization;
+
 namespace NihomeBackend.Models.DTOs.Responses;
 
 public class QuoteDocumentResponse
@@ -20,8 +23,11 @@ public class QuoteItemResponse
     public string? ItemCode { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Unit { get; set; } = string.Empty;
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal Quantity { get; set; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal UnitPrice { get; set; }
+    [JsonConverter(typeof(DecimalStringJsonConverter))]
     public decimal Amount { get; set; }
     public int SortOrder { get; set; }
 }

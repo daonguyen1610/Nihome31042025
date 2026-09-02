@@ -248,6 +248,65 @@ public sealed class MaterialRateCatalogsController(
         });
     }
 
+    [HttpPost("{catalogId:int}/revisions/{revisionId:int}/lines")]
+    [RequirePermission("crm.material-rates", "manage")]
+    public async Task<ActionResult<MaterialRateRevisionResponse>> CreateBoqLine(
+        int catalogId,
+        int revisionId,
+        [FromBody] UpsertBoqMaterialRateLineRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteAsync<MaterialRateRevisionResponse>(async () =>
+        {
+            var result = await service.CreateBoqLineAsync(catalogId, revisionId, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            var line = result.Lines.Last(item => string.Equals(item.MaterialCode, request.ItemCode?.Trim(), StringComparison.OrdinalIgnoreCase));
+            Audit("material-rate-line.create", revisionId, line);
+            return CreatedAtAction(nameof(GetRevision), new { catalogId, revisionId }, result);
+        });
+    }
+
+    [HttpPut("{catalogId:int}/revisions/{revisionId:int}/lines/{lineId:int}")]
+    [RequirePermission("crm.material-rates", "manage")]
+    public async Task<ActionResult<MaterialRateRevisionResponse>> UpdateBoqLine(
+        int catalogId,
+        int revisionId,
+        int lineId,
+        [FromBody] UpsertBoqMaterialRateLineRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteAsync<MaterialRateRevisionResponse>(async () =>
+        {
+            var result = await service.UpdateBoqLineAsync(catalogId, revisionId, lineId, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("material-rate-line.update", revisionId, result.Lines.Single(item => item.Id == lineId));
+            return Ok(result);
+        });
+    }
+
+    [HttpDelete("{catalogId:int}/revisions/{revisionId:int}/lines/{lineId:int}")]
+    [RequirePermission("crm.material-rates", "manage")]
+    public async Task<ActionResult<MaterialRateRevisionResponse>> DeleteBoqLine(
+        int catalogId,
+        int revisionId,
+        int lineId,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteAsync<MaterialRateRevisionResponse>(async () =>
+        {
+            var result = await service.DeleteBoqLineAsync(catalogId, revisionId, lineId, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("material-rate-line.delete", revisionId, new { catalogId, revisionId, lineId });
+            return Ok(result);
+        });
+    }
+
     [HttpPost("{catalogId:int}/revisions/{revisionId:int}/import")]
     [Consumes("multipart/form-data")]
     [RequirePermission("crm.material-rates", "manage")]

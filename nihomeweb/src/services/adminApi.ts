@@ -1367,8 +1367,8 @@ export interface QuoteItemInput {
   itemCode?: string | null;
   name: string;
   unit: string;
-  quantity: number;
-  unitPrice: number;
+  quantity: number | string;
+  unitPrice: number | string;
   sortOrder?: number;
 }
 
@@ -1377,9 +1377,9 @@ export interface QuoteItemResponse {
   itemCode?: string;
   name: string;
   unit: string;
-  quantity: number;
-  unitPrice: number;
-  amount: number;
+  quantity: string;
+  unitPrice: string;
+  amount: string;
   sortOrder: number;
 }
 
@@ -1574,11 +1574,11 @@ export interface MaterialRateLineResponse {
   materialCode: string;
   materialName: string;
   unit: string;
-  quantity: number;
-  normPerSqm: number;
-  unitRate: number;
-  wastePercent: number;
-  amountPerSqm: number;
+  quantity: string;
+  normPerSqm: string;
+  unitRate: string;
+  wastePercent: string;
+  amountPerSqm: string;
   sortOrder: number;
 }
 
@@ -1598,8 +1598,8 @@ export interface MaterialRateRevisionResponse {
   decidedAt?: string | null;
   createdAt: string;
   updatedAt: string;
-  totalRatePerSqm: number;
-  totalAmount: number;
+  totalRatePerSqm: string;
+  totalAmount: string;
   lines: MaterialRateLineResponse[];
 }
 
@@ -1616,6 +1616,14 @@ export interface CreateMaterialRateRevisionRequest {
   effectiveFrom: string;
   effectiveTo?: string | null;
   note?: string | null;
+}
+
+export interface UpsertBoqMaterialRateLineRequest {
+  itemCode: string;
+  itemName: string;
+  unit: string;
+  quantity: string;
+  unitPrice: string;
 }
 
 export interface CsvImportError {
@@ -3939,6 +3947,12 @@ export const adminApi = {
     }),
   createMaterialRateRevision: (catalogId: number, body: CreateMaterialRateRevisionRequest) =>
     api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions`, body),
+  createBoqMaterialRateLine: (catalogId: number, revisionId: number, body: UpsertBoqMaterialRateLineRequest) =>
+    api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`, body),
+  updateBoqMaterialRateLine: (catalogId: number, revisionId: number, lineId: number, body: UpsertBoqMaterialRateLineRequest) =>
+    api.put<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`, body),
+  deleteBoqMaterialRateLine: (catalogId: number, revisionId: number, lineId: number) =>
+    api.delete<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`),
   importMaterialRateRevision: (catalogId: number, revisionId: number, file: File) => {
     const formData = new FormData();
     formData.append("file", file);

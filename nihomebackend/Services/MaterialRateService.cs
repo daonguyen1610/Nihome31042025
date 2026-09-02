@@ -1,6 +1,8 @@
 using System.Data;
 using System.Globalization;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -18,6 +20,9 @@ public interface IMaterialRateService
     Task<List<MaterialRateRevisionResponse>?> ListRevisionsAsync(int catalogId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> GetRevisionAsync(int catalogId, int revisionId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> CreateRevisionAsync(int catalogId, CreateMaterialRateRevisionRequest request, int userId, CancellationToken ct = default);
+    Task<MaterialRateRevisionResponse?> CreateBoqLineAsync(int catalogId, int revisionId, UpsertBoqMaterialRateLineRequest request, int userId, CancellationToken ct = default);
+    Task<MaterialRateRevisionResponse?> UpdateBoqLineAsync(int catalogId, int revisionId, int lineId, UpsertBoqMaterialRateLineRequest request, int userId, CancellationToken ct = default);
+    Task<MaterialRateRevisionResponse?> DeleteBoqLineAsync(int catalogId, int revisionId, int lineId, int userId, CancellationToken ct = default);
     Task<MaterialRateImportResponse?> ImportAsync(
         int catalogId,
         int revisionId,
@@ -54,6 +59,10 @@ public sealed class MaterialRateService(
         "Quantity",
         "UnitPrice",
     ];
+
+    private const decimal MaxQuantity = 999999999999.999999m;
+    private const decimal MaxRate = 99999999999999.9999m;
+    private const decimal MaxAmount = 99999999999999.9999m;
 
     public Task<List<MaterialRateCatalogResponse>> ListCatalogsAsync(
         string? search,
@@ -254,6 +263,97 @@ public sealed class MaterialRateService(
         return await GetRevisionAsync(catalogId, revision.Id, ct);
     }
 
+    public async Task<MaterialRateRevisionResponse?> CreateBoqLineAsync(
+        int catalogId,
+        int revisionId,
+        UpsertBoqMaterialRateLineRequest request,
+        int userId,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
+        var revision = await GetEditableBoqRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return null;
+        var values = ValidateBoqLine(request);
+        EnsureUniqueBoqCode(revision, values.Code);
+        revision.Lines.Add(new MaterialRateLine
+        {
+            MaterialCode = values.Code,
+            MaterialName = values.Name,
+            Unit = values.Unit,
+            Quantity = values.Quantity,
+            UnitRate = values.UnitPrice,
+            AmountPerSqm = values.Amount,
+            SortOrder = revision.Lines.Count == 0 ? 1 : revision.Lines.Max(line => line.SortOrder) + 1,
+        });
+        TouchRevision(revision, userId);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+        {
+            throw DuplicateBoqCode();
+        }
+        return await GetRevisionAsync(catalogId, revisionId, ct);
+    }
+
+    public async Task<MaterialRateRevisionResponse?> UpdateBoqLineAsync(
+        int catalogId,
+        int revisionId,
+        int lineId,
+        UpsertBoqMaterialRateLineRequest request,
+        int userId,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
+        var revision = await GetEditableBoqRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return null;
+        var line = revision.Lines.FirstOrDefault(item => item.Id == lineId);
+        if (line is null) return null;
+        var values = ValidateBoqLine(request);
+        EnsureUniqueBoqCode(revision, values.Code, lineId);
+        line.MaterialCode = values.Code;
+        line.MaterialName = values.Name;
+        line.Unit = values.Unit;
+        line.Quantity = values.Quantity;
+        line.UnitRate = values.UnitPrice;
+        line.AmountPerSqm = values.Amount;
+        TouchRevision(revision, userId);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+        {
+            throw DuplicateBoqCode();
+        }
+        return await GetRevisionAsync(catalogId, revisionId, ct);
+    }
+
+    public async Task<MaterialRateRevisionResponse?> DeleteBoqLineAsync(
+        int catalogId,
+        int revisionId,
+        int lineId,
+        int userId,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
+        var revision = await GetEditableBoqRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return null;
+        var line = revision.Lines.FirstOrDefault(item => item.Id == lineId);
+        if (line is null) return null;
+        db.MaterialRateLines.Remove(line);
+        revision.Lines.Remove(line);
+        var remainingLines = revision.Lines.OrderBy(item => item.SortOrder).ToList();
+        for (var index = 0; index < remainingLines.Count; index++) remainingLines[index].SortOrder = index + 1;
+        TouchRevision(revision, userId);
+        await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return await GetRevisionAsync(catalogId, revisionId, ct);
+    }
+
     public async Task<MaterialRateImportResponse?> ImportAsync(
         int catalogId,
         int revisionId,
@@ -262,9 +362,7 @@ public sealed class MaterialRateService(
         string fileName = "upload.csv",
         CancellationToken ct = default)
     {
-        await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
-            : null;
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
         var revision = await db.MaterialRateRevisions
             .Include(item => item.Catalog)
             .Include(item => item.Lines)
@@ -311,11 +409,11 @@ public sealed class MaterialRateService(
             var rate = ParseDecimal(row[rateField], rateField, rowNumber, 5, isBoq ? 2 : 4, errors);
             var waste = isBoq ? 0m : ParseDecimal(row["WastePercent"], "WastePercent", rowNumber, 6, 4, errors);
             if (isBoq && quantity is <= 0) errors.Add(Error(rowNumber, 4, "Quantity phải lớn hơn 0.", "materialRates.csvError.quantityPositive", new() { ["field"] = "Quantity" }));
-            if (isBoq && quantity is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "Quantity vượt quá giới hạn lưu trữ.", "materialRates.csvError.quantityMaximum", new() { ["field"] = "Quantity" }));
+            if (isBoq && quantity is > MaxQuantity) errors.Add(Error(rowNumber, 4, "Quantity vượt quá giới hạn lưu trữ.", "materialRates.csvError.quantityMaximum", new() { ["field"] = "Quantity" }));
             if (!isBoq && norm is <= 0) errors.Add(Error(rowNumber, 4, "NormPerSqm phải lớn hơn 0.", "materialRates.csvError.normPositive", new() { ["field"] = "NormPerSqm" }));
             if (!isBoq && norm is > 999999999999.999999m) errors.Add(Error(rowNumber, 4, "NormPerSqm vượt quá giới hạn lưu trữ.", "materialRates.csvError.normMaximum", new() { ["field"] = "NormPerSqm" }));
             if (rate is < 0) errors.Add(Error(rowNumber, 5, $"{rateField} không được nhỏ hơn 0.", "materialRates.csvError.rateNonNegative", new() { ["field"] = rateField }));
-            if (rate is > 99999999999999.9999m) errors.Add(Error(rowNumber, 5, $"{rateField} vượt quá giới hạn lưu trữ.", "materialRates.csvError.rateMaximum", new() { ["field"] = rateField }));
+            if (rate is > MaxRate) errors.Add(Error(rowNumber, 5, $"{rateField} vượt quá giới hạn lưu trữ.", "materialRates.csvError.rateMaximum", new() { ["field"] = rateField }));
             if (!isBoq && waste is (< 0 or > 100)) errors.Add(Error(rowNumber, 6, "WastePercent phải nằm trong khoảng từ 0 đến 100.", "materialRates.csvError.wasteRange", new() { ["field"] = "WastePercent" }));
 
             if (code.Length == 0 || name.Length == 0 || unit.Length == 0 || quantity is null || norm is null || rate is null || waste is null)
@@ -329,7 +427,7 @@ public sealed class MaterialRateService(
                     isBoq ? quantity.Value * rate.Value : norm.Value * rate.Value * (1m + waste.Value / 100m),
                     4,
                     MidpointRounding.AwayFromZero);
-                if (amount > 99999999999999.9999m)
+                if (amount > MaxAmount)
                 {
                     var amountField = isBoq ? "TotalAmount" : "AmountPerSqm";
                     errors.Add(Error(rowNumber, null, $"{amountField} vượt quá giới hạn lưu trữ.", "materialRates.csvError.amountMaximum", new() { ["field"] = amountField }));
@@ -434,9 +532,7 @@ public sealed class MaterialRateService(
         int userId,
         CancellationToken ct)
     {
-        await using var transaction = status == MaterialRateRevisionStatus.Approved && db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
-            : null;
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
         var revision = await db.MaterialRateRevisions
             .Include(item => item.Lines)
             .FirstOrDefaultAsync(item => item.Id == revisionId && item.CatalogId == catalogId, ct);
@@ -528,6 +624,125 @@ public sealed class MaterialRateService(
         }
         return parsed;
     }
+
+    private async Task<MaterialRateRevision?> GetEditableBoqRevisionAsync(
+        int catalogId,
+        int revisionId,
+        CancellationToken ct)
+    {
+        var revision = await db.MaterialRateRevisions
+            .Include(item => item.Catalog)
+            .Include(item => item.Lines)
+            .FirstOrDefaultAsync(item => item.Id == revisionId && item.CatalogId == catalogId, ct);
+        if (revision is null) return null;
+        if (revision.Catalog.CatalogType != MaterialRateCatalogType.Boq)
+        {
+            throw new MaterialRateOperationException(
+                "Chỉ danh mục BOQ mới cho phép nhập tay các dòng hạng mục.",
+                "materialRates.line.boqOnly");
+        }
+        if (revision.Status != MaterialRateRevisionStatus.Draft)
+        {
+            throw new MaterialRateOperationException(
+                "Chỉ phiên bản Nháp mới cho phép thêm, sửa hoặc xoá dòng BOQ.",
+                "materialRates.line.draftOnly");
+        }
+        return revision;
+    }
+
+    private static (string Code, string Name, string Unit, decimal Quantity, decimal UnitPrice, decimal Amount) ValidateBoqLine(
+        UpsertBoqMaterialRateLineRequest request)
+    {
+        var code = request.ItemCode?.Trim() ?? string.Empty;
+        var name = request.ItemName?.Trim() ?? string.Empty;
+        var unit = request.Unit?.Trim() ?? string.Empty;
+        if (code.Length is < 1 or > 60)
+            throw LineError("Mã hạng mục phải có từ 1 đến 60 ký tự, ví dụ: BT-MONG-M300.", "materialRates.line.validation.code");
+        if (name.Length is < 1 or > 300)
+            throw LineError("Tên hạng mục phải có từ 1 đến 300 ký tự, ví dụ: Bê tông móng M300.", "materialRates.line.validation.name");
+        if (unit.Length is < 1 or > 30)
+            throw LineError("Đơn vị phải có từ 1 đến 30 ký tự, ví dụ: m3.", "materialRates.line.validation.unit");
+        if (request.Quantity is null or <= 0)
+            throw LineError("Khối lượng phải lớn hơn 0, ví dụ: 12.5.", "materialRates.line.validation.quantityPositive");
+        if (decimal.Round(request.Quantity.Value, 4) != request.Quantity.Value)
+            throw LineError("Khối lượng chỉ được có tối đa 4 chữ số thập phân, ví dụ: 12.5.", "materialRates.line.validation.quantityScale");
+        if (request.Quantity.Value > MaxQuantity)
+            throw LineError("Khối lượng vượt quá giới hạn lưu trữ.", "materialRates.line.validation.quantityMaximum");
+        if (request.UnitPrice is null or < 0)
+            throw LineError("Đơn giá không được nhỏ hơn 0, ví dụ: 1500000.25.", "materialRates.line.validation.priceNonNegative");
+        if (decimal.Round(request.UnitPrice.Value, 2) != request.UnitPrice.Value)
+            throw LineError("Đơn giá chỉ được có tối đa 2 chữ số thập phân, ví dụ: 1500000.25.", "materialRates.line.validation.priceScale");
+        if (request.UnitPrice.Value > MaxRate)
+            throw LineError("Đơn giá vượt quá giới hạn lưu trữ.", "materialRates.line.validation.priceMaximum");
+        decimal amount;
+        try
+        {
+            amount = decimal.Round(request.Quantity.Value * request.UnitPrice.Value, 4, MidpointRounding.AwayFromZero);
+        }
+        catch (OverflowException)
+        {
+            throw LineError("Thành tiền vượt quá giới hạn tính toán.", "materialRates.line.validation.amountMaximum");
+        }
+        if (amount > MaxAmount)
+            throw LineError("Thành tiền vượt quá giới hạn lưu trữ.", "materialRates.line.validation.amountMaximum");
+        return (code, name, unit, request.Quantity.Value, request.UnitPrice.Value, amount);
+    }
+
+    private static void EnsureUniqueBoqCode(MaterialRateRevision revision, string code, int? excludedLineId = null)
+    {
+        if (revision.Lines.Any(line => line.Id != excludedLineId &&
+            string.Equals(line.MaterialCode, code, StringComparison.OrdinalIgnoreCase)))
+        {
+            throw DuplicateBoqCode();
+        }
+    }
+
+    private async Task<IDbContextTransaction?> BeginRevisionMutationAsync(int revisionId, CancellationToken ct)
+    {
+        if (!db.Database.IsRelational()) return null;
+        var isSqlServer = string.Equals(
+            db.Database.ProviderName,
+            "Microsoft.EntityFrameworkCore.SqlServer",
+            StringComparison.Ordinal);
+        var transaction = await db.Database.BeginTransactionAsync(
+            isSqlServer ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable,
+            ct);
+        if (!isSqlServer) return transaction;
+        try
+        {
+            var resource = $"material-rate-revision-{revisionId}";
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                DECLARE @result int;
+                EXEC @result = sys.sp_getapplock
+                    @Resource = {resource},
+                    @LockMode = 'Exclusive',
+                    @LockOwner = 'Transaction',
+                    @LockTimeout = 15000;
+                IF @result < 0
+                    THROW 51000, 'Unable to acquire the material rate revision lock.', 1;
+                """, ct);
+            return transaction;
+        }
+        catch
+        {
+            await transaction.DisposeAsync();
+            throw;
+        }
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception) =>
+        exception.InnerException is SqlException { Number: 2601 or 2627 };
+
+    private static MaterialRateOperationException DuplicateBoqCode() =>
+        LineError("Mã hạng mục đã tồn tại trong phiên bản BOQ này.", "materialRates.line.validation.duplicateCode");
+
+    private static void TouchRevision(MaterialRateRevision revision, int userId)
+    {
+        revision.UpdatedAt = DateTime.UtcNow;
+        revision.UpdatedByUserId = userId;
+    }
+
+    private static MaterialRateOperationException LineError(string message, string messageKey) => new(message, messageKey);
 
     private static void ValidateText(string value, int maxLength, string field, int row, List<CsvImportError> errors)
     {

@@ -308,7 +308,7 @@ const AdminQuoteDetail = () => {
         toast({ title: t("common.error"), description: t("quotes.validation.noEffectiveRate"), variant: "destructive" });
         return;
       }
-      const isOverride = form.unitPricePerSqm !== effectiveRevision.totalRatePerSqm;
+      const isOverride = form.unitPricePerSqm !== Number(effectiveRevision.totalRatePerSqm);
       if (isOverride && !canOverrideRate) {
         toast({ title: t("common.error"), description: t("quotes.validation.overridePermission"), variant: "destructive" });
         return;

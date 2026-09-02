@@ -21,7 +21,19 @@ export type QuoteValidationIssue =
 export const MAX_QUOTE_MONEY = Number.MAX_SAFE_INTEGER;
 export const MAX_QUOTE_QUANTITY = 99_999_999_999_999;
 
-const toScaledInteger = (value: number, scale: number): bigint => {
+type DecimalInput = number | string;
+
+const toScaledInteger = (value: DecimalInput, scale: number): bigint => {
+  if (typeof value === "string") {
+    const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
+    if (!match) return 0n;
+    const [, sign, integerDigits, fractionDigits = ""] = match;
+    const scaleFactor = 10n ** BigInt(scale);
+    const scaledFraction = (fractionDigits.slice(0, scale) || "0").padEnd(scale, "0");
+    let result = BigInt(integerDigits) * scaleFactor + BigInt(scaledFraction);
+    if (fractionDigits.length > scale && fractionDigits[scale] >= "5") result += 1n;
+    return sign ? -result : result;
+  }
   if (!Number.isFinite(value)) return 0n;
   if (Math.abs(value) >= 1e21) {
     return BigInt(Math.trunc(value)) * (10n ** BigInt(scale));
@@ -40,17 +52,25 @@ export const roundQuoteMoney = (value: number): number => centsToNumber(
   divideRoundHalfAwayFromZero(toScaledInteger(value, 4), 100n),
 );
 
-const calculateQuoteLineAmountCents = (quantity: number, unitPrice: number): bigint =>
+const calculateQuoteLineAmountCents = (quantity: DecimalInput, unitPrice: DecimalInput): bigint =>
   divideRoundHalfAwayFromZero(
     toScaledInteger(quantity, 4) * toScaledInteger(unitPrice, 2),
     10_000n,
   );
 
-export const calculateQuoteLineAmount = (quantity: number, unitPrice: number): number =>
+export const calculateQuoteLineAmount = (quantity: DecimalInput, unitPrice: DecimalInput): number =>
   centsToNumber(calculateQuoteLineAmountCents(quantity, unitPrice));
 
-const hasScale = (value: number, scale: number): boolean =>
-  Number.isFinite(value) && Number(value.toFixed(scale)) === value;
+const hasScale = (value: DecimalInput, scale: number): boolean => {
+  if (typeof value === "string") {
+    const match = /^\d+(?:\.(\d+))?$/.exec(value.trim());
+    return Boolean(match && (match[1]?.length ?? 0) <= scale);
+  }
+  return Number.isFinite(value) && Number(value.toFixed(scale)) === value;
+};
+
+const isFiniteDecimal = (value: DecimalInput): boolean =>
+  typeof value === "string" ? /^-?\d+(?:\.\d+)?$/.test(value.trim()) : Number.isFinite(value);
 
 export const calculateQuoteTotals = (
   method: QuoteMethod,
@@ -125,16 +145,16 @@ export const validateQuoteValues = (
     const items = values.items ?? [];
     if (items.length === 0) return "boqRequired";
     if (items.some((item) => !item.name.trim() || !item.unit.trim() ||
-        !Number.isFinite(item.quantity) || !Number.isFinite(item.unitPrice) ||
-        item.quantity <= 0 || item.unitPrice < 0)) {
+      !isFiniteDecimal(item.quantity) || !isFiniteDecimal(item.unitPrice) ||
+      Number(item.quantity) <= 0 || Number(item.unitPrice) < 0)) {
       return "boqInvalidRow";
     }
     if (items.some((item) => !hasScale(item.quantity, 4) || !hasScale(item.unitPrice, 2))) {
       return "boqPrecision";
     }
-    if (items.some((item) => item.quantity > MAX_QUOTE_QUANTITY ||
-        item.unitPrice > MAX_QUOTE_MONEY ||
-        item.quantity * item.unitPrice > MAX_QUOTE_MONEY)) {
+    if (items.some((item) => Number(item.quantity) > MAX_QUOTE_QUANTITY ||
+      Number(item.unitPrice) > MAX_QUOTE_MONEY ||
+      Number(item.quantity) * Number(item.unitPrice) > MAX_QUOTE_MONEY)) {
       return "amountTooLarge";
     }
   }
