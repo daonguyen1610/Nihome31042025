@@ -34,6 +34,7 @@ const ALL_ADMIN_PATHS = [
   "/admin/customers",
   "/admin/opportunities",
   "/admin/quotes",
+  "/admin/material-rates",
   "/admin/capability-documents",
   "/admin/tenders",
   "/admin/surveys",
@@ -102,7 +103,7 @@ const matrix: RoleExpectation[] = [
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
     user: TEST_USERS.sale,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/operational-projects", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/operational-projects", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
     // SALES_MANAGER: crm.** (full — includes quotes.approve on top of manage)
@@ -110,7 +111,7 @@ const matrix: RoleExpectation[] = [
     // as SALE plus view.all across CRM entities; routes rendered are
     // identical (server enforces scope).
     user: TEST_USERS.salesManager,
-    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/operational-projects", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
+    allowed: ["/admin", "/admin/notifications", "/admin/leads", "/admin/customers", "/admin/opportunities", "/admin/quotes", "/admin/material-rates", "/admin/capability-documents", "/admin/tenders", "/admin/surveys", "/admin/contracts", "/admin/operational-projects", "/admin/contacts", "/admin/recruitment", "/admin/master-data", "/admin/workflows"],
   },
   {
     // DESIGN: content.** + processes.view + dashboard.view + design.projects.view
@@ -317,6 +318,9 @@ const MATRIX_PATH_EXCLUSIONS = new Set<string>([
   "/admin/slideshow",
   // /admin/posts redirects to /admin/activities; no independent permission gate.
   "/admin/posts",
+  // Catalog subtype views share the crm.material-rates.view gate covered by the base route.
+  "/admin/material-rates/investment",
+  "/admin/material-rates/boq",
   // Process sub-groups all gated by ADMIN_PERMS.processes; /admin/processes/general
   // already proves the gate works for the whole group.
   "/admin/processes/ptcskh",

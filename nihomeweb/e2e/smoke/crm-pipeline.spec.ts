@@ -1,5 +1,9 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import type { APIRequestContext } from "@playwright/test";
+import {
+  createApprovedInvestmentRate,
+  retireInvestmentRate,
+} from "../fixtures/materialRate";
 
 /**
  * Full CRM pipeline E2E test: Lead → Customer + Opportunity → Quote → Contract
@@ -33,6 +37,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
     let opportunityId = 0;
     let quoteId = 0;
     let contractId = 0;
+    let investmentRate: Awaited<ReturnType<typeof createApprovedInvestmentRate>> | null = null;
 
     try {
       // ====== STEP 1: Create Lead ======
@@ -123,11 +128,14 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       // ====== STEP 6: Create Quote for Opportunity ======
       console.log("Step 6: Creating quote...");
+      investmentRate = await createApprovedInvestmentRate(api, { Authorization: `Bearer ${token}` }, unique, 3_500_000);
       const quoteRes = await c.post("/api/quotes", {
         opportunityId,
         method: "UnitCost",
         areaSqm: 150,
         unitPricePerSqm: 3_500_000, // 3.5M per sqm
+        materialRateCatalogId: investmentRate.catalogId,
+        pricingEffectiveDate: investmentRate.pricingEffectiveDate,
         packageDescription: `Full construction package for ${customer.name}`,
         discountPercent: 5,
         vatPercent: 8,
@@ -168,13 +176,13 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       const contractRes = await c.post("/api/contracts", {
         customerId,
+        opportunityId,
         quoteId,
-        signDate: today,
         startDate,
         endDate,
-        contractValue: approvedQuote.grandTotal,
-        paymentTerms: "30% upfront, 40% at foundation, 30% at completion",
+        value: approvedQuote.grandTotal,
         scopeOfWork: approvedQuote.packageDescription,
+        note: "30% upfront, 40% at foundation, 30% at completion",
       });
       expect(contractRes.status(), await contractRes.text()).toBe(201);
       const contract = await contractRes.json();
@@ -187,6 +195,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       const signRes = await c.put(`/api/contracts/${contractId}`, {
         ...contract,
         status: "Signed",
+        signedDate: today,
       });
       expect(signRes.status(), await signRes.text()).toBe(200);
       const signedContract = await signRes.json();
@@ -243,6 +252,9 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       if (opportunityId) await c.del(`/api/opportunities/${opportunityId}`).catch(() => {});
       if (customerId) await c.del(`/api/customers/${customerId}`).catch(() => {});
       if (leadId) await c.del(`/api/leads/${leadId}`).catch(() => {});
+      if (investmentRate) {
+        await retireInvestmentRate(api, { Authorization: `Bearer ${token}` }, investmentRate);
+      }
     }
   });
 

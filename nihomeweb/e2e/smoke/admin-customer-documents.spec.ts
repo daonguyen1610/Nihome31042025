@@ -3,6 +3,10 @@ import { test, expect, TEST_USERS } from "../fixtures/auth";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  createApprovedInvestmentRate,
+  retireInvestmentRate,
+} from "../fixtures/materialRate";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +35,7 @@ test("customer related records, documents, and contract owner inheritance work i
   let opportunityId = 0;
   let quoteId = 0;
   let contractId = 0;
+  let investmentRate: Awaited<ReturnType<typeof createApprovedInvestmentRate>> | null = null;
 
   try {
     const customerResponse = await api.post("/api/customers", {
@@ -82,6 +87,7 @@ test("customer related records, documents, and contract owner inheritance work i
       expect(activityResponse.status(), await activityResponse.text()).toBe(200);
     }
 
+    investmentRate = await createApprovedInvestmentRate(api, headers, unique, 4_280_000);
     const quoteResponse = await api.post("/api/quotes", {
       headers,
       data: {
@@ -89,6 +95,8 @@ test("customer related records, documents, and contract owner inheritance work i
         method: "UnitCost",
         areaSqm: 100,
         unitPricePerSqm: 4_280_000,
+        materialRateCatalogId: investmentRate.catalogId,
+        pricingEffectiveDate: investmentRate.pricingEffectiveDate,
         discountPercent: 0,
         vatPercent: 8,
       },
@@ -233,6 +241,7 @@ test("customer related records, documents, and contract owner inheritance work i
       const deleteCustomerResponse = await api.delete(`/api/customers/${customerId}`, { headers });
       expect([204, 404]).toContain(deleteCustomerResponse.status());
     }
+    if (investmentRate) await retireInvestmentRate(api, headers, investmentRate);
   }
 });
 
