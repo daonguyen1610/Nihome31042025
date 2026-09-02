@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize, formatVnd, parseVnd } from "@/lib/numberFormat";
 import { calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
+import { normalizeBoqSortOrder } from "@/lib/boqPaste";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,6 +159,7 @@ const AdminQuoteDetail = () => {
   const [saving, setSaving] = useState(false);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [boqPasteOpen, setBoqPasteOpen] = useState(false);
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -246,7 +249,7 @@ const AdminQuoteDetail = () => {
     if (!form) return;
     const items = [...(form.items ?? [])];
     items.splice(idx, 1);
-    setForm({ ...form, items });
+    setForm({ ...form, items: normalizeBoqSortOrder(items) });
   };
   const updateBoqRow = (idx: number, patch: Partial<QuoteItemInput>) => {
     if (!form) return;
@@ -254,31 +257,12 @@ const AdminQuoteDetail = () => {
     items[idx] = { ...items[idx], ...patch };
     setForm({ ...form, items });
   };
-  const pasteBoqFromClipboard = async () => {
+  const appendPastedBoqItems = (pastedItems: QuoteItemInput[]) => {
     if (!form) return;
-    try {
-      const text = await navigator.clipboard.readText();
-      const parsed = parseTsvBoq(text);
-      if (parsed.length === 0) {
-        toast({
-          title: t("quotes.paste.empty"),
-          variant: "destructive",
-        });
-        return;
-      }
-      const items = [...(form.items ?? []), ...parsed];
-      setForm({ ...form, items });
-      toast({
-        title: t("quotes.paste.ok"),
-        description: `+${parsed.length}`,
-      });
-    } catch {
-      toast({
-        title: t("common.error"),
-        description: t("quotes.paste.needsPermission"),
-        variant: "destructive",
-      });
-    }
+    const existingItems = form.items ?? [];
+    const items = normalizeBoqSortOrder([...existingItems, ...pastedItems]);
+    setForm({ ...form, items });
+    toast({ title: t("quotes.paste.ok"), description: `+${pastedItems.length}` });
   };
 
   // ---------- save + workflow ----------
@@ -531,7 +515,7 @@ const AdminQuoteDetail = () => {
             </Button>
           )}
           {showEditToggle && (
-            <Button variant="outline" onClick={() => setEditing(true)}>
+            <Button variant="outline" data-testid="quote-edit" onClick={() => setEditing(true)}>
               <Pencil className="mr-1.5 h-4 w-4" />
               {t("common.edit")}
             </Button>
@@ -541,7 +525,7 @@ const AdminQuoteDetail = () => {
               <Button variant="outline" onClick={() => { setForm(toFormState(quote)); setEditing(false); }}>
                 {t("common.cancel")}
               </Button>
-              <Button onClick={() => void handleSave()} disabled={saving}>
+              <Button data-testid="quote-save" onClick={() => void handleSave()} disabled={saving}>
                 {saving && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 <Save className="mr-1.5 h-4 w-4" />
                 {t("common.save")}
@@ -698,7 +682,7 @@ const AdminQuoteDetail = () => {
                   onAdd={addBoqRow}
                   onRemove={removeBoqRow}
                   onChange={updateBoqRow}
-                  onPaste={() => void pasteBoqFromClipboard()}
+                  onPaste={() => setBoqPasteOpen(true)}
                   t={t}
                 />
               )}
@@ -983,6 +967,12 @@ const AdminQuoteDetail = () => {
         </DialogContent>
       </Dialog>
 
+      <BoqPasteDialog
+        open={boqPasteOpen}
+        onOpenChange={setBoqPasteOpen}
+        onConfirm={appendPastedBoqItems}
+      />
+
       <Dialog open={selectedVersion !== null} onOpenChange={(open) => !open && setSelectedVersion(null)}>
         <DialogContent className="max-h-[90vh] w-[95vw] max-w-4xl overflow-y-auto sm:w-full">
           <DialogHeader>
@@ -1055,49 +1045,6 @@ function workflowIcon(k: WorkflowKind) {
     case "customerReject": return <XCircle className={cls} />;
     case "cancel": return <Ban className={cls} />;
   }
-}
-
-function parseTsvBoq(text: string): QuoteItemInput[] {
-  // Accept tab- or comma-separated rows in the order
-  // (name, unit, quantity, unit_price) — optional 5th col is item_code.
-  const rows: QuoteItemInput[] = [];
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) continue;
-    const cells = line.split(/\t|,(?![^"]*"[^"]*")/).map((c) => c.trim());
-    if (cells.length < 4) continue;
-    const [name, unit, qtyStr, priceStr, code] = cells;
-    const quantity = parseNumberLoose(qtyStr);
-    const unitPrice = parseNumberLoose(priceStr);
-    if (!name || !unit || Number.isNaN(quantity) || Number.isNaN(unitPrice)) continue;
-    rows.push({
-      itemCode: code || null,
-      name,
-      unit,
-      quantity,
-      unitPrice,
-      sortOrder: rows.length + 1,
-    });
-  }
-  return rows;
-}
-
-function parseNumberLoose(s: string): number {
-  // Accepts "1.234,56" (vi) or "1,234.56" (en). Strip thousands, keep last comma/dot as decimal.
-  if (!s) return NaN;
-  const cleaned = s.replace(/[^\d.,-]/g, "");
-  // If both separators present, treat the LAST-occurring as the decimal.
-  const lastDot = cleaned.lastIndexOf(".");
-  const lastComma = cleaned.lastIndexOf(",");
-  let normalised = cleaned;
-  if (lastDot !== -1 && lastComma !== -1) {
-    if (lastDot > lastComma) normalised = cleaned.replace(/,/g, "");
-    else normalised = cleaned.replace(/\./g, "").replace(",", ".");
-  } else if (lastComma !== -1) {
-    normalised = cleaned.replace(",", ".");
-  }
-  const n = Number(normalised);
-  return Number.isFinite(n) ? n : NaN;
 }
 
 const FormField = ({
@@ -1253,7 +1200,7 @@ const BoqTable = ({
         <span>{t("quotes.boq.title")}</span>
         {editing && (
           <div className="flex gap-1.5">
-            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onPaste}>
+            <Button size="sm" variant="ghost" className="h-7 px-2" data-testid="boq-paste-open" onClick={onPaste}>
               <Clipboard className="mr-1 h-3.5 w-3.5" />
               {t("quotes.boq.paste")}
             </Button>
@@ -1263,6 +1210,12 @@ const BoqTable = ({
             </Button>
           </div>
         )}
+      </div>
+      <div className="border-b bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-900">
+        {t("quotes.boq.materialRateHint")} {t("quotes.boq.materialRateExistingQuote")}{" "}
+        <Link className="font-medium underline underline-offset-2" to="/admin/material-rates">
+          {t("quotes.boq.openMaterialRates")}
+        </Link>
       </div>
 
       {/* Desktop table (md+). */}
@@ -1332,6 +1285,7 @@ const BoqTable = ({
                       <Button
                         variant="ghost"
                         size="sm"
+                        data-testid={`boq-remove-desktop-${idx}`}
                         className="h-7 px-1 text-destructive hover:text-destructive"
                         onClick={() => onRemove(idx)}
                       >

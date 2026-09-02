@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCheck,
   Ban,
+  Clipboard,
   Loader2,
   Pencil,
   Plus,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -26,6 +28,7 @@ import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { calculateQuoteTotals, MAX_QUOTE_QUANTITY, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
+import { normalizeBoqSortOrder } from "@/lib/boqPaste";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -191,6 +194,7 @@ const AdminQuotes = () => {
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(null);
+  const [boqPasteOpen, setBoqPasteOpen] = useState(false);
   const createTotals = useMemo(
     () => calculateQuoteTotals(createForm.method, createForm),
     [createForm],
@@ -226,8 +230,32 @@ const AdminQuotes = () => {
   const removeBoqItem = (index: number) => {
     setCreateForm({
       ...createForm,
-      items: (createForm.items ?? []).filter((_, itemIndex) => itemIndex !== index),
+      items: normalizeBoqSortOrder(
+        (createForm.items ?? []).filter((_, itemIndex) => itemIndex !== index),
+      ),
     });
+  };
+
+  const appendPastedBoqItems = (items: QuoteItemInput[]) => {
+    const existingItems = createForm.items ?? [];
+    setCreateForm({
+      ...createForm,
+      items: normalizeBoqSortOrder([...existingItems, ...items]),
+    });
+    toast({ title: t("quotes.paste.ok"), description: `+${items.length}` });
+  };
+
+  const changeCreateMethod = (method: QuoteMethod) => {
+    if (method === createForm.method) return;
+    if (createForm.method === "Boq" && method === "UnitCost" &&
+        (createForm.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boq.switchConfirm"))) {
+      return;
+    }
+    setCreateForm((current) => ({
+      ...current,
+      method,
+      items: method === "UnitCost" ? [] : current.items,
+    }));
   };
 
   const handleCreate = async () => {
@@ -682,11 +710,9 @@ const AdminQuotes = () => {
               <Label>{t("quotes.field.method")}</Label>
               <Select
                 value={createForm.method}
-                onValueChange={(v) =>
-                  setCreateForm({ ...createForm, method: v as QuoteMethod })
-                }
+                onValueChange={(value) => changeCreateMethod(value as QuoteMethod)}
               >
-                <SelectTrigger>
+                <SelectTrigger data-testid="quote-method">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -701,6 +727,7 @@ const AdminQuotes = () => {
                   <Label>{t("quotes.field.areaSqm")}</Label>
                   <Input
                     inputMode="decimal"
+                    data-testid="quote-area"
                     value={createForm.areaSqm ?? ""}
                     onChange={(e) => setCreateForm((current) => ({ ...current, areaSqm: e.target.value ? Number(e.target.value) : null }))}
                   />
@@ -732,10 +759,27 @@ const AdminQuotes = () => {
               <div className="space-y-3 rounded-md border p-3">
                 <div className="flex items-center justify-between gap-2">
                   <Label>{t("quotes.boq.title")}</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addBoqItem}>
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    {t("quotes.boq.addRow")}
-                  </Button>
+                  <div className="flex gap-1.5">
+                    <Button type="button" size="sm" variant="ghost" data-testid="quote-create-boq-paste" onClick={() => setBoqPasteOpen(true)}>
+                      <Clipboard className="mr-1 h-3.5 w-3.5" />
+                      {t("quotes.boq.paste")}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={addBoqItem}>
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      {t("quotes.boq.addRow")}
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-md bg-sky-50 p-2 text-xs leading-relaxed text-sky-900">
+                  {t("quotes.boq.materialRateHint")}{" "}
+                  <button
+                    type="button"
+                    data-testid="quote-switch-unit-cost"
+                    className="font-medium underline underline-offset-2"
+                    onClick={() => changeCreateMethod("UnitCost")}
+                  >
+                    {t("quotes.boq.switchToUnitCost")}
+                  </button>
                 </div>
                 {(createForm.items ?? []).length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t("quotes.validation.boqRequired")}</p>
@@ -763,6 +807,7 @@ const AdminQuotes = () => {
                           <div>
                             <Label className="text-xs">{t("quotes.boq.name")}</Label>
                             <Input
+                              data-testid={`quote-create-boq-name-${index}`}
                               placeholder={t("quotes.boq.namePlaceholder")}
                               value={item.name}
                               onChange={(event) => updateBoqItem(index, { name: event.target.value })}
@@ -816,6 +861,7 @@ const AdminQuotes = () => {
                 <Label>{t("quotes.field.discountPercent")}</Label>
                 <Input
                   type="number"
+                  data-testid="quote-discount"
                   min={0}
                   max={100}
                   value={createForm.discountPercent}
@@ -831,6 +877,7 @@ const AdminQuotes = () => {
                 <Label>{t("quotes.field.vatPercent")}</Label>
                 <Input
                   type="number"
+                  data-testid="quote-vat"
                   min={0}
                   max={100}
                   value={createForm.vatPercent}
@@ -879,13 +926,19 @@ const AdminQuotes = () => {
             <Button variant="outline" onClick={() => setCreating(false)}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={() => void handleCreate()} disabled={saving}>
+            <Button data-testid="quote-create-save" onClick={() => void handleCreate()} disabled={saving}>
               {saving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               {t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BoqPasteDialog
+        open={boqPasteOpen}
+        onOpenChange={setBoqPasteOpen}
+        onConfirm={appendPastedBoqItems}
+      />
 
     </AdminLayout>
   );

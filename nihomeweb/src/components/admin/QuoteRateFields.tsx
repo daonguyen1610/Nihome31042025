@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -110,6 +111,12 @@ const QuoteRateFields = ({
 
   return (
     <div className="space-y-3 rounded-md border bg-muted/20 p-3">
+      <div className="text-xs leading-relaxed text-muted-foreground">
+        {t("quotes.rate.usageHint")}{" "}
+        <Link className="font-medium text-primary underline underline-offset-2" to="/admin/material-rates">
+          {t("quotes.rate.manageCatalogs")}
+        </Link>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label>{t("quotes.field.materialRateCatalog")} *</Label>
@@ -126,7 +133,7 @@ const QuoteRateFields = ({
               });
             }}
           >
-            <SelectTrigger><SelectValue placeholder={t("quotes.rate.selectCatalog")} /></SelectTrigger>
+            <SelectTrigger data-testid="quote-rate-catalog"><SelectValue placeholder={t("quotes.rate.selectCatalog")} /></SelectTrigger>
             <SelectContent>
               {catalogs.map((catalog) => (
                 <SelectItem key={catalog.id} value={String(catalog.id)}>
@@ -135,11 +142,15 @@ const QuoteRateFields = ({
               ))}
             </SelectContent>
           </Select>
+          {catalogs.length === 0 && !error && (
+            <p className="mt-1 text-xs text-amber-700">{t("quotes.rate.noCatalogs")}</p>
+          )}
         </div>
         <div>
           <Label>{t("quotes.field.pricingEffectiveDate")} *</Label>
           <Input
             type="date"
+            data-testid="quote-rate-date"
             disabled={disabled}
             value={pricingDate?.slice(0, 10) ?? ""}
             onChange={(event) => {
@@ -169,6 +180,7 @@ const QuoteRateFields = ({
         <Label>{t("quotes.field.appliedRate")} *</Label>
         <Input
           inputMode="numeric"
+          data-testid="quote-applied-rate"
           disabled={disabled || !canOverride}
           value={unitPrice ? formatVnd(unitPrice) : ""}
           onChange={(event) => onChange({ unitPricePerSqm: parseVnd(event.target.value) || null })}
