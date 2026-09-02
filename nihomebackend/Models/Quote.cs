@@ -159,6 +159,7 @@ public enum QuoteRateSource
 {
     Catalog = 1,
     Override = 2,
+    CatalogReference = 3,
 }
 
 public enum QuoteStatus

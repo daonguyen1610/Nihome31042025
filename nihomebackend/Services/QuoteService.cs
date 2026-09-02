@@ -185,7 +185,8 @@ public class QuoteService(
             ? await ResolveBoqRevisionAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate, required: false, ct)
             : null;
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
-        ValidateMethodPayload(request.Method, request.AreaSqm, appliedUnitPrice, request.Items);
+        ValidateMethodPayload(request.Method, request.AreaSqm, appliedUnitPrice, request.Items,
+            request.DiscountPercent, request.VatPercent);
 
         var ownerId = request.OwnerUserId ?? opportunity.OwnerUserId ?? callerUserId;
         var validUntil = request.ValidUntil ?? now.AddDays(DefaultValidityDays);
@@ -210,7 +211,7 @@ public class QuoteService(
             MaterialRateRevisionId = rate?.Revision.Id ?? boqRevision?.Revision.Id,
             PricingEffectiveDate = rate?.EffectiveDate ?? boqRevision?.EffectiveDate,
             CatalogUnitPricePerSqm = rate?.CatalogUnitPrice,
-            RateSource = rate?.Source ?? (boqRevision is not null ? QuoteRateSource.Catalog : QuoteRateSource.Override),
+            RateSource = rate?.Source ?? (boqRevision is not null ? QuoteRateSource.CatalogReference : QuoteRateSource.Override),
             RateOverrideReason = request.Method == QuoteMethod.UnitCost && rate is null
                 ? "Giá nhập trực tiếp theo quy trình hiện hành."
                 : rate?.OverrideReason,
@@ -302,7 +303,8 @@ public class QuoteService(
             ? await ResolveUpdatedBoqRevisionAsync(quote, request, ct)
             : null;
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
-        ValidateMethodPayload(quote.Method, request.AreaSqm, appliedUnitPrice, request.Items);
+        ValidateMethodPayload(quote.Method, request.AreaSqm, appliedUnitPrice, request.Items,
+            request.DiscountPercent, request.VatPercent);
         if (quote.Method == QuoteMethod.UnitCost) request.UnitPricePerSqm = appliedUnitPrice;
 
         var changes = DetectChanges(quote, request);
@@ -381,7 +383,7 @@ public class QuoteService(
             quote.MaterialRateRevisionId = boqRevision.Revision.Id;
             quote.PricingEffectiveDate = boqRevision.EffectiveDate;
             quote.CatalogUnitPricePerSqm = null;
-            quote.RateSource = QuoteRateSource.Catalog;
+            quote.RateSource = QuoteRateSource.CatalogReference;
             quote.RateOverrideReason = null;
             quote.RateOverrideByUserId = null;
             quote.RateOverrideAt = null;
@@ -1157,14 +1159,27 @@ public class QuoteService(
         quote.GrandTotal = grand;
     }
 
-    private static void ValidateMethodPayload(QuoteMethod method, decimal? area, decimal? unitPrice, List<QuoteItemInput> items)
+    private static void ValidateMethodPayload(
+        QuoteMethod method,
+        decimal? area,
+        decimal? unitPrice,
+        List<QuoteItemInput> items,
+        decimal discountPercent,
+        decimal vatPercent)
     {
+        if (discountPercent is < 0 or > 100 || vatPercent is < 0 or > 100)
+            throw new QuoteOperationException("Thuế và chiết khấu phải nằm trong khoảng từ 0 đến 100%.");
+        if (!HasScale(discountPercent, 2) || !HasScale(vatPercent, 2))
+            throw new QuoteOperationException("Thuế và chiết khấu tối đa 2 số lẻ, ví dụ: 8,25%.");
+
         if (method == QuoteMethod.UnitCost)
         {
             if (area is null || area <= 0)
                 throw new QuoteOperationException("Suất đầu tư: Diện tích m² phải > 0.");
             if (unitPrice is null || unitPrice <= 0)
                 throw new QuoteOperationException("Suất đầu tư: Đơn giá/m² phải > 0.");
+            if (!HasScale(area.Value, 2) || !HasScale(unitPrice.Value, 2))
+                throw new QuoteOperationException("Suất đầu tư: diện tích và đơn giá/m² tối đa 2 số lẻ, ví dụ: 125,50.");
             if (area > MaxMoney || unitPrice > MaxMoney || area > MaxMoney / unitPrice)
                 throw new QuoteOperationException("Suất đầu tư: giá trị Báo giá vượt giới hạn lưu trữ.");
         }
@@ -1178,6 +1193,8 @@ public class QuoteService(
                 throw new QuoteOperationException("BOQ: tên hạng mục và đơn vị không được để trống.");
             if (items.Any(i => i.Quantity <= 0 || i.UnitPrice < 0))
                 throw new QuoteOperationException("BOQ: khối lượng phải lớn hơn 0 và đơn giá không được âm.");
+            if (items.Any(i => !HasScale(i.Quantity, 4) || !HasScale(i.UnitPrice, 2)))
+                throw new QuoteOperationException("BOQ: khối lượng tối đa 4 số lẻ và đơn giá tối đa 2 số lẻ, ví dụ 1,2345 và 1500000,25.");
             if (items.Any(i => i.Quantity > MaxQuantity || i.UnitPrice > MaxMoney))
                 throw new QuoteOperationException("BOQ: khối lượng hoặc đơn giá vượt giới hạn lưu trữ.");
             if (items.Any(i => i.UnitPrice > 0 && i.Quantity > MaxMoney / i.UnitPrice))
@@ -1205,6 +1222,8 @@ public class QuoteService(
         }
         return rounded;
     }
+
+    private static bool HasScale(decimal value, int scale) => decimal.Round(value, scale) == value;
 
     private static QuoteVersionSnapshot SnapshotOf(Quote q, DateTime now, int by) => new()
     {

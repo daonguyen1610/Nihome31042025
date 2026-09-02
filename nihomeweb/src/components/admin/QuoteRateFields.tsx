@@ -13,7 +13,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd, parseVnd } from "@/lib/numberFormat";
+import { formatVnd } from "@/lib/numberFormat";
+import { roundQuoteMoney } from "@/lib/quoteTotals";
 import {
   adminApi,
   type MaterialRateCatalogResponse,
@@ -25,7 +26,7 @@ interface QuoteRateFieldsProps {
   pricingDate?: string | null;
   unitPrice?: number | null;
   overrideReason?: string | null;
-  rateSource?: "Catalog" | "Override";
+  rateSource?: "Catalog" | "Override" | "CatalogReference";
   canOverride: boolean;
   disabled?: boolean;
   onChange: (patch: {
@@ -85,12 +86,16 @@ const QuoteRateFields = ({
     void adminApi.getEffectiveMaterialRateRevision(catalogId, pricingDate)
       .then(({ data }) => {
         if (cancelled) return;
+        const quoteRevision = {
+          ...data,
+          totalRatePerSqm: roundQuoteMoney(data.totalRatePerSqm),
+        };
         const selectionChanged = lastResolvedKey.current !== null && lastResolvedKey.current !== key;
         lastResolvedKey.current = key;
-        setRevision(data);
-        onEffectiveRevisionChangeRef.current?.(data);
+        setRevision(quoteRevision);
+        onEffectiveRevisionChangeRef.current?.(quoteRevision);
         if (!canOverride || unitPrice == null || (selectionChanged && rateSource !== "Override")) {
-          onChangeRef.current({ unitPricePerSqm: data.totalRatePerSqm, rateOverrideReason: null });
+          onChangeRef.current({ unitPricePerSqm: quoteRevision.totalRatePerSqm, rateOverrideReason: null });
         }
       })
       .catch((err) => {
@@ -179,11 +184,14 @@ const QuoteRateFields = ({
       <div>
         <Label>{t("quotes.field.appliedRate")} *</Label>
         <Input
-          inputMode="numeric"
+          type="number"
+          inputMode="decimal"
+          min={0.01}
+          step={0.01}
           data-testid="quote-applied-rate"
           disabled={disabled || !canOverride}
-          value={unitPrice ? formatVnd(unitPrice) : ""}
-          onChange={(event) => onChange({ unitPricePerSqm: parseVnd(event.target.value) || null })}
+          value={unitPrice ?? ""}
+          onChange={(event) => onChange({ unitPricePerSqm: event.target.value ? Number(event.target.value) : null })}
         />
         {!canOverride && <p className="mt-1 text-xs text-muted-foreground">{t("quotes.rate.catalogLocked")}</p>}
       </div>

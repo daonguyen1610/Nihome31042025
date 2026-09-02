@@ -319,8 +319,8 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
             .Border.SetOutsideBorder(XLBorderStyleValues.Thin).Border.SetInsideBorder(XLBorderStyleValues.Thin);
         sheet.Range(FirstDataRow, 1, LastDataRow, 5).Style.Fill.SetBackgroundColor(XLColor.FromHtml("#FFFDEB"));
         sheet.Range(FirstDataRow, 6, LastDataRow, 6).Style.Fill.SetBackgroundColor(XLColor.FromHtml("#E2F0D9"));
-        sheet.Range(FirstDataRow, 4, LastDataRow, 4).Style.NumberFormat.Format = "0.######";
-        sheet.Range(FirstDataRow, 5, LastDataRow, 6).Style.NumberFormat.Format = "#,##0.####";
+        sheet.Range(FirstDataRow, 4, LastDataRow, 4).Style.NumberFormat.Format = "0.####";
+        sheet.Range(FirstDataRow, 5, LastDataRow, 6).Style.NumberFormat.Format = "#,##0.00";
         for (var row = FirstDataRow; row <= LastDataRow; row++)
         {
             sheet.Cell(row, 6).FormulaA1 = $"=IF(COUNTA(A{row}:E{row})=0,\"\",D{row}*E{row})";

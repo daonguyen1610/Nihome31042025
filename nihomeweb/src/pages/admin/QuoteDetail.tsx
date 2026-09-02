@@ -33,8 +33,8 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
-import { formatFileSize, formatVnd, parseVnd } from "@/lib/numberFormat";
-import { calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
+import { formatFileSize, formatVnd } from "@/lib/numberFormat";
+import { calculateQuoteLineAmount, calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
 import { normalizeBoqSortOrder } from "@/lib/boqPaste";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -700,6 +700,7 @@ const AdminQuoteDetail = () => {
                 <div className="space-y-4">
                   {editing ? (
                     <BoqCatalogFields
+                      key={`${quote.id}:${form.materialRateCatalogId ?? "manual"}:${form.pricingEffectiveDate ?? "none"}`}
                       catalogId={form.materialRateCatalogId}
                       pricingDate={form.pricingEffectiveDate}
                       onApply={applyBoqCatalog}
@@ -1266,7 +1267,7 @@ const BoqTable = ({
           </thead>
           <tbody className="divide-y">
             {items.map((row, idx) => {
-              const amount = Math.round(row.quantity * row.unitPrice * 100) / 100;
+              const amount = calculateQuoteLineAmount(row.quantity, row.unitPrice);
               return (
                 <tr key={idx}>
                   <td className="hidden px-2 py-1 lg:table-cell">
@@ -1305,10 +1306,13 @@ const BoqTable = ({
                   <td className="px-2 py-1">
                     <Input
                       className="h-8 text-right"
-                      inputMode="numeric"
-                      value={row.unitPrice ? formatVnd(row.unitPrice) : ""}
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.01}
+                      value={row.unitPrice || ""}
                       disabled={!editing}
-                      onChange={(e) => onChange(idx, { unitPrice: parseVnd(e.target.value) || 0 })}
+                      onChange={(e) => onChange(idx, { unitPrice: Number(e.target.value) })}
                     />
                   </td>
                   <td className="px-2 py-1 text-right font-medium">{formatVnd(amount)} ₫</td>
@@ -1349,7 +1353,7 @@ const BoqTable = ({
           </li>
         )}
         {items.map((row, idx) => {
-          const amount = Math.round(row.quantity * row.unitPrice * 100) / 100;
+          const amount = calculateQuoteLineAmount(row.quantity, row.unitPrice);
           return (
             <li key={idx} className="space-y-2 p-3">
               {editing ? (
@@ -1393,10 +1397,13 @@ const BoqTable = ({
                     />
                     <Input
                       className="h-9 text-right"
-                      inputMode="numeric"
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step={0.01}
                       placeholder={t("quotes.boq.unitPrice")}
-                      value={row.unitPrice ? formatVnd(row.unitPrice) : ""}
-                      onChange={(e) => onChange(idx, { unitPrice: parseVnd(e.target.value) || 0 })}
+                      value={row.unitPrice || ""}
+                      onChange={(e) => onChange(idx, { unitPrice: Number(e.target.value) })}
                     />
                   </div>
                   <div className="flex items-center justify-between rounded bg-muted/30 px-2 py-1 text-sm">

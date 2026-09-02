@@ -27,7 +27,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
-import { calculateQuoteTotals, MAX_QUOTE_QUANTITY, validateQuoteValues } from "@/lib/quoteTotals";
+import { calculateQuoteLineAmount, calculateQuoteTotals, MAX_QUOTE_QUANTITY, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
 import { normalizeBoqSortOrder } from "@/lib/boqPaste";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -782,6 +782,7 @@ const AdminQuotes = () => {
             ) : (
               <div className="space-y-3 rounded-md border p-3">
                 <BoqCatalogFields
+                  key={`${createForm.materialRateCatalogId ?? "manual"}:${createForm.pricingEffectiveDate ?? "none"}`}
                   catalogId={createForm.materialRateCatalogId}
                   pricingDate={createForm.pricingEffectiveDate}
                   onApply={applyBoqCatalog}
@@ -866,16 +867,20 @@ const AdminQuotes = () => {
                             <div>
                               <Label className="text-xs">{t("quotes.boq.unitPrice")}</Label>
                               <Input
-                                inputMode="numeric"
+                                type="number"
+                                inputMode="decimal"
+                                min={0}
+                                step={0.01}
+                                data-testid={`quote-create-boq-price-${index}`}
                                 placeholder="0 ₫"
-                                value={item.unitPrice ? formatVnd(item.unitPrice) : ""}
-                                onChange={(event) => updateBoqItem(index, { unitPrice: parseVnd(event.target.value) })}
+                                value={item.unitPrice || ""}
+                                onChange={(event) => updateBoqItem(index, { unitPrice: Number(event.target.value) })}
                               />
                             </div>
                           </div>
                           {item.quantity > 0 && item.unitPrice > 0 && (
                             <div className="text-right text-sm font-medium">
-                              {t("quotes.boq.amount")}: {formatVnd(item.quantity * item.unitPrice)} ₫
+                              {t("quotes.boq.amount")}: {formatVnd(calculateQuoteLineAmount(item.quantity, item.unitPrice))} ₫
                             </div>
                           )}
                         </div>

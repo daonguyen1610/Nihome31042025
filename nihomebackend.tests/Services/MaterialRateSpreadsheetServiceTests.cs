@@ -101,6 +101,20 @@ public class MaterialRateSpreadsheetServiceTests
     }
 
     [Fact]
+    public void CreateTemplate_BoqUsesQuoteCompatibleNumberFormats()
+    {
+        var bytes = _sut.CreateTemplate(new Dictionary<string, string>(), MaterialRateCatalogType.Boq);
+        using var stream = new MemoryStream(bytes);
+        using var workbook = new XLWorkbook(stream);
+        var entry = workbook.Worksheets.First(sheet => sheet.Visibility == XLWorksheetVisibility.Visible);
+
+        Assert.Equal("0.####", entry.Cell("D5").Style.NumberFormat.Format);
+        Assert.Equal("#,##0.00", entry.Cell("E5").Style.NumberFormat.Format);
+        Assert.Equal("#,##0.00", entry.Cell("F5").Style.NumberFormat.Format);
+        Assert.True(entry.Cell("F5").HasFormula);
+    }
+
+    [Fact]
     public void Parse_RejectsReorderedColumns()
     {
         var bytes = _sut.CreateTemplate(new Dictionary<string, string>());

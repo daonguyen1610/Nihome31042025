@@ -177,7 +177,7 @@ public class QuotesControllerTests : IntegrationTestBase
         body.GetProperty("materialRateCatalogName").GetString().Should().Be(catalog.Name);
         body.GetProperty("materialRateRevisionVersion").GetInt32().Should().Be(1);
         body.GetProperty("pricingEffectiveDate").GetString().Should().Be("2026-09-01");
-        body.GetProperty("rateSource").GetString().Should().Be("Catalog");
+        body.GetProperty("rateSource").GetString().Should().Be("CatalogReference");
         body.GetProperty("rateOverrideReason").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
         body.GetProperty("subtotal").GetDecimal().Should().Be(400m);
         body.GetProperty("grandTotal").GetDecimal().Should().Be(440m);
@@ -206,6 +206,38 @@ public class QuotesControllerTests : IntegrationTestBase
                 new { name = "Overflow", unit = "item", quantity = 99_999_999_999_999m, unitPrice = 99_999_999_999_999m },
             },
         })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        foreach (var item in new object[]
+        {
+            new { name = "Quantity scale", unit = "m2", quantity = 1.00001m, unitPrice = 100m },
+            new { name = "Price scale", unit = "m2", quantity = 1m, unitPrice = 100.001m },
+        })
+        {
+            (await Client.PostAsJsonAsync("/api/quotes", new
+            {
+                opportunityId = oppId,
+                method = "Boq",
+                items = new[] { item },
+            })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        foreach (var payload in new[]
+        {
+            new { areaSqm = 100.001m, unitPricePerSqm = 1_000_000m },
+            new { areaSqm = 100m, unitPricePerSqm = 1_000_000.001m },
+        })
+        {
+            (await Client.PostAsJsonAsync("/api/quotes", new
+            {
+                opportunityId = oppId,
+                method = "UnitCost",
+                payload.areaSqm,
+                payload.unitPricePerSqm,
+            })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        (await WithDbAsync(db => db.Quotes.CountAsync(quote => quote.OpportunityId == oppId)))
+            .Should().Be(0);
     }
 
     [Fact]
