@@ -69,6 +69,16 @@ const formatFileSize = (bytes: number) => bytes < 1024 * 1024
   ? `${Math.max(1, Math.round(bytes / 1024))} KB`
   : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
+const IMPORT_FIELD_KEYS: Record<string, string> = {
+  MaterialCode: "materialRates.field.materialCode",
+  MaterialName: "materialRates.field.materialName",
+  Unit: "materialRates.field.unit",
+  NormPerSqm: "materialRates.field.normPerSqm",
+  UnitRate: "materialRates.field.unitRate",
+  WastePercent: "materialRates.field.wastePercent",
+  AmountPerSqm: "materialRates.field.amountPerSqm",
+};
+
 const AdminMaterialRates = () => {
   const { lang, t } = useI18n();
   const { toast } = useToast();
@@ -251,7 +261,8 @@ const AdminMaterialRates = () => {
     if (!file || !selectedCatalogId || !selectedRevision) return;
     setImportErrors([]);
     setImportedCount(null);
-    if (!file.name.toLowerCase().endsWith(".csv") || file.size > 2 * 1024 * 1024) {
+    const extension = file.name.toLowerCase().split(".").pop();
+    if (!extension || !["xlsx", "csv"].includes(extension) || file.size > 5 * 1024 * 1024) {
       setImportErrors([{ message: t("materialRates.validation.csv") }]);
       return;
     }
@@ -287,11 +298,11 @@ const AdminMaterialRates = () => {
 
   const downloadTemplatePackage = async () => {
     try {
-      const { data } = await adminApi.downloadMaterialRateTemplatePackage(lang);
+      const { data } = await adminApi.downloadMaterialRateExcelTemplate(lang);
       const url = URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "material-rate-template-package.zip";
+      link.download = t("materialRates.excel.fileName");
       link.click();
       URL.revokeObjectURL(url);
       toast({ title: t("materialRates.package.downloaded") });
@@ -348,6 +359,14 @@ const AdminMaterialRates = () => {
     { icon: UploadCloud, title: t("materialRates.workflow.import"), detail: t("materialRates.workflow.importHint") },
     { icon: ShieldCheck, title: t("materialRates.workflow.approve"), detail: t("materialRates.workflow.approveHint") },
   ];
+  const importErrorMessage = (item: CsvImportError) => {
+    if (!item.messageKey) return item.message;
+    const args = { ...(item.messageArgs ?? {}) };
+    if (typeof args.field === "string" && IMPORT_FIELD_KEYS[args.field]) {
+      args.field = t(IMPORT_FIELD_KEYS[args.field]);
+    }
+    return t(item.messageKey, args);
+  };
 
   return (
     <AdminLayout>
@@ -486,7 +505,7 @@ const AdminMaterialRates = () => {
                               <UploadCloud className="h-8 w-8 text-primary" />
                               <span className="mt-2 text-sm font-medium">{t("materialRates.import.select")}</span>
                               <span className="mt-1 text-xs text-muted-foreground">{t("materialRates.import.requirements")}</span>
-                              <Input type="file" accept=".csv,text/csv" className="sr-only" data-testid="material-rates-import-file" disabled={importing} onChange={(event) => { selectImportFile(event.target.files?.[0] ?? null); event.target.value = ""; }} />
+                              <Input type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" className="sr-only" data-testid="material-rates-import-file" disabled={importing} onChange={(event) => { selectImportFile(event.target.files?.[0] ?? null); event.target.value = ""; }} />
                             </Label>
                             {pendingImportFile && (
                               <div className="mt-3 flex flex-col gap-3 rounded-md border bg-background p-3 sm:flex-row sm:items-center sm:justify-between" data-testid="material-rates-selected-file">
@@ -512,7 +531,7 @@ const AdminMaterialRates = () => {
                           {selectedRevision.status === "Approved" && <p className="basis-full text-xs text-muted-foreground">{selectedCatalog.isActive ? t("materialRates.quote.hint") : t("materialRates.quote.inactiveHint")}</p>}
                         </div>
 
-                        {importErrors.length > 0 && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="mb-2 text-sm font-medium text-destructive">{t("materialRates.import.errors")}</p><ul className="space-y-1 text-xs text-destructive">{importErrors.map((item, index) => <li key={`${item.row}-${item.column}-${index}`}>{item.row ? t("materialRates.import.errorLocation", { row: item.row, column: item.column ?? "—" }) : ""} {item.messageKey ? t(item.messageKey, item.messageArgs ?? undefined) : item.message}</li>)}</ul></div>}
+                        {importErrors.length > 0 && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="mb-2 text-sm font-medium text-destructive">{t("materialRates.import.errors")}</p><ul className="space-y-1 text-xs text-destructive">{importErrors.map((item, index) => <li key={`${item.row}-${item.column}-${index}`}>{item.row ? t("materialRates.import.errorLocation", { row: item.row, column: item.column ?? "—" }) : ""} {importErrorMessage(item)}</li>)}</ul></div>}
 
                         {selectedRevision.lines.length === 0 ? <p className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">{t("materialRates.lines.empty")}</p> : <>
                           <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[720px] divide-y text-sm"><thead className="bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-2 py-2 text-left">{t("materialRates.field.materialCode")}</th><th className="px-2 py-2 text-left">{t("materialRates.field.materialName")}</th><th className="px-2 py-2 text-left">{t("materialRates.field.unit")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.normPerSqm")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.wastePercent")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.amountPerSqm")}</th></tr></thead><tbody className="divide-y">{selectedRevision.lines.map((line) => <tr key={line.id}><td className="px-2 py-2">{line.materialCode}</td><td className="px-2 py-2 font-medium">{line.materialName}</td><td className="px-2 py-2">{line.unit}</td><td className="px-2 py-2 text-right">{line.normPerSqm}</td><td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td><td className="px-2 py-2 text-right">{line.wastePercent}%</td><td className="px-2 py-2 text-right font-medium">{formatVnd(line.amountPerSqm)}</td></tr>)}</tbody></table></div>

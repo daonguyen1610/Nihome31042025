@@ -115,6 +115,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IQuotePdfService, QuotePdfService>();
         services.AddScoped<IQuoteService, QuoteService>();
         services.AddSingleton<IUtf8CsvParser, Utf8CsvParser>();
+        services.AddSingleton<IMaterialRateSpreadsheetService, MaterialRateSpreadsheetService>();
         services.AddScoped<IMaterialRateService, MaterialRateService>();
         services.AddScoped<IContractService, ContractService>();
         services.AddScoped<IContractAppendixService, ContractAppendixService>();

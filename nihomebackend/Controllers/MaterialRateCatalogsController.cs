@@ -18,6 +18,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public sealed class MaterialRateCatalogsController(
     IMaterialRateService service,
+    IMaterialRateSpreadsheetService spreadsheetService,
     TranslationService translations,
     IAuditLogger audit) : ControllerBase
 {
@@ -81,6 +82,20 @@ public sealed class MaterialRateCatalogsController(
         return File(bytes, "text/csv; charset=utf-8", "material-rate-template.csv");
     }
 
+    [HttpGet("excel-template")]
+    [RequirePermission("crm.material-rates", "view")]
+    public async Task<IActionResult> DownloadExcelTemplate([FromQuery] string language = "vi")
+    {
+        var normalizedLanguage = NormalizeLanguage(language);
+        if (normalizedLanguage is null) return InvalidLanguage();
+
+        var text = await translations.GetTranslationMapAsync(normalizedLanguage);
+        return File(
+            spreadsheetService.CreateTemplate(text),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            GetExcelFileName(normalizedLanguage));
+    }
+
     [HttpGet("template-package")]
     [RequirePermission("crm.material-rates", "view")]
     public async Task<IActionResult> DownloadTemplatePackage(
@@ -88,11 +103,8 @@ public sealed class MaterialRateCatalogsController(
         CancellationToken ct = default)
     {
         _ = ct;
-        var normalizedLanguage = language.Trim().ToLowerInvariant();
-        if (!SupportedLanguages.Contains(normalizedLanguage, StringComparer.Ordinal))
-        {
-            return BadRequest(new { message = "Ngôn ngữ không hợp lệ. Chỉ chấp nhận vi, en, zh hoặc ja." });
-        }
+        var normalizedLanguage = NormalizeLanguage(language);
+        if (normalizedLanguage is null) return InvalidLanguage();
 
         var text = await translations.GetTranslationMapAsync(normalizedLanguage);
         string T(string key, string fallback) => text.GetValueOrDefault(key, fallback);
@@ -101,13 +113,13 @@ public sealed class MaterialRateCatalogsController(
             T("materialRates.package.title", "HƯỚNG DẪN NHẬP ĐỊNH MỨC VÀ ĐƠN GIÁ VẬT LIỆU"),
             new string('=', 68),
             "",
-            T("materialRates.package.purpose", "Mục đích: điền dữ liệu vào material-rates.csv để NICON tính đơn giá xây dựng trên mỗi m²."),
+            T("materialRates.package.purpose", "Mục đích: điền biểu mẫu Excel để NICON tính đơn giá xây dựng trên mỗi m²."),
             "",
             T("materialRates.package.stepsTitle", "CÁC BƯỚC THỰC HIỆN"),
-            T("materialRates.package.step1", "1. Mở material-rates.csv bằng Excel, Numbers hoặc Google Sheets."),
-            T("materialRates.package.step2", "2. Xóa các dòng ví dụ và nhập mỗi vật liệu trên một dòng; không sửa tên hoặc thứ tự cột."),
-            T("materialRates.package.step3", "3. Lưu dưới định dạng CSV UTF-8, dùng dấu chấm cho phần thập phân và không thêm dấu phân cách hàng nghìn."),
-            T("materialRates.package.step4", "4. Gửi lại đúng file material-rates.csv. NICON sẽ kiểm tra toàn bộ file trước khi lưu."),
+            T("materialRates.package.step1", "1. Mở biểu mẫu bằng Excel, Numbers hoặc Google Sheets."),
+            T("materialRates.package.step2", "2. Nhập mỗi vật liệu trên một dòng tại trang Nhập liệu; không sửa tên hoặc thứ tự cột."),
+            T("materialRates.package.step3", "3. Dùng số không có dấu phân cách hàng nghìn; cột Thành tiền được tự động tính."),
+            T("materialRates.package.step4", "4. Lưu nguyên định dạng Excel và gửi lại tệp cho NICON để nhập dữ liệu."),
             "",
             T("materialRates.package.columnsTitle", "GIẢI THÍCH CÁC CỘT"),
             T("materialRates.package.columnCode", "MaterialCode: mã vật liệu duy nhất trong file, tối đa 50 ký tự. Ví dụ: VL-XM-PC40."),
@@ -131,11 +143,15 @@ public sealed class MaterialRateCatalogsController(
         await using var buffer = new MemoryStream();
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
         {
-            WriteUtf8Entry(archive, "material-rates.csv", CreateTemplateCsv(), includeBom: true);
+            var workbookEntry = archive.CreateEntry(GetExcelFileName(normalizedLanguage), CompressionLevel.Optimal);
+            using (var workbookStream = workbookEntry.Open())
+            {
+                workbookStream.Write(spreadsheetService.CreateTemplate(text));
+            }
             WriteUtf8Entry(archive, "README.txt", guide, includeBom: true);
         }
 
-        return File(buffer.ToArray(), "application/zip", "material-rate-template-package.zip");
+        return File(buffer.ToArray(), "application/zip", "nicon-material-rate-form.zip");
     }
 
     [HttpGet("{catalogId:int}/revisions")]
@@ -197,15 +213,28 @@ public sealed class MaterialRateCatalogsController(
                 }],
             });
         }
-        if (file.Length > 2 * 1024 * 1024)
+        var extension = Path.GetExtension(file.FileName);
+        if (!extension.Equals(".csv", StringComparison.OrdinalIgnoreCase) &&
+            !extension.Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
         {
             return BadRequest(new MaterialRateImportResponse
             {
                 Errors = [new CsvImportError
                 {
-                    Message = "Tệp CSV vượt quá dung lượng tối đa 2 MB.",
-                    MessageKey = "csv.error.maxBytes",
-                    MessageArgs = new() { ["max"] = 2 },
+                    Message = "Chỉ chấp nhận biểu mẫu Excel (.xlsx) hoặc tệp CSV UTF-8 (.csv).",
+                    MessageKey = "materialRates.validation.fileType",
+                }],
+            });
+        }
+        if (file.Length > 5 * 1024 * 1024)
+        {
+            return BadRequest(new MaterialRateImportResponse
+            {
+                Errors = [new CsvImportError
+                {
+                    Message = "Tệp vượt quá dung lượng tối đa 5 MB.",
+                    MessageKey = "materialRates.validation.maxBytes",
+                    MessageArgs = new() { ["max"] = 5 },
                 }],
             });
         }
@@ -213,7 +242,7 @@ public sealed class MaterialRateCatalogsController(
         return await ExecuteAsync<MaterialRateImportResponse>(async () =>
         {
             await using var stream = file.OpenReadStream();
-            var result = await service.ImportAsync(catalogId, revisionId, stream, userId.Value, ct);
+            var result = await service.ImportAsync(catalogId, revisionId, stream, userId.Value, file.FileName, ct);
             if (result is null) return NotFound();
             if (result.Errors.Count > 0) return BadRequest(result);
             Audit("material-rate-revision.import", revisionId, result);
@@ -316,13 +345,25 @@ public sealed class MaterialRateCatalogsController(
         return int.TryParse(value, out var userId) ? userId : null;
     }
 
+    private static string? NormalizeLanguage(string language)
+    {
+        var normalized = language.Trim().ToLowerInvariant();
+        return SupportedLanguages.Contains(normalized, StringComparer.Ordinal) ? normalized : null;
+    }
+
+    private BadRequestObjectResult InvalidLanguage() =>
+        BadRequest(new { message = "Ngôn ngữ không hợp lệ. Chỉ chấp nhận vi, en, zh hoặc ja." });
+
+    private static string GetExcelFileName(string language) => language switch
+    {
+        "en" => "NICON-Material-Rate-Form.xlsx",
+        "zh" => "NICON-材料定额单价表.xlsx",
+        "ja" => "NICON-材料基準単価表.xlsx",
+        _ => "NICON-Bieu-mau-dinh-muc-don-gia.xlsx",
+    };
+
     private static string CreateTemplateCsv() =>
-        string.Join(',', MaterialRateService.CsvHeaders) + "\r\n"
-        + "VL-XM-PC40,Xi măng Portland PCB40,kg,12.5,1850,3\r\n"
-        + "VL-CAT-01,Cát xây tô,m3,0.025,420000,5\r\n"
-        + "VL-GACH-01,Gạch ống 8x8x18,viên,68,1450,4\r\n"
-        + "VL-THEP-D10,Thép cây D10,kg,4.2,16800,2.5\r\n"
-        + "VL-SON-01,Sơn nước nội thất,lít,0.35,95000,8\r\n";
+        string.Join(',', MaterialRateService.CsvHeaders) + "\r\n";
 
     private static void WriteUtf8Entry(ZipArchive archive, string name, string content, bool includeBom)
     {

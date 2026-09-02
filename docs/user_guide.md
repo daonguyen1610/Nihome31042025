@@ -237,9 +237,13 @@ deleted unless another qualifying Contract remains.
 #### 3.1.4 Direct Quotation
 
 Create quotations using an approved material-rate revision or a preliminary
-BOQ. In **Material norms & rates**, download the UTF-8 CSV template, fill in
-material code/name, unit, norm per m², unit rate, and waste percentage, then
-import it into a Draft revision. Import is atomic and computes each rate as
+BOQ. In **Material norms & rates**, download the localized Excel form, open the
+**Entry** sheet, and fill in material code/name, unit, norm per m², unit rate,
+and waste percentage. The workbook provides customer-facing column names,
+number formats, an automatic amount formula, and a separate guide with examples;
+the customer does not need to delete the examples or convert the file to CSV.
+Return and import the same `.xlsx` file into a Draft revision. UTF-8 CSV remains
+available for system compatibility. Import is atomic and computes each rate as
 `NormPerSqm × UnitRate × (1 + WastePercent / 100)`. Approve non-overlapping
 effective revisions before use. Unit-cost quotations select a catalog and
 pricing date, retain the chosen revision and catalog rate, and calculate

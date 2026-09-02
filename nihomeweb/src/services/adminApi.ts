@@ -3911,6 +3911,11 @@ export const adminApi = {
     api.put<MaterialRateCatalogResponse>(`/material-rate-catalogs/${id}`, body),
   downloadMaterialRateTemplate: () =>
     api.get<Blob>("/material-rate-catalogs/csv-template", { responseType: "blob" }),
+  downloadMaterialRateExcelTemplate: (language: "vi" | "en" | "zh" | "ja") =>
+    api.get<Blob>("/material-rate-catalogs/excel-template", {
+      params: { language },
+      responseType: "blob",
+    }),
   downloadMaterialRateTemplatePackage: (language: "vi" | "en" | "zh" | "ja") =>
     api.get<Blob>("/material-rate-catalogs/template-package", {
       params: { language },

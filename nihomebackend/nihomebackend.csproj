@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="AutoMapper" Version="15.1.1" />
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="Google.Apis.Drive.v3" Version="1.70.0.3834" />
     <PackageReference Include="MailKit" Version="4.16.0" />
     <PackageReference Include="OpenPdf" Version="1.6.2" />
