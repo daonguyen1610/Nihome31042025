@@ -21,13 +21,16 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class DesignProjectsController(
     IDesignProjectService svc,
+    IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("design.projects", "view")]
     public async Task<ActionResult<DesignProjectListResponse>> List([FromQuery] DesignProjectListParams parameters, CancellationToken ct)
     {
-        var result = await svc.ListAsync(parameters, ct);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var result = await svc.ListAsync(parameters, userId.Value, ct);
         return Ok(result);
     }
 
@@ -35,6 +38,9 @@ public class DesignProjectsController(
     [RequirePermission("design.projects", "view")]
     public async Task<ActionResult<DesignProjectResponse>> Get(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, id, ct)) return NotFound();
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
@@ -45,6 +51,13 @@ public class DesignProjectsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var operationalProjectId = await projectAccess.ResolveDesignCreateOperationalProjectIdAsync(
+            request.OperationalProjectId, request.ContractId, ct);
+        if (!operationalProjectId.HasValue ||
+            !await projectAccess.CanManageTeamAsync(userId.Value, operationalProjectId.Value, ct))
+        {
+            return NotFound();
+        }
         try
         {
             var response = await svc.CreateAsync(request, userId.Value, ct);
@@ -78,6 +91,7 @@ public class DesignProjectsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -111,9 +125,12 @@ public class DesignProjectsController(
     [RequirePermission("design.projects", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
         try
         {
-            var removed = await svc.DeleteAsync(id, ct);
+            var removed = await svc.DeleteAsync(id, userId.Value, ct);
             if (!removed) return NotFound();
             audit.Log(new AuditEvent
             {

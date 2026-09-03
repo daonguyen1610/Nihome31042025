@@ -208,13 +208,31 @@ public class SiteDiariesControllerTests : IntegrationTestBase
     private async Task<int> CreateProjectAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Diary fixture {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = $"PJ-DIARY-{Guid.NewGuid():N}"[..40],
+                Name = "Site diary integration fixture",
+                CustomerId = customerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<int> CreateDiaryAsync(int projectId, string diaryDate)

@@ -36,7 +36,10 @@ public class BasicDesignDocService(
         ["interior"] = "NT-BD",
     };
 
-    public async Task<BasicDesignDocListResponse> ListAsync(BasicDesignDocListParams p, CancellationToken ct = default)
+    public async Task<BasicDesignDocListResponse> ListAsync(
+        BasicDesignDocListParams p,
+        CancellationToken ct = default,
+        IReadOnlySet<string>? accessibleDisciplines = null)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 50 : p.PageSize, 1, MaxPageSize);
@@ -48,6 +51,11 @@ public class BasicDesignDocService(
             .AsQueryable();
 
         if (p.DesignProjectId.HasValue) q = q.Where(d => d.DesignProjectId == p.DesignProjectId.Value);
+        if (accessibleDisciplines is not null)
+        {
+            var accessibleCodes = accessibleDisciplines.ToList();
+            q = q.Where(d => accessibleCodes.Contains(d.DisciplineCode));
+        }
         if (!string.IsNullOrWhiteSpace(p.DisciplineCode))
         {
             var code = p.DisciplineCode.Trim();
@@ -87,6 +95,15 @@ public class BasicDesignDocService(
         var readiness = p.DesignProjectId.HasValue
             ? await ComputeReadinessAsync(p.DesignProjectId.Value, ct)
             : new BasicDesignReadiness { RequiredDisciplineCodes = RequiredDisciplines.ToList() };
+        if (accessibleDisciplines is not null)
+        {
+            readiness.RequiredDisciplineCodes = readiness.RequiredDisciplineCodes
+                .Where(accessibleDisciplines.Contains).ToList();
+            readiness.InternallyApprovedDisciplineCodes = readiness.InternallyApprovedDisciplineCodes
+                .Where(accessibleDisciplines.Contains).ToList();
+            readiness.ReadyForShopDrawing = readiness.RequiredDisciplineCodes.Count > 0 &&
+                readiness.RequiredDisciplineCodes.All(readiness.InternallyApprovedDisciplineCodes.Contains);
+        }
 
         return new BasicDesignDocListResponse
         {

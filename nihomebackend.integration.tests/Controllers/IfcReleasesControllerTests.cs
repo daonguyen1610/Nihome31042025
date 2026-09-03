@@ -18,21 +18,80 @@ public class IfcReleasesControllerTests : IntegrationTestBase
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
     {
-        (await Client.GetAsync("/api/ifc-releases")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/ifc-releases?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task List_AsSale_IsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
-        (await Client.GetAsync("/api/ifc-releases")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/ifc-releases?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task List_AsDesign_ReturnsOk()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (projectId, _, _) = await CreateShopStageProjectWithApprovedDrawingAsync();
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
-        (await Client.GetAsync("/api/ifc-releases")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/ifc-releases?designProjectId={projectId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task DisciplineScopedMember_CannotReadProjectWideIfcGate()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (projectId, _, _) = await CreateShopStageProjectWithApprovedDrawingAsync();
+        var release = await Client.PostAsJsonAsync("/api/ifc-releases", new
+        {
+            designProjectId = projectId,
+            title = "Restricted IFC gate",
+        });
+        release.EnsureSuccessStatusCode();
+        var releaseId = (await ReadJsonAsync(release)).GetProperty("id").GetInt32();
+        await WithDbAsync(async db =>
+        {
+            var userId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var superAdminId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
+                .Select(user => user.Id)
+                .SingleAsync();
+            var operationalProject = await db.DesignProjects
+                .Where(project => project.Id == projectId)
+                .Select(project => project.OperationalProject!)
+                .SingleAsync();
+            operationalProject.ProjectManagerUserId = superAdminId;
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = operationalProject.Id,
+                UserId = userId,
+                Position = "Architect",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = superAdminId,
+                UpdatedByUserId = superAdminId,
+                Roles =
+                [
+                    new OperationalProjectMemberRole
+                    {
+                        RoleCode = ProjectTeamRoleCode.Architect,
+                        Scope = ProjectRoleScope.Discipline,
+                        ScopeValue = "architecture",
+                        StartedAt = DateTime.UtcNow.AddDays(-1),
+                    },
+                ],
+            });
+            await db.SaveChangesAsync();
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
+
+        (await Client.GetAsync($"/api/ifc-releases?designProjectId={projectId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/ifc-releases/{releaseId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -57,10 +116,12 @@ public class IfcReleasesControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var proj = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Concept-stage {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         var projectId = (await ReadJsonAsync(proj)).GetProperty("id").GetInt32();
 
@@ -223,43 +284,22 @@ public class IfcReleasesControllerTests : IntegrationTestBase
     private async Task<(int ProjectId, int ApprovedShopId, int DraftingShopId)> CreateShopStageProjectWithApprovedDrawingAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var proj = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"IFC fixture {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         proj.EnsureSuccessStatusCode();
         var projectId = (await ReadJsonAsync(proj)).GetProperty("id").GetInt32();
 
-        // Concept → BasicDesign
-        var opt = await Client.PostAsJsonAsync("/api/concept-options", new
+        await WithDbAsync(async db =>
         {
-            designProjectId = projectId,
-            name = "AutoFinalized",
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.ShopDrawing;
+            await db.SaveChangesAsync();
         });
-        var optId = (await ReadJsonAsync(opt)).GetProperty("id").GetInt32();
-        foreach (var s in new[] { "PendingInternalReview", "PresentedToClient", "Finalized" })
-        {
-            (await Client.PostAsJsonAsync($"/api/concept-options/{optId}/status", new { status = s }))
-                .EnsureSuccessStatusCode();
-        }
-        // BasicDesign → ShopDrawing
-        foreach (var d in new[] { "architecture", "structure", "mep" })
-        {
-            var docRes = await Client.PostAsJsonAsync("/api/basic-design-docs", new
-            {
-                designProjectId = projectId,
-                disciplineCode = d,
-                title = $"BD {d} {Guid.NewGuid():N}",
-            });
-            var docId = (await ReadJsonAsync(docRes)).GetProperty("id").GetInt32();
-            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{docId}/status", new { status = "SubmittedForReview" }))
-                .EnsureSuccessStatusCode();
-            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{docId}/status", new { status = "InternallyApproved" }))
-                .EnsureSuccessStatusCode();
-        }
-        (await Client.PostAsync($"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null))
-            .EnsureSuccessStatusCode();
 
         // Approved shop drawing.
         var approvedShop = await Client.PostAsJsonAsync("/api/shop-drawings", new
@@ -286,6 +326,27 @@ public class IfcReleasesControllerTests : IntegrationTestBase
         var draftingId = (await ReadJsonAsync(draftingShop)).GetProperty("id").GetInt32();
 
         return (projectId, approvedId, draftingId);
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var designUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-TEST-{Guid.NewGuid():N}",
+                Name = "IFC release integration fixture",
+                CustomerId = customerId,
+                ProjectManagerUserId = designUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<int> CreateFullDraftAsync(int projectId, int approvedShopId)

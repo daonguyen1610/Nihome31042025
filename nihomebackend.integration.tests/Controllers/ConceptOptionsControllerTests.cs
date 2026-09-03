@@ -16,7 +16,7 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
     {
-        (await Client.GetAsync("/api/concept-options")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/concept-options?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -24,15 +24,16 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     {
         // SALE has no design.concepts.* bundle.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
-        (await Client.GetAsync("/api/concept-options")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/concept-options?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task List_AsDesign_ReturnsOk()
     {
-        // DESIGN has design.concepts.view.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateDesignProjectAsync();
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
-        var res = await Client.GetAsync("/api/concept-options");
+        var res = await Client.GetAsync($"/api/concept-options?designProjectId={projectId}");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("items").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
@@ -56,7 +57,7 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_UnknownProject_IsBadRequest()
+    public async Task Create_UnknownProject_IsNotFoundAfterAccessCheck()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var res = await Client.PostAsJsonAsync("/api/concept-options", new
@@ -64,7 +65,7 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
             designProjectId = 9999999,
             name = "orphan",
         });
-        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -115,7 +116,7 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     {
         // DESIGN has design.concepts.{view|manage} but NOT
         // design.concepts.finalize (per rbac-defaults). Non-Finalize
-        // transitions must pass; Finalize must be blocked with 403.
+        // transitions must pass; approval access is project-masked with 404.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateDesignProjectAsync();
         var id = await CreateOptionAsync(projectId);
@@ -126,7 +127,7 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
         var toPresented = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "PresentedToClient" });
         toPresented.StatusCode.Should().Be(HttpStatusCode.OK);
         var toFinal = await Client.PostAsJsonAsync($"/api/concept-options/{id}/status", new { status = "Finalized" });
-        toFinal.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        toFinal.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -148,13 +149,53 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     private async Task<int> CreateDesignProjectAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Concept fixture {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var designUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-TEST-{Guid.NewGuid():N}",
+                Name = "Concept integration fixture",
+                CustomerId = customerId,
+                ProjectManagerUserId = designUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = designUserId,
+                Position = "Designer",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = designUserId,
+                UpdatedByUserId = designUserId,
+            };
+            member.Roles.Add(new OperationalProjectMemberRole
+            {
+                RoleCode = ProjectTeamRoleCode.Architect,
+                Scope = ProjectRoleScope.Project,
+                StartedAt = member.StartedAt,
+            });
+            db.OperationalProjectMembers.Add(member);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<int> CreateOptionAsync(int projectId)

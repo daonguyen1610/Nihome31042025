@@ -31,7 +31,10 @@ public class ShopDrawingService(
         ["interior"] = "NT-SD",
     };
 
-    public async Task<ShopDrawingListResponse> ListAsync(ShopDrawingListParams p, CancellationToken ct = default)
+    public async Task<ShopDrawingListResponse> ListAsync(
+        ShopDrawingListParams p,
+        CancellationToken ct = default,
+        IReadOnlySet<string>? accessibleDisciplines = null)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 50 : p.PageSize, 1, MaxPageSize);
@@ -43,6 +46,11 @@ public class ShopDrawingService(
             .AsQueryable();
 
         if (p.DesignProjectId.HasValue) q = q.Where(d => d.DesignProjectId == p.DesignProjectId.Value);
+        if (accessibleDisciplines is not null)
+        {
+            var accessibleCodes = accessibleDisciplines.ToList();
+            q = q.Where(d => accessibleCodes.Contains(d.DisciplineCode));
+        }
         if (!string.IsNullOrWhiteSpace(p.DisciplineCode))
         {
             var code = p.DisciplineCode.Trim();
@@ -91,6 +99,11 @@ public class ShopDrawingService(
         // list even when pagination is in play.
         var statusScope = db.ShopDrawings.AsNoTracking();
         if (p.DesignProjectId.HasValue) statusScope = statusScope.Where(d => d.DesignProjectId == p.DesignProjectId.Value);
+        if (accessibleDisciplines is not null)
+        {
+            var accessibleStatusCodes = accessibleDisciplines.ToList();
+            statusScope = statusScope.Where(d => accessibleStatusCodes.Contains(d.DisciplineCode));
+        }
         if (!string.IsNullOrWhiteSpace(p.DisciplineCode))
         {
             var code = p.DisciplineCode.Trim();

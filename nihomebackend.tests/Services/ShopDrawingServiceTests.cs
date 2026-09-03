@@ -135,6 +135,22 @@ public class ShopDrawingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ListAsync_AccessibleDisciplines_FiltersItemsCountsAndTotal()
+    {
+        await _sut.CreateAsync(ValidCreate(title: "Architecture", discipline: "architecture"), _userId);
+        await _sut.CreateAsync(ValidCreate(title: "Structure", discipline: "structure"), _userId);
+
+        var result = await _sut.ListAsync(
+            new ShopDrawingListParams { DesignProjectId = _projectId },
+            accessibleDisciplines: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "architecture" });
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal("architecture", item.DisciplineCode);
+        Assert.Equal(1, result.Total);
+        Assert.Equal(1, result.StatusCounts[nameof(ShopDrawingStatus.Drafting)]);
+    }
+
+    [Fact]
     public async Task CreateAsync_MissingTitle_Throws()
     {
         await Assert.ThrowsAsync<ShopDrawingOperationException>(() =>

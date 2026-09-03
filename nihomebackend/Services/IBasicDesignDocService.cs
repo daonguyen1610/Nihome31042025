@@ -23,7 +23,10 @@ public class BasicDesignDocOperationException(string message) : Exception(messag
 /// </summary>
 public interface IBasicDesignDocService
 {
-    Task<BasicDesignDocListResponse> ListAsync(BasicDesignDocListParams parameters, CancellationToken ct = default);
+    Task<BasicDesignDocListResponse> ListAsync(
+        BasicDesignDocListParams parameters,
+        CancellationToken ct = default,
+        IReadOnlySet<string>? accessibleDisciplines = null);
 
     Task<BasicDesignDocResponse?> GetAsync(int id, CancellationToken ct = default);
 

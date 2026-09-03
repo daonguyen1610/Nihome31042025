@@ -19,7 +19,7 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
     {
-        (await Client.GetAsync("/api/shop-drawings")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/shop-drawings?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -27,18 +27,47 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
     {
         // SALE has no design.shop.* bundle.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
-        (await Client.GetAsync("/api/shop-drawings")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/shop-drawings?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task List_AsDesign_ReturnsOkWithStatusCounts()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateShopStageProjectAsync();
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
-        var res = await Client.GetAsync("/api/shop-drawings");
+        var res = await Client.GetAsync($"/api/shop-drawings?designProjectId={projectId}");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("items").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
         body.GetProperty("statusCounts").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Object);
+    }
+
+    [Fact]
+    public async Task DisciplineScopedMember_ListDetailAndContent_HideOtherDisciplines()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateShopStageProjectAsync();
+        var architectureId = await CreateDrawingAsync(projectId, "architecture");
+        var structureId = await CreateDrawingAsync(projectId, "structure");
+        using (var file = CreateFileForm("restricted structure", "structure.pdf", "application/pdf"))
+            (await Client.PostAsync($"/api/shop-drawings/{structureId}/upload", file)).EnsureSuccessStatusCode();
+        await SeedDisciplineMemberAsync(projectId, "architecture");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "ARCHITECT"));
+        var list = await Client.GetAsync($"/api/shop-drawings?designProjectId={projectId}");
+        var body = await ReadJsonAsync(list);
+
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.GetProperty("total").GetInt32().Should().Be(1);
+        body.GetProperty("items")[0].GetProperty("id").GetInt32().Should().Be(architectureId);
+        body.GetProperty("statusCounts").GetProperty("Drafting").GetInt32().Should().Be(1);
+        (await Client.GetAsync($"/api/shop-drawings/{architectureId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/shop-drawings/{structureId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/shop-drawings/{structureId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -93,10 +122,12 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
         // The auto-created project after DesignProject POST is at Concept stage.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var proj = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Concept-stage {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         var projectId = (await ReadJsonAsync(proj)).GetProperty("id").GetInt32();
 
@@ -254,54 +285,49 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
     // -------- helpers --------
 
     /// <summary>
-    /// Create a fresh DesignProject, finalize a Concept option to unlock
-    /// BasicDesign, then approve 1 basic-design doc per required discipline
-    /// and unlock Shop Drawing. Returns the project id.
+    /// Create a fresh DesignProject and seed the required setup stage.
     /// </summary>
     private async Task<int> CreateShopStageProjectAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var proj = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Shop-stage {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         proj.EnsureSuccessStatusCode();
         var projectId = (await ReadJsonAsync(proj)).GetProperty("id").GetInt32();
 
-        // Concept → BasicDesign
-        var opt = await Client.PostAsJsonAsync("/api/concept-options", new
+        await WithDbAsync(async db =>
         {
-            designProjectId = projectId,
-            name = "AutoFinalized",
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.ShopDrawing;
+            await db.SaveChangesAsync();
         });
-        opt.EnsureSuccessStatusCode();
-        var optId = (await ReadJsonAsync(opt)).GetProperty("id").GetInt32();
-        foreach (var s in new[] { "PendingInternalReview", "PresentedToClient", "Finalized" })
-        {
-            (await Client.PostAsJsonAsync($"/api/concept-options/{optId}/status", new { status = s }))
-                .EnsureSuccessStatusCode();
-        }
-
-        // BasicDesign → ShopDrawing (approve 1 doc per required discipline)
-        foreach (var d in new[] { "architecture", "structure", "mep" })
-        {
-            var docRes = await Client.PostAsJsonAsync("/api/basic-design-docs", new
-            {
-                designProjectId = projectId,
-                disciplineCode = d,
-                title = $"BD {d} {Guid.NewGuid():N}",
-            });
-            docRes.EnsureSuccessStatusCode();
-            var docId = (await ReadJsonAsync(docRes)).GetProperty("id").GetInt32();
-            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{docId}/status", new { status = "SubmittedForReview" }))
-                .EnsureSuccessStatusCode();
-            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{docId}/status", new { status = "InternallyApproved" }))
-                .EnsureSuccessStatusCode();
-        }
-        (await Client.PostAsync($"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null))
-            .EnsureSuccessStatusCode();
         return projectId;
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var designUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-TEST-{Guid.NewGuid():N}",
+                Name = "Shop drawing integration fixture",
+                CustomerId = customerId,
+                ProjectManagerUserId = designUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<int> CreateDrawingAsync(int projectId, string discipline, string constructionItem = "Móng cọc")
@@ -315,6 +341,41 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task SeedDisciplineMemberAsync(int designProjectId, string discipline)
+    {
+        await WithDbAsync(async db =>
+        {
+            var userId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var operationalProjectId = await db.DesignProjects
+                .Where(project => project.Id == designProjectId)
+                .Select(project => project.OperationalProjectId!.Value)
+                .SingleAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = operationalProjectId,
+                UserId = userId,
+                Position = "Architect",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+                Roles =
+                [
+                    new OperationalProjectMemberRole
+                    {
+                        RoleCode = ProjectTeamRoleCode.Architect,
+                        Scope = ProjectRoleScope.Discipline,
+                        ScopeValue = discipline,
+                        StartedAt = DateTime.UtcNow.AddDays(-1),
+                    },
+                ],
+            });
+            await db.SaveChangesAsync();
+        });
     }
 
     private static MultipartFormDataContent CreateFileForm(string content, string fileName, string contentType)

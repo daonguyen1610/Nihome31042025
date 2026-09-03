@@ -15,11 +15,16 @@ public class DesignProjectService(
     AppDbContext db,
     IPermitChecklistService permitChecklistService,
     ILogger<DesignProjectService> logger,
-    IProjectDocumentStagingService projectDocuments) : IDesignProjectService
+    IProjectDocumentStagingService projectDocuments,
+    IProjectAccessService projectAccess,
+    ILegacyProjectTeamSyncService projectTeamSync) : IDesignProjectService
 {
     private const int MaxPageSize = 100;
 
-    public async Task<DesignProjectListResponse> ListAsync(DesignProjectListParams p, CancellationToken ct = default)
+    public async Task<DesignProjectListResponse> ListAsync(
+        DesignProjectListParams p,
+        int callerUserId,
+        CancellationToken ct = default)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 20 : p.PageSize, 1, MaxPageSize);
@@ -31,6 +36,15 @@ public class DesignProjectService(
             .Include(dp => dp.ProjectManager)
             .Include(dp => dp.DesignLead)
             .AsQueryable();
+
+        if (!await projectAccess.HasAdministrativeBypassAsync(callerUserId, ct))
+        {
+            var accessibleProjectIds = await projectAccess.GetAccessibleOperationalProjectIdsAsync(callerUserId, ct);
+            q = q.Where(dp =>
+                dp.OperationalProjectId.HasValue && accessibleProjectIds.Contains(dp.OperationalProjectId.Value) ||
+                !dp.OperationalProjectId.HasValue &&
+                (dp.ProjectManagerUserId == callerUserId || dp.DesignLeadUserId == callerUserId));
+        }
 
         if (p.CustomerId.HasValue) q = q.Where(dp => dp.CustomerId == p.CustomerId.Value);
         if (p.ContractId.HasValue) q = q.Where(dp => dp.ContractId == p.ContractId.Value);
@@ -95,7 +109,6 @@ public class DesignProjectService(
         {
             throw new DesignProjectOperationException("Tên dự án là bắt buộc.");
         }
-
         await EnsureRelationsAsync(request, excludeDesignProjectId: null, ct);
         var allocationYear = DateTime.UtcNow.Year;
         await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
@@ -120,6 +133,15 @@ public class DesignProjectService(
             UpdatedAt = DateTime.UtcNow,
         };
         db.DesignProjects.Add(entity);
+        if (entity.OperationalProjectId.HasValue)
+        {
+            await projectTeamSync.SyncDesignProjectRolesAsync(
+                entity.OperationalProjectId.Value,
+                entity.ProjectManagerUserId,
+                entity.DesignLeadUserId,
+                callerUserId,
+                ct);
+        }
         await db.SaveChangesAsync(ct);
         if (allocationTransaction is not null)
         {
@@ -146,12 +168,13 @@ public class DesignProjectService(
             throw new DesignProjectOperationException("Tên dự án là bắt buộc.");
         }
 
-        var previousProjectId = entity.OperationalProjectId;
         request.OperationalProjectId ??= entity.OperationalProjectId;
+        if (request.OperationalProjectId != entity.OperationalProjectId)
+        {
+            throw new DesignProjectOperationException(
+                "Không thể chuyển dự án thiết kế sang Dự án vận hành khác.");
+        }
         await EnsureRelationsAsync(request, id, ct);
-        await using var transaction = previousProjectId != request.OperationalProjectId && db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct)
-            : null;
 
         entity.Name = name;
         entity.OperationalProjectId = request.OperationalProjectId;
@@ -163,14 +186,6 @@ public class DesignProjectService(
         entity.Deadline = request.Deadline;
         entity.Note = TrimOrNull(request.Note);
 
-        if (!string.IsNullOrWhiteSpace(request.CurrentStage))
-        {
-            if (!Enum.TryParse<DesignProjectStage>(request.CurrentStage, true, out var stage))
-            {
-                throw new DesignProjectOperationException($"Giai đoạn '{request.CurrentStage}' không hợp lệ.");
-            }
-            entity.CurrentStage = stage;
-        }
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
             if (!Enum.TryParse<DesignProjectStatus>(request.Status, true, out var status))
@@ -183,26 +198,30 @@ public class DesignProjectService(
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
 
-        if (previousProjectId != entity.OperationalProjectId)
+        if (entity.OperationalProjectId.HasValue)
         {
-            var files = await GetMoveDescriptorsAsync(entity, ct);
-            await projectDocuments.StageExistingManagedFilesMoveAsync(
-                previousProjectId, entity.OperationalProjectId, files, callerUserId, ct);
+            await projectTeamSync.SyncDesignProjectRolesAsync(
+                entity.OperationalProjectId.Value,
+                entity.ProjectManagerUserId,
+                entity.DesignLeadUserId,
+                callerUserId,
+                ct);
         }
-
         await db.SaveChangesAsync(ct);
-        if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation("DesignProject {Id} updated by user {UserId}", id, callerUserId);
         return await GetAsync(id, ct);
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(int id, int callerUserId, CancellationToken ct = default)
     {
         var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
         if (entity is null) return false;
+        if (entity.CurrentStage != DesignProjectStage.Concept)
+            throw new DesignProjectOperationException(
+                "Chỉ có thể xoá Dự án thiết kế khi còn ở giai đoạn Ý tưởng.");
 
         await AggregateDeletionService.DeleteDesignProjectsAsync(
-            db, new[] { id }, projectDocuments, entity.UpdatedByUserId, ct);
+            db, new[] { id }, projectDocuments, callerUserId, ct);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("DesignProject {Id} deleted", id);
         return true;
@@ -419,14 +438,18 @@ public class DesignProjectService(
             }
         }
         if (request.ProjectManagerUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.ProjectManagerUserId.Value, ct))
+            !await db.Users.AnyAsync(u =>
+                u.Id == request.ProjectManagerUserId.Value && u.IsActive, ct))
         {
-            throw new DesignProjectOperationException($"PM #{request.ProjectManagerUserId} không tồn tại.");
+            throw new DesignProjectOperationException(
+                $"PM #{request.ProjectManagerUserId} không tồn tại hoặc đã ngừng hoạt động.");
         }
         if (request.DesignLeadUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.DesignLeadUserId.Value, ct))
+            !await db.Users.AnyAsync(u =>
+                u.Id == request.DesignLeadUserId.Value && u.IsActive, ct))
         {
-            throw new DesignProjectOperationException($"Design Lead #{request.DesignLeadUserId} không tồn tại.");
+            throw new DesignProjectOperationException(
+                $"Design Lead #{request.DesignLeadUserId} không tồn tại hoặc đã ngừng hoạt động.");
         }
         if (request.StartDate.HasValue && request.Deadline.HasValue &&
             request.Deadline.Value < request.StartDate.Value)

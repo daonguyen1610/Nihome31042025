@@ -126,6 +126,23 @@ public class BasicDesignDocServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ListAsync_AccessibleDisciplines_FiltersItemsReadinessAndTotal()
+    {
+        await _sut.CreateAsync(ValidCreate(title: "Architecture", discipline: "architecture"), _userId);
+        await _sut.CreateAsync(ValidCreate(title: "Structure", discipline: "structure"), _userId);
+
+        var result = await _sut.ListAsync(
+            new BasicDesignDocListParams { DesignProjectId = _projectId },
+            accessibleDisciplines: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "architecture" });
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal("architecture", item.DisciplineCode);
+        Assert.Equal(1, result.Total);
+        Assert.Equal(["architecture"], result.Readiness.RequiredDisciplineCodes);
+        Assert.False(result.Readiness.ReadyForShopDrawing);
+    }
+
+    [Fact]
     public async Task CreateAsync_MissingTitle_Throws()
     {
         await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>

@@ -19,6 +19,7 @@ public class DesignProjectServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly DesignProjectService _sut;
     private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
+    private readonly Mock<IProjectAccessService> _projectAccess = new();
     private readonly int _userId;
     private readonly int _customerId;
     private readonly int _contractId;
@@ -26,11 +27,16 @@ public class DesignProjectServiceTests : IDisposable
     public DesignProjectServiceTests()
     {
         _db = DbContextFactory.Create();
+        _projectAccess.Setup(service => service.HasAdministrativeBypassAsync(
+                It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         _sut = new DesignProjectService(
             _db,
             new NoopPermitChecklistService(),
             NullLogger<DesignProjectService>.Instance,
-            _projectDocuments.Object);
+            _projectDocuments.Object,
+            _projectAccess.Object,
+            new LegacyProjectTeamSyncService(_db));
 
         var user = new ApplicationUser
         {
@@ -97,6 +103,46 @@ public class DesignProjectServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_LinkedProject_DualWritesDesignManagerAndLeadRoles()
+    {
+        var lead = new ApplicationUser
+        {
+            PhoneNumber = "0900000021",
+            FullName = "Design Lead Tester",
+            Email = "design.lead.test@example.com",
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
+        };
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-DESIGN-DUAL-WRITE",
+            Name = "Design dual-write project",
+            CustomerId = _customerId,
+        };
+        _db.AddRange(lead, operationalProject);
+        await _db.SaveChangesAsync();
+        var request = ValidCreate();
+        request.OperationalProjectId = operationalProject.Id;
+        request.ProjectManagerUserId = _userId;
+        request.DesignLeadUserId = lead.Id;
+
+        await _sut.CreateAsync(request, _userId);
+
+        var members = await _db.OperationalProjectMembers.Include(member => member.Roles).ToListAsync();
+        Assert.Contains(members, member => member.UserId == _userId && member.Roles.Any(role =>
+            role.RoleCode == ProjectTeamRoleCode.ProjectManager &&
+            role.Scope == ProjectRoleScope.Module &&
+            role.ScopeValue == "Design" &&
+            role.EndedAt == null));
+        Assert.Contains(members, member => member.UserId == lead.Id && member.Roles.Any(role =>
+            role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+            role.Scope == ProjectRoleScope.Module &&
+            role.ScopeValue == "Design" &&
+            role.EndedAt == null));
+    }
+
+    [Fact]
     public async Task CreateAsync_MissingName_Throws()
     {
         await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
@@ -115,6 +161,29 @@ public class DesignProjectServiceTests : IDisposable
     {
         await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
             _sut.CreateAsync(ValidCreate(contractId: 99999), _userId));
+    }
+
+    [Fact]
+    public async Task CreateAsync_InactiveDesignLead_IsRejectedWithoutMembership()
+    {
+        var inactiveLead = new ApplicationUser
+        {
+            PhoneNumber = "0900000022",
+            FullName = "Inactive Design Lead",
+            Email = "inactive.design.lead@example.com",
+            Role = UserRole.USER,
+            IsActive = false,
+            PasswordHash = "x",
+        };
+        _db.Users.Add(inactiveLead);
+        await _db.SaveChangesAsync();
+        var request = ValidCreate();
+        request.DesignLeadUserId = inactiveLead.Id;
+
+        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.CreateAsync(request, _userId));
+
+        Assert.Empty(await _db.OperationalProjectMembers.ToListAsync());
     }
 
     [Fact]
@@ -182,14 +251,11 @@ public class DesignProjectServiceTests : IDisposable
     {
         var a = await _sut.CreateAsync(ValidCreate(name: "Row A"), _userId);
         var b = await _sut.CreateAsync(ValidCreate(name: "Row B"), _userId);
-        await _sut.UpdateAsync(b.Id, new UpdateDesignProjectRequest
-        {
-            Name = b.Name,
-            CustomerId = _customerId,
-            CurrentStage = "BasicDesign",
-        }, _userId);
+        var entity = await _db.DesignProjects.FindAsync(b.Id);
+        entity!.CurrentStage = DesignProjectStage.BasicDesign;
+        await _db.SaveChangesAsync();
 
-        var basic = await _sut.ListAsync(new DesignProjectListParams { Stage = "BasicDesign" });
+        var basic = await _sut.ListAsync(new DesignProjectListParams { Stage = "BasicDesign" }, _userId);
         Assert.Single(basic.Items);
         Assert.Equal(b.Id, basic.Items[0].Id);
     }
@@ -208,21 +274,21 @@ public class DesignProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_InvalidStage_Throws()
+    public async Task UpdateAsync_DoesNotChangeStage()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var req = new UpdateDesignProjectRequest
         {
             Name = created.Name,
             CustomerId = _customerId,
-            CurrentStage = "NotAStage",
+            Status = "OnHold",
         };
-        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
-            _sut.UpdateAsync(created.Id, req, _userId));
+        var updated = await _sut.UpdateAsync(created.Id, req, _userId);
+        Assert.Equal("Concept", updated!.CurrentStage);
     }
 
     [Fact]
-    public async Task UpdateAsync_ProjectChange_MovesEverySupportedAuthoritativeFileSlot()
+    public async Task UpdateAsync_ProjectChange_IsRejected()
     {
         var oldProject = new OperationalProject { Code = "OP-D-OLD", Name = "Old", CustomerId = _customerId };
         var newProject = new OperationalProject { Code = "OP-D-NEW", Name = "New", CustomerId = _customerId };
@@ -297,24 +363,16 @@ public class DesignProjectServiceTests : IDisposable
             });
         await _db.SaveChangesAsync();
 
-        await _sut.UpdateAsync(created.Id, new UpdateDesignProjectRequest
-        {
-            Name = created.Name,
-            CustomerId = _customerId,
-            OperationalProjectId = newProject.Id,
-        }, _userId);
-
+        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.UpdateAsync(created.Id, new UpdateDesignProjectRequest
+            {
+                Name = created.Name,
+                CustomerId = _customerId,
+                OperationalProjectId = newProject.Id,
+            }, _userId));
         _projectDocuments.Verify(staging => staging.StageExistingManagedFilesMoveAsync(
-            oldProject.Id, newProject.Id,
-            It.Is<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(files => files.Count == 7 &&
-                files.Any(file => file.SourceEntityType == nameof(BasicDesignDoc) && file.SourceSlot == "file" && file.Category == ProjectDocumentCategory.DesignBasic) &&
-                files.Any(file => file.SourceEntityType == nameof(ShopDrawing) && file.SourceSlot == "file" && file.Category == ProjectDocumentCategory.DesignShopDrawing) &&
-                files.Any(file => file.SourceEntityType == nameof(PermitChecklistItem) && file.SourceSlot == "submittedPackage" && file.Category == ProjectDocumentCategory.LegalPermits) &&
-                files.Any(file => file.SourceEntityType == nameof(PermitChecklistItem) && file.SourceSlot == "issuedPermit" && file.Category == ProjectDocumentCategory.LegalPermits) &&
-                files.Any(file => file.SourceEntityType == nameof(AcceptanceRecord) && file.SourceSlot == "documents" && file.SourceModule == ProjectDocumentSourceModule.Acceptance) &&
-                files.Any(file => file.SourceEntityType == nameof(AsBuiltDocument) && file.SourceSlot == "file" && file.SourceModule == ProjectDocumentSourceModule.Acceptance) &&
-                files.Any(file => file.SourceEntityType == nameof(HandoverRecord) && file.SourceSlot == "documents" && file.SourceModule == ProjectDocumentSourceModule.Handover)),
-            _userId, It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<IReadOnlyCollection<ProjectDocumentMoveDescriptor>>(),
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ---------------- Delete ----------------
@@ -323,13 +381,13 @@ public class DesignProjectServiceTests : IDisposable
     public async Task DeleteAsync_ConceptStage_Deletes()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        var removed = await _sut.DeleteAsync(created.Id);
+        var removed = await _sut.DeleteAsync(created.Id, _userId);
         Assert.True(removed);
         Assert.Null(await _sut.GetAsync(created.Id));
     }
 
     [Fact]
-    public async Task DeleteAsync_BeyondConcept_RemovesBlockersAndPreservesExternalRows()
+    public async Task DeleteAsync_BeyondConcept_IsRejectedAndPreservesProject()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var operationalProject = new OperationalProject
@@ -343,12 +401,8 @@ public class DesignProjectServiceTests : IDisposable
         var createdEntity = await _db.DesignProjects.FindAsync(created.Id);
         createdEntity!.OperationalProjectId = operationalProject.Id;
         await _db.SaveChangesAsync();
-        await _sut.UpdateAsync(created.Id, new UpdateDesignProjectRequest
-        {
-            Name = created.Name,
-            CustomerId = _customerId,
-            CurrentStage = "BasicDesign",
-        }, _userId);
+        createdEntity.CurrentStage = DesignProjectStage.BasicDesign;
+        await _db.SaveChangesAsync();
         var basicDoc = new BasicDesignDoc
         {
             DesignProjectId = created.Id,
@@ -476,42 +530,16 @@ public class DesignProjectServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        Assert.True(await _sut.DeleteAsync(created.Id));
-        Assert.Null(await _db.DesignProjects.FindAsync(created.Id));
-        Assert.Empty(await _db.DrawingRevisions.ToListAsync());
-        Assert.Empty(await _db.ConstructionTaskDependencies.ToListAsync());
-        Assert.Empty(await _db.AcceptanceRecords.ToListAsync());
-        Assert.Empty(await _db.HandoverRecords.ToListAsync());
-        Assert.Empty(await _db.IfcReleaseItems.ToListAsync());
-        Assert.NotNull(await _db.Customers.FindAsync(_customerId));
-        Assert.NotNull(await _db.Contracts.FindAsync(_contractId));
-        Assert.NotNull(await _db.Users.FindAsync(_userId));
+        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.DeleteAsync(created.Id, _userId));
+        Assert.NotNull(await _db.DesignProjects.FindAsync(created.Id));
+        Assert.NotEmpty(await _db.DrawingRevisions.ToListAsync());
+        Assert.NotEmpty(await _db.AcceptanceRecords.ToListAsync());
+        Assert.NotEmpty(await _db.HandoverRecords.ToListAsync());
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
-            basicDoc.Id, basicDoc.FilePath!, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
-        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
-            shopDrawing.Id, shopDrawing.FilePath!, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
-        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
-            "submittedPackage", permit.Id, permit.SubmittedFilePath!, It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem),
-            "issuedPermit", permit.Id, permit.IssuedFilePath!, It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            operationalProject.Id, ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord),
-            "documents", acceptance.Id, "/files/business-documents/acceptance/aggregate.pdf",
-            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
-        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            operationalProject.Id, ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument),
-            "file", asBuilt.Id, asBuilt.FileUrl!, It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()), Times.Once);
-        _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
-            operationalProject.Id, ProjectDocumentSourceModule.Handover, nameof(HandoverRecord),
-            "documents", handover.Id, "/files/business-documents/handover/aggregate.pdf",
-            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ---------------- Auto-create hook ----------------

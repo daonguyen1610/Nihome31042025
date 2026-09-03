@@ -10,12 +10,29 @@ export async function createDesignProject(
   api: APIRequestContext,
   options: CreateDesignProjectOptions,
 ): Promise<number> {
+  const operationalProjectResponse = await api.post("/api/operational-projects", {
+    headers: options.headers,
+    data: {
+      name: `${options.name} operational project`,
+      customerId: options.customerId,
+    },
+  });
+  if (!operationalProjectResponse.ok()) {
+    throw new Error(
+      `Operational project creation failed (${operationalProjectResponse.status()}): ${await operationalProjectResponse.text()}`,
+    );
+  }
+  const operationalProjectId = (await operationalProjectResponse.json()).id as number;
   let lastError = "";
 
   for (let attempt = 1; attempt <= 5; attempt += 1) {
     const response = await api.post("/api/design-projects", {
       headers: options.headers,
-      data: { name: options.name, customerId: options.customerId },
+      data: {
+        name: options.name,
+        customerId: options.customerId,
+        operationalProjectId,
+      },
     });
 
     if (response.ok()) {

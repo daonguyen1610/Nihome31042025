@@ -10,6 +10,7 @@ namespace NihomeBackend.Services;
 
 public class OperationalProjectService(
     AppDbContext db,
+    ILegacyProjectTeamSyncService projectTeamSync,
     ILogger<OperationalProjectService> logger) : IOperationalProjectService
 {
     private const int MaxPageSize = 100;
@@ -28,7 +29,8 @@ public class OperationalProjectService(
         {
             query = query.Where(project =>
                 project.ProjectManagerUserId == callerUserId ||
-                project.CreatedByUserId == callerUserId);
+                project.CreatedByUserId == callerUserId ||
+                project.TeamMembers.Any(member => member.UserId == callerUserId && member.EndedAt == null));
         }
         else if (parameters.ProjectManagerUserId.HasValue)
         {
@@ -116,9 +118,10 @@ public class OperationalProjectService(
                 .ThenInclude(c => c.Customer)
             .Include(item => item.Contracts)
                 .ThenInclude(c => c.Owner)
+            .Include(item => item.TeamMembers)
             .FirstOrDefaultAsync(item => item.Id == id, ct);
 
-        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return null;
+        if (project is null || !CanView(project, callerUserId, canSeeAll)) return null;
         return Map(project);
     }
 
@@ -130,8 +133,9 @@ public class OperationalProjectService(
     {
         var project = await db.OperationalProjects
             .AsNoTracking()
+            .Include(item => item.TeamMembers)
             .FirstOrDefaultAsync(item => item.Id == id, ct);
-        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return null;
+        if (project is null || !CanView(project, callerUserId, canSeeAll)) return null;
 
         var milestones = await db.ContractPaymentMilestones
             .AsNoTracking()
@@ -208,6 +212,9 @@ public class OperationalProjectService(
         };
         db.OperationalProjects.Add(project);
         await db.SaveChangesAsync(ct);
+        await projectTeamSync.SyncOperationalProjectManagerAsync(
+            project.Id, project.ProjectManagerUserId, callerUserId, ct);
+        await db.SaveChangesAsync(ct);
         if (allocationTransaction is not null) await allocationTransaction.CommitAsync(ct);
 
         logger.LogInformation(
@@ -226,7 +233,7 @@ public class OperationalProjectService(
         CancellationToken ct = default)
     {
         var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
-        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return null;
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
 
         await ValidateAsync(request, callerUserId, canSeeAll, ct);
         if (project.CustomerId != request.CustomerId &&
@@ -248,6 +255,8 @@ public class OperationalProjectService(
         project.UpdatedAt = DateTime.UtcNow;
         project.UpdatedByUserId = callerUserId;
 
+        await projectTeamSync.SyncOperationalProjectManagerAsync(
+            project.Id, project.ProjectManagerUserId, callerUserId, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetAsync(id, callerUserId, canSeeAll, ct);
     }
@@ -260,7 +269,7 @@ public class OperationalProjectService(
         CancellationToken ct = default)
     {
         var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
-        if (project is null || !CanAccess(project, callerUserId, canSeeAll)) return false;
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return false;
         if (project.Status != OperationalProjectStatus.Planning)
         {
             throw new OperationalProjectOperationException(
@@ -275,7 +284,15 @@ public class OperationalProjectService(
 
         CrmConcurrency.Apply(db, project, rowVersion);
         db.OperationalProjects.Remove(project);
-        await CrmConcurrency.SaveChangesAsync(db, ct);
+        try
+        {
+            await CrmConcurrency.SaveChangesAsync(db, ct);
+        }
+        catch (DbUpdateException)
+        {
+            throw new CrmConcurrencyException(
+                "Dự án vừa phát sinh dữ liệu liên quan. Vui lòng tải lại và chuyển Dự án sang Đã huỷ.");
+        }
         return true;
     }
 
@@ -284,7 +301,10 @@ public class OperationalProjectService(
         await db.Quotes.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
         await db.Contracts.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
         await db.ProjectDocuments.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct);
+        await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
+        await db.OperationalProjectMembers.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
+        await db.OperationalProjectAssignments.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
+        await db.OperationalProjectTeamHistory.AnyAsync(item => item.OperationalProjectId == projectId, ct);
 
     private async Task ValidateAsync(
         CreateOperationalProjectRequest request,
@@ -309,9 +329,10 @@ public class OperationalProjectService(
         }
 
         var managerId = request.ProjectManagerUserId ?? callerUserId;
-        if (!await db.Users.AnyAsync(user => user.Id == managerId, ct))
+        if (!await db.Users.AnyAsync(user => user.Id == managerId && user.IsActive, ct))
         {
-            throw new OperationalProjectOperationException($"PM #{managerId} không tồn tại.");
+            throw new OperationalProjectOperationException(
+                $"PM #{managerId} không tồn tại hoặc đã ngừng hoạt động.");
         }
         if (!canSeeAll && managerId != callerUserId)
         {
@@ -395,12 +416,18 @@ public class OperationalProjectService(
         }
     }
 
-    private static bool CanAccess(
+    private static bool CanManage(
         OperationalProject project,
         int callerUserId,
         bool canSeeAll) => canSeeAll ||
             project.ProjectManagerUserId == callerUserId ||
             project.CreatedByUserId == callerUserId;
+
+    private static bool CanView(
+        OperationalProject project,
+        int callerUserId,
+        bool canSeeAll) => CanManage(project, callerUserId, canSeeAll) ||
+            project.TeamMembers.Any(member => member.UserId == callerUserId && member.EndedAt == null);
 
     private static OperationalProjectResponse Map(OperationalProject project) => new()
     {
