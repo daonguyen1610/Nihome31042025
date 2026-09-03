@@ -24,7 +24,7 @@ public static class SampleCrmDataSeeder
         // fall back to the first admin.
         var owner = db.Users.FirstOrDefault(u => u.PhoneNumber == "0911000003")
                     ?? db.Users.FirstOrDefault(u => u.Role == UserRole.SUPER_ADMIN)
-                    ?? db.Users.FirstOrDefault();
+                    ?? db.Users.OrderBy(u => u.Id).FirstOrDefault();
         if (owner is null) return;
         var projectManager = ResolveRoleUser(db, "PM", owner);
         var designOwner = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
@@ -1680,7 +1680,8 @@ public static class SampleCrmDataSeeder
     /// data on a fresh DB. Two disciplines already reach
     /// <c>InternallyApproved</c>; the third stays In Progress so the
     /// readiness gate is a partial-not-yet-ready state (exercises both
-    /// UI paths). Idempotent — guarded on the "Sample" marker in Title.
+    /// UI paths). Idempotent by the unique (project, document code) key so
+    /// partial seeds and administrator-created rows are preserved.
     /// </summary>
     private static void SeedBasicDesignDocs(AppDbContext db, ApplicationUser owner, DateTime now)
     {
@@ -1692,9 +1693,6 @@ public static class SampleCrmDataSeeder
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
-        if (db.BasicDesignDocs.Any(d => d.DesignProjectId == project.Id
-                                     && d.Note != null
-                                     && d.Note.StartsWith(SampleMarker))) return;
 
         var seeds = new (string Discipline, string Prefix, string Title, BasicDesignDocStatus Status, int DaysAgo)[]
         {
@@ -1704,17 +1702,23 @@ public static class SampleCrmDataSeeder
             ("mep",          "MEP-BD", "Hệ thống điện — Sơ đồ nguyên lý",          BasicDesignDocStatus.InProgress,         3),
         };
 
+        var existingCodes = db.BasicDesignDocs
+            .Where(document => document.DesignProjectId == project.Id)
+            .Select(document => document.DocumentCode)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var perDisciplineSeq = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var (discipline, prefix, title, status, daysAgo) in seeds)
         {
             perDisciplineSeq.TryGetValue(discipline, out var current);
             perDisciplineSeq[discipline] = current + 1;
             var seq = perDisciplineSeq[discipline];
+            var documentCode = $"{prefix}-{seq:D3}";
+            if (!existingCodes.Add(documentCode)) continue;
             db.BasicDesignDocs.Add(new BasicDesignDoc
             {
                 DesignProjectId = project.Id,
                 DisciplineCode = discipline,
-                DocumentCode = $"{prefix}-{seq:D3}",
+                DocumentCode = documentCode,
                 Title = title,
                 OwnerUserId = owner.Id,
                 Status = status,
