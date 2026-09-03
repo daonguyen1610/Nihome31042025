@@ -14,6 +14,89 @@ public class ContentSeederTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public void Seed_LogosRestoreEachMissingDefaultFromPartialCategoryState()
+    {
+        _db.ClientLogos.Add(new ClientLogo
+        {
+            Name = "Custom client",
+            ImageUrl = "/images/custom-client.png",
+            Kind = LogoKind.Client,
+            SortOrder = 500,
+        });
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        Assert.Contains(_db.ClientLogos, logo => logo.Kind == LogoKind.Client && logo.Name == "BIDV");
+        Assert.Contains(_db.ClientLogos, logo => logo.Kind == LogoKind.Client && logo.Name == "SBMT");
+        Assert.Contains(_db.ClientLogos, logo => logo.Kind == LogoKind.Client && logo.Name == "DOMINSNANT");
+        Assert.Contains(_db.ClientLogos, logo => logo.Kind == LogoKind.Client && logo.Name == "MEDICARE");
+        Assert.Contains(_db.ClientLogos, logo => logo.Kind == LogoKind.Partner && logo.Name == "AGC");
+        Assert.Contains(_db.ClientLogos, logo => logo.Kind == LogoKind.Supplier && logo.Name == "LHC");
+        Assert.Contains(_db.ClientLogos, logo => logo.Kind == LogoKind.Supplier && logo.Name == "ACG");
+    }
+
+    [Fact]
+    public void Seed_LogosPreserveMatchingDefaultWithCustomValuesAndStableId()
+    {
+        var existing = new ClientLogo
+        {
+            Name = "bidv",
+            ImageUrl = "/images/admin-bidv.png",
+            Kind = LogoKind.Client,
+            SortOrder = 777,
+        };
+        _db.ClientLogos.Add(existing);
+        _db.SaveChanges();
+        var id = existing.Id;
+
+        ContentSeeder.Seed(_db);
+        ContentSeeder.Seed(_db);
+
+        var matching = _db.ClientLogos.Where(logo =>
+            logo.Kind == LogoKind.Client && logo.Name.ToLower() == "bidv").ToList();
+        var preserved = Assert.Single(matching);
+        Assert.Equal(id, preserved.Id);
+        Assert.Equal("bidv", preserved.Name);
+        Assert.Equal("/images/admin-bidv.png", preserved.ImageUrl);
+        Assert.Equal(777, preserved.SortOrder);
+    }
+
+    [Fact]
+    public void Seed_LogosDoNotRemoveOrRenameLegacyObsoleteAndCustomRows()
+    {
+        var existing = new[]
+        {
+            new ClientLogo { Name = "CLOTEX", ImageUrl = "/legacy/clotex.png", Kind = LogoKind.Client, SortOrder = 91 },
+            new ClientLogo { Name = "AKATI WOOD", ImageUrl = "/legacy/akati.png", Kind = LogoKind.Client, SortOrder = 92 },
+            new ClientLogo { Name = "Seamasterpaint", ImageUrl = "/legacy/seamaster.png", Kind = LogoKind.Supplier, SortOrder = 93 },
+            new ClientLogo { Name = "Admin custom", ImageUrl = "/custom/logo.png", Kind = LogoKind.Partner, SortOrder = 94 },
+        };
+        _db.ClientLogos.AddRange(existing);
+        _db.SaveChanges();
+        var idsByName = existing.ToDictionary(logo => logo.Name, logo => logo.Id);
+
+        ContentSeeder.Seed(_db);
+
+        Assert.All(idsByName, pair => Assert.Equal(
+            pair.Value,
+            _db.ClientLogos.Single(logo => logo.Name == pair.Key).Id));
+    }
+
+    [Fact]
+    public void Seed_LogosRerunKeepsStableCountsAndIds()
+    {
+        ContentSeeder.Seed(_db);
+        var firstIds = _db.ClientLogos.ToDictionary(logo => logo.Kind + "|" + logo.Name, logo => logo.Id);
+
+        ContentSeeder.Seed(_db);
+
+        var secondIds = _db.ClientLogos.ToDictionary(logo => logo.Kind + "|" + logo.Name, logo => logo.Id);
+        Assert.Equal(firstIds.Count, secondIds.Count);
+        Assert.All(firstIds, pair => Assert.Equal(pair.Value, secondIds[pair.Key]));
+    }
+
+    [Fact]
     public void Seed_MigratesLegacyShopDrawingProcessLabels()
     {
         ContentSeeder.Seed(_db);
@@ -69,6 +152,162 @@ public class ContentSeederTests : IDisposable
 
         Assert.Equal("Admin-edited process title", process.Title);
         Assert.Contains("Admin-edited document label", process.FilesJson);
+    }
+
+    [Fact]
+    public void Seed_ProcessesPreserveCustomRowsAndStableIds_WhileRestoringMissingDefaults()
+    {
+        ContentSeeder.Seed(_db);
+        var seeded = _db.ProcessDocuments.Single(item => item.GroupKey == "tc" && item.Code == "3");
+        var seededId = seeded.Id;
+        seeded.Title = "Admin-owned process title";
+        var reordered = _db.ProcessDocuments.Single(item => item.GroupKey == "dt" && item.SortOrder == 0);
+        var reorderedId = reordered.Id;
+        reordered.SortOrder = 777;
+        _db.ProcessDocuments.Add(new ProcessDocument
+        {
+            GroupKey = "custom",
+            Code = "admin",
+            Title = "Custom process",
+            SortOrder = 900,
+        });
+        var missing = _db.ProcessDocuments.Single(item => item.GroupKey == "general" && item.SortOrder == 1);
+        _db.ProcessDocuments.Remove(missing);
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        Assert.Equal("Admin-owned process title", _db.ProcessDocuments.Single(item => item.Id == seededId).Title);
+        Assert.Equal(777, _db.ProcessDocuments.Single(item => item.Id == reorderedId).SortOrder);
+        Assert.Contains(_db.ProcessDocuments, item => item.GroupKey == "custom" && item.Title == "Custom process");
+        Assert.Contains(_db.ProcessDocuments, item => item.GroupKey == "general" && item.SortOrder == 1);
+        Assert.Equal(30, _db.ProcessDocuments.Count());
+    }
+
+    [Fact]
+    public void Seed_ProcessesUseImmutableSeedIdentityAfterTitleAndSortOrderEdits()
+    {
+        ContentSeeder.Seed(_db);
+        var process = _db.ProcessDocuments.Single(item =>
+            item.GroupKey == "general" && item.Title == "Quy trình đánh giá nội bộ");
+        var id = process.Id;
+        var seedKey = process.SeedKey;
+        var canonicalCount = _db.ProcessDocuments.Count(item => item.SeedKey != null);
+        Assert.False(string.IsNullOrWhiteSpace(process.SeedKey));
+        Assert.DoesNotContain(process.Title.ToLowerInvariant(), process.SeedKey);
+        process.Title = "Admin-renamed process";
+        process.SortOrder = 777;
+        _db.ProcessDocuments.Add(new ProcessDocument
+        {
+            GroupKey = "general",
+            Title = "Custom process with colliding order",
+            SortOrder = 1,
+        });
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        Assert.Equal(canonicalCount, _db.ProcessDocuments.Count(item => item.SeedKey != null));
+        var preserved = _db.ProcessDocuments.Single(item => item.Id == id);
+        Assert.Equal(seedKey, preserved.SeedKey);
+        Assert.Equal("Admin-renamed process", preserved.Title);
+        Assert.Equal(777, preserved.SortOrder);
+        Assert.Contains(_db.ProcessDocuments, item =>
+            item.SeedKey == null && item.Title == "Custom process with colliding order");
+    }
+
+    [Fact]
+    public void Seed_ProcessesMigrateTemporaryTitleIdentityWithoutIdOrCountChurn()
+    {
+        ContentSeeder.Seed(_db);
+        var process = _db.ProcessDocuments.Single(item =>
+            item.GroupKey == "general" && item.Title == "Quy trình đánh giá nội bộ");
+        var id = process.Id;
+        var count = _db.ProcessDocuments.Count();
+        process.SeedKey = "general|quy trình đánh giá nội bộ";
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        var migrated = _db.ProcessDocuments.Single(item => item.Id == id);
+        Assert.Equal(count, _db.ProcessDocuments.Count());
+        Assert.StartsWith("general|/process-assets/", migrated.SeedKey);
+    }
+
+    [Fact]
+    public void Seed_SlideshowTranslationsResolveBySlugAndPreserveAdminContent()
+    {
+        _db.SlideshowItems.Add(new SlideshowItem
+        {
+            Slug = "admin-hero",
+            Title = "Admin hero",
+            ImageUrl = "/images/custom.jpg",
+            LinkUrl = "/custom",
+            LinkText = "Custom",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+        var factory = _db.SlideshowItems.Single(item => item.Slug == "hero-factory");
+        factory.Title = "Admin-edited factory hero";
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+
+        Assert.NotEqual(1, factory.Id);
+        Assert.Equal("Admin-edited factory hero", _db.SlideshowItems.Single(item => item.Id == factory.Id).Title);
+        Assert.Contains(_db.EntityTranslations, translation =>
+            translation.EntityType == EntityTypes.Slideshow && translation.EntityId == factory.Id &&
+            translation.FieldName == "Title" && translation.LanguageCode == "en" &&
+            translation.Value == "General Contractor for Factory Design & Build");
+        Assert.DoesNotContain(_db.EntityTranslations, translation =>
+            translation.EntityType == EntityTypes.Slideshow && translation.EntityId == 1);
+    }
+
+    [Fact]
+    public void Seed_RecruitmentAndContactDefaultsRecoverFromPartialStateWithoutOverwritingCustomRows()
+    {
+        _db.EmploymentTypes.Add(new EmploymentType
+        {
+            Code = "full-time",
+            Name = "Admin full time",
+            IsActive = false,
+            SortOrder = 99,
+        });
+        _db.JobPositions.Add(new JobPosition
+        {
+            Title = "Kỹ sư Xây dựng (Site Engineer)",
+            Department = "Admin department",
+            Location = "Đà Nẵng",
+            EmploymentType = "full-time",
+            RequirementsJson = "[]",
+            SortOrder = 50,
+        });
+        _db.ContactMessages.Add(new ContactMessage
+        {
+            Name = "Custom sender",
+            Email = "custom@example.com",
+            Subject = "Custom subject",
+            Message = "Custom message",
+        });
+        _db.SaveChanges();
+
+        ContentSeeder.Seed(_db);
+        var position = _db.JobPositions.Single(item => item.Title == "Kỹ sư Xây dựng (Site Engineer)");
+        var positionId = position.Id;
+        var counts = (_db.EmploymentTypes.Count(), _db.JobPositions.Count(), _db.JobApplications.Count(), _db.ContactMessages.Count());
+
+        ContentSeeder.Seed(_db);
+
+        Assert.Equal("Admin full time", _db.EmploymentTypes.Single(item => item.Code == "full-time").Name);
+        Assert.Equal("Admin department", _db.JobPositions.Single(item => item.Id == positionId).Department);
+        Assert.Contains(_db.EmploymentTypes, item => item.Code == "part-time");
+        Assert.Contains(_db.JobPositions, item => item.Title == "Kiến trúc sư Thiết kế");
+        Assert.Contains(_db.ContactMessages, item => item.Email == "custom@example.com" && item.Message == "Custom message");
+        Assert.Equal(counts, (_db.EmploymentTypes.Count(), _db.JobPositions.Count(), _db.JobApplications.Count(), _db.ContactMessages.Count()));
     }
 
     [Fact]

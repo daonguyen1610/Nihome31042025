@@ -66,7 +66,6 @@ public static class ContentSeeder
             var key = NormalizeCategoryKey(seed.Name);
             if (existingProjCats.TryGetValue(key, out var existing))
             {
-                existing.SortOrder = seed.SortOrder;
                 if (string.IsNullOrWhiteSpace(existing.NameEn)) existing.NameEn = seed.NameEn;
                 if (string.IsNullOrWhiteSpace(existing.NameZh)) existing.NameZh = seed.NameZh;
                 if (string.IsNullOrWhiteSpace(existing.NameJa)) existing.NameJa = seed.NameJa;
@@ -105,7 +104,6 @@ public static class ContentSeeder
             var key = NormalizeCategoryKey(seed.Name);
             if (existingActCats.TryGetValue(key, out var existing))
             {
-                existing.SortOrder = seed.SortOrder;
                 if (string.IsNullOrWhiteSpace(existing.NameEn)) existing.NameEn = seed.NameEn;
                 if (string.IsNullOrWhiteSpace(existing.NameZh)) existing.NameZh = seed.NameZh;
                 if (string.IsNullOrWhiteSpace(existing.NameJa)) existing.NameJa = seed.NameJa;
@@ -145,7 +143,6 @@ public static class ContentSeeder
             var key = NormalizeCategoryKey(seed.Name);
             if (existingNewsCats.TryGetValue(key, out var existing))
             {
-                existing.SortOrder = seed.SortOrder;
                 if (string.IsNullOrWhiteSpace(existing.NameEn)) existing.NameEn = seed.NameEn;
                 if (string.IsNullOrWhiteSpace(existing.NameZh)) existing.NameZh = seed.NameZh;
                 if (string.IsNullOrWhiteSpace(existing.NameJa)) existing.NameJa = seed.NameJa;
@@ -675,35 +672,22 @@ public static class ContentSeeder
 
         foreach (var seed in seeds)
         {
-            if (existing.TryGetValue(seed.Slug, out var item))
+            if (existing.ContainsKey(seed.Slug)) continue;
+
+            db.ServiceItems.Add(new ServiceItem
             {
-                item.Title = seed.Title;
-                item.ShortTitle = seed.ShortTitle;
-                item.Tagline = seed.Tagline;
-                item.Intro = seed.Intro;
-                item.SectionsJson = seed.SectionsJson;
-                item.HighlightsJson = seed.HighlightsJson;
-                item.IntroBlocksJson = seed.IntroBlocksJson;
-                item.SortOrder = seed.SortOrder;
-                item.UpdatedAt = now;
-            }
-            else
-            {
-                db.ServiceItems.Add(new ServiceItem
-                {
-                    Slug = seed.Slug,
-                    Title = seed.Title,
-                    ShortTitle = seed.ShortTitle,
-                    Tagline = seed.Tagline,
-                    Intro = seed.Intro,
-                    SectionsJson = seed.SectionsJson,
-                    HighlightsJson = seed.HighlightsJson,
-                    IntroBlocksJson = seed.IntroBlocksJson,
-                    SortOrder = seed.SortOrder,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                });
-            }
+                Slug = seed.Slug,
+                Title = seed.Title,
+                ShortTitle = seed.ShortTitle,
+                Tagline = seed.Tagline,
+                Intro = seed.Intro,
+                SectionsJson = seed.SectionsJson,
+                HighlightsJson = seed.HighlightsJson,
+                IntroBlocksJson = seed.IntroBlocksJson,
+                SortOrder = seed.SortOrder,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
         }
 
         db.SaveChanges();
@@ -713,13 +697,8 @@ public static class ContentSeeder
 
     private static void SeedLogos(AppDbContext db)
     {
-        var logos = new List<ClientLogo>();
-        var i = 0;
-
-        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Client))
-        {
-            string[][] clients = [
-                ["CLOTEX", "/images/logos/clients/clotex.png"],
+        string[][] clients = [
+                ["BIDV", "/images/logos/clients/bidv.png"],
                 ["SBMT", "/images/logos/clients/sbmt.png"],
                 ["SMITH MULLER", "/images/logos/clients/smith-muller.jpeg"],
                 ["LAM HIEP HUNG", "/images/logos/clients/lam-hiep-hung.jpeg"],
@@ -746,14 +725,9 @@ public static class ContentSeeder
                 ["SONADEZI", "/images/logos/clients/sonadezi.jpeg"],
                 ["MYUNGBO", "/images/logos/clients/myungbo.jpeg"],
                 ["HEART OF DARKNESS", "/images/logos/clients/heart-of-darkness.jpeg"],
+                ["MEDICARE", "/images/logos/clients/medicare.png"],
             ];
-            foreach (var c in clients)
-                logos.Add(new ClientLogo { Name = c[0], ImageUrl = c[1], Kind = LogoKind.Client, SortOrder = i++ });
-        }
-
-        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Partner))
-        {
-            string[][] partners = [
+        string[][] partners = [
                 ["VSIP", "/images/logos/partners/vsip.jpeg"],
                 ["RESCO", "/images/logos/partners/resco.jpeg"],
                 ["TECHCONS", "/images/logos/partners/techcons.jpeg"],
@@ -773,15 +747,9 @@ public static class ContentSeeder
                 ["VIETCOMBANK", "/images/logos/partners/vietcombank.jpeg"],
                 ["HIEP PHUOC", "/images/logos/partners/hiep-phuoc.jpeg"],
                 ["ACB", "/images/logos/partners/acb.jpeg"],
+                ["AGC", "/images/logos/partners/agc.png"],
             ];
-            i = 0;
-            foreach (var p in partners)
-                logos.Add(new ClientLogo { Name = p[0], ImageUrl = p[1], Kind = LogoKind.Partner, SortOrder = i++ });
-        }
-
-        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Supplier))
-        {
-            string[][] suppliers = [
+        string[][] suppliers = [
                 ["MPE-Inc", "/images/logos/suppliers/mpe-inc.jpeg"],
                 ["Chi Thanh Steel", "/images/logos/suppliers/chi-thanh-steel.jpeg"],
                 ["Hoa Phat Steel", "/images/logos/suppliers/hoa-phat-steel.jpeg"],
@@ -808,141 +776,41 @@ public static class ContentSeeder
                 ["LHC", "/images/logos/suppliers/lhc.png"],
                 ["ACG", "/images/logos/suppliers/acg.png"],
             ];
-            i = 0;
-            foreach (var s in suppliers)
-                logos.Add(new ClientLogo { Name = s[0], ImageUrl = s[1], Kind = LogoKind.Supplier, SortOrder = i++ });
-        }
-
-        if (!db.ClientLogos.Any(l => l.Kind == LogoKind.Award))
-        {
-            string[][] awards = [
+        string[][] awards = [
                 ["Top 10 Vietnam Leading Brands 2018", "/images/activities/activity-ceremony.jpg"],
                 ["Vietnam Golden FDI 2019", "/images/activities/activity-opening.jpg"],
                 ["Outstanding Design & Build Contractor", "/images/activities/activity-handover.jpg"],
             ];
-            i = 0;
-            foreach (var a in awards)
-                logos.Add(new ClientLogo { Name = a[0], ImageUrl = a[1], Kind = LogoKind.Award, SortOrder = i++ });
-        }
 
-        if (logos.Count > 0)
-        {
-            db.ClientLogos.AddRange(logos);
-            db.SaveChanges();
-        }
+        var defaults = new List<ClientLogo>();
+        AddDefaults(clients, LogoKind.Client);
+        AddDefaults(partners, LogoKind.Partner);
+        AddDefaults(suppliers, LogoKind.Supplier);
+        AddDefaults(awards, LogoKind.Award);
 
-        // Always-run upserts: replace CLOTEX → BIDV, SCON → SBMT, AKATI WOOD → DOMINSNANT, remove AMPHACO
-        var amphacoLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "AMPHACO" && l.Kind == LogoKind.Client);
-        if (amphacoLogo != null)
-            db.ClientLogos.Remove(amphacoLogo);
+        var existingKeys = db.ClientLogos
+            .Select(logo => new { logo.Kind, logo.Name })
+            .AsEnumerable()
+            .Select(logo => $"{logo.Kind}|{logo.Name}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var akatiLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "AKATI WOOD" && l.Kind == LogoKind.Client);
-        if (akatiLogo != null)
-        {
-            akatiLogo.Name = "DOMINSNANT";
-            akatiLogo.ImageUrl = "/images/logos/clients/akati-wood.png";
-        }
-
-        var sconLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "SCON" && l.Kind == LogoKind.Client);
-        if (sconLogo != null)
-        {
-            sconLogo.Name = "SBMT";
-            sconLogo.ImageUrl = "/images/logos/clients/sbmt.png";
-        }
-
-        var clotexLogo = db.ClientLogos.FirstOrDefault(l => l.Name == "CLOTEX" && l.Kind == LogoKind.Client);
-        if (clotexLogo != null)
-        {
-            clotexLogo.Name = "BIDV";
-            clotexLogo.ImageUrl = "/images/logos/clients/bidv.png";
-        }
-
-        if (!db.ClientLogos.Any(l => l.Name == "MEDICARE" && l.Kind == LogoKind.Client))
-        {
-            var maxOrder = db.ClientLogos
-                .Where(l => l.Kind == LogoKind.Client)
-                .Max(l => (int?)l.SortOrder) ?? 0;
-            db.ClientLogos.Add(new ClientLogo
-            {
-                Name = "MEDICARE",
-                ImageUrl = "/images/logos/clients/medicare.png",
-                Kind = LogoKind.Client,
-                SortOrder = maxOrder + 1,
-            });
-        }
-
-        // Ensure AGC partner logo exists
-        if (!db.ClientLogos.Any(l => l.Name == "AGC" && l.Kind == LogoKind.Partner))
-        {
-            var maxPartnerOrder = db.ClientLogos
-                .Where(l => l.Kind == LogoKind.Partner)
-                .Max(l => (int?)l.SortOrder) ?? 0;
-            db.ClientLogos.Add(new ClientLogo
-            {
-                Name = "AGC",
-                ImageUrl = "/images/logos/partners/agc.png",
-                Kind = LogoKind.Partner,
-                SortOrder = maxPartnerOrder + 1,
-            });
-        }
-
-        // Remove obsolete supplier logos
-        string[] obsoleteSuppliers = [
-            "Seamasterpaint", "Nippon", "Vicem Cement", "Fico Cement",
-            "Dong Tam Group", "Dulux", "Sika", "Shell",
-            "VN Steel", "QSB Steel", "Zamil Steel", "BlueScope", "TungShin",
-        ];
-        var toRemove = db.ClientLogos
-            .Where(l => l.Kind == LogoKind.Supplier && obsoleteSuppliers.Contains(l.Name))
-            .ToList();
-        if (toRemove.Count > 0)
-            db.ClientLogos.RemoveRange(toRemove);
-
-        // Add LHC supplier if not present
-        if (!db.ClientLogos.Any(l => l.Name == "LHC" && l.Kind == LogoKind.Supplier))
-        {
-            var maxSupOrder = db.ClientLogos
-                .Where(l => l.Kind == LogoKind.Supplier)
-                .Max(l => (int?)l.SortOrder) ?? 0;
-            db.ClientLogos.Add(new ClientLogo
-            {
-                Name = "LHC",
-                ImageUrl = "/images/logos/suppliers/lhc.png",
-                Kind = LogoKind.Supplier,
-                SortOrder = maxSupOrder + 1,
-            });
-        }
-
-        // Add ACG supplier if not present
-        if (!db.ClientLogos.Any(l => l.Name == "ACG" && l.Kind == LogoKind.Supplier))
-        {
-            var maxSupOrder = db.ClientLogos
-                .Where(l => l.Kind == LogoKind.Supplier)
-                .Max(l => (int?)l.SortOrder) ?? 0;
-            db.ClientLogos.Add(new ClientLogo
-            {
-                Name = "ACG",
-                ImageUrl = "/images/logos/suppliers/acg.png",
-                Kind = LogoKind.Supplier,
-                SortOrder = maxSupOrder + 1,
-            });
-        }
-
-        // Fix any localhost URLs in award logos
-        var awardLogoFixes = new Dictionary<string, string>
-        {
-            ["Top 10 Vietnam Leading Brands 2018"] = "/images/activities/activity-ceremony.jpg",
-            ["Vietnam Golden FDI 2019"] = "/images/activities/activity-opening.jpg",
-            ["Outstanding Design & Build Contractor"] = "/images/activities/activity-handover.jpg",
-        };
-        foreach (var (name, relUrl) in awardLogoFixes)
-        {
-            var logo = db.ClientLogos.FirstOrDefault(l => l.Kind == LogoKind.Award && l.Name == name);
-            if (logo != null && logo.ImageUrl != relUrl)
-                logo.ImageUrl = relUrl;
-        }
+        db.ClientLogos.AddRange(defaults.Where(logo => existingKeys.Add($"{logo.Kind}|{logo.Name}")));
 
         db.SaveChanges();
+
+        void AddDefaults(string[][] items, LogoKind kind)
+        {
+            for (var sortOrder = 0; sortOrder < items.Length; sortOrder++)
+            {
+                defaults.Add(new ClientLogo
+                {
+                    Name = items[sortOrder][0],
+                    ImageUrl = items[sortOrder][1],
+                    Kind = kind,
+                    SortOrder = sortOrder,
+                });
+            }
+        }
     }
 
     // ─── Processes ──────────────────────────────────────────────────
@@ -959,26 +827,84 @@ public static class ContentSeeder
 
         MigrateLegacyDetailDesignProcessLabels(db, opts);
 
-        // Re-seed when count mismatches OR when asset JSON columns haven't been populated yet
-        var seedWithAssets = seedItems.Any(s => s.Images.Count > 0 || s.Files.Count > 0);
-        var dbHasAssets = db.ProcessDocuments.Any(p => p.ImagesJson != null || p.FilesJson != null);
-        if (db.ProcessDocuments.Count() == seedItems.Count && (!seedWithAssets || dbHasAssets)) return;
-
-        db.ProcessDocuments.RemoveRange(db.ProcessDocuments);
-        db.SaveChanges();
-
-        var items = seedItems.Select(seed => new ProcessDocument
+        var existingProcesses = db.ProcessDocuments.OrderBy(item => item.Id).ToList();
+        foreach (var seed in seedItems)
         {
-            GroupKey = seed.GroupKey,
-            Code = seed.Code,
-            Title = seed.Title,
-            SortOrder = seed.SortOrder,
-            ImagesJson = seed.Images.Count > 0 ? JsonSerializer.Serialize(seed.Images) : null,
-            FilesJson = seed.Files.Count > 0 ? JsonSerializer.Serialize(seed.Files) : null,
-        }).ToList();
+            var seedAssetUrls = seed.Images.Concat(seed.Files)
+                .Select(asset => asset.Url)
+                .Where(url => !string.IsNullOrWhiteSpace(url))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var identityAssetUrl = seed.Images.Concat(seed.Files)
+                .Select(asset => asset.Url)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url))
+                ?? throw new InvalidDataException(
+                    $"Process seed requires a stable asset identity: {seed.GroupKey}|{seed.Title}.");
+            var seedKey = $"{seed.GroupKey.Trim().ToLowerInvariant()}|{identityAssetUrl.Trim().ToLowerInvariant()}";
+            var legacyTitleSeedKey =
+                $"{seed.GroupKey.Trim().ToLowerInvariant()}|{seed.Title.Trim().ToLowerInvariant()}";
+            var existing = existingProcesses.FirstOrDefault(item =>
+                    string.Equals(item.SeedKey, seedKey, StringComparison.OrdinalIgnoreCase))
+                ?? existingProcesses.FirstOrDefault(item =>
+                    string.Equals(item.SeedKey, legacyTitleSeedKey, StringComparison.OrdinalIgnoreCase))
+                ?? existingProcesses.FirstOrDefault(item => item.SeedKey == null &&
+                    string.Equals(item.GroupKey, seed.GroupKey, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(item.Code, seed.Code, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(item.Title, seed.Title, StringComparison.OrdinalIgnoreCase))
+                ?? existingProcesses.FirstOrDefault(item => item.SeedKey == null &&
+                    string.Equals(item.GroupKey, seed.GroupKey, StringComparison.OrdinalIgnoreCase) &&
+                    HasProcessAsset(item, seedAssetUrls));
+            if (existing is not null)
+            {
+                existing.SeedKey = seedKey;
+                if (existing.Title == seed.Title)
+                {
+                    if (existing.ImagesJson == null && seed.Images.Count > 0)
+                        existing.ImagesJson = JsonSerializer.Serialize(seed.Images);
+                    if (existing.FilesJson == null && seed.Files.Count > 0)
+                        existing.FilesJson = JsonSerializer.Serialize(seed.Files);
+                }
+                continue;
+            }
 
-        db.ProcessDocuments.AddRange(items);
+            var item = new ProcessDocument
+            {
+                SeedKey = seedKey,
+                GroupKey = seed.GroupKey,
+                Code = seed.Code,
+                Title = seed.Title,
+                SortOrder = seed.SortOrder,
+                ImagesJson = seed.Images.Count > 0 ? JsonSerializer.Serialize(seed.Images) : null,
+                FilesJson = seed.Files.Count > 0 ? JsonSerializer.Serialize(seed.Files) : null,
+            };
+            db.ProcessDocuments.Add(item);
+            existingProcesses.Add(item);
+        }
+
         db.SaveChanges();
+    }
+
+    private static bool HasProcessAsset(ProcessDocument process, IReadOnlySet<string> seedAssetUrls)
+    {
+        if (seedAssetUrls.Count == 0) return false;
+        return ContainsSeedAsset(process.ImagesJson) || ContainsSeedAsset(process.FilesJson);
+
+        bool ContainsSeedAsset(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return false;
+            try
+            {
+                using var document = JsonDocument.Parse(json);
+                return document.RootElement.ValueKind == JsonValueKind.Array &&
+                    document.RootElement.EnumerateArray().Any(asset =>
+                        asset.TryGetProperty("url", out var url) &&
+                        url.ValueKind == JsonValueKind.String &&
+                        seedAssetUrls.Contains(url.GetString()!));
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
     }
 
     private static void MigrateLegacyDetailDesignProcessLabels(
@@ -1071,33 +997,21 @@ public static class ContentSeeder
 
         foreach (var s in seeds)
         {
-            if (existing.TryGetValue(s.Slug, out var item))
+            if (existing.ContainsKey(s.Slug)) continue;
+
+            db.SlideshowItems.Add(new SlideshowItem
             {
-                item.ImageUrl = s.ImageUrl;
-                item.Title = s.Title;
-                item.Subtitle = s.Subtitle;
-                item.LinkUrl = s.LinkUrl;
-                item.LinkText = s.LinkText;
-                item.IsActive = s.IsActive;
-                item.SortOrder = s.SortOrder;
-                item.UpdatedAt = now;
-            }
-            else
-            {
-                db.SlideshowItems.Add(new SlideshowItem
-                {
-                    Slug = s.Slug,
-                    ImageUrl = s.ImageUrl,
-                    Title = s.Title,
-                    Subtitle = s.Subtitle,
-                    LinkUrl = s.LinkUrl,
-                    LinkText = s.LinkText,
-                    IsActive = s.IsActive,
-                    SortOrder = s.SortOrder,
-                    CreatedAt = now,
-                    UpdatedAt = now,
-                });
-            }
+                Slug = s.Slug,
+                ImageUrl = s.ImageUrl,
+                Title = s.Title,
+                Subtitle = s.Subtitle,
+                LinkUrl = s.LinkUrl,
+                LinkText = s.LinkText,
+                IsActive = s.IsActive,
+                SortOrder = s.SortOrder,
+                CreatedAt = now,
+                UpdatedAt = now,
+            });
         }
 
         db.SaveChanges();
@@ -1126,25 +1040,11 @@ public static class ContentSeeder
         var existing = db.AboutSectionContents.ToDictionary(a => a.Slug);
         foreach (var seed in seeds)
         {
-            if (existing.TryGetValue(seed.Slug, out var item))
-            {
-                item.Eyebrow = seed.Eyebrow;
-                item.TitleA = seed.TitleA;
-                item.TitleB = seed.TitleB;
-                item.Paragraph1 = seed.Paragraph1;
-                item.Paragraph2 = seed.Paragraph2;
-                item.ImageUrl = seed.ImageUrl;
-                item.ItemsJson = seed.ItemsJson;
-                item.IsActive = seed.IsActive;
-                item.SortOrder = seed.SortOrder;
-                item.UpdatedAt = now;
-            }
-            else
-            {
-                seed.CreatedAt = now;
-                seed.UpdatedAt = now;
-                db.AboutSectionContents.Add(seed);
-            }
+            if (existing.ContainsKey(seed.Slug)) continue;
+
+            seed.CreatedAt = now;
+            seed.UpdatedAt = now;
+            db.AboutSectionContents.Add(seed);
         }
 
         db.SaveChanges();
@@ -1174,8 +1074,6 @@ public static class ContentSeeder
     private static void SeedRecruitment(AppDbContext db)
     {
         SeedEmploymentTypes(db);
-
-        if (db.JobPositions.Any()) return;
 
         var now = DateTime.UtcNow;
 
@@ -1308,17 +1206,25 @@ public static class ContentSeeder
             },
         };
 
-        db.JobPositions.AddRange(positions);
+        var existingPositionTitles = db.JobPositions
+            .Select(position => position.Title)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        db.JobPositions.AddRange(positions.Where(position => existingPositionTitles.Add(position.Title)));
         db.SaveChanges();
 
         // Seed sample applications
-        var posIds = db.JobPositions.Select(p => new { p.Id, p.Title }).ToList();
+        var positionIdsByTitle = db.JobPositions
+            .OrderBy(position => position.Id)
+            .Select(position => new { position.Id, position.Title })
+            .AsEnumerable()
+            .GroupBy(position => position.Title, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Id, StringComparer.OrdinalIgnoreCase);
 
         var applications = new JobApplication[]
         {
             new()
             {
-                JobPositionId = posIds[0].Id, // Kỹ sư Xây dựng
+                JobPositionId = positionIdsByTitle["Kỹ sư Xây dựng (Site Engineer)"],
                 CandidateName = "Nguyễn Minh Tuấn",
                 Email = "tuan.nguyen@gmail.com",
                 Phone = "0901234567",
@@ -1330,7 +1236,7 @@ public static class ContentSeeder
             },
             new()
             {
-                JobPositionId = posIds[0].Id, // Kỹ sư Xây dựng
+                JobPositionId = positionIdsByTitle["Kỹ sư Xây dựng (Site Engineer)"],
                 CandidateName = "Trần Thị Hương",
                 Email = "huong.tran@outlook.com",
                 Phone = "0912345678",
@@ -1342,7 +1248,7 @@ public static class ContentSeeder
             },
             new()
             {
-                JobPositionId = posIds[1].Id, // Kiến trúc sư
+                JobPositionId = positionIdsByTitle["Kiến trúc sư Thiết kế"],
                 CandidateName = "Lê Quốc Bảo",
                 Email = "bao.le.arch@gmail.com",
                 Phone = "0933456789",
@@ -1354,7 +1260,7 @@ public static class ContentSeeder
             },
             new()
             {
-                JobPositionId = posIds[2].Id, // Nhân viên Kinh doanh
+                JobPositionId = positionIdsByTitle["Nhân viên Kinh doanh Dự án"],
                 CandidateName = "Phạm Anh Dũng",
                 Email = "dung.pham.sales@gmail.com",
                 Phone = "0944567890",
@@ -1366,7 +1272,7 @@ public static class ContentSeeder
             },
             new()
             {
-                JobPositionId = posIds[2].Id, // Nhân viên Kinh doanh
+                JobPositionId = positionIdsByTitle["Nhân viên Kinh doanh Dự án"],
                 CandidateName = "Võ Thị Mai",
                 Email = "mai.vo@yahoo.com",
                 Phone = "0955678901",
@@ -1378,7 +1284,7 @@ public static class ContentSeeder
             },
             new()
             {
-                JobPositionId = posIds[3].Id, // Kỹ sư MEP
+                JobPositionId = positionIdsByTitle["Kỹ sư MEP (Cơ điện)"],
                 CandidateName = "Đặng Văn Hải",
                 Email = "hai.dang.mep@gmail.com",
                 Phone = "0966789012",
@@ -1390,7 +1296,7 @@ public static class ContentSeeder
             },
             new()
             {
-                JobPositionId = posIds[4].Id, // Thực tập sinh
+                JobPositionId = positionIdsByTitle["Thực tập sinh Kỹ thuật"],
                 CandidateName = "Hoàng Minh Khôi",
                 Email = "khoi.hoang.sv@gmail.com",
                 Phone = "0977890123",
@@ -1402,14 +1308,16 @@ public static class ContentSeeder
             },
         };
 
-        db.JobApplications.AddRange(applications);
+        var existingApplicationKeys = db.JobApplications
+            .Select(application => application.JobPositionId + "|" + application.Email)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        db.JobApplications.AddRange(applications.Where(application =>
+            existingApplicationKeys.Add(application.JobPositionId + "|" + application.Email)));
         db.SaveChanges();
     }
 
     private static void SeedEmploymentTypes(AppDbContext db)
     {
-        if (db.EmploymentTypes.Any()) return;
-
         var items = new EmploymentType[]
         {
             new() { Code = "full-time", Name = "Toàn thời gian", IsActive = true, SortOrder = 1 },
@@ -1417,7 +1325,10 @@ public static class ContentSeeder
             new() { Code = "intern", Name = "Thực tập sinh", IsActive = true, SortOrder = 3 },
         };
 
-        db.EmploymentTypes.AddRange(items);
+        var existingCodes = db.EmploymentTypes
+            .Select(item => item.Code)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        db.EmploymentTypes.AddRange(items.Where(item => existingCodes.Add(item.Code)));
         db.SaveChanges();
     }
 
@@ -1425,8 +1336,6 @@ public static class ContentSeeder
 
     private static void SeedContactMessages(AppDbContext db)
     {
-        if (db.ContactMessages.Any()) return;
-
         var now = DateTime.UtcNow;
         var items = new ContactMessage[]
         {
@@ -1480,7 +1389,11 @@ public static class ContentSeeder
             },
         };
 
-        db.ContactMessages.AddRange(items);
+        var existingKeys = db.ContactMessages
+            .Select(message => message.Email + "|" + message.Subject)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        db.ContactMessages.AddRange(items.Where(message =>
+            existingKeys.Add(message.Email + "|" + message.Subject)));
         db.SaveChanges();
     }
 
@@ -1509,6 +1422,7 @@ public static class ContentSeeder
                 CreatedAt = now,
                 UpdatedAt = now,
             });
+            existingKeys.Add(key);
         }
 
         // Activity (1..16) and News (1..20) translations are now seeded
@@ -1517,62 +1431,70 @@ public static class ContentSeeder
         // stay in sync with real entity IDs after re-seeds.
         // Do not re-add hardcoded ID-based blocks here.
 
+        var slideshowIdsBySlug = db.SlideshowItems
+            .ToDictionary(item => item.Slug, item => item.Id, StringComparer.OrdinalIgnoreCase);
+        void AddSlideshow(string slug, string field, string lang, string value)
+        {
+            if (slideshowIdsBySlug.TryGetValue(slug, out var id))
+                Add(EntityTypes.Slideshow, id, field, lang, value);
+        }
+
         // --- Slideshow items ---
-        Add(EntityTypes.Slideshow, 1, "Title", "en", "General Contractor for Factory Design & Build");
-        Add(EntityTypes.Slideshow, 1, "Subtitle", "en", "Over 18 years of experience — 150+ industrial projects");
-        Add(EntityTypes.Slideshow, 1, "LinkText", "en", "View Projects");
+        AddSlideshow("hero-factory", "Title", "en", "General Contractor for Factory Design & Build");
+        AddSlideshow("hero-factory", "Subtitle", "en", "Over 18 years of experience — 150+ industrial projects");
+        AddSlideshow("hero-factory", "LinkText", "en", "View Projects");
 
-        Add(EntityTypes.Slideshow, 2, "Title", "en", "Design & Build — Turnkey Solutions");
-        Add(EntityTypes.Slideshow, 2, "Subtitle", "en", "One point of contact — full project lifecycle from design to handover");
-        Add(EntityTypes.Slideshow, 2, "LinkText", "en", "Learn More");
+        AddSlideshow("hero-design-build", "Title", "en", "Design & Build — Turnkey Solutions");
+        AddSlideshow("hero-design-build", "Subtitle", "en", "One point of contact — full project lifecycle from design to handover");
+        AddSlideshow("hero-design-build", "LinkText", "en", "Learn More");
 
-        Add(EntityTypes.Slideshow, 3, "Title", "en", "Large-Scale Industrial Factories");
-        Add(EntityTypes.Slideshow, 3, "Subtitle", "en", "250,000 m² complex — Japanese standards with Mori Group");
-        Add(EntityTypes.Slideshow, 3, "LinkText", "en", "View Details");
+        AddSlideshow("hero-industrial", "Title", "en", "Large-Scale Industrial Factories");
+        AddSlideshow("hero-industrial", "Subtitle", "en", "250,000 m² complex — Japanese standards with Mori Group");
+        AddSlideshow("hero-industrial", "LinkText", "en", "View Details");
 
-        Add(EntityTypes.Slideshow, 4, "Title", "en", "Sports & Recreation Facilities");
-        Add(EntityTypes.Slideshow, 4, "Subtitle", "en", "Multi-purpose sports facility design serving the community");
-        Add(EntityTypes.Slideshow, 4, "LinkText", "en", "Explore");
+        AddSlideshow("hero-sports-center", "Title", "en", "Sports & Recreation Facilities");
+        AddSlideshow("hero-sports-center", "Subtitle", "en", "Multi-purpose sports facility design serving the community");
+        AddSlideshow("hero-sports-center", "LinkText", "en", "Explore");
 
-        Add(EntityTypes.Slideshow, 5, "Title", "en", "Modern Office Interiors");
-        Add(EntityTypes.Slideshow, 5, "Subtitle", "en", "Minimalist style — Open space — International standards");
-        Add(EntityTypes.Slideshow, 5, "LinkText", "en", "View Project");
+        AddSlideshow("hero-office", "Title", "en", "Modern Office Interiors");
+        AddSlideshow("hero-office", "Subtitle", "en", "Minimalist style — Open space — International standards");
+        AddSlideshow("hero-office", "LinkText", "en", "View Project");
 
         // Project translations are now handled by SeedProjectTranslations() via project-translations.json (slug-based).
 
         // ─── Slideshow: ZH translations ───
-        Add(EntityTypes.Slideshow, 1, "Title", "zh", "工厂设计施工总承包商");
-        Add(EntityTypes.Slideshow, 1, "Subtitle", "zh", "18年以上经验 — 150+工业项目");
-        Add(EntityTypes.Slideshow, 1, "LinkText", "zh", "查看项目");
-        Add(EntityTypes.Slideshow, 2, "Title", "zh", "设计施工一体化 — 交钥匙方案");
-        Add(EntityTypes.Slideshow, 2, "Subtitle", "zh", "单一联系窗口 — 从设计到移交的全项目周期");
-        Add(EntityTypes.Slideshow, 2, "LinkText", "zh", "了解更多");
-        Add(EntityTypes.Slideshow, 3, "Title", "zh", "大规模工业工厂");
-        Add(EntityTypes.Slideshow, 3, "Subtitle", "zh", "250,000㎡综合体 — 与Mori集团合作的日本标准");
-        Add(EntityTypes.Slideshow, 3, "LinkText", "zh", "查看详情");
-        Add(EntityTypes.Slideshow, 4, "Title", "zh", "体育休闲设施");
-        Add(EntityTypes.Slideshow, 4, "Subtitle", "zh", "服务社区的多功能体育设施设计");
-        Add(EntityTypes.Slideshow, 4, "LinkText", "zh", "探索");
-        Add(EntityTypes.Slideshow, 5, "Title", "zh", "现代办公室内装");
-        Add(EntityTypes.Slideshow, 5, "Subtitle", "zh", "极简风格 — 开放空间 — 国际标准");
-        Add(EntityTypes.Slideshow, 5, "LinkText", "zh", "查看项目");
+        AddSlideshow("hero-factory", "Title", "zh", "工厂设计施工总承包商");
+        AddSlideshow("hero-factory", "Subtitle", "zh", "18年以上经验 — 150+工业项目");
+        AddSlideshow("hero-factory", "LinkText", "zh", "查看项目");
+        AddSlideshow("hero-design-build", "Title", "zh", "设计施工一体化 — 交钥匙方案");
+        AddSlideshow("hero-design-build", "Subtitle", "zh", "单一联系窗口 — 从设计到移交的全项目周期");
+        AddSlideshow("hero-design-build", "LinkText", "zh", "了解更多");
+        AddSlideshow("hero-industrial", "Title", "zh", "大规模工业工厂");
+        AddSlideshow("hero-industrial", "Subtitle", "zh", "250,000㎡综合体 — 与Mori集团合作的日本标准");
+        AddSlideshow("hero-industrial", "LinkText", "zh", "查看详情");
+        AddSlideshow("hero-sports-center", "Title", "zh", "体育休闲设施");
+        AddSlideshow("hero-sports-center", "Subtitle", "zh", "服务社区的多功能体育设施设计");
+        AddSlideshow("hero-sports-center", "LinkText", "zh", "探索");
+        AddSlideshow("hero-office", "Title", "zh", "现代办公室内装");
+        AddSlideshow("hero-office", "Subtitle", "zh", "极简风格 — 开放空间 — 国际标准");
+        AddSlideshow("hero-office", "LinkText", "zh", "查看项目");
 
         // ─── Slideshow: JA translations ───
-        Add(EntityTypes.Slideshow, 1, "Title", "ja", "工場設計施工の総合請負");
-        Add(EntityTypes.Slideshow, 1, "Subtitle", "ja", "18年以上の実績 — 150件超の産業プロジェクト");
-        Add(EntityTypes.Slideshow, 1, "LinkText", "ja", "プロジェクトを見る");
-        Add(EntityTypes.Slideshow, 2, "Title", "ja", "設計＆施工 — ターンキーソリューション");
-        Add(EntityTypes.Slideshow, 2, "Subtitle", "ja", "単一窓口 — 設計から引渡しまでの全工程");
-        Add(EntityTypes.Slideshow, 2, "LinkText", "ja", "詳しく見る");
-        Add(EntityTypes.Slideshow, 3, "Title", "ja", "大規模産業工場");
-        Add(EntityTypes.Slideshow, 3, "Subtitle", "ja", "250,000㎡の複合施設 — Moriグループとの日本基準");
-        Add(EntityTypes.Slideshow, 3, "LinkText", "ja", "詳細を見る");
-        Add(EntityTypes.Slideshow, 4, "Title", "ja", "スポーツ・レクリエーション施設");
-        Add(EntityTypes.Slideshow, 4, "Subtitle", "ja", "地域に貢献する多目的スポーツ施設の設計");
-        Add(EntityTypes.Slideshow, 4, "LinkText", "ja", "探索する");
-        Add(EntityTypes.Slideshow, 5, "Title", "ja", "モダンオフィスインテリア");
-        Add(EntityTypes.Slideshow, 5, "Subtitle", "ja", "ミニマリスト — オープンスペース — 国際基準");
-        Add(EntityTypes.Slideshow, 5, "LinkText", "ja", "プロジェクトを見る");
+        AddSlideshow("hero-factory", "Title", "ja", "工場設計施工の総合請負");
+        AddSlideshow("hero-factory", "Subtitle", "ja", "18年以上の実績 — 150件超の産業プロジェクト");
+        AddSlideshow("hero-factory", "LinkText", "ja", "プロジェクトを見る");
+        AddSlideshow("hero-design-build", "Title", "ja", "設計＆施工 — ターンキーソリューション");
+        AddSlideshow("hero-design-build", "Subtitle", "ja", "単一窓口 — 設計から引渡しまでの全工程");
+        AddSlideshow("hero-design-build", "LinkText", "ja", "詳しく見る");
+        AddSlideshow("hero-industrial", "Title", "ja", "大規模産業工場");
+        AddSlideshow("hero-industrial", "Subtitle", "ja", "250,000㎡の複合施設 — Moriグループとの日本基準");
+        AddSlideshow("hero-industrial", "LinkText", "ja", "詳細を見る");
+        AddSlideshow("hero-sports-center", "Title", "ja", "スポーツ・レクリエーション施設");
+        AddSlideshow("hero-sports-center", "Subtitle", "ja", "地域に貢献する多目的スポーツ施設の設計");
+        AddSlideshow("hero-sports-center", "LinkText", "ja", "探索する");
+        AddSlideshow("hero-office", "Title", "ja", "モダンオフィスインテリア");
+        AddSlideshow("hero-office", "Subtitle", "ja", "ミニマリスト — オープンスペース — 国際基準");
+        AddSlideshow("hero-office", "LinkText", "ja", "プロジェクトを見る");
 
         // --- Job Positions ---
         var jobPositions = db.JobPositions.Select(p => new { p.Id, p.Title }).ToList();

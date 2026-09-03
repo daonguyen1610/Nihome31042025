@@ -50,9 +50,9 @@ public static class TranslationSeeder
                     var compositeKey = key + "|" + lang;
                     if (existingRows.TryGetValue(compositeKey, out var existing))
                     {
-                        if (existing.Value != value || existing.Category != category)
+                        if (string.IsNullOrWhiteSpace(existing.Category)
+                            && !string.IsNullOrWhiteSpace(category))
                         {
-                            existing.Value = value;
                             existing.Category = category;
                             existing.UpdatedAt = now;
                             hasUpdates = true;

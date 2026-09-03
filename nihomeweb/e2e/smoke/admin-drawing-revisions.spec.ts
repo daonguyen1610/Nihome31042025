@@ -136,9 +136,10 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     // Pick R1 as From and R2 as To via the API response order — safer
     // than parsing DOM labels which vary per language.
     const listResp = await api.get(
-      `/api/drawing-revisions?targetType=ShopDrawing&targetId=${shopId}&pageSize=10`,
+      `/api/drawing-revisions?designProjectId=${projectId}&targetType=ShopDrawing&targetId=${shopId}&pageSize=10`,
       { headers: authHeader },
     );
+    expect(listResp.ok(), await listResp.text()).toBeTruthy();
     const revs = (await listResp.json()).items as Array<{ id: number; revisionNumber: number }>;
     const r1 = revs.find((r) => r.revisionNumber === 1)!;
     const r2 = revs.find((r) => r.revisionNumber === 2)!;

@@ -192,13 +192,22 @@ public static class RbacSeeder
 
             if (!role.InitialPermissionsSeeded)
             {
-                // First-ever seed for this role — insert the whole declared set.
-                var rows = declaredCodes.Select(c => new RolePermission
-                {
-                    RoleId = role.Id,
-                    PermissionId = permissionIdByCode[c],
-                    CreatedAt = DateTime.UtcNow,
-                });
+                // A role can already have part of its default matrix when an
+                // earlier seed was interrupted. Add only the missing pairs so
+                // the unique (RoleId, PermissionId) index is never violated.
+                var existingIds = db.RolePermissions
+                    .Where(rp => rp.RoleId == role.Id)
+                    .Select(rp => rp.PermissionId)
+                    .ToHashSet();
+                var rows = declaredCodes
+                    .Select(c => permissionIdByCode[c])
+                    .Where(id => !existingIds.Contains(id))
+                    .Select(id => new RolePermission
+                    {
+                        RoleId = role.Id,
+                        PermissionId = id,
+                        CreatedAt = DateTime.UtcNow,
+                    });
                 db.RolePermissions.AddRange(rows);
                 role.InitialPermissionsSeeded = true;
             }

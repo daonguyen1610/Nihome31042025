@@ -116,6 +116,49 @@ public class MasterDataSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_RepairsMissingLabelKeyWithoutChangingAdminValues()
+    {
+        _db.MasterDataOptions.Add(new MasterDataOption
+        {
+            Category = "customer_type",
+            Code = "individual",
+            Name = "Admin individual",
+            LabelKey = null,
+            IsActive = false,
+            SortOrder = 99,
+        });
+        _db.SaveChanges();
+
+        MasterDataSeeder.Seed(_db);
+
+        var item = _db.MasterDataOptions.Single(option =>
+            option.Category == "customer_type" && option.Code == "individual");
+        Assert.Equal("Admin individual", item.Name);
+        Assert.False(item.IsActive);
+        Assert.Equal(99, item.SortOrder);
+        Assert.Equal("masterData.customer_type.individual.label", item.LabelKey);
+    }
+
+    [Fact]
+    public void Seed_RejectsDuplicateDefinitionsBeforeInsertion()
+    {
+        const string json = """
+            { "categories": [
+              { "category": "status", "options": [
+                { "code": "open", "name": "Open" },
+                { "code": "OPEN", "name": "Duplicate" }
+              ] }
+            ] }
+            """;
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+        var error = Assert.Throws<InvalidDataException>(() => MasterDataSeeder.Seed(_db, stream));
+
+        Assert.Contains("status|open", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(_db.MasterDataOptions);
+    }
+
+    [Fact]
     public void Seed_AllOptionsAreActiveAndNamesPopulated()
     {
         MasterDataSeeder.Seed(_db);

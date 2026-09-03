@@ -23,7 +23,7 @@ public static class SampleCrmDataSeeder
         // integration + e2e specs. If SALE is missing (e.g. a partial seed),
         // fall back to the first admin.
         var owner = db.Users.FirstOrDefault(u => u.PhoneNumber == "0911000003")
-                    ?? db.Users.FirstOrDefault(u => u.Role == UserRole.SUPER_ADMIN)
+                ?? db.Users.Where(u => u.Role == UserRole.SUPER_ADMIN).OrderBy(u => u.Id).FirstOrDefault()
                     ?? db.Users.OrderBy(u => u.Id).FirstOrDefault();
         if (owner is null) return;
         var projectManager = ResolveRoleUser(db, "PM", owner);
@@ -70,7 +70,7 @@ public static class SampleCrmDataSeeder
                 Phone = "0900000101",
                 Email = "minh.anh.sample@example.com",
                 SourceCode = "marketing",
-                Status = LeadStatus.New,
+                Status = LeadStatus.Converted,
                 Note = "Lead mẫu từ chiến dịch Facebook Ads.",
             },
             new Lead
@@ -111,8 +111,25 @@ public static class SampleCrmDataSeeder
 
         foreach (var s in samples)
         {
-            var exists = db.Leads.Any(l => l.Name == s.Name);
-            if (exists) continue;
+            var existing = db.Leads.OrderBy(l => l.Id).FirstOrDefault(l => l.Name == s.Name);
+            if (existing is not null)
+            {
+                if (!db.LeadActivities.Any(activity => activity.LeadId == existing.Id
+                    && activity.Type == LeadActivityType.Note
+                    && activity.Content == "Ghi chú mẫu khởi tạo cho lead demo."))
+                {
+                    db.LeadActivities.Add(new LeadActivity
+                    {
+                        LeadId = existing.Id,
+                        Type = LeadActivityType.Note,
+                        Content = "Ghi chú mẫu khởi tạo cho lead demo.",
+                        CreatedByUserId = owner.Id,
+                        CreatedAt = now,
+                    });
+                    db.SaveChanges();
+                }
+                continue;
+            }
 
             s.OwnerUserId = owner.Id;
             s.CreatedByUserId = owner.Id;
@@ -238,7 +255,34 @@ public static class SampleCrmDataSeeder
 
         foreach (var (customer, contact) in samples)
         {
-            if (db.Customers.Any(c => c.Name == customer.Name)) continue;
+            var existing = db.Customers.OrderBy(c => c.Id).FirstOrDefault(c => c.Name == customer.Name);
+            if (existing is not null)
+            {
+                if (!db.CustomerContacts.Any(item => item.CustomerId == existing.Id
+                    && item.FullName == contact.FullName && item.Phone == contact.Phone))
+                {
+                    contact.CustomerId = existing.Id;
+                    contact.CreatedAt = now;
+                    contact.UpdatedAt = now;
+                    db.CustomerContacts.Add(contact);
+                }
+                if (!db.CustomerActivities.Any(activity => activity.CustomerId == existing.Id
+                    && activity.Type == CustomerActivityType.Note
+                    && activity.Content == "Ghi chú mẫu khởi tạo cho khách hàng demo."))
+                {
+                    db.CustomerActivities.Add(new CustomerActivity
+                    {
+                        CustomerId = existing.Id,
+                        Type = CustomerActivityType.Note,
+                        OccurredAt = now,
+                        Content = "Ghi chú mẫu khởi tạo cho khách hàng demo.",
+                        CreatedByUserId = owner.Id,
+                        CreatedAt = now,
+                    });
+                }
+                db.SaveChanges();
+                continue;
+            }
 
             customer.OwnerUserId = owner.Id;
             customer.CreatedByUserId = owner.Id;
@@ -289,7 +333,26 @@ public static class SampleCrmDataSeeder
         for (var i = 0; i < samples.Length; i++)
         {
             var (name, value, probability, stage, closeDays) = samples[i];
-            if (db.Opportunities.Any(o => o.Name == name)) continue;
+            var existing = db.Opportunities.OrderBy(o => o.Id).FirstOrDefault(o => o.Name == name);
+            if (existing is not null)
+            {
+                if (!db.OpportunityActivities.Any(activity => activity.OpportunityId == existing.Id
+                    && activity.Type == OpportunityActivityType.Note
+                    && activity.Content == "Ghi chú mẫu khởi tạo cho cơ hội demo."))
+                {
+                    db.OpportunityActivities.Add(new OpportunityActivity
+                    {
+                        OpportunityId = existing.Id,
+                        Type = OpportunityActivityType.Note,
+                        OccurredAt = now,
+                        Content = "Ghi chú mẫu khởi tạo cho cơ hội demo.",
+                        CreatedByUserId = owner.Id,
+                        CreatedAt = now,
+                    });
+                    db.SaveChanges();
+                }
+                continue;
+            }
 
             var customer = sampleCustomers[i % sampleCustomers.Count];
             var closeDate = now.AddDays(closeDays);
@@ -392,12 +455,6 @@ public static class SampleCrmDataSeeder
 
     private static void SeedQuotes(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        // Guard: seeder-managed quotes carry a canonical marker in Note. If
-        // any exist we treat the module as already seeded and bail — that way
-        // subsequent boot cycles are a no-op while still letting real users
-        // author their own quotes freely.
-        if (db.Quotes.Any(q => q.Note != null && q.Note.StartsWith(SampleQuoteNoteMarker))) return;
-
         var sampleOpps = db.Opportunities
             .Where(o => o.Name.StartsWith(SampleTag))
             .OrderBy(o => o.Id)
@@ -420,15 +477,6 @@ public static class SampleCrmDataSeeder
             (3, QuoteMethod.Boq,      QuoteStatus.Cancelled,         30, "Đã huỷ · terminal"),
         };
 
-        var year = now.Year;
-        var nextSeq = 1 + (db.Quotes.AsNoTracking()
-            .Where(q => q.Code.StartsWith($"QT-{year}-"))
-            .Select(q => q.Code)
-            .AsEnumerable()
-            .Select(c => int.TryParse(c.AsSpan($"QT-{year}-".Length), out var n) ? n : 0)
-            .DefaultIfEmpty(0)
-            .Max());
-
         var snapshotQuoteId = 0;
         for (var i = 0; i < seeds.Length; i++)
         {
@@ -436,7 +484,14 @@ public static class SampleCrmDataSeeder
             if (oppIdx >= sampleOpps.Count) continue;
 
             var opp = sampleOpps[oppIdx];
-            var code = $"QT-{year}-{nextSeq++:D4}";
+            var code = $"QT-SAMPLE-{i + 1:D3}";
+            var sampleNote = $"{SampleQuoteNoteMarker} {label}";
+            var existing = db.Quotes.OrderBy(q => q.Id).FirstOrDefault(q => q.Code == code
+                || q.Note == sampleNote);
+            if (existing is not null)
+            {
+                continue;
+            }
             var validUntil = now.AddDays(validDays);
 
             var quote = new Quote
@@ -449,7 +504,7 @@ public static class SampleCrmDataSeeder
                 DiscountPercent = i % 3 == 0 ? 0m : (i % 3 == 1 ? 5m : 10m),
                 VatPercent = method == QuoteMethod.Boq ? 10m : 8m,
                 ValidUntil = validUntil,
-                Note = $"{SampleQuoteNoteMarker} {label}",
+                Note = sampleNote,
                 Status = status,
                 CreatedAt = now.AddDays(-3),
                 UpdatedAt = now.AddHours(-1),
@@ -706,11 +761,7 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedContracts(AppDbContext db, ApplicationUser owner, DateTime now, string? webRootPath = null)
     {
-        var alreadySeeded = db.Contracts.Any(c => c.Note != null && c.Note.StartsWith(SampleContractMarker));
-        if (!alreadySeeded)
-        {
-            SeedContractHeaders(db, owner, now);
-        }
+        SeedContractHeaders(db, owner, now);
         SeedContractMilestones(db, now);
         SeedContractAppendices(db, owner, now);
         SeedContractAttachments(db, owner, now, webRootPath);
@@ -732,15 +783,6 @@ public static class SampleCrmDataSeeder
             .GroupBy(q => q.OpportunityId)
             .ToDictionary(group => group.Key, group => group.First());
 
-        var year = now.Year;
-        var nextSeq = 1 + (db.Contracts.AsNoTracking()
-            .Where(c => c.ContractNumber.StartsWith($"HD-{year}-"))
-            .Select(c => c.ContractNumber)
-            .AsEnumerable()
-            .Select(n => int.TryParse(n.AsSpan($"HD-{year}-".Length), out var s) ? s : 0)
-            .DefaultIfEmpty(0)
-            .Max());
-
         // (opportunityIdx, status, signedOffsetDays, durationDays, value, label)
         // The InProgress row uses a short remaining window on purpose so
         // the FE red badge (endDate - now ≤ 30 days) has a live example.
@@ -754,14 +796,18 @@ public static class SampleCrmDataSeeder
             (4, ContractStatus.Completed, -240, 180,  980_000_000m, "Hoàn thành, đã bàn giao"),
         };
 
-        foreach (var (opportunityIdx, status, signedOffset, durationDays, value, label) in seeds)
+        for (var index = 0; index < seeds.Length; index++)
         {
+            var (opportunityIdx, status, signedOffset, durationDays, value, label) = seeds[index];
             var opportunity = sampleOpportunities[opportunityIdx % sampleOpportunities.Count];
             sampleQuotes.TryGetValue(opportunity.Id, out var quote);
             var signedDate = status == ContractStatus.Draft ? (DateTime?)null : now.AddDays(signedOffset);
             var startDate = signedDate?.AddDays(7);
             var endDate = startDate?.AddDays(durationDays);
-            var number = $"HD-{year}-{nextSeq++:D4}";
+            var number = $"HD-SAMPLE-{index + 1:D3}";
+            var sampleNote = $"{SampleContractMarker} {label}";
+            if (db.Contracts.Any(contract => contract.ContractNumber == number
+                || contract.Note == sampleNote)) continue;
 
             db.Contracts.Add(new Contract
             {
@@ -776,7 +822,7 @@ public static class SampleCrmDataSeeder
                 EndDate = endDate,
                 Value = value,
                 ScopeOfWork = "Phạm vi thi công phần thô và hoàn thiện theo hồ sơ thiết kế kèm theo.",
-                Note = $"{SampleContractMarker} {label}",
+                Note = sampleNote,
                 CreatedAt = now.AddDays(signedOffset).AddDays(-3),
                 UpdatedAt = now.AddHours(-1),
                 CreatedByUserId = owner.Id,
@@ -799,24 +845,33 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedContractMilestones(AppDbContext db, DateTime now)
     {
-        var contractsMissingSchedule = db.Contracts
+        var contracts = db.Contracts
             .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker)
                      && c.Status != ContractStatus.Draft
-                     && c.SignedDate != null
-                     && !db.ContractPaymentMilestones.Any(m => m.ContractId == c.Id))
+                     && c.SignedDate != null)
+            .OrderBy(c => c.ContractNumber)
             .ToList();
-        if (contractsMissingSchedule.Count == 0) return;
 
-        foreach (var c in contractsMissingSchedule)
+        foreach (var c in contracts)
         {
             var start = c.StartDate ?? c.SignedDate!.Value;
             var end = c.EndDate ?? start.AddDays(180);
             var mid = start.AddTicks((end - start).Ticks / 2);
-            db.ContractPaymentMilestones.AddRange(
+            var milestones = new[]
+            {
                 new ContractPaymentMilestone { ContractId = c.Id, Order = 1, Name = "Đợt 1 - Tạm ứng khi ký HĐ", PercentValue = 30m, DueDate = c.SignedDate!.Value.AddDays(7), Status = PaymentMilestoneStatus.Paid, CreatedAt = now, UpdatedAt = now },
                 new ContractPaymentMilestone { ContractId = c.Id, Order = 2, Name = "Đợt 2 - Nghiệm thu 50%", PercentValue = 30m, DueDate = mid, Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Requested, CreatedAt = now, UpdatedAt = now },
                 new ContractPaymentMilestone { ContractId = c.Id, Order = 3, Name = "Đợt 3 - Bàn giao", PercentValue = 30m, DueDate = end, Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Pending, CreatedAt = now, UpdatedAt = now },
-                new ContractPaymentMilestone { ContractId = c.Id, Order = 4, Name = "Đợt 4 - Quyết toán bảo hành", PercentValue = 10m, DueDate = end.AddDays(30), Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Pending, CreatedAt = now, UpdatedAt = now });
+                new ContractPaymentMilestone { ContractId = c.Id, Order = 4, Name = "Đợt 4 - Quyết toán bảo hành", PercentValue = 10m, DueDate = end.AddDays(30), Status = c.Status == ContractStatus.Completed ? PaymentMilestoneStatus.Paid : PaymentMilestoneStatus.Pending, CreatedAt = now, UpdatedAt = now },
+            };
+            foreach (var milestone in milestones)
+            {
+                if (!db.ContractPaymentMilestones.Any(existing => existing.ContractId == c.Id
+                    && existing.Order == milestone.Order))
+                {
+                    db.ContractPaymentMilestones.Add(milestone);
+                }
+            }
         }
         db.SaveChanges();
     }
@@ -836,14 +891,13 @@ public static class SampleCrmDataSeeder
             .ToList();
         foreach (var c in contracts)
         {
-            if (db.ContractAppendices.Any(v => v.ContractId == c.Id)) continue;
             switch (c.Status)
             {
                 case ContractStatus.InProgress:
                     // Two VOs so header currentValue reflects a realistic
                     // stack, plus a rejected one so reviewers see the
                     // "Rejected" style out of the box.
-                    db.ContractAppendices.AddRange(
+                    AddMissingContractAppendices(db, c.Id,
                         new ContractAppendix
                         {
                             ContractId = c.Id,
@@ -882,7 +936,7 @@ public static class SampleCrmDataSeeder
                         });
                     break;
                 case ContractStatus.Completed:
-                    db.ContractAppendices.Add(new ContractAppendix
+                    AddMissingContractAppendices(db, c.Id, new ContractAppendix
                     {
                         ContractId = c.Id,
                         VoNumber = 1,
@@ -904,7 +958,7 @@ public static class SampleCrmDataSeeder
                 case ContractStatus.Signed:
                     // Signed contracts have a Draft VO so Sales can see
                     // the editable state on first login.
-                    db.ContractAppendices.Add(new ContractAppendix
+                    AddMissingContractAppendices(db, c.Id, new ContractAppendix
                     {
                         ContractId = c.Id,
                         VoNumber = 1,
@@ -919,7 +973,7 @@ public static class SampleCrmDataSeeder
                     });
                     break;
                 case ContractStatus.OnHold:
-                    db.ContractAppendices.Add(new ContractAppendix
+                    AddMissingContractAppendices(db, c.Id, new ContractAppendix
                     {
                         ContractId = c.Id,
                         VoNumber = 1,
@@ -938,6 +992,19 @@ public static class SampleCrmDataSeeder
             }
         }
         db.SaveChanges();
+    }
+
+    private static void AddMissingContractAppendices(AppDbContext db, int contractId,
+        params ContractAppendix[] appendices)
+    {
+        foreach (var appendix in appendices)
+        {
+            if (!db.ContractAppendices.Any(existing => existing.ContractId == contractId
+                && existing.VoNumber == appendix.VoNumber))
+            {
+                db.ContractAppendices.Add(appendix);
+            }
+        }
     }
 
     /// <summary>
@@ -979,24 +1046,31 @@ public static class SampleCrmDataSeeder
             .ToList();
         foreach (var c in contracts)
         {
-            if (db.ContractAttachments.Any(a => a.ContractId == c.Id)) continue;
-
-            db.ContractAttachments.Add(new ContractAttachment
+            if (!db.ContractAttachments.Any(a => a.ContractId == c.Id
+                && a.Kind == ContractAttachmentKind.SignedScan
+                && a.FilePath == SamplePlaceholderPath))
             {
-                ContractId = c.Id,
-                Kind = ContractAttachmentKind.SignedScan,
-                FilePath = SamplePlaceholderPath,
-                OriginalFileName = $"{c.ContractNumber}-scan.pdf",
-                FileSize = placeholderSize,
-                ContentType = "application/pdf",
-                Label = "Bản scan hợp đồng đã ký",
-                CreatedAt = now.AddDays(-1),
-                UploadedByUserId = owner.Id,
-            });
+                db.ContractAttachments.Add(new ContractAttachment
+                {
+                    ContractId = c.Id,
+                    Kind = ContractAttachmentKind.SignedScan,
+                    FilePath = SamplePlaceholderPath,
+                    OriginalFileName = $"{c.ContractNumber}-scan.pdf",
+                    FileSize = placeholderSize,
+                    ContentType = "application/pdf",
+                    Label = "Bản scan hợp đồng đã ký",
+                    CreatedAt = now.AddDays(-1),
+                    UploadedByUserId = owner.Id,
+                });
+            }
 
             // Supporting document on InProgress rows so the Documents tab
             // demonstrates a mixed list + delete flow out of the box.
-            if (c.Status == ContractStatus.InProgress)
+            if (c.Status == ContractStatus.InProgress
+                && !db.ContractAttachments.Any(a => a.ContractId == c.Id
+                    && a.Kind == ContractAttachmentKind.Supporting
+                    && a.FilePath == SamplePlaceholderPath
+                    && a.OriginalFileName == $"{c.ContractNumber}-boq.pdf"))
             {
                 db.ContractAttachments.Add(new ContractAttachment
                 {
@@ -1091,45 +1165,41 @@ public static class SampleCrmDataSeeder
             if (patched) db.SaveChanges();
         }
 
-        // Phase 2 — DB rows are inserted only when the sample set is
-        // absent, so admin edits (e.g. renaming a sample row) are not
-        // clobbered on subsequent boots.
-        if (!db.CapabilityDocuments.Any(d => d.Description != null
-            && d.Description.StartsWith(SampleCapabilityMarker)))
+        var i = 0;
+        foreach (var (name, tag, issuedDaysAgo, expiryDaysFromNow, file) in seeds)
         {
-            var i = 0;
-            foreach (var (name, tag, issuedDaysAgo, expiryDaysFromNow, file) in seeds)
+            var filePath = $"/files/capability/{file}";
+            if (db.CapabilityDocuments.Any(document => document.FilePath == filePath))
             {
-                long size = 512 * 1024 * (i + 1);
-                if (storageDir is not null)
-                {
-                    var fullPath = Path.Combine(storageDir, file);
-                    if (File.Exists(fullPath)) size = new FileInfo(fullPath).Length;
-                }
-
-                var doc = new CapabilityDocument
-                {
-                    Name = name,
-                    TagCode = tag,
-                    IssuedDate = issuedDaysAgo.HasValue ? now.AddDays(issuedDaysAgo.Value) : null,
-                    ExpiryDate = expiryDaysFromNow.HasValue ? now.AddDays(expiryDaysFromNow.Value) : null,
-                    Description = $"{SampleCapabilityMarker} Sample capability document.",
-                    FilePath = $"/files/capability/{file}",
-                    OriginalFileName = file,
-                    FileSize = size,
-                    ContentType = "application/pdf",
-                    CurrentVersion = 1,
-                    UploadedByUserId = owner.Id,
-                    UpdatedByUserId = owner.Id,
-                    CreatedAt = now.AddDays(-14 + i),
-                    UpdatedAt = now.AddDays(-14 + i),
-                };
-                db.CapabilityDocuments.Add(doc);
                 i++;
+                continue;
             }
-
-            db.SaveChanges();
+            long size = 512 * 1024 * (i + 1);
+            if (storageDir is not null)
+            {
+                var fullPath = Path.Combine(storageDir, file);
+                if (File.Exists(fullPath)) size = new FileInfo(fullPath).Length;
+            }
+            db.CapabilityDocuments.Add(new CapabilityDocument
+            {
+                Name = name,
+                TagCode = tag,
+                IssuedDate = issuedDaysAgo.HasValue ? now.AddDays(issuedDaysAgo.Value) : null,
+                ExpiryDate = expiryDaysFromNow.HasValue ? now.AddDays(expiryDaysFromNow.Value) : null,
+                Description = $"{SampleCapabilityMarker} Sample capability document.",
+                FilePath = filePath,
+                OriginalFileName = file,
+                FileSize = size,
+                ContentType = "application/pdf",
+                CurrentVersion = 1,
+                UploadedByUserId = owner.Id,
+                UpdatedByUserId = owner.Id,
+                CreatedAt = now.AddDays(-14 + i),
+                UpdatedAt = now.AddDays(-14 + i),
+            });
+            i++;
         }
+        db.SaveChanges();
 
         SeedCapabilityDocumentVersion(db);
     }
@@ -1196,8 +1266,6 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedTenders(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        if (db.Tenders.Any(t => t.Note != null && t.Note.StartsWith(SampleTenderMarker))) return;
-
         var customers = db.Customers.Where(c => c.Name.StartsWith(SampleTag))
             .OrderBy(c => c.Id).Take(5).ToList();
         if (customers.Count == 0) return;
@@ -1220,9 +1288,6 @@ public static class SampleCrmDataSeeder
             .OrderBy(o => o.Id)
             .ToList();
 
-        var year = now.Year;
-        var nextSeq = 1 + db.Tenders.Count(t => t.Code.StartsWith($"TD-{year}-"));
-
         // Curated scenarios so every state (Preparing / imminent / Submitted /
         // Won / Lost) has at least one row on the list, and the detail-page
         // checklist has ownership + internal deadlines + attached files.
@@ -1241,7 +1306,20 @@ public static class SampleCrmDataSeeder
         {
             if (custIdx >= customers.Count) continue;
             var customer = customers[custIdx];
-            var code = $"TD-{year}-{nextSeq++:D4}";
+            var code = $"TD-SAMPLE-{i + 1:D3}";
+            var existingTender = db.Tenders.OrderBy(tender => tender.Id)
+                .FirstOrDefault(tender => tender.Code == code
+                    || (tender.Note != null && tender.Note.StartsWith(SampleTenderMarker)
+                        && tender.Name == name));
+            if (existingTender is not null)
+            {
+                if (existingTender.Note != null && existingTender.Note.StartsWith(SampleTenderMarker))
+                {
+                    SeedTenderChecklistItems(db, existingTender, templates, libraryDoc, owner.Id, now, richChecklist);
+                }
+                i++;
+                continue;
+            }
             var deadline = now.AddDays(daysToDeadline);
 
             // Won tenders need a linked opportunity so the detail-page
@@ -1281,80 +1359,55 @@ public static class SampleCrmDataSeeder
             };
             db.Tenders.Add(tender);
             db.SaveChanges();
-
-            // Build the checklist. Rich rows carry ownership, an internal
-            // deadline, and an attached file (path borrowed from a sample
-            // capability document so the download link works). Everyone
-            // else gets a mix of Done / NotStarted so % != 0 and != 100.
-            var itemsToAdd = new List<TenderChecklistItem>();
-            for (var idx = 0; idx < templates.Count; idx++)
-            {
-                var tpl = templates[idx];
-                TenderChecklistItemStatus itemStatus;
-                if (status == TenderStatus.Submitted || status == TenderStatus.Won)
-                {
-                    itemStatus = TenderChecklistItemStatus.Submitted;
-                }
-                else if (status == TenderStatus.Lost)
-                {
-                    // Lost tenders keep whatever they had — mostly done but
-                    // not all submitted (bid never made it out).
-                    itemStatus = idx < 4 ? TenderChecklistItemStatus.Done : TenderChecklistItemStatus.NotStarted;
-                }
-                else if (richChecklist)
-                {
-                    // Preparing — spread across every status so the
-                    // detail-page dropdown shows variety.
-                    itemStatus = idx switch
-                    {
-                        0 => TenderChecklistItemStatus.Done,
-                        1 => TenderChecklistItemStatus.Done,
-                        2 => TenderChecklistItemStatus.Preparing,
-                        3 => TenderChecklistItemStatus.Preparing,
-                        _ => TenderChecklistItemStatus.NotStarted,
-                    };
-                }
-                else
-                {
-                    itemStatus = idx < 3
-                        ? TenderChecklistItemStatus.Done
-                        : TenderChecklistItemStatus.NotStarted;
-                }
-
-                var item = new TenderChecklistItem
-                {
-                    TenderId = tender.Id,
-                    TemplateCode = tpl.Code,
-                    Title = tpl.Name,
-                    Status = itemStatus,
-                    SortOrder = tpl.SortOrder != 0 ? tpl.SortOrder : idx + 1,
-                    CreatedAt = now.AddDays(-3),
-                    UpdatedAt = now.AddDays(-1),
-                };
-
-                if (richChecklist)
-                {
-                    // First two rows show ownership so the "Người phụ trách"
-                    // column has data on the detail page. Falls back
-                    // silently when the sample DB has no second user.
-                    if (idx <= 1) item.OwnerUserId = owner.Id;
-                    // Give one row an internal deadline in the near future.
-                    if (idx == 1) item.InternalDeadline = now.AddDays(3);
-                    // Attach a real file to the first "Done" row so the
-                    // Download link works.
-                    if (idx == 0 && libraryDoc is not null)
-                    {
-                        item.FilePath = libraryDoc.FilePath;
-                        item.OriginalFileName = libraryDoc.OriginalFileName;
-                    }
-                }
-
-                itemsToAdd.Add(item);
-            }
-            db.TenderChecklistItems.AddRange(itemsToAdd);
-            db.SaveChanges();
+            SeedTenderChecklistItems(db, tender, templates, libraryDoc, owner.Id, now, richChecklist);
             i++;
         }
+    }
+
+    private static void SeedTenderChecklistItems(AppDbContext db, Tender tender,
+        IReadOnlyList<MasterDataOption> templates, CapabilityDocument? libraryDoc, int ownerUserId,
+        DateTime now, bool richChecklist)
+    {
+        for (var index = 0; index < templates.Count; index++)
+        {
+            var template = templates[index];
+            if (db.TenderChecklistItems.Any(item => item.TenderId == tender.Id
+                && item.TemplateCode == template.Code)) continue;
+            var status = tender.Status is TenderStatus.Submitted or TenderStatus.Won
+                ? TenderChecklistItemStatus.Submitted
+                : tender.Status == TenderStatus.Lost
+                    ? index < 4 ? TenderChecklistItemStatus.Done : TenderChecklistItemStatus.NotStarted
+                    : richChecklist
+                        ? index switch
+                        {
+                            0 or 1 => TenderChecklistItemStatus.Done,
+                            2 or 3 => TenderChecklistItemStatus.Preparing,
+                            _ => TenderChecklistItemStatus.NotStarted,
+                        }
+                        : index < 3 ? TenderChecklistItemStatus.Done : TenderChecklistItemStatus.NotStarted;
+            var item = new TenderChecklistItem
+            {
+                TenderId = tender.Id,
+                TemplateCode = template.Code,
+                Title = template.Name,
+                Status = status,
+                SortOrder = template.SortOrder != 0 ? template.SortOrder : index + 1,
+                CreatedAt = now.AddDays(-3),
+                UpdatedAt = now.AddDays(-1),
+            };
+            if (richChecklist)
+            {
+                if (index <= 1) item.OwnerUserId = ownerUserId;
+                if (index == 1) item.InternalDeadline = now.AddDays(3);
+                if (index == 0 && libraryDoc is not null)
+                {
+                    item.FilePath = libraryDoc.FilePath;
+                    item.OriginalFileName = libraryDoc.OriginalFileName;
+                }
+            }
+            db.TenderChecklistItems.Add(item);
+        }
+        db.SaveChanges();
     }
 
     private const string SampleSurveyMarker = "[SAMPLE_SURVEY]";
@@ -1368,12 +1421,6 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedSurveys(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        if (db.Surveys.Any(s => s.Note != null && s.Note.StartsWith(SampleSurveyMarker)))
-        {
-            EnsureSampleSurveyChecklists(db, owner.Id, now);
-            return;
-        }
-
         var sampleOpportunities = db.Opportunities
             .Where(o => o.Name.StartsWith(SampleTag))
             .OrderBy(o => o.Id)
@@ -1392,9 +1439,6 @@ public static class SampleCrmDataSeeder
         // — pick the first row if present, else leave the link empty.
         var sampleProject = db.Projects.OrderBy(p => p.Id).FirstOrDefault();
 
-        var year = now.Year;
-        var nextSeq = 1 + db.Surveys.Count(s => s.Code.StartsWith($"SV-{year}-"));
-
         // (Location, ConstructionTypeCode, DaysAgo, DriveSync, DriveError, LinkProject, LinkOpportunity)
         var seeds = new (string Location, string ConstructionCode, int DaysAgo,
             SurveyDriveSyncStatus DriveSync, string? DriveError, bool LinkProject, int? LinkOppIdx)[]
@@ -1409,7 +1453,14 @@ public static class SampleCrmDataSeeder
         var i = 0;
         foreach (var (location, code, daysAgo, driveSync, driveError, linkProject, oppIdx) in seeds)
         {
-            var seq = nextSeq++;
+            var surveyCode = $"SV-SAMPLE-{i + 1:D3}";
+            if (db.Surveys.Any(survey => survey.Code == surveyCode
+                || (survey.Note != null && survey.Note.StartsWith(SampleSurveyMarker)
+                    && survey.Location == location)))
+            {
+                i++;
+                continue;
+            }
             int? linkedOppId = null;
             if (oppIdx.HasValue && oppIdx.Value < sampleOpportunities.Count)
             {
@@ -1422,7 +1473,7 @@ public static class SampleCrmDataSeeder
 
             var survey = new Survey
             {
-                Code = $"SV-{year}-{seq:D4}",
+                Code = surveyCode,
                 Location = location,
                 ConstructionTypeCode = code,
                 SurveyDate = now.AddDays(-daysAgo),
@@ -1491,8 +1542,6 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedDesignProjects(AppDbContext db, ApplicationUser owner, DateTime now)
     {
-        if (db.DesignProjects.Any(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker))) return;
-
         var sampleContracts = GetSampleContracts(db);
         var sampleCustomers = db.Customers
             .Where(c => c.Name.StartsWith(SampleTag))
@@ -1502,9 +1551,6 @@ public static class SampleCrmDataSeeder
 
         var projectManager = ResolveRoleUser(db, "PM", owner);
         var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
-
-        var year = now.Year;
-        var nextSeq = 1 + db.DesignProjects.Count(dp => dp.ProjectCode.StartsWith($"DP-{year}-"));
 
         // Each row deterministically uses a distinct sample contract when one
         // is available; this keeps the project/customer relationship coherent.
@@ -1523,11 +1569,15 @@ public static class SampleCrmDataSeeder
             var contract = sampleContracts.Count > index ? sampleContracts[index] : null;
             if (contract is null && sampleCustomers.Count == 0) continue;
             var customerId = contract?.CustomerId ?? sampleCustomers[index % sampleCustomers.Count].Id;
-            var seq = nextSeq++;
+            var projectCode = $"DP-SAMPLE-{index + 1:D3}";
+            var sampleName = $"{SampleTag} {name}";
+            if (db.DesignProjects.Any(project => project.ProjectCode == projectCode
+                || (project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker)
+                    && project.Name == sampleName))) continue;
             var dp = new DesignProject
             {
-                ProjectCode = $"DP-{year}-{seq:D4}",
-                Name = $"{SampleTag} {name}",
+                ProjectCode = projectCode,
+                Name = sampleName,
                 CustomerId = customerId,
                 ContractId = contract?.Id,
                 ProjectManagerUserId = projectManager.Id,
@@ -1643,10 +1693,6 @@ public static class SampleCrmDataSeeder
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
-        if (db.ConceptOptions.Any(c => c.DesignProjectId == project.Id
-                                     && c.Description != null
-                                     && c.Description.StartsWith(SampleTag))) return;
-
         var seeds = new (string Name, string Description, ConceptOptionStatus Status, int DaysAgo, bool Presented)[]
         {
             ("Phương án A - Hiện đại",  $"{SampleTag} Concept option A — tone hiện đại, tối giản.", ConceptOptionStatus.PresentedToClient,     3,  true),
@@ -1656,6 +1702,8 @@ public static class SampleCrmDataSeeder
 
         foreach (var (name, description, status, daysAgo, presented) in seeds)
         {
+            if (db.ConceptOptions.Any(option => option.DesignProjectId == project.Id
+                && option.Name == name)) continue;
             db.ConceptOptions.Add(new ConceptOption
             {
                 DesignProjectId = project.Id,
@@ -1759,10 +1807,6 @@ public static class SampleCrmDataSeeder
         }
         if (legacySamples.Count > 0) db.SaveChanges();
 
-        if (db.ShopDrawings.Any(d => d.DesignProjectId == project.Id
-                                  && d.Note != null
-                                  && d.Note.StartsWith(SampleMarker))) return;
-
         var seeds = new (string Discipline, string Prefix, string Item, string Title, ShopDrawingStatus Status, int DaysAgo)[]
         {
             ("architecture", "KT-SD",  "Mặt bằng bố trí showroom tầng 1", "Bản vẽ bố trí cửa hàng — trục A-D", ShopDrawingStatus.Approved,   3),
@@ -1779,12 +1823,15 @@ public static class SampleCrmDataSeeder
             perDisciplineSeq.TryGetValue(discipline, out var current);
             perDisciplineSeq[discipline] = current + 1;
             var seq = perDisciplineSeq[discipline];
+            var drawingCode = $"{prefix}-{seq:D3}";
+            if (db.ShopDrawings.Any(drawing => drawing.DesignProjectId == project.Id
+                && drawing.DrawingCode == drawingCode)) continue;
             db.ShopDrawings.Add(new ShopDrawing
             {
                 DesignProjectId = project.Id,
                 DisciplineCode = discipline,
                 ConstructionItem = item,
-                DrawingCode = $"{prefix}-{seq:D3}",
+                DrawingCode = drawingCode,
                 Title = title,
                 OwnerUserId = owner.Id,
                 Status = status,
@@ -1817,7 +1864,7 @@ public static class SampleCrmDataSeeder
         if (project is null) return;
 
         if (!db.ConceptOptions.Any(item => item.DesignProjectId == project.Id
-                                        && item.InternalNote == ConceptMarker))
+                        && item.Name == "Phương án showroom được phê duyệt"))
         {
             db.ConceptOptions.Add(new ConceptOption
             {
@@ -1997,8 +2044,6 @@ public static class SampleCrmDataSeeder
     private static void SeedDrawingRevisions(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         const string SampleMarker = "[SAMPLE_REV]";
-        if (db.DrawingRevisions.Any(r => r.Note.StartsWith(SampleMarker))) return;
-
         // First seeded ShopDrawing — bump it with a client-request R1 +
         // a follow-up MEP-coordination R2 so the FE has real diff data
         // to show.
@@ -2008,28 +2053,36 @@ public static class SampleCrmDataSeeder
             .FirstOrDefault();
         if (firstShop is not null)
         {
-            db.DrawingRevisions.Add(new DrawingRevision
+            if (!db.DrawingRevisions.Any(revision => revision.TargetType == DrawingRevisionTargetType.ShopDrawing
+                && revision.TargetId == firstShop.Id && revision.RevisionNumber == 1))
             {
-                TargetType = DrawingRevisionTargetType.ShopDrawing,
-                TargetId = firstShop.Id,
-                RevisionNumber = 1,
-                ReasonCode = "client-request",
-                Note = $"{SampleMarker} Khách yêu cầu đổi vị trí cửa chính sang trục B để mở view.",
-                IsCurrent = false,
-                CreatedByUserId = owner.Id,
-                CreatedAt = now.AddDays(-2),
-            });
-            db.DrawingRevisions.Add(new DrawingRevision
+                db.DrawingRevisions.Add(new DrawingRevision
+                {
+                    TargetType = DrawingRevisionTargetType.ShopDrawing,
+                    TargetId = firstShop.Id,
+                    RevisionNumber = 1,
+                    ReasonCode = "client-request",
+                    Note = $"{SampleMarker} Khách yêu cầu đổi vị trí cửa chính sang trục B để mở view.",
+                    IsCurrent = false,
+                    CreatedByUserId = owner.Id,
+                    CreatedAt = now.AddDays(-2),
+                });
+            }
+            if (!db.DrawingRevisions.Any(revision => revision.TargetType == DrawingRevisionTargetType.ShopDrawing
+                && revision.TargetId == firstShop.Id && revision.RevisionNumber == 2))
             {
-                TargetType = DrawingRevisionTargetType.ShopDrawing,
-                TargetId = firstShop.Id,
-                RevisionNumber = 2,
-                ReasonCode = "mep-sync",
-                Note = $"{SampleMarker} Đồng bộ hộp kỹ thuật MEP với bản vẽ điều hoà.",
-                IsCurrent = true,
-                CreatedByUserId = owner.Id,
-                CreatedAt = now.AddDays(-1),
-            });
+                db.DrawingRevisions.Add(new DrawingRevision
+                {
+                    TargetType = DrawingRevisionTargetType.ShopDrawing,
+                    TargetId = firstShop.Id,
+                    RevisionNumber = 2,
+                    ReasonCode = "mep-sync",
+                    Note = $"{SampleMarker} Đồng bộ hộp kỹ thuật MEP với bản vẽ điều hoà.",
+                    IsCurrent = true,
+                    CreatedByUserId = owner.Id,
+                    CreatedAt = now.AddDays(-1),
+                });
+            }
         }
 
         // First seeded BasicDesignDoc — one revision showing the reason
@@ -2040,17 +2093,21 @@ public static class SampleCrmDataSeeder
             .FirstOrDefault();
         if (firstBasic is not null)
         {
-            db.DrawingRevisions.Add(new DrawingRevision
+            if (!db.DrawingRevisions.Any(revision => revision.TargetType == DrawingRevisionTargetType.BasicDesignDoc
+                && revision.TargetId == firstBasic.Id && revision.RevisionNumber == 1))
             {
-                TargetType = DrawingRevisionTargetType.BasicDesignDoc,
-                TargetId = firstBasic.Id,
-                RevisionNumber = 1,
-                ReasonCode = "technical-fix",
-                Note = $"{SampleMarker} Cập nhật cao độ tim cột theo khảo sát thực địa.",
-                IsCurrent = true,
-                CreatedByUserId = owner.Id,
-                CreatedAt = now.AddDays(-3),
-            });
+                db.DrawingRevisions.Add(new DrawingRevision
+                {
+                    TargetType = DrawingRevisionTargetType.BasicDesignDoc,
+                    TargetId = firstBasic.Id,
+                    RevisionNumber = 1,
+                    ReasonCode = "technical-fix",
+                    Note = $"{SampleMarker} Cập nhật cao độ tim cột theo khảo sát thực địa.",
+                    IsCurrent = true,
+                    CreatedByUserId = owner.Id,
+                    CreatedAt = now.AddDays(-3),
+                });
+            }
         }
 
         db.SaveChanges();
@@ -2074,14 +2131,13 @@ public static class SampleCrmDataSeeder
         }
         if (legacySamples.Count > 0) db.SaveChanges();
 
-        if (db.IfcReleases.Any(r => r.Note != null && r.Note.StartsWith(SampleMarker))) return;
-
         var project = db.DesignProjects
             .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
                       && dp.CurrentStage == DesignProjectStage.ShopDrawing)
             .OrderBy(dp => dp.Id)
             .FirstOrDefault();
         if (project is null) return;
+        const string releaseNumber = "IFC-SAMPLE-001";
 
         // Pick the seeded approved shop drawings on this project so the
         // Draft phi\u1ebfu can walk through the release action without
@@ -2095,10 +2151,51 @@ public static class SampleCrmDataSeeder
             .ToList();
         if (approvedDrawings.Count == 0) return;
 
+        var existingRelease = db.IfcReleases
+            .Include(release => release.Items)
+            .Include(release => release.Recipients)
+            .OrderBy(release => release.Id)
+            .FirstOrDefault(release => release.DesignProjectId == project.Id
+                && (release.ReleaseNumber == releaseNumber
+                    || (release.Note != null && release.Note.StartsWith(SampleMarker))));
+        if (existingRelease is not null)
+        {
+            if (existingRelease.Note != null && existingRelease.Note.StartsWith(SampleMarker))
+            {
+                foreach (var drawing in approvedDrawings)
+                {
+                    if (!existingRelease.Items.Any(item => item.ShopDrawingId == drawing.Id))
+                    {
+                        existingRelease.Items.Add(new IfcReleaseItem { ShopDrawingId = drawing.Id });
+                    }
+                }
+                var recipients = new[]
+                {
+                    (Name: "Công ty CP xây dựng ABC", Type: "main-contractor"),
+                    (Name: "Tư vấn giám sát XYZ", Type: "supervisor"),
+                    (Name: "Chủ đầu tư [SAMPLE] Nguyễn Văn An", Type: "client"),
+                };
+                foreach (var recipient in recipients)
+                {
+                    if (!existingRelease.Recipients.Any(item => item.Name == recipient.Name
+                        && item.RecipientTypeCode == recipient.Type))
+                    {
+                        existingRelease.Recipients.Add(new IfcReleaseRecipient
+                        {
+                            Name = recipient.Name,
+                            RecipientTypeCode = recipient.Type,
+                        });
+                    }
+                }
+                db.SaveChanges();
+            }
+            return;
+        }
+
         var release = new IfcRelease
         {
             DesignProjectId = project.Id,
-            ReleaseNumber = $"IFC-{now.Year}-001",
+            ReleaseNumber = releaseNumber,
             Title = "B\u00e0n giao t\u1ea7ng 1 — s\u1ea3n showroom",
             Status = IfcReleaseStatus.Draft,
             Note = $"{SampleMarker} Gói IFC mẫu — gồm các bản vẽ thiết kế chi tiết đã duyệt đầu tiên.",
@@ -2130,8 +2227,6 @@ public static class SampleCrmDataSeeder
     private static void SeedConstructionTasks(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         const string SampleMarker = "[SAMPLE_CONSTR]";
-        if (db.ConstructionTasks.Any(t => t.Description != null && t.Description.StartsWith(SampleMarker))) return;
-
         var project = db.DesignProjects
             .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
                       && dp.CurrentStage == DesignProjectStage.ShopDrawing)
@@ -2223,13 +2318,34 @@ public static class SampleCrmDataSeeder
             UpdatedAt = now.AddDays(-1),
         };
 
-        db.ConstructionTasks.AddRange(mobilization, foundation, superstructure, mepRoughIn);
+        var tasks = new[] { mobilization, foundation, superstructure, mepRoughIn };
+        foreach (var task in tasks)
+        {
+            if (!db.ConstructionTasks.Any(existing => existing.DesignProjectId == project.Id
+                && existing.TaskCode == task.TaskCode))
+            {
+                db.ConstructionTasks.Add(task);
+            }
+        }
         db.SaveChanges();
 
-        // Dependencies: T-002 depends on T-001, T-003 depends on T-002.
-        db.ConstructionTaskDependencies.AddRange(
-            new ConstructionTaskDependency { TaskId = foundation.Id, PredecessorTaskId = mobilization.Id },
-            new ConstructionTaskDependency { TaskId = superstructure.Id, PredecessorTaskId = foundation.Id });
+        var tasksByCode = db.ConstructionTasks
+            .Where(task => task.DesignProjectId == project.Id
+                && new[] { "T-001", "T-002", "T-003" }.Contains(task.TaskCode))
+            .ToDictionary(task => task.TaskCode, task => task.Id);
+        var dependencies = new[] { (Task: "T-002", Predecessor: "T-001"), (Task: "T-003", Predecessor: "T-002") };
+        foreach (var dependency in dependencies)
+        {
+            if (!tasksByCode.TryGetValue(dependency.Task, out var taskId)
+                || !tasksByCode.TryGetValue(dependency.Predecessor, out var predecessorId)
+                || db.ConstructionTaskDependencies.Any(existing => existing.TaskId == taskId
+                    && existing.PredecessorTaskId == predecessorId)) continue;
+            db.ConstructionTaskDependencies.Add(new ConstructionTaskDependency
+            {
+                TaskId = taskId,
+                PredecessorTaskId = predecessorId,
+            });
+        }
         db.SaveChanges();
     }
 
@@ -2243,8 +2359,6 @@ public static class SampleCrmDataSeeder
     private static void SeedSiteDiaries(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         const string SampleMarker = "[SAMPLE_DIARY]";
-        if (db.SiteDiaries.Any(d => d.Note != null && d.Note.StartsWith(SampleMarker))) return;
-
         var project = db.DesignProjects
             .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
                       && dp.CurrentStage == DesignProjectStage.ShopDrawing)
@@ -2256,7 +2370,7 @@ public static class SampleCrmDataSeeder
         // will have, but be defensive so a partial seed doesn't crash).
         if (!db.MasterDataOptions.Any(m => m.Category == "diary_weather" && m.Code == "sunny")) return;
 
-        var today = DateOnly.FromDateTime(now);
+        var today = new DateOnly(2026, 1, 15);
         var confirmed = new SiteDiary
         {
             DesignProjectId = project.Id,
@@ -2329,7 +2443,14 @@ public static class SampleCrmDataSeeder
             UpdatedAt = now,
         };
 
-        db.SiteDiaries.AddRange(confirmed, submitted, draft);
+        foreach (var diary in new[] { confirmed, submitted, draft })
+        {
+            if (!db.SiteDiaries.Any(existing => existing.DesignProjectId == project.Id
+                && existing.DiaryDate == diary.DiaryDate))
+            {
+                db.SiteDiaries.Add(diary);
+            }
+        }
         db.SaveChanges();
     }
 
@@ -2342,8 +2463,6 @@ public static class SampleCrmDataSeeder
     private static void SeedPunchItems(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         const string SampleMarker = "[SAMPLE_PUNCH]";
-        if (db.PunchItems.Any(p => p.Note != null && p.Note.StartsWith(SampleMarker))) return;
-
         var project = db.DesignProjects
             .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
                       && dp.CurrentStage == DesignProjectStage.ShopDrawing)
@@ -2436,15 +2555,20 @@ public static class SampleCrmDataSeeder
                 UpdatedAt = now.AddDays(-12),
             },
         };
-        db.PunchItems.AddRange(items);
+        foreach (var item in items)
+        {
+            if (!db.PunchItems.Any(existing => existing.DesignProjectId == project.Id
+                && existing.PunchCode == item.PunchCode))
+            {
+                db.PunchItems.Add(item);
+            }
+        }
         db.SaveChanges();
     }
 
     private static void SeedAcceptanceRecords(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         const string SampleMarker = "[SAMPLE_ACCEPT]";
-        if (db.AcceptanceRecords.Any(a => a.Description != null && a.Description.StartsWith(SampleMarker))) return;
-
         var project = db.DesignProjects
             .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
                       && dp.CurrentStage == DesignProjectStage.ShopDrawing)
@@ -2562,7 +2686,14 @@ public static class SampleCrmDataSeeder
             UpdatedAt = now.AddDays(-2),
         };
 
-        db.AcceptanceRecords.AddRange(draft, submitted, overdue, approved, rejected);
+        foreach (var record in new[] { draft, submitted, overdue, approved, rejected })
+        {
+            if (!db.AcceptanceRecords.Any(existing => existing.DesignProjectId == project.Id
+                && existing.AcceptanceCode == record.AcceptanceCode))
+            {
+                db.AcceptanceRecords.Add(record);
+            }
+        }
         db.SaveChanges();
     }
 
@@ -2572,8 +2703,6 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedAsBuiltDocumentCategories(AppDbContext db)
     {
-        if (db.AsBuiltDocumentCategories.Any()) return;
-
         var categories = new[]
         {
             new AsBuiltDocumentCategory
@@ -2638,7 +2767,13 @@ public static class SampleCrmDataSeeder
             },
         };
 
-        db.AsBuiltDocumentCategories.AddRange(categories);
+        foreach (var category in categories)
+        {
+            if (!db.AsBuiltDocumentCategories.Any(existing => existing.Code == category.Code))
+            {
+                db.AsBuiltDocumentCategories.Add(category);
+            }
+        }
         db.SaveChanges();
     }
 
@@ -2652,8 +2787,6 @@ public static class SampleCrmDataSeeder
     {
         const string SampleMarker = "[SAMPLE_ASBUILT]";
         MaterializeAsBuiltPlaceholders(webRootPath);
-        if (db.AsBuiltDocuments.Any(a => a.Note != null && a.Note.StartsWith(SampleMarker))) return;
-
         // Resolve category IDs
         var categoryByCode = db.AsBuiltDocumentCategories
             .ToDictionary(c => c.Code, c => c.Id);
@@ -2772,14 +2905,42 @@ public static class SampleCrmDataSeeder
                 UpdatedAt = now.AddDays(-14),
             },
         };
-        db.AsBuiltDocuments.AddRange(docs);
+        foreach (var document in docs)
+        {
+            if (!db.AsBuiltDocuments.Any(existing => existing.DesignProjectId == project.Id
+                && existing.DocumentCode == document.DocumentCode))
+            {
+                db.AsBuiltDocuments.Add(document);
+            }
+        }
         db.SaveChanges();
     }
 
     private static void SeedHandoverRecords(AppDbContext db, ApplicationUser owner, DateTime now)
     {
         const string SampleCode = "HO-SAMPLE-001";
-        if (db.HandoverRecords.Any(record => record.HandoverCode == SampleCode)) return;
+        var existing = db.HandoverRecords
+            .Include(record => record.StatusHistory)
+            .OrderBy(record => record.Id)
+            .FirstOrDefault(record => record.HandoverCode == SampleCode);
+        if (existing is not null)
+        {
+            if (!existing.StatusHistory.Any(history => history.FromStatus == null
+                && history.ToStatus == HandoverStatus.Draft
+                && history.Note == "Khởi tạo hồ sơ bàn giao mẫu."))
+            {
+                existing.StatusHistory.Add(new HandoverStatusHistory
+                {
+                    FromStatus = null,
+                    ToStatus = HandoverStatus.Draft,
+                    ChangedByUserId = owner.Id,
+                    ChangedAt = existing.CreatedAt,
+                    Note = "Khởi tạo hồ sơ bàn giao mẫu.",
+                });
+                db.SaveChanges();
+            }
+            return;
+        }
 
         var project = db.DesignProjects
             .Where(item => item.Note != null
@@ -2836,7 +2997,8 @@ public static class SampleCrmDataSeeder
             .Select(role => (int?)role.Id)
             .FirstOrDefault();
         return roleId.HasValue
-            ? db.Users.FirstOrDefault(user => user.RoleEntityId == roleId.Value && user.IsActive) ?? fallback
+            ? db.Users.Where(user => user.RoleEntityId == roleId.Value && user.IsActive)
+                .OrderBy(user => user.Id).FirstOrDefault() ?? fallback
             : fallback;
     }
 
@@ -2849,11 +3011,12 @@ public static class SampleCrmDataSeeder
     private static void SeedCapabilityDocumentVersion(AppDbContext db)
     {
         var document = db.CapabilityDocuments
-            .Where(item => item.Description != null && item.Description.StartsWith(SampleCapabilityMarker))
+            .Where(item => item.FilePath == "/files/capability/phap-nhan-erc.pdf")
             .OrderBy(item => item.Id)
             .FirstOrDefault();
         if (document is null || db.CapabilityDocumentVersions.Any(version =>
                 version.CapabilityDocumentId == document.Id && version.VersionNumber == 1)) return;
+        if (document.Description == null || !document.Description.StartsWith(SampleCapabilityMarker)) return;
 
         db.CapabilityDocumentVersions.Add(new CapabilityDocumentVersion
         {
@@ -2902,7 +3065,6 @@ public static class SampleCrmDataSeeder
             .Where(p => p.Code.StartsWith("PJ-SAMPLE-"))
             .Select(p => p.Code)
             .ToHashSet();
-        if (existingCodes.Count > 0) return;
 
         var customers = db.Customers
             .Where(c => c.Name.StartsWith(SampleTag))
@@ -2976,6 +3138,7 @@ public static class SampleCrmDataSeeder
         {
             var code = $"PJ-SAMPLE-{codeIndex:D3}";
             codeIndex++;
+            if (existingCodes.Contains(code)) continue;
 
             var customer = customers[(codeIndex - 1) % customers.Count];
 
@@ -3026,7 +3189,8 @@ public static class SampleCrmDataSeeder
             .ToList();
         foreach (var opp in opportunities)
         {
-            if (projectByCustomer.TryGetValue(opp.CustomerId, out var project))
+            if (!opp.OperationalProjectId.HasValue
+                && projectByCustomer.TryGetValue(opp.CustomerId, out var project))
             {
                 opp.OperationalProjectId = project.Id;
             }
@@ -3040,7 +3204,8 @@ public static class SampleCrmDataSeeder
         foreach (var quote in quotes)
         {
             var customerId = quote.Opportunity?.CustomerId;
-            if (customerId.HasValue && projectByCustomer.TryGetValue(customerId.Value, out var project))
+            if (!quote.OperationalProjectId.HasValue && customerId.HasValue
+                && projectByCustomer.TryGetValue(customerId.Value, out var project))
             {
                 quote.OperationalProjectId = project.Id;
             }
@@ -3053,7 +3218,8 @@ public static class SampleCrmDataSeeder
             .ToList();
         foreach (var contract in contracts)
         {
-            if (projectByCustomer.TryGetValue(contract.CustomerId, out var project))
+            if (!contract.OperationalProjectId.HasValue
+                && projectByCustomer.TryGetValue(contract.CustomerId, out var project))
             {
                 contract.OperationalProjectId = project.Id;
             }
@@ -3086,25 +3252,30 @@ public static class SampleCrmDataSeeder
             [ContractStatus.OnHold] = 3,
             [ContractStatus.Completed] = 4,
         };
-        var statusOccurrences = new Dictionary<ContractStatus, int>();
         if (opportunities.Count > 0)
         {
             foreach (var contract in contracts)
             {
-                statusOccurrences.TryGetValue(contract.Status, out var occurrence);
-                statusOccurrences[contract.Status] = occurrence + 1;
                 var baseIndex = opportunityIndexesByStatus.GetValueOrDefault(contract.Status, 0);
-                var opportunity = opportunities[(baseIndex + occurrence) % opportunities.Count];
-                var quote = quotes.FirstOrDefault(item => item.OpportunityId == opportunity.Id);
-                contract.CustomerId = opportunity.CustomerId;
-                contract.OpportunityId = opportunity.Id;
-                contract.QuoteId = quote?.Id;
+                var opportunity = opportunities
+                    .Skip(baseIndex)
+                    .Concat(opportunities.Take(baseIndex))
+                    .FirstOrDefault(item => item.CustomerId == contract.CustomerId);
+                if (!contract.OpportunityId.HasValue && opportunity is not null)
+                {
+                    contract.OpportunityId = opportunity.Id;
+                }
+                if (!contract.QuoteId.HasValue && contract.OpportunityId.HasValue)
+                {
+                    contract.QuoteId = quotes.FirstOrDefault(item =>
+                        item.OpportunityId == contract.OpportunityId.Value)?.Id;
+                }
             }
         }
 
         foreach (var opportunity in opportunities.Where(item => item.Stage == OpportunityStage.Won))
         {
-            opportunity.WonQuoteId = quotes.FirstOrDefault(quote =>
+            opportunity.WonQuoteId ??= quotes.FirstOrDefault(quote =>
                 quote.OpportunityId == opportunity.Id && quote.Status == QuoteStatus.CustomerApproved)?.Id;
         }
 
@@ -3113,11 +3284,11 @@ public static class SampleCrmDataSeeder
             .OrderBy(lead => lead.Id)
             .FirstOrDefault();
         var convertedOpportunity = opportunities.FirstOrDefault();
-        if (convertedLead is not null && convertedOpportunity is not null)
+        if (convertedLead is not null && convertedLead.Status == LeadStatus.Converted
+            && convertedOpportunity is not null)
         {
-            convertedLead.Status = LeadStatus.Converted;
-            convertedLead.ConvertedCustomerId = convertedOpportunity.CustomerId;
-            convertedLead.ConvertedOpportunityId = convertedOpportunity.Id;
+            convertedLead.ConvertedCustomerId ??= convertedOpportunity.CustomerId;
+            convertedLead.ConvertedOpportunityId ??= convertedOpportunity.Id;
             convertedLead.ConvertedAt ??= convertedOpportunity.CreatedAt;
         }
 
@@ -3135,27 +3306,25 @@ public static class SampleCrmDataSeeder
         var sampleContracts = GetSampleContracts(db)
             .Where(contract => !reservedContractIds.Contains(contract.Id))
             .ToList();
-        var usedContractIds = new HashSet<int>();
+        var usedContractIds = sampleProjects
+            .Where(project => project.ContractId.HasValue)
+            .Select(project => project.ContractId!.Value)
+            .ToHashSet();
 
         foreach (var project in sampleProjects)
         {
-            var contract = project.ContractId.HasValue
-                ? sampleContracts.FirstOrDefault(item => item.Id == project.ContractId.Value
-                                                      && usedContractIds.Add(item.Id))
-                : null;
-            contract ??= sampleContracts.FirstOrDefault(item => !usedContractIds.Contains(item.Id));
-            if (contract is not null)
+            if (!project.ContractId.HasValue)
             {
-                usedContractIds.Add(contract.Id);
-                project.ContractId = contract.Id;
-                project.CustomerId = contract.CustomerId;
+                var contract = sampleContracts.FirstOrDefault(item =>
+                    item.CustomerId == project.CustomerId && !usedContractIds.Contains(item.Id));
+                if (contract is not null)
+                {
+                    usedContractIds.Add(contract.Id);
+                    project.ContractId = contract.Id;
+                }
             }
-            else
-            {
-                project.ContractId = null;
-            }
-            project.ProjectManagerUserId = projectManager.Id;
-            project.DesignLeadUserId = designLead.Id;
+            project.ProjectManagerUserId ??= projectManager.Id;
+            project.DesignLeadUserId ??= designLead.Id;
         }
 
         db.SaveChanges();

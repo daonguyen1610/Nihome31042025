@@ -651,6 +651,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
         <RevisionsPanel
           open={!!revisionsFor}
           onOpenChange={(v) => (!v ? setRevisionsFor(null) : undefined)}
+          designProjectId={project.id}
           targetType="BasicDesignDoc"
           targetId={revisionsFor.id}
           targetCode={revisionsFor.documentCode}

@@ -318,6 +318,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ProcessDocument>().ToTable("process_documents");
         modelBuilder.Entity<ProcessDocument>().HasKey(p => p.Id);
         modelBuilder.Entity<ProcessDocument>().HasIndex(p => p.GroupKey);
+        modelBuilder.Entity<ProcessDocument>().HasIndex(p => p.SeedKey).IsUnique()
+            .HasFilter("[SeedKey] IS NOT NULL");
 
         modelBuilder.Entity<SlideshowItem>().ToTable("slideshow_items");
 

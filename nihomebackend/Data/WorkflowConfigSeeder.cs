@@ -11,9 +11,8 @@ namespace NihomeBackend.Data;
 /// and inserts <c>(module, action)</c> pairs that are missing. Existing rows
 /// are never overwritten so admin edits made through the UI survive reboots.
 ///
-/// Any step whose <c>approverRoleCode</c> is not present in the RBAC table
-/// is skipped for that workflow — this keeps the seed safe when a role gets
-/// removed downstream.
+/// Invalid workflow definitions fail startup before any workflow changes are
+/// persisted so approval chains cannot be silently degraded.
 /// </summary>
 public static class WorkflowConfigSeeder
 {
@@ -31,21 +30,29 @@ public static class WorkflowConfigSeeder
         }
 
         using var stream = assembly.GetManifestResourceStream(resource)!;
+        Seed(db, stream);
+    }
+
+    internal static void Seed(AppDbContext db, Stream stream)
+    {
         using var doc = JsonDocument.Parse(stream);
 
         if (!doc.RootElement.TryGetProperty("workflows", out var workflowsEl) ||
-            workflowsEl.ValueKind != JsonValueKind.Array)
+            workflowsEl.ValueKind != JsonValueKind.Array ||
+            workflowsEl.GetArrayLength() == 0)
         {
-            return;
+            throw new InvalidDataException("Workflow seed manifest requires a non-empty workflows array.");
         }
 
-        var existingPairs = db.WorkflowConfigs
-            .Select(w => new { w.Module, w.Action })
-            .ToHashSet();
+        var existingByPair = db.WorkflowConfigs
+            .ToDictionary(w => WorkflowKey(w.Module, w.Action), StringComparer.OrdinalIgnoreCase);
 
-        var knownRoleCodes = db.Roles.Select(r => r.Code).ToHashSet(StringComparer.Ordinal);
+        var knownRoleCodes = db.Roles
+            .ToDictionary(r => r.Code, r => r.Code, StringComparer.OrdinalIgnoreCase);
         var now = DateTime.UtcNow;
         var toInsert = new List<WorkflowConfig>();
+        var definedPairs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hasUpdates = false;
 
         foreach (var wfEl in workflowsEl.EnumerateArray())
         {
@@ -54,42 +61,50 @@ public static class WorkflowConfigSeeder
             var name = ReadString(wfEl, "name");
             if (string.IsNullOrEmpty(module) || string.IsNullOrEmpty(action) || string.IsNullOrEmpty(name))
             {
-                continue;
+                throw new InvalidDataException("Workflow seed definitions require module, action, and name.");
             }
 
-            if (existingPairs.Contains(new { Module = module, Action = action }))
+            var pairKey = WorkflowKey(module, action);
+            if (!definedPairs.Add(pairKey))
             {
-                continue;
+                throw new InvalidDataException($"Duplicate workflow seed definition: {pairKey}.");
             }
 
             if (!wfEl.TryGetProperty("steps", out var stepsEl) || stepsEl.ValueKind != JsonValueKind.Array)
             {
-                continue;
+                throw new InvalidDataException($"Workflow steps must be an array: {pairKey}.");
             }
 
             var steps = new List<WorkflowStepResponse>();
-            var stepIndex = 0;
+            var stepOrders = new HashSet<int>();
             foreach (var stepEl in stepsEl.EnumerateArray())
             {
-                stepIndex++;
+                if (stepEl.ValueKind != JsonValueKind.Object)
+                {
+                    throw new InvalidDataException($"Invalid workflow step definition: {pairKey}.");
+                }
                 var stepName = ReadString(stepEl, "name");
                 var approver = ReadString(stepEl, "approverRoleCode");
-                if (string.IsNullOrEmpty(stepName) || string.IsNullOrEmpty(approver))
+                var order = 0;
+                var hasValidOrder = stepEl.TryGetProperty("order", out var orderElement)
+                    && orderElement.ValueKind == JsonValueKind.Number
+                    && orderElement.TryGetInt32(out order);
+                if (string.IsNullOrEmpty(stepName) || string.IsNullOrEmpty(approver) ||
+                    !hasValidOrder || order <= 0 || !stepOrders.Add(order))
                 {
-                    continue;
+                    throw new InvalidDataException($"Invalid workflow step definition: {pairKey}.");
                 }
-                if (!knownRoleCodes.Contains(approver))
+                if (!knownRoleCodes.TryGetValue(approver, out var canonicalApprover))
                 {
-                    // Silently skip: the role was probably removed from the RBAC
-                    // seed; don't block the whole workflow over one dangling ref.
-                    continue;
+                    throw new InvalidDataException(
+                        $"Unknown workflow approver role '{approver}': {pairKey}.");
                 }
 
                 steps.Add(new WorkflowStepResponse
                 {
-                    Order = ReadInt(stepEl, "order", stepIndex),
+                    Order = order,
                     Name = stepName,
-                    ApproverRoleCode = approver,
+                    ApproverRoleCode = canonicalApprover,
                     SlaHours = ReadInt(stepEl, "slaHours", 0),
                     RequireAllApprovers = ReadBool(stepEl, "requireAllApprovers", false),
                     ConditionExpression = ReadOptionalString(stepEl, "conditionExpression"),
@@ -98,10 +113,32 @@ public static class WorkflowConfigSeeder
 
             if (steps.Count == 0)
             {
+                throw new InvalidDataException($"Workflow requires at least one step: {pairKey}.");
+            }
+
+            var stepsJson = JsonSerializer.Serialize(steps.OrderBy(s => s.Order).ToList(), StepsJsonOptions);
+            if (existingByPair.TryGetValue(pairKey, out var existing))
+            {
+                var repaired = false;
+                if (string.IsNullOrWhiteSpace(existing.Name))
+                {
+                    existing.Name = name;
+                    repaired = true;
+                }
+                if (HasNoSteps(existing.StepsJson, knownRoleCodes))
+                {
+                    existing.StepsJson = stepsJson;
+                    repaired = true;
+                }
+                if (repaired)
+                {
+                    existing.UpdatedAt = now;
+                    hasUpdates = true;
+                }
                 continue;
             }
 
-            toInsert.Add(new WorkflowConfig
+            var workflow = new WorkflowConfig
             {
                 Module = module,
                 Action = action,
@@ -109,19 +146,65 @@ public static class WorkflowConfigSeeder
                 Description = ReadOptionalString(wfEl, "description"),
                 IsActive = ReadBool(wfEl, "isActive", true),
                 SortOrder = ReadInt(wfEl, "sortOrder", 0),
-                StepsJson = JsonSerializer.Serialize(steps.OrderBy(s => s.Order).ToList(), StepsJsonOptions),
+                StepsJson = stepsJson,
                 CreatedAt = now,
                 UpdatedAt = now,
-            });
+            };
+            toInsert.Add(workflow);
+            existingByPair.Add(pairKey, workflow);
         }
 
-        if (toInsert.Count == 0)
+        if (toInsert.Count > 0)
         {
-            return;
+            db.WorkflowConfigs.AddRange(toInsert);
+            hasUpdates = true;
         }
 
-        db.WorkflowConfigs.AddRange(toInsert);
-        db.SaveChanges();
+        if (hasUpdates) db.SaveChanges();
+    }
+
+    private static string WorkflowKey(string module, string action) =>
+        $"{module.Trim()}|{action.Trim()}";
+
+    private static bool HasNoSteps(string? stepsJson,
+        IReadOnlyDictionary<string, string> knownRoleCodes)
+    {
+        if (string.IsNullOrWhiteSpace(stepsJson)) return true;
+        try
+        {
+            using var document = JsonDocument.Parse(stepsJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Array ||
+                document.RootElement.GetArrayLength() == 0)
+            {
+                return true;
+            }
+
+            var orders = new HashSet<int>();
+            foreach (var step in document.RootElement.EnumerateArray())
+            {
+                if (step.ValueKind != JsonValueKind.Object ||
+                    !step.TryGetProperty("name", out var name) ||
+                    name.ValueKind != JsonValueKind.String ||
+                    string.IsNullOrWhiteSpace(name.GetString()) ||
+                    !step.TryGetProperty("approverRoleCode", out var approverRoleCode) ||
+                    approverRoleCode.ValueKind != JsonValueKind.String ||
+                    string.IsNullOrWhiteSpace(approverRoleCode.GetString()) ||
+                    !knownRoleCodes.ContainsKey(approverRoleCode.GetString()!) ||
+                    !step.TryGetProperty("order", out var order) ||
+                    !order.TryGetInt32(out var orderValue) ||
+                    orderValue <= 0 ||
+                    !orders.Add(orderValue))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (JsonException)
+        {
+            return true;
+        }
     }
 
     private static string ReadString(JsonElement el, string name) =>

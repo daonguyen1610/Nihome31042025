@@ -21,55 +21,7 @@ public static class DbSeeder
     {
         var now = DateTime.UtcNow;
 
-        if (!db.Users.Any(u => u.Role == UserRole.SUPER_ADMIN))
-        {
-            var superAdmin = new ApplicationUser
-            {
-                PhoneNumber = "0335240370",
-                FullName = "Super Admin",
-                Email = "superadmin@nihome.vn",
-                Role = UserRole.SUPER_ADMIN,
-                IsActive = true
-            };
-
-            var passwordService = new PasswordService();
-            superAdmin.PasswordHash = passwordService.Hash(superAdmin, "Admin@123");
-
-            db.Users.Add(superAdmin);
-            db.SaveChanges();
-        }
-
-        if (!db.Users.Any(u => u.Role == UserRole.ADMIN))
-        {
-            var passwordService = new PasswordService();
-            var adminUsers = new[]
-            {
-                new ApplicationUser
-                {
-                    PhoneNumber = "0911111111",
-                    FullName = "Lê Thảo Vy",
-                    Email = "ops.admin@nihome.vn",
-                    Role = UserRole.ADMIN,
-                    IsActive = true
-                },
-                new ApplicationUser
-                {
-                    PhoneNumber = "0922222222",
-                    FullName = "Nguyễn Quốc Bảo",
-                    Email = "leasing.admin@nihome.vn",
-                    Role = UserRole.ADMIN,
-                    IsActive = true
-                }
-            };
-
-            foreach (var admin in adminUsers)
-            {
-                admin.PasswordHash = passwordService.Hash(admin, "Admin@123");
-            }
-
-            db.Users.AddRange(adminUsers);
-            db.SaveChanges();
-        }
+        SeedCanonicalAdminUsers(db);
 
         if (!db.SiteSettings.Any())
         {
@@ -96,7 +48,7 @@ public static class DbSeeder
             db.SaveChanges();
         }
 
-        var existingSettings = db.SiteSettings.FirstOrDefault();
+        var existingSettings = db.SiteSettings.OrderBy(settings => settings.Id).FirstOrDefault();
         if (existingSettings != null)
         {
             var updated = false;
@@ -190,6 +142,42 @@ public static class DbSeeder
         SampleCrmDataSeeder.Seed(db, webRootPath);
     }
 
+    private static readonly (string Phone, string FullName, string Email, UserRole Role)[] _canonicalAdminUsers =
+    [
+        ("0335240370", "Super Admin", "superadmin@nihome.vn", UserRole.SUPER_ADMIN),
+        ("0911111111", "Lê Thảo Vy", "ops.admin@nihome.vn", UserRole.ADMIN),
+        ("0922222222", "Nguyễn Quốc Bảo", "leasing.admin@nihome.vn", UserRole.ADMIN),
+    ];
+
+    private static void SeedCanonicalAdminUsers(AppDbContext db)
+    {
+        var existingPhones = db.Users.Select(user => user.PhoneNumber).ToHashSet(StringComparer.Ordinal);
+        var existingEmails = db.Users.Select(user => user.Email).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var passwordService = new PasswordService();
+
+        foreach (var (phone, fullName, preferredEmail, role) in _canonicalAdminUsers)
+        {
+            if (existingPhones.Contains(phone)) continue;
+
+            var email = ResolveSeedEmail(preferredEmail, phone, existingEmails);
+
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                FullName = fullName,
+                Email = email,
+                Role = role,
+                IsActive = true,
+            };
+            user.PasswordHash = passwordService.Hash(user, "Admin@123");
+            db.Users.Add(user);
+            existingPhones.Add(phone);
+            existingEmails.Add(email);
+        }
+
+        db.SaveChanges();
+    }
+
     // Phone numbers used here are stable, predictable test credentials so the
     // RBAC test matrix in docs/users-rbac.md and the playwright/integration
     // tests can always log in as any role.
@@ -216,8 +204,9 @@ public static class DbSeeder
         var rolesByCode = db.Roles
             .Where(r => !r.IsSystem)
             .ToDictionary(r => r.Code, r => r.Id, StringComparer.OrdinalIgnoreCase);
+        var existingEmails = db.Users.Select(user => user.Email).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var (code, phone, fullName, email, legacyName, legacyEmail) in _businessRoleUsers)
+        foreach (var (code, phone, fullName, preferredEmail, legacyName, legacyEmail) in _businessRoleUsers)
         {
             if (!rolesByCode.TryGetValue(code, out var roleId)) continue;
 
@@ -236,11 +225,12 @@ public static class DbSeeder
                 }
                 if (legacyEmail is not null && existingUser.Email == legacyEmail)
                 {
-                    existingUser.Email = email;
+                    existingUser.Email = ResolveSeedEmail(preferredEmail, phone, existingEmails);
                 }
                 continue;
             }
 
+            var email = ResolveSeedEmail(preferredEmail, phone, existingEmails);
             var user = new ApplicationUser
             {
                 PhoneNumber = phone,
@@ -258,5 +248,24 @@ public static class DbSeeder
         }
 
         db.SaveChanges();
+    }
+
+    private static string ResolveSeedEmail(string preferredEmail, string phone,
+        HashSet<string> existingEmails)
+    {
+        var email = preferredEmail;
+        if (existingEmails.Contains(email))
+        {
+            email = $"seed.{phone}@nihome.vn";
+            var suffix = 1;
+            while (existingEmails.Contains(email))
+            {
+                email = $"seed.{phone}.{suffix}@nihome.vn";
+                suffix++;
+            }
+        }
+
+        existingEmails.Add(email);
+        return email;
     }
 }

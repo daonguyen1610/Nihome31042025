@@ -28,6 +28,11 @@ public static class NotificationTemplateSeeder
         if (resource == null) return;
 
         using var stream = assembly.GetManifestResourceStream(resource)!;
+        Seed(db, stream);
+    }
+
+    internal static void Seed(AppDbContext db, Stream stream)
+    {
         using var doc = JsonDocument.Parse(stream);
 
         if (!doc.RootElement.TryGetProperty("templates", out var templatesEl) ||
@@ -42,13 +47,19 @@ public static class NotificationTemplateSeeder
 
         var now = DateTime.UtcNow;
         var toInsert = new List<NotificationTemplate>();
+        var definedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var el in templatesEl.EnumerateArray())
         {
             var code = el.TryGetProperty("code", out var codeProp)
                 ? (codeProp.GetString() ?? string.Empty).Trim()
                 : string.Empty;
-            if (string.IsNullOrEmpty(code) || existingCodes.Contains(code)) continue;
+            if (string.IsNullOrEmpty(code)) continue;
+            if (!definedCodes.Add(code))
+            {
+                throw new InvalidDataException($"Duplicate notification-template seed definition: {code}.");
+            }
+            if (existingCodes.Contains(code)) continue;
 
             var module = el.TryGetProperty("module", out var modProp)
                 ? (modProp.GetString() ?? string.Empty).Trim()
@@ -63,7 +74,7 @@ public static class NotificationTemplateSeeder
                 ? descProp.GetString()
                 : null;
 
-            toInsert.Add(new NotificationTemplate
+            var template = new NotificationTemplate
             {
                 Code = code,
                 Module = module,
@@ -73,7 +84,9 @@ public static class NotificationTemplateSeeder
                 IsActive = true,
                 AdminDescription = adminDescription,
                 CreatedAt = now,
-            });
+            };
+            toInsert.Add(template);
+            existingCodes.Add(code);
         }
 
         if (toInsert.Count == 0) return;
