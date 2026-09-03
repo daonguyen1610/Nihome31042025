@@ -2,18 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Pencil, PenTool, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,16 +32,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   adminApi,
   DESIGN_PROJECT_STAGES,
   DESIGN_PROJECT_STATUSES,
@@ -54,6 +42,7 @@ import {
   type DesignProjectResponse,
   type DesignProjectStage,
   type DesignProjectStatus,
+  type DeletionImpactResponse,
   type UpdateDesignProjectRequest,
   type ContractResponse,
 } from "@/services/adminApi";
@@ -379,45 +368,44 @@ const AdminDesignProjects = () => {
   // -------- delete confirmation --------
   const [deleting, setDeleting] = useState<DesignProjectListItemResponse | null>(null);
   const [busyDelete, setBusyDelete] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setBusyDelete(true);
+  const openDelete = async (project: DesignProjectListItemResponse) => {
+    setDeleting(project);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteDesignProject(deleting.id);
+      const response = await adminApi.getDesignProjectDeletionImpact(project.id);
+      setDeleteImpact(response.data);
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
+    }
+  };
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return;
+    setBusyDelete(true);
+    setDeleteError(null);
+    try {
+      await adminApi.deleteDesignProject(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+      });
       toast({ title: t("designProjects.deleted") });
       setDeleting(null);
+      setDeleteImpact(null);
       await fetchList();
     } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
-      });
+      setDeleteError(extractApiError(err));
     } finally {
       setBusyDelete(false);
     }
   };
-
-  // -------- bulk selection --------
-  const deletableIds = useMemo(
-    () => canManage ? rows.map((row) => row.id) : [],
-    [rows, canManage],
-  );
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds: deletableIds,
-    deleteOne: (id) => adminApi.deleteDesignProject(id),
-    onAfter: fetchList,
-  });
 
   // ----------------------------- render -----------------------------
 
@@ -575,15 +563,6 @@ const AdminDesignProjects = () => {
           </div>
         ) : (
           <>
-            {canManage ? (
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            ) : null}
-
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => {
@@ -596,16 +575,6 @@ const AdminDesignProjects = () => {
                   >
                     <header className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
-                        {canManage ? (
-                          <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
-                            <Checkbox
-                              aria-label={`${t("common.selectAll")} · ${r.name}`}
-                              disabled={!canDelete}
-                              checked={selectedIds.has(r.id)}
-                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                            />
-                          </span>
-                        ) : null}
                         <div className="min-w-0">
                           <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -653,7 +622,7 @@ const AdminDesignProjects = () => {
                             size="sm"
                             disabled={!canDelete}
                             className="text-rose-700 hover:bg-rose-50 hover:text-rose-800 disabled:text-muted-foreground"
-                            onClick={() => setDeleting(r)}
+                            onClick={() => void openDelete(r)}
                           >
                             <Trash2 className="mr-1 h-3.5 w-3.5" />
                             {t("common.delete")}
@@ -671,21 +640,6 @@ const AdminDesignProjects = () => {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    {canManage ? (
-                      <th className="w-10 px-3 py-2">
-                        <Checkbox
-                          aria-label={t("common.selectAll")}
-                          checked={
-                            allVisibleSelected
-                              ? true
-                              : someVisibleSelected
-                                ? "indeterminate"
-                                : false
-                          }
-                          onCheckedChange={(v) => toggleAllVisible(v === true)}
-                        />
-                      </th>
-                    ) : null}
                     <th className="px-3 py-2">{t("designProjects.field.code")}</th>
                     <th className="px-3 py-2">{t("designProjects.field.name")}</th>
                     <th className="px-3 py-2">{t("designProjects.field.customer")}</th>
@@ -705,16 +659,6 @@ const AdminDesignProjects = () => {
                         className="cursor-pointer transition-colors hover:bg-slate-50/70"
                         onClick={() => openDetail(r.id)}
                       >
-                        {canManage ? (
-                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              aria-label={`${t("common.selectAll")} · ${r.name}`}
-                              disabled={!canDelete}
-                              checked={selectedIds.has(r.id)}
-                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                            />
-                          </td>
-                        ) : null}
                         <td className="px-3 py-2 font-mono text-xs text-slate-600">{r.projectCode}</td>
                         <td className="px-3 py-2 font-medium text-slate-900">
                           <div className="flex items-center gap-2">
@@ -750,7 +694,7 @@ const AdminDesignProjects = () => {
                                   disabled={!canDelete}
                                   aria-label={t("common.delete")}
                                   className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                                  onClick={() => setDeleting(r)}
+                                  onClick={() => void openDelete(r)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -923,30 +867,21 @@ const AdminDesignProjects = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation */}
-      <AlertDialog open={!!deleting} onOpenChange={(o) => (!o ? setDeleting(null) : undefined)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("designProjects.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("designProjects.delete.confirmBody").replace("{name}", deleting?.name ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busyDelete}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
-              onClick={(e) => {
-                e.preventDefault();
-                void confirmDelete();
-              }}
-              disabled={busyDelete}
-            >
-              {t("designProjects.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletionImpactDialog
+        open={deleting != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={busyDelete}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !busyDelete) {
+            setDeleting(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+      />
     </AdminLayout>
   );
 };

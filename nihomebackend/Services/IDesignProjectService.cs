@@ -30,14 +30,13 @@ public interface IDesignProjectService
 
     Task<DesignProjectResponse?> UpdateAsync(int id, UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default);
 
-    /// <summary>
-    /// Delete a design project. Blocks the delete once a project has been
-    /// pushed past Concept — a project that already has downstream docs
-    /// must be Cancelled or OnHold instead. NIH-113 stores no docs yet
-    /// so the guard is on <c>CurrentStage</c>; NIH-114+ will tighten this
-    /// to look at real document counts.
-    /// </summary>
-    Task<bool> DeleteAsync(int id, int callerUserId, CancellationToken ct = default);
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, CancellationToken ct = default);
+
+    Task<bool> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        CancellationToken ct = default);
 
     /// <summary>
     /// Idempotent auto-create hook. Called by <see cref="IContractService"/>

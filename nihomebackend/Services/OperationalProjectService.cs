@@ -11,6 +11,7 @@ namespace NihomeBackend.Services;
 public class OperationalProjectService(
     AppDbContext db,
     ILegacyProjectTeamSyncService projectTeamSync,
+    IProjectDocumentStagingService projectDocuments,
     ILogger<OperationalProjectService> logger) : IOperationalProjectService
 {
     private const int MaxPageSize = 100;
@@ -261,38 +262,67 @@ public class OperationalProjectService(
         return await GetAsync(id, callerUserId, canSeeAll, ct);
     }
 
-    public async Task<bool> DeleteAsync(
+    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
         int id,
         int callerUserId,
         bool canSeeAll,
-        string? rowVersion,
+        CancellationToken ct = default)
+    {
+        var project = await db.OperationalProjects.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
+        return await DeletionImpactPlanner.ForOperationalProjectAsync(db, id, ct);
+    }
+
+    public async Task<bool> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        bool canSeeAll,
         CancellationToken ct = default)
     {
         var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return false;
-        if (project.Status != OperationalProjectStatus.Planning)
-        {
-            throw new OperationalProjectOperationException(
-                "Chỉ có thể xoá Dự án đang ở trạng thái Lập kế hoạch.");
-        }
 
-        if (await HasDependenciesAsync(id, ct))
-        {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        var impact = await DeletionImpactPlanner.ForOperationalProjectAsync(db, id, ct);
+        if (impact is null) return false;
+        if (!impact.CanDelete)
             throw new OperationalProjectOperationException(
-                "Không thể xoá Dự án đã có dữ liệu nghiệp vụ. Hãy chuyển sang Đã huỷ.");
-        }
+                "Không thể xoá Dự án khi còn tệp hoặc thư mục Drive. Vui lòng dọn các mục bị chặn trước.");
+        if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException(
+                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!string.Equals(request.Confirmation?.Trim(), impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new OperationalProjectOperationException(
+                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");
+        if (string.IsNullOrWhiteSpace(request.RowVersion))
+            throw new CrmConcurrencyTokenException(
+                "Phiên bản dữ liệu là bắt buộc. Vui lòng tải lại Dự án trước khi xoá.");
 
-        CrmConcurrency.Apply(db, project, rowVersion);
-        db.OperationalProjects.Remove(project);
+        CrmConcurrency.Apply(db, project, request.RowVersion);
+        try
+        {
+            await AggregateDeletionService.DeleteOperationalProjectAsync(
+                db, project, projectDocuments, callerUserId, ct);
+        }
+        catch (AggregateDeletionBlockedException ex)
+        {
+            throw new OperationalProjectOperationException(ex.Message);
+        }
         try
         {
             await CrmConcurrency.SaveChangesAsync(db, ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
         }
         catch (DbUpdateException)
         {
             throw new CrmConcurrencyException(
-                "Dự án vừa phát sinh dữ liệu liên quan. Vui lòng tải lại và chuyển Dự án sang Đã huỷ.");
+                "Dự án vừa phát sinh dữ liệu liên quan. Vui lòng tải lại danh sách ảnh hưởng.");
         }
+        logger.LogInformation("OperationalProject {ProjectId} hard-deleted", id);
         return true;
     }
 

@@ -146,18 +146,22 @@ public class OperationalProjectsController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("operations.projects", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
+        request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
             var deleted = await service.DeleteAsync(
                 id,
+                request,
                 userId.Value,
                 canSeeAll,
-                CrmConcurrency.ResolveRequestToken(Request, null),
                 ct);
             if (!deleted) return NotFound();
             audit.Log(new AuditEvent
@@ -173,6 +177,23 @@ public class OperationalProjectsController(
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("operations.projects", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(
+        int id,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
+        var impact = await service.GetDeletionImpactAsync(id, userId.Value, canSeeAll, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpGet("{id:int}/documents")]

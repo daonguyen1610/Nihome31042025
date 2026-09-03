@@ -1034,7 +1034,16 @@ public class ContractServiceTests : IDisposable
             int id, NihomeBackend.Models.DTOs.Requests.UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?>(null);
 
-        public Task<bool> DeleteAsync(int id, int callerUserId, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse?> GetDeletionImpactAsync(
+            int id, CancellationToken ct = default)
+            => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse?>(null);
+
+        public Task<bool> DeleteAsync(
+            int id,
+            NihomeBackend.Models.DTOs.Requests.ConfirmDeletionRequest request,
+            int callerUserId,
+            CancellationToken ct = default)
+            => Task.FromResult(false);
 
         public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse> EnsureForContractAsync(
             NihomeBackend.Models.Contract contract, int? callerUserId, CancellationToken ct = default)

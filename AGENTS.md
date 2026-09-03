@@ -138,6 +138,36 @@ done.
   `"0911" + Guid` is producing letters where digits belong. When a validator
   turns fixtures red, fix the fixtures — that red is the validator working.
 
+## Hard Delete Rules
+
+Hard delete is a business operation, not a direct `DbSet.Remove` call. Every
+user-facing root delete must use the shared preview-and-confirm contract
+described in `docs/hard-delete-convention.md`.
+
+* Provide an authorized `GET .../{id}/deletion-impact` endpoint before the
+  delete endpoint. Classify every dependent group as `Delete`, `Unlink`, or
+  `Block`, including files and external-system bindings.
+* Require a typed resource code and the preview's deterministic plan token in
+  the DELETE body. Recompute the plan inside the delete transaction and return
+  `409 Conflict` when it changed.
+* Enforce authorization, confirmation, concurrency, and blockers on the server.
+  Hiding a button or disabling a dialog is not protection.
+* Execute aggregate database changes in one transaction. Delete aggregate-owned
+  records, unlink independent business records, and preserve unrelated roots.
+* Never silently orphan or destroy files. Stage managed-file cleanup through
+  the existing document services; block while cleanup is pending. Explicitly
+  disclose external folders that will only be unlinked and preserved.
+* Use the shared frontend deletion-impact dialog. Do not use `window.confirm`,
+  generic confirmation text, or parallel client-side loops to delete an
+  aggregate graph.
+* Seed every user-visible dependency label and message in all four languages:
+  Vietnamese, English, Chinese, and Japanese.
+* Integration tests must prove preview authorization, dependency counts and
+  actions, invalid/missing confirmation, blockers, stale plans/concurrency,
+  successful cleanup/unlinking, and unchanged state after rejected requests.
+* Seeded and demo roots follow the same hard-delete contract as user-created
+  data. Do not add undeletable seed-only guards.
+
 ---
 
 ## Docker Development

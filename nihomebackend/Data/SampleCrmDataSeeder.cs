@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.Data;
@@ -1551,6 +1552,10 @@ public static class SampleCrmDataSeeder
 
         var projectManager = ResolveRoleUser(db, "PM", owner);
         var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
+        var deletedProjectCodes = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.DesignProject)
+            .Select(item => item.ResourceKey)
+            .ToHashSet();
 
         // Each row deterministically uses a distinct sample contract when one
         // is available; this keeps the project/customer relationship coherent.
@@ -1570,6 +1575,7 @@ public static class SampleCrmDataSeeder
             if (contract is null && sampleCustomers.Count == 0) continue;
             var customerId = contract?.CustomerId ?? sampleCustomers[index % sampleCustomers.Count].Id;
             var projectCode = $"DP-SAMPLE-{index + 1:D3}";
+            if (deletedProjectCodes.Contains(projectCode)) continue;
             var sampleName = $"{SampleTag} {name}";
             if (db.DesignProjects.Any(project => project.ProjectCode == projectCode
                 || (project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker)
@@ -1580,6 +1586,7 @@ public static class SampleCrmDataSeeder
                 Name = sampleName,
                 CustomerId = customerId,
                 ContractId = contract?.Id,
+                OperationalProjectId = contract?.OperationalProjectId,
                 ProjectManagerUserId = projectManager.Id,
                 DesignLeadUserId = designLead.Id,
                 StartDate = now.AddDays(-startDaysAgo),
@@ -3065,6 +3072,10 @@ public static class SampleCrmDataSeeder
             .Where(p => p.Code.StartsWith("PJ-SAMPLE-"))
             .Select(p => p.Code)
             .ToHashSet();
+        var deletedProjectCodes = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.OperationalProject)
+            .Select(item => item.ResourceKey)
+            .ToHashSet();
 
         var customers = db.Customers
             .Where(c => c.Name.StartsWith(SampleTag))
@@ -3138,7 +3149,7 @@ public static class SampleCrmDataSeeder
         {
             var code = $"PJ-SAMPLE-{codeIndex:D3}";
             codeIndex++;
-            if (existingCodes.Contains(code)) continue;
+            if (existingCodes.Contains(code) || deletedProjectCodes.Contains(code)) continue;
 
             var customer = customers[(codeIndex - 1) % customers.Count];
 
