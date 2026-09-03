@@ -164,6 +164,46 @@ public class SampleContractSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_BasicDesignDocs_PartialExistingCodes_InsertsOnlyMissingRows()
+    {
+        SampleCrmDataSeeder.Seed(_db);
+        var project = _db.DesignProjects
+            .Where(item => item.Note != null && item.Note.StartsWith("[SAMPLE_DP]") &&
+                item.CurrentStage == DesignProjectStage.BasicDesign)
+            .OrderBy(item => item.Id)
+            .First();
+        var documents = _db.BasicDesignDocs
+            .Where(item => item.DesignProjectId == project.Id &&
+                item.Note != null && item.Note.StartsWith("[SAMPLE_BD]"))
+            .ToList();
+        var preserved = documents.Single(item => item.DocumentCode == "KT-BD-001");
+        preserved.Note = "Administrator-owned document";
+        _db.BasicDesignDocs.RemoveRange(documents.Where(item => item.Id != preserved.Id));
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        var reseeded = _db.BasicDesignDocs
+            .Where(item => item.DesignProjectId == project.Id)
+            .ToList();
+        Assert.Equal(4, reseeded.Count);
+        Assert.Equal(4, reseeded.Select(item => item.DocumentCode).Distinct().Count());
+        Assert.Equal("Administrator-owned document",
+            reseeded.Single(item => item.DocumentCode == "KT-BD-001").Note);
+        Assert.Equal(
+            ["KC-BD-001", "KT-BD-001", "KT-BD-002", "MEP-BD-001"],
+            reseeded.Select(item => item.DocumentCode).Order().ToArray());
+
+        var idsByCode = reseeded.ToDictionary(item => item.DocumentCode, item => item.Id);
+        SampleCrmDataSeeder.Seed(_db);
+
+        var repeated = _db.BasicDesignDocs
+            .Where(item => item.DesignProjectId == project.Id)
+            .ToList();
+        Assert.Equal(idsByCode, repeated.ToDictionary(item => item.DocumentCode, item => item.Id));
+    }
+
+    [Fact]
     public void Seed_OperationalDataTargetsOnlySampleProjects_AndIsIdempotent()
     {
         var userCustomer = new Customer
