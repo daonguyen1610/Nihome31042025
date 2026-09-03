@@ -29,15 +29,11 @@ public class CreateDesignProjectRequest
 }
 
 /// <summary>
-/// Update payload. Same fields as create plus lifecycle knobs the create
-/// form does not expose (stage + status). Both are optional so partial
-/// updates from the header dropdown work without shipping the full form.
+/// Update payload. Stage is intentionally excluded because lifecycle
+/// transitions are owned by the Concept and Basic Design approval workflows.
 /// </summary>
 public class UpdateDesignProjectRequest : CreateDesignProjectRequest
 {
-    /// <summary>Concept / BasicDesign / ShopDrawing / Completed.</summary>
-    public string? CurrentStage { get; set; }
-
     /// <summary>Active / OnHold / Completed / Cancelled.</summary>
     public string? Status { get; set; }
 }

@@ -21,6 +21,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class IfcReleasesController(
     IIfcReleaseService svc,
+    IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -28,6 +29,16 @@ public class IfcReleasesController(
     public async Task<ActionResult<IfcReleaseListResponse>> List(
         [FromQuery] IfcReleaseListParams parameters, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!parameters.DesignProjectId.HasValue)
+            return BadRequest(new { message = "DesignProjectId is required." });
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, parameters.DesignProjectId.Value, ct))
+            return NotFound();
+        if (await projectAccess.GetAccessibleDesignDisciplinesAsync(
+            userId.Value, parameters.DesignProjectId.Value, ct) is not null)
+            return NotFound();
+
         var result = await svc.ListAsync(parameters, ct);
         return Ok(result);
     }
@@ -36,6 +47,10 @@ public class IfcReleasesController(
     [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> Get(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
@@ -47,6 +62,8 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, request.DesignProjectId, ct))
+            return NotFound();
         try
         {
             var response = await svc.CreateAsync(request, userId.Value, ct);
@@ -73,6 +90,7 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -97,6 +115,10 @@ public class IfcReleasesController(
     [RequirePermission("design.ifc", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+
         try
         {
             var removed = await svc.DeleteAsync(id, ct);
@@ -123,6 +145,14 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await GetManagedProjectIdAsync(userId.Value, id, ct);
+        if (!projectId.HasValue) return NotFound();
+        var drawingIds = request.ShopDrawingIds.Distinct().ToList();
+        var drawingProjects = await projectAccess.ResolveDesignProjectIdsAsync(
+            DesignProjectResourceType.ShopDrawing, drawingIds, ct);
+        if (drawingProjects.Count != drawingIds.Count ||
+            drawingProjects.Values.Any(drawingProjectId => drawingProjectId != projectId.Value))
+            return NotFound();
         try
         {
             var response = await svc.AddItemsAsync(id, request, userId.Value, ct);
@@ -149,6 +179,10 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await GetManagedProjectIdAsync(userId.Value, id, ct);
+        if (!projectId.HasValue || !await IsInProjectAsync(
+            DesignProjectResourceType.IfcReleaseItem, itemId, projectId.Value, ct))
+            return NotFound();
         try
         {
             var response = await svc.RemoveItemAsync(id, itemId, userId.Value, ct);
@@ -167,6 +201,7 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
         try
         {
             var response = await svc.AddRecipientAsync(id, request, userId.Value, ct);
@@ -185,6 +220,10 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await GetManagedProjectIdAsync(userId.Value, id, ct);
+        if (!projectId.HasValue || !await IsInProjectAsync(
+            DesignProjectResourceType.IfcReleaseRecipient, recipientId, projectId.Value, ct))
+            return NotFound();
         try
         {
             var response = await svc.RemoveRecipientAsync(id, recipientId, userId.Value, ct);
@@ -204,6 +243,10 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await GetManagedProjectIdAsync(userId.Value, id, ct);
+        if (!projectId.HasValue || !await IsInProjectAsync(
+            DesignProjectResourceType.IfcReleaseRecipient, recipientId, projectId.Value, ct))
+            return NotFound();
         try
         {
             var response = await svc.AcknowledgeRecipientAsync(id, recipientId, request, userId.Value, ct);
@@ -234,6 +277,10 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await GetManagedProjectIdAsync(userId.Value, id, ct);
+        if (!projectId.HasValue ||
+            !await projectAccess.CanApproveDesignProjectAsync(userId.Value, projectId.Value, ct))
+            return NotFound();
         try
         {
             var response = await svc.ReleaseAsync(id, userId.Value, ct);
@@ -259,6 +306,10 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await GetManagedProjectIdAsync(userId.Value, id, ct);
+        if (!projectId.HasValue ||
+            !await projectAccess.CanApproveDesignProjectAsync(userId.Value, projectId.Value, ct))
+            return NotFound();
         try
         {
             var response = await svc.CancelAsync(id, userId.Value, ct);
@@ -282,4 +333,33 @@ public class IfcReleasesController(
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
     }
+
+    private async Task<bool> CanAccessAsync(int userId, int id, bool manage, CancellationToken ct)
+    {
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.IfcRelease, id, ct);
+        if (!projectId.HasValue) return false;
+
+        return manage
+            ? await projectAccess.CanManageDesignProjectAsync(userId, projectId.Value, ct)
+            : await projectAccess.CanViewDesignResourceAsync(
+                userId, DesignProjectResourceType.IfcRelease, id, ct);
+    }
+
+    private async Task<int?> GetManagedProjectIdAsync(int userId, int id, CancellationToken ct)
+    {
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.IfcRelease, id, ct);
+        return projectId.HasValue &&
+            await projectAccess.CanManageDesignProjectAsync(userId, projectId.Value, ct)
+            ? projectId
+            : null;
+    }
+
+    private async Task<bool> IsInProjectAsync(
+        DesignProjectResourceType resourceType,
+        int resourceId,
+        int projectId,
+        CancellationToken ct) =>
+        await projectAccess.ResolveDesignProjectIdAsync(resourceType, resourceId, ct) == projectId;
 }

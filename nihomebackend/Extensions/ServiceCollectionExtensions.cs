@@ -135,6 +135,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<GoogleDriveOAuthService>();
         services.AddScoped<IGoogleDriveAdapter, GoogleDriveAdapter>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();
+        services.AddScoped<IProjectAccessService, ProjectAccessService>();
+        services.AddScoped<ILegacyProjectTeamSyncService, LegacyProjectTeamSyncService>();
+        services.AddScoped<IProjectTeamService, ProjectTeamService>();
         services.AddScoped<ProjectDocumentService>();
         services.AddScoped<IProjectDocumentService>(provider => provider.GetRequiredService<ProjectDocumentService>());
         services.AddScoped<IProjectDocumentStagingService>(provider => provider.GetRequiredService<ProjectDocumentService>());

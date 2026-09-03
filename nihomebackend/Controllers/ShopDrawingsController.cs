@@ -22,6 +22,7 @@ namespace NihomeBackend.Controllers;
 public class ShopDrawingsController(
     IShopDrawingService svc,
     IPermissionService permissions,
+    IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
     private const long MaxFileSizeBytes = 20L * 1024 * 1024;
@@ -34,7 +35,16 @@ public class ShopDrawingsController(
     public async Task<ActionResult<ShopDrawingListResponse>> List(
         [FromQuery] ShopDrawingListParams parameters, CancellationToken ct)
     {
-        var result = await svc.ListAsync(parameters, ct);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!parameters.DesignProjectId.HasValue)
+            return BadRequest(new { message = "DesignProjectId is required." });
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, parameters.DesignProjectId.Value, ct))
+            return NotFound();
+
+        var disciplines = await projectAccess.GetAccessibleDesignDisciplinesAsync(
+            userId.Value, parameters.DesignProjectId.Value, ct);
+        var result = await svc.ListAsync(parameters, ct, disciplines);
         return Ok(result);
     }
 
@@ -42,6 +52,10 @@ public class ShopDrawingsController(
     [RequirePermission("design.shop", "view")]
     public async Task<ActionResult<ShopDrawingResponse>> Get(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
@@ -50,6 +64,10 @@ public class ShopDrawingsController(
     [RequirePermission("design.shop", "view")]
     public async Task<IActionResult> GetContent(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+
         var content = await svc.GetContentAsync(id, ct);
         return content is null
             ? NotFound()
@@ -63,6 +81,9 @@ public class ShopDrawingsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanManageDesignProjectAsync(
+            userId.Value, request.DesignProjectId, ct, request.DisciplineCode))
+            return NotFound();
         try
         {
             var response = await svc.CreateAsync(request, userId.Value, ct);
@@ -89,6 +110,7 @@ public class ShopDrawingsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -113,6 +135,10 @@ public class ShopDrawingsController(
     [RequirePermission("design.shop", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+
         try
         {
             var removed = await svc.DeleteAsync(id, ct);
@@ -142,6 +168,16 @@ public class ShopDrawingsController(
     public async Task<ActionResult<ShopDrawingBulkDeleteResponse>> BulkDelete(
         [FromBody] BulkDeleteShopDrawingsRequest request, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var ids = (request.Ids ?? new List<int>()).Distinct().ToList();
+        var projectIds = await projectAccess.ResolveDesignProjectIdsAsync(
+            DesignProjectResourceType.ShopDrawing, ids, ct);
+        var distinctProjectIds = projectIds.Values.Distinct().ToList();
+        if (projectIds.Count != ids.Count || distinctProjectIds.Count != 1 ||
+            !await AllManageableAsync(userId.Value, ids, ct))
+            return NotFound();
+
         try
         {
             var result = await svc.BulkDeleteAsync(request.Ids ?? new List<int>(), ct);
@@ -173,9 +209,21 @@ public class ShopDrawingsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.ShopDrawing, id, ct);
+        if (!projectId.HasValue ||
+            !await projectAccess.CanManageDesignResourceAsync(
+                userId.Value, DesignProjectResourceType.ShopDrawing, id, ct))
+            return NotFound();
 
-        if (string.Equals(request.Status, "Approved", StringComparison.OrdinalIgnoreCase)
-            && !await permissions.HasAsync(userId.Value, "design.shop.approve", ct))
+        if (string.Equals(request.Status, "Approved", StringComparison.OrdinalIgnoreCase) &&
+            !await projectAccess.CanApproveDesignResourceAsync(
+                userId.Value, DesignProjectResourceType.ShopDrawing, id, ct))
+        {
+            return NotFound();
+        }
+        if (string.Equals(request.Status, "Approved", StringComparison.OrdinalIgnoreCase) &&
+            !await permissions.HasAsync(userId.Value, "design.shop.approve", ct))
         {
             return Forbid();
         }
@@ -211,6 +259,7 @@ public class ShopDrawingsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
 
         if (file.Length == 0 || file.Length > MaxFileSizeBytes)
             return BadRequest(new { message = "File size must be between 1 byte and 20 MB." });
@@ -242,5 +291,28 @@ public class ShopDrawingsController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private async Task<bool> CanAccessAsync(int userId, int id, bool manage, CancellationToken ct)
+    {
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.ShopDrawing, id, ct);
+        if (!projectId.HasValue) return false;
+
+        return manage
+            ? await projectAccess.CanManageDesignResourceAsync(
+                userId, DesignProjectResourceType.ShopDrawing, id, ct)
+            : await projectAccess.CanViewDesignResourceAsync(
+                userId, DesignProjectResourceType.ShopDrawing, id, ct);
+    }
+
+    private async Task<bool> AllManageableAsync(int userId, IEnumerable<int> ids, CancellationToken ct)
+    {
+        foreach (var id in ids)
+        {
+            if (!await projectAccess.CanManageDesignResourceAsync(
+                    userId, DesignProjectResourceType.ShopDrawing, id, ct)) return false;
+        }
+        return true;
     }
 }

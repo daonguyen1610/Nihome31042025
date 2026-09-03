@@ -84,6 +84,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     // Internal project aggregate shared across operational modules (NIH-460).
     public DbSet<OperationalProject> OperationalProjects => Set<OperationalProject>();
+    public DbSet<OperationalProjectMember> OperationalProjectMembers => Set<OperationalProjectMember>();
+    public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
+    public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
+    public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
     public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
     public DbSet<ProjectDriveFolder> ProjectDriveFolders => Set<ProjectDriveFolder>();
     public DbSet<GoogleDriveCredential> GoogleDriveCredentials => Set<GoogleDriveCredential>();
@@ -1230,6 +1234,81 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(dp => dp.DesignLeadUserId);
             b.HasIndex(dp => dp.Status);
             b.HasIndex(dp => dp.CurrentStage);
+        });
+
+        modelBuilder.Entity<OperationalProjectMember>(b =>
+        {
+            b.ToTable("operational_project_members");
+            b.HasKey(member => member.Id);
+            b.Property(member => member.Position).HasMaxLength(150).IsRequired();
+            b.Property(member => member.Source).HasMaxLength(30).IsRequired();
+            b.Property(member => member.SourceReference).HasMaxLength(200);
+            b.Property(member => member.RowVersion).IsRowVersion();
+            b.HasOne(member => member.OperationalProject).WithMany(project => project.TeamMembers)
+                .HasForeignKey(member => member.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(member => member.User).WithMany().HasForeignKey(member => member.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(member => member.ReportsToMember).WithMany().HasForeignKey(member => member.ReportsToMemberId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(member => new { member.OperationalProjectId, member.UserId })
+                .IsUnique().HasFilter("[EndedAt] IS NULL");
+            b.HasIndex(member => member.ReportsToMemberId);
+        });
+
+        modelBuilder.Entity<OperationalProjectMemberRole>(b =>
+        {
+            b.ToTable("operational_project_member_roles");
+            b.HasKey(role => role.Id);
+            b.Property(role => role.RoleCode).HasConversion<string>().HasMaxLength(50).IsRequired();
+            b.Property(role => role.Scope).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(role => role.ScopeValue).HasMaxLength(80);
+            b.Property(role => role.Source).HasMaxLength(30).IsRequired();
+            b.Property(role => role.SourceReference).HasMaxLength(200);
+            b.HasOne(role => role.Member).WithMany(member => member.Roles)
+                .HasForeignKey(role => role.MemberId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(role => new { role.MemberId, role.RoleCode, role.Scope, role.ScopeValue })
+                .IsUnique().HasFilter("[EndedAt] IS NULL");
+        });
+
+        modelBuilder.Entity<OperationalProjectAssignment>(b =>
+        {
+            b.ToTable("operational_project_assignments");
+            b.HasKey(assignment => assignment.Id);
+            b.Property(assignment => assignment.WorkKey).HasMaxLength(120).IsRequired();
+            b.Property(assignment => assignment.Title).HasMaxLength(300).IsRequired();
+            b.Property(assignment => assignment.Module).HasMaxLength(50).IsRequired();
+            b.Property(assignment => assignment.Discipline).HasMaxLength(50);
+            b.Property(assignment => assignment.ParallelGroup).HasMaxLength(80);
+            b.Property(assignment => assignment.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(assignment => assignment.Note).HasMaxLength(2000);
+            b.Property(assignment => assignment.RowVersion).IsRowVersion();
+            b.HasOne(assignment => assignment.OperationalProject).WithMany(project => project.TeamAssignments)
+                .HasForeignKey(assignment => assignment.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(assignment => assignment.AssigneeMember).WithMany(member => member.Assignments)
+                .HasForeignKey(assignment => assignment.AssigneeMemberId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(assignment => assignment.ManagerMember).WithMany()
+                .HasForeignKey(assignment => assignment.ManagerMemberId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(assignment => new
+            {
+                assignment.OperationalProjectId,
+                assignment.WorkKey,
+                assignment.AssigneeMemberId,
+            }).IsUnique();
+            b.HasIndex(assignment => assignment.ParallelGroup);
+        });
+
+        modelBuilder.Entity<OperationalProjectTeamHistory>(b =>
+        {
+            b.ToTable("operational_project_team_history");
+            b.HasKey(history => history.Id);
+            b.Property(history => history.EntityType).HasMaxLength(30).IsRequired();
+            b.Property(history => history.Action).HasMaxLength(30).IsRequired();
+            b.Property(history => history.SnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne(history => history.OperationalProject).WithMany()
+                .HasForeignKey(history => history.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(history => history.ChangedByUser).WithMany()
+                .HasForeignKey(history => history.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(history => new { history.OperationalProjectId, history.ChangedAt });
         });
 
         modelBuilder.Entity<PermitChecklistItem>(b =>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
@@ -21,6 +22,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class DrawingRevisionsController(
     IDrawingRevisionService svc,
+    IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -28,9 +30,18 @@ public class DrawingRevisionsController(
     public async Task<ActionResult<DrawingRevisionListResponse>> List(
         [FromQuery] DrawingRevisionListParams parameters, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!parameters.DesignProjectId.HasValue)
+            return BadRequest(new { message = "DesignProjectId is required." });
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, parameters.DesignProjectId.Value, ct))
+            return NotFound();
+
         try
         {
-            var result = await svc.ListAsync(parameters, ct);
+            var disciplines = await projectAccess.GetAccessibleDesignDisciplinesAsync(
+                userId.Value, parameters.DesignProjectId.Value, ct);
+            var result = await svc.ListAsync(parameters, ct, disciplines);
             return Ok(result);
         }
         catch (DrawingRevisionOperationException ex)
@@ -43,6 +54,12 @@ public class DrawingRevisionsController(
     [RequirePermission("design.revisions", "view")]
     public async Task<ActionResult<DrawingRevisionResponse>> Get(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanViewDesignResourceAsync(
+            userId.Value, DesignProjectResourceType.DrawingRevision, id, ct))
+            return NotFound();
+
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
@@ -61,6 +78,18 @@ public class DrawingRevisionsController(
         if (userId is null) return Unauthorized();
         try
         {
+            if (!Enum.TryParse<DrawingRevisionTargetType>(request.TargetType, true, out var targetType) ||
+                !Enum.IsDefined(targetType))
+                throw new DrawingRevisionOperationException($"Loại đối tượng '{request.TargetType}' không hợp lệ.");
+            var resourceType = targetType == DrawingRevisionTargetType.BasicDesignDoc
+                ? DesignProjectResourceType.BasicDesignDoc
+                : DesignProjectResourceType.ShopDrawing;
+            var projectId = await projectAccess.ResolveDesignProjectIdAsync(resourceType, request.TargetId, ct);
+            if (!projectId.HasValue ||
+                !await projectAccess.CanManageDesignResourceAsync(
+                    userId.Value, resourceType, request.TargetId, ct))
+                return NotFound();
+
             var response = await svc.CreateAsync(request, userId.Value, ct);
             audit.Log(new AuditEvent
             {
@@ -83,6 +112,14 @@ public class DrawingRevisionsController(
     public async Task<ActionResult<DrawingRevisionDiffResponse>> Diff(
         [FromQuery] DrawingRevisionDiffParams parameters, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var revisionIds = new[] { parameters.FromId, parameters.ToId }.Distinct().ToList();
+        foreach (var revisionId in revisionIds)
+            if (!await projectAccess.CanViewDesignResourceAsync(
+                userId.Value, DesignProjectResourceType.DrawingRevision, revisionId, ct))
+                return NotFound();
+
         try
         {
             var result = await svc.DiffAsync(parameters.FromId, parameters.ToId, ct);

@@ -11,7 +11,9 @@ public static class TranslationSeeder
     public static void Seed(AppDbContext db)
     {
         var existingRows = db.Translations.ToList()
-            .ToDictionary(t => t.Key + "|" + t.LanguageCode);
+            .ToDictionary(
+                translation => translation.Key + "|" + translation.LanguageCode,
+                StringComparer.OrdinalIgnoreCase);
 
         var assembly = Assembly.GetExecutingAssembly();
         var seedResources = assembly.GetManifestResourceNames()

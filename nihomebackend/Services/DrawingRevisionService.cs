@@ -17,7 +17,10 @@ public class DrawingRevisionService(
     private const int MaxPageSize = 200;
     private const string ReasonCategory = "drawing_revision_reason";
 
-    public async Task<DrawingRevisionListResponse> ListAsync(DrawingRevisionListParams p, CancellationToken ct = default)
+    public async Task<DrawingRevisionListResponse> ListAsync(
+        DrawingRevisionListParams p,
+        CancellationToken ct = default,
+        IReadOnlySet<string>? accessibleDisciplines = null)
     {
         var page = p.Page < 1 ? 1 : p.Page;
         var pageSize = Math.Clamp(p.PageSize <= 0 ? 100 : p.PageSize, 1, MaxPageSize);
@@ -35,6 +38,15 @@ public class DrawingRevisionService(
                  db.BasicDesignDocs.Any(d => d.Id == r.TargetId && d.DesignProjectId == designProjectId)) ||
                 (r.TargetType == DrawingRevisionTargetType.ShopDrawing &&
                  db.ShopDrawings.Any(d => d.Id == r.TargetId && d.DesignProjectId == designProjectId)));
+        }
+        if (accessibleDisciplines is not null)
+        {
+            var disciplineCodes = accessibleDisciplines.ToList();
+            q = q.Where(r =>
+                (r.TargetType == DrawingRevisionTargetType.BasicDesignDoc &&
+                 db.BasicDesignDocs.Any(d => d.Id == r.TargetId && disciplineCodes.Contains(d.DisciplineCode))) ||
+                (r.TargetType == DrawingRevisionTargetType.ShopDrawing &&
+                 db.ShopDrawings.Any(d => d.Id == r.TargetId && disciplineCodes.Contains(d.DisciplineCode))));
         }
 
         DrawingRevisionTargetType? targetType = null;

@@ -45,14 +45,7 @@ public class PermitsControllerTests : IntegrationTestBase
     public async Task Create_DesignProject_AutoSeedsPermitChecklist()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
-        var customerId = await FirstCustomerIdAsync();
-        var create = await Client.PostAsJsonAsync("/api/design-projects", new
-        {
-            name = $"Permit auto-seed {Guid.NewGuid():N}",
-            customerId,
-        });
-        create.EnsureSuccessStatusCode();
-        var projectId = (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+        var projectId = await CreateDesignProjectAsync();
 
         var listRes = await Client.GetAsync($"/api/permits?designProjectId={projectId}&pageSize=100");
         listRes.EnsureSuccessStatusCode();
@@ -187,13 +180,31 @@ public class PermitsControllerTests : IntegrationTestBase
     private async Task<int> CreateDesignProjectAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Permit fixture {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = $"PJ-PERMIT-{Guid.NewGuid():N}"[..40],
+                Name = "Permit integration fixture",
+                CustomerId = customerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<HttpResponseMessage> UploadDocumentAsync(int id, string kind, string fileName)

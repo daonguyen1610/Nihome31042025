@@ -22,6 +22,7 @@ namespace NihomeBackend.Controllers;
 public class ConceptOptionsController(
     IConceptOptionService svc,
     IPermissionService permissions,
+    IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
@@ -29,6 +30,13 @@ public class ConceptOptionsController(
     public async Task<ActionResult<ConceptOptionListResponse>> List(
         [FromQuery] ConceptOptionListParams parameters, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!parameters.DesignProjectId.HasValue)
+            return BadRequest(new { message = "DesignProjectId is required." });
+        if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, parameters.DesignProjectId.Value, ct))
+            return NotFound();
+
         var result = await svc.ListAsync(parameters, ct);
         return Ok(result);
     }
@@ -37,6 +45,10 @@ public class ConceptOptionsController(
     [RequirePermission("design.concepts", "view")]
     public async Task<ActionResult<ConceptOptionResponse>> Get(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
@@ -48,6 +60,8 @@ public class ConceptOptionsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, request.DesignProjectId, ct))
+            return NotFound();
         try
         {
             var response = await svc.CreateAsync(request, userId.Value, ct);
@@ -74,6 +88,7 @@ public class ConceptOptionsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -98,6 +113,10 @@ public class ConceptOptionsController(
     [RequirePermission("design.concepts", "manage")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+
         try
         {
             var removed = await svc.DeleteAsync(id, ct);
@@ -131,10 +150,20 @@ public class ConceptOptionsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.ConceptOption, id, ct);
+        if (!projectId.HasValue ||
+            !await projectAccess.CanManageDesignProjectAsync(userId.Value, projectId.Value, ct))
+            return NotFound();
 
         // Finalize is a stricter permission on top of manage.
-        if (string.Equals(request.Status, "Finalized", StringComparison.OrdinalIgnoreCase)
-            && !await permissions.HasAsync(userId.Value, "design.concepts.finalize", ct))
+        if (string.Equals(request.Status, "Finalized", StringComparison.OrdinalIgnoreCase) &&
+            !await projectAccess.CanApproveDesignProjectAsync(userId.Value, projectId.Value, ct))
+        {
+            return NotFound();
+        }
+        if (string.Equals(request.Status, "Finalized", StringComparison.OrdinalIgnoreCase) &&
+            !await permissions.HasAsync(userId.Value, "design.concepts.finalize", ct))
         {
             return Forbid();
         }
@@ -163,5 +192,16 @@ public class ConceptOptionsController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private async Task<bool> CanAccessAsync(int userId, int id, bool manage, CancellationToken ct)
+    {
+        var projectId = await projectAccess.ResolveDesignProjectIdAsync(
+            DesignProjectResourceType.ConceptOption, id, ct);
+        if (!projectId.HasValue) return false;
+
+        return manage
+            ? await projectAccess.CanManageDesignProjectAsync(userId, projectId.Value, ct)
+            : await projectAccess.CanViewDesignProjectAsync(userId, projectId.Value, ct);
     }
 }

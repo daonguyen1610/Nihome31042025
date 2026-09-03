@@ -22,7 +22,7 @@ public class DesignProjectOperationException(string message) : Exception(message
 /// </summary>
 public interface IDesignProjectService
 {
-    Task<DesignProjectListResponse> ListAsync(DesignProjectListParams parameters, CancellationToken ct = default);
+    Task<DesignProjectListResponse> ListAsync(DesignProjectListParams parameters, int callerUserId, CancellationToken ct = default);
 
     Task<DesignProjectResponse?> GetAsync(int id, CancellationToken ct = default);
 
@@ -37,7 +37,7 @@ public interface IDesignProjectService
     /// so the guard is on <c>CurrentStage</c>; NIH-114+ will tighten this
     /// to look at real document counts.
     /// </summary>
-    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, int callerUserId, CancellationToken ct = default);
 
     /// <summary>
     /// Idempotent auto-create hook. Called by <see cref="IContractService"/>

@@ -11,7 +11,10 @@ namespace NihomeBackend.Services;
 /// </summary>
 public interface IShopDrawingService
 {
-    Task<ShopDrawingListResponse> ListAsync(ShopDrawingListParams parameters, CancellationToken ct = default);
+    Task<ShopDrawingListResponse> ListAsync(
+        ShopDrawingListParams parameters,
+        CancellationToken ct = default,
+        IReadOnlySet<string>? accessibleDisciplines = null);
     Task<ShopDrawingResponse?> GetAsync(int id, CancellationToken ct = default);
     Task<ShopDrawingResponse> CreateAsync(CreateShopDrawingRequest request, int callerUserId, CancellationToken ct = default);
     Task<ShopDrawingResponse?> UpdateAsync(int id, UpdateShopDrawingRequest request, int callerUserId, CancellationToken ct = default);

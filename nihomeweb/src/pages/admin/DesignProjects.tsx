@@ -99,7 +99,6 @@ const emptyForm = (): UpdateDesignProjectRequest => ({
   startDate: null,
   deadline: null,
   note: "",
-  currentStage: "Concept",
   status: "Active",
 });
 
@@ -292,7 +291,6 @@ const AdminDesignProjects = () => {
         startDate: data.startDate ?? null,
         deadline: data.deadline ?? null,
         note: data.note ?? "",
-        currentStage: data.currentStage,
         status: data.status,
       });
       setFormError(null);
@@ -334,7 +332,6 @@ const AdminDesignProjects = () => {
           startDate: form.startDate || null,
           deadline: form.deadline || null,
           note: form.note?.trim() || null,
-          currentStage: form.currentStage,
           status: form.status,
         };
         await adminApi.updateDesignProject(editingDetail!.id, payload);
@@ -884,47 +881,24 @@ const AdminDesignProjects = () => {
               />
             </div>
             {isEdit ? (
-              <>
-                <div>
-                  <Label>{t("designProjects.field.stage")}</Label>
-                  <Select
-                    value={form.currentStage ?? "Concept"}
-                    onValueChange={(v) => setForm((f) => ({ ...f, currentStage: v as DesignProjectStage }))}
-                  >
-                    <SelectTrigger className="mt-1 h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DESIGN_PROJECT_STAGES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {t(`designProjects.stage.${s}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t("designProjects.field.status")}</Label>
-                  <Select
-                    value={form.status ?? "Active"}
-                    onValueChange={(v) => setForm((f) => ({ ...f, status: v as DesignProjectStatus }))}
-                  >
-                    <SelectTrigger className="mt-1 h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DESIGN_PROJECT_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {t(`designProjects.status.${s}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <p className="text-xs text-slate-500 md:col-span-2">
-                  {t("designProjects.form.stageHint")}
-                </p>
-              </>
+              <div>
+                <Label>{t("designProjects.field.status")}</Label>
+                <Select
+                  value={form.status ?? "Active"}
+                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as DesignProjectStatus }))}
+                >
+                  <SelectTrigger className="mt-1 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DESIGN_PROJECT_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {t(`designProjects.status.${s}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             ) : null}
             <div className="md:col-span-2">
               <Label>{t("designProjects.field.note")}</Label>

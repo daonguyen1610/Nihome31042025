@@ -1018,7 +1018,9 @@ public class ContractServiceTests : IDisposable
     private sealed class NoopDesignProjectService : IDesignProjectService
     {
         public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectListResponse> ListAsync(
-            NihomeBackend.Models.DTOs.Requests.DesignProjectListParams parameters, CancellationToken ct = default)
+            NihomeBackend.Models.DTOs.Requests.DesignProjectListParams parameters,
+            int callerUserId,
+            CancellationToken ct = default)
             => Task.FromResult(new NihomeBackend.Models.DTOs.Responses.DesignProjectListResponse());
 
         public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?> GetAsync(int id, CancellationToken ct = default)
@@ -1032,7 +1034,7 @@ public class ContractServiceTests : IDisposable
             int id, NihomeBackend.Models.DTOs.Requests.UpdateDesignProjectRequest request, int callerUserId, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse?>(null);
 
-        public Task<bool> DeleteAsync(int id, CancellationToken ct = default) => Task.FromResult(false);
+        public Task<bool> DeleteAsync(int id, int callerUserId, CancellationToken ct = default) => Task.FromResult(false);
 
         public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse> EnsureForContractAsync(
             NihomeBackend.Models.Contract contract, int? callerUserId, CancellationToken ct = default)

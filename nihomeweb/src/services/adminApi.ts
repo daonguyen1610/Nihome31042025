@@ -2251,8 +2251,120 @@ export interface CreateDesignProjectRequest {
 }
 
 export interface UpdateDesignProjectRequest extends CreateDesignProjectRequest {
-  currentStage?: DesignProjectStage;
   status?: DesignProjectStatus;
+}
+
+export type ProjectAssignmentStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
+
+export interface ProjectRoleDefinitionResponse {
+  code: string;
+  raci: string;
+  canManageTeam: boolean;
+  canApproveDesign: boolean;
+  allowedScopes: string[];
+}
+
+export interface ProjectMemberRoleResponse {
+  roleCode: string;
+  scope: string;
+  scopeValue?: string | null;
+  startedAt: string;
+  endedAt?: string | null;
+}
+
+export interface OperationalProjectMemberResponse {
+  id: number;
+  userId: number;
+  userName: string;
+  email: string;
+  position: string;
+  reportsToMemberId?: number | null;
+  reportsToName?: string | null;
+  startedAt: string;
+  endedAt?: string | null;
+  isActive: boolean;
+  source: string;
+  sourceReference?: string | null;
+  roles: ProjectMemberRoleResponse[];
+  rowVersion: string;
+}
+
+export interface OperationalProjectAssignmentResponse {
+  id: number;
+  workKey: string;
+  kpiIdentity: string;
+  title: string;
+  module: string;
+  discipline?: string | null;
+  parallelGroup?: string | null;
+  assigneeMemberId: number;
+  assigneeName: string;
+  managerMemberId?: number | null;
+  managerName?: string | null;
+  status: ProjectAssignmentStatus;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
+  completedAt?: string | null;
+  note?: string | null;
+  rowVersion: string;
+}
+
+export interface OperationalProjectTeamResponse {
+  operationalProjectId: number;
+  canManage: boolean;
+  roleDefinitions: ProjectRoleDefinitionResponse[];
+  moduleOptions: string[];
+  disciplineOptions: string[];
+  members: OperationalProjectMemberResponse[];
+  assignments: OperationalProjectAssignmentResponse[];
+}
+
+export interface OperationalProjectTeamHistoryResponse {
+  id: number;
+  entityType: string;
+  entityId: number;
+  action: string;
+  snapshotJson: string;
+  changedAt: string;
+  changedByUserId: number;
+  changedByName: string;
+}
+
+export interface ProjectMemberCandidateResponse {
+  userId: number;
+  name: string;
+  email: string;
+}
+
+export interface ProjectMemberRoleRequest {
+  roleCode: string;
+  scope: string;
+  scopeValue?: string | null;
+}
+
+export interface UpsertOperationalProjectMemberRequest {
+  userId: number;
+  position: string;
+  reportsToMemberId?: number | null;
+  startedAt: string;
+  endedAt?: string | null;
+  roles: ProjectMemberRoleRequest[];
+  rowVersion?: string;
+}
+
+export interface UpsertOperationalProjectAssignmentRequest {
+  workKey: string;
+  title: string;
+  module: string;
+  discipline?: string | null;
+  parallelGroup?: string | null;
+  assigneeMemberId: number;
+  managerMemberId?: number | null;
+  status: ProjectAssignmentStatus;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
+  note?: string | null;
+  rowVersion?: string;
 }
 
 // ─── Permits (NIH-137 M3 checklist) ────────────────────────
@@ -4592,6 +4704,56 @@ export const adminApi = {
     api.get<OperationalProjectResponse>(`/operational-projects/${id}`),
   getOperationalProjectTimeline: (id: number) =>
     api.get<OperationalProjectTimelineItem[]>(`/operational-projects/${id}/timeline`),
+  getOperationalProjectTeam: (projectId: number) =>
+    api.get<OperationalProjectTeamResponse>(`/operational-projects/${projectId}/team`),
+  getOperationalProjectTeamHistory: (projectId: number) =>
+    api.get<OperationalProjectTeamHistoryResponse[]>(`/operational-projects/${projectId}/team/history`),
+  getOperationalProjectTeamCandidates: (projectId: number) =>
+    api.get<ProjectMemberCandidateResponse[]>(`/operational-projects/${projectId}/team/candidates`),
+  addOperationalProjectMember: (
+    projectId: number,
+    body: UpsertOperationalProjectMemberRequest,
+    idempotencyKey: string,
+  ) => api.post<OperationalProjectMemberResponse>(
+    `/operational-projects/${projectId}/team/members`,
+    body,
+    withIdempotencyKey(idempotencyKey),
+  ),
+  updateOperationalProjectMember: (
+    projectId: number,
+    memberId: number,
+    body: UpsertOperationalProjectMemberRequest,
+    idempotencyKey: string,
+  ) => api.put<OperationalProjectMemberResponse>(
+    `/operational-projects/${projectId}/team/members/${memberId}`,
+    body,
+    { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } },
+  ),
+  addOperationalProjectAssignment: (
+    projectId: number,
+    body: UpsertOperationalProjectAssignmentRequest,
+    idempotencyKey: string,
+  ) => api.post<OperationalProjectAssignmentResponse>(
+    `/operational-projects/${projectId}/team/assignments`,
+    body,
+    withIdempotencyKey(idempotencyKey),
+  ),
+  updateOperationalProjectAssignment: (
+    projectId: number,
+    assignmentId: number,
+    body: UpsertOperationalProjectAssignmentRequest,
+    idempotencyKey: string,
+  ) => api.put<OperationalProjectAssignmentResponse>(
+    `/operational-projects/${projectId}/team/assignments/${assignmentId}`,
+    body,
+    { headers: {
+      ...withIdempotencyKey(idempotencyKey).headers,
+      ...withIfMatch(body.rowVersion).headers,
+    } },
+  ),
   createOperationalProject: (body: CreateOperationalProjectRequest) =>
     api.post<OperationalProjectResponse>("/operational-projects", body),
   updateOperationalProject: (id: number, body: UpdateOperationalProjectRequest) =>

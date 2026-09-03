@@ -163,6 +163,7 @@ public sealed class IdempotencyService
         CancellationToken ct = default)
     {
         if (!IsValidKey(key)) return;
+        _db.ChangeTracker.Clear();
         var record = await _db.IdempotencyRecords
             .FirstOrDefaultAsync(item => item.Scope == scope && item.Key == key && item.StatusCode == 0, ct);
         if (record is null) return;

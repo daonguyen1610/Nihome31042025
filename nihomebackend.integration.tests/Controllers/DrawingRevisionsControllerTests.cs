@@ -18,21 +18,23 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
     {
-        (await Client.GetAsync("/api/drawing-revisions")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/drawing-revisions?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task List_AsSale_IsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
-        (await Client.GetAsync("/api/drawing-revisions")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/drawing-revisions?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task List_AsDesign_ReturnsOk()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (projectId, _) = await CreateShopStageProjectWithFirstDrawingAsync();
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
-        var res = await Client.GetAsync("/api/drawing-revisions");
+        var res = await Client.GetAsync($"/api/drawing-revisions?designProjectId={projectId}");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -55,8 +57,41 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
 
         matching.EnsureSuccessStatusCode();
         (await ReadJsonAsync(matching)).GetProperty("items").GetArrayLength().Should().Be(1);
-        missing.EnsureSuccessStatusCode();
-        (await ReadJsonAsync(missing)).GetProperty("items").GetArrayLength().Should().Be(0);
+        missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DisciplineScopedMember_ListDetailAndDiff_HideOtherDisciplines()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (projectId, architectureDrawingId) = await CreateShopStageProjectWithFirstDrawingAsync();
+        var structureDrawing = await Client.PostAsJsonAsync("/api/shop-drawings", new
+        {
+            designProjectId = projectId,
+            disciplineCode = "structure",
+            constructionItem = "Structure",
+            title = "Structure SD",
+        });
+        structureDrawing.EnsureSuccessStatusCode();
+        var structureDrawingId = (await ReadJsonAsync(structureDrawing)).GetProperty("id").GetInt32();
+        var architectureRevision = await CreateRevisionAsync(architectureDrawingId, "Architecture revision");
+        var structureRevision = await CreateRevisionAsync(structureDrawingId, "Structure revision");
+        await SeedDisciplineMemberAsync(projectId, "architecture");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "ARCHITECT"));
+        var list = await Client.GetAsync($"/api/drawing-revisions?designProjectId={projectId}");
+        var body = await ReadJsonAsync(list);
+
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.GetProperty("total").GetInt32().Should().Be(1);
+        body.GetProperty("items")[0].GetProperty("id").GetInt32().Should().Be(architectureRevision);
+        (await Client.GetAsync($"/api/drawing-revisions/{architectureRevision}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/drawing-revisions/{structureRevision}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync(
+            $"/api/drawing-revisions/diff?fromId={architectureRevision}&toId={structureRevision}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -112,7 +147,7 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_UnknownTarget_IsBadRequest()
+    public async Task Create_UnknownTarget_IsNotFoundAfterAccessCheck()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var res = await Client.PostAsJsonAsync("/api/drawing-revisions", new
@@ -122,7 +157,7 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
             reasonCode = "client-request",
             note = "should fail",
         });
-        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -246,46 +281,22 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
     private async Task<(int ProjectId, int ShopDrawingId)> CreateShopStageProjectWithFirstDrawingAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var proj = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Rev fixture {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         proj.EnsureSuccessStatusCode();
         var projectId = (await ReadJsonAsync(proj)).GetProperty("id").GetInt32();
 
-        // Concept → BasicDesign
-        var opt = await Client.PostAsJsonAsync("/api/concept-options", new
+        await WithDbAsync(async db =>
         {
-            designProjectId = projectId,
-            name = "AutoFinalized",
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.ShopDrawing;
+            await db.SaveChangesAsync();
         });
-        opt.EnsureSuccessStatusCode();
-        var optId = (await ReadJsonAsync(opt)).GetProperty("id").GetInt32();
-        foreach (var s in new[] { "PendingInternalReview", "PresentedToClient", "Finalized" })
-        {
-            (await Client.PostAsJsonAsync($"/api/concept-options/{optId}/status", new { status = s }))
-                .EnsureSuccessStatusCode();
-        }
-
-        // BasicDesign → ShopDrawing (approve 1 doc per required discipline)
-        foreach (var d in new[] { "architecture", "structure", "mep" })
-        {
-            var docRes = await Client.PostAsJsonAsync("/api/basic-design-docs", new
-            {
-                designProjectId = projectId,
-                disciplineCode = d,
-                title = $"BD {d} {Guid.NewGuid():N}",
-            });
-            docRes.EnsureSuccessStatusCode();
-            var docId = (await ReadJsonAsync(docRes)).GetProperty("id").GetInt32();
-            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{docId}/status", new { status = "SubmittedForReview" }))
-                .EnsureSuccessStatusCode();
-            (await Client.PostAsJsonAsync($"/api/basic-design-docs/{docId}/status", new { status = "InternallyApproved" }))
-                .EnsureSuccessStatusCode();
-        }
-        (await Client.PostAsync($"/api/basic-design-docs/design-project/{projectId}/unlock-shop-drawing", null))
-            .EnsureSuccessStatusCode();
 
         // First shop drawing.
         var shop = await Client.PostAsJsonAsync("/api/shop-drawings", new
@@ -299,6 +310,75 @@ public class DrawingRevisionsControllerTests : IntegrationTestBase
         var shopId = (await ReadJsonAsync(shop)).GetProperty("id").GetInt32();
 
         return (projectId, shopId);
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var designUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-TEST-{Guid.NewGuid():N}",
+                Name = "Drawing revision integration fixture",
+                CustomerId = customerId,
+                ProjectManagerUserId = designUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
+    }
+
+    private async Task<int> CreateRevisionAsync(int targetId, string note)
+    {
+        var response = await Client.PostAsJsonAsync("/api/drawing-revisions", new
+        {
+            targetType = "ShopDrawing",
+            targetId,
+            reasonCode = "client-request",
+            note,
+        });
+        response.EnsureSuccessStatusCode();
+        return (await ReadJsonAsync(response)).GetProperty("id").GetInt32();
+    }
+
+    private async Task SeedDisciplineMemberAsync(int designProjectId, string discipline)
+    {
+        await WithDbAsync(async db =>
+        {
+            var userId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var operationalProjectId = await db.DesignProjects
+                .Where(project => project.Id == designProjectId)
+                .Select(project => project.OperationalProjectId!.Value)
+                .SingleAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = operationalProjectId,
+                UserId = userId,
+                Position = "Architect",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+                Roles =
+                [
+                    new OperationalProjectMemberRole
+                    {
+                        RoleCode = ProjectTeamRoleCode.Architect,
+                        Scope = ProjectRoleScope.Discipline,
+                        ScopeValue = discipline,
+                        StartedAt = DateTime.UtcNow.AddDays(-1),
+                    },
+                ],
+            });
+            await db.SaveChangesAsync();
+        });
     }
 
     private async Task<int> FirstCustomerIdAsync()

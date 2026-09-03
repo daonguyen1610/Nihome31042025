@@ -19,7 +19,7 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
     {
-        (await Client.GetAsync("/api/basic-design-docs")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.GetAsync("/api/basic-design-docs?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -27,18 +27,85 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
     {
         // SALE has no design.basic.* bundle.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
-        (await Client.GetAsync("/api/basic-design-docs")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync("/api/basic-design-docs?designProjectId=1")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
     public async Task List_AsDesign_ReturnsOkWithReadiness()
     {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
-        var res = await Client.GetAsync("/api/basic-design-docs");
+        var res = await Client.GetAsync($"/api/basic-design-docs?designProjectId={projectId}");
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
         body.GetProperty("items").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Array);
         body.GetProperty("readiness").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Object);
+    }
+
+    [Fact]
+    public async Task DisciplineScopedMember_ListAndDetail_HideOtherDisciplines()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        var architectureId = await CreateDocAsync(projectId, "architecture");
+        var structureId = await CreateDocAsync(projectId, "structure");
+        using (var file = CreateFileForm("restricted structure", "structure.pdf", "application/pdf"))
+            (await Client.PostAsync($"/api/basic-design-docs/{structureId}/upload", file))
+                .EnsureSuccessStatusCode();
+        var designUserId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"])
+            .Select(user => user.Id)
+            .SingleAsync());
+        await WithDbAsync(async db =>
+        {
+            var operationalProjectId = await db.DesignProjects
+                .Where(project => project.Id == projectId)
+                .Select(project => project.OperationalProjectId!.Value)
+                .SingleAsync();
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = operationalProjectId,
+                UserId = designUserId,
+                Position = "Architect",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = designUserId,
+                UpdatedByUserId = designUserId,
+                Roles =
+                [
+                    new OperationalProjectMemberRole
+                    {
+                        RoleCode = ProjectTeamRoleCode.Architect,
+                        Scope = ProjectRoleScope.Discipline,
+                        ScopeValue = "architecture",
+                        StartedAt = DateTime.UtcNow.AddDays(-1),
+                    },
+                ],
+            };
+            db.OperationalProjectMembers.Add(member);
+            var architecture = await db.BasicDesignDocs.FindAsync(architectureId);
+            architecture!.Status = BasicDesignDocStatus.InternallyApproved;
+            await db.SaveChangesAsync();
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "ARCHITECT"));
+        var list = await Client.GetAsync($"/api/basic-design-docs?designProjectId={projectId}");
+        var body = await ReadJsonAsync(list);
+
+        list.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.GetProperty("total").GetInt32().Should().Be(1);
+        body.GetProperty("items")[0].GetProperty("id").GetInt32().Should().Be(architectureId);
+        body.GetProperty("readiness").GetProperty("requiredDisciplineCodes")
+            .EnumerateArray().Select(item => item.GetString()).Should().Equal("architecture");
+        body.GetProperty("readiness").GetProperty("internallyApprovedDisciplineCodes")
+            .EnumerateArray().Select(item => item.GetString()).Should().Equal("architecture");
+        body.GetProperty("readiness").GetProperty("readyForShopDrawing").GetBoolean().Should().BeTrue();
+        (await Client.GetAsync($"/api/basic-design-docs/{architectureId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/basic-design-docs/{structureId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/basic-design-docs/{structureId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -91,10 +158,12 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         // The auto-created project after DesignProject POST is at Concept stage.
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var proj = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Concept-stage {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         var projectId = (await ReadJsonAsync(proj)).GetProperty("id").GetInt32();
 
@@ -226,34 +295,49 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
     // -------- helpers --------
 
     /// <summary>
-    /// Create a fresh DesignProject, finalize a Concept option on it so
-    /// the parent stage flips to BasicDesign, and return the project id.
+    /// Create a fresh DesignProject and seed the required setup stage.
     /// </summary>
     private async Task<int> CreateBasicStageProjectAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var proj = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Basic-stage {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         proj.EnsureSuccessStatusCode();
         var projectId = (await ReadJsonAsync(proj)).GetProperty("id").GetInt32();
 
-        // Push a concept option through the state machine to unlock BasicDesign.
-        var opt = await Client.PostAsJsonAsync("/api/concept-options", new
+        await WithDbAsync(async db =>
         {
-            designProjectId = projectId,
-            name = "AutoFinalized",
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.BasicDesign;
+            await db.SaveChangesAsync();
         });
-        opt.EnsureSuccessStatusCode();
-        var optId = (await ReadJsonAsync(opt)).GetProperty("id").GetInt32();
-        foreach (var s in new[] { "PendingInternalReview", "PresentedToClient", "Finalized" })
-        {
-            (await Client.PostAsJsonAsync($"/api/concept-options/{optId}/status", new { status = s }))
-                .EnsureSuccessStatusCode();
-        }
         return projectId;
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var designUserId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN"])
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-TEST-{Guid.NewGuid():N}",
+                Name = "Basic design integration fixture",
+                CustomerId = customerId,
+                ProjectManagerUserId = designUserId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<int> CreateDocAsync(int projectId, string discipline)

@@ -57,10 +57,12 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"DP integ {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
         });
         res.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await ReadJsonAsync(res);
@@ -70,7 +72,7 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_UnknownCustomer_IsBadRequest()
+    public async Task Create_UnknownCustomer_IsNotFoundAfterAccessCheck()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
@@ -78,7 +80,7 @@ public class DesignProjectsControllerTests : IntegrationTestBase
             name = "Bad customer",
             customerId = 9999999,
         });
-        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -89,33 +91,38 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Update_HappyPath_ChangesStage()
+    public async Task Update_ExtraCurrentStage_DoesNotChangeServerOwnedStage()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
         var id = await CreateAsync(customerId, "Update round-trip");
+        var operationalProjectId = await WithDbAsync<int>(db => db.DesignProjects
+            .Where(project => project.Id == id)
+            .Select(project => project.OperationalProjectId!.Value)
+            .SingleAsync());
         var res = await Client.PutAsJsonAsync($"/api/design-projects/{id}", new
         {
             name = "Update round-trip",
             customerId,
+            operationalProjectId,
             currentStage = "BasicDesign",
         });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await ReadJsonAsync(res);
-        body.GetProperty("currentStage").GetString().Should().Be("BasicDesign");
+        body.GetProperty("currentStage").GetString().Should().Be("Concept");
     }
 
     [Fact]
-    public async Task Delete_BeyondConcept_RemovesRestrictedDependentsAndPreservesExternalRows()
+    public async Task Delete_BeyondConcept_IsRejectedAndPreservesControlledHistory()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
         var id = await CreateAsync(customerId, "Delete aggregate after stage");
-        await Client.PutAsJsonAsync($"/api/design-projects/{id}", new
+        await WithDbAsync(async db =>
         {
-            name = "Delete aggregate after stage",
-            customerId,
-            currentStage = "BasicDesign",
+            var project = await db.DesignProjects.FindAsync(id);
+            project!.CurrentStage = DesignProjectStage.BasicDesign;
+            await db.SaveChangesAsync();
         });
         var userId = await WithDbAsync<int>(db => db.Users.Select(user => user.Id).FirstAsync());
         var taskId = await WithDbAsync<int>(async db =>
@@ -158,14 +165,14 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         });
 
         (await Client.DeleteAsync($"/api/design-projects/{id}"))
-            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         await WithDbAsync(async db =>
         {
-            (await db.DesignProjects.AnyAsync(project => project.Id == id)).Should().BeFalse();
+            (await db.DesignProjects.AnyAsync(project => project.Id == id)).Should().BeTrue();
             (await db.ConstructionTaskDependencies.AnyAsync(dependency => dependency.TaskId == taskId
-                || dependency.PredecessorTaskId == taskId)).Should().BeFalse();
-            (await db.AcceptanceRecords.AnyAsync(record => record.DesignProjectId == id)).Should().BeFalse();
-            (await db.HandoverRecords.AnyAsync(record => record.DesignProjectId == id)).Should().BeFalse();
+                || dependency.PredecessorTaskId == taskId)).Should().BeTrue();
+            (await db.AcceptanceRecords.AnyAsync(record => record.DesignProjectId == id)).Should().BeTrue();
+            (await db.HandoverRecords.AnyAsync(record => record.DesignProjectId == id)).Should().BeTrue();
             (await db.Customers.AnyAsync(customer => customer.Id == customerId)).Should().BeTrue();
             (await db.Users.AnyAsync(user => user.Id == userId)).Should().BeTrue();
         });
@@ -187,13 +194,31 @@ public class DesignProjectsControllerTests : IntegrationTestBase
 
     private async Task<int> CreateAsync(int customerId, string name)
     {
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name,
             customerId,
+            operationalProjectId,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = $"PJ-TEST-{Guid.NewGuid():N}",
+                Name = "Design project integration fixture",
+                CustomerId = customerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<int> FirstCustomerIdAsync()

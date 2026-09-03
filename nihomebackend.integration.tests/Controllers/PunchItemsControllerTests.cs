@@ -195,13 +195,36 @@ public class PunchItemsControllerTests : IntegrationTestBase
     private async Task<int> CreateProjectAsync()
     {
         var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
+        var projectManagerUserId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+            .Select(user => user.Id)
+            .SingleAsync());
         var res = await Client.PostAsJsonAsync("/api/design-projects", new
         {
             name = $"Punch fixture {Guid.NewGuid():N}",
             customerId,
+            operationalProjectId,
+            projectManagerUserId,
         });
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<int> CreateOperationalProjectAsync(int customerId)
+    {
+        return await WithDbAsync<int>(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = $"PJ-PUNCH-{Guid.NewGuid():N}"[..40],
+                Name = "Punch integration fixture",
+                CustomerId = customerId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            return project.Id;
+        });
     }
 
     private async Task<int> CreatePunchAsync(int projectId)

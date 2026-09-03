@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -176,6 +177,14 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             Client,
             client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
         var customerId = await CreateCustomerAsync();
+        var projectManagerId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+            .Select(user => user.Id)
+            .SingleAsync());
+        var designLeadId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"])
+            .Select(user => user.Id)
+            .SingleAsync());
         var projectResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
         {
             name = $"Design inheritance {Guid.NewGuid():N}",
@@ -198,11 +207,36 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             name = "Inherited design workflow",
             customerId,
             contractId,
+            projectManagerUserId = projectManagerId,
+            designLeadUserId = designLeadId,
         });
 
         designResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         (await ReadJsonAsync(designResponse)).GetProperty("operationalProjectId")
             .GetInt32().Should().Be(projectId);
+        var roles = await WithDbAsync(db => db.OperationalProjectMemberRoles
+            .Where(role => role.Member.OperationalProjectId == projectId && role.EndedAt == null)
+            .Select(role => new
+            {
+                role.Member.UserId,
+                role.RoleCode,
+                role.Scope,
+                role.ScopeValue,
+                role.Source,
+            })
+            .ToListAsync());
+        roles.Should().Contain(role =>
+            role.UserId == projectManagerId &&
+            role.RoleCode == ProjectTeamRoleCode.ProjectManager &&
+            role.Scope == ProjectRoleScope.Module &&
+            role.ScopeValue == "Design" &&
+            role.Source == LegacyProjectTeamSyncService.RuntimeSource);
+        roles.Should().Contain(role =>
+            role.UserId == designLeadId &&
+            role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+            role.Scope == ProjectRoleScope.Module &&
+            role.ScopeValue == "Design" &&
+            role.Source == LegacyProjectTeamSyncService.RuntimeSource);
     }
 
     [Fact]
@@ -238,6 +272,136 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var delete = await Client.SendAsync(request);
 
         delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Delete_ProjectWithTeamHistoryOnly_IsRejectedAndPreservesHistory()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var seeded = await WithDbAsync(async db =>
+        {
+            var userId = await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.SuperAdminPhone)
+                .Select(user => user.Id)
+                .SingleAsync();
+            var project = new OperationalProject
+            {
+                Code = $"PJ-HIST-{Guid.NewGuid():N}"[..24],
+                Name = "Team history only",
+                CustomerId = customerId,
+                ProjectManagerUserId = userId,
+                CreatedByUserId = userId,
+                UpdatedByUserId = userId,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            db.OperationalProjectTeamHistory.Add(new OperationalProjectTeamHistory
+            {
+                OperationalProjectId = project.Id,
+                EntityType = "Project",
+                EntityId = project.Id,
+                Action = "Created",
+                SnapshotJson = "{}",
+                ChangedByUserId = userId,
+            });
+            await db.SaveChangesAsync();
+            return new { project.Id, RowVersion = CrmConcurrency.Encode(project.RowVersion) };
+        });
+        var projectId = seeded.Id;
+        var historyCount = await WithDbAsync(db => db.OperationalProjectTeamHistory
+            .CountAsync(item => item.OperationalProjectId == projectId));
+        (await WithDbAsync(db => db.OperationalProjectMembers
+            .CountAsync(item => item.OperationalProjectId == projectId))).Should().Be(0);
+        (await WithDbAsync(db => db.OperationalProjectAssignments
+            .CountAsync(item => item.OperationalProjectId == projectId))).Should().Be(0);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/operational-projects/{projectId}");
+        request.Headers.IfMatch.ParseAdd($"\"{seeded.RowVersion}\"");
+
+        var delete = await Client.SendAsync(request);
+
+        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
+        (await WithDbAsync(db => db.OperationalProjectTeamHistory
+            .CountAsync(item => item.OperationalProjectId == projectId)))
+            .Should().Be(historyCount);
+    }
+
+    [Fact]
+    public async Task ActiveMember_CanReadPortfolioDetailAndTimeline_ButCannotMutate()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var projectResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Member visible {Guid.NewGuid():N}",
+            customerId,
+        });
+        projectResponse.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(projectResponse);
+        var projectId = project.GetProperty("id").GetInt32();
+        var memberUserId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"])
+            .Select(user => user.Id)
+            .SingleAsync());
+        await WithDbAsync(async db =>
+        {
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = projectId,
+                UserId = memberUserId,
+                Position = "Observer",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = memberUserId,
+                UpdatedByUserId = memberUserId,
+                Roles =
+                [
+                    new OperationalProjectMemberRole
+                    {
+                        RoleCode = ProjectTeamRoleCode.Observer,
+                        Scope = ProjectRoleScope.Project,
+                        StartedAt = DateTime.UtcNow.AddDays(-1),
+                    },
+                ],
+            });
+            await db.SaveChangesAsync();
+        });
+
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+        var list = await ReadJsonAsync(await Client.GetAsync("/api/operational-projects"));
+        var detail = await Client.GetAsync($"/api/operational-projects/{projectId}");
+        var timeline = await Client.GetAsync($"/api/operational-projects/{projectId}/timeline");
+        var update = await Client.PutAsJsonAsync($"/api/operational-projects/{projectId}", new
+        {
+            name = project.GetProperty("name").GetString(),
+            customerId,
+            projectManagerUserId = project.GetProperty("projectManagerUserId").GetInt32(),
+            status = "Planning",
+            rowVersion = project.GetProperty("rowVersion").GetString(),
+        });
+        using var deleteRequest = new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/operational-projects/{projectId}");
+        deleteRequest.Headers.IfMatch.ParseAdd($"\"{project.GetProperty("rowVersion").GetString()}\"");
+        var delete = await Client.SendAsync(deleteRequest);
+
+        list.GetProperty("items").EnumerateArray()
+            .Should().Contain(item => item.GetProperty("id").GetInt32() == projectId);
+        detail.StatusCode.Should().Be(HttpStatusCode.OK);
+        timeline.StatusCode.Should().Be(HttpStatusCode.OK);
+        update.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        delete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
     }
 
     [Fact]

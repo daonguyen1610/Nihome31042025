@@ -127,6 +127,21 @@ public class DrawingRevisionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ListAsync_AccessibleDisciplines_FiltersBeforeCount()
+    {
+        await _sut.CreateAsync(ValidCreate(targetId: _shopId), _userId);
+        await _sut.CreateAsync(ValidCreate(targetId: _otherShopId), _userId);
+
+        var result = await _sut.ListAsync(
+            new DrawingRevisionListParams { DesignProjectId = _projectId },
+            accessibleDisciplines: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "architecture" });
+
+        var item = Assert.Single(result.Items);
+        Assert.Equal(_shopId, item.TargetId);
+        Assert.Equal(1, result.Total);
+    }
+
+    [Fact]
     public async Task CreateAsync_HappyPath_StartsAtR1_AndIsCurrent()
     {
         var resp = await _sut.CreateAsync(ValidCreate(), _userId);

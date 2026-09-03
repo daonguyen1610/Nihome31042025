@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -20,6 +22,7 @@ public class OperationalProjectServiceTests : IDisposable
     {
         _service = new OperationalProjectService(
             _db,
+            new LegacyProjectTeamSyncService(_db),
             NullLogger<OperationalProjectService>.Instance);
         var manager = AddUser("0900100001", "Project Manager");
         var other = AddUser("0900100002", "Other Manager");
@@ -44,6 +47,12 @@ public class OperationalProjectServiceTests : IDisposable
         Assert.StartsWith($"PJ-{DateTime.UtcNow.Year}-", result.Code);
         Assert.Equal(_managerId, result.ProjectManagerUserId);
         Assert.Equal("Planning", result.Status);
+        var member = await _db.OperationalProjectMembers.Include(item => item.Roles).SingleAsync();
+        Assert.Equal(_managerId, member.UserId);
+        Assert.Contains(member.Roles, role =>
+            role.RoleCode == ProjectTeamRoleCode.ProjectManager &&
+            role.Scope == ProjectRoleScope.Project &&
+            role.EndedAt == null);
     }
 
     [Fact]
@@ -68,6 +77,21 @@ public class OperationalProjectServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_InactiveManager_IsRejectedWithoutMembership()
+    {
+        var inactive = AddUser("0900100003", "Inactive Manager");
+        inactive.IsActive = false;
+        await _db.SaveChangesAsync();
+        var request = ValidCreate();
+        request.ProjectManagerUserId = inactive.Id;
+
+        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.CreateAsync(request, _managerId, true));
+
+        Assert.Empty(await _db.OperationalProjectMembers.ToListAsync());
+    }
+
+    [Fact]
     public async Task ListAsync_NonManagerSeesOnlyOwnProjects()
     {
         await _service.CreateAsync(ValidCreate("Own project"), _managerId, false);
@@ -80,6 +104,124 @@ public class OperationalProjectServiceTests : IDisposable
 
         var item = Assert.Single(result.Items);
         Assert.Equal("Own project", item.Name);
+    }
+
+    [Fact]
+    public async Task ActiveTeamMember_CanDiscoverAndReadButCannotUpdateProject()
+    {
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        _db.OperationalProjectMembers.Add(new OperationalProjectMember
+        {
+            OperationalProjectId = created.Id,
+            UserId = _otherUserId,
+            Position = "Observer",
+            StartedAt = DateTime.UtcNow,
+            CreatedByUserId = _managerId,
+            UpdatedByUserId = _managerId,
+        });
+        await _db.SaveChangesAsync();
+
+        var list = await _service.ListAsync(
+            new OperationalProjectListParams(), _otherUserId, false);
+        var detail = await _service.GetAsync(created.Id, _otherUserId, false);
+        var timeline = await _service.GetTimelineAsync(created.Id, _otherUserId, false);
+        var update = await _service.UpdateAsync(
+            created.Id,
+            ValidUpdate(created, OperationalProjectStatus.Planning),
+            _otherUserId,
+            false);
+        var delete = await _service.DeleteAsync(
+            created.Id, _otherUserId, false, created.RowVersion);
+
+        Assert.Contains(list.Items, item => item.Id == created.Id);
+        Assert.NotNull(detail);
+        Assert.NotNull(timeline);
+        Assert.Null(update);
+        Assert.False(delete);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithResponsibilityHistory_IsRejectedAndPreservesHistory()
+    {
+        var project = new OperationalProject
+        {
+            Code = "PJ-HISTORY-ONLY",
+            Name = "History only",
+            CustomerId = _customerId,
+            ProjectManagerUserId = _managerId,
+            CreatedByUserId = _managerId,
+            UpdatedByUserId = _managerId,
+        };
+        _db.OperationalProjects.Add(project);
+        await _db.SaveChangesAsync();
+        _db.OperationalProjectTeamHistory.Add(new OperationalProjectTeamHistory
+        {
+            OperationalProjectId = project.Id,
+            EntityType = "Project",
+            EntityId = project.Id,
+            Action = "Created",
+            SnapshotJson = "{}",
+            ChangedByUserId = _managerId,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Empty(await _db.OperationalProjectMembers
+            .Where(item => item.OperationalProjectId == project.Id).ToListAsync());
+        Assert.Empty(await _db.OperationalProjectAssignments
+            .Where(item => item.OperationalProjectId == project.Id).ToListAsync());
+
+        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.DeleteAsync(project.Id, _managerId, false, null));
+
+        Assert.NotNull(await _db.OperationalProjects.FindAsync(project.Id));
+        Assert.NotEmpty(await _db.OperationalProjectTeamHistory
+            .Where(item => item.OperationalProjectId == project.Id)
+            .ToListAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenDependencyWinsRace_ReturnsConcurrencyConflict()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(new OperationalProjectDeleteFailureInterceptor())
+            .Options;
+        await using var db = new AppDbContext(options);
+        var user = new ApplicationUser
+        {
+            PhoneNumber = "0900100099",
+            FullName = "Race manager",
+            Email = "race.manager@example.com",
+            PasswordHash = "x",
+            Role = UserRole.USER,
+            IsActive = true,
+        };
+        var customer = new Customer
+        {
+            Name = "Race customer",
+            Type = CustomerType.Company,
+            SourceCode = "referral",
+        };
+        db.AddRange(user, customer);
+        await db.SaveChangesAsync();
+        var project = new OperationalProject
+        {
+            Code = "PJ-RACE",
+            Name = "Delete race",
+            CustomerId = customer.Id,
+            ProjectManagerUserId = user.Id,
+            CreatedByUserId = user.Id,
+            UpdatedByUserId = user.Id,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        var service = new OperationalProjectService(
+            db,
+            new LegacyProjectTeamSyncService(db),
+            NullLogger<OperationalProjectService>.Instance);
+
+        await Assert.ThrowsAsync<CrmConcurrencyException>(() =>
+            service.DeleteAsync(project.Id, user.Id, false, null));
     }
 
     [Fact]
@@ -293,5 +435,20 @@ public class OperationalProjectServiceTests : IDisposable
         _db.Users.Add(user);
         _db.SaveChanges();
         return user;
+    }
+
+    private sealed class OperationalProjectDeleteFailureInterceptor : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context?.ChangeTracker.Entries<OperationalProject>()
+                .Any(entry => entry.State == EntityState.Deleted) == true)
+                throw new DbUpdateException("A concurrent dependency prevents deletion.");
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
     }
 }

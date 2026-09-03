@@ -15,7 +15,10 @@ namespace NihomeBackend.Services;
 /// </summary>
 public interface IDrawingRevisionService
 {
-    Task<DrawingRevisionListResponse> ListAsync(DrawingRevisionListParams parameters, CancellationToken ct = default);
+    Task<DrawingRevisionListResponse> ListAsync(
+        DrawingRevisionListParams parameters,
+        CancellationToken ct = default,
+        IReadOnlySet<string>? accessibleDisciplines = null);
     Task<DrawingRevisionResponse?> GetAsync(int id, CancellationToken ct = default);
     Task<DrawingRevisionResponse> CreateAsync(CreateDrawingRevisionRequest request, int callerUserId, CancellationToken ct = default);
     Task<DrawingRevisionDiffResponse?> DiffAsync(int fromId, int toId, CancellationToken ct = default);
