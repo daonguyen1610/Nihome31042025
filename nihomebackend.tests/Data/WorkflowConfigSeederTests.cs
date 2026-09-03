@@ -246,86 +246,86 @@ public class WorkflowConfigSeederTests : IDisposable
         Assert.Empty(_db.WorkflowConfigs);
     }
 
-        [Theory]
-        [InlineData(0, 2)]
-        [InlineData(-1, 2)]
-        [InlineData(1, 1)]
-        public void Seed_RejectsInvalidIncomingStepOrders(int firstOrder, int secondOrder)
-        {
-                var json = $$"""
-                        { "workflows": [
-                            { "module": "quotes", "action": "approve", "name": "Approve quote", "steps": [
-                                { "name": "One", "approverRoleCode": "ADMIN", "order": {{firstOrder}} },
-                                { "name": "Two", "approverRoleCode": "BGD", "order": {{secondOrder}} }
-                            ] }
-                        ] }
-                        """;
-                using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
-
-                var error = Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
-
-                Assert.Contains("quotes|approve", error.Message, StringComparison.OrdinalIgnoreCase);
-                Assert.Empty(_db.WorkflowConfigs);
-        }
-
-            [Theory]
-            [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"steps\": [] }")]
-            [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": {} }")]
-            [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [] }")]
-            [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [{ \"name\": \"One\", \"approverRoleCode\": \"ADMIN\" }] }")]
-            [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [{ \"name\": \"One\", \"approverRoleCode\": \"ADMIN\", \"order\": \"first\" }] }")]
-            [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [{ \"name\": \"One\", \"approverRoleCode\": \"UNKNOWN\", \"order\": 1 }] }")]
-            public void Seed_RejectsMalformedIncomingWorkflowWithoutPersistence(string workflowJson)
-            {
-                var json = $"{{ \"workflows\": [{workflowJson}] }}";
-                using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
-
-                Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
-
-                Assert.Empty(_db.WorkflowConfigs);
-            }
-
-            [Theory]
-            [InlineData("{}")]
-            [InlineData("{ \"workflows\": {} }")]
-            [InlineData("{ \"workflows\": [] }")]
-            public void Seed_RejectsInvalidWorkflowManifestRoot(string json)
-            {
-                using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
-
-                Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
-
-                Assert.Empty(_db.WorkflowConfigs);
-            }
-
-            [Fact]
-            public void Seed_InvalidLaterWorkflowDoesNotPersistEarlierValidWorkflow()
-            {
-                const string json = """
-                    { "workflows": [
-                      { "module": "quotes", "action": "approve", "name": "Approve quote", "steps": [
-                        { "name": "Approve", "approverRoleCode": "ADMIN", "order": 1 }
-                      ] },
-                      { "module": "contracts", "action": "sign", "name": "Sign contract", "steps": [] }
+    [Theory]
+    [InlineData(0, 2)]
+    [InlineData(-1, 2)]
+    [InlineData(1, 1)]
+    public void Seed_RejectsInvalidIncomingStepOrders(int firstOrder, int secondOrder)
+    {
+        var json = $$"""
+                { "workflows": [
+                    { "module": "quotes", "action": "approve", "name": "Approve quote", "steps": [
+                        { "name": "One", "approverRoleCode": "ADMIN", "order": {{firstOrder}} },
+                        { "name": "Two", "approverRoleCode": "BGD", "order": {{secondOrder}} }
                     ] }
-                    """;
-                using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+                ] }
+                """;
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
 
-                Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
+        var error = Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
 
-                Assert.Empty(_db.WorkflowConfigs);
-            }
+        Assert.Contains("quotes|approve", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(_db.WorkflowConfigs);
+    }
+
+    [Theory]
+    [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"steps\": [] }")]
+    [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": {} }")]
+    [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [] }")]
+    [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [{ \"name\": \"One\", \"approverRoleCode\": \"ADMIN\" }] }")]
+    [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [{ \"name\": \"One\", \"approverRoleCode\": \"ADMIN\", \"order\": \"first\" }] }")]
+    [InlineData("{ \"module\": \"quotes\", \"action\": \"approve\", \"name\": \"Approve\", \"steps\": [{ \"name\": \"One\", \"approverRoleCode\": \"UNKNOWN\", \"order\": 1 }] }")]
+    public void Seed_RejectsMalformedIncomingWorkflowWithoutPersistence(string workflowJson)
+    {
+        var json = $"{{ \"workflows\": [{workflowJson}] }}";
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+        Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
+
+        Assert.Empty(_db.WorkflowConfigs);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{ \"workflows\": {} }")]
+    [InlineData("{ \"workflows\": [] }")]
+    public void Seed_RejectsInvalidWorkflowManifestRoot(string json)
+    {
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+        Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
+
+        Assert.Empty(_db.WorkflowConfigs);
+    }
 
     [Fact]
-            public void Seed_RejectsWorkflowsThatReferenceUnknownRoles()
+    public void Seed_InvalidLaterWorkflowDoesNotPersistEarlierValidWorkflow()
+    {
+        const string json = """
+            { "workflows": [
+              { "module": "quotes", "action": "approve", "name": "Approve quote", "steps": [
+                { "name": "Approve", "approverRoleCode": "ADMIN", "order": 1 }
+              ] },
+              { "module": "contracts", "action": "sign", "name": "Sign contract", "steps": [] }
+            ] }
+            """;
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+        Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db, stream));
+
+        Assert.Empty(_db.WorkflowConfigs);
+    }
+
+    [Fact]
+    public void Seed_RejectsWorkflowsThatReferenceUnknownRoles()
     {
         var designLead = _db.Roles.Single(r => r.Code == "DESIGN_LEAD");
         _db.Roles.Remove(designLead);
         _db.SaveChanges();
 
-                var error = Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db));
+        var error = Assert.Throws<InvalidDataException>(() => WorkflowConfigSeeder.Seed(_db));
 
-                Assert.Contains("DESIGN_LEAD", error.Message);
-                Assert.Empty(_db.WorkflowConfigs);
+        Assert.Contains("DESIGN_LEAD", error.Message);
+        Assert.Empty(_db.WorkflowConfigs);
     }
 }
