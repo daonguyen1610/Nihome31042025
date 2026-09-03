@@ -1,4 +1,5 @@
 using NihomeBackend.Data;
+using NihomeBackend.Constants;
 using NihomeBackend.Models;
 using nihomebackend.tests.Helpers;
 
@@ -23,6 +24,42 @@ public class SampleCrmDataSeederTests : IDisposable
         SampleCrmDataSeeder.Seed(_db);
 
         Assert.Equal(before, CaptureFingerprint());
+    }
+
+    [Fact]
+    public void Seed_HardDeletedSampleDesignProject_WithTombstone_DoesNotRecreateRoot()
+    {
+        var project = _db.DesignProjects.Single(item => item.ProjectCode == "DP-SAMPLE-001");
+        _db.SeededRootDeletions.Add(new SeededRootDeletion
+        {
+            ResourceType = EntityTypes.DesignProject,
+            ResourceKey = project.ProjectCode,
+        });
+        _db.DesignProjects.Remove(project);
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.DoesNotContain(_db.DesignProjects, item => item.ProjectCode == "DP-SAMPLE-001");
+    }
+
+    [Fact]
+    public void Seed_HardDeletedSampleOperationalProject_WithTombstones_DoesNotRecreateRoots()
+    {
+        var operationalProject = _db.OperationalProjects
+            .First(item => item.Code.StartsWith("PJ-SAMPLE-"));
+        var deletedCode = operationalProject.Code;
+        _db.SeededRootDeletions.Add(new SeededRootDeletion
+        {
+            ResourceType = EntityTypes.OperationalProject,
+            ResourceKey = deletedCode,
+        });
+        operationalProject.Code = $"REMOVED-{operationalProject.Id}";
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.DoesNotContain(_db.OperationalProjects, item => item.Code == deletedCode);
     }
 
     [Fact]

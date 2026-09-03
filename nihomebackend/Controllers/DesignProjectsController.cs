@@ -123,14 +123,17 @@ public class DesignProjectsController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("design.projects", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
         try
         {
-            var removed = await svc.DeleteAsync(id, userId.Value, ct);
+            var removed = await svc.DeleteAsync(id, request, userId.Value, ct);
             if (!removed) return NotFound();
             audit.Log(new AuditEvent
             {
@@ -143,17 +146,25 @@ public class DesignProjectsController(
         }
         catch (DesignProjectOperationException ex)
         {
-            audit.Log(new AuditEvent
-            {
-                Action = "design-project.delete",
-                ResourceType = EntityTypes.DesignProject,
-                ResourceId = id.ToString(),
-                Message = ex.Message,
-                Status = AuditStatus.Failure,
-                FailureReason = ex.Message,
-            });
             return BadRequest(new { message = ex.Message });
         }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("design.projects", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(
+        int id,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
+        var impact = await svc.GetDeletionImpactAsync(id, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     private int? GetUserId()

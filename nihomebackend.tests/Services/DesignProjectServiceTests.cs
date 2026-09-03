@@ -381,13 +381,14 @@ public class DesignProjectServiceTests : IDisposable
     public async Task DeleteAsync_ConceptStage_Deletes()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
-        var removed = await _sut.DeleteAsync(created.Id, _userId);
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+        var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
         Assert.True(removed);
         Assert.Null(await _sut.GetAsync(created.Id));
     }
 
     [Fact]
-    public async Task DeleteAsync_BeyondConcept_IsRejectedAndPreservesProject()
+    public async Task DeleteAsync_BeyondConcept_DeletesAggregateAndStagesManagedFiles()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var operationalProject = new OperationalProject
@@ -528,19 +529,121 @@ public class DesignProjectServiceTests : IDisposable
             IfcReleaseId = release.Id,
             ShopDrawingId = shopDrawing.Id,
         });
+        _db.ProjectDocuments.AddRange(
+            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
+                nameof(BasicDesignDoc), "file", basicDoc.Id, basicDoc.FilePath!),
+            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
+                nameof(ShopDrawing), "file", shopDrawing.Id, shopDrawing.FilePath!),
+            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
+                nameof(PermitChecklistItem), "submittedPackage", permit.Id, permit.SubmittedFilePath!),
+            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
+                nameof(PermitChecklistItem), "issuedPermit", permit.Id, permit.IssuedFilePath!),
+            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Acceptance,
+                nameof(AcceptanceRecord), "documents", acceptance.Id,
+                "/files/business-documents/acceptance/aggregate.pdf"),
+            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Acceptance,
+                nameof(AsBuiltDocument), "file", asBuilt.Id, asBuilt.FileUrl!),
+            Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Handover,
+                nameof(HandoverRecord), "documents", handover.Id,
+                "/files/business-documents/handover/aggregate.pdf"));
         await _db.SaveChangesAsync();
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
-        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
-            _sut.DeleteAsync(created.Id, _userId));
-        Assert.NotNull(await _db.DesignProjects.FindAsync(created.Id));
-        Assert.NotEmpty(await _db.DrawingRevisions.ToListAsync());
-        Assert.NotEmpty(await _db.AcceptanceRecords.ToListAsync());
-        Assert.NotEmpty(await _db.HandoverRecords.ToListAsync());
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+        var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
+
+        Assert.True(removed);
+        Assert.Null(await _db.DesignProjects.FindAsync(created.Id));
+        Assert.Empty(await _db.DrawingRevisions.ToListAsync());
+        Assert.Empty(await _db.AcceptanceRecords.ToListAsync());
+        Assert.Empty(await _db.HandoverRecords.ToListAsync());
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
             It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
             It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<CancellationToken>()), Times.AtLeastOnce);
     }
+
+    private static ProjectDocument Sidecar(
+        int operationalProjectId,
+        ProjectDocumentSourceModule sourceModule,
+        string sourceEntityType,
+        string sourceSlot,
+        long sourceRecordId,
+        string localPath) => new()
+        {
+            OperationalProjectId = operationalProjectId,
+            Category = ProjectDocumentCategory.Unclassified,
+            SourceModule = sourceModule,
+            SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+            SourceEntityType = sourceEntityType,
+            SourceSlot = sourceSlot,
+            SourceRecordId = sourceRecordId,
+            LocalPath = localPath,
+            OriginalFileName = Path.GetFileName(localPath),
+            Sha256 = new string('a', 64),
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+        };
+
+    [Fact]
+    public async Task DeleteAsync_WhenFileStagingFails_PreservesAggregateAndTranslations()
+    {
+        var created = await _sut.CreateAsync(ValidCreate("Failed staging"), _userId);
+        var operationalProject = new OperationalProject
+        {
+            Code = "OP-STAGING-FAILURE",
+            Name = "Staging failure project",
+            CustomerId = _customerId,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        await _db.SaveChangesAsync();
+        var project = await _db.DesignProjects.FindAsync(created.Id);
+        project!.OperationalProjectId = operationalProject.Id;
+        var document = new BasicDesignDoc
+        {
+            DesignProjectId = created.Id,
+            DisciplineCode = "architecture",
+            DocumentCode = "BD-STAGING-FAILURE",
+            Title = "Failed staging document",
+            FilePath = "/files/design/basic/staging-failure.pdf",
+        };
+        _db.BasicDesignDocs.Add(document);
+        await _db.SaveChangesAsync();
+        _db.ProjectDocuments.Add(Sidecar(operationalProject.Id, ProjectDocumentSourceModule.Design,
+            nameof(BasicDesignDoc), "file", document.Id, document.FilePath));
+        _db.EntityTranslations.Add(new EntityTranslation
+        {
+            EntityType = NihomeBackend.Constants.EntityTypes.BasicDesignDoc,
+            EntityId = document.Id,
+            FieldName = "Title",
+            LanguageCode = "en",
+            Value = "Failed staging document",
+        });
+        await _db.SaveChangesAsync();
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
+                operationalProject.Id, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc),
+                "file", document.Id, document.FilePath, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+
+        await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.DeleteAsync(created.Id, Confirm(impact!), _userId));
+
+        Assert.NotNull(await _db.DesignProjects.FindAsync(created.Id));
+        Assert.NotNull(await _db.BasicDesignDocs.FindAsync(document.Id));
+        Assert.NotNull(await _db.EntityTranslations.SingleOrDefaultAsync(item =>
+            item.EntityType == NihomeBackend.Constants.EntityTypes.BasicDesignDoc && item.EntityId == document.Id));
+    }
+
+    private static ConfirmDeletionRequest Confirm(
+        NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse impact) => new()
+        {
+            PlanToken = impact.PlanToken,
+            Confirmation = impact.RequiredConfirmation,
+        };
 
     // ---------------- Auto-create hook ----------------
 

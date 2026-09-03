@@ -212,19 +212,54 @@ public class DesignProjectService(
         return await GetAsync(id, ct);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, CancellationToken ct = default)
+    public Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id, CancellationToken ct = default) =>
+        DeletionImpactPlanner.ForDesignProjectAsync(db, id, ct);
+
+    public async Task<bool> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        CancellationToken ct = default)
     {
         var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
         if (entity is null) return false;
-        if (entity.CurrentStage != DesignProjectStage.Concept)
-            throw new DesignProjectOperationException(
-                "Chỉ có thể xoá Dự án thiết kế khi còn ở giai đoạn Ý tưởng.");
 
-        await AggregateDeletionService.DeleteDesignProjectsAsync(
-            db, new[] { id }, projectDocuments, callerUserId, ct);
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        var impact = await DeletionImpactPlanner.ForDesignProjectAsync(db, id, ct);
+        if (impact is null) return false;
+        ValidateDeletionConfirmation(impact, request);
+
+        try
+        {
+            await AggregateDeletionService.DeleteDesignProjectsAsync(
+                db, new[] { id }, projectDocuments, callerUserId, ct);
+        }
+        catch (AggregateDeletionBlockedException ex)
+        {
+            throw new DesignProjectOperationException(ex.Message);
+        }
         await db.SaveChangesAsync(ct);
-        logger.LogInformation("DesignProject {Id} deleted", id);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        logger.LogInformation("DesignProject {Id} hard-deleted", id);
         return true;
+    }
+
+    private static void ValidateDeletionConfirmation(
+        DeletionImpactResponse impact,
+        ConfirmDeletionRequest request)
+    {
+        if (!impact.CanDelete)
+            throw new DesignProjectOperationException(
+                "Không thể xoá Dự án vì còn dữ liệu cần được dọn an toàn trước.");
+        if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException(
+                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!string.Equals(request.Confirmation?.Trim(), impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new DesignProjectOperationException(
+                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");
     }
 
     public async Task<DesignProjectResponse> EnsureForContractAsync(Contract contract, int? callerUserId, CancellationToken ct = default)

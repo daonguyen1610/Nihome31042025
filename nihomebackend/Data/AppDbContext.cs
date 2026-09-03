@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+    public DbSet<SeededRootDeletion> SeededRootDeletions => Set<SeededRootDeletion>();
 
     // RBAC
     public DbSet<Role> Roles => Set<Role>();
@@ -1311,6 +1312,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(history => history.ChangedByUser).WithMany()
                 .HasForeignKey(history => history.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(history => new { history.OperationalProjectId, history.ChangedAt });
+        });
+
+        modelBuilder.Entity<SeededRootDeletion>(b =>
+        {
+            b.ToTable("seeded_root_deletions");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.ResourceType).HasMaxLength(80).IsRequired();
+            b.Property(item => item.ResourceKey).HasMaxLength(120).IsRequired();
+            b.HasIndex(item => new { item.ResourceType, item.ResourceKey }).IsUnique();
         });
 
         modelBuilder.Entity<PermitChecklistItem>(b =>

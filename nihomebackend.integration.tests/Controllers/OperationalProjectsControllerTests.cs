@@ -19,6 +19,13 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DeletionImpact_WithoutAuthentication_IsUnauthorized()
+    {
+        var response = await Client.GetAsync("/api/operational-projects/1/deletion-impact");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task SuperAdmin_CanCreateReadAndActivateProject()
     {
         await AuthTestHelper.AuthenticateAsync(
@@ -66,7 +73,6 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             await CreateCustomerAsync("Project owner"),
             await CreateCustomerAsync("Different customer"),
         };
-
         var projectResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
         {
             name = $"Cross customer {Guid.NewGuid():N}",
@@ -240,7 +246,7 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_ProjectWithDependencies_IsRejected()
+    public async Task Delete_ProjectWithIndependentContract_UnlinksContractAndDeletesProject()
     {
         await AuthTestHelper.AuthenticateAsync(
             Client,
@@ -264,18 +270,24 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             });
             await db.SaveChangesAsync();
         });
-        using var request = new HttpRequestMessage(
-            HttpMethod.Delete,
-            $"/api/operational-projects/{projectId}");
-        request.Headers.IfMatch.ParseAdd(
-            $"\"{project.GetProperty("rowVersion").GetString()}\"");
-        var delete = await Client.SendAsync(request);
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.contracts" &&
+            item.GetProperty("action").GetString() == "Unlink" &&
+            item.GetProperty("count").GetInt32() == 1);
+        var delete = await ConfirmDeleteAsync(projectId, project, impact);
 
-        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeFalse();
+        (await WithDbAsync(db => db.Contracts
+            .SingleAsync(item => item.OperationalProjectId == null && item.CustomerId == customerId)))
+            .OperationalProjectId.Should().BeNull();
     }
 
     [Fact]
-    public async Task Delete_ProjectWithTeamHistoryOnly_IsRejectedAndPreservesHistory()
+    public async Task Delete_ProjectWithTeamHistoryOnly_DeletesOwnedHistory()
     {
         await AuthTestHelper.AuthenticateAsync(
             Client,
@@ -317,19 +329,23 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             .CountAsync(item => item.OperationalProjectId == projectId))).Should().Be(0);
         (await WithDbAsync(db => db.OperationalProjectAssignments
             .CountAsync(item => item.OperationalProjectId == projectId))).Should().Be(0);
-        using var request = new HttpRequestMessage(
-            HttpMethod.Delete,
-            $"/api/operational-projects/{projectId}");
-        request.Headers.IfMatch.ParseAdd($"\"{seeded.RowVersion}\"");
+        var project = JsonDocument.Parse(JsonSerializer.Serialize(new
+        {
+            rowVersion = seeded.RowVersion,
+        })).RootElement.Clone();
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.teamHistory" &&
+            item.GetProperty("count").GetInt32() == historyCount);
+        var delete = await ConfirmDeleteAsync(projectId, project, impact);
 
-        var delete = await Client.SendAsync(request);
-
-        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
-            .Should().BeTrue();
+            .Should().BeFalse();
         (await WithDbAsync(db => db.OperationalProjectTeamHistory
             .CountAsync(item => item.OperationalProjectId == projectId)))
-            .Should().Be(historyCount);
+            .Should().Be(0);
     }
 
     [Fact]
@@ -388,9 +404,18 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             status = "Planning",
             rowVersion = project.GetProperty("rowVersion").GetString(),
         });
+        var impact = await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact");
         using var deleteRequest = new HttpRequestMessage(
             HttpMethod.Delete,
-            $"/api/operational-projects/{projectId}");
+            $"/api/operational-projects/{projectId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = new string('a', 64),
+                confirmation = project.GetProperty("code").GetString(),
+                rowVersion = project.GetProperty("rowVersion").GetString(),
+            }),
+        };
         deleteRequest.Headers.IfMatch.ParseAdd($"\"{project.GetProperty("rowVersion").GetString()}\"");
         var delete = await Client.SendAsync(deleteRequest);
 
@@ -399,9 +424,291 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         detail.StatusCode.Should().Be(HttpStatusCode.OK);
         timeline.StatusCode.Should().Be(HttpStatusCode.OK);
         update.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        impact.StatusCode.Should().Be(HttpStatusCode.NotFound);
         delete.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
             .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_WhenImpactChanged_ReturnsConflictAndPreservesProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Stale plan {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+        await WithDbAsync(async db =>
+        {
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = $"HD-STALE-{Guid.NewGuid():N}",
+                CustomerId = customerId,
+                OperationalProjectId = projectId,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var delete = await ConfirmDeleteAsync(projectId, project, impact);
+
+        delete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeletionImpact_WithPendingDocument_BlocksDelete()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"File blocker {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        await WithDbAsync(async db =>
+        {
+            db.ProjectDocuments.Add(new ProjectDocument
+            {
+                OperationalProjectId = projectId,
+                LocalPath = $"/files/{Guid.NewGuid():N}.pdf",
+                OriginalFileName = "pending.pdf",
+                ContentType = "application/pdf",
+                Sha256 = new string('a', 64),
+                SyncStatus = ProjectDocumentSyncStatus.Pending,
+            });
+            await db.SaveChangesAsync();
+        });
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.pendingDocuments" &&
+            item.GetProperty("action").GetString() == "Block");
+        (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
+            .Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_WithDriveFolder_UnlinksBindingAndPreservesExternalFolderReference()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Drive folder unlink {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var externalFolderId = $"drive-folder-{Guid.NewGuid():N}";
+        await WithDbAsync(async db =>
+        {
+            db.ProjectDriveFolders.Add(new ProjectDriveFolder
+            {
+                OperationalProjectId = projectId,
+                Category = ProjectDocumentCategory.DesignConcept,
+                DriveFolderId = externalFolderId,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.driveFolders" &&
+            item.GetProperty("action").GetString() == "Unlink" &&
+            item.GetProperty("count").GetInt32() == 1);
+        (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.ProjectDriveFolders
+            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_WithStaleRowVersion_ReturnsConflictAndPreservesProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Stale row version {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+        var update = await Client.PutAsJsonAsync($"/api/operational-projects/{projectId}", new
+        {
+            name = $"Updated stale row version {Guid.NewGuid():N}",
+            customerId,
+            projectManagerUserId = project.GetProperty("projectManagerUserId").GetInt32(),
+            status = project.GetProperty("status").GetString(),
+            rowVersion = project.GetProperty("rowVersion").GetString(),
+        });
+        update.EnsureSuccessStatusCode();
+
+        var delete = await ConfirmDeleteAsync(projectId, project, impact);
+
+        delete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_WithoutRowVersion_ReturnsBadRequestAndPreservesProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Missing row version {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+        var delete = await Client.SendAsync(new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/operational-projects/{projectId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            }),
+        });
+
+        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_SampleProject_WritesTombstone()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var project = await WithDbAsync<OperationalProject>(async db =>
+        {
+            var item = new OperationalProject
+            {
+                Code = $"PJ-SAMPLE-{Guid.NewGuid():N}"[..40],
+                Name = "Sample operational deletion",
+                CustomerId = customerId,
+            };
+            db.OperationalProjects.Add(item);
+            await db.SaveChangesAsync();
+            return item;
+        });
+        var response = await Client.GetAsync($"/api/operational-projects/{project.Id}");
+        var detail = await ReadJsonAsync(response);
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{project.Id}/deletion-impact"));
+
+        (await ConfirmDeleteAsync(project.Id, detail, impact)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.SeededRootDeletions.AnyAsync(item =>
+            item.ResourceType == NihomeBackend.Constants.EntityTypes.OperationalProject &&
+            item.ResourceKey == project.Code))).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_WithSurveyChildren_PreviewsAndDeletesNestedRecords()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Survey child deletion {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var surveyId = await WithDbAsync<int>(async db =>
+        {
+            var survey = new Survey
+            {
+                Code = $"SV-{Guid.NewGuid():N}"[..24],
+                Location = "Nested deletion fixture",
+                SurveyDate = DateTime.UtcNow,
+                OperationalProjectId = projectId,
+                DriveFolderId = $"survey-drive-{Guid.NewGuid():N}",
+                DriveFolderLink = "https://drive.google.com/drive/folders/test",
+            };
+            db.Surveys.Add(survey);
+            await db.SaveChangesAsync();
+            db.SurveyChecklistResults.Add(new SurveyChecklistResult
+            {
+                SurveyId = survey.Id,
+                TemplateCode = "access",
+                TemplateTitle = "Site access",
+            });
+            db.SurveySiteConditions.Add(new SurveySiteCondition
+            {
+                SurveyId = survey.Id,
+                Code = "right-of-way",
+                Category = SurveySiteConditionCategory.RightOfWay,
+                Status = SurveySiteConditionStatus.Available,
+            });
+            await db.SaveChangesAsync();
+            return survey.Id;
+        });
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.surveyChecklistResults" &&
+            item.GetProperty("count").GetInt32() == 1);
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.surveySiteConditions" &&
+            item.GetProperty("count").GetInt32() == 1);
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "operations.surveyDriveFolders" &&
+            item.GetProperty("action").GetString() == "Unlink" &&
+            item.GetProperty("count").GetInt32() == 1);
+        (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
+            .Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.Surveys.AnyAsync(item => item.Id == surveyId))).Should().BeFalse();
+        (await WithDbAsync(db => db.SurveyChecklistResults.AnyAsync(item => item.SurveyId == surveyId)))
+            .Should().BeFalse();
+        (await WithDbAsync(db => db.SurveySiteConditions.AnyAsync(item => item.SurveyId == surveyId)))
+            .Should().BeFalse();
     }
 
     [Fact]
@@ -550,5 +857,26 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             await db.SaveChangesAsync();
             return customer.Id;
         });
+    }
+
+    private async Task<HttpResponseMessage> ConfirmDeleteAsync(
+        int projectId,
+        JsonElement project,
+        JsonElement impact)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/operational-projects/{projectId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+                rowVersion = project.GetProperty("rowVersion").GetString(),
+            }),
+        };
+        request.Headers.IfMatch.ParseAdd(
+            $"\"{project.GetProperty("rowVersion").GetString()}\"");
+        return await Client.SendAsync(request);
     }
 }

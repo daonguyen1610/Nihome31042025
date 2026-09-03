@@ -2,19 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, BriefcaseBusiness, CalendarClock, ExternalLink, FileText, Pencil, Plus, RefreshCcw, Search, ShoppingCart, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
@@ -24,6 +22,7 @@ import {
   adminApi,
   OPERATIONAL_PROJECT_STATUSES,
   type CustomerResponse,
+  type DeletionImpactResponse,
   type OperationalProjectListItemResponse,
   type OperationalProjectResponse,
   type OperationalProjectStatus,
@@ -89,25 +88,11 @@ const OperationalProjects = () => {
   const [form, setForm] = useState<UpdateOperationalProjectRequest>(emptyForm());
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  const visibleIds = useMemo(() => rows.map(r => r.id), [rows]);
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection({
-    visibleIds,
-    deleteOne: async (id) => {
-      const row = rows.find(r => r.id === id);
-      await adminApi.deleteOperationalProject(id, row?.updatedAt ? undefined : undefined);
-    },
-    onAfter: () => void load(),
-  });
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,14 +205,39 @@ const OperationalProjects = () => {
     }
   };
 
-  const remove = async () => {
-    if (!detail || !window.confirm(t("operationalProjects.deleteConfirm", { name: detail.name }))) return;
+  const openDelete = async () => {
+    if (!detail) return;
+    setDeleteOpen(true);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteOperationalProject(detail.id, detail.rowVersion);
+      const response = await adminApi.getOperationalProjectDeletionImpact(detail.id);
+      setDeleteImpact(response.data);
+    } catch (reason) {
+      setDeleteError(extractApiError(reason));
+    } finally {
+      setDeleteImpactLoading(false);
+    }
+  };
+
+  const remove = async (confirmation: string) => {
+    if (!detail || !deleteImpact) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await adminApi.deleteOperationalProject(detail.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+        rowVersion: detail.rowVersion,
+      });
       toast({ title: t("operationalProjects.deleted") });
+      setDeleteOpen(false);
       navigate("/admin/operational-projects");
     } catch (reason) {
-      toast({ title: t("common.error"), description: extractApiError(reason), variant: "destructive" });
+      setDeleteError(extractApiError(reason));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -256,7 +266,7 @@ const OperationalProjects = () => {
             </div>
             {canManage && <div className="flex gap-2">
               <Button variant="outline" onClick={() => openEdit(detail)}><Pencil className="mr-2 h-4 w-4" />{t("common.edit")}</Button>
-              <Button variant="destructive" onClick={() => void remove()}><Trash2 className="mr-2 h-4 w-4" />{t("common.delete")}</Button>
+              <Button variant="destructive" onClick={() => void openDelete()}><Trash2 className="mr-2 h-4 w-4" />{t("common.delete")}</Button>
             </div>}
           </div>
 
@@ -649,27 +659,6 @@ const OperationalProjects = () => {
             <Button variant="outline" onClick={() => void load()}><RefreshCcw className="mr-2 h-4 w-4" />{t("common.refresh")}</Button>
           </div>
 
-          {canManage && rows.length > 0 && (
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="select-all"
-                  checked={allVisibleSelected}
-                  onCheckedChange={toggleAllVisible}
-                  aria-label={t("common.selectAll")}
-                  {...(someVisibleSelected ? { "data-state": "indeterminate" } : {})}
-                />
-                <Label htmlFor="select-all" className="cursor-pointer text-sm">{t("common.selectAll")}</Label>
-              </div>
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            </div>
-          )}
-
           <p className="text-sm text-muted-foreground">{t("operationalProjects.total", { count: total })}</p>
           {rows.length === 0 ? (
             <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">{t("operationalProjects.empty")}</div>
@@ -677,29 +666,19 @@ const OperationalProjects = () => {
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {rows.map(project => (
                 <div key={project.id} className="relative rounded-lg border bg-card p-4 text-left transition hover:border-primary/50 hover:shadow-sm">
-                  {canManage && (
-                    <div className="absolute left-3 top-3 z-10">
-                      <Checkbox
-                        checked={selectedIds.has(project.id)}
-                        onCheckedChange={(checked) => toggleOne(project.id, !!checked)}
-                        aria-label={t("common.selectItem")}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  )}
                   <button
                     type="button"
                     className="w-full text-left"
                     onClick={() => navigate(`/admin/operational-projects/${project.id}`)}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className={canManage ? "pl-7" : ""}>
+                      <div>
                         <p className="font-mono text-xs text-muted-foreground">{project.code}</p>
                         <h2 className="mt-1 font-semibold">{project.name}</h2>
                       </div>
                       <Badge variant="outline" className={statusClass[project.status]}>{t(`operationalProjects.status.${project.status}`)}</Badge>
                     </div>
-                    <p className={`mt-2 text-sm text-muted-foreground ${canManage ? "pl-7" : ""}`}>{project.customerName}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{project.customerName}</p>
                     <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-3 text-center text-xs">
                       <Count value={project.opportunityCount} label={t("operationalProjects.count.opportunities")} />
                       <Count value={project.quoteCount} label={t("operationalProjects.count.quotes")} />
@@ -729,6 +708,22 @@ const OperationalProjects = () => {
           <DialogFooter><Button variant="outline" onClick={() => setDialogOpen(false)}>{t("common.cancel")}</Button><Button disabled={saving} onClick={() => void save()}>{saving ? t("common.saving") : t("common.save")}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeletionImpactDialog
+        open={deleteOpen}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={deleting}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteOpen(false);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={remove}
+      />
     </AdminLayout>
   );
 };

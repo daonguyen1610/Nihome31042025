@@ -38,10 +38,16 @@ public interface IOperationalProjectService
         bool canSeeAll,
         CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(
         int id,
         int callerUserId,
         bool canSeeAll,
-        string? rowVersion,
+        CancellationToken ct = default);
+
+    Task<bool> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        bool canSeeAll,
         CancellationToken ct = default);
 }

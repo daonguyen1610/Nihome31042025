@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -13,6 +14,7 @@ namespace nihomebackend.tests.Services;
 public class OperationalProjectServiceTests : IDisposable
 {
     private readonly AppDbContext _db = DbContextFactory.Create();
+    private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
     private readonly OperationalProjectService _service;
     private readonly int _managerId;
     private readonly int _otherUserId;
@@ -23,6 +25,7 @@ public class OperationalProjectServiceTests : IDisposable
         _service = new OperationalProjectService(
             _db,
             new LegacyProjectTeamSyncService(_db),
+            _projectDocuments.Object,
             NullLogger<OperationalProjectService>.Instance);
         var manager = AddUser("0900100001", "Project Manager");
         var other = AddUser("0900100002", "Other Manager");
@@ -131,7 +134,7 @@ public class OperationalProjectServiceTests : IDisposable
             _otherUserId,
             false);
         var delete = await _service.DeleteAsync(
-            created.Id, _otherUserId, false, created.RowVersion);
+            created.Id, new ConfirmDeletionRequest(), _otherUserId, false);
 
         Assert.Contains(list.Items, item => item.Id == created.Id);
         Assert.NotNull(detail);
@@ -141,7 +144,7 @@ public class OperationalProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_WithResponsibilityHistory_IsRejectedAndPreservesHistory()
+    public async Task DeleteAsync_WithResponsibilityHistory_DeletesOwnedHistory()
     {
         var project = new OperationalProject
         {
@@ -151,6 +154,7 @@ public class OperationalProjectServiceTests : IDisposable
             ProjectManagerUserId = _managerId,
             CreatedByUserId = _managerId,
             UpdatedByUserId = _managerId,
+            RowVersion = [1, 0, 0, 0, 0, 0, 0, 0],
         };
         _db.OperationalProjects.Add(project);
         await _db.SaveChangesAsync();
@@ -170,11 +174,13 @@ public class OperationalProjectServiceTests : IDisposable
         Assert.Empty(await _db.OperationalProjectAssignments
             .Where(item => item.OperationalProjectId == project.Id).ToListAsync());
 
-        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
-            _service.DeleteAsync(project.Id, _managerId, false, null));
+        var impact = await _service.GetDeletionImpactAsync(project.Id, _managerId, false);
+        var removed = await _service.DeleteAsync(
+            project.Id, Confirm(impact!, CrmConcurrency.Encode(project.RowVersion)), _managerId, false);
 
-        Assert.NotNull(await _db.OperationalProjects.FindAsync(project.Id));
-        Assert.NotEmpty(await _db.OperationalProjectTeamHistory
+        Assert.True(removed);
+        Assert.Null(await _db.OperationalProjects.FindAsync(project.Id));
+        Assert.Empty(await _db.OperationalProjectTeamHistory
             .Where(item => item.OperationalProjectId == project.Id)
             .ToListAsync());
     }
@@ -212,16 +218,20 @@ public class OperationalProjectServiceTests : IDisposable
             ProjectManagerUserId = user.Id,
             CreatedByUserId = user.Id,
             UpdatedByUserId = user.Id,
+            RowVersion = [1, 0, 0, 0, 0, 0, 0, 0],
         };
         db.OperationalProjects.Add(project);
         await db.SaveChangesAsync();
         var service = new OperationalProjectService(
             db,
             new LegacyProjectTeamSyncService(db),
+            Mock.Of<IProjectDocumentStagingService>(),
             NullLogger<OperationalProjectService>.Instance);
+        var impact = await service.GetDeletionImpactAsync(project.Id, user.Id, false);
 
         await Assert.ThrowsAsync<CrmConcurrencyException>(() =>
-            service.DeleteAsync(project.Id, user.Id, false, null));
+            service.DeleteAsync(
+                project.Id, Confirm(impact!, CrmConcurrency.Encode(project.RowVersion)), user.Id, false));
     }
 
     [Fact]
@@ -248,9 +258,11 @@ public class OperationalProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_WithContract_IsRejectedAndPreservesProject()
+    public async Task DeleteAsync_WithContract_UnlinksContractAndDeletesProject()
     {
         var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        var project = await _db.OperationalProjects.FindAsync(created.Id);
+        project!.RowVersion = [1, 0, 0, 0, 0, 0, 0, 0];
         _db.Contracts.Add(new Contract
         {
             ContractNumber = "HD-2026-OP-1",
@@ -260,9 +272,13 @@ public class OperationalProjectServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
-            _service.DeleteAsync(created.Id, _managerId, false, created.RowVersion));
-        Assert.NotNull(await _db.OperationalProjects.FindAsync(created.Id));
+        var impact = await _service.GetDeletionImpactAsync(created.Id, _managerId, false);
+        var removed = await _service.DeleteAsync(
+            created.Id, Confirm(impact!, CrmConcurrency.Encode(project.RowVersion)), _managerId, false);
+
+        Assert.True(removed);
+        Assert.Null(await _db.OperationalProjects.FindAsync(created.Id));
+        Assert.Null((await _db.Contracts.SingleAsync()).OperationalProjectId);
     }
 
     [Fact]
@@ -419,6 +435,15 @@ public class OperationalProjectServiceTests : IDisposable
             Note = current.Note,
             Status = status,
             RowVersion = current.RowVersion,
+        };
+
+    private static ConfirmDeletionRequest Confirm(
+        DeletionImpactResponse impact,
+        string? rowVersion = null) => new()
+        {
+            PlanToken = impact.PlanToken,
+            Confirmation = impact.RequiredConfirmation,
+            RowVersion = rowVersion,
         };
 
     private ApplicationUser AddUser(string phone, string name)

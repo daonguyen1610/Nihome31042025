@@ -838,6 +838,32 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
   "Cancelled",
 ];
 
+export type DeletionImpactAction = "Delete" | "Unlink" | "Block";
+
+export interface DeletionImpactItemResponse {
+  key: string;
+  action: DeletionImpactAction;
+  count: number;
+  examples: string[];
+}
+
+export interface DeletionImpactResponse {
+  resourceType: string;
+  resourceId: number;
+  resourceLabel: string;
+  requiredConfirmation: string;
+  planToken: string;
+  canDelete: boolean;
+  totalAffected: number;
+  items: DeletionImpactItemResponse[];
+}
+
+export interface ConfirmDeletionRequest {
+  planToken: string;
+  confirmation: string;
+  rowVersion?: string;
+}
+
 export interface OperationalProjectListItemResponse {
   id: number;
   code: string;
@@ -4277,8 +4303,10 @@ export const adminApi = {
     api.post<DesignProjectResponse>("/design-projects", body),
   updateDesignProject: (id: number, body: UpdateDesignProjectRequest) =>
     api.put<DesignProjectResponse>(`/design-projects/${id}`, body),
-  deleteDesignProject: (id: number) =>
-    api.delete(`/design-projects/${id}`),
+  getDesignProjectDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/design-projects/${id}/deletion-impact`),
+  deleteDesignProject: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/design-projects/${id}`, { data: body }),
 
   // Permits (NIH-137)
   listPermits: (params: PermitChecklistListParams = {}) => {
@@ -4758,8 +4786,13 @@ export const adminApi = {
     api.post<OperationalProjectResponse>("/operational-projects", body),
   updateOperationalProject: (id: number, body: UpdateOperationalProjectRequest) =>
     api.put<OperationalProjectResponse>(`/operational-projects/${id}`, body),
-  deleteOperationalProject: (id: number, rowVersion?: string) =>
-    api.delete(`/operational-projects/${id}`, withIfMatch(rowVersion)),
+  getOperationalProjectDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/operational-projects/${id}/deletion-impact`),
+  deleteOperationalProject: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/operational-projects/${id}`, {
+      ...withIfMatch(body.rowVersion),
+      data: body,
+    }),
   listProjectDocumentCategories: () =>
     api.get<ProjectDocumentCategoryResponse[]>("/operational-projects/document-categories"),
   listProjectDocuments: (projectId: number) =>
