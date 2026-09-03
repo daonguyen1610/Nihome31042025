@@ -45,6 +45,7 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  designProjectId: number;
   targetType: DrawingRevisionTargetType;
   targetId: number;
   /** Display code shown in the header (KT-BD-001, KT-SD-001…). */
@@ -64,6 +65,7 @@ interface Props {
 export const RevisionsPanel = ({
   open,
   onOpenChange,
+  designProjectId,
   targetType,
   targetId,
   targetCode,
@@ -85,6 +87,7 @@ export const RevisionsPanel = ({
     setError(null);
     try {
       const { data } = await adminApi.listDrawingRevisions({
+        designProjectId,
         targetType,
         targetId,
         pageSize: 200,
@@ -95,7 +98,7 @@ export const RevisionsPanel = ({
     } finally {
       setLoading(false);
     }
-  }, [open, targetType, targetId]);
+  }, [open, designProjectId, targetType, targetId]);
 
   useEffect(() => {
     void fetchRows();

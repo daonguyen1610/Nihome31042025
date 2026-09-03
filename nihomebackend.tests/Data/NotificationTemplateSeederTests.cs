@@ -89,4 +89,50 @@ public class NotificationTemplateSeederTests : IDisposable
         Assert.Equal(NotificationChannel.Both, stillEdited.Channel);
         Assert.False(stillEdited.IsActive);
     }
+
+    [Fact]
+    public void Seed_PartialStateAddsMissingTemplatesAndKeepsStableExistingId()
+    {
+        _db.NotificationTemplates.Add(new NotificationTemplate
+        {
+            Code = "lead.assigned",
+            Module = "custom-module",
+            TitleKey = "custom.title",
+            BodyKey = "custom.body",
+            Channel = NotificationChannel.Email,
+            IsActive = false,
+            CreatedAt = DateTime.UtcNow,
+        });
+        _db.SaveChanges();
+        var existingId = _db.NotificationTemplates.Single().Id;
+
+        NotificationTemplateSeeder.Seed(_db);
+        var count = _db.NotificationTemplates.Count();
+        NotificationTemplateSeeder.Seed(_db);
+
+        var existing = _db.NotificationTemplates.Single(template => template.Code == "lead.assigned");
+        Assert.Equal(existingId, existing.Id);
+        Assert.Equal("custom-module", existing.Module);
+        Assert.Equal(NotificationChannel.Email, existing.Channel);
+        Assert.False(existing.IsActive);
+        Assert.Equal(count, _db.NotificationTemplates.Count());
+        Assert.Contains(_db.NotificationTemplates, template => template.Code == "quote.approved");
+    }
+
+    [Fact]
+    public void Seed_RejectsDuplicateTemplateDefinitionsBeforeInsertion()
+    {
+        const string json = """
+            { "templates": [
+              { "code": "lead.assigned", "module": "leads", "channel": "InApp" },
+              { "code": "LEAD.ASSIGNED", "module": "leads", "channel": "Both" }
+            ] }
+            """;
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+
+        var error = Assert.Throws<InvalidDataException>(() => NotificationTemplateSeeder.Seed(_db, stream));
+
+        Assert.Contains("lead.assigned", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(_db.NotificationTemplates);
+    }
 }

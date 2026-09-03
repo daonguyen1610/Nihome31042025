@@ -2755,7 +2755,7 @@ export interface DrawingRevisionListResponse {
 }
 
 export interface DrawingRevisionListParams {
-  designProjectId?: number;
+  designProjectId: number;
   targetType?: DrawingRevisionTargetType;
   targetId?: number;
   page?: number;
@@ -4402,7 +4402,7 @@ export const adminApi = {
   },
 
   // Drawing Revisions (NIH-117)
-  listDrawingRevisions: (params: DrawingRevisionListParams = {}) => {
+  listDrawingRevisions: (params: DrawingRevisionListParams) => {
     const q = new URLSearchParams();
     if (params.designProjectId != null) q.append("designProjectId", String(params.designProjectId));
     if (params.targetType) q.append("targetType", params.targetType);

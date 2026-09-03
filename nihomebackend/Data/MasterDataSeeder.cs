@@ -34,6 +34,11 @@ public static class MasterDataSeeder
         }
 
         using var stream = assembly.GetManifestResourceStream(resource)!;
+        Seed(db, stream);
+    }
+
+    internal static void Seed(AppDbContext db, Stream stream)
+    {
         using var doc = JsonDocument.Parse(stream);
 
         if (!doc.RootElement.TryGetProperty("categories", out var categoriesEl) ||
@@ -47,6 +52,8 @@ public static class MasterDataSeeder
 
         var now = DateTime.UtcNow;
         var toInsert = new List<MasterDataOption>();
+        var definedPairs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hasUpdates = false;
 
         foreach (var categoryEl in categoriesEl.EnumerateArray())
         {
@@ -71,8 +78,18 @@ public static class MasterDataSeeder
                 if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(name)) continue;
 
                 var pairKey = category + "|" + code;
-                if (existingByPair.ContainsKey(pairKey))
+                if (!definedPairs.Add(pairKey))
                 {
+                    throw new InvalidDataException($"Duplicate master-data seed definition: {pairKey}.");
+                }
+
+                if (existingByPair.TryGetValue(pairKey, out var existing))
+                {
+                    if (string.IsNullOrWhiteSpace(existing.LabelKey))
+                    {
+                        existing.LabelKey = $"masterData.{category}.{code}.label";
+                        hasUpdates = true;
+                    }
                     continue;
                 }
 
@@ -83,7 +100,7 @@ public static class MasterDataSeeder
                     ? descProp.GetString()
                     : null;
 
-                toInsert.Add(new MasterDataOption
+                var item = new MasterDataOption
                 {
                     Category = category,
                     Code = code,
@@ -93,16 +110,18 @@ public static class MasterDataSeeder
                     IsActive = true,
                     SortOrder = sortOrder,
                     CreatedAt = now,
-                });
+                };
+                toInsert.Add(item);
+                existingByPair.Add(pairKey, item);
             }
         }
 
-        if (toInsert.Count == 0)
+        if (toInsert.Count > 0)
         {
-            return;
+            db.MasterDataOptions.AddRange(toInsert);
+            hasUpdates = true;
         }
 
-        db.MasterDataOptions.AddRange(toInsert);
-        db.SaveChanges();
+        if (hasUpdates) db.SaveChanges();
     }
 }

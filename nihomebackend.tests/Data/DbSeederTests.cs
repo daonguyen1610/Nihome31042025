@@ -102,6 +102,117 @@ public class DbSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_CreatesMissingCanonicalAdminsByPhone_DespiteExistingRolesAndEmailConflict()
+    {
+        _db.Users.AddRange(
+            new ApplicationUser
+            {
+                PhoneNumber = "0900000100",
+                FullName = "Existing super admin",
+                Email = "superadmin@nihome.vn",
+                PasswordHash = "x",
+                Role = UserRole.SUPER_ADMIN,
+            },
+            new ApplicationUser
+            {
+                PhoneNumber = "0900000101",
+                FullName = "Existing admin",
+                Email = "existing.admin@nihome.vn",
+                PasswordHash = "x",
+                Role = UserRole.ADMIN,
+            });
+        _db.SaveChanges();
+
+        DbSeeder.Seed(_db);
+
+        Assert.Contains(_db.Users, user => user.PhoneNumber == "0335240370" && user.Role == UserRole.SUPER_ADMIN);
+        Assert.Contains(_db.Users, user => user.PhoneNumber == "0911111111" && user.Role == UserRole.ADMIN);
+        Assert.Contains(_db.Users, user => user.PhoneNumber == "0922222222" && user.Role == UserRole.ADMIN);
+        var canonical = _db.Users.Single(user => user.PhoneNumber == "0335240370");
+        Assert.False(string.Equals("superadmin@nihome.vn", canonical.Email, StringComparison.OrdinalIgnoreCase));
+
+        var canonicalIds = _db.Users
+            .Where(user => user.PhoneNumber == "0335240370" || user.PhoneNumber == "0911111111" || user.PhoneNumber == "0922222222")
+            .ToDictionary(user => user.PhoneNumber, user => user.Id);
+        DbSeeder.Seed(_db);
+
+        Assert.Equal(canonicalIds, _db.Users
+            .Where(user => canonicalIds.Keys.Contains(user.PhoneNumber))
+            .ToDictionary(user => user.PhoneNumber, user => user.Id));
+    }
+
+    [Fact]
+    public void Seed_BusinessEmailConflictsUseStableFallbacksWithoutChangingExistingUsers()
+    {
+        var preferredSaleOwner = new ApplicationUser
+        {
+            PhoneNumber = "0900000200",
+            FullName = "Existing sale email owner",
+            Email = "MINH.ANH.SALE@NIHOME.VN",
+            PasswordHash = "x",
+            Role = UserRole.USER,
+        };
+        var preferredManagerOwner = new ApplicationUser
+        {
+            PhoneNumber = "0900000201",
+            FullName = "Existing manager email owner",
+            Email = "quoc.huy.sales@nihome.vn",
+            PasswordHash = "x",
+            Role = UserRole.USER,
+        };
+        var legacySale = new ApplicationUser
+        {
+            PhoneNumber = "0911000003",
+            FullName = "Sale Tester",
+            Email = "sale.test@nihome.vn",
+            PasswordHash = "x",
+            Role = UserRole.USER,
+        };
+        _db.Users.AddRange(preferredSaleOwner, preferredManagerOwner, legacySale);
+        _db.SaveChanges();
+
+        DbSeeder.Seed(_db);
+
+        Assert.Equal("seed.0911000003@nihome.vn", legacySale.Email);
+        var salesManager = _db.Users.Single(user => user.PhoneNumber == "0911000010");
+        Assert.Equal("seed.0911000010@nihome.vn", salesManager.Email);
+        Assert.Equal("MINH.ANH.SALE@NIHOME.VN", preferredSaleOwner.Email);
+        Assert.Equal("quoc.huy.sales@nihome.vn", preferredManagerOwner.Email);
+        var identities = _db.Users.ToDictionary(user => user.PhoneNumber,
+            user => (user.Id, user.Email));
+        Assert.Equal(_db.Users.Count(), _db.Users.Select(user => user.Email).AsEnumerable()
+            .Distinct(StringComparer.OrdinalIgnoreCase).Count());
+
+        DbSeeder.Seed(_db);
+
+        Assert.Equal(identities, _db.Users.ToDictionary(user => user.PhoneNumber,
+            user => (user.Id, user.Email)));
+        Assert.Equal(_db.Users.Count(), _db.Users.Select(user => user.Email).AsEnumerable()
+            .Distinct(StringComparer.OrdinalIgnoreCase).Count());
+    }
+
+    [Fact]
+    public void Seed_MigratesOnlyLowestIdSiteSettingsRow()
+    {
+        var canonical = CreateSettings(EmailTemplateFormatter.LegacyDefaultOtpBody);
+        canonical.SiteDescription = "Căn hộ dịch vụ cao cấp - Không gian sống tiện nghi";
+        var custom = CreateSettings("<p>Custom {{otpCode}}</p>");
+        custom.SiteName = "Secondary custom settings";
+        _db.SiteSettings.AddRange(canonical, custom);
+        _db.SaveChanges();
+
+        DbSeeder.Seed(_db);
+
+        Assert.Equal("NICON", _db.SiteSettings.Single(settings => settings.Id == canonical.Id).SiteName);
+        Assert.Equal(EmailTemplateFormatter.DefaultOtpBody,
+            _db.SiteSettings.Single(settings => settings.Id == canonical.Id).OtpEmailBodyTemplate);
+        Assert.Equal("Secondary custom settings",
+            _db.SiteSettings.Single(settings => settings.Id == custom.Id).SiteName);
+        Assert.Equal("<p>Custom {{otpCode}}</p>",
+            _db.SiteSettings.Single(settings => settings.Id == custom.Id).OtpEmailBodyTemplate);
+    }
+
+    [Fact]
     public void Seed_AddsProcessDocumentsFromSeedJson()
     {
         DbSeeder.Seed(_db);

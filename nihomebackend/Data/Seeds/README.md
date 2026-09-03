@@ -77,7 +77,9 @@ triggered a full drop-and-reseed) and was the root cause of translations
 disappearing after a backend restart; the destructive path has been
 removed.
 
-Process documents are different: the current process seeder can replace database rows when manifest counts or seeded asset state drift. Logo seeding also contains cleanup behavior. Treat those manifests as seed-owned inputs and review the relevant seeder before changing or removing entries; do not assume all content manifests preserve administrator-created rows.
+Process documents use an internal persisted `SeedKey`, derived from the process group and first canonical asset URL, to reconcile canonical rows without depending on titles or sort order. Missing canonical process and logo rows are added, while existing and custom rows are preserved. Missing process asset metadata is backfilled only when the canonical title is unchanged.
+
+Workflow resources are fail-fast inputs: malformed definitions, invalid or duplicate step orders, and unknown approver roles abort seeding before workflow changes are saved. Review these manifests carefully because an invalid approval chain prevents application startup by design.
 
 ## Other embedded seed families
 

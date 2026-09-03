@@ -100,6 +100,29 @@ public class RbacSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_InitialBusinessRolePermissionsRepairsPartialStateWithoutDuplicates()
+    {
+        RbacSeeder.Seed(_db);
+        var sale = _db.Roles.Single(role => role.Code == "SALE");
+        var existing = _db.RolePermissions.Where(item => item.RoleId == sale.Id).ToList();
+        Assert.True(existing.Count > 1);
+        _db.RolePermissions.RemoveRange(existing.Skip(1));
+        sale.InitialPermissionsSeeded = false;
+        _db.SaveChanges();
+
+        RbacSeeder.Seed(_db);
+
+        var allCodes = PermissionCatalog.Resolve(RbacSeedData.Default.BaseCatalog)
+            .Select(entry => entry.Code)
+            .ToList();
+        Assert.Equal(ExpectedCount("SALE", allCodes), _db.RolePermissions.Count(item => item.RoleId == sale.Id));
+        Assert.Equal(
+            _db.RolePermissions.Count(item => item.RoleId == sale.Id),
+            _db.RolePermissions.Where(item => item.RoleId == sale.Id).Select(item => item.PermissionId).Distinct().Count());
+        Assert.True(sale.InitialPermissionsSeeded);
+    }
+
+    [Fact]
     public void Seed_SystemRolePermissionsAreRestoredOnEveryBoot()
     {
         RbacSeeder.Seed(_db);

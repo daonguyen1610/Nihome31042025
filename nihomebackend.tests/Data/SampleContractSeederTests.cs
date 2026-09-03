@@ -121,7 +121,7 @@ public class SampleContractSeederTests : IDisposable
     }
 
     [Fact]
-    public void Seed_RepairsStaleSampleOperationalProjectRelationships()
+    public void Seed_PreservesAdminEditedOperationalProjectRelationships()
     {
         SampleCrmDataSeeder.Seed(_db);
         var contract = _db.Contracts.OrderBy(item => item.Id).First();
@@ -135,12 +135,9 @@ public class SampleContractSeederTests : IDisposable
 
         SampleCrmDataSeeder.Seed(_db);
 
-        Assert.Equal(contract.CustomerId,
-            _db.OperationalProjects.Single(item => item.Id == contract.OperationalProjectId).CustomerId);
-        Assert.Equal(opportunity.CustomerId,
-            _db.OperationalProjects.Single(item => item.Id == opportunity.OperationalProjectId).CustomerId);
-        Assert.Equal(opportunity.CustomerId,
-            _db.OperationalProjects.Single(item => item.Id == quote.OperationalProjectId).CustomerId);
+        Assert.Equal(mismatchedProject.Id, contract.OperationalProjectId);
+        Assert.Equal(mismatchedProject.Id, opportunity.OperationalProjectId);
+        Assert.Equal(mismatchedProject.Id, quote.OperationalProjectId);
     }
 
     [Fact]

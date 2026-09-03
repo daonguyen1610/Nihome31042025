@@ -419,17 +419,13 @@ The project handover schema is introduced by `AddHandoverRecords` and hardened b
 
 Outside the `IntegrationTests` environment, application startup applies pending migrations and then runs the complete seed pipeline. The order is baseline users/settings, content, UI and entity translations, RBAC catalog/roles, master data, workflows, notification templates, deterministic business-role users, and sample CRM/design/construction data.
 
-Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process and logo seeders contain replacement behavior under some drift conditions; treat those manifests as seed-owned and review the seeder before changing manifest counts. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
+Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process documents and logos are also reconciled additively: missing canonical rows are restored without deleting custom rows or overwriting administrator-managed values. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
 
-#### Process Document Seeder Guard
+#### Process Document Seeder Identity
 
-The process document seeder uses a two-condition guard to decide whether to re-seed:
+Canonical process rows carry an internal nullable `SeedKey` with a filtered unique index. The key is derived from the process group and its first canonical asset URL, so manifest or administrator title and sort-order changes do not alter identity. On the first startup after the migration, existing canonical rows are identified by their canonical title or seeded asset URLs and assigned that identity. Rows without a seed identity remain administrator-owned and are not deleted or repurposed.
 
-```
-if (count matches AND (no asset data in seed OR DB rows already have assets)) → skip
-```
-
-This means the seeder re-runs automatically after a migration that adds `ImagesJson`/`FilesJson` columns even when the row count has not changed. After the re-seed, subsequent restarts skip again because the DB rows now have asset data.
+Missing image and file metadata is backfilled only while the canonical title remains unchanged. Workflow manifests are validated before persistence; malformed definitions, invalid or duplicate step orders, and unknown approver roles fail startup rather than silently weakening an approval chain.
 
 #### Static Asset Files for Process Documents
 
@@ -1096,7 +1092,7 @@ Official references: [Drive API v3](https://developers.google.com/workspace/driv
 
 `DbSeeder` creates a deterministic demonstration dataset covering the CRM funnel, all contract statuses, design stages, permitting, construction, acceptance, as-built, and handover workflows. Seeder-owned rows use stable markers such as `[SAMPLE]`, `[SAMPLE_CONTRACT]`, and `[SAMPLE_DP]`; downstream records are attached only to marker-owned sample projects rather than arbitrary database rows.
 
-The dataset is idempotent: rerunning startup seeding preserves row counts and administrator-edited free text and values. A constrained repair pass updates only sample-marker relationship fields needed for referential coherence, including opportunity/quote links, project/customer/contract links, and PM/design-lead assignments. Sales records are owned by the SALE demo user, project and construction records prefer PM, design documents prefer DESIGN_LEAD then DESIGN, and permit work prefers LEGAL_OFFICER with safe fallbacks.
+The dataset is idempotent: rerunning startup seeding preserves row counts and administrator-edited free text, lifecycle values, and relationships. A constrained backfill pass populates only missing sample relationships, including opportunity/quote links, project/customer/contract links, and PM/design-lead assignments. Sales records are owned by the SALE demo user, project and construction records prefer PM, design documents prefer DESIGN_LEAD then DESIGN, and permit work prefers LEGAL_OFFICER with safe fallbacks.
 
 When a web root is available, the seeder materializes small placeholder PDFs beneath `wwwroot/files/capability/`, `wwwroot/files/contracts/`, and `wwwroot/files/asbuilt/`; URL metadata is still seeded when no web root is supplied. These files and all named contacts, phone numbers, and email addresses in sample rows are demonstration data, not real personal or customer data, and must not be treated as production records.
 
