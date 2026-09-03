@@ -292,31 +292,31 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         string position,
         string roleCode,
         string? rowVersion = null) => new
-    {
-        userId,
-        position,
-        startedAt = DateTime.UtcNow.AddDays(-1),
-        roles = new[] { new { roleCode, scope = "Project" } },
-        rowVersion,
-    };
+        {
+            userId,
+            position,
+            startedAt = DateTime.UtcNow.AddDays(-1),
+            roles = new[] { new { roleCode, scope = "Project" } },
+            rowVersion,
+        };
 
     private static object AssignmentPayload(
         string workKey,
         int memberId,
         string status = "Planned",
         string? rowVersion = null) => new
-    {
-        workKey,
-        title = "Architectural design package",
-        module = "Design",
-        discipline = "Architecture",
-        parallelGroup = "DESIGN-SPRINT-1",
-        assigneeMemberId = memberId,
-        status,
-        plannedStart = DateTime.UtcNow,
-        plannedEnd = DateTime.UtcNow.AddDays(7),
-        rowVersion,
-    };
+        {
+            workKey,
+            title = "Architectural design package",
+            module = "Design",
+            discipline = "Architecture",
+            parallelGroup = "DESIGN-SPRINT-1",
+            assigneeMemberId = memberId,
+            status,
+            plannedStart = DateTime.UtcNow,
+            plannedEnd = DateTime.UtcNow.AddDays(7),
+            rowVersion,
+        };
 
     private async Task<HttpResponseMessage> SendJsonWithKeyAsync(
         HttpMethod method,

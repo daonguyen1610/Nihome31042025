@@ -385,38 +385,38 @@ public sealed class ProjectTeamServiceTests : IDisposable
         int userId,
         string position,
         params ProjectMemberRoleRequest[] roles) => new()
-    {
-        UserId = userId,
-        Position = position,
-        StartedAt = DateTime.UtcNow.AddDays(-1),
-        Roles = roles.ToList(),
-    };
+        {
+            UserId = userId,
+            Position = position,
+            StartedAt = DateTime.UtcNow.AddDays(-1),
+            Roles = roles.ToList(),
+        };
 
     private static ProjectMemberRoleRequest Role(
         string roleCode,
         string scope = "Project",
         string? scopeValue = null) => new()
-    {
-        RoleCode = roleCode,
-        Scope = scope,
-        ScopeValue = scopeValue,
-    };
+        {
+            RoleCode = roleCode,
+            Scope = scope,
+            ScopeValue = scopeValue,
+        };
 
     private static UpsertOperationalProjectAssignmentRequest Assignment(
         string workKey,
         int assigneeMemberId,
         int? managerMemberId = null,
         string? parallelGroup = null) => new()
-    {
-        WorkKey = workKey,
-        Title = $"Assignment {workKey}",
-        Module = "Design",
-        Discipline = "Architecture",
-        ParallelGroup = parallelGroup,
-        AssigneeMemberId = assigneeMemberId,
-        ManagerMemberId = managerMemberId,
-        Status = "Planned",
-    };
+        {
+            WorkKey = workKey,
+            Title = $"Assignment {workKey}",
+            Module = "Design",
+            Discipline = "Architecture",
+            ParallelGroup = parallelGroup,
+            AssigneeMemberId = assigneeMemberId,
+            ManagerMemberId = managerMemberId,
+            Status = "Planned",
+        };
 
     private ApplicationUser AddUser(string phone, string name, bool isActive = true)
     {
