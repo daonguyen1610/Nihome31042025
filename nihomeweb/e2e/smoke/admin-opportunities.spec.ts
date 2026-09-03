@@ -216,8 +216,9 @@ test("Opportunity actions follow the sequential and terminal UI contract", async
     await expect(desktopRow.getByRole("button", { name: /^Sửa$|^Edit$/i })).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
-    const mobileCard = page.locator("ul.lg\\:hidden > li").filter({ hasText: opportunityName });
+    const mobileCard = page.getByTestId(`opportunity-card-${opportunityId}`);
     await expect(mobileCard).toBeVisible();
+    await expect(mobileCard).toContainText(opportunityName);
     await expect(mobileCard.getByRole("button", { name: /^Sửa$|^Edit$/i })).toHaveCount(0);
 
     await client.del(`/api/opportunities/${opportunityId}`);

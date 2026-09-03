@@ -593,6 +593,7 @@ const AdminOpportunities = () => {
                   return (
                     <li
                       key={o.id}
+                      data-testid={`opportunity-card-${o.id}`}
                       className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30"
                       onClick={() => void openDetail(o.id)}
                     >
