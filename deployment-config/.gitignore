@@ -1,0 +1,6 @@
+process-assets/
+images/
+output/
+files/
+appsettings.json
+web.config
