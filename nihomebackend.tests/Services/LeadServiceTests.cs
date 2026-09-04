@@ -22,11 +22,14 @@ public class LeadServiceTests : IDisposable
         _db = DbContextFactory.Create();
         _permissions = new Mock<IPermissionService>();
         _notifications = new Mock<INotificationService>();
+        var hardDelete = HardDeleteTestServices.Create(_db, Mock.Of<IProjectDocumentStagingService>());
         _sut = new LeadService(
             _db,
             _permissions.Object,
             _notifications.Object,
-            NullLogger<LeadService>.Instance);
+            NullLogger<LeadService>.Instance,
+            hardDelete.CrmPlans,
+            hardDelete.Operations);
     }
 
     public void Dispose() => _db.Dispose();
@@ -1090,9 +1093,10 @@ public class LeadServiceTests : IDisposable
         SeedSource("marketing");
         var lead = await SeedLeadAsync(status: status);
 
-        var deleted = await _sut.DeleteAsync(lead.Id, manager.Id, canManage: true, canSeeAll: true);
+        var impact = await _sut.GetDeletionImpactAsync(lead.Id, manager.Id, true, true);
+        var deleted = await _sut.DeleteAsync(lead.Id, Confirm(impact!, lead), manager.Id, true, true);
 
-        Assert.True(deleted);
+        Assert.True(deleted!.IsComplete);
         Assert.Empty(_db.Leads);
     }
 
@@ -1117,9 +1121,10 @@ public class LeadServiceTests : IDisposable
         lead.ConvertedOpportunityId = opportunity.Id;
         await _db.SaveChangesAsync();
 
-        var deleted = await _sut.DeleteAsync(lead.Id, manager.Id, canManage: true, canSeeAll: true);
+        var impact = await _sut.GetDeletionImpactAsync(lead.Id, manager.Id, true, true);
+        var deleted = await _sut.DeleteAsync(lead.Id, Confirm(impact!, lead), manager.Id, true, true);
 
-        Assert.True(deleted);
+        Assert.True(deleted!.IsComplete);
         Assert.Empty(_db.Leads);
         Assert.True(await _db.Customers.AnyAsync(c => c.Id == customer.Id));
         Assert.True(await _db.Opportunities.AnyAsync(o => o.Id == opportunity.Id));
@@ -1127,11 +1132,12 @@ public class LeadServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_MissingId_ReturnsFalse()
+    public async Task DeleteAsync_MissingId_ReturnsNull()
     {
         var manager = await SeedUserAsync(UserRole.USER);
-        var deleted = await _sut.DeleteAsync(99999, manager.Id, canManage: true, canSeeAll: true);
-        Assert.False(deleted);
+        var deleted = await _sut.DeleteAsync(
+            99999, new ConfirmDeletionRequest(), manager.Id, canManage: true, canSeeAll: true);
+        Assert.Null(deleted);
     }
 
     [Fact]
@@ -1143,9 +1149,10 @@ public class LeadServiceTests : IDisposable
         SeedSource("marketing");
         var lead = await SeedLeadAsync(ownerId: other.Id);
 
-        var deleted = await _sut.DeleteAsync(lead.Id, sales.Id, canManage: true, canSeeAll: false);
+        var deleted = await _sut.DeleteAsync(
+            lead.Id, new ConfirmDeletionRequest(), sales.Id, canManage: true, canSeeAll: false);
 
-        Assert.False(deleted);
+        Assert.Null(deleted);
         Assert.Single(_db.Leads);
     }
 
@@ -1156,9 +1163,18 @@ public class LeadServiceTests : IDisposable
         SeedSource("marketing");
         var lead = await SeedLeadAsync(ownerId: sales.Id);
 
-        Assert.True(await _sut.DeleteAsync(lead.Id, sales.Id, canManage: true, canSeeAll: false));
+        var impact = await _sut.GetDeletionImpactAsync(lead.Id, sales.Id, true, false);
+        Assert.True((await _sut.DeleteAsync(
+            lead.Id, Confirm(impact!, lead), sales.Id, true, false))!.IsComplete);
         Assert.Empty(_db.Leads);
     }
+
+    private static ConfirmDeletionRequest Confirm(DeletionImpactResponse impact, Lead lead) => new()
+    {
+        PlanToken = impact.PlanToken,
+        Confirmation = impact.RequiredConfirmation,
+        RowVersion = CrmConcurrency.Encode(lead.RowVersion),
+    };
 
     // ---------------- Activities ----------------
 
@@ -1340,6 +1356,7 @@ public class LeadServiceTests : IDisposable
             Phone = "0900000000",
             Status = status,
             OwnerUserId = ownerId,
+            RowVersion = BitConverter.GetBytes(DateTime.UtcNow.Ticks),
         };
         _db.Leads.Add(lead);
         await _db.SaveChangesAsync();

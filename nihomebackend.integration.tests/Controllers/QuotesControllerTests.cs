@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Hosting;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 using UglyToad.PdfPig;
@@ -443,25 +444,52 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_SubmittedQuote_RemovesAggregateAndPreservesOpportunity()
+    public async Task Delete_SubmittedQuote_WithPreviewConfirmationReturns204AndUnlinksIndependentRoots()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var quoteId = await CreateQuoteAsync();
         var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
         var opportunityId = quote.GetProperty("opportunityId").GetInt32();
         (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new { })).EnsureSuccessStatusCode();
+        quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var customerId = quote.GetProperty("customerId").GetInt32();
+        var contractId = await WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opportunityId);
+            opportunity.WonQuoteId = quoteId;
+            var contract = new Contract
+            {
+                ContractNumber = $"HD-Q-{Guid.NewGuid():N}"[..30],
+                CustomerId = customerId,
+                OpportunityId = opportunityId,
+                QuoteId = quoteId,
+                Value = 1,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            return contract.Id;
+        });
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/deletion-impact"));
 
-        (await Client.DeleteAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var response = await DeleteQuoteAsync(quoteId, impact.GetProperty("planToken").GetString()!,
+            quote.GetProperty("code").GetString()!, quote.GetProperty("rowVersion").GetString());
 
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await Client.GetAsync($"/api/opportunities/{opportunityId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(async db =>
+            (await db.Opportunities.FindAsync(opportunityId))!.WonQuoteId)).Should().BeNull();
+        (await WithDbAsync(async db =>
+            (await db.Contracts.FindAsync(contractId))!.QuoteId)).Should().BeNull();
+        (await WithDbAsync(db => db.Customers.AnyAsync(item => item.Id == customerId))).Should().BeTrue();
     }
 
     [Fact]
     public async Task Delete_MissingQuote_ReturnsNotFound()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        (await Client.DeleteAsync("/api/quotes/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteQuoteAsync(9999999, new string('a', 64), "QT-MISSING", "AAAAAAAAAAA="))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -480,7 +508,96 @@ public class QuotesControllerTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = null;
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
 
-        (await Client.DeleteAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteQuoteAsync(quoteId, new string('a', 64), "QT-HIDDEN", "AAAAAAAAAAA="))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Delete_RejectsWhitespaceConfirmationMissingAndStaleRowVersionWithoutCreatingOperation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/deletion-impact"));
+        var token = impact.GetProperty("planToken").GetString()!;
+        var code = quote.GetProperty("code").GetString()!;
+        var rowVersion = quote.GetProperty("rowVersion").GetString()!;
+
+        (await DeleteQuoteAsync(quoteId, token, $" {code} ", rowVersion))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteQuoteAsync(quoteId, token, code, null))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using (var headerOnly = new HttpRequestMessage(HttpMethod.Delete, $"/api/quotes/{quoteId}")
+        {
+            Content = JsonContent.Create(new { planToken = token, confirmation = code }),
+        })
+        {
+            headerOnly.Headers.TryAddWithoutValidation("If-Match", $"\"{rowVersion}\"");
+            (await Client.SendAsync(headerOnly)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+        (await DeleteQuoteAsync(quoteId, token, code, Convert.ToBase64String(BitConverter.GetBytes(long.MaxValue))))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        (await WithDbAsync(db => db.Quotes.AnyAsync(item => item.Id == quoteId))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "Quote" && item.ResourceId == quoteId.ToString()))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_StalePlanReturnsConflictWithoutCreatingOperation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/deletion-impact"));
+        await WithDbAsync(async db =>
+        {
+            db.QuoteItems.Add(new QuoteItem
+            {
+                QuoteId = quoteId,
+                Name = "Plan changed",
+                Unit = "item",
+                Quantity = 1,
+                UnitPrice = 1,
+                Amount = 1,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var response = await DeleteQuoteAsync(quoteId, impact.GetProperty("planToken").GetString()!,
+            quote.GetProperty("code").GetString()!, quote.GetProperty("rowVersion").GetString());
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.Quotes.AnyAsync(item => item.Id == quoteId))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "Quote" && item.ResourceId == quoteId.ToString()))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_UploadedDocumentPurgesManagedLocalFile()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var quoteId = await CreateQuoteAsync();
+        var upload = await UploadDocumentAsync(quoteId, "purge.pdf", "Purge test");
+        upload.EnsureSuccessStatusCode();
+        var filePath = (await ReadJsonAsync(upload)).GetProperty("filePath").GetString()!;
+        string fullPath;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            fullPath = Path.Combine(environment.ContentRootPath, "wwwroot",
+                filePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        }
+        File.Exists(fullPath).Should().BeTrue();
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/deletion-impact"));
+
+        var response = await DeleteQuoteAsync(quoteId, impact.GetProperty("planToken").GetString()!,
+            quote.GetProperty("code").GetString()!, quote.GetProperty("rowVersion").GetString());
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        File.Exists(fullPath).Should().BeFalse();
+        (await WithDbAsync(db => db.QuoteDocuments.AnyAsync(item => item.QuoteId == quoteId))).Should().BeFalse();
     }
 
     [Fact]
@@ -747,6 +864,16 @@ public class QuotesControllerTests : IntegrationTestBase
         content.Add(fileContent, "file", fileName);
         if (label is not null) content.Add(new StringContent(label), "label");
         return await Client.PostAsync($"/api/quotes/{quoteId}/documents", content);
+    }
+
+    private async Task<HttpResponseMessage> DeleteQuoteAsync(
+        int quoteId, string planToken, string confirmation, string? rowVersion)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/quotes/{quoteId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation, rowVersion }),
+        };
+        return await Client.SendAsync(request);
     }
 
     private async Task<int> CreateCustomerAsync()

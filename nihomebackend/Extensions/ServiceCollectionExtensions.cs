@@ -11,6 +11,7 @@ using NihomeBackend.Infrastructure.OpenApi;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 using NihomeBackend.Services.GoogleDrive;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Extensions;
 
@@ -134,6 +135,17 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGoogleDriveSettingsStore, GoogleDriveSettingsStore>();
         services.AddScoped<GoogleDriveOAuthService>();
         services.AddScoped<IGoogleDriveAdapter, GoogleDriveAdapter>();
+        services.AddSingleton(new HardDeleteFileOptions());
+        services.AddScoped<IHardDeleteFileService, HardDeleteFileService>();
+        services.AddScoped<IProjectHardDeletePlanService, ProjectHardDeletePlanService>();
+        services.AddScoped<ICrmHardDeletePlanService, CrmHardDeletePlanService>();
+        services.AddScoped<IHardDeleteResourceHandler, DesignProjectHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, OperationalProjectHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, LeadHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, TenderHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, QuoteHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandlerRegistry, HardDeleteResourceHandlerRegistry>();
+        services.AddScoped<IHardDeleteOperationService, HardDeleteOperationService>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();
         services.AddScoped<IProjectAccessService, ProjectAccessService>();
         services.AddScoped<ILegacyProjectTeamSyncService, LegacyProjectTeamSyncService>();
@@ -184,6 +196,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<UploadedImageCleanupService>();
         services.AddHostedService<ProjectDriveSyncService>();
+        services.AddHostedService<HardDeleteRetryWorker>();
 
         // Audit logging (non-blocking queue + background writer + retention sweeper)
         services.AddHttpContextAccessor();

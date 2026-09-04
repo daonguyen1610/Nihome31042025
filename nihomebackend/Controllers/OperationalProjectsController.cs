@@ -9,6 +9,7 @@ using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
 using NihomeBackend.Services.GoogleDrive;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -157,27 +158,32 @@ public class OperationalProjectsController(
         request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
-            var deleted = await service.DeleteAsync(
+            var result = await service.DeleteAsync(
                 id,
                 request,
                 userId.Value,
                 canSeeAll,
                 ct);
-            if (!deleted) return NotFound();
+            if (result is null) return NotFound();
             audit.Log(new AuditEvent
             {
-                Action = "operational-project.delete",
+                Action = result.IsComplete ? "operational-project.delete" : "operational-project.delete_requested",
                 ResourceType = EntityTypes.OperationalProject,
                 ResourceId = id.ToString(),
-                Message = $"Operational project #{id} deleted.",
+                Message = $"Operational project #{id} durable deletion is {result.Status}.",
+                NewValue = result,
             });
-            return NoContent();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (OperationalProjectOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
         catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
         {
             return Conflict(new { message = ex.Message });
         }
@@ -351,5 +357,14 @@ public class OperationalProjectsController(
     {
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(value, out var id) ? id : null;
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(
+            nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations",
+            new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }

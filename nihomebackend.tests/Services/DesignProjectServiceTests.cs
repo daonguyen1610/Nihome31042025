@@ -30,13 +30,15 @@ public class DesignProjectServiceTests : IDisposable
         _projectAccess.Setup(service => service.HasAdministrativeBypassAsync(
                 It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        var hardDelete = HardDeleteTestServices.Create(_db, _projectDocuments.Object);
         _sut = new DesignProjectService(
             _db,
             new NoopPermitChecklistService(),
             NullLogger<DesignProjectService>.Instance,
-            _projectDocuments.Object,
             _projectAccess.Object,
-            new LegacyProjectTeamSyncService(_db));
+            new LegacyProjectTeamSyncService(_db),
+            hardDelete.Plans,
+            hardDelete.Operations);
 
         var user = new ApplicationUser
         {
@@ -383,7 +385,7 @@ public class DesignProjectServiceTests : IDisposable
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var impact = await _sut.GetDeletionImpactAsync(created.Id);
         var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
-        Assert.True(removed);
+        Assert.True(removed!.IsComplete);
         Assert.Null(await _sut.GetAsync(created.Id));
     }
 
@@ -556,7 +558,7 @@ public class DesignProjectServiceTests : IDisposable
         var impact = await _sut.GetDeletionImpactAsync(created.Id);
         var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
 
-        Assert.True(removed);
+        Assert.True(removed!.IsComplete);
         Assert.Null(await _db.DesignProjects.FindAsync(created.Id));
         Assert.Empty(await _db.DrawingRevisions.ToListAsync());
         Assert.Empty(await _db.AcceptanceRecords.ToListAsync());
@@ -564,7 +566,7 @@ public class DesignProjectServiceTests : IDisposable
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileDeleteAsync(
             It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
             It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static ProjectDocument Sidecar(
@@ -585,7 +587,7 @@ public class DesignProjectServiceTests : IDisposable
             LocalPath = localPath,
             OriginalFileName = Path.GetFileName(localPath),
             Sha256 = new string('a', 64),
-            SyncStatus = ProjectDocumentSyncStatus.Synced,
+            SyncStatus = ProjectDocumentSyncStatus.Deleted,
         };
 
     [Fact]
@@ -608,7 +610,7 @@ public class DesignProjectServiceTests : IDisposable
             DisciplineCode = "architecture",
             DocumentCode = "BD-STAGING-FAILURE",
             Title = "Failed staging document",
-            FilePath = "/files/design/basic/staging-failure.pdf",
+            FilePath = "/images/unmanaged/staging-failure.pdf",
         };
         _db.BasicDesignDocs.Add(document);
         await _db.SaveChangesAsync();
@@ -629,6 +631,7 @@ public class DesignProjectServiceTests : IDisposable
             .ReturnsAsync(false);
         var impact = await _sut.GetDeletionImpactAsync(created.Id);
 
+        Assert.False(impact!.CanDelete);
         await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
             _sut.DeleteAsync(created.Id, Confirm(impact!), _userId));
 

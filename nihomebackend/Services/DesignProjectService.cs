@@ -1,10 +1,12 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -15,9 +17,10 @@ public class DesignProjectService(
     AppDbContext db,
     IPermitChecklistService permitChecklistService,
     ILogger<DesignProjectService> logger,
-    IProjectDocumentStagingService projectDocuments,
     IProjectAccessService projectAccess,
-    ILegacyProjectTeamSyncService projectTeamSync) : IDesignProjectService
+    ILegacyProjectTeamSyncService projectTeamSync,
+    IProjectHardDeletePlanService hardDeletePlans,
+    IHardDeleteOperationService hardDeleteOperations) : IDesignProjectService
 {
     private const int MaxPageSize = 100;
 
@@ -212,39 +215,31 @@ public class DesignProjectService(
         return await GetAsync(id, ct);
     }
 
-    public Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
         int id, CancellationToken ct = default) =>
-        DeletionImpactPlanner.ForDesignProjectAsync(db, id, ct);
+        (await hardDeletePlans.ForDesignProjectAsync(id, ct))?.Impact;
 
-    public async Task<bool> DeleteAsync(
+    public async Task<HardDeleteOperationResult?> DeleteAsync(
         int id,
         ConfirmDeletionRequest request,
         int callerUserId,
         CancellationToken ct = default)
     {
-        var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
-        if (entity is null) return false;
-
-        await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
-            : null;
-        var impact = await DeletionImpactPlanner.ForDesignProjectAsync(db, id, ct);
-        if (impact is null) return false;
-        ValidateDeletionConfirmation(impact, request);
-
-        try
-        {
-            await AggregateDeletionService.DeleteDesignProjectsAsync(
-                db, new[] { id }, projectDocuments, callerUserId, ct);
-        }
-        catch (AggregateDeletionBlockedException ex)
-        {
-            throw new DesignProjectOperationException(ex.Message);
-        }
-        await db.SaveChangesAsync(ct);
-        if (transaction is not null) await transaction.CommitAsync(ct);
-        logger.LogInformation("DesignProject {Id} hard-deleted", id);
-        return true;
+        if (!await db.DesignProjects.AsNoTracking().AnyAsync(dp => dp.Id == id, ct)) return null;
+        var plan = await hardDeletePlans.ForDesignProjectAsync(id, ct);
+        if (plan is null) return null;
+        ValidateDeletionConfirmation(plan.Impact, request);
+        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.DesignProject,
+            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Impact.ResourceLabel,
+            plan.Impact.PlanToken,
+            request.Confirmation!,
+            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Items), ct);
+        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
+        logger.LogInformation("DesignProject {Id} durable hard-delete is {Status}", id, result.Status);
+        return result;
     }
 
     private static void ValidateDeletionConfirmation(
@@ -257,7 +252,7 @@ public class DesignProjectService(
         if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
             throw new DeletionPlanChangedException(
                 "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
-        if (!string.Equals(request.Confirmation?.Trim(), impact.RequiredConfirmation, StringComparison.Ordinal))
+        if (!string.Equals(request.Confirmation, impact.RequiredConfirmation, StringComparison.Ordinal))
             throw new DesignProjectOperationException(
                 $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");
     }

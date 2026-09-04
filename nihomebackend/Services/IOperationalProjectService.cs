@@ -1,5 +1,6 @@
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -44,7 +45,7 @@ public interface IOperationalProjectService
         bool canSeeAll,
         CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(
+    Task<HardDeleteOperationResult?> DeleteAsync(
         int id,
         ConfirmDeletionRequest request,
         int callerUserId,

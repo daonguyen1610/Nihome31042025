@@ -2,17 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -27,16 +25,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -49,6 +37,7 @@ import {
   TENDER_STATUSES,
   type CreateTenderRequest,
   type CustomerResponse,
+  type DeletionImpactResponse,
   type TenderListItemResponse,
   type TenderListParams,
   type TenderResponse,
@@ -264,44 +253,54 @@ const AdminTenders = () => {
 
   // -------- delete --------
   const [deleting, setDeleting] = useState<TenderListItemResponse | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
   const [busyDelete, setBusyDelete] = useState(false);
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setBusyDelete(true);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const openDelete = async (tender: TenderListItemResponse) => {
+    setDeleting(tender);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteTender(deleting.id);
-      toast({ title: t("tenders.deleted") });
-      setDeleting(null);
-      await fetchList();
+      const response = await adminApi.getTenderDeletionImpact(tender.id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
+    }
+  };
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return null;
+    setBusyDelete(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteTender(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusyDelete(false);
     }
   };
 
+  const completeDelete = async () => {
+    setDeleting(null);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    toast({ title: t("tenders.deleted") });
+    await fetchList();
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusLabel = (s: TenderStatus) => t(`tenders.status.${s}`);
-
-  // -------- bulk selection --------
-  const deletableIds = useMemo(
-    () => canManage ? rows.map((row) => row.id) : [],
-    [rows, canManage],
-  );
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds: deletableIds,
-    deleteOne: (id) => adminApi.deleteTender(id),
-    onAfter: fetchList,
-  });
 
   const renderRowActions = (r: TenderListItemResponse) => (
     <>
@@ -320,7 +319,7 @@ const AdminTenders = () => {
             size="icon"
             variant="ghost"
             className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-            onClick={() => setDeleting(r)}
+            onClick={() => void openDelete(r)}
             title={t("common.delete")}
             aria-label={t("common.delete")}
           >
@@ -418,18 +417,9 @@ const AdminTenders = () => {
           </div>
         ) : (
           <>
-            {canManage && (
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            )}
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => {
-                const canDelete = canManage;
                 return (
                   <article
                     key={r.id}
@@ -438,19 +428,6 @@ const AdminTenders = () => {
                   >
                     <header className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
-                        {canManage && (
-                          <span
-                            onClick={(e) => e.stopPropagation()}
-                            className="pt-0.5"
-                          >
-                            <Checkbox
-                              aria-label={`${t("common.selectAll")} · ${r.name}`}
-                              disabled={!canDelete}
-                              checked={selectedIds.has(r.id)}
-                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                            />
-                          </span>
-                        )}
                         <div className="min-w-0">
                           <h3 className="break-words text-sm font-semibold leading-tight">{r.name}</h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">{r.code} · {r.customerName}</p>
@@ -511,22 +488,6 @@ const AdminTenders = () => {
               <table className="w-full min-w-[960px] text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
                   <tr>
-                    {canManage && (
-                      <th className="w-8 px-3 py-2">
-                        <Checkbox
-                          aria-label={t("common.selectAll")}
-                          disabled={deletableIds.length === 0}
-                          checked={
-                            allVisibleSelected
-                              ? true
-                              : someVisibleSelected
-                                ? "indeterminate"
-                                : false
-                          }
-                          onCheckedChange={(v) => toggleAllVisible(v === true)}
-                        />
-                      </th>
-                    )}
                     <th className="min-w-[220px] px-3 py-2">{t("tenders.field.name")}</th>
                     <th className="min-w-[160px] px-3 py-2">{t("tenders.field.customer")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("tenders.field.deadline")}</th>
@@ -539,26 +500,12 @@ const AdminTenders = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => {
-                    const canDelete = canManage;
                     return (
                       <tr
                         key={r.id}
                         className="cursor-pointer border-t align-top hover:bg-slate-50/50"
                         onClick={() => openDetail(r.id)}
                       >
-                        {canManage && (
-                          <td
-                            className="px-3 py-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Checkbox
-                              aria-label={`${t("common.selectAll")} · ${r.name}`}
-                              disabled={!canDelete}
-                              checked={selectedIds.has(r.id)}
-                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                            />
-                          </td>
-                        )}
                         <td className="min-w-[220px] px-3 py-2">
                           <div className="font-medium">{r.name}</div>
                           <div className="whitespace-nowrap text-xs text-muted-foreground">{r.code}</div>
@@ -742,32 +689,22 @@ const AdminTenders = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm */}
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent className="w-[95vw] max-w-md sm:w-full">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("tenders.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription className="break-words">
-              {t("tenders.delete.confirmBody").replace("{name}", deleting?.name ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <AlertDialogCancel disabled={busyDelete} className="w-full sm:w-auto">
-              {t("common.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="w-full bg-rose-600 hover:bg-rose-700 sm:w-auto"
-              onClick={(e) => {
-                e.preventDefault();
-                void confirmDelete();
-              }}
-              disabled={busyDelete}
-            >
-              {t("tenders.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletionImpactDialog
+        open={deleting != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={busyDelete}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !busyDelete) {
+            setDeleting(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
+      />
     </AdminLayout>
   );
 };

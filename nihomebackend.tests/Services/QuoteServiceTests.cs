@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
+using NihomeBackend.Services.HardDelete;
 using nihomebackend.tests.Helpers;
 
 namespace nihomebackend.tests.Services;
@@ -15,6 +17,7 @@ public class QuoteServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
     private readonly QuoteService _sut;
+    private readonly ICrmHardDeletePlanService _hardDeletePlans;
     private readonly int _rateCatalogId;
     private readonly DateOnly _pricingDate = new(2026, 9, 1);
 
@@ -22,13 +25,16 @@ public class QuoteServiceTests : IDisposable
     {
         _db = DbContextFactory.Create();
         _notifications = new Mock<INotificationService>();
+        var hardDelete = HardDeleteTestServices.Create(
+            _db, Mock.Of<IProjectDocumentStagingService>());
+        _hardDeletePlans = hardDelete.CrmPlans;
         _sut = new QuoteService(
             _db,
             _notifications.Object,
-            Mock.Of<IQuoteDocumentService>(),
             Mock.Of<IQuotePdfService>(),
             NullLogger<QuoteService>.Instance,
-            Mock.Of<IProjectDocumentStagingService>());
+            hardDelete.CrmPlans,
+            hardDelete.Operations);
         var catalog = new MaterialRateCatalog
         {
             Code = "RATE-TEST",
@@ -635,36 +641,489 @@ public class QuoteServiceTests : IDisposable
         var opportunityId = quote.OpportunityId;
         var opportunity = (await _db.Opportunities.FindAsync(opportunityId))!;
         opportunity.WonQuoteId = quote.Id;
+        quote.RowVersion = BitConverter.GetBytes(100L + (int)status);
+        var contract = new Contract
+        {
+            ContractNumber = $"HD-QUOTE-{status}",
+            CustomerId = opportunity.CustomerId,
+            OpportunityId = opportunity.Id,
+            QuoteId = quote.Id,
+            Value = 1,
+        };
+        _db.Contracts.Add(contract);
         await _db.SaveChangesAsync();
         var customerId = opportunity.CustomerId;
+        var materialRevisionId = quote.MaterialRateRevisionId;
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
 
-        Assert.True(await _sut.DeleteAsync(quote.Id, user.Id, canManage: true, canSeeAll: true));
+        var result = await _sut.DeleteAsync(quote.Id, new ConfirmDeletionRequest
+        {
+            PlanToken = plan.Impact.PlanToken,
+            Confirmation = quote.Code,
+            RowVersion = Convert.ToBase64String(quote.RowVersion),
+        }, user.Id, canManage: true, canSeeAll: true);
 
+        Assert.True(result!.IsComplete);
         Assert.Empty(_db.Quotes);
         Assert.Empty(_db.QuoteItems);
         Assert.Empty(_db.QuoteApprovalLogs);
         Assert.Empty(_db.QuoteVersionSnapshots);
         Assert.True(await _db.Opportunities.AnyAsync(o => o.Id == opportunityId));
         Assert.Null((await _db.Opportunities.FindAsync(opportunityId))!.WonQuoteId);
+        Assert.Null((await _db.Contracts.FindAsync(contract.Id))!.QuoteId);
+        Assert.True(await _db.Contracts.AnyAsync(item => item.Id == contract.Id));
         Assert.True(await _db.Customers.AnyAsync(c => c.Id == customerId));
         Assert.True(await _db.Users.AnyAsync(u => u.Id == user.Id));
+        if (materialRevisionId.HasValue)
+            Assert.True(await _db.MaterialRateRevisions.AnyAsync(item => item.Id == materialRevisionId));
     }
 
     [Fact]
-    public async Task DeleteAsync_MissingId_ReturnsFalse()
+    public async Task DeleteAsync_MissingId_ReturnsNull()
     {
         var user = await SeedUserAsync();
-        Assert.False(await _sut.DeleteAsync(99999, user.Id, canManage: true, canSeeAll: true));
+        Assert.Null(await _sut.DeleteAsync(99999, new ConfirmDeletionRequest(),
+            user.Id, canManage: true, canSeeAll: true));
     }
 
     [Fact]
-    public async Task DeleteAsync_OtherOwnersQuote_ReturnsFalse()
+    public async Task DeleteAsync_OtherOwnersQuote_ReturnsNull()
     {
         var (_, quote) = await SeedApprovedReadyQuoteAsync();
         var stranger = await SeedUserAsync();
 
-        Assert.False(await _sut.DeleteAsync(quote.Id, stranger.Id, canManage: true, canSeeAll: false));
+        Assert.Null(await _sut.DeleteAsync(quote.Id, new ConfirmDeletionRequest(),
+            stranger.Id, canManage: true, canSeeAll: false));
         Assert.Single(_db.Quotes);
+    }
+
+    [Fact]
+    public async Task ForQuoteAsync_GraphChangeChangesTokenAndCountsOwnedAndInboundRows()
+    {
+        var (_, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.RowVersion = BitConverter.GetBytes(123L);
+        _db.QuoteDocuments.Add(new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = $"/files/quotes/{quote.Id}/proposal.pdf",
+            OriginalFileName = "proposal.pdf",
+        });
+        await _db.SaveChangesAsync();
+
+        var before = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+        _db.QuoteItems.Add(new QuoteItem
+        {
+            QuoteId = quote.Id,
+            Name = "Changed graph",
+            Unit = "item",
+            Quantity = 1,
+            UnitPrice = 1,
+            Amount = 1,
+        });
+        await _db.SaveChangesAsync();
+        var after = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        Assert.True(before.Impact.CanDelete);
+        Assert.NotEqual(before.Impact.PlanToken, after.Impact.PlanToken);
+        Assert.Equal(before.Impact.TotalAffected + 1, after.Impact.TotalAffected);
+        Assert.Contains(before.Items, item => item.Kind == HardDeleteItemKind.LocalFile &&
+            item.ActionIdentifier == $"/files/quotes/{quote.Id}/proposal.pdf");
+    }
+
+    [Theory]
+    [InlineData(" /files/quotes/1/invalid.pdf")]
+    [InlineData("/files/contracts/outside.pdf")]
+    public async Task DeleteAsync_InvalidOrOutsideFilePathBlocksWithoutOperation(string filePath)
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.RowVersion = BitConverter.GetBytes(124L);
+        _db.QuoteDocuments.Add(new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = filePath,
+            OriginalFileName = "unsafe.pdf",
+        });
+        await _db.SaveChangesAsync();
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.DeleteAsync(quote.Id,
+            new ConfirmDeletionRequest
+            {
+                PlanToken = plan.Impact.PlanToken,
+                Confirmation = quote.Code,
+                RowVersion = Convert.ToBase64String(quote.RowVersion),
+            }, user.Id, canManage: true, canSeeAll: true));
+
+        Assert.False(plan.Impact.CanDelete);
+        Assert.Empty(_db.HardDeleteOperations);
+        Assert.True(await _db.Quotes.AnyAsync(item => item.Id == quote.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DuplicatePathBlocksWithoutOperation()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.RowVersion = BitConverter.GetBytes(125L);
+        var path = $"/files/quotes/{quote.Id}/duplicate.pdf";
+        _db.QuoteDocuments.AddRange(
+            new QuoteDocument { QuoteId = quote.Id, FilePath = path, OriginalFileName = "a.pdf" },
+            new QuoteDocument { QuoteId = quote.Id, FilePath = path, OriginalFileName = "b.pdf" });
+        await _db.SaveChangesAsync();
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.DeleteAsync(quote.Id,
+            new ConfirmDeletionRequest
+            {
+                PlanToken = plan.Impact.PlanToken,
+                Confirmation = quote.Code,
+                RowVersion = Convert.ToBase64String(quote.RowVersion),
+            }, user.Id, canManage: true, canSeeAll: true));
+
+        Assert.False(plan.Impact.CanDelete);
+        Assert.Empty(_db.HardDeleteOperations);
+        Assert.Equal(2, await _db.QuoteDocuments.CountAsync(item => item.QuoteId == quote.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RejectsWhitespaceConfirmationAndMissingOrStaleRowVersionWithoutOperation()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.RowVersion = BitConverter.GetBytes(126L);
+        await _db.SaveChangesAsync();
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.DeleteAsync(quote.Id,
+            new ConfirmDeletionRequest
+            {
+                PlanToken = plan.Impact.PlanToken,
+                Confirmation = $" {quote.Code} ",
+                RowVersion = Convert.ToBase64String(quote.RowVersion),
+            }, user.Id, true, true));
+        await Assert.ThrowsAsync<CrmConcurrencyTokenException>(() => _sut.DeleteAsync(quote.Id,
+            new ConfirmDeletionRequest { PlanToken = plan.Impact.PlanToken, Confirmation = quote.Code },
+            user.Id, true, true));
+        await Assert.ThrowsAsync<CrmConcurrencyException>(() => _sut.DeleteAsync(quote.Id,
+            new ConfirmDeletionRequest
+            {
+                PlanToken = plan.Impact.PlanToken,
+                Confirmation = quote.Code,
+                RowVersion = Convert.ToBase64String(BitConverter.GetBytes(999L)),
+            }, user.Id, true, true));
+
+        Assert.Empty(_db.HardDeleteOperations);
+        Assert.True(await _db.Quotes.AnyAsync(item => item.Id == quote.Id));
+    }
+
+    [Fact]
+    public async Task ForQuoteAsync_StableSyncedNiconSidecarCreatesOwnedDriveDefinition()
+    {
+        var (_, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.OperationalProjectId = 1;
+        quote.RowVersion = BitConverter.GetBytes(127L);
+        var document = new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = $"/files/quotes/{quote.Id}/project.pdf",
+            OriginalFileName = "project.pdf",
+        };
+        _db.QuoteDocuments.Add(document);
+        await _db.SaveChangesAsync();
+        var sidecar = new ProjectDocument
+        {
+            OperationalProjectId = 1,
+            SourceModule = ProjectDocumentSourceModule.Crm,
+            SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+            SourceEntityType = nameof(QuoteDocument),
+            SourceSlot = "file",
+            SourceRecordId = document.Id,
+            LocalPath = document.FilePath,
+            OriginalFileName = document.OriginalFileName,
+            Sha256 = "hash",
+            DesiredOperation = ProjectDocumentDesiredOperation.None,
+            SyncStatus = ProjectDocumentSyncStatus.Synced,
+            DriveFileId = "drive-file",
+            DriveFolderId = "drive-folder",
+            Generation = 7,
+        };
+        _db.ProjectDocuments.Add(sidecar);
+        await _db.SaveChangesAsync();
+
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        Assert.Contains(plan.Impact.Items, item =>
+            item.Key == "quote.driveFiles" && item.Action == DeletionImpactActions.Delete && item.Count == 1);
+        Assert.Contains(plan.Impact.Items, item =>
+            item.Key == "quote.projectDocumentSidecars" && item.Action == DeletionImpactActions.Unlink && item.Count == 1);
+        var drive = Assert.Single(plan.Items, item => item.Kind == HardDeleteItemKind.DriveFile);
+        Assert.Equal("drive-file", drive.ActionIdentifier);
+        Assert.Equal("drive-folder", drive.ExpectedParentId);
+        Assert.Equal(3, drive.ExpectedAppProperties!.Count);
+        Assert.Equal("unit-test", drive.ExpectedAppProperties["niconInstance"]);
+        Assert.Equal($"project-document:{sidecar.Id}", drive.ExpectedAppProperties["niconReplicaKey"]);
+        Assert.Equal("7", drive.ExpectedAppProperties["niconGeneration"]);
+        Assert.Single(plan.Items, item => item.Kind == HardDeleteItemKind.LocalFile &&
+            item.ActionIdentifier == document.FilePath);
+    }
+
+    [Theory]
+    [InlineData("imported")]
+    [InlineData("shared")]
+    [InlineData("conflicted")]
+    [InlineData("pending")]
+    [InlineData("pending-operation")]
+    [InlineData("failed")]
+    [InlineData("mismatched-path")]
+    [InlineData("missing-file-id")]
+    [InlineData("missing-folder-id")]
+    [InlineData("missing-generation")]
+    [InlineData("active-claim")]
+    [InlineData("expired-claim")]
+    [InlineData("claim-expiry-only")]
+    [InlineData("wrong-project")]
+    [InlineData("wrong-source-slot")]
+    [InlineData("conflict-link")]
+    [InlineData("conflict-observation")]
+    [InlineData("compound-identity-mismatch")]
+    public async Task ForQuoteAsync_UnsafeProjectDocumentSidecarBlocks(string unsafeState)
+    {
+        var (_, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.OperationalProjectId = 1;
+        var document = new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = $"/files/quotes/{quote.Id}/{unsafeState}.pdf",
+            OriginalFileName = $"{unsafeState}.pdf",
+        };
+        _db.QuoteDocuments.Add(document);
+        await _db.SaveChangesAsync();
+        var sidecar = CreateQuoteSidecar(document, $"drive-{unsafeState}");
+        switch (unsafeState)
+        {
+            case "imported":
+                sidecar.SourceType = ProjectDocumentSourceType.GoogleDriveImport;
+                break;
+            case "shared":
+                sidecar.Origin = ProjectDocumentOrigin.GoogleDrive;
+                break;
+            case "conflicted":
+                sidecar.ConflictState = ProjectDocumentConflictState.PendingConfirmation;
+                break;
+            case "pending":
+                sidecar.SyncStatus = ProjectDocumentSyncStatus.Pending;
+                break;
+            case "pending-operation":
+                sidecar.DesiredOperation = ProjectDocumentDesiredOperation.Upsert;
+                break;
+            case "failed":
+                sidecar.SyncStatus = ProjectDocumentSyncStatus.Failed;
+                break;
+            case "mismatched-path":
+                sidecar.LocalPath += ".other";
+                break;
+            case "missing-file-id":
+                sidecar.DriveFileId = null;
+                break;
+            case "missing-folder-id":
+                sidecar.DriveFolderId = null;
+                break;
+            case "missing-generation":
+                sidecar.Generation = 0;
+                break;
+            case "active-claim":
+                sidecar.ClaimToken = Guid.NewGuid();
+                sidecar.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(5);
+                break;
+            case "expired-claim":
+                sidecar.ClaimToken = Guid.NewGuid();
+                sidecar.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(-5);
+                break;
+            case "claim-expiry-only":
+                sidecar.ClaimExpiresAt = DateTime.UtcNow.AddMinutes(-5);
+                break;
+            case "wrong-project":
+                sidecar.OperationalProjectId = 2;
+                break;
+            case "wrong-source-slot":
+                sidecar.SourceSlot = "other";
+                break;
+            case "conflict-link":
+                sidecar.ConflictWithDocumentId = 123;
+                break;
+            case "conflict-observation":
+                sidecar.ConflictObservedDriveFileId = "observed-drive";
+                sidecar.ConflictObservedDriveVersion = "observed-version";
+                break;
+            case "compound-identity-mismatch":
+                sidecar.SourceModule = ProjectDocumentSourceModule.Design;
+                sidecar.SourceSlot = "other";
+                sidecar.LocalPath += ".other";
+                break;
+        }
+        _db.ProjectDocuments.Add(sidecar);
+        await _db.SaveChangesAsync();
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        Assert.False(plan.Impact.CanDelete);
+        Assert.Contains(plan.Impact.Items, item =>
+            item.Key == "quote.projectDocumentSidecarBlockers" &&
+            item.Action == DeletionImpactActions.Block && item.Count == 1);
+        Assert.DoesNotContain(plan.Items, item => item.Kind == HardDeleteItemKind.DriveFile);
+    }
+
+    [Fact]
+    public async Task ForQuoteAsync_TerminalDeletedSidecarWithoutDriveFileIsPreservedWithoutBlocker()
+    {
+        var (_, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.OperationalProjectId = 1;
+        var document = new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = $"/files/quotes/{quote.Id}/already-deleted.pdf",
+            OriginalFileName = "already-deleted.pdf",
+        };
+        _db.QuoteDocuments.Add(document);
+        await _db.SaveChangesAsync();
+        var sidecar = CreateQuoteSidecar(document, null);
+        sidecar.DesiredOperation = ProjectDocumentDesiredOperation.None;
+        sidecar.SyncStatus = ProjectDocumentSyncStatus.Deleted;
+        _db.ProjectDocuments.Add(sidecar);
+        await _db.SaveChangesAsync();
+
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        Assert.Contains(plan.Impact.Items, item =>
+            item.Key == "quote.projectDocumentSidecars" && item.Action == DeletionImpactActions.Unlink);
+        Assert.DoesNotContain(plan.Items, item => item.Kind == HardDeleteItemKind.DriveFile);
+    }
+
+    [Fact]
+    public async Task ForQuoteAsync_DuplicateDriveIdsBlockAllAmbiguousSidecars()
+    {
+        var (_, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.OperationalProjectId = 1;
+        var first = new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = $"/files/quotes/{quote.Id}/first.pdf",
+            OriginalFileName = "first.pdf",
+        };
+        var second = new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = $"/files/quotes/{quote.Id}/second.pdf",
+            OriginalFileName = "second.pdf",
+        };
+        _db.QuoteDocuments.AddRange(first, second);
+        await _db.SaveChangesAsync();
+        _db.ProjectDocuments.AddRange(
+            CreateQuoteSidecar(first, "duplicate-drive"),
+            CreateQuoteSidecar(second, "duplicate-drive"));
+        await _db.SaveChangesAsync();
+
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        Assert.Contains(plan.Impact.Items, item =>
+            item.Key == "quote.projectDocumentSidecarBlockers" && item.Count == 2);
+        Assert.DoesNotContain(plan.Items, item => item.Kind == HardDeleteItemKind.DriveFile);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_VerifiedDriveDeletionTerminalizesAndPreservesSidecar()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.OperationalProjectId = 1;
+        quote.RowVersion = BitConverter.GetBytes(129L);
+        var document = new QuoteDocument
+        {
+            QuoteId = quote.Id,
+            FilePath = $"/files/quotes/{quote.Id}/terminalize.pdf",
+            OriginalFileName = "terminalize.pdf",
+        };
+        _db.QuoteDocuments.Add(document);
+        await _db.SaveChangesAsync();
+        var sidecar = CreateQuoteSidecar(document, "drive-terminalize");
+        sidecar.DriveWebViewLink = "https://drive.test/file";
+        sidecar.DriveVersion = "3";
+        sidecar.DriveModifiedAt = DateTime.UtcNow.AddDays(-1);
+        sidecar.SyncAttemptCount = 2;
+        sidecar.SyncError = "old error";
+        sidecar.NextSyncAttemptAt = DateTime.UtcNow.AddMinutes(1);
+        sidecar.LastSyncAttemptAt = DateTime.UtcNow.AddMinutes(-1);
+        _db.ProjectDocuments.Add(sidecar);
+        await _db.SaveChangesAsync();
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        var result = await _sut.DeleteAsync(quote.Id, new ConfirmDeletionRequest
+        {
+            PlanToken = plan.Impact.PlanToken,
+            Confirmation = quote.Code,
+            RowVersion = Convert.ToBase64String(quote.RowVersion),
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.True(result!.IsComplete);
+        var preserved = await _db.ProjectDocuments.SingleAsync(item => item.Id == sidecar.Id);
+        Assert.Equal(ProjectDocumentDesiredOperation.None, preserved.DesiredOperation);
+        Assert.Equal(ProjectDocumentSyncStatus.Deleted, preserved.SyncStatus);
+        Assert.Null(preserved.DriveFileId);
+        Assert.Null(preserved.DriveWebViewLink);
+        Assert.Null(preserved.DriveVersion);
+        Assert.Null(preserved.DriveModifiedAt);
+        Assert.Equal(0, preserved.SyncAttemptCount);
+        Assert.Null(preserved.SyncError);
+        Assert.Null(preserved.NextSyncAttemptAt);
+        Assert.Null(preserved.LastSyncAttemptAt);
+        Assert.Null(preserved.ClaimToken);
+        Assert.Null(preserved.ClaimExpiresAt);
+        Assert.NotNull(preserved.DeletedAt);
+        Assert.Equal(user.Id, preserved.DeletedByUserId);
+        Assert.Equal(user.Id, preserved.UpdatedByUserId);
+        Assert.False(await _db.Quotes.AnyAsync(item => item.Id == quote.Id));
+        Assert.False(await _db.QuoteDocuments.AnyAsync(item => item.Id == document.Id));
+        Assert.Single(_db.AuditLogs, auditLog =>
+            auditLog.Action == "quote.delete" && auditLog.ResourceId == quote.Id.ToString());
+    }
+
+    [Fact]
+    public async Task QuoteHandler_MissingRootForwardRecovery_IsAuthorizedAndAuditedIdempotently()
+    {
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.HasAsync(
+                It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var handler = new QuoteHardDeleteHandler(_db, _hardDeletePlans, permissions.Object);
+        var operationId = Guid.NewGuid();
+        var context = new HardDeleteResourceContext(
+            operationId, EntityTypes.Quote, "987654", "plan", "1", "delete-quote-aggregate", true);
+
+        await handler.AuthorizeAsync(context);
+        await handler.FinalizeAsync(context);
+        await handler.FinalizeAsync(context);
+
+        Assert.Single(_db.AuditLogs, auditLog =>
+            auditLog.AuditId == operationId.ToString("N") &&
+            auditLog.Action == "quote.delete" && auditLog.ResourceId == "987654");
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SeededQuoteCodeRecordsDeletionTombstone()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        quote.Code = "QT-SAMPLE-999";
+        quote.RowVersion = BitConverter.GetBytes(128L);
+        await _db.SaveChangesAsync();
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        var result = await _sut.DeleteAsync(quote.Id, new ConfirmDeletionRequest
+        {
+            PlanToken = plan.Impact.PlanToken,
+            Confirmation = quote.Code,
+            RowVersion = Convert.ToBase64String(quote.RowVersion),
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.True(result!.IsComplete);
+        var tombstone = await _db.SeededRootDeletions.SingleAsync(item =>
+            item.ResourceType == EntityTypes.Quote && item.ResourceKey == quote.Code);
+        Assert.Equal(user.Id, tombstone.DeletedByUserId);
     }
 
     // =========================== Helpers ===========================
@@ -678,6 +1137,25 @@ public class QuoteServiceTests : IDisposable
         MaterialRateCatalogId = _rateCatalogId,
         PricingEffectiveDate = _pricingDate,
         VatPercent = 8m,
+    };
+
+    private static ProjectDocument CreateQuoteSidecar(QuoteDocument document, string? driveFileId) => new()
+    {
+        OperationalProjectId = 1,
+        SourceModule = ProjectDocumentSourceModule.Crm,
+        SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+        SourceEntityType = nameof(QuoteDocument),
+        SourceSlot = "file",
+        SourceRecordId = document.Id,
+        LocalPath = document.FilePath,
+        OriginalFileName = document.OriginalFileName,
+        Sha256 = "hash",
+        Origin = ProjectDocumentOrigin.Nicon,
+        Generation = 1,
+        DesiredOperation = ProjectDocumentDesiredOperation.None,
+        SyncStatus = ProjectDocumentSyncStatus.Synced,
+        DriveFileId = driveFileId,
+        DriveFolderId = "drive-folder",
     };
 
     // ---------------- Dirty check on update ----------------

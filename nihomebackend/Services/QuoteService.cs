@@ -1,10 +1,12 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -37,10 +39,10 @@ public class QuoteOperationException : Exception
 public class QuoteService(
     AppDbContext db,
     INotificationService notifications,
-    IQuoteDocumentService quoteDocuments,
     IQuotePdfService quotePdf,
     ILogger<QuoteService> logger,
-    IProjectDocumentStagingService projectDocuments) : IQuoteService
+    ICrmHardDeletePlanService hardDeletePlans,
+    IHardDeleteOperationService hardDeleteOperations) : IQuoteService
 {
     private const int MaxPageSize = 100;
     private const int DefaultValidityDays = 30;
@@ -560,40 +562,54 @@ public class QuoteService(
 
     // ------------------------------ Delete ------------------------------
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
+    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct = default)
     {
-        if (!canManage) return false;
+        if (!canManage) throw new QuoteOperationException("Không có quyền xoá báo giá.");
+        var visible = await db.Quotes.AsNoTracking()
+            .AnyAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
+        return visible ? (await hardDeletePlans.ForQuoteAsync(id, ct))?.Impact : null;
+    }
 
-        var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id, ct);
-        if (quote is null) return false;
-        if (!canSeeAll && quote.OwnerUserId != callerUserId) return false;
+    public async Task<HardDeleteOperationResult?> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        if (!canManage) throw new QuoteOperationException("Không có quyền xoá báo giá.");
+        var quote = await db.Quotes.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
+        if (quote is null) return null;
+        var plan = await hardDeletePlans.ForQuoteAsync(id, ct);
+        if (plan is null) return null;
+        if (!plan.Impact.CanDelete)
+            throw new QuoteOperationException("Không thể xoá báo giá vì còn tệp cần được xử lý an toàn.");
+        if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException(
+                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!string.Equals(request.Confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new QuoteOperationException(
+                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
+        CrmConcurrency.EnsureMatches(quote.RowVersion, request.RowVersion);
 
-        CrmConcurrency.Apply(db, quote, rowVersion);
-
-        var winningOpportunities = await db.Opportunities
-            .Where(opportunity => opportunity.WonQuoteId == id)
-            .ToListAsync(ct);
-        foreach (var opportunity in winningOpportunities)
-        {
-            opportunity.WonQuoteId = null;
-        }
-
-        if (quote.OperationalProjectId.HasValue)
-        {
-            var documents = await db.QuoteDocuments
-                .Where(document => document.QuoteId == id)
-                .ToListAsync(ct);
-            foreach (var document in documents)
-                await projectDocuments.StageExistingManagedFileDeleteAsync(
-                    quote.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
-                    nameof(QuoteDocument), "file", document.Id, document.FilePath,
-                    callerUserId, ct);
-        }
-
-        db.Quotes.Remove(quote);
-        await CrmConcurrency.SaveChangesAsync(db, ct);
-        quoteDocuments.DeleteQuoteFiles(id);
-        return true;
+        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.Quote,
+            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Impact.ResourceLabel,
+            plan.Impact.PlanToken,
+            request.Confirmation,
+            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Items), ct);
+        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
+        logger.LogInformation("Quote {Id} durable hard-delete is {Status}", id, result.Status);
+        return result;
     }
 
     // ------------------------------ Versions ------------------------------

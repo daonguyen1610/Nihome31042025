@@ -8,6 +8,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -157,7 +158,10 @@ public class LeadsController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.leads", "manage")]
-    public async Task<ActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
@@ -167,24 +171,44 @@ public class LeadsController(
 
         try
         {
-            var removed = await svc.DeleteAsync(
-                id, userId.Value, canManage, canSeeAll, ct,
-                CrmConcurrency.ResolveRequestToken(Request, null));
-            if (!removed) return NotFound();
+            request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+            var result = await svc.DeleteAsync(id, request, userId.Value, canManage, canSeeAll, ct);
+            if (result is null) return NotFound();
 
             audit.Log(new AuditEvent
             {
-                Action = "lead.delete",
+                Action = result.IsComplete ? "lead.delete" : "lead.delete_requested",
                 ResourceType = EntityTypes.Lead,
                 ResourceId = id.ToString(),
-                Message = $"Lead #{id} deleted.",
+                Message = $"Lead #{id} durable deletion is {result.Status}.",
+                NewValue = result,
             });
-            return NoContent();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (LeadOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("crm.leads", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canManage = await permissions.HasAsync(userId.Value, "crm.leads.manage", ct);
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.leads.view.all", ct);
+        var impact = await svc.GetDeletionImpactAsync(id, userId.Value, canManage, canSeeAll, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpPost("{id:int}/convert")]
@@ -340,5 +364,14 @@ public class LeadsController(
             "en" or "vi" or "zh" or "ja" => code,
             _ => "vi",
         };
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(
+            nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations",
+            new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }

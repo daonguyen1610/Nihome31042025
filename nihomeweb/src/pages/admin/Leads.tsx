@@ -2,23 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Plus, Search, Trash2, ArrowRight, RefreshCw, Pencil, Save } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { validateContact } from "@/lib/validation";
 import { PageLoading, PageError } from "@/components/PageState";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +42,7 @@ import {
   type LeadActivityType,
   type MasterDataOption,
   type CustomerDuplicateDetail,
+  type DeletionImpactResponse,
 } from "@/services/adminApi";
 
 const STATUSES: LeadStatus[] = [
@@ -310,42 +309,56 @@ const AdminLeads = () => {
     }
   };
 
+  const [deletingLead, setDeletingLead] = useState<LeadResponse | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t("leads.deleteConfirm"))) return;
+    const lead = detail?.id === id ? detail : leads.find((item) => item.id === id);
+    if (!lead) return;
+    setDeletingLead(lead);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteLead(id, detail?.id === id
-        ? detail.rowVersion
-        : leads.find((lead) => lead.id === id)?.rowVersion);
-      toast({ title: t("leads.deleted") });
-      await fetchList();
-      if (detail?.id === id) closeDetail();
+      const response = await adminApi.getLeadDeletionImpact(id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
     }
   };
 
-  const visibleIds = useMemo(() => leads.map((l) => l.id), [leads]);
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds,
-    deleteOne: (id) => adminApi.deleteLead(id, leads.find((lead) => lead.id === id)?.rowVersion),
-    onAfter: async ({ success }) => {
-      if (success > 0 && detail && selectedIds.has(detail.id)) closeDetail();
-      await fetchList();
-    },
-  });
+  const confirmDelete = async (confirmation: string) => {
+    if (!deletingLead || !deleteImpact) return null;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteLead(deletingLead.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+        rowVersion: deletingLead.rowVersion,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
-  useEffect(() => {
-    clearSelection();
-  }, [page, statusFilter, sourceFilter, segmentFilter, search, clearSelection]);
+  const completeDelete = async () => {
+    const deletedId = deletingLead?.id;
+    setDeletingLead(null);
+    setDeleteImpact(null);
+    toast({ title: t("leads.deleted") });
+    await fetchList();
+    if (detail?.id === deletedId) closeDetail();
+  };
 
   const handleAddActivity = async () => {
     if (!detail || !activityContent.trim()) return;
@@ -560,35 +573,8 @@ const AdminLeads = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {canManage && (
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            )}
-
             {/* Mobile / tablet card view (<lg) */}
             <div className="grid gap-3 lg:hidden">
-              {canManage && leads.length > 1 && (
-                <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
-                  <Checkbox
-                    checked={
-                      allVisibleSelected
-                        ? true
-                        : someVisibleSelected
-                          ? "indeterminate"
-                          : false
-                    }
-                    onCheckedChange={(v) => toggleAllVisible(v === true)}
-                    aria-label={t("common.selectAll")}
-                  />
-                  <span>
-                    {allVisibleSelected ? t("common.deselectAll") : t("common.selectAll")}
-                  </span>
-                </label>
-              )}
               {leads.map((lead) => (
                 <article
                   key={lead.id}
@@ -596,18 +582,6 @@ const AdminLeads = () => {
                   onClick={() => void openDetail(lead.id)}
                 >
                   <header className="flex items-start gap-2">
-                    {canManage && (
-                      <div
-                        className="pt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Checkbox
-                          checked={selectedIds.has(lead.id)}
-                          onCheckedChange={(v) => toggleOne(lead.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${lead.name}`}
-                        />
-                      </div>
-                    )}
                     <div className="min-w-0 flex-1">
                       <h3 className="break-words text-sm font-semibold leading-tight">{lead.name}</h3>
                       {lead.companyName && (
@@ -687,21 +661,6 @@ const AdminLeads = () => {
             <table className="w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  {canManage && (
-                    <th className="w-10 px-3 py-3 text-left">
-                      <Checkbox
-                        checked={
-                          allVisibleSelected
-                            ? true
-                            : someVisibleSelected
-                              ? "indeterminate"
-                              : false
-                        }
-                        onCheckedChange={(v) => toggleAllVisible(v === true)}
-                        aria-label={t("common.selectAll")}
-                      />
-                    </th>
-                  )}
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.name")}</th>
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.company")}</th>
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("leads.field.phone")} / {t("leads.field.email")}</th>
@@ -722,18 +681,6 @@ const AdminLeads = () => {
                     className="cursor-pointer hover:bg-muted/40"
                     onClick={() => void openDetail(lead.id)}
                   >
-                    {canManage && (
-                      <td
-                        className="px-3 py-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Checkbox
-                          checked={selectedIds.has(lead.id)}
-                          onCheckedChange={(v) => toggleOne(lead.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${lead.name}`}
-                        />
-                      </td>
-                    )}
                     <td className="px-3 py-3 font-medium">{lead.name}</td>
                     <td className="px-3 py-3 text-muted-foreground">{lead.companyName || "—"}</td>
                     <td className="px-3 py-3 text-xs">
@@ -1180,6 +1127,23 @@ const AdminLeads = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeletionImpactDialog
+        open={deletingLead != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={deleteBusy}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) {
+            setDeletingLead(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
+      />
     </AdminLayout>
   );
 };

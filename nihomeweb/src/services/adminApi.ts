@@ -864,6 +864,23 @@ export interface ConfirmDeletionRequest {
   rowVersion?: string;
 }
 
+export type HardDeleteOperationStatus =
+  | "Preparing"
+  | "Ready"
+  | "Processing"
+  | "Completed"
+  | "ManualActionRequired"
+  | "Failed";
+
+export interface HardDeleteOperationResult {
+  operationId: string;
+  status: HardDeleteOperationStatus;
+  isComplete: boolean;
+  requiresManualAction: boolean;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+}
+
 export interface OperationalProjectListItemResponse {
   id: number;
   code: string;
@@ -3886,8 +3903,13 @@ export const adminApi = {
     api.post<LeadResponse>("/leads", body),
   updateLead: (id: number, body: UpdateLeadRequest) =>
     api.put<LeadResponse>(`/leads/${id}`, body),
-  deleteLead: (id: number, rowVersion?: string) =>
-    api.delete(`/leads/${id}`, withIfMatch(rowVersion)),
+  getLeadDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/leads/${id}/deletion-impact`),
+  deleteLead: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult | null>(`/leads/${id}`, {
+      ...withIfMatch(body.rowVersion),
+      data: body,
+    }),
   convertLead: (id: number, body: ConvertLeadRequest = {}) =>
     api.post<LeadResponse>(`/leads/${id}/convert`, body),
   unconvertLead: (id: number, rowVersion?: string) =>
@@ -4047,8 +4069,10 @@ export const adminApi = {
   },
   deleteQuoteDocument: (id: number, documentId: number) =>
     api.delete(`/quotes/${id}/documents/${documentId}`),
-  deleteQuote: (id: number, rowVersion?: string) =>
-    api.delete(`/quotes/${id}`, withIfMatch(rowVersion)),
+  getQuoteDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/quotes/${id}/deletion-impact`),
+  deleteQuote: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult>(`/quotes/${id}`, { data: body }),
 
   // Material rate catalogs
   listMaterialRateCatalogs: (search?: string, includeInactive = false, catalogType?: MaterialRateCatalogType) =>
@@ -4169,7 +4193,10 @@ export const adminApi = {
   getTender: (id: number) => api.get<TenderResponse>(`/tenders/${id}`),
   createTender: (body: CreateTenderRequest) => api.post<TenderResponse>("/tenders", body),
   updateTender: (id: number, body: UpdateTenderRequest) => api.put<TenderResponse>(`/tenders/${id}`, body),
-  deleteTender: (id: number) => api.delete(`/tenders/${id}`),
+  getTenderDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/tenders/${id}/deletion-impact`),
+  deleteTender: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult | null>(`/tenders/${id}`, { data: body }),
 
   // Tender detail-page workflow (NIH-97)
   updateTenderChecklistItem: (
@@ -4306,7 +4333,12 @@ export const adminApi = {
   getDesignProjectDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/design-projects/${id}/deletion-impact`),
   deleteDesignProject: (id: number, body: ConfirmDeletionRequest) =>
-    api.delete(`/design-projects/${id}`, { data: body }),
+    api.delete<HardDeleteOperationResult | null>(`/design-projects/${id}`, { data: body }),
+
+  getHardDeleteOperation: (operationId: string) =>
+    api.get<HardDeleteOperationResult>(`/hard-delete-operations/${operationId}`),
+  retryHardDeleteOperation: (operationId: string) =>
+    api.post<HardDeleteOperationResult>(`/hard-delete-operations/${operationId}/retry`),
 
   // Permits (NIH-137)
   listPermits: (params: PermitChecklistListParams = {}) => {
@@ -4789,7 +4821,7 @@ export const adminApi = {
   getOperationalProjectDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/operational-projects/${id}/deletion-impact`),
   deleteOperationalProject: (id: number, body: ConfirmDeletionRequest) =>
-    api.delete(`/operational-projects/${id}`, {
+    api.delete<HardDeleteOperationResult | null>(`/operational-projects/${id}`, {
       ...withIfMatch(body.rowVersion),
       data: body,
     }),

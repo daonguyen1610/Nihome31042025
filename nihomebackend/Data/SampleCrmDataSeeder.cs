@@ -461,6 +461,10 @@ public static class SampleCrmDataSeeder
             .OrderBy(o => o.Id)
             .ToList();
         if (sampleOpps.Count == 0) return;
+        var deletedQuoteCodes = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.Quote)
+            .Select(item => item.ResourceKey)
+            .ToHashSet();
 
         // One curated sample per QuoteStatus so every filter/badge/workflow
         // branch has real data to render (plus a versioned pair to exercise
@@ -486,6 +490,7 @@ public static class SampleCrmDataSeeder
 
             var opp = sampleOpps[oppIdx];
             var code = $"QT-SAMPLE-{i + 1:D3}";
+            if (deletedQuoteCodes.Contains(code)) continue;
             var sampleNote = $"{SampleQuoteNoteMarker} {label}";
             var existing = db.Quotes.OrderBy(q => q.Id).FirstOrDefault(q => q.Code == code
                 || q.Note == sampleNote);

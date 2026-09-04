@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { AlertTriangle, Link2Off, Loader2, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Link2Off, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import type { DeletionImpactAction, DeletionImpactResponse } from "@/services/adminApi";
+import { adminApi, type DeletionImpactAction, type DeletionImpactResponse, type HardDeleteOperationResult } from "@/services/adminApi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -23,8 +24,11 @@ interface DeletionImpactDialogProps {
   deleting: boolean;
   error?: string | null;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (confirmation: string) => Promise<void>;
+  onConfirm: (confirmation: string) => Promise<HardDeleteOperationResult | null>;
+  onCompleted: () => Promise<void> | void;
 }
+
+const POLL_INTERVAL_MS = 2_000;
 
 const actionIcon: Record<DeletionImpactAction, typeof Trash2> = {
   Delete: Trash2,
@@ -46,16 +50,81 @@ export const DeletionImpactDialog = ({
   error,
   onOpenChange,
   onConfirm,
+  onCompleted,
 }: DeletionImpactDialogProps) => {
   const { t } = useI18n();
   const [confirmation, setConfirmation] = useState("");
+  const [operation, setOperation] = useState<HardDeleteOperationResult | null>(null);
+  const [operationError, setOperationError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const completedRef = useRef(false);
 
   useEffect(() => {
-    if (!open) setConfirmation("");
+    if (!open) {
+      setConfirmation("");
+      setOperation(null);
+      setOperationError(false);
+      completedRef.current = false;
+    }
   }, [open]);
 
-  const confirmed = impact != null && confirmation.trim() === impact.requiredConfirmation;
-  const canSubmit = impact?.canDelete === true && confirmed && !loading && !deleting;
+  useEffect(() => {
+    if (!open || !operation || operation.isComplete || operation.status === "Failed" || operation.requiresManualAction) return;
+
+    let active = true;
+    const poll = async () => {
+      try {
+        const response = await adminApi.getHardDeleteOperation(operation.operationId);
+        if (!active) return;
+        setOperationError(false);
+        setOperation(response.data);
+      } catch {
+        if (active) setOperationError(true);
+      }
+    };
+    const timer = window.setInterval(() => void poll(), POLL_INTERVAL_MS);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [open, operation]);
+
+  useEffect(() => {
+    if (!operation?.isComplete || completedRef.current) return;
+    completedRef.current = true;
+    void onCompleted();
+  }, [onCompleted, operation]);
+
+  const confirmed = impact != null && confirmation === impact.requiredConfirmation;
+  const operationActive = operation != null && !operation.isComplete && operation.status !== "Failed" && !operation.requiresManualAction;
+  const canSubmit = impact?.canDelete === true && confirmed && !loading && !deleting && operation == null;
+
+  const submit = async () => {
+    try {
+      const result = await onConfirm(confirmation);
+      if (result == null || result.isComplete) {
+        await onCompleted();
+        return;
+      }
+      setOperation(result);
+    } catch {
+      return;
+    }
+  };
+
+  const retry = async () => {
+    if (!operation) return;
+    setRetrying(true);
+    setOperationError(false);
+    try {
+      const response = await adminApi.retryHardDeleteOperation(operation.operationId);
+      setOperation(response.data);
+    } catch {
+      setOperationError(true);
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -83,7 +152,32 @@ export const DeletionImpactDialog = ({
           </div>
         ) : null}
 
-        {impact ? (
+        {operation ? (
+          <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4" role="status">
+            <div className="flex items-start gap-2 text-sm text-amber-900">
+              {operationActive ? <Loader2 className="mt-0.5 h-4 w-4 animate-spin" /> : <AlertTriangle className="mt-0.5 h-4 w-4" />}
+              <div className="space-y-1">
+                <p className="font-medium">
+                  {operation.requiresManualAction
+                    ? t("deletionImpact.operation.manualAction")
+                    : operation.status === "Failed"
+                      ? t("deletionImpact.operation.failed")
+                      : t("deletionImpact.operation.processing")}
+                </p>
+                <p className="text-xs">{t("deletionImpact.operation.reference", { id: operation.operationId })}</p>
+              </div>
+            </div>
+            {operationError ? <p role="alert" className="text-sm text-destructive">{t("deletionImpact.operation.statusError")}</p> : null}
+            {(operation.status === "Failed" || operation.requiresManualAction) ? (
+              <Button type="button" variant="outline" size="sm" disabled={retrying} onClick={() => void retry()}>
+                {retrying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+                {t("deletionImpact.operation.retry")}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {impact && !operation ? (
           <div className="space-y-4">
             {impact.items.length === 0 ? (
               <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
@@ -140,17 +234,19 @@ export const DeletionImpactDialog = ({
         ) : null}
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={!canSubmit}
-            onClick={(event) => {
-              event.preventDefault();
-              void onConfirm(confirmation.trim());
-            }}
-          >
-            {deleting ? t("deletionImpact.deleting") : t("deletionImpact.confirm")}
-          </AlertDialogAction>
+          <AlertDialogCancel disabled={deleting || operationActive}>{t("common.cancel")}</AlertDialogCancel>
+          {!operation ? (
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!canSubmit}
+              onClick={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              {deleting ? t("deletionImpact.deleting") : t("deletionImpact.confirm")}
+            </AlertDialogAction>
+          ) : null}
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

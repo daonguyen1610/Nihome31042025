@@ -1,5 +1,6 @@
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -32,7 +33,13 @@ public interface ITenderService
 
     Task<TenderResponse?> UpdateAsync(int id, UpdateTenderRequest request, int callerUserId, CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, CancellationToken ct = default);
+
+    Task<HardDeleteOperationResult?> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        CancellationToken ct = default);
 
     // ------------- NIH-97 Detail-page workflow -------------
 

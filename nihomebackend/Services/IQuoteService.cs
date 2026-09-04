@@ -1,6 +1,7 @@
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -50,7 +51,11 @@ public interface IQuoteService
     Task<QuoteResponse?> CancelAsync(int id, QuoteWorkflowRequest request, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
     Task<QuoteResponse?> ExtendValidityAsync(int id, ExtendQuoteValidityRequest request, int callerUserId, bool canApprove, CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
+    Task<HardDeleteOperationResult?> DeleteAsync(
+        int id, ConfirmDeletionRequest request, int callerUserId,
+        bool canManage, bool canSeeAll, CancellationToken ct = default);
 
     Task<QuoteVersionsResponse?> GetVersionsAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<byte[]?> ExportPdfAsync(int id, int callerUserId, bool canSeeAll, string languageCode, CancellationToken ct = default);

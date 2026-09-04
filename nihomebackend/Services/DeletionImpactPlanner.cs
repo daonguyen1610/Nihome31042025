@@ -5,11 +5,47 @@ using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
 internal static class DeletionImpactPlanner
 {
+    internal static void ApplyDurableFileEvidence(
+        DeletionImpactResponse impact,
+        IReadOnlyCollection<string> identities,
+        IReadOnlyCollection<string> blockers,
+        IReadOnlyCollection<HardDeleteItemDefinition> definitions)
+    {
+        impact.Items.RemoveAll(item => item.Key is "design.filesPendingCleanup" or
+            "operations.pendingDocuments" or "operations.driveFolders");
+        var deleteCount = definitions.Count(item => item.Kind != HardDeleteItemKind.DatabaseAggregate);
+        if (deleteCount > 0)
+            impact.Items.Add(new DeletionImpactItemResponse
+            {
+                Key = "hardDelete.managedExternalItems",
+                Action = DeletionImpactActions.Delete,
+                Count = deleteCount,
+                Examples = definitions.Select(item => item.ActionIdentifier).Take(3).ToList(),
+            });
+        if (blockers.Count > 0)
+            impact.Items.Add(new DeletionImpactItemResponse
+            {
+                Key = impact.ResourceType == EntityTypes.DesignProject
+                    ? "design.filesPendingCleanup"
+                    : "operations.pendingDocuments",
+                Action = DeletionImpactActions.Block,
+                Count = blockers.Count,
+                Examples = blockers.Take(3).ToList(),
+            });
+        impact.Items = impact.Items.OrderBy(item => item.Key, StringComparer.Ordinal).ToList();
+        impact.CanDelete = impact.Items.All(item => item.Action != DeletionImpactActions.Block);
+        impact.TotalAffected = 1 + impact.Items.Sum(item => item.Count);
+        var source = string.Join('|', identities.OrderBy(item => item, StringComparer.Ordinal));
+        impact.PlanToken = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"{impact.PlanToken}:{source}"))).ToLowerInvariant();
+    }
+
     public static async Task<DeletionImpactResponse?> ForDesignProjectAsync(
         AppDbContext db, int projectId, CancellationToken ct)
     {
@@ -331,7 +367,7 @@ internal static class DeletionImpactPlanner
             .Where(item => item.OperationalProjectId == projectId && item.DriveFolderId != null)
             .Select(item => new { item.Id, item.DriveFolderId })
             .ToListAsync(ct);
-        AddRaw(items, "operations.surveyDriveFolders", DeletionImpactActions.Unlink,
+        AddRaw(items, "operations.surveyDriveFolders", DeletionImpactActions.Block,
             surveyFolders.Select(item => $"{item.Id}:{item.DriveFolderId}"),
             surveyFolders.Select(item => item.DriveFolderId!));
         await AddTranslationsAsync(items, db, EntityTypes.Survey,
