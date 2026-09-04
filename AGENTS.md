@@ -1,471 +1,261 @@
 # AGENTS.md
 
-## Project Context
+## Project context
 
-This is a React + ASP.NET Core 8 project running with Docker Compose.
+This repository contains a React frontend and an ASP.NET Core 8 backend developed and tested with Docker Compose. Work as a careful senior software engineer: understand existing behavior, make the smallest safe change, and leave the repository verifiable.
 
-The assistant should behave like a careful senior software engineer working inside this repository.
+## Instruction precedence
 
----
+Follow instructions in this order:
 
-## Critical Instructions
+1. System and platform instructions.
+2. User instructions for the current task.
+3. This file and repository documentation.
+4. Existing code conventions and local defaults.
 
-You MUST follow ALL sections in this file.
+When repository instructions conflict, use the more specific and recent instruction, document the conflict, and ask the user when the choice could affect business behavior or data.
 
-Do NOT skip any rule even if it is not explicitly mentioned in the prompt.
+## Working principles
 
----
+- Read relevant nearby code, tests, migrations, and documentation before editing.
+- Prefer small, focused, reversible changes.
+- Preserve existing behavior and public contracts unless the task requires a change.
+- Reuse existing services, validators, components, and patterns. Search first, especially in 'src/lib/', 'Services/', and shared frontend utilities.
+- Do not refactor unrelated code, add dependencies without justification, or invent requirements, APIs, translations, or business rules.
+- Record meaningful trade-offs, assumptions, blocked checks, and residual risks.
 
-## Core Rules
+## Task lifecycle
 
-* Think before editing.
-* Prefer small, safe, surgical changes.
-* Do not refactor unrelated code.
-* Do not introduce new dependencies unless necessary.
-* Follow existing project structure and conventions.
-* Preserve existing behavior unless explicitly requested.
-* Read nearby code before modifying.
-* Do not invent requirements or APIs.
+For every non-trivial task:
 
----
+1. Inspect repository state and identify affected code, data, documentation, and test layers.
+2. Clarify acceptance criteria and affected API or data contracts.
+3. Implement the smallest complete change.
+4. Add or update tests at the lowest appropriate test layer.
+5. Run relevant checks and investigate failures to distinguish a bad test from a product defect.
+6. Review the final diff for scope, security, compatibility, and accidental changes.
+7. Update documentation and seed data when required.
+8. Commit the completed change using the Git rules below.
 
-## Business Validation Skill Routing
+Do not declare work complete when required validation is skipped. If a check cannot run, state why and identify the risk.
 
-For non-trivial features and business-rule changes, use the repository skills in this order after implementation:
+## Business validation
 
-1. `.github/skills/senior-business-analyst/SKILL.md` — validate business intent, actors, rules, lifecycle, contracts, and requirement-to-test traceability.
-2. `.github/skills/business-functional-qa/SKILL.md` — design and execute risk-based functional validation from the approved business contract and BA handoff.
+For non-trivial features and business-rule changes, use these skills after implementation, in order:
 
-Use both skills before declaring a feature business-ready. The BA review approves the business contract as the QA test basis; the QA review proves release readiness with evidence at the correct test layer. Agents without native skill discovery must read and follow these files directly.
+1. '.github/skills/senior-business-analyst/SKILL.md' — validate actors, intent, rules, lifecycle, contracts, and requirement-to-test traceability.
+2. '.github/skills/business-functional-qa/SKILL.md' — design and execute risk-based functional validation from the approved business contract.
 
-Use a separate agent or clean review context for BA and QA validation when available. If the same agent must validate its implementation, treat the implementation summary as untrusted, re-read source evidence, and record that independence limitation as a risk. Report ambiguities, missing evidence, defects, blocked checks, and residual risks explicitly. Only the product or business owner may accept requirement risk; only fix findings when the user requests remediation, then rerun the affected validation.
+Use both before declaring a feature business-ready. Use a separate agent or clean review context when available. If the same agent validates its implementation, reread source evidence and record the independence limitation.
 
----
+Report ambiguity, missing evidence, defects, blocked checks, and residual risk. Only the product or business owner may accept requirement risk. Fix findings only when requested, then rerun affected validation.
 
-## Fast Delivery Rules
+## Branching and repository safety
 
-* Optimize for speed but keep changes safe.
-* Prefer simple working solutions.
-* Avoid over-engineering.
-* Reuse existing code whenever possible.
-* If trade-offs are made, clearly state them.
+- Start on a task branch unless the user requests the current branch or the change is a small documentation-only update.
+- Branch from the designated default branch, normally 'main', unless instructed otherwise.
+- Check for uncommitted changes before switching branches. Never overwrite, reset, stash, or discard user changes without explicit approval.
+- Do not rewrite history, force-push, squash, or amend another commit unless explicitly requested.
+- Never commit secrets, credentials, private keys, tokens, local environment files, or sensitive production data. Stop and report the issue if discovered.
 
----
+## Frontend and backend integration
 
-## Git Branching
+- Keep frontend behavior, backend behavior, DTOs, validation, and API contracts aligned. Update both sides when a contract changes.
+- Handle loading, error, empty, success, and responsive states where applicable.
+- Do not hardcode business data such as categories in React; fetch it from the backend API or an approved shared configuration source.
+- Do not hardcode 'localhost' or deployment-specific media/API hosts. Store backend media as host-relative paths such as '/images/example.png', resolved through a shared helper.
+- Follow 'nihomeweb/CLAUDE.md' for web UI conventions when it exists.
+- Centralize content translations in '/admin/translations'. Add i18n keys rather than embedding display text.
+- Keep translation keys and seeded content aligned in all supported languages.
+- For entities with fields such as 'NameVi', 'Name', 'NameZh', and 'NameJa', populate every required language field on every write path: create, seed, migration, and legacy-data auto-create. Do not rely on read-time fallback.
 
-* Always create a new branch before starting a task unless already on a task branch or instructed otherwise.
-* Small documentation or instruction-only changes may stay on the current branch when the user requests a quick update.
-* Branch from `main` unless instructed otherwise.
-* Do not switch branches if there are uncommitted user changes that could be disrupted; ask first.
+## Validation rules
 
----
+Every user-writable field needs explicit rules for presence, format, length, range, normalization, and cross-field relationships as applicable.
 
-## Code Quality Rules
+- Validate in the frontend for feedback and on the server for protection. Frontend-only validation is insufficient.
+- Validate format, not only presence. A non-empty phone number or email address is not necessarily usable.
+- Do not assume '[EmailAddress]' or '[Phone]' enforces the required project format.
+- Reuse the shared validators in 'nihomebackend/Services/ContactValidation.cs' and 'nihomeweb/src/lib/validation.ts'; do not add a parallel regex.
+- User-facing validation messages must identify the field, explain the rule, and include an accepted example when useful. Add frontend messages as i18n keys.
+- Keep fixtures and seed data valid. Do not weaken validation merely to make invalid fixtures pass.
 
-* Keep code readable and maintainable.
-* Use meaningful naming.
-* Keep methods small and focused.
-* Avoid duplicate logic.
-* Before adding a new helper/utility (URL resolution, localized-name selection, formatting, etc.), search the codebase (`src/lib/`, `Services/`) for an existing one that already does the job and reuse or extend it instead of writing a parallel implementation.
-* Avoid deep nesting.
-* Remove unused code.
+Before finishing a form or write endpoint, identify each field's invalid-value rule and the server location that enforces it.
 
----
+## Hard-delete policy
 
-## Clean Code Rules
+Hard delete is a business operation, not a direct 'DbSet.Remove' call. Every user-facing root delete must follow 'docs/hard-delete-convention.md'.
 
-* Follow SOLID principles where practical.
-* Keep business logic out of controllers.
-* Use clear and explicit logic.
-* Handle edge cases properly.
-* Avoid magic values.
+- Add an authorized 'GET .../{id}/deletion-impact' endpoint. Classify every dependent group as 'Delete', 'Unlink', or 'Block', including files and external bindings.
+- Require a typed resource code and deterministic plan token in the 'DELETE' body. Recompute the plan inside the delete transaction and return '409 Conflict' if it changed.
+- Enforce authorization, confirmation, concurrency, and blockers on the server.
+- Execute aggregate database changes in one transaction: delete owned records, unlink independent records, and preserve unrelated roots.
+- Never silently orphan or destroy files. Use existing document services for cleanup, block while cleanup is pending, and disclose external folders that are unlinked but preserved.
+- Use the shared frontend deletion-impact dialog. Do not use 'window.confirm' or client-side loops to delete an aggregate graph.
+- Seed dependency labels and messages in Vietnamese, English, Chinese, and Japanese.
+- Integration tests must cover authorization, counts/actions, confirmation, blockers, stale plans, concurrency, cleanup/unlinking, and unchanged state after rejection.
+- Seeded and demo roots follow the same contract as user-created data.
 
----
+## ASP.NET Core and data access
 
-## Design Pattern Rules
+- Keep controllers thin; put business logic in services and use dependency injection.
+- Use DTOs at API boundaries rather than exposing persistence entities.
+- Use 'async'/'await' for I/O and cancellation tokens where supported.
+- Do not change schema without an EF Core migration.
+- Avoid N+1 queries. Use 'AsNoTracking()' for read-only queries when tracking is unnecessary.
+- Review migration files for correctness, data safety, rollback implications, and environment compatibility before applying them.
+- Do not run 'dotnet', EF, or database commands directly on the host when the backend container is available.
 
-* Use patterns only when necessary.
-* Prefer patterns already used in the project.
-* Avoid adding unnecessary abstraction layers.
+## Docker and EF commands
 
----
-
-## React + ASP.NET Rules
-
-* Keep frontend and backend aligned.
-* Do not break API contracts.
-* Update frontend if backend changes.
-* Handle loading, error, and empty states.
-* Update the translation and content keys in the ASP .NET DbSeeder aligned with frontend.
-* Check `npm run lint` and fix the issues.
-* No hardcode like the category in the React. All need to fetch from the backend API to avoid the hardcode.
-* Do not hardcode frontend media/backend hosts such as localhost. Backend-served media must be stored as host-relative paths like `/images/...`; frontend helpers may resolve those paths against the current API origin.
-* Entities with per-language fields (e.g. `NameVi`/`Name`/`NameZh`/`NameJa`) must have every language field populated on every write path — create, auto-create-from-legacy-data, seed, and migration. Do not rely on read-time fallback to compensate for missing writes.
-* Follow the nihomeweb/CLAUDE.md for strictly developing the web UI application.
-**The content translations must be to updated in Content Translations**
-- Must be centralized the content translations in the `/admin/translations` endpoint.
-
----
-
-## Input Validation Rules
-
-A field that accepts anything is a field that will be filled with anything. Every
-user-writable field needs its rules decided once and enforced on both sides.
-
-**The check to perform before finishing any form or write endpoint:** for each
-field the user can type into, name the rule that rejects a bad value, and point
-at where it runs on the server. If either answer is missing, the field is not
-done.
-
-* **Validate on both layers.** The frontend tells the user before the request
-  leaves; the server is what actually protects the data, because the API can be
-  called directly. Frontend-only validation is not validation.
-* **Format, not just presence.** "Has a value" and "has a usable value" are
-  different rules. Requiring one of phone or email says nothing about whether
-  either can be dialled or delivered to.
-* **Do not trust `[EmailAddress]` or `[Phone]` to mean what they say.**
-  `[EmailAddress]` accepts `345@434`; `[Phone]` is looser still. Where the shape
-  matters, write the rule explicitly.
-* **Reuse the shared validators; do not write a fourth regex.** Contact rules
-  live in `nihomebackend/Services/ContactValidation.cs` and its mirror
-  `nihomeweb/src/lib/validation.ts`. Extend those when the rule changes, and keep
-  the two in step — the comment at the top of each says so.
-* **Validation messages are user-facing.** Write them in Vietnamese, name the
-  offending field, and show an example of an accepted value. Add the frontend
-  copy as an i18n key in all four languages, like any other display string.
-* **Test data has to satisfy the rules.** A fixture that generates
-  `"0911" + Guid` is producing letters where digits belong. When a validator
-  turns fixtures red, fix the fixtures — that red is the validator working.
-
-## Hard Delete Rules
-
-Hard delete is a business operation, not a direct `DbSet.Remove` call. Every
-user-facing root delete must use the shared preview-and-confirm contract
-described in `docs/hard-delete-convention.md`.
-
-* Provide an authorized `GET .../{id}/deletion-impact` endpoint before the
-  delete endpoint. Classify every dependent group as `Delete`, `Unlink`, or
-  `Block`, including files and external-system bindings.
-* Require a typed resource code and the preview's deterministic plan token in
-  the DELETE body. Recompute the plan inside the delete transaction and return
-  `409 Conflict` when it changed.
-* Enforce authorization, confirmation, concurrency, and blockers on the server.
-  Hiding a button or disabling a dialog is not protection.
-* Execute aggregate database changes in one transaction. Delete aggregate-owned
-  records, unlink independent business records, and preserve unrelated roots.
-* Never silently orphan or destroy files. Stage managed-file cleanup through
-  the existing document services; block while cleanup is pending. Explicitly
-  disclose external folders that will only be unlinked and preserved.
-* Use the shared frontend deletion-impact dialog. Do not use `window.confirm`,
-  generic confirmation text, or parallel client-side loops to delete an
-  aggregate graph.
-* Seed every user-visible dependency label and message in all four languages:
-  Vietnamese, English, Chinese, and Japanese.
-* Integration tests must prove preview authorization, dependency counts and
-  actions, invalid/missing confirmation, blockers, stale plans/concurrency,
-  successful cleanup/unlinking, and unchanged state after rejected requests.
-* Seeded and demo roots follow the same hard-delete contract as user-created
-  data. Do not add undeletable seed-only guards.
-
----
-
-## Docker Development
-
-* This project runs in Docker. Do not run `dotnet` or database commands directly on the host.
-* Use `docker exec nihome31042025-backend <command>` for backend tasks.
-* Run migrations inside the container: `docker exec nihome31042025-backend dotnet ef migrations add <Name>`
-
----
-
-## ASP.NET Core Rules
-
-* Keep controllers thin.
-* Put logic in services.
-* Use dependency injection.
-* Use DTOs instead of entities.
-* Use async/await for I/O.
-
----
-
-## Entity Framework Rules
-
-* Do not change schema without migrations.
-* Use EF Core migrations for all changes.
-* Avoid N+1 queries.
-* Use AsNoTracking for read operations.
-
----
-
-## EF Migration Rules
-
-### Create Migration
+Confirm the actual container with 'docker compose ps'; the name may differ from this example.
 
 ```bash
-dotnet ef migrations add <Name>
+docker compose ps
+docker exec <backend-container> dotnet build
+docker exec <backend-container> dotnet ef migrations add <Name>
+docker exec <backend-container> dotnet ef database update
+docker exec <backend-container> dotnet ef migrations remove
+docker exec <backend-container> dotnet ef migrations script
 ```
 
-### Apply Migration
+Always inspect generated migrations before applying them.
+
+## Test strategy
+
+Choose the lowest test layer that can prove the behavior. Do not duplicate the same assertion at every layer.
+
+- Unit tests ('nihomebackend.tests'): isolated services, validation, branching, JSON handling, cache invalidation, and file-resolution helpers. Use InMemory EF and Moq where appropriate; no HTTP or Docker.
+- Integration tests ('nihomebackend.integration.tests'): the real ASP.NET pipeline through 'WebApplicationFactory', including middleware, auth, model binding, EF persistence, API contracts, CRUD, validation, and authorization.
+- E2E tests ('nihomeweb/e2e/smoke'): narrow real-browser rendering, SPA mounting, JavaScript errors, route rendering, and deployed-stack wiring such as CORS and health checks. API-only behavior belongs in integration tests.
+
+Use this rule: pure logic → unit; HTTP/auth/persistence contract → integration; browser or deployed-stack behavior → E2E. Tests must detect defects, not merely reproduce the implementation. Find the root cause before changing a failing test or product code.
+
+## Documentation and quality checks
+
+- Update 'docs/' when behavior, configuration, API contracts, workflows, or operations change.
+- Update seed/demo data when needed to demonstrate normal, empty, error, and edge states.
+- Keep manual API examples accurate and environment-appropriate.
+- Run checks relevant to the changed area.
+
+Backend:
 
 ```bash
-dotnet ef database update
+docker exec <backend-container> dotnet build
+docker exec <backend-container> dotnet format --verify-no-changes
+docker exec <backend-container> dotnet test nihomebackend.tests/nihomebackend.tests.csproj
+docker exec <backend-container> dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
 ```
 
-### Remove Migration
+Frontend:
 
 ```bash
-dotnet ef migrations remove
+cd nihomeweb
+npm run lint
+npm run build
 ```
 
-### Generate Script
-
-```bash
-dotnet ef migrations script
-```
-
-Always review migration files before applying.
-
----
-
-## ASP.NET Testing Rules
-
-* When develop the feature, please cover the test cases properly in `nihomebackend.tests`
-* Ensure the linter with `dotnet format`
-* Ensure the test cases cover the feature, and follow the design pattern
-
----
-
-## Test Layering — avoid duplication across layers
-
-Each test layer has a clear, non-overlapping responsibility. Do not duplicate
-coverage between layers — pick the lowest layer that can prove the behavior.
-
-### Unit tests — `nihomebackend.tests`
-
-* Service-level logic in isolation: validation, branching, JSON shape handling,
-  cache invalidation, file-resolution helpers, etc.
-* Use InMemory EF and Moq. No HTTP, no docker.
-* This is where edge cases and validation matrices live.
-
-### Integration tests — `nihomebackend.integration.tests`
-
-* Boots the real ASP.NET pipeline via `WebApplicationFactory` (controllers,
-  middleware, auth, model binding, EF).
-* Owns **all** API behavior: CRUD round-trips, auth/role enforcement,
-  validation 400s, contract shape, error paths.
-* Fast (seconds), runs on every PR, no docker required.
-
-### E2E tests — `nihomeweb/e2e/smoke` (Playwright)
-
-* Scope is intentionally narrow: only what integration tests structurally
-  cannot cover.
-  * Real-browser rendering: SPA mounts, no JS errors, public routes resolve,
-    detail pages render with seeded data.
-  * Deployment-only contracts against the live `docker compose` stack:
-    CORS preflight, brute-force tolerance, health endpoint, etc.
-* **Do not** add API-only specs here (CRUD round-trips, auth checks,
-  validation 400s). If the assertion can be made with `HttpClient` against
-  `WebApplicationFactory`, it belongs in `nihomebackend.integration.tests`.
-* Single Playwright project, single CI job, runs on every PR + push to main.
-
-### Rule of thumb when adding a test
-
-1. Pure logic / a service method? → unit test.
-2. HTTP contract, validation, auth, persistence round-trip? → integration test.
-3. Does the user need to actually see a page render, or does the deployed
-   stack need to wire up correctly? → E2E.
-
-If a behavior is already proven at a lower layer, do not re-assert it at a
-higher layer.
-
-## Documentation
-
-* When maturing the features, please update the documentation in `docs/`
-
-### Manual API Test
-
-Example:
-
-```bash
-curl -X GET http://localhost:5000/api/resource
-```
-
----
-
-## Quality Check
-
-* Test manual with playwright in the integrated browser. Ensure all the changes match with the test.
-* Ensure the quality of code: Clean code, no hardcode, reusable functions.
-* Ensure all test passed: unittest, integration test, E2E test.
-* Ensure no breaking changes the UI, the UI must be cleaned, easy to use for the users.
-* Ensure the UI must be clean in every responsive. For example: Scale to mobile, tablet we should use cardview to show, ensure the spacings between the components.
-* Ensure write the tests to cover all scenarios.
-* Ensure the Seeder mock the data to showcase the functionalities.
-
-### Backend
-
-```bash
-docker exec nihome31042025-backend dotnet build
-docker exec nihome31042025-backend dotnet format --verify-no-changes
-docker exec nihome31042025-backend dotnet test nihomebackend.tests/nihomebackend.tests.csproj
-dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
-```
-
-### Frontend
-
-```bash
-cd nihomeweb && npm run lint && npm run build
-```
-
-### E2E (browser + deployment smoke)
-
-Requires the full stack to be running locally:
+E2E, when required:
 
 ```bash
 docker compose up -d --build
-cd nihomeweb && BASE_URL=http://localhost:5043 npx playwright test
+cd nihomeweb
+BASE_URL=http://localhost:5043 npx playwright test
 ```
 
-### Docker
+Verify affected screens at mobile and tablet widths, including spacing, readable states, and regression-free navigation.
+
+## Git commit policy
+
+Commit every completed feature or bug fix. Keep commits focused and include only files related to the current task.
+
+Before committing:
 
 ```bash
-docker compose up --build
+git status --short
+git diff
+git diff --cached
 ```
 
----
+Run relevant checks first. Stage explicit paths:
 
-## Final Response Format
+```bash
+git add path/to/file1 path/to/file2
+```
 
-Every response MUST include:
+Never use 'git add -A', 'git add .', or 'git commit -a' blindly. Do not stage unrelated edits, generated files, secrets, credentials, local configuration, or temporary files. Preserve unrelated user changes and stage only the required files or hunks.
 
-## Summary
+Review exactly what will be committed:
 
-## Files Changed
+```bash
+git diff --cached --check
+git diff --cached
+```
 
-## Quality Check
+### Commit-message requirements
 
-## Assumptions / Risks
+Follow the 50/72 rule:
 
----
+- Subject: imperative, specific, and preferably 50 characters or fewer.
+- Body: wrap lines at 72 characters or fewer.
+- Separate subject and body with one blank line.
+- Do not end the subject with a period.
+- Do not use vague messages such as 'Update code', 'Fix issue', or 'Changes'.
+- Do not create a title-only commit. Explain why the change was needed and what behavior it provides.
+- Describe the feature or problem solved, not a list of edited files.
 
-## Response Style
+For a feature, list all meaningful delivered functionalities:
 
-* Be clear and concise
-* Focus on practical solutions
-* Highlight risks when needed
+```text
+Add invoice payment workflow
 
-## Git Commit Rules
+Add invoice creation, payment processing, and status tracking.
+Validate payment requests and return clear errors for invalid invoices.
+Cover the workflow with unit and integration tests.
+```
 
-These rules apply whenever a feature, bug fix, refactor, or other change is
-complete and ready to be recorded in Git.
+For a bug fix, state the root cause and solution:
 
-### Before committing
+```text
+Fix duplicate payment notifications
 
-1. Inspect the working tree and review the diff:
+The retry handler republished notifications because it did not record the
+event before retrying. Persist the event key and make notification handling
+idempotent so retries produce one notification. Add regression coverage.
+```
 
-   ```bash
-   git status --short
-   git diff
-   git diff --cached
-   ```
-
-2. Run the relevant tests, linters, formatters, and build checks for the
-   change. Do not commit when required checks are failing unless the user
-   explicitly asks to commit the failing state.
-
-3. Stage only files that belong to the current change. Use explicit paths:
-
-   ```bash
-   git add path/to/file1 path/to/file2
-   ```
-
-   Never use `git add -A`, `git add .`, or `git commit -a` blindly. Do not
-   include unrelated edits, generated files, secrets, credentials, local
-   configuration, or temporary files.
-
-4. Review the staged patch before committing:
-
-   ```bash
-   git diff --cached --check
-   git diff --cached
-   ```
-
-5. If unrelated changes are already present, preserve them and commit only
-   the files and hunks required for the current task.
-
-### Commit messages
-
-1. Follow the 50/72 rule:
-
-   - Keep the subject line at 50 characters or fewer when practical.
-   - Wrap body lines at 72 characters or fewer.
-   - Use imperative mood: `Add`, `Fix`, `Update`, `Remove`, or `Refactor`.
-   - Do not end the subject line with a period.
-
-2. Do not write a title-only commit. Every commit must include a body that
-   explains the purpose and behavior of the change.
-
-3. Keep the message simple and describe the feature or problem being solved,
-   not the mechanics of the Git diff.
-
-4. Use this structure:
-
-   ```text
-   <imperative summary, 50 characters or fewer>
-
-   <why the change was needed and what behavior it provides>
-   <relevant validation or important implementation constraint>
-   ```
-
-5. For a feature, list the user-visible functionalities delivered:
-
-   ```text
-   Add invoice payment workflow
-
-   Add invoice creation, payment processing, and payment-status tracking.
-   Validate payment requests and return clear errors for invalid invoices.
-   Cover the workflow with unit and integration tests.
-   ```
-
-6. For a bug fix, state both the root cause and the solution:
-
-   ```text
-   Fix duplicate payment notifications
-
-   The retry handler published the same notification more than once because
-   it did not record the event before retrying. Persist the event key and
-   make notification handling idempotent so retries produce one notification.
-   Add regression coverage for repeated delivery.
-   ```
-
-7. Do not include vague messages such as `Update code`, `Fix issue`, or
-   `Changes`.
-
-### Creating the commit
-
-Use an explicit commit command with the prepared message:
+Create the commit explicitly:
 
 ```bash
 git commit -m "<subject>" -m "<body>"
 ```
 
-After committing, verify the result:
+After committing:
 
 ```bash
 git show --stat --oneline HEAD
 git status --short
 ```
 
-The final status should contain no unintended staged or committed files.
-Report the commit hash, summary, validation performed, and any remaining
-working-tree changes.
+Report the commit hash, summary, validation performed, and any remaining working-tree changes. Do not amend, reset, squash, or discard existing work unless explicitly requested.
 
-### Commit scope
+## Final response
 
-- Prefer one focused commit per feature or bug fix.
-- Keep unrelated refactors, formatting-only changes, dependency upgrades, and
-  cleanup in separate commits unless they are required for the current work.
-- Do not rewrite, squash, reset, or discard existing commits or user changes
-  unless explicitly requested.
-- Never commit secrets or sensitive values. If a secret is found, stop and
-  report it instead of staging it.
+Keep the response concise and include:
+
+### Summary
+
+What was implemented or diagnosed.
+
+### Files changed
+
+Relevant files and the purpose of each change.
+
+### Quality checks
+
+Checks run, plus failures or skipped checks and their reasons.
+
+### Assumptions and risks
+
+Unresolved ambiguity, compatibility concerns, migration risk, or required follow-up.
+
