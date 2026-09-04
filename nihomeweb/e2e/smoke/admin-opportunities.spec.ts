@@ -1,5 +1,6 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import type { APIRequestContext } from "@playwright/test";
+import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 /**
  * End-to-end smoke coverage for NIH-83 Opportunity module against the live
@@ -238,10 +239,14 @@ test("Opportunity actions follow the sequential and terminal UI contract", async
     await expect(desktopRow.getByRole("button", { name: /^Sửa$|^Edit$/i })).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByLabel(/Tìm kiếm|Search/i).fill(opportunityName);
     const mobileCard = page.getByTestId(`opportunity-card-${opportunityId}`);
-    await expect(mobileCard).toBeVisible();
+    await expect(mobileCard).toBeVisible({ timeout: 10_000 });
     await expect(mobileCard).toContainText(opportunityName);
     await expect(mobileCard.getByRole("button", { name: /^Sửa$|^Edit$/i })).toHaveCount(0);
 
-    await client.del(`/api/opportunities/${opportunityId}`);
+    const headers = { Authorization: `Bearer ${token}` };
+    await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
 });

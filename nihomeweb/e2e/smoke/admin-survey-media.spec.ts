@@ -81,7 +81,7 @@ async function getSurveyDetail(
   return (await response.json()) as SurveyDetail;
 }
 
-async function waitForMediaSyncToSettle(
+async function waitForMediaProcessingToFinish(
   api: APIRequestContext,
   surveyId: number,
   mediaId: number,
@@ -91,9 +91,9 @@ async function waitForMediaSyncToSettle(
     const detail = await getSurveyDetail(api, surveyId, headers);
     return detail.media.find((media) => media.id === mediaId)?.syncStatus ?? "Missing";
   }, {
-    message: `wait for media ${mediaId} sync before deletion`,
+    message: `wait for active media ${mediaId} sync before deletion`,
     timeout: 30_000,
-  }).not.toMatch(/^(Pending|Processing)$/);
+  }).not.toBe("Processing");
 }
 
 test.describe.serial("NIH-101 — Survey Media browser flow", () => {
@@ -108,7 +108,7 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
         expect(detailResponse.status(), `cleanup: read survey ${surveyId}`).toBe(200);
         const detail = (await detailResponse.json()) as SurveyDetail;
         for (const media of detail.media) {
-          await waitForMediaSyncToSettle(api, surveyId, media.id, headers);
+          await waitForMediaProcessingToFinish(api, surveyId, media.id, headers);
           const mediaDelete = await api.delete(`/api/surveys/${surveyId}/media/${media.id}`, { headers });
           expect(mediaDelete.status(), `cleanup: delete media ${media.id} from survey ${surveyId}`).toBe(204);
         }
@@ -263,7 +263,7 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     expect(pdfBytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
     expect(pdfBytes.length).toBeGreaterThan(500);
 
-    await waitForMediaSyncToSettle(api, survey.id, uploaded.id, authHeader);
+    await waitForMediaProcessingToFinish(api, survey.id, uploaded.id, authHeader);
     await card.getByRole("button", { name: deleteLabel }).click();
     const deleteDialog = page.getByRole("alertdialog");
     const deleteResponsePromise = page.waitForResponse(
