@@ -390,7 +390,7 @@ public class DesignProjectServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_BeyondConcept_DeletesAggregateAndStagesManagedFiles()
+    public async Task DeleteAsync_BeyondConceptAfterManagedFileCleanup_DeletesAggregate()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
         var operationalProject = new OperationalProject
@@ -549,11 +549,15 @@ public class DesignProjectServiceTests : IDisposable
                 nameof(HandoverRecord), "documents", handover.Id,
                 "/files/business-documents/handover/aggregate.pdf"));
         await _db.SaveChangesAsync();
-        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
-                It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
-                It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+
+        basicDoc.FilePath = null;
+        shopDrawing.FilePath = null;
+        permit.SubmittedFilePath = null;
+        permit.IssuedFilePath = null;
+        acceptance.Documents = "[]";
+        asBuilt.FileUrl = null;
+        handover.Documents = "[]";
+        await _db.SaveChangesAsync();
 
         var impact = await _sut.GetDeletionImpactAsync(created.Id);
         var removed = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
