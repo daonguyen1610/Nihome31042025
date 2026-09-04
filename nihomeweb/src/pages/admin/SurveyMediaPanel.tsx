@@ -85,6 +85,7 @@ type Props = {
   canManage: boolean;
   onRefresh: () => Promise<void>;
   formatDateTime: (value?: string | null) => string;
+  targetMediaId?: number | null;
 };
 
 type UploadDraft = {
@@ -141,7 +142,7 @@ function SurveyMediaThumbnail({ surveyId, media }: { surveyId: number; media: Su
   );
 }
 
-export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatDateTime }: Props) {
+export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatDateTime, targetMediaId }: Props) {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,6 +159,7 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
   const [checklistSavingId, setChecklistSavingId] = useState<number | null>(null);
   const [checklistDrafts, setChecklistDrafts] = useState<Record<number, SurveyChecklistResultResponse>>({});
   const [exporting, setExporting] = useState(false);
+  const [highlightedMediaId, setHighlightedMediaId] = useState<number | null>(null);
 
   const hasActiveSync = survey.media.some((media) => ACTIVE_SYNC_STATUSES.has(media.syncStatus));
 
@@ -189,6 +191,22 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
     const timer = window.setInterval(() => void onRefresh(), 10_000);
     return () => window.clearInterval(timer);
   }, [hasActiveSync, onRefresh]);
+
+  useEffect(() => {
+    if (targetMediaId == null) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`survey-media-${targetMediaId}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      setHighlightedMediaId(targetMediaId);
+    });
+    const timer = window.setTimeout(() => setHighlightedMediaId(null), 2_500);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [targetMediaId]);
 
   const totalSize = useMemo(
     () => survey.media.reduce((total, media) => total + media.size, 0),
@@ -459,7 +477,16 @@ export default function SurveyMediaPanel({ survey, canManage, onRefresh, formatD
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {survey.media.map((media) => (
-              <article key={media.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white" data-testid="survey-media-card">
+              <article
+                key={media.id}
+                id={`survey-media-${media.id}`}
+                className={cn(
+                  "overflow-hidden rounded-lg border border-slate-200 bg-white transition-shadow duration-300",
+                  highlightedMediaId === media.id && "ring-2 ring-sky-500 ring-offset-2",
+                )}
+                data-testid="survey-media-card"
+                data-highlighted={highlightedMediaId === media.id ? "true" : undefined}
+              >
                 <div className="flex h-36 items-center justify-center bg-slate-100 text-slate-400">
                   <SurveyMediaThumbnail surveyId={survey.id} media={media} />
                 </div>

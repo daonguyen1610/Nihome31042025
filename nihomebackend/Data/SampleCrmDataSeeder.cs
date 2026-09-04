@@ -320,6 +320,9 @@ public static class SampleCrmDataSeeder
 
     private static void SeedOpportunities(AppDbContext db, ApplicationUser owner, DateTime now)
     {
+        var deletedOpportunityNames = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.Opportunity)
+            .Select(item => item.ResourceKey).ToHashSet();
         var sampleCustomers = db.Customers
             .Where(c => c.Name.StartsWith(SampleTag))
             .OrderBy(c => c.Id)
@@ -339,6 +342,7 @@ public static class SampleCrmDataSeeder
         for (var i = 0; i < samples.Length; i++)
         {
             var (name, value, probability, stage, closeDays) = samples[i];
+            if (deletedOpportunityNames.Contains(name)) continue;
             var existing = db.Opportunities.OrderBy(o => o.Id).FirstOrDefault(o => o.Name == name);
             if (existing is not null)
             {
@@ -780,6 +784,9 @@ public static class SampleCrmDataSeeder
 
     private static void SeedContractHeaders(AppDbContext db, ApplicationUser owner, DateTime now)
     {
+        var deletedContractNumbers = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.Contract)
+            .Select(item => item.ResourceKey).ToHashSet();
         var sampleOpportunities = db.Opportunities
             .Where(o => o.Name.StartsWith(SampleTag))
             .OrderBy(o => o.Id)
@@ -816,6 +823,7 @@ public static class SampleCrmDataSeeder
             var startDate = signedDate?.AddDays(7);
             var endDate = startDate?.AddDays(durationDays);
             var number = $"HD-SAMPLE-{index + 1:D3}";
+            if (deletedContractNumbers.Contains(number)) continue;
             var sampleNote = $"{SampleContractMarker} {label}";
             if (db.Contracts.Any(contract => contract.ContractNumber == number
                 || contract.Note == sampleNote)) continue;
@@ -1128,6 +1136,9 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedCapabilityDocuments(AppDbContext db, ApplicationUser owner, DateTime now, string? webRootPath = null)
     {
+        var deletedCapabilityPaths = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.CapabilityDocument)
+            .Select(item => item.ResourceKey).ToHashSet();
         // Curated to cover every tag + every expiry-state band so the FE
         // filters have at least one row each to render.
         var seeds = new (string Name, string Tag, int? IssuedDaysAgo, int? ExpiryDaysFromNow, string File)[]
@@ -1155,6 +1166,8 @@ public static class SampleCrmDataSeeder
             var fileSizes = new Dictionary<string, long>();
             foreach (var (name, _, _, _, file) in seeds)
             {
+                var resourceKey = $"/files/capability/{file}";
+                if (deletedCapabilityPaths.Contains(resourceKey)) continue;
                 var fullPath = Path.Combine(storageDir, file);
                 if (!File.Exists(fullPath))
                 {
@@ -1180,6 +1193,11 @@ public static class SampleCrmDataSeeder
         foreach (var (name, tag, issuedDaysAgo, expiryDaysFromNow, file) in seeds)
         {
             var filePath = $"/files/capability/{file}";
+            if (deletedCapabilityPaths.Contains(filePath))
+            {
+                i++;
+                continue;
+            }
             if (db.CapabilityDocuments.Any(document => document.FilePath == filePath))
             {
                 i++;
@@ -1277,6 +1295,10 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedTenders(AppDbContext db, ApplicationUser owner, DateTime now)
     {
+        var deletedTenderCodes = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.Tender)
+            .Select(item => item.ResourceKey)
+            .ToHashSet();
         var customers = db.Customers.Where(c => c.Name.StartsWith(SampleTag))
             .OrderBy(c => c.Id).Take(5).ToList();
         if (customers.Count == 0) return;
@@ -1318,6 +1340,11 @@ public static class SampleCrmDataSeeder
             if (custIdx >= customers.Count) continue;
             var customer = customers[custIdx];
             var code = $"TD-SAMPLE-{i + 1:D3}";
+            if (deletedTenderCodes.Contains(code))
+            {
+                i++;
+                continue;
+            }
             var existingTender = db.Tenders.OrderBy(tender => tender.Id)
                 .FirstOrDefault(tender => tender.Code == code
                     || (tender.Note != null && tender.Note.StartsWith(SampleTenderMarker)
@@ -1432,6 +1459,9 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedSurveys(AppDbContext db, ApplicationUser owner, DateTime now)
     {
+        var deletedSurveyCodes = db.SeededRootDeletions
+            .Where(item => item.ResourceType == EntityTypes.Survey)
+            .Select(item => item.ResourceKey).ToHashSet();
         var sampleOpportunities = db.Opportunities
             .Where(o => o.Name.StartsWith(SampleTag))
             .OrderBy(o => o.Id)
@@ -1465,6 +1495,11 @@ public static class SampleCrmDataSeeder
         foreach (var (location, code, daysAgo, driveSync, driveError, linkProject, oppIdx) in seeds)
         {
             var surveyCode = $"SV-SAMPLE-{i + 1:D3}";
+            if (deletedSurveyCodes.Contains(surveyCode))
+            {
+                i++;
+                continue;
+            }
             if (db.Surveys.Any(survey => survey.Code == surveyCode
                 || (survey.Note != null && survey.Note.StartsWith(SampleSurveyMarker)
                     && survey.Location == location)))

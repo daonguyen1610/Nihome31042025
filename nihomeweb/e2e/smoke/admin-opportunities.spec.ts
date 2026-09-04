@@ -15,8 +15,25 @@ function authed(api: APIRequestContext, token: string) {
         post: (path: string, data: unknown) => api.post(path, { headers: auth, data }),
         put: (path: string, data: unknown) => api.put(path, { headers: auth, data }),
         patch: (path: string, data: unknown) => api.patch(path, { headers: auth, data }),
-        del: (path: string) => api.delete(path, { headers: auth }),
+        del: (path: string, data?: unknown) => api.delete(path, { headers: auth, data }),
     };
+}
+
+async function deleteOpportunity(api: APIRequestContext, token: string, opportunityId: number) {
+    const client = authed(api, token);
+    const [impactResponse, detailResponse] = await Promise.all([
+        client.get(`/api/opportunities/${opportunityId}/deletion-impact`),
+        client.get(`/api/opportunities/${opportunityId}`),
+    ]);
+    expect(impactResponse.status(), `preview opportunity ${opportunityId}`).toBe(200);
+    expect(detailResponse.status(), `read opportunity ${opportunityId}`).toBe(200);
+    const impact = await impactResponse.json() as { planToken: string; requiredConfirmation: string };
+    const detail = await detailResponse.json() as { rowVersion: string };
+    return client.del(`/api/opportunities/${opportunityId}`, {
+        planToken: impact.planToken,
+        confirmation: impact.requiredConfirmation,
+        rowVersion: detail.rowVersion,
+    });
 }
 
 async function createCustomer(api: APIRequestContext, token: string): Promise<number> {
@@ -76,12 +93,17 @@ test("SALE can CRUD only their own opportunities", async ({ api, loginAs }) => {
     expect(direct.status()).toBe(404);
 
     // DELETE 404 as well — regression guard for the CRM cross-owner leak fixed in NIH-78.
-    const del = await authed(api, saleToken).del(`/api/opportunities/${foreignOp}`);
+    const del = await authed(api, saleToken).del(`/api/opportunities/${foreignOp}`, {
+        planToken: "a".repeat(64),
+        confirmation: `OPPORTUNITY-${foreignOp}`,
+        rowVersion: "AAAAAAAAAAA=",
+    });
     expect(del.status()).toBe(404);
 
     // Manager still sees the row afterwards.
     const stillThere = await authed(api, managerToken).get(`/api/opportunities/${foreignOp}`);
     expect(stillThere.status()).toBe(200);
+    expect((await deleteOpportunity(api, managerToken, foreignOp)).status()).toBe(204);
 });
 
 test("Stage transition deployment smoke — next stage succeeds and Lost requires reason + note", async ({ api, loginAs }) => {
@@ -122,9 +144,9 @@ test("Stage transition deployment smoke — next stage succeeds and Lost require
     expect(skipped.status()).toBe(400);
 
     // Clean up.
-    await c.del(`/api/opportunities/${opA}`);
-    await c.del(`/api/opportunities/${opB}`);
-    await c.del(`/api/opportunities/${opC}`);
+    expect((await deleteOpportunity(api, token, opA)).status()).toBe(204);
+    expect((await deleteOpportunity(api, token, opB)).status()).toBe(204);
+    expect((await deleteOpportunity(api, token, opC)).status()).toBe(204);
 });
 
 test("Pipeline endpoint returns six columns with totals aggregated server-side", async ({ api, loginAs }) => {

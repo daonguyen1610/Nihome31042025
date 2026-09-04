@@ -6,20 +6,18 @@ import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { isOpportunityOverdue } from "@/lib/opportunityDates";
 import { PageLoading, PageError } from "@/components/PageState";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +40,7 @@ import {
   type AuditLogItem,
   type CreateOpportunityRequest,
   type CustomerResponse,
+  type DeletionImpactResponse,
   type MasterDataOption,
   type OpportunityActivityType,
   type OpportunityListParams,
@@ -260,6 +259,11 @@ const AdminOpportunities = () => {
 
   // ---------- detail + edit ----------
   const [detail, setDetail] = useState<OpportunityResponse | null>(null);
+  const [deletingOpportunity, setDeletingOpportunity] = useState<OpportunityResponse | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<UpdateOpportunityRequest | null>(null);
@@ -383,17 +387,48 @@ const AdminOpportunities = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t("opportunities.deleteConfirm"))) return;
+    const opportunity = detail?.id === id ? detail : rows.find((row) => row.id === id);
+    if (!opportunity) return;
+    setDeletingOpportunity(opportunity);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteOpportunity(id, detail?.id === id
-        ? detail.rowVersion
-        : rows.find((row) => row.id === id)?.rowVersion);
-      toast({ title: t("opportunities.deleted") });
-      if (detail?.id === id) closeDetail();
-      await fetchList();
+      const response = await adminApi.getOpportunityDeletionImpact(id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
     }
+  };
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!deletingOpportunity || !deleteImpact) return null;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteOpportunity(deletingOpportunity.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+        rowVersion: deletingOpportunity.rowVersion,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const completeDelete = async () => {
+    const deletedId = deletingOpportunity?.id;
+    setDeletingOpportunity(null);
+    setDeleteImpact(null);
+    toast({ title: t("opportunities.deleted") });
+    if (detail?.id === deletedId) closeDetail();
+    await fetchList();
   };
 
   const handleAddActivity = async () => {
@@ -441,30 +476,6 @@ const AdminOpportunities = () => {
       setChangingStage(false);
     }
   };
-
-  // ---------- bulk ----------
-  const visibleIds = useMemo(() => rows.map((r) => r.id), [rows]);
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds,
-    deleteOne: (id) => adminApi.deleteOpportunity(id, rows.find((row) => row.id === id)?.rowVersion),
-    onAfter: async ({ success }) => {
-      if (success > 0 && detail && selectedIds.has(detail.id)) closeDetail();
-      await fetchList();
-    },
-  });
-
-  useEffect(() => {
-    clearSelection();
-  }, [page, stageFilter, customerFilter, minValue, maxValue, search, clearSelection]);
 
   // ---------- render ----------
   return (
@@ -576,15 +587,6 @@ const AdminOpportunities = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              {canManage && (
-                <BulkActionBar
-                  selectedCount={selectedIds.size}
-                  bulkDeleting={bulkDeleting}
-                  onClear={clearSelection}
-                  onBulkDelete={() => void handleBulkDelete()}
-                />
-              )}
-
               {/* Mobile / tablet card view (<lg). Keeps the row-click-to-detail
                   affordance and inline edit/delete for parity with the table. */}
               <ul className="grid gap-3 lg:hidden">
@@ -598,16 +600,6 @@ const AdminOpportunities = () => {
                       onClick={() => void openDetail(o.id)}
                     >
                       <header className="flex items-start gap-2">
-                        {canManage && (
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              className="mt-1"
-                              checked={selectedIds.has(o.id)}
-                              onCheckedChange={(v) => toggleOne(o.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${o.name}`}
-                            />
-                          </div>
-                        )}
                         <div className="min-w-0 flex-1">
                           <h3 className="break-words text-sm font-semibold leading-tight">{o.name}</h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -688,15 +680,6 @@ const AdminOpportunities = () => {
                 <table className="min-w-[960px] w-full divide-y text-sm">
                   <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
-                      {canManage && (
-                        <th className="w-10 px-3 py-3 text-left">
-                          <Checkbox
-                            checked={allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false}
-                            onCheckedChange={(v) => toggleAllVisible(v === true)}
-                            aria-label={t("common.selectAll")}
-                          />
-                        </th>
-                      )}
                       <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.name")}</th>
                       <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("opportunities.field.customer")}</th>
                       <th className="whitespace-nowrap px-3 py-3 text-right font-medium">{t("opportunities.field.estimatedValue")}</th>
@@ -716,15 +699,6 @@ const AdminOpportunities = () => {
                         className="cursor-pointer hover:bg-muted/40"
                         onClick={() => void openDetail(o.id)}
                       >
-                        {canManage && (
-                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedIds.has(o.id)}
-                              onCheckedChange={(v) => toggleOne(o.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${o.name}`}
-                            />
-                          </td>
-                        )}
                         <td className="px-3 py-3 font-medium">{o.name}</td>
                         <td className="px-3 py-3">{o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}</td>
                         <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{formatVnd(o.estimatedValue)}</td>
@@ -1400,6 +1374,22 @@ const AdminOpportunities = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DeletionImpactDialog
+        open={deletingOpportunity != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={deleteBusy}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) {
+            setDeletingOpportunity(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
+      />
     </AdminLayout>
   );
 };

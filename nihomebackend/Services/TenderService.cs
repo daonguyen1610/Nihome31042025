@@ -273,27 +273,27 @@ public class TenderService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        if (!await db.Tenders.AsNoTracking().AnyAsync(item => item.Id == id, ct)) return null;
-        var plan = await hardDeletePlans.ForTenderAsync(id, ct);
-        if (plan is null) return null;
-        if (!plan.Impact.CanDelete)
-            throw new TenderOperationException("Chỉ gói thầu đang Chuẩn bị mới có thể bị xóa.");
-        if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
-            throw new DeletionPlanChangedException(
-                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
-        var confirmation = request.Confirmation;
-        if (!string.Equals(confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
-            throw new TenderOperationException(
-                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
-        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
-            EntityTypes.Tender,
-            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            plan.Impact.ResourceLabel,
-            plan.Impact.PlanToken,
-            confirmation!,
-            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            plan.Items), ct);
-        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
+        var result = await DurableHardDeleteStarter.StartAsync(
+            db, hardDeleteOperations, () => hardDeletePlans.ForTenderAsync(id, ct), plan =>
+            {
+                if (!plan.Impact.CanDelete)
+                    throw new TenderOperationException("Chỉ gói thầu đang Chuẩn bị mới có thể bị xóa.");
+                if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
+                    throw new DeletionPlanChangedException(
+                        "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+                if (!string.Equals(request.Confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
+                    throw new TenderOperationException(
+                        $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
+                return new CreateHardDeleteOperationRequest(
+                    EntityTypes.Tender,
+                    id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    plan.Impact.ResourceLabel,
+                    plan.Impact.PlanToken,
+                    request.Confirmation,
+                    callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    plan.Items);
+            }, ct);
+        if (result is null) return null;
         logger.LogInformation("Tender {Id} durable hard-delete is {Status}", id, result.Status);
         return result;
     }

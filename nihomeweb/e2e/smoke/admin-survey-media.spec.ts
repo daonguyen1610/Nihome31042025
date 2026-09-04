@@ -96,7 +96,19 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
           const mediaDelete = await api.delete(`/api/surveys/${surveyId}/media/${media.id}`, { headers });
           expect(mediaDelete.status(), `cleanup: delete media ${media.id} from survey ${surveyId}`).toBe(204);
         }
-        const surveyDelete = await api.delete(`/api/surveys/${surveyId}`, { headers });
+        const impactResponse = await api.get(`/api/surveys/${surveyId}/deletion-impact`, { headers });
+        expect(impactResponse.status(), `cleanup: preview survey ${surveyId}`).toBe(200);
+        const impact = await impactResponse.json() as {
+          planToken: string;
+          requiredConfirmation: string;
+        };
+        const surveyDelete = await api.delete(`/api/surveys/${surveyId}`, {
+          headers,
+          data: {
+            planToken: impact.planToken,
+            confirmation: impact.requiredConfirmation,
+          },
+        });
         expect(surveyDelete.status(), `cleanup: delete survey ${surveyId}`).toBe(204);
         expect((await api.get(`/api/surveys/${surveyId}`, { headers })).status(), `cleanup: verify survey ${surveyId}`).toBe(404);
       }
@@ -285,6 +297,46 @@ test.describe.serial("NIH-101 — Survey Media browser flow", () => {
     await expect(page.getByTestId("survey-media-card").getByRole("button", { name: deleteLabel })).toHaveCount(0);
     await expect(page.getByTestId("survey-checklist").getByRole("combobox").first()).toBeDisabled();
     await expect(page.getByTestId("survey-checklist").getByRole("button", { name: saveLabel })).toHaveCount(0);
+  });
+
+  test("media deep links select, scroll to, and highlight only survey-owned media", async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
+    const token = await loginAs(TEST_USERS.superAdmin);
+    const authHeader = { Authorization: `Bearer ${token}` };
+    const survey = await createSurvey(api, authHeader);
+    const otherSurvey = await createSurvey(api, authHeader);
+    const uploadMedia = async (surveyId: number, fileName: string) => {
+      const response = await api.post(`/api/surveys/${surveyId}/media`, {
+        headers: authHeader,
+        multipart: { file: { name: fileName, mimeType: "image/png", buffer: pngBytes } },
+      });
+      expect(response.status(), await response.text()).toBe(201);
+      return (await response.json()) as SurveyDetail["media"][number];
+    };
+    const target = await uploadMedia(survey.id, `deep-link-${uid()}.png`);
+    const foreign = await uploadMedia(otherSurvey.id, `foreign-${uid()}.png`);
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`/admin/surveys/${survey.id}?mediaId=${target.id}`, { waitUntil: "networkidle" });
+
+    const mediaTab = page.getByTestId("survey-media-tab");
+    const targetCard = page.locator(`#survey-media-${target.id}`);
+    await expect(mediaTab).toHaveAttribute("data-state", "active");
+    await expect(targetCard).toHaveAttribute("data-highlighted", "true");
+    await expect.poll(() => targetCard.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.bottom > 0 && bounds.top < window.innerHeight;
+    })).toBe(true);
+
+    for (const mediaId of ["invalid", "0", "999999999", String(foreign.id)]) {
+      await page.goto(`/admin/surveys/${survey.id}?mediaId=${mediaId}`, { waitUntil: "networkidle" });
+      await expect(page.getByRole("tab").first()).toHaveAttribute("data-state", "active");
+      await expect(page.getByTestId("survey-media-panel")).toHaveCount(0);
+    }
   });
 
   test("mobile panel renders without horizontal page overflow or browser errors", async ({

@@ -250,7 +250,6 @@ public sealed class DesignProjectHardDeleteHandler(
         if (!await permissions.HasAsync(requestedBy, "design.projects.manage", ct))
             throw ProjectAuthorizationChanged();
         var exists = await db.DesignProjects.AsNoTracking().AnyAsync(item => item.Id == projectId, ct);
-        if (!exists && context.IsForwardRecovery) return;
         if (!exists || !await projectAccess.CanManageDesignProjectAsync(requestedBy, projectId, ct))
             throw ProjectAuthorizationChanged();
         var current = await plans.ForDesignProjectAsync(projectId, ct)
@@ -330,7 +329,6 @@ public sealed class OperationalProjectHardDeleteHandler(
             throw ProjectAuthorizationChanged();
         var canSeeAll = await permissions.HasAsync(requestedBy, "operations.projects.view.all", ct);
         var exists = await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId, ct);
-        if (!exists && context.IsForwardRecovery) return;
         var canManage = exists && await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
             project.Id == projectId &&
             (canSeeAll || project.ProjectManagerUserId == requestedBy || project.CreatedByUserId == requestedBy), ct);

@@ -136,14 +136,6 @@ public class DesignProjectsController(
         {
             var result = await svc.DeleteAsync(id, request, userId.Value, ct);
             if (result is null) return NotFound();
-            audit.Log(new AuditEvent
-            {
-                Action = result.IsComplete ? "design-project.delete" : "design-project.delete_requested",
-                ResourceType = EntityTypes.DesignProject,
-                ResourceId = id.ToString(),
-                Message = $"Design project #{id} durable deletion is {result.Status}.",
-                NewValue = result,
-            });
             return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (DesignProjectOperationException ex)

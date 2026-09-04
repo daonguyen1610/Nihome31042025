@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NihomeBackend.Constants;
+using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 using NihomeBackend.Services.GoogleDrive;
@@ -51,6 +54,65 @@ public sealed class HardDeleteOperationServiceTests : IDisposable
         Assert.True(result.IsComplete);
         Assert.Equal(HardDeleteOperationStatus.Completed, result.Status);
         Assert.Equal(["quarantine", "drive", "database", "purge"], calls);
+        Assert.Single(db.AuditLogs, item => item.AuditId == operation.OperationId.ToString("N") &&
+            item.Action == "test-resource.delete" && item.Status == "success");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    public async Task CreateAsync_RequiresExactlyOneDatabaseFinalizerBeforeAnySideEffect(int databaseItemCount)
+    {
+        var items = new List<HardDeleteItemDefinition> { LocalItem(0), DriveItem(1, "drive-1") };
+        for (var index = 0; index < databaseItemCount; index++)
+            items.Add(new HardDeleteItemDefinition(
+                HardDeleteItemKind.DatabaseAggregate, $"delete-root-{index}", index + 2));
+
+        var exception = await Assert.ThrowsAsync<HardDeleteOperationException>(
+            () => service.CreateAsync(Request(items.ToArray())));
+
+        Assert.Equal("invalid_operation_plan", exception.Code);
+        Assert.Empty(db.HardDeleteOperations);
+        files.Verify(item => item.QuarantineAsync(
+            It.IsAny<Guid>(), It.IsAny<string>(), default), Times.Never);
+        drive.Verify(item => item.PermanentDeleteOwnedAsync(
+            It.IsAny<DrivePermanentDeleteRequest>(), default), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(EntityTypes.Quote, "quote.delete")]
+    [InlineData(EntityTypes.Contract, "contract.delete")]
+    [InlineData(EntityTypes.Tender, "tender.delete")]
+    [InlineData(EntityTypes.Opportunity, "opportunity.delete")]
+    [InlineData(EntityTypes.Survey, "survey.delete")]
+    [InlineData(EntityTypes.CapabilityDocument, "capability-doc.delete")]
+    [InlineData(EntityTypes.Customer, "customer.delete")]
+    [InlineData(EntityTypes.Lead, "lead.delete")]
+    [InlineData(EntityTypes.DesignProject, "design-project.delete")]
+    [InlineData(EntityTypes.OperationalProject, "operational-project.delete")]
+    public async Task ProcessAsync_CompletedBusinessRoot_WritesExactlyOneCompletionAudit(
+        string resourceType, string expectedAction)
+    {
+        var resourceHandler = new Mock<IHardDeleteResourceHandler>();
+        resourceHandler.SetupGet(item => item.ResourceType).Returns(resourceType);
+        resourceHandler.Setup(item => item.FinalizeAsync(It.IsAny<HardDeleteResourceContext>(), default))
+            .Returns(Task.CompletedTask);
+        var operationService = new HardDeleteOperationService(
+            db,
+            files.Object,
+            drive.Object,
+            new HardDeleteResourceHandlerRegistry([resourceHandler.Object]),
+            Mock.Of<ILogger<HardDeleteOperationService>>());
+        var operation = await operationService.CreateAsync(new CreateHardDeleteOperationRequest(
+            resourceType, "42", "Root 42", "plan-token", "DELETE-42", "77", [DatabaseItem(0)]));
+
+        var first = await operationService.ProcessAsync(operation.OperationId);
+        var repeated = await operationService.ProcessAsync(operation.OperationId);
+
+        Assert.True(first.IsComplete);
+        Assert.True(repeated.IsComplete);
+        Assert.Single(db.AuditLogs, item => item.AuditId == operation.OperationId.ToString("N") &&
+            item.ResourceType == resourceType && item.Action == expectedAction && item.Status == "success");
     }
 
     [Fact]
@@ -91,6 +153,73 @@ public sealed class HardDeleteOperationServiceTests : IDisposable
             It.IsAny<DrivePermanentDeleteRequest>(), default), Times.Never);
         handler.Verify(item => item.FinalizeAsync(
             It.IsAny<HardDeleteResourceContext>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_TenderPermissionRevoked_StopsBeforeEveryDeleteEffect()
+    {
+        var plans = new Mock<ICrmHardDeletePlanService>();
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.HasAsync(77, "crm.tenders.manage", default))
+            .ReturnsAsync(false);
+        var tenderHandler = new TenderHardDeleteHandler(db, plans.Object, permissions.Object);
+        var tenderService = new HardDeleteOperationService(
+            db,
+            files.Object,
+            drive.Object,
+            new HardDeleteResourceHandlerRegistry([tenderHandler]),
+            Mock.Of<ILogger<HardDeleteOperationService>>());
+        var operation = await tenderService.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.Tender,
+            "42",
+            "TD-42",
+            "plan-token",
+            "TD-42",
+            "77",
+            [LocalItem(0), DriveItem(1, "drive-1"), DatabaseItem(2)]));
+
+        var result = await tenderService.ProcessAsync(operation.OperationId);
+
+        Assert.Equal(HardDeleteOperationStatus.ManualActionRequired, result.Status);
+        Assert.Equal("hard_delete_authorization_changed", result.ErrorCode);
+        permissions.Verify(item => item.HasAsync(77, "crm.tenders.manage", default), Times.Once);
+        plans.Verify(item => item.ForTenderAsync(It.IsAny<int>(), default), Times.Never);
+        files.Verify(item => item.QuarantineAsync(
+            It.IsAny<Guid>(), It.IsAny<string>(), default), Times.Never);
+        drive.Verify(item => item.PermanentDeleteOwnedAsync(
+            It.IsAny<DrivePermanentDeleteRequest>(), default), Times.Never);
+        Assert.DoesNotContain(db.AuditLogs, item => item.AuditId == operation.OperationId.ToString("N"));
+    }
+
+    [Fact]
+    public async Task ProcessAsync_TenderMissingBeforeDatabaseFinalization_StopsForwardRecovery()
+    {
+        var plans = new Mock<ICrmHardDeletePlanService>();
+        plans.Setup(item => item.ForTenderAsync(42, default)).ReturnsAsync((CrmHardDeletePlan?)null);
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.HasAsync(77, "crm.tenders.manage", default)).ReturnsAsync(true);
+        var tenderHandler = new TenderHardDeleteHandler(db, plans.Object, permissions.Object);
+        var tenderService = new HardDeleteOperationService(
+            db, files.Object, drive.Object,
+            new HardDeleteResourceHandlerRegistry([tenderHandler]),
+            Mock.Of<ILogger<HardDeleteOperationService>>());
+        var operation = await tenderService.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.Tender, "42", "TD-42", "plan-token", "TD-42", "77",
+            [DriveItem(0, "drive-1"), DatabaseItem(1)]));
+        var persisted = await db.HardDeleteOperations.Include(item => item.Items)
+            .SingleAsync(item => item.Id == operation.OperationId);
+        persisted.HasIrreversibleStep = true;
+        var driveItem = persisted.Items.Single(item => item.Kind == HardDeleteItemKind.DriveFile);
+        driveItem.Status = HardDeleteItemStatus.Completed;
+        driveItem.CompletedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        var result = await tenderService.ProcessAsync(operation.OperationId);
+
+        Assert.Equal(HardDeleteOperationStatus.ManualActionRequired, result.Status);
+        Assert.Equal("hard_delete_authorization_changed", result.ErrorCode);
+        files.Verify(item => item.QuarantineAsync(
+            It.IsAny<Guid>(), It.IsAny<string>(), default), Times.Never);
     }
 
     [Fact]
@@ -152,10 +281,57 @@ public sealed class HardDeleteOperationServiceTests : IDisposable
         Assert.Equal(HardDeleteOperationStatus.Failed, result.Status);
         Assert.False(result.IsComplete);
         handler.Verify(item => item.FinalizeAsync(It.IsAny<HardDeleteResourceContext>(), default), Times.Once);
+        Assert.DoesNotContain(db.AuditLogs, item => item.AuditId == operation.OperationId.ToString("N"));
+
+        files.Setup(item => item.PurgeAsync(It.IsAny<string>(), default)).Returns(Task.CompletedTask);
+        var retry = await service.ProcessAsync(operation.OperationId);
+
+        Assert.True(retry.IsComplete);
+        Assert.Single(db.AuditLogs, item => item.AuditId == operation.OperationId.ToString("N") &&
+            item.Action == "test-resource.delete" && item.Status == "success");
+
+        var repeated = await service.ProcessAsync(operation.OperationId);
+        Assert.True(repeated.IsComplete);
+        Assert.Single(db.AuditLogs, item => item.AuditId == operation.OperationId.ToString("N"));
     }
 
     [Fact]
-    public async Task ProcessAsync_PostCommitRecovery_AuthorizesMissingRootAndPurgesQuarantine()
+    public async Task ProcessAsync_CompletionSaveFailure_IsPersistedAsRetryableWithoutAudit()
+    {
+        var interceptor = new CompletionSaveFailureInterceptor();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(interceptor)
+            .Options;
+        await using var faultingDb = new AppDbContext(options);
+        await faultingDb.Database.EnsureCreatedAsync();
+        var resourceHandler = new Mock<IHardDeleteResourceHandler>();
+        resourceHandler.SetupGet(item => item.ResourceType).Returns("completion-fault");
+        resourceHandler.Setup(item => item.FinalizeAsync(It.IsAny<HardDeleteResourceContext>(), default))
+            .Returns(Task.CompletedTask);
+        var operationService = new HardDeleteOperationService(
+            faultingDb,
+            Mock.Of<IHardDeleteFileService>(),
+            Mock.Of<IGoogleDriveAdapter>(),
+            new HardDeleteResourceHandlerRegistry([resourceHandler.Object]),
+            Mock.Of<ILogger<HardDeleteOperationService>>());
+        var operation = await operationService.CreateAsync(new CreateHardDeleteOperationRequest(
+            "completion-fault", "42", "Root 42", "plan-token", "DELETE-42", "77", [DatabaseItem(0)]));
+
+        var failed = await operationService.ProcessAsync(operation.OperationId);
+
+        Assert.Equal(HardDeleteOperationStatus.Failed, failed.Status);
+        Assert.False(failed.IsComplete);
+        Assert.Equal("hard_delete_processing_failed", failed.ErrorCode);
+        var persisted = await faultingDb.HardDeleteOperations.AsNoTracking()
+            .SingleAsync(item => item.Id == operation.OperationId);
+        Assert.Equal(HardDeleteOperationStatus.Failed, persisted.Status);
+        Assert.Null(persisted.CompletedAt);
+        Assert.DoesNotContain(faultingDb.AuditLogs, item => item.AuditId == operation.OperationId.ToString("N"));
+    }
+
+    [Fact]
+    public async Task ProcessAsync_PostFinalizerRecovery_SkipsAuthorizationAndPurgesQuarantine()
     {
         var operation = await service.CreateAsync(Request(LocalItem(0), DatabaseItem(1)));
         var persisted = await db.HardDeleteOperations.Include(item => item.Items)
@@ -165,13 +341,10 @@ public sealed class HardDeleteOperationServiceTests : IDisposable
         var local = persisted.Items.Single(item => item.Kind == HardDeleteItemKind.LocalFile);
         local.Status = HardDeleteItemStatus.Quarantined;
         local.QuarantinePath = "/files/.hard-delete-quarantine/op/a.pdf";
+        var databaseItem = persisted.Items.Single(item => item.Kind == HardDeleteItemKind.DatabaseAggregate);
+        databaseItem.Status = HardDeleteItemStatus.Completed;
+        databaseItem.CompletedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
-        handler.Setup(item => item.AuthorizeAsync(
-                It.Is<HardDeleteResourceContext>(context => context.IsForwardRecovery), default))
-            .Returns(Task.CompletedTask);
-        handler.Setup(item => item.FinalizeAsync(
-                It.Is<HardDeleteResourceContext>(context => context.IsForwardRecovery), default))
-            .Returns(Task.CompletedTask);
         files.Setup(item => item.PurgeAsync(local.QuarantinePath, default))
             .Returns(Task.CompletedTask);
 
@@ -179,7 +352,9 @@ public sealed class HardDeleteOperationServiceTests : IDisposable
 
         Assert.True(result.IsComplete);
         handler.Verify(item => item.AuthorizeAsync(
-            It.Is<HardDeleteResourceContext>(context => context.IsForwardRecovery), default), Times.Once);
+            It.IsAny<HardDeleteResourceContext>(), default), Times.Never);
+        handler.Verify(item => item.FinalizeAsync(
+            It.IsAny<HardDeleteResourceContext>(), default), Times.Never);
         files.Verify(item => item.PurgeAsync(local.QuarantinePath, default), Times.Once);
     }
 
@@ -198,6 +373,25 @@ public sealed class HardDeleteOperationServiceTests : IDisposable
 
     private static HardDeleteItemDefinition DatabaseItem(int sequence) =>
         new(HardDeleteItemKind.DatabaseAggregate, "delete-root", sequence);
+
+    private sealed class CompletionSaveFailureInterceptor : SaveChangesInterceptor
+    {
+        private bool hasFailed;
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData,
+            InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (!hasFailed && eventData.Context is AppDbContext context &&
+                context.ChangeTracker.Entries<AuditLog>().Any(entry => entry.State == EntityState.Added))
+            {
+                hasFailed = true;
+                throw new DbUpdateException("Completion save failed.");
+            }
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
 
     public void Dispose() => db.Dispose();
 }

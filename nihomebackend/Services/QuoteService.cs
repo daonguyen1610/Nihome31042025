@@ -584,30 +584,33 @@ public class QuoteService(
         CancellationToken ct = default)
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền xoá báo giá.");
-        var quote = await db.Quotes.AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
-        if (quote is null) return null;
-        var plan = await hardDeletePlans.ForQuoteAsync(id, ct);
-        if (plan is null) return null;
-        if (!plan.Impact.CanDelete)
-            throw new QuoteOperationException("Không thể xoá báo giá vì còn tệp cần được xử lý an toàn.");
-        if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
-            throw new DeletionPlanChangedException(
-                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
-        if (!string.Equals(request.Confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
-            throw new QuoteOperationException(
-                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
-        CrmConcurrency.EnsureMatches(quote.RowVersion, request.RowVersion);
-
-        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
-            EntityTypes.Quote,
-            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            plan.Impact.ResourceLabel,
-            plan.Impact.PlanToken,
-            request.Confirmation,
-            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            plan.Items), ct);
-        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
+        Quote? currentQuote = null;
+        var result = await DurableHardDeleteStarter.StartAsync(db, hardDeleteOperations, async () =>
+        {
+            currentQuote = await db.Quotes.AsNoTracking()
+                .SingleOrDefaultAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
+            return currentQuote is null ? null : await hardDeletePlans.ForQuoteAsync(id, ct);
+        }, plan =>
+        {
+            if (!plan.Impact.CanDelete)
+                throw new QuoteOperationException("Không thể xoá báo giá vì còn tệp cần được xử lý an toàn.");
+            if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
+                throw new DeletionPlanChangedException(
+                    "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+            if (!string.Equals(request.Confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
+                throw new QuoteOperationException(
+                    $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
+            CrmConcurrency.EnsureMatches(currentQuote!.RowVersion, request.RowVersion);
+            return new CreateHardDeleteOperationRequest(
+                EntityTypes.Quote,
+                id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                plan.Impact.ResourceLabel,
+                plan.Impact.PlanToken,
+                request.Confirmation,
+                callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                plan.Items);
+        }, ct);
+        if (result is null) return null;
         logger.LogInformation("Quote {Id} durable hard-delete is {Status}", id, result.Status);
         return result;
     }

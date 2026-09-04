@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -272,39 +273,39 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_SalesUser_CannotDeleteOtherOwnersOpportunity()
+    public async Task DeletionImpact_EnforcesAuthorizationPermissionAndOwnerScope()
     {
-        // Manager creates the opportunity owned by SALES_MANAGER
+        (await Client.GetAsync("/api/opportunities/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync("/api/opportunities/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var opId = await CreateOpportunityAsync();
 
-        // SALE (different owner) attempts delete
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
-        var res = await Client.DeleteAsync($"/api/opportunities/{opId}");
-        res.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/opportunities/{opId}/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteOpportunityAsync(opId, new string('a', 64), $"OPPORTUNITY-{opId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        // Manager confirms still exists
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        (await Client.GetAsync($"/api/opportunities/{opId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await GetDeletionImpactAsync(opId);
+        impact.GetProperty("resourceType").GetString().Should().Be("Opportunity");
+        impact.GetProperty("requiredConfirmation").GetString().Should().Be($"OPPORTUNITY-{opId}");
+        (await WithDbAsync(db => db.Opportunities.AnyAsync(item => item.Id == opId))).Should().BeTrue();
     }
 
     [Fact]
-    public async Task Delete_WithQuote_RemovesQuoteAndClearsLinkedRecords()
+    public async Task Delete_WithIndependentLinks_ReturnsNoContentAndUnlinksRelatedRoots()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var opportunityId = await CreateOpportunityAsync();
         var ids = await WithDbAsync(async db =>
         {
             var opportunity = await db.Opportunities.SingleAsync(row => row.Id == opportunityId);
-            var quote = new Quote
-            {
-                Code = UniqueSlug("QT-OP-DELETE"),
-                OpportunityId = opportunityId,
-                AreaSqm = 1,
-                UnitPricePerSqm = 1,
-                Subtotal = 1,
-                GrandTotal = 1,
-            };
             var contract = new Contract
             {
                 ContractNumber = UniqueSlug("HD-OP-DELETE"),
@@ -318,26 +319,103 @@ public class OpportunitiesControllerTests : IntegrationTestBase
                 SurveyDate = DateTime.UtcNow,
                 LinkedOpportunityId = opportunityId,
             };
-            db.AddRange(quote, contract, survey);
+            db.AddRange(contract, survey);
             await db.SaveChangesAsync();
             return (
-                QuoteId: quote.Id,
                 ContractId: contract.Id,
                 SurveyId: survey.Id,
                 CustomerId: opportunity.CustomerId);
         });
+        var impact = await GetDeletionImpactAsync(opportunityId);
 
-        (await Client.DeleteAsync($"/api/opportunities/{opportunityId}"))
+        (await ConfirmDeleteAsync(opportunityId, impact))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         await WithDbAsync(async db =>
         {
             (await db.Opportunities.AnyAsync(row => row.Id == opportunityId)).Should().BeFalse();
-            (await db.Quotes.AnyAsync(row => row.Id == ids.QuoteId)).Should().BeFalse();
             (await db.Contracts.FindAsync(ids.ContractId))!.OpportunityId.Should().BeNull();
             (await db.Surveys.FindAsync(ids.SurveyId))!.LinkedOpportunityId.Should().BeNull();
             (await db.Customers.AnyAsync(row => row.Id == ids.CustomerId)).Should().BeTrue();
         });
+    }
+
+    [Fact]
+    public async Task DeletionImpact_WithQuoteReportsBlockerAndDeletePreservesState()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var quoteId = await WithDbAsync(async db =>
+        {
+            var quote = new Quote
+            {
+                Code = UniqueSlug("QT-OP-BLOCK"),
+                OpportunityId = opportunityId,
+                AreaSqm = 1,
+                UnitPricePerSqm = 1,
+                Subtotal = 1,
+                GrandTotal = 1,
+            };
+            db.Quotes.Add(quote);
+            await db.SaveChangesAsync();
+            return quote.Id;
+        });
+
+        var impact = await GetDeletionImpactAsync(opportunityId);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "opportunity.quotes" &&
+            item.GetProperty("action").GetString() == "Block");
+
+        (await ConfirmDeleteAsync(opportunityId, impact)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Opportunities.AnyAsync(item => item.Id == opportunityId))).Should().BeTrue();
+        (await WithDbAsync(db => db.Quotes.AnyAsync(item => item.Id == quoteId))).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_RejectsMissingOrInvalidConfirmationAndStalePlanWithoutMutation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var impact = await GetDeletionImpactAsync(opportunityId);
+        var token = impact.GetProperty("planToken").GetString()!;
+        var confirmation = impact.GetProperty("requiredConfirmation").GetString()!;
+        var rowVersion = await GetRowVersionAsync(opportunityId);
+
+        (await DeleteOpportunityAsync(opportunityId, token, null, rowVersion)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteOpportunityAsync(opportunityId, token, $"{confirmation} ", rowVersion)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteOpportunityAsync(opportunityId, new string('a', 64), confirmation, rowVersion)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        (await WithDbAsync(db => db.Opportunities.AnyAsync(item => item.Id == opportunityId))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "Opportunity" && item.ResourceId == opportunityId.ToString()))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_RequiresWellFormedCurrentRowVersionAndEmitsOneCompletionAudit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var opportunityId = await CreateOpportunityAsync();
+        var impact = await GetDeletionImpactAsync(opportunityId);
+        var planToken = impact.GetProperty("planToken").GetString();
+        var confirmation = impact.GetProperty("requiredConfirmation").GetString();
+        var staleBytes = Convert.FromBase64String(await GetRowVersionAsync(opportunityId));
+        staleBytes[0] ^= 0xff;
+
+        (await DeleteOpportunityAsync(opportunityId, planToken, confirmation, null)).StatusCode
+            .Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteOpportunityAsync(opportunityId, planToken, confirmation, "malformed")).StatusCode
+            .Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteOpportunityAsync(opportunityId, planToken, confirmation, Convert.ToBase64String(staleBytes)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.AuditLogs.CountAsync(item =>
+            item.ResourceType == EntityTypes.Opportunity && item.ResourceId == opportunityId.ToString() &&
+            item.Action == "opportunity.delete"))).Should().Be(0);
+
+        (await ConfirmDeleteAsync(opportunityId, impact)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.AuditLogs.CountAsync(item =>
+            item.ResourceType == EntityTypes.Opportunity && item.ResourceId == opportunityId.ToString() &&
+            item.Action == "opportunity.delete"))).Should().Be(1);
     }
 
     // ---------- regression coverage ----------
@@ -453,7 +531,8 @@ public class OpportunitiesControllerTests : IntegrationTestBase
     public async Task Delete_UnknownId_Returns404()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        (await Client.DeleteAsync("/api/opportunities/999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteOpportunityAsync(999999, new string('a', 64), "OPPORTUNITY-999999"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -622,7 +701,7 @@ public class OpportunitiesControllerTests : IntegrationTestBase
                 isPrimary = true,
             },
         });
-        res.EnsureSuccessStatusCode();
+        res.StatusCode.Should().Be(HttpStatusCode.Created, await res.Content.ReadAsStringAsync());
         var body = await ReadJsonAsync(res);
         return body.GetProperty("id").GetInt32();
     }
@@ -640,5 +719,36 @@ public class OpportunitiesControllerTests : IntegrationTestBase
         res.EnsureSuccessStatusCode();
         var body = await ReadJsonAsync(res);
         return body.GetProperty("id").GetInt32();
+    }
+
+    private async Task<JsonElement> GetDeletionImpactAsync(int opportunityId)
+    {
+        var response = await Client.GetAsync($"/api/opportunities/{opportunityId}/deletion-impact");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return await ReadJsonAsync(response);
+    }
+
+    private async Task<HttpResponseMessage> ConfirmDeleteAsync(int opportunityId, JsonElement impact) =>
+        await DeleteOpportunityAsync(
+            opportunityId,
+            impact.GetProperty("planToken").GetString(),
+            impact.GetProperty("requiredConfirmation").GetString(),
+            await GetRowVersionAsync(opportunityId));
+
+    private async Task<string> GetRowVersionAsync(int opportunityId) =>
+        (await ReadJsonAsync(await Client.GetAsync($"/api/opportunities/{opportunityId}")))
+            .GetProperty("rowVersion").GetString()!;
+
+    private async Task<HttpResponseMessage> DeleteOpportunityAsync(
+        int opportunityId,
+        string? planToken,
+        string? confirmation,
+        string? rowVersion = null)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/opportunities/{opportunityId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation, rowVersion }),
+        };
+        return await Client.SendAsync(request);
     }
 }

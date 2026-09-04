@@ -4023,8 +4023,10 @@ export const adminApi = {
     api.put<OpportunityResponse>(`/opportunities/${id}`, body),
   changeOpportunityStage: (id: number, body: ChangeOpportunityStageRequest) =>
     api.patch<OpportunityResponse>(`/opportunities/${id}/stage`, body),
-  deleteOpportunity: (id: number, rowVersion?: string) =>
-    api.delete(`/opportunities/${id}`, withIfMatch(rowVersion)),
+  getOpportunityDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/opportunities/${id}/deletion-impact`),
+  deleteOpportunity: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult>(`/opportunities/${id}`, { data: body }),
   addOpportunityActivity: (id: number, body: AddOpportunityActivityRequest) =>
     api.post<OpportunityActivityResponse>(`/opportunities/${id}/activities`, body),
 
@@ -4183,8 +4185,10 @@ export const adminApi = {
     api.put<CapabilityDocumentResponse>(`/capability-documents/${id}`, body),
   replaceCapabilityDocumentFile: (id: number, body: ReplaceCapabilityDocumentFileRequest) =>
     api.post<CapabilityDocumentResponse>(`/capability-documents/${id}/replace-file`, body),
-  deleteCapabilityDocument: (id: number) =>
-    api.delete(`/capability-documents/${id}`),
+  getCapabilityDocumentDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/capability-documents/${id}/deletion-impact`),
+  deleteCapabilityDocument: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult>(`/capability-documents/${id}`, { data: body }),
   downloadCapabilityDocumentsZip: (ids: number[]) =>
     api.post<Blob>(`/capability-documents/download-zip`, { ids }, { responseType: "blob" }),
 
@@ -4278,7 +4282,10 @@ export const adminApi = {
   createSurvey: (body: CreateSurveyRequest) => api.post<SurveyResponse>("/surveys", body),
   updateSurvey: (id: number, body: CreateSurveyRequest) =>
     api.put<SurveyResponse>(`/surveys/${id}`, body),
-  deleteSurvey: (id: number) => api.delete(`/surveys/${id}`),
+  getSurveyDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/surveys/${id}/deletion-impact`),
+  deleteSurvey: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult>(`/surveys/${id}`, { data: body }),
   getSurveyTimeline: (id: number, limit = 100) =>
     api.get<SurveyTimelineEvent[]>(`/surveys/${id}/timeline`, { params: { limit } }),
   uploadSurveyMedia: (id: number, request: SurveyMediaUploadRequest) => {
@@ -4877,8 +4884,10 @@ export const adminApi = {
     api.post<ContractResponse>("/contracts", body),
   updateContract: (id: number, body: UpsertContractRequest) =>
     api.put<ContractResponse>(`/contracts/${id}`, body),
-  deleteContract: (id: number, rowVersion?: string) =>
-    api.delete(`/contracts/${id}`, withIfMatch(rowVersion)),
+  getContractDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/contracts/${id}/deletion-impact`),
+  deleteContract: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult>(`/contracts/${id}`, { data: body }),
 
   // Contract state / milestones / VO / attachments / timeline (NIH-104)
   ensureContractDesignProject: (contractId: number) =>

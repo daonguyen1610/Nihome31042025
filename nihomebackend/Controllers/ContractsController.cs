@@ -11,6 +11,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -28,6 +29,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class ContractsController(
     IContractService svc,
+    IBusinessRootHardDeleteService hardDelete,
     IContractAppendixService voSvc,
     IContractAttachmentService attSvc,
     IDesignProjectService designProjects,
@@ -170,25 +172,53 @@ public class ContractsController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.contracts", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
-        var removed = await svc.DeleteAsync(
-            id, userId.Value, canSeeAll, ct,
-            CrmConcurrency.ResolveRequestToken(Request, null));
-        if (!removed) return NotFound();
-
-        audit.Log(new AuditEvent
+        try
         {
-            Action = "contract.delete",
-            ResourceType = EntityTypes.Contract,
-            ResourceId = id.ToString(),
-            Message = $"Contract #{id} deleted.",
-        });
-        return NoContent();
+            request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+            var result = await hardDelete.DeleteContractAsync(id, request, userId.Value, canSeeAll, ct);
+            if (result is null) return NotFound();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
+        }
+        catch (CrmConcurrencyTokenException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (CrmConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (BusinessRootDeleteException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        var impact = await hardDelete.GetContractImpactAsync(id, userId.Value, canSeeAll, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     // -------- state transitions --------
@@ -750,5 +780,12 @@ public class ContractsController(
         var value = principal.FindFirstValue(ClaimTypes.NameIdentifier)
             ?? principal.FindFirstValue("uid");
         return int.TryParse(value, out var uid) ? uid : null;
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations", new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }

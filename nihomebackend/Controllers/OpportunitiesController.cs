@@ -8,6 +8,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -23,6 +24,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class OpportunitiesController(
     IOpportunityService svc,
+    IBusinessRootHardDeleteService hardDelete,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
@@ -220,33 +222,53 @@ public class OpportunitiesController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.opportunities", "manage")]
-    public async Task<ActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var canManage = await permissions.HasAsync(userId.Value, "crm.opportunities.manage", ct);
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
         try
         {
-            var removed = await svc.DeleteAsync(
-                id, userId.Value, canManage, canSeeAll, ct,
-                CrmConcurrency.ResolveRequestToken(Request, null));
-            if (!removed) return NotFound();
-
-            audit.Log(new AuditEvent
-            {
-                Action = "opportunity.delete",
-                ResourceType = EntityTypes.Opportunity,
-                ResourceId = id.ToString(),
-                Message = $"Opportunity #{id} deleted.",
-            });
-            return NoContent();
+            request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+            var result = await hardDelete.DeleteOpportunityAsync(id, request, userId.Value, canSeeAll, ct);
+            if (result is null) return NotFound();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
-        catch (OpportunityOperationException ex)
+        catch (CrmConcurrencyTokenException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (CrmConcurrencyException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (BusinessRootDeleteException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("crm.opportunities", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.opportunities.view.all", ct);
+        var impact = await hardDelete.GetOpportunityImpactAsync(id, userId.Value, canSeeAll, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpPost("{id:int}/activities")]
@@ -277,5 +299,12 @@ public class OpportunitiesController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations", new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }

@@ -5,6 +5,7 @@ using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.HardDelete;
 using nihomebackend.tests.Helpers;
@@ -313,6 +314,23 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_SeededTenderCodeRecordsExactDeletionTombstone()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var tender = await _db.Tenders.SingleAsync(item => item.Id == created.Id);
+        tender.Code = "TD-SAMPLE-999";
+        await _db.SaveChangesAsync();
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+
+        var result = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
+
+        Assert.True(result!.IsComplete);
+        var tombstone = await _db.SeededRootDeletions.SingleAsync(item =>
+            item.ResourceType == EntityTypes.Tender && item.ResourceKey == "TD-SAMPLE-999");
+        Assert.Equal(_userId, tombstone.DeletedByUserId);
+    }
+
+    [Fact]
     public async Task DeletionImpact_IncludesOwnedIdsLocalFileAndReferenceOnlyCapability()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
@@ -347,6 +365,49 @@ public class TenderServiceTests : IDisposable
         Assert.DoesNotContain(plan.Items, item => item.ActionIdentifier == capability.FilePath);
         Assert.Contains(plan.Impact.Items, item => item.Key == "tender.capabilityDocuments" &&
             item.Action == "Unlink" && item.Examples.Contains(capability.Id.ToString()));
+    }
+
+    [Fact]
+    public async Task ForTenderAsync_ImpactLinksToTenderCapabilityQueryAndOpportunityDetails()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var capability = new CapabilityDocument
+        {
+            Name = "Linked capability",
+            TagCode = "capability",
+            FilePath = "/files/capability/linked.pdf",
+            OriginalFileName = "linked.pdf",
+            FileSize = 100,
+            ContentType = "application/pdf",
+        };
+        var opportunity = new Opportunity
+        {
+            Name = "Winning opportunity",
+            CustomerId = _customerId,
+            WonTenderId = created.Id,
+        };
+        _db.AddRange(capability, opportunity);
+        await _db.SaveChangesAsync();
+        var checklist = await _db.TenderChecklistItems.FirstAsync(item => item.TenderId == created.Id);
+        checklist.CapabilityDocumentId = capability.Id;
+        checklist.FilePath = capability.FilePath;
+        created.WonOpportunityId = opportunity.Id;
+        await _db.SaveChangesAsync();
+
+        var plan = (await _hardDeletePlans.ForTenderAsync(created.Id))!;
+
+        var checklistItem = Assert.Single(plan.Impact.Items, item => item.Key == "tender.checklistItems");
+        Assert.Equal($"/admin/tenders/{created.Id}", checklistItem.ResolutionUrl);
+        Assert.Contains(checklistItem.ResolutionLinks, link => link.Url == $"/admin/tenders/{created.Id}");
+        var capabilityItem = Assert.Single(plan.Impact.Items, item => item.Key == "tender.capabilityDocuments");
+        Assert.Equal(DeletionImpactActions.Unlink, capabilityItem.Action);
+        Assert.Contains(capabilityItem.ResolutionLinks, link =>
+            link.Label == capability.Name &&
+            link.Url == $"/admin/capability-documents?documentId={capability.Id}");
+        var opportunityItem = Assert.Single(plan.Impact.Items, item => item.Key == "tender.winningOpportunities");
+        Assert.Equal(DeletionImpactActions.Unlink, opportunityItem.Action);
+        Assert.Contains(opportunityItem.ResolutionLinks, link =>
+            link.Label == opportunity.Name && link.Url == $"/admin/opportunities/{opportunity.Id}");
     }
 
     [Fact]

@@ -12,6 +12,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -32,6 +33,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class CapabilityDocumentsController(
     ICapabilityDocumentService svc,
+    IBusinessRootHardDeleteService hardDelete,
     AppDbContext db,
     IWebHostEnvironment env,
     IAuditLogger audit,
@@ -240,34 +242,39 @@ public class CapabilityDocumentsController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.capability-docs", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
         try
         {
-            var ok = await svc.DeleteAsync(id, ct);
-            if (!ok) return NotFound();
-            audit.Log(new AuditEvent
-            {
-                Action = "capability-doc.delete",
-                ResourceType = EntityTypes.CapabilityDocument,
-                ResourceId = id.ToString(),
-                Message = $"Capability document #{id} deleted.",
-            });
-            return NoContent();
+            var result = await hardDelete.DeleteCapabilityAsync(id, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
-        catch (CapabilityDocumentOperationException ex)
+        catch (BusinessRootDeleteException ex)
         {
-            audit.Log(new AuditEvent
-            {
-                Action = "capability-doc.delete",
-                ResourceType = EntityTypes.CapabilityDocument,
-                ResourceId = id.ToString(),
-                Message = ex.Message,
-                Status = AuditStatus.Failure,
-                FailureReason = ex.Message,
-            });
             return BadRequest(new { message = ex.Message });
         }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("crm.capability-docs", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var impact = await hardDelete.GetCapabilityImpactAsync(id, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     /// <summary>
@@ -374,5 +381,12 @@ public class CapabilityDocumentsController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations", new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }

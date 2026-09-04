@@ -139,12 +139,18 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IHardDeleteFileService, HardDeleteFileService>();
         services.AddScoped<IProjectHardDeletePlanService, ProjectHardDeletePlanService>();
         services.AddScoped<ICrmHardDeletePlanService, CrmHardDeletePlanService>();
+        services.AddScoped<IBusinessRootHardDeletePlanService, BusinessRootHardDeletePlanService>();
+        services.AddScoped<IBusinessRootHardDeleteService, BusinessRootHardDeleteService>();
         services.AddScoped<IHardDeleteResourceHandler, DesignProjectHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, OperationalProjectHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, CustomerHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, LeadHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, TenderHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, QuoteHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, OpportunityHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, ContractHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, SurveyHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, CapabilityDocumentHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandlerRegistry, HardDeleteResourceHandlerRegistry>();
         services.AddScoped<IHardDeleteOperationService, HardDeleteOperationService>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();

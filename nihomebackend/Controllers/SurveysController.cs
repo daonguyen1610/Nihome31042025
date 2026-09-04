@@ -7,6 +7,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -20,6 +21,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public class SurveysController(
     ISurveyService svc,
+    IBusinessRootHardDeleteService hardDelete,
     ISurveyConditionService conditionSvc,
     ISurveyMediaService mediaSvc,
     IPermissionService permissions,
@@ -117,37 +119,43 @@ public class SurveysController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.surveys", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         try
         {
-            var removed = await svc.DeleteAsync(
-                id, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
-            if (!removed) return NotFound();
-            audit.Log(new AuditEvent
-            {
-                Action = "survey.delete",
-                ResourceType = EntityTypes.Survey,
-                ResourceId = id.ToString(),
-                Message = $"Survey #{id} deleted.",
-            });
-            return NoContent();
+            var result = await hardDelete.DeleteSurveyAsync(
+                id, request, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
+            if (result is null) return NotFound();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
-        catch (SurveyOperationException ex)
+        catch (BusinessRootDeleteException ex)
         {
-            audit.Log(new AuditEvent
-            {
-                Action = "survey.delete",
-                ResourceType = EntityTypes.Survey,
-                ResourceId = id.ToString(),
-                Message = ex.Message,
-                Status = AuditStatus.Failure,
-                FailureReason = ex.Message,
-            });
             return BadRequest(new { message = ex.Message });
         }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("crm.surveys", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var impact = await hardDelete.GetSurveyImpactAsync(
+            id, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpGet("{id:int}/timeline")]
@@ -389,6 +397,13 @@ public class SurveysController(
 
     private Task<bool> CanManageAllAsync(int userId, CancellationToken ct) =>
         permissions.HasAsync(userId, "crm.surveys.manage.all", ct);
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations", new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
+    }
 
     private async Task<bool> CanViewAsync(int surveyId, int userId, CancellationToken ct) =>
         await svc.CanAccessAsync(surveyId, userId, await CanViewAllAsync(userId, ct), ct);

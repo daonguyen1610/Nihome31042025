@@ -691,7 +691,21 @@ public class TendersControllerTests : IntegrationTestBase
             content.StatusCode.Should().Be(HttpStatusCode.OK);
             (await content.Content.ReadAsStringAsync()).Should().Be("shared capability content");
 
-            var delete = await Client.DeleteAsync($"/api/capability-documents/{documentId}");
+            var impactResponse = await Client.GetAsync(
+                $"/api/capability-documents/{documentId}/deletion-impact");
+            impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var impact = await ReadJsonAsync(impactResponse);
+            using var deleteRequest = new HttpRequestMessage(
+                HttpMethod.Delete,
+                $"/api/capability-documents/{documentId}")
+            {
+                Content = JsonContent.Create(new
+                {
+                    planToken = impact.GetProperty("planToken").GetString(),
+                    confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+                }),
+            };
+            var delete = await Client.SendAsync(deleteRequest);
             delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             (await Client.GetAsync($"/api/tenders/{tenderId}/checklist/{itemId}/content"))
                 .StatusCode.Should().Be(HttpStatusCode.OK);

@@ -296,22 +296,29 @@ public sealed class CrmHardDeletePlanService(
             .OrderBy(item => item.Id)
             .Select(item => item.Id)
             .ToListAsync(ct);
-        var opportunityIds = await db.Opportunities.AsNoTracking()
+        var opportunityRecords = await db.Opportunities.AsNoTracking()
             .Where(item => item.WonTenderId == tenderId)
             .OrderBy(item => item.Id)
-            .Select(item => item.Id)
+            .Select(item => new { item.Id, item.Name })
             .ToListAsync(ct);
 
         var checklistIds = checklist.Select(item => Identifier(item.Id)).ToList();
         var revisionIdentifiers = revisionIds.Select(Identifier).ToList();
         var lineIdentifiers = lineIds.Select(Identifier).ToList();
-        var opportunityIdentifiers = opportunityIds.Select(Identifier).ToList();
-        var capabilityIdentifiers = checklist
+        var opportunityIdentifiers = opportunityRecords.Select(item => Identifier(item.Id)).ToList();
+        var capabilityIds = checklist
             .Where(item => item.CapabilityDocumentId.HasValue)
-            .Select(item => Identifier(item.CapabilityDocumentId!.Value))
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)
+            .Select(item => item.CapabilityDocumentId!.Value)
+            .Distinct()
             .ToList();
+        var capabilityRecords = await db.CapabilityDocuments.AsNoTracking()
+            .Where(item => capabilityIds.Contains(item.Id)).OrderBy(item => item.Id)
+            .Select(item => new { item.Id, item.Name }).ToListAsync(ct);
+        var capabilityIdentifiers = capabilityRecords.Select(item => Identifier(item.Id)).ToList();
+        var wonOpportunity = tender.WonOpportunityId.HasValue
+            ? await db.Opportunities.AsNoTracking().Where(item => item.Id == tender.WonOpportunityId.Value)
+                .Select(item => new { item.Id, item.Name }).SingleOrDefaultAsync(ct)
+            : null;
         var localPaths = new List<string>();
         var fileBlockers = new List<string>();
         foreach (var item in checklist.Where(item =>
@@ -336,20 +343,26 @@ public sealed class CrmHardDeletePlanService(
         fileBlockers = fileBlockers.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
 
         var impactItems = new List<DeletionImpactItemResponse>();
-        AddImpact(impactItems, "tender.checklistItems", checklistIds);
-        AddImpact(impactItems, "tender.estimateRevisions", revisionIdentifiers);
-        AddImpact(impactItems, "tender.estimateLines", lineIdentifiers);
-        AddImpact(impactItems, "tender.localFiles", localPaths);
-        AddImpact(impactItems, "tender.fileBlockers", fileBlockers, DeletionImpactActions.Block);
+        var tenderDetail = $"/admin/tenders/{tender.Id}";
+        var tenderLink = new[] { DetailLink($"{tender.Code} · {tender.Name}", tenderDetail) };
+        AddImpact(impactItems, "tender.checklistItems", checklistIds, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
+        AddImpact(impactItems, "tender.estimateRevisions", revisionIdentifiers, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
+        AddImpact(impactItems, "tender.estimateLines", lineIdentifiers, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
+        AddImpact(impactItems, "tender.localFiles", localPaths, resolutionUrl: tenderDetail, resolutionLinks: tenderLink);
+        AddImpact(impactItems, "tender.fileBlockers", fileBlockers, DeletionImpactActions.Block, tenderDetail, tenderLink);
         AddImpact(impactItems, "tender.capabilityDocuments", capabilityIdentifiers,
-            DeletionImpactActions.Unlink);
+            DeletionImpactActions.Unlink, "/admin/capability-documents",
+            capabilityRecords.Select(item => DetailLink(item.Name,
+                $"/admin/capability-documents?documentId={item.Id}")).ToList());
         AddImpact(impactItems, "tender.winningOpportunities", opportunityIdentifiers,
-            DeletionImpactActions.Unlink);
-        var wonOpportunityIdentifiers = tender.WonOpportunityId.HasValue
-            ? new[] { Identifier(tender.WonOpportunityId.Value) }
+            DeletionImpactActions.Unlink, null,
+            opportunityRecords.Select(item => DetailLink(item.Name, $"/admin/opportunities/{item.Id}")).ToList());
+        var wonOpportunityIdentifiers = wonOpportunity is not null
+            ? new[] { Identifier(wonOpportunity.Id) }
             : [];
         AddImpact(impactItems, "tender.wonOpportunity", wonOpportunityIdentifiers,
-            DeletionImpactActions.Unlink);
+            DeletionImpactActions.Unlink, null,
+            wonOpportunity is null ? [] : [DetailLink(wonOpportunity.Name, $"/admin/opportunities/{wonOpportunity.Id}")]);
         var canDelete = tender.Status == TenderStatus.Preparing && fileBlockers.Count == 0;
         if (tender.Status != TenderStatus.Preparing)
         {
@@ -359,6 +372,8 @@ public sealed class CrmHardDeletePlanService(
                 Action = DeletionImpactActions.Block,
                 Count = 1,
                 Examples = [tender.Status.ToString()],
+                ResolutionLinks = tenderLink.ToList(),
+                ResolutionUrl = tenderDetail,
             });
         }
 
@@ -436,15 +451,15 @@ public sealed class CrmHardDeletePlanService(
             .OrderBy(item => item.Id)
             .Select(item => item.Id)
             .ToListAsync(ct);
-        var opportunityIds = await db.Opportunities.AsNoTracking()
+        var opportunityRecords = await db.Opportunities.AsNoTracking()
             .Where(item => item.WonQuoteId == quoteId)
             .OrderBy(item => item.Id)
-            .Select(item => item.Id)
+            .Select(item => new { item.Id, item.Name })
             .ToListAsync(ct);
-        var contractIds = await db.Contracts.AsNoTracking()
+        var contractRecords = await db.Contracts.AsNoTracking()
             .Where(item => item.QuoteId == quoteId)
             .OrderBy(item => item.Id)
-            .Select(item => item.Id)
+            .Select(item => new { item.Id, item.ContractNumber })
             .ToListAsync(ct);
         var documentIds = documents.Select(item => (long)item.Id).ToList();
         var documentPaths = documents.Select(item => item.FilePath).Distinct().ToList();
@@ -560,23 +575,27 @@ public sealed class CrmHardDeletePlanService(
         var approvalLogIdentifiers = approvalLogIds.Select(Identifier).ToList();
         var snapshotIdentifiers = snapshotIds.Select(Identifier).ToList();
         var translationIdentifiers = translationIds.Select(Identifier).ToList();
-        var opportunityIdentifiers = opportunityIds.Select(Identifier).ToList();
-        var contractIdentifiers = contractIds.Select(Identifier).ToList();
+        var opportunityIdentifiers = opportunityRecords.Select(item => Identifier(item.Id)).ToList();
+        var contractIdentifiers = contractRecords.Select(item => Identifier(item.Id)).ToList();
         var localPaths = localDefinitions.Select(item => item.ActionIdentifier).ToList();
 
         var impactItems = new List<DeletionImpactItemResponse>();
-        AddImpact(impactItems, "quote.items", itemIdentifiers);
-        AddImpact(impactItems, "quote.documents", documentIdentifiers);
-        AddImpact(impactItems, "quote.approvalLogs", approvalLogIdentifiers);
-        AddImpact(impactItems, "quote.versionSnapshots", snapshotIdentifiers);
+        var quoteDetail = $"/admin/quotes/{quote.Id}";
+        var quoteLinks = new[] { DetailLink(quote.Code, quoteDetail) };
+        AddImpact(impactItems, "quote.items", itemIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.documents", documentIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.approvalLogs", approvalLogIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.versionSnapshots", snapshotIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.translations", translationIdentifiers);
-        AddImpact(impactItems, "quote.localFiles", localPaths);
-        AddImpact(impactItems, "quote.fileBlockers", fileBlockers, DeletionImpactActions.Block);
-        AddImpact(impactItems, "quote.driveFiles", driveIdentifiers);
-        AddImpact(impactItems, "quote.projectDocumentSidecars", sidecarIdentifiers, DeletionImpactActions.Unlink);
-        AddImpact(impactItems, "quote.projectDocumentSidecarBlockers", sidecarBlockers, DeletionImpactActions.Block);
-        AddImpact(impactItems, "quote.winningOpportunities", opportunityIdentifiers, DeletionImpactActions.Unlink);
-        AddImpact(impactItems, "quote.contracts", contractIdentifiers, DeletionImpactActions.Unlink);
+        AddImpact(impactItems, "quote.localFiles", localPaths, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.fileBlockers", fileBlockers, DeletionImpactActions.Block, quoteDetail, quoteLinks);
+        AddImpact(impactItems, "quote.driveFiles", driveIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.projectDocumentSidecars", sidecarIdentifiers, DeletionImpactActions.Unlink, quoteDetail, quoteLinks);
+        AddImpact(impactItems, "quote.projectDocumentSidecarBlockers", sidecarBlockers, DeletionImpactActions.Block, quoteDetail, quoteLinks);
+        AddImpact(impactItems, "quote.winningOpportunities", opportunityIdentifiers, DeletionImpactActions.Unlink, null,
+            opportunityRecords.Select(item => DetailLink(item.Name, $"/admin/opportunities/{item.Id}")).ToList());
+        AddImpact(impactItems, "quote.contracts", contractIdentifiers, DeletionImpactActions.Unlink, null,
+            contractRecords.Select(item => DetailLink(item.ContractNumber, $"/admin/contracts/{item.Id}")).ToList());
 
         var rowVersion = CrmConcurrency.Encode(quote.RowVersion);
         var tokenSource = string.Join('|',
@@ -721,7 +740,6 @@ public sealed class CustomerHardDeleteHandler(
         if (!canManage)
             throw new HardDeleteAuthorizationException(
                 "Quyền xóa khách hàng hoặc phạm vi sở hữu đã thay đổi. Cần người có thẩm quyền xem xét tác vụ.");
-        if (customer is null && context.IsForwardRecovery) return;
         if (customer is null || !canSeeAll && customer.OwnerUserId != requestedBy)
             throw new HardDeleteAuthorizationException(
                 "Quyền xóa khách hàng hoặc phạm vi sở hữu đã thay đổi. Cần người có thẩm quyền xem xét tác vụ.");
@@ -739,8 +757,6 @@ public sealed class CustomerHardDeleteHandler(
         var customer = await db.Customers.SingleOrDefaultAsync(item => item.Id == customerId, ct);
         if (customer is null)
         {
-            AddCompletionAuditIfMissing(context, requestedBy, customerId);
-            await db.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
             return;
         }
@@ -779,7 +795,6 @@ public sealed class CustomerHardDeleteHandler(
                     DeletedByUserId = requestedBy,
                 });
             }
-            AddCompletionAuditIfMissing(context, requestedBy, customerId);
             db.Customers.Remove(customer);
             await db.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
@@ -792,27 +807,6 @@ public sealed class CustomerHardDeleteHandler(
         }
     }
 
-    private void AddCompletionAuditIfMissing(
-        HardDeleteResourceContext context, int requestedBy, int customerId)
-    {
-        var auditId = context.OperationId.ToString("N");
-        if (db.AuditLogs.Local.Any(item => item.AuditId == auditId) ||
-            db.AuditLogs.Any(item => item.AuditId == auditId)) return;
-        db.AuditLogs.Add(new AuditLog
-        {
-            AuditId = auditId,
-            CreatedAt = DateTime.UtcNow,
-            ActorUserId = requestedBy,
-            ActorType = "user",
-            Action = "customer.delete",
-            ResourceType = EntityTypes.Customer,
-            ResourceId = customerId.ToString(CultureInfo.InvariantCulture),
-            Message = $"Customer #{customerId} durable deletion completed.",
-            Channel = "job",
-            Status = "success",
-            CorrelationId = context.OperationId.ToString(),
-        });
-    }
 }
 
 public sealed class LeadHardDeleteHandler(
@@ -861,14 +855,31 @@ public sealed class LeadHardDeleteHandler(
 
 public sealed class TenderHardDeleteHandler(
     AppDbContext db,
-    ICrmHardDeletePlanService plans) : IHardDeleteResourceHandler
+    ICrmHardDeletePlanService plans,
+    IPermissionService permissions) : IHardDeleteResourceHandler
 {
     public string ResourceType => EntityTypes.Tender;
+
+    public async Task AuthorizeAsync(HardDeleteResourceContext context, CancellationToken ct = default)
+    {
+        if (!int.TryParse(context.ResourceId, NumberStyles.None, CultureInfo.InvariantCulture, out var tenderId) ||
+            !int.TryParse(context.RequestedBy, NumberStyles.None, CultureInfo.InvariantCulture, out var requestedBy))
+            throw new HardDeleteAuthorizationException("Thông tin phân quyền tác vụ xóa không hợp lệ.");
+        if (!await permissions.HasAsync(requestedBy, "crm.tenders.manage", ct))
+            throw new HardDeleteAuthorizationException(
+                "Quyền xóa gói thầu đã thay đổi. Cần người có thẩm quyền xem xét tác vụ.");
+        var current = await plans.ForTenderAsync(tenderId, ct);
+        if (current is null)
+            throw new HardDeleteAuthorizationException("Gói thầu cần xoá không còn tồn tại trước khi tác vụ bắt đầu.");
+        DesignProjectHardDeleteHandler.EnsurePlan(context.PlanToken, current.Impact.PlanToken);
+        if (!current.Impact.CanDelete)
+            throw new TenderOperationException("Chỉ gói thầu đang Chuẩn bị mới có thể bị xóa.");
+    }
 
     public async Task FinalizeAsync(HardDeleteResourceContext context, CancellationToken ct = default)
     {
         if (!int.TryParse(context.ResourceId, NumberStyles.None, CultureInfo.InvariantCulture, out var tenderId) ||
-            !int.TryParse(context.RequestedBy, NumberStyles.None, CultureInfo.InvariantCulture, out _))
+            !int.TryParse(context.RequestedBy, NumberStyles.None, CultureInfo.InvariantCulture, out var requestedBy))
             throw new HardDeleteOperationException("invalid_resource_context", "Thông tin tác vụ xóa không hợp lệ.");
 
         await using var transaction = db.Database.IsRelational()
@@ -904,6 +915,17 @@ public sealed class TenderHardDeleteHandler(
                 .Where(item => item.WonTenderId == tenderId)
                 .ToListAsync(ct);
             foreach (var opportunity in winningOpportunities) opportunity.WonTenderId = null;
+            if (tender.Code.StartsWith("TD-SAMPLE-", StringComparison.Ordinal) &&
+                !await db.SeededRootDeletions.AnyAsync(item =>
+                    item.ResourceType == EntityTypes.Tender && item.ResourceKey == tender.Code, ct))
+            {
+                db.SeededRootDeletions.Add(new SeededRootDeletion
+                {
+                    ResourceType = EntityTypes.Tender,
+                    ResourceKey = tender.Code,
+                    DeletedByUserId = requestedBy,
+                });
+            }
             db.Tenders.Remove(tender);
             await db.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
@@ -935,10 +957,14 @@ public sealed class QuoteHardDeleteHandler(
             .Where(item => item.Id == quoteId)
             .Select(item => new { item.OwnerUserId })
             .SingleOrDefaultAsync(ct);
-        if (quote is null && context.IsForwardRecovery) return;
         if (!canManage || quote is null || !canSeeAll && quote.OwnerUserId != requestedBy)
             throw new HardDeleteAuthorizationException(
                 "Quyền xóa báo giá hoặc phạm vi sở hữu đã thay đổi. Cần người có thẩm quyền xem xét tác vụ.");
+        var current = await plans.ForQuoteAsync(quoteId, ct)
+            ?? throw new HardDeleteAuthorizationException("Báo giá cần xoá không còn tồn tại trước khi tác vụ bắt đầu.");
+        DesignProjectHardDeleteHandler.EnsurePlan(context.PlanToken, current.Impact.PlanToken);
+        if (!current.Impact.CanDelete)
+            throw new QuoteOperationException("Không thể xoá báo giá vì còn tệp cần được xử lý an toàn.");
     }
 
     public async Task FinalizeAsync(HardDeleteResourceContext context, CancellationToken ct = default)
@@ -953,8 +979,6 @@ public sealed class QuoteHardDeleteHandler(
         var quote = await db.Quotes.SingleOrDefaultAsync(item => item.Id == quoteId, ct);
         if (quote is null)
         {
-            AddCompletionAuditIfMissing(context, requestedBy, quoteId);
-            await db.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
             return;
         }
@@ -1020,7 +1044,6 @@ public sealed class QuoteHardDeleteHandler(
                     DeletedByUserId = requestedBy,
                 });
             }
-            AddCompletionAuditIfMissing(context, requestedBy, quoteId);
             db.Quotes.Remove(quote);
             await db.SaveChangesAsync(ct);
             if (transaction is not null) await transaction.CommitAsync(ct);
@@ -1036,27 +1059,6 @@ public sealed class QuoteHardDeleteHandler(
     private static bool IsSeededQuoteCode(string code) =>
         code.StartsWith("QT-SAMPLE-", StringComparison.Ordinal);
 
-    private void AddCompletionAuditIfMissing(
-        HardDeleteResourceContext context, int requestedBy, int quoteId)
-    {
-        var auditId = context.OperationId.ToString("N");
-        if (db.AuditLogs.Local.Any(item => item.AuditId == auditId) ||
-            db.AuditLogs.Any(item => item.AuditId == auditId)) return;
-        db.AuditLogs.Add(new AuditLog
-        {
-            AuditId = auditId,
-            CreatedAt = DateTime.UtcNow,
-            ActorUserId = requestedBy,
-            ActorType = "user",
-            Action = "quote.delete",
-            ResourceType = EntityTypes.Quote,
-            ResourceId = quoteId.ToString(CultureInfo.InvariantCulture),
-            Message = $"Quote #{quoteId} durable deletion completed.",
-            Channel = "job",
-            Status = "success",
-            CorrelationId = context.OperationId.ToString(),
-        });
-    }
 }
 
 internal static class HardDeleteQueryExtensions
