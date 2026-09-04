@@ -16,14 +16,20 @@ namespace nihomebackend.Migrations
                 IF EXISTS (
                     SELECT 1
                     FROM surveys survey
+                    LEFT JOIN operational_projects project
+                        ON project.Id = survey.OperationalProjectId
                     LEFT JOIN opportunities opportunity
                         ON opportunity.Id = survey.LinkedOpportunityId
-                    WHERE opportunity.Id IS NULL
-                       OR opportunity.OperationalProjectId IS NULL
-                       OR survey.OperationalProjectId <> opportunity.OperationalProjectId
+                    WHERE project.Id IS NULL
+                       OR (survey.LinkedOpportunityId IS NOT NULL AND (
+                           opportunity.Id IS NULL
+                           OR opportunity.OperationalProjectId IS NULL
+                           OR survey.OperationalProjectId <> opportunity.OperationalProjectId
+                           OR project.CustomerId <> opportunity.CustomerId
+                       ))
                 )
                     THROW 51001,
-                        'Không thể xác nhận dự án của phiếu khảo sát lịch sử từ cơ hội liên kết.',
+                        'Không thể xác nhận Dự án vận hành của phiếu khảo sát lịch sử.',
                         1;
                 """);
         }

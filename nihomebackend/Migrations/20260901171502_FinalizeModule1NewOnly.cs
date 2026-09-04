@@ -151,6 +151,63 @@ namespace nihomebackend.Migrations
                     WHERE survey.OperationalProjectId IS NULL
                       AND opportunity.OperationalProjectId IS NOT NULL;
 
+                    INSERT INTO customers
+                        (Type, Name, SourceCode, RelationshipStatus, OwnerUserId,
+                         Note, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId)
+                    SELECT 'Individual',
+                           CONCAT(N'Khách hàng khảo sát legacy ', survey.Code),
+                           'other', 'Prospect', NULL,
+                           CONCAT(N'MIGRATION:CompleteModule1:Survey:', survey.Id),
+                           survey.CreatedAt, survey.CreatedByUserId,
+                           survey.UpdatedAt, survey.UpdatedByUserId
+                    FROM surveys survey
+                    WHERE survey.OperationalProjectId IS NULL
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM operational_projects project
+                          WHERE project.Code = CONCAT('PJ-LEGACY-SV-', survey.Id)
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM customers customer
+                          WHERE customer.Note = CONCAT(N'MIGRATION:CompleteModule1:Survey:', survey.Id)
+                      );
+
+                    INSERT INTO operational_projects
+                        (Code, Name, CustomerId, ProjectManagerUserId, Status,
+                         StartDate, EndDate, Note, CreatedAt, CreatedByUserId,
+                         UpdatedAt, UpdatedByUserId)
+                    SELECT CONCAT('PJ-LEGACY-SV-', survey.Id),
+                           CONCAT(N'Dự án khảo sát ', survey.Code),
+                           legacyCustomer.Id, NULL, 'Planning',
+                           survey.SurveyDate, NULL,
+                              CONCAT(N'MIGRATION:CompleteModule1:Survey:', survey.Id,
+                                  N'; Backfill từ phiếu khảo sát legacy ', survey.Code, N'.'),
+                           survey.CreatedAt, survey.CreatedByUserId,
+                           survey.UpdatedAt, survey.UpdatedByUserId
+                    FROM surveys survey
+                    CROSS APPLY (
+                        SELECT TOP (1) customer.Id
+                        FROM customers customer
+                        WHERE customer.Note = CONCAT(N'MIGRATION:CompleteModule1:Survey:', survey.Id)
+                        ORDER BY customer.Id
+                    ) legacyCustomer
+                    WHERE survey.OperationalProjectId IS NULL
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM operational_projects project
+                          WHERE project.Code = CONCAT('PJ-LEGACY-SV-', survey.Id)
+                      );
+
+                    UPDATE survey
+                    SET OperationalProjectId = project.Id
+                    FROM surveys survey
+                    INNER JOIN operational_projects project
+                        ON project.Code = CONCAT('PJ-LEGACY-SV-', survey.Id)
+                       AND project.Note LIKE CONCAT(
+                           N'MIGRATION:CompleteModule1:Survey:', survey.Id, N';%')
+                    WHERE survey.OperationalProjectId IS NULL;
+
                     IF EXISTS (SELECT 1 FROM surveys WHERE OperationalProjectId IS NULL)
                         THROW 51000, 'Không thể chuyển đổi phiếu khảo sát: thiếu Dự án vận hành hợp lệ.', 1;
 
