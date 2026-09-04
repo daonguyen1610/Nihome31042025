@@ -586,9 +586,11 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
   });
   await expect(detailLink).toHaveAttribute("href", "/admin/operational-projects/456106");
   await expect(detailLink).toHaveAttribute("target", "_blank");
-  await expect(dialog.getByRole("link", {
-    name: /View all blocking records|Xem tất cả bản ghi đang chặn|查看所有阻止记录|すべてのブロック中レコードを表示/i,
-  })).toHaveAttribute("href", `/admin/operational-projects?customerId=${customer.id}`);
+  const viewAllProjectsLink = dialog.locator(
+    `a[href="/admin/operational-projects?customerId=${customer.id}"]`,
+  );
+  await expect(viewAllProjectsLink).toHaveCount(1);
+  await expect(viewAllProjectsLink).toHaveAttribute("target", "_blank");
   await expect(dialog.getByRole("link", { name: "HD-CUSTOMER-001" })).toHaveAttribute(
     "href",
     "/admin/contracts/456109",
