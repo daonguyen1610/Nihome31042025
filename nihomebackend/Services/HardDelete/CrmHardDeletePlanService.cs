@@ -17,6 +17,7 @@ public sealed record CrmHardDeletePlan(
 public interface ICrmHardDeletePlanService
 {
     Task<CrmHardDeletePlan?> ForLeadAsync(int leadId, CancellationToken ct = default);
+    Task<CrmHardDeletePlan?> ForCustomerAsync(int customerId, CancellationToken ct = default);
     Task<CrmHardDeletePlan?> ForTenderAsync(int tenderId, CancellationToken ct = default);
     Task<CrmHardDeletePlan?> ForQuoteAsync(int quoteId, CancellationToken ct = default);
 }
@@ -26,6 +27,184 @@ public sealed class CrmHardDeletePlanService(
     IGoogleDriveSettingsStore settingsStore,
     IHardDeleteFileService files) : ICrmHardDeletePlanService
 {
+    public async Task<CrmHardDeletePlan?> ForCustomerAsync(
+        int customerId, CancellationToken ct = default)
+    {
+        var customer = await db.Customers.AsNoTracking()
+            .Where(item => item.Id == customerId)
+            .Select(item => new { item.Id, item.Name, item.RowVersion })
+            .SingleOrDefaultAsync(ct);
+        if (customer is null) return null;
+
+        var contactIds = await db.CustomerContacts.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var activityIds = await db.CustomerActivities.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var documents = await db.CustomerDocuments.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => new { item.Id, item.FilePath }).ToListAsync(ct);
+        var translationIds = await db.EntityTranslations.AsNoTracking()
+            .Where(item => item.EntityType == EntityTypes.Customer && item.EntityId == customerId)
+            .OrderBy(item => item.Id).Select(item => item.Id).ToListAsync(ct);
+        var leadIds = await db.Leads.AsNoTracking()
+            .Where(item => item.ConvertedCustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var projectDocumentIds = await db.ProjectDocuments.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var opportunityIds = await db.Opportunities.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var tenderIds = await db.Tenders.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var contractIds = await db.Contracts.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var designProjectIds = await db.DesignProjects.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+        var operationalProjectIds = await db.OperationalProjects.AsNoTracking()
+            .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
+            .Select(item => item.Id).ToListAsync(ct);
+
+        var localDefinitions = new List<HardDeleteItemDefinition>();
+        var fileBlockers = new List<string>();
+        foreach (var document in documents)
+        {
+            try
+            {
+                var path = files.ValidateManagedPath(document.FilePath);
+                if (!path.StartsWith($"/files/customers/{customerId}/", StringComparison.Ordinal))
+                {
+                    fileBlockers.Add($"outside-root:{document.Id}:{path}");
+                    continue;
+                }
+                localDefinitions.Add(new HardDeleteItemDefinition(
+                    HardDeleteItemKind.LocalFile, path, localDefinitions.Count));
+            }
+            catch (HardDeleteFileException)
+            {
+                fileBlockers.Add($"invalid:{document.Id}:{document.FilePath}");
+            }
+        }
+
+        var duplicatePaths = localDefinitions
+            .GroupBy(item => item.ActionIdentifier, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key).Order(StringComparer.Ordinal).ToList();
+        fileBlockers.AddRange(duplicatePaths.Select(path => $"duplicate-local:{path}"));
+        var candidatePaths = localDefinitions.Select(item => item.ActionIdentifier)
+            .ToHashSet(StringComparer.Ordinal);
+        var otherCustomerPaths = await db.CustomerDocuments.AsNoTracking()
+            .Where(item => item.CustomerId != customerId)
+            .Select(item => item.FilePath).ToListAsync(ct);
+        var projectDocumentPaths = await db.ProjectDocuments.AsNoTracking()
+            .Select(item => item.LocalPath).ToListAsync(ct);
+        var sharedCustomerPaths = NormalizeSharedPaths(otherCustomerPaths, candidatePaths);
+        var sharedProjectPaths = NormalizeSharedPaths(projectDocumentPaths, candidatePaths);
+        fileBlockers.AddRange(sharedCustomerPaths.Select(path => $"shared-customer-document:{path}"));
+        fileBlockers.AddRange(sharedProjectPaths.Select(path => $"shared-project-document:{path}"));
+        var sharedPaths = sharedCustomerPaths.Concat(sharedProjectPaths)
+            .ToHashSet(StringComparer.Ordinal);
+        localDefinitions = localDefinitions
+            .Where(item => !duplicatePaths.Contains(item.ActionIdentifier, StringComparer.Ordinal) &&
+                !sharedPaths.Contains(item.ActionIdentifier))
+            .OrderBy(item => item.ActionIdentifier, StringComparer.Ordinal)
+            .Select((item, index) => item with { Sequence = index }).ToList();
+        fileBlockers = fileBlockers.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+
+        var contacts = contactIds.Select(Identifier).ToList();
+        var activities = activityIds.Select(Identifier).ToList();
+        var documentIdentifiers = documents.Select(item => Identifier(item.Id)).ToList();
+        var translations = translationIds.Select(Identifier).ToList();
+        var leads = leadIds.Select(Identifier).ToList();
+        var projectDocuments = projectDocumentIds.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();
+        var opportunities = opportunityIds.Select(Identifier).ToList();
+        var tenders = tenderIds.Select(Identifier).ToList();
+        var contracts = contractIds.Select(Identifier).ToList();
+        var designProjects = designProjectIds.Select(Identifier).ToList();
+        var operationalProjects = operationalProjectIds.Select(Identifier).ToList();
+        var localPaths = localDefinitions.Select(item => item.ActionIdentifier).ToList();
+
+        var impactItems = new List<DeletionImpactItemResponse>();
+        AddImpact(impactItems, "customer.contacts", contacts);
+        AddImpact(impactItems, "customer.activities", activities);
+        AddImpact(impactItems, "customer.documents", documentIdentifiers);
+        AddImpact(impactItems, "customer.localFiles", localPaths);
+        AddImpact(impactItems, "customer.fileBlockers", fileBlockers, DeletionImpactActions.Block);
+        AddImpact(impactItems, "customer.translations", translations);
+        AddImpact(impactItems, "customer.convertedLeads", leads, DeletionImpactActions.Unlink);
+        AddImpact(impactItems, "customer.projectDocuments", projectDocuments, DeletionImpactActions.Unlink);
+        AddImpact(impactItems, "customer.opportunities", opportunities, DeletionImpactActions.Block);
+        AddImpact(impactItems, "customer.tenders", tenders, DeletionImpactActions.Block);
+        AddImpact(impactItems, "customer.contracts", contracts, DeletionImpactActions.Block);
+        AddImpact(impactItems, "customer.designProjects", designProjects, DeletionImpactActions.Block);
+        AddImpact(impactItems, "customer.operationalProjects", operationalProjects, DeletionImpactActions.Block);
+
+        var rowVersion = CrmConcurrency.Encode(customer.RowVersion);
+        var confirmation = $"CUSTOMER-{customer.Id}";
+        var tokenSource = string.Join('|',
+            $"customer.root:{customer.Id}:{customer.Name}:{rowVersion}",
+            $"customer.contacts:{string.Join(',', contacts)}",
+            $"customer.activities:{string.Join(',', activities)}",
+            $"customer.documents:{string.Join(',', documentIdentifiers)}",
+            $"customer.localFiles:{string.Join(',', localPaths)}",
+            $"customer.fileBlockers:{string.Join(',', fileBlockers)}",
+            $"customer.translations:{string.Join(',', translations)}",
+            $"customer.convertedLeads:{string.Join(',', leads)}",
+            $"customer.projectDocuments:{string.Join(',', projectDocuments)}",
+            $"customer.opportunities:{string.Join(',', opportunities)}",
+            $"customer.tenders:{string.Join(',', tenders)}",
+            $"customer.contracts:{string.Join(',', contracts)}",
+            $"customer.designProjects:{string.Join(',', designProjects)}",
+            $"customer.operationalProjects:{string.Join(',', operationalProjects)}");
+        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"{EntityTypes.Customer}:{tokenSource}"))).ToLowerInvariant();
+        var blockerCount = fileBlockers.Count + opportunities.Count + tenders.Count +
+            contracts.Count + designProjects.Count + operationalProjects.Count;
+        var impact = new DeletionImpactResponse
+        {
+            ResourceType = EntityTypes.Customer,
+            ResourceId = customer.Id,
+            ResourceLabel = customer.Name,
+            RequiredConfirmation = confirmation,
+            PlanToken = token,
+            CanDelete = blockerCount == 0,
+            TotalAffected = 1 + contacts.Count + activities.Count + documentIdentifiers.Count +
+                localPaths.Count + fileBlockers.Count + translations.Count + leads.Count +
+                projectDocuments.Count + opportunities.Count + tenders.Count + contracts.Count +
+                designProjects.Count + operationalProjects.Count,
+            Items = impactItems,
+        };
+        var definitions = localDefinitions
+            .Append(new HardDeleteItemDefinition(
+                HardDeleteItemKind.DatabaseAggregate, "delete-customer-aggregate", localDefinitions.Count))
+            .ToList();
+        return new CrmHardDeletePlan(impact, definitions);
+    }
+
+    private IReadOnlyList<string> NormalizeSharedPaths(
+        IEnumerable<string> paths,
+        IReadOnlySet<string> candidatePaths)
+    {
+        var shared = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var path in paths)
+        {
+            try
+            {
+                var normalized = files.ValidateManagedPath(path);
+                if (candidatePaths.Contains(normalized)) shared.Add(normalized);
+            }
+            catch (HardDeleteFileException)
+            {
+            }
+        }
+        return shared.Order(StringComparer.Ordinal).ToList();
+    }
+
     public async Task<CrmHardDeletePlan?> ForLeadAsync(int leadId, CancellationToken ct = default)
     {
         var lead = await db.Leads.AsNoTracking()
@@ -495,6 +674,120 @@ public sealed class CrmHardDeletePlanService(
         document.SyncAttemptCount, document.SyncError, document.NextSyncAttemptAt?.ToString("O"),
         document.LastSyncAttemptAt?.ToString("O"), document.DeletedAt?.ToString("O"),
         document.DeletedByUserId);
+}
+
+public sealed class CustomerHardDeleteHandler(
+    AppDbContext db,
+    ICrmHardDeletePlanService plans,
+    IPermissionService permissions) : IHardDeleteResourceHandler
+{
+    public string ResourceType => EntityTypes.Customer;
+
+    public async Task AuthorizeAsync(HardDeleteResourceContext context, CancellationToken ct = default)
+    {
+        if (!int.TryParse(context.ResourceId, NumberStyles.None, CultureInfo.InvariantCulture, out var customerId) ||
+            !int.TryParse(context.RequestedBy, NumberStyles.None, CultureInfo.InvariantCulture, out var requestedBy))
+            throw new HardDeleteAuthorizationException("Thông tin phân quyền tác vụ xóa không hợp lệ.");
+        var canManage = await permissions.HasAsync(requestedBy, "crm.customers.manage", ct);
+        var canSeeAll = await permissions.HasAsync(requestedBy, "crm.customers.view.all", ct);
+        var customer = await db.Customers.AsNoTracking()
+            .Where(item => item.Id == customerId)
+            .Select(item => new { item.OwnerUserId }).SingleOrDefaultAsync(ct);
+        if (!canManage)
+            throw new HardDeleteAuthorizationException(
+                "Quyền xóa khách hàng hoặc phạm vi sở hữu đã thay đổi. Cần người có thẩm quyền xem xét tác vụ.");
+        if (customer is null && context.IsForwardRecovery) return;
+        if (customer is null || !canSeeAll && customer.OwnerUserId != requestedBy)
+            throw new HardDeleteAuthorizationException(
+                "Quyền xóa khách hàng hoặc phạm vi sở hữu đã thay đổi. Cần người có thẩm quyền xem xét tác vụ.");
+    }
+
+    public async Task FinalizeAsync(HardDeleteResourceContext context, CancellationToken ct = default)
+    {
+        if (!int.TryParse(context.ResourceId, NumberStyles.None, CultureInfo.InvariantCulture, out var customerId) ||
+            !int.TryParse(context.RequestedBy, NumberStyles.None, CultureInfo.InvariantCulture, out var requestedBy))
+            throw new HardDeleteOperationException("invalid_resource_context", "Thông tin tác vụ xóa không hợp lệ.");
+
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct)
+            : null;
+        var customer = await db.Customers.SingleOrDefaultAsync(item => item.Id == customerId, ct);
+        if (customer is null)
+        {
+            AddCompletionAuditIfMissing(context, requestedBy, customerId);
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+            return;
+        }
+
+        var current = await plans.ForCustomerAsync(customerId, ct)
+            ?? throw new HardDeleteOperationException("resource_not_found", "Không tìm thấy khách hàng.");
+        DesignProjectHardDeleteHandler.EnsurePlan(context.PlanToken, current.Impact.PlanToken);
+        if (!current.Impact.CanDelete)
+            throw new CustomerOperationException(
+                "Không thể xoá khách hàng khi còn dữ liệu nghiệp vụ độc lập hoặc tệp chưa an toàn.");
+        try
+        {
+            var leads = await db.Leads.Where(item => item.ConvertedCustomerId == customerId).ToListAsync(ct);
+            foreach (var lead in leads) lead.ConvertedCustomerId = null;
+            var projectDocuments = await db.ProjectDocuments
+                .Where(item => item.CustomerId == customerId).ToListAsync(ct);
+            foreach (var document in projectDocuments) document.CustomerId = null;
+
+            await db.CustomerContacts.Where(item => item.CustomerId == customerId)
+                .ExecuteDeleteOrRemoveAsync(db, ct);
+            await db.CustomerActivities.Where(item => item.CustomerId == customerId)
+                .ExecuteDeleteOrRemoveAsync(db, ct);
+            await db.CustomerDocuments.Where(item => item.CustomerId == customerId)
+                .ExecuteDeleteOrRemoveAsync(db, ct);
+            await db.EntityTranslations
+                .Where(item => item.EntityType == EntityTypes.Customer && item.EntityId == customerId)
+                .ExecuteDeleteOrRemoveAsync(db, ct);
+            if (customer.Name.StartsWith("[SAMPLE]", StringComparison.Ordinal) &&
+                !await db.SeededRootDeletions.AnyAsync(item =>
+                    item.ResourceType == EntityTypes.Customer && item.ResourceKey == customer.Name, ct))
+            {
+                db.SeededRootDeletions.Add(new SeededRootDeletion
+                {
+                    ResourceType = EntityTypes.Customer,
+                    ResourceKey = customer.Name,
+                    DeletedByUserId = requestedBy,
+                });
+            }
+            AddCompletionAuditIfMissing(context, requestedBy, customerId);
+            db.Customers.Remove(customer);
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch
+        {
+            if (transaction is not null) await transaction.RollbackAsync(CancellationToken.None);
+            DesignProjectHardDeleteHandler.DetachRolledBackDomainEntries(db);
+            throw;
+        }
+    }
+
+    private void AddCompletionAuditIfMissing(
+        HardDeleteResourceContext context, int requestedBy, int customerId)
+    {
+        var auditId = context.OperationId.ToString("N");
+        if (db.AuditLogs.Local.Any(item => item.AuditId == auditId) ||
+            db.AuditLogs.Any(item => item.AuditId == auditId)) return;
+        db.AuditLogs.Add(new AuditLog
+        {
+            AuditId = auditId,
+            CreatedAt = DateTime.UtcNow,
+            ActorUserId = requestedBy,
+            ActorType = "user",
+            Action = "customer.delete",
+            ResourceType = EntityTypes.Customer,
+            ResourceId = customerId.ToString(CultureInfo.InvariantCulture),
+            Message = $"Customer #{customerId} durable deletion completed.",
+            Channel = "job",
+            Status = "success",
+            CorrelationId = context.OperationId.ToString(),
+        });
+    }
 }
 
 public sealed class LeadHardDeleteHandler(

@@ -909,7 +909,7 @@ public class LeadServiceTests : IDisposable
     // ---------------- Unconvert ----------------
 
     [Fact]
-    public async Task UnconvertAsync_DeletesBoth_WhenBothAutoCreatedAndClean()
+    public async Task UnconvertAsync_PreservesCustomer_WhenBothAutoCreatedAndClean()
     {
         var sales = await SeedUserAsync(UserRole.USER);
         SeedSource("marketing");
@@ -919,8 +919,9 @@ public class LeadServiceTests : IDisposable
         var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
 
         Assert.NotNull(result);
-        Assert.Equal(UnconvertOutcome.DeletedBoth, result!.Outcome);
-        Assert.Empty(_db.Customers);
+        Assert.Equal(UnconvertOutcome.DeletedOpportunity, result!.Outcome);
+        Assert.Single(_db.Customers);
+        Assert.NotNull(result.KeptCustomerId);
         Assert.Empty(_db.Opportunities);
 
         var saved = await _db.Leads.SingleAsync(l => l.Id == lead.Id);
@@ -1010,7 +1011,7 @@ public class LeadServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UnconvertAsync_StillDeletesBoth_WhenTheOnlyActivitiesCameFromTheConvert()
+    public async Task UnconvertAsync_PreservesCustomerAndMigratedActivities()
     {
         var sales = await SeedUserAsync(UserRole.USER);
         SeedSource("marketing");
@@ -1032,8 +1033,9 @@ public class LeadServiceTests : IDisposable
 
         var result = await _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true);
 
-        Assert.Equal(UnconvertOutcome.DeletedBoth, result!.Outcome);
-        Assert.Empty(_db.Customers);
+        Assert.Equal(UnconvertOutcome.DeletedOpportunity, result!.Outcome);
+        Assert.Single(_db.Customers);
+        Assert.NotEmpty(_db.CustomerActivities);
     }
 
     [Fact]

@@ -1,17 +1,18 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
 public class CustomerService(
     AppDbContext db,
-    ICustomerDocumentService customerDocumentService,
-    IQuoteDocumentService quoteDocumentService,
     ILogger<CustomerService> logger,
-    IProjectDocumentStagingService projectDocuments) : ICustomerService
+    ICrmHardDeletePlanService hardDeletePlans,
+    IHardDeleteOperationService hardDeleteOperations) : ICustomerService
 {
     private const int MaxPageSize = 100;
     private const string SourceCategory = "customer_source";
@@ -252,36 +253,55 @@ public class CustomerService(
         return MapCustomer(customer, ownerName, customer.Contacts, activities: null);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
+    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct = default)
     {
-        if (!canManage) throw new CustomerOperationException("Caller does not have permission to delete customers.");
+        if (!canManage) throw new CustomerOperationException("Không có quyền xoá khách hàng.");
+        var visible = await db.Customers.AsNoTracking()
+            .AnyAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
+        return visible ? (await hardDeletePlans.ForCustomerAsync(id, ct))?.Impact : null;
+    }
 
-        var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == id, ct);
-        if (customer is null) return false;
+    public async Task<HardDeleteOperationResult?> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        if (!canManage) throw new CustomerOperationException("Không có quyền xoá khách hàng.");
+        var customer = await db.Customers.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
+        if (customer is null) return null;
+        var plan = await hardDeletePlans.ForCustomerAsync(id, ct);
+        if (plan is null) return null;
+        if (!plan.Impact.CanDelete)
+            throw new CustomerOperationException(
+                "Không thể xoá khách hàng khi còn cơ hội, gói thầu, hợp đồng hoặc dự án liên quan.");
+        if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException(
+                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!string.Equals(request.Confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new CustomerOperationException(
+                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
+        CrmConcurrency.EnsureMatches(customer.RowVersion, request.RowVersion);
 
-        // Owner scoping: Sales users can only delete customers they own.
-        // Managers / Admin / BOD (canSeeAll) may delete anyone's record.
-        // Returning false (not throwing) mirrors the Get/List behaviour so
-        // we never leak the customer's existence to unauthorised callers.
-        if (!canSeeAll && customer.OwnerUserId != callerUserId) return false;
-
-        CrmConcurrency.Apply(db, customer, rowVersion);
-
-        var quoteIds = await AggregateDeletionService.DeleteCustomerAsync(
-            db, customer, projectDocuments, callerUserId, ct);
-        try
-        {
-            await CrmConcurrency.SaveChangesAsync(db, ct);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            // Customer was already deleted by another operation (cascade or concurrent request)
-            return false;
-        }
-        customerDocumentService.DeleteCustomerFiles(id);
-        foreach (var quoteId in quoteIds) quoteDocumentService.DeleteQuoteFiles(quoteId);
-        logger.LogInformation("Deleted customer {Id} and its dependent aggregates", id);
-        return true;
+        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.Customer,
+            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Impact.ResourceLabel,
+            plan.Impact.PlanToken,
+            request.Confirmation,
+            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Items), ct);
+        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
+        logger.LogInformation("Customer {Id} durable hard-delete is {Status}", id, result.Status);
+        return result;
     }
 
     public async Task<CustomerContactResponse?> UpsertContactAsync(

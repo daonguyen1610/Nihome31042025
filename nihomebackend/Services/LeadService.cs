@@ -579,9 +579,7 @@ public class LeadService(
 
         var customer = lead.ConvertedCustomerId is null
             ? null
-            : await db.Customers
-                .Include(c => c.Contacts)
-                .FirstOrDefaultAsync(c => c.Id == lead.ConvertedCustomerId, ct);
+            : await db.Customers.FirstOrDefaultAsync(c => c.Id == lead.ConvertedCustomerId, ct);
 
         var opportunity = lead.ConvertedOpportunityId is null
             ? null
@@ -591,7 +589,6 @@ public class LeadService(
         // Auto-created rows are recognised by a CreatedAt matching the convert
         // stamp exactly. ConvertAsync writes all three from one timestamp for
         // precisely this reason; a unit test pins that contract.
-        var customerAutoCreated = customer is not null && customer.CreatedAt == convertedAt;
         var opportunityAutoCreated = opportunity is not null && opportunity.CreatedAt == convertedAt;
 
         var opportunityClean = opportunity is not null
@@ -602,39 +599,15 @@ public class LeadService(
             && !await db.Contracts.AnyAsync(c => c.OpportunityId == opportunity.Id, ct)
             && !await db.Tenders.AnyAsync(tn => tn.WonOpportunityId == opportunity.Id, ct);
 
-        // Customer activities and documents both cascade on delete, so removing the
-        // customer would take them silently — and for documents the row goes while
-        // the file on disk stays. One child record is enough to stop.
-        var customerHasOtherWork = customer is not null
-            && (await db.Opportunities.AnyAsync(
-                    o => o.CustomerId == customer.Id && o.Id != lead.ConvertedOpportunityId, ct)
-                || await db.Contracts.AnyAsync(c => c.CustomerId == customer.Id, ct)
-                // Convert itself migrates the lead's activities onto the customer,
-                // so those carry the convert stamp and must not count as work
-                // somebody else did — otherwise nothing is ever deletable.
-                || await db.CustomerActivities.AnyAsync(
-                    a => a.CustomerId == customer.Id && a.CreatedAt != convertedAt, ct)
-                || await db.CustomerDocuments.AnyAsync(d => d.CustomerId == customer.Id, ct));
-
         var outcome = UnconvertOutcome.UnlinkedOnly;
 
         if (opportunityAutoCreated && opportunityClean)
         {
-            if (customerAutoCreated && !customerHasOtherWork)
-            {
-                db.Opportunities.Remove(opportunity!);
-                db.CustomerContacts.RemoveRange(customer!.Contacts);
-                db.Customers.Remove(customer);
-                outcome = UnconvertOutcome.DeletedBoth;
-            }
-            else
-            {
-                db.Opportunities.Remove(opportunity!);
-                outcome = UnconvertOutcome.DeletedOpportunity;
-            }
+            db.Opportunities.Remove(opportunity!);
+            outcome = UnconvertOutcome.DeletedOpportunity;
         }
 
-        var keptCustomerId = outcome == UnconvertOutcome.DeletedBoth ? null : lead.ConvertedCustomerId;
+        var keptCustomerId = customer?.Id;
         var keptOpportunityId = outcome == UnconvertOutcome.UnlinkedOnly ? lead.ConvertedOpportunityId : null;
 
         db.LeadActivities.Add(new LeadActivity

@@ -9,6 +9,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -171,7 +172,10 @@ public class CustomersController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.customers", "manage")]
-    public async Task<ActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
@@ -180,24 +184,37 @@ public class CustomersController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         try
         {
-            var removed = await svc.DeleteAsync(
-                id, userId.Value, canManage, canSeeAll, ct,
-                CrmConcurrency.ResolveRequestToken(Request, null));
-            if (!removed) return NotFound();
-
-            audit.Log(new AuditEvent
-            {
-                Action = "customer.delete",
-                ResourceType = EntityTypes.Customer,
-                ResourceId = id.ToString(),
-                Message = $"Customer #{id} deleted.",
-            });
-            return NoContent();
+            if (!string.IsNullOrWhiteSpace(request.RowVersion))
+                request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+            var result = await svc.DeleteAsync(
+                id, request, userId.Value, canManage, canSeeAll, ct);
+            if (result is null) return NotFound();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (CustomerOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("crm.customers", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canManage = await permissions.HasAsync(userId.Value, "crm.customers.manage", ct);
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
+        var impact = await svc.GetDeletionImpactAsync(id, userId.Value, canManage, canSeeAll, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     // ------- Contacts -------
@@ -378,5 +395,14 @@ public class CustomersController(
             ?? principal.FindFirstValue("uid");
 
         return int.TryParse(value, out var uid) ? uid : null;
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(
+            nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations",
+            new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }

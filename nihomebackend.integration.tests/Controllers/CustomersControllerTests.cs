@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -484,7 +486,21 @@ public class CustomersControllerTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = null;
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
 
-        (await Client.DeleteAsync($"/api/customers/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"/api/customers/{id}/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var delete = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{id}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = new string('a', 64),
+                confirmation = $"CUSTOMER-{id}",
+                rowVersion = Convert.ToBase64String(BitConverter.GetBytes(1L)),
+            }),
+        });
+        delete.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.Customers.AnyAsync(item => item.Id == id))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "Customer" && item.ResourceId == id.ToString()))).Should().BeFalse();
 
         // Manager can still see it.
         Client.DefaultRequestHeaders.Authorization = null;
@@ -493,7 +509,284 @@ public class CustomersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_WithDownstreamAggregates_RemovesCompleteCustomerTree()
+    public async Task Delete_WithoutAuthOrManagePermission_IsRejected()
+    {
+        var unauthenticated = await Client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Delete, "/api/customers/1")
+            {
+                Content = JsonContent.Create(new { }),
+            });
+        unauthenticated.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var forbidden = await Client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Delete, "/api/customers/1")
+            {
+                Content = JsonContent.Create(new { }),
+            });
+        forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_WithoutDownstreamRoots_RemovesCustomerAggregate()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var created = await Client.PostAsJsonAsync("/api/customers", new
+        {
+            type = "Individual",
+            name = "Durable delete " + Guid.NewGuid().ToString("N")[..6],
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Owner", phone = "0911" + Random.Shared.Next(100000, 999999) },
+        });
+        created.EnsureSuccessStatusCode();
+        var customer = await ReadJsonAsync(created);
+        var customerId = customer.GetProperty("id").GetInt32();
+        using var documentForm = new MultipartFormDataContent();
+        var documentContent = new ByteArrayContent(Encoding.UTF8.GetBytes("owned customer document"));
+        documentContent.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        documentForm.Add(documentContent, "file", "owned.pdf");
+        var upload = await Client.PostAsync($"/api/customers/{customerId}/documents", documentForm);
+        upload.StatusCode.Should().Be(HttpStatusCode.Created);
+        var uploadedDocument = await ReadJsonAsync(upload);
+        var documentId = uploadedDocument.GetProperty("id").GetInt32();
+        var documentPath = uploadedDocument.GetProperty("filePath").GetString()!;
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var documentFullPath = Path.Combine(
+            environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"),
+            documentPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        File.Exists(documentFullPath).Should().BeTrue();
+        var linked = await WithDbAsync(async db =>
+        {
+            var actorUserId = await db.Users.Select(item => item.Id).FirstAsync();
+            var otherCustomer = new Customer
+            {
+                Type = CustomerType.Company,
+                Name = "Project owner " + Guid.NewGuid().ToString("N")[..6],
+                SourceCode = "marketing",
+                RelationshipStatus = CustomerRelationshipStatus.Prospect,
+            };
+            db.Customers.Add(otherCustomer);
+            await db.SaveChangesAsync();
+            var operationalProject = new OperationalProject
+            {
+                Code = UniqueSlug("OP-CUSTOMER-METADATA"),
+                Name = "Metadata host project",
+                CustomerId = otherCustomer.Id,
+            };
+            var lead = new Lead
+            {
+                Name = "Converted lead",
+                Phone = "0911222333",
+                SourceCode = "marketing",
+                Status = LeadStatus.Converted,
+                ConvertedAt = DateTime.UtcNow,
+                ConvertedCustomerId = customerId,
+            };
+            db.AddRange(operationalProject, lead);
+            await db.SaveChangesAsync();
+            var projectDocument = new ProjectDocument
+            {
+                OperationalProjectId = operationalProject.Id,
+                CustomerId = customerId,
+                LocalPath = $"/files/projects/{Guid.NewGuid():N}.pdf",
+                OriginalFileName = "metadata.pdf",
+                ContentType = "application/pdf",
+                Sha256 = new string('a', 64),
+            };
+            var activity = new CustomerActivity
+            {
+                CustomerId = customerId,
+                Type = CustomerActivityType.Note,
+                Content = "Owned activity",
+                CreatedByUserId = actorUserId,
+            };
+            var translation = new EntityTranslation
+            {
+                EntityType = "Customer",
+                EntityId = customerId,
+                FieldName = "Name",
+                LanguageCode = "en",
+                Value = "Translated customer",
+            };
+            db.AddRange(projectDocument, activity, translation);
+            await db.SaveChangesAsync();
+            return (LeadId: lead.Id, ProjectDocumentId: projectDocument.Id,
+                ActivityId: activity.Id, TranslationId: translation.Id);
+        });
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/customers/{customerId}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        var delete = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+                rowVersion = customer.GetProperty("rowVersion").GetString(),
+            }),
+        });
+
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await WithDbAsync(async db =>
+        {
+            (await db.Customers.AnyAsync(item => item.Id == customerId)).Should().BeFalse();
+            (await db.CustomerContacts.AnyAsync(item => item.CustomerId == customerId)).Should().BeFalse();
+            (await db.CustomerDocuments.AnyAsync(item => item.Id == documentId)).Should().BeFalse();
+            (await db.CustomerActivities.AnyAsync(item => item.Id == linked.ActivityId)).Should().BeFalse();
+            (await db.EntityTranslations.AnyAsync(item => item.Id == linked.TranslationId)).Should().BeFalse();
+            (await db.Leads.SingleAsync(item => item.Id == linked.LeadId))
+                .ConvertedCustomerId.Should().BeNull();
+            (await db.ProjectDocuments.SingleAsync(item => item.Id == linked.ProjectDocumentId))
+                .CustomerId.Should().BeNull();
+            (await db.AuditLogs.AnyAsync(item => item.Action == "customer.delete" &&
+                item.ResourceId == customerId.ToString() && item.Status == "success")).Should().BeTrue();
+        });
+            File.Exists(documentFullPath).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_MissingOrStaleRowVersion_IsRejectedWithoutCreatingOperation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateIndividualCustomerAsync("Concurrency delete");
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/customers/{customerId}/deletion-impact"));
+        var requiredConfirmation = impact.GetProperty("requiredConfirmation").GetString();
+        var planToken = impact.GetProperty("planToken").GetString();
+        var currentCustomer = await ReadJsonAsync(await Client.GetAsync($"/api/customers/{customerId}"));
+        var currentRowVersion = currentCustomer.GetProperty("rowVersion").GetString();
+
+        var missing = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation = requiredConfirmation }),
+        });
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var wrongConfirmation = await Client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
+            {
+                Content = JsonContent.Create(new
+                {
+                    planToken,
+                    confirmation = $"{requiredConfirmation} ",
+                    rowVersion = currentRowVersion,
+                }),
+            });
+        wrongConfirmation.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var stale = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken,
+                confirmation = requiredConfirmation,
+                rowVersion = Convert.ToBase64String(BitConverter.GetBytes(long.MaxValue)),
+            }),
+        });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await Client.PostAsJsonAsync($"/api/customers/{customerId}/activities", new
+        {
+            type = "Note",
+            content = "Changes the deletion plan",
+        })).StatusCode.Should().Be(HttpStatusCode.Created);
+        var stalePlan = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken,
+                confirmation = requiredConfirmation,
+                rowVersion = currentRowVersion,
+            }),
+        });
+        stalePlan.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        (await WithDbAsync(db => db.Customers.AnyAsync(item => item.Id == customerId))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "Customer" && item.ResourceId == customerId.ToString()))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_WhenProjectDocumentSharesManagedFile_IsBlockedAndPreservesFile()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateIndividualCustomerAsync("Shared file delete");
+        using var form = new MultipartFormDataContent();
+        var content = new ByteArrayContent(Encoding.UTF8.GetBytes("shared customer file"));
+        content.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(content, "file", "shared.pdf");
+        var upload = await Client.PostAsync($"/api/customers/{customerId}/documents", form);
+        upload.StatusCode.Should().Be(HttpStatusCode.Created);
+        var document = await ReadJsonAsync(upload);
+        var documentPath = document.GetProperty("filePath").GetString()!;
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var fullPath = Path.Combine(
+            environment.WebRootPath ?? Path.Combine(environment.ContentRootPath, "wwwroot"),
+            documentPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        var projectDocumentId = await WithDbAsync(async db =>
+        {
+            var otherCustomer = new Customer
+            {
+                Type = CustomerType.Company,
+                Name = "Shared file project owner " + Guid.NewGuid().ToString("N")[..6],
+                SourceCode = "marketing",
+            };
+            db.Customers.Add(otherCustomer);
+            await db.SaveChangesAsync();
+            var project = new OperationalProject
+            {
+                Code = UniqueSlug("OP-SHARED-CUSTOMER-FILE"),
+                Name = "Shared file host",
+                CustomerId = otherCustomer.Id,
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var projectDocument = new ProjectDocument
+            {
+                OperationalProjectId = project.Id,
+                CustomerId = customerId,
+                LocalPath = $"/{documentPath}",
+                OriginalFileName = "shared.pdf",
+                ContentType = "application/pdf",
+                Sha256 = new string('b', 64),
+            };
+            db.ProjectDocuments.Add(projectDocument);
+            await db.SaveChangesAsync();
+            return projectDocument.Id;
+        });
+
+        try
+        {
+            var customer = await ReadJsonAsync(await Client.GetAsync($"/api/customers/{customerId}"));
+            var impact = await ReadJsonAsync(
+                await Client.GetAsync($"/api/customers/{customerId}/deletion-impact"));
+            impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+            impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+                item.GetProperty("key").GetString() == "customer.fileBlockers" &&
+                item.GetProperty("examples").EnumerateArray().Any(example =>
+                    example.GetString() == $"shared-project-document:{documentPath}"));
+            var delete = await Client.SendAsync(
+                new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
+                {
+                    Content = JsonContent.Create(new
+                    {
+                        planToken = impact.GetProperty("planToken").GetString(),
+                        confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+                        rowVersion = customer.GetProperty("rowVersion").GetString(),
+                    }),
+                });
+            delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            File.Exists(fullPath).Should().BeTrue();
+            (await WithDbAsync(db => db.Customers.AnyAsync(item => item.Id == customerId))).Should().BeTrue();
+            (await WithDbAsync(db => db.ProjectDocuments.AnyAsync(item => item.Id == projectDocumentId)))
+                .Should().BeTrue();
+        }
+        finally
+        {
+            if (File.Exists(fullPath)) File.Delete(fullPath);
+        }
+    }
+
+    [Fact]
+    public async Task Delete_WithDownstreamAggregates_IsBlockedAndPreservesCompleteCustomerGraph()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var created = await Client.PostAsJsonAsync("/api/customers", new
@@ -539,27 +832,62 @@ public class CustomersControllerTests : IntegrationTestBase
                 CustomerId = customerId,
                 Contract = contract,
             };
-            db.AddRange(quote, tender, project);
+            var operationalProject = new OperationalProject
+            {
+                Code = UniqueSlug("OP-CUSTOMER-DELETE"),
+                Name = "Owned operational project",
+                CustomerId = customerId,
+            };
+            db.AddRange(quote, tender, project, operationalProject);
             await db.SaveChangesAsync();
             return (
                 OpportunityId: opportunity.Id,
                 QuoteId: quote.Id,
                 ContractId: contract.Id,
                 TenderId: tender.Id,
-                ProjectId: project.Id);
+                ProjectId: project.Id,
+                OperationalProjectId: operationalProject.Id);
         });
 
-        (await Client.DeleteAsync($"/api/customers/{customerId}"))
-            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/customers/{customerId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "customer.opportunities" &&
+            item.GetProperty("action").GetString() == "Block");
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "customer.contracts" &&
+            item.GetProperty("action").GetString() == "Block");
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "customer.tenders" &&
+            item.GetProperty("action").GetString() == "Block");
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "customer.designProjects" &&
+            item.GetProperty("action").GetString() == "Block");
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "customer.operationalProjects" &&
+            item.GetProperty("action").GetString() == "Block");
+        var delete = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+                rowVersion = (await ReadJsonAsync(await Client.GetAsync($"/api/customers/{customerId}")))
+                    .GetProperty("rowVersion").GetString(),
+            }),
+        });
+        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         await WithDbAsync(async db =>
         {
-            (await db.Customers.AnyAsync(row => row.Id == customerId)).Should().BeFalse();
-            (await db.Opportunities.AnyAsync(row => row.Id == ids.OpportunityId)).Should().BeFalse();
-            (await db.Quotes.AnyAsync(row => row.Id == ids.QuoteId)).Should().BeFalse();
-            (await db.Contracts.AnyAsync(row => row.Id == ids.ContractId)).Should().BeFalse();
-            (await db.Tenders.AnyAsync(row => row.Id == ids.TenderId)).Should().BeFalse();
-            (await db.DesignProjects.AnyAsync(row => row.Id == ids.ProjectId)).Should().BeFalse();
+            (await db.Customers.AnyAsync(row => row.Id == customerId)).Should().BeTrue();
+            (await db.Opportunities.AnyAsync(row => row.Id == ids.OpportunityId)).Should().BeTrue();
+            (await db.Quotes.AnyAsync(row => row.Id == ids.QuoteId)).Should().BeTrue();
+            (await db.Contracts.AnyAsync(row => row.Id == ids.ContractId)).Should().BeTrue();
+            (await db.Tenders.AnyAsync(row => row.Id == ids.TenderId)).Should().BeTrue();
+            (await db.DesignProjects.AnyAsync(row => row.Id == ids.ProjectId)).Should().BeTrue();
+            (await db.OperationalProjects.AnyAsync(row => row.Id == ids.OperationalProjectId)).Should().BeTrue();
         });
     }
 

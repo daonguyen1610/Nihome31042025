@@ -3935,8 +3935,13 @@ export const adminApi = {
   getCustomer: (id: number) => api.get<CustomerResponse>(`/customers/${id}`),
   createCustomer: (body: CreateCustomerRequest) => api.post<CustomerResponse>("/customers", body),
   updateCustomer: (id: number, body: UpdateCustomerRequest) => api.put<CustomerResponse>(`/customers/${id}`, body),
-  deleteCustomer: (id: number, rowVersion?: string) =>
-    api.delete(`/customers/${id}`, withIfMatch(rowVersion)),
+  getCustomerDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/customers/${id}/deletion-impact`),
+  deleteCustomer: (id: number, body: ConfirmDeletionRequest) =>
+    api.delete<HardDeleteOperationResult | null>(`/customers/${id}`, {
+      ...withIfMatch(body.rowVersion),
+      data: body,
+    }),
   upsertCustomerContact: (id: number, body: UpsertCustomerContactRequest) =>
     api.post<CustomerContactResponse>(`/customers/${id}/contacts`, body),
   deleteCustomerContact: (id: number, contactId: number) =>
