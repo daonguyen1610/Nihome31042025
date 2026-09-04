@@ -34,10 +34,10 @@ internal static class HardDeleteTestServices
         drive.Setup(item => item.PermanentDeleteOwnedAsync(
                 It.IsAny<DrivePermanentDeleteRequest>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-            var permissions = new Mock<IPermissionService>();
-            permissions.Setup(item => item.HasAsync(
-                It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(true);
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.HasAsync(
+            It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var plans = new ProjectHardDeletePlanService(db, settings.Object, files.Object);
         var crmPlans = new CrmHardDeletePlanService(db, settings.Object, files.Object);
