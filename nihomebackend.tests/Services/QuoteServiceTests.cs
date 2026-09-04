@@ -730,6 +730,47 @@ public class QuoteServiceTests : IDisposable
             item.ActionIdentifier == $"/files/quotes/{quote.Id}/proposal.pdf");
     }
 
+    [Fact]
+    public async Task ForQuoteAsync_ImpactLinksToQuoteOpportunityAndContractDetails()
+    {
+        var (_, quote) = await SeedApprovedReadyQuoteAsync();
+        var opportunity = (await _db.Opportunities.FindAsync(quote.OpportunityId))!;
+        opportunity.WonQuoteId = quote.Id;
+        _db.QuoteItems.Add(new QuoteItem
+        {
+            QuoteId = quote.Id,
+            Name = "Linked item",
+            Unit = "item",
+            Quantity = 1,
+            UnitPrice = 1,
+            Amount = 1,
+        });
+        var contract = new Contract
+        {
+            ContractNumber = "HD-QUOTE-LINKS",
+            CustomerId = opportunity.CustomerId,
+            OpportunityId = opportunity.Id,
+            QuoteId = quote.Id,
+        };
+        _db.Contracts.Add(contract);
+        await _db.SaveChangesAsync();
+
+        var plan = (await _hardDeletePlans.ForQuoteAsync(quote.Id))!;
+
+        var ownedItem = Assert.Single(plan.Impact.Items, item => item.Key == "quote.items");
+        Assert.Equal($"/admin/quotes/{quote.Id}", ownedItem.ResolutionUrl);
+        Assert.Contains(ownedItem.ResolutionLinks, link =>
+            link.Label == quote.Code && link.Url == $"/admin/quotes/{quote.Id}");
+        var opportunityItem = Assert.Single(plan.Impact.Items, item => item.Key == "quote.winningOpportunities");
+        Assert.Equal(DeletionImpactActions.Unlink, opportunityItem.Action);
+        Assert.Contains(opportunityItem.ResolutionLinks, link =>
+            link.Label == opportunity.Name && link.Url == $"/admin/opportunities/{opportunity.Id}");
+        var contractItem = Assert.Single(plan.Impact.Items, item => item.Key == "quote.contracts");
+        Assert.Equal(DeletionImpactActions.Unlink, contractItem.Action);
+        Assert.Contains(contractItem.ResolutionLinks, link =>
+            link.Label == contract.ContractNumber && link.Url == $"/admin/contracts/{contract.Id}");
+    }
+
     [Theory]
     [InlineData(" /files/quotes/1/invalid.pdf")]
     [InlineData("/files/contracts/outside.pdf")]
@@ -1084,7 +1125,7 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task QuoteHandler_MissingRootForwardRecovery_IsAuthorizedAndAuditedIdempotently()
+    public async Task QuoteHandler_MissingRootBeforeFinalization_RequiresCurrentAuthorization()
     {
         var permissions = new Mock<IPermissionService>();
         permissions.Setup(item => item.HasAsync(
@@ -1095,13 +1136,12 @@ public class QuoteServiceTests : IDisposable
         var context = new HardDeleteResourceContext(
             operationId, EntityTypes.Quote, "987654", "plan", "1", "delete-quote-aggregate", true);
 
-        await handler.AuthorizeAsync(context);
-        await handler.FinalizeAsync(context);
-        await handler.FinalizeAsync(context);
+        var exception = await Assert.ThrowsAsync<HardDeleteAuthorizationException>(
+            () => handler.AuthorizeAsync(context));
 
-        Assert.Single(_db.AuditLogs, auditLog =>
-            auditLog.AuditId == operationId.ToString("N") &&
-            auditLog.Action == "quote.delete" && auditLog.ResourceId == "987654");
+        Assert.Equal("hard_delete_authorization_changed", exception.Code);
+        Assert.DoesNotContain(_db.AuditLogs, auditLog =>
+            auditLog.AuditId == operationId.ToString("N"));
     }
 
     [Fact]

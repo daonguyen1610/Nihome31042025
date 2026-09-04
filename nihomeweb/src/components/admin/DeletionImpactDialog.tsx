@@ -187,11 +187,9 @@ export const DeletionImpactDialog = ({
               <div className="space-y-2">
                 {impact.items.map((item) => {
                   const Icon = actionIcon[item.action];
-                  const canResolve = item.action === "Block" && !item.key.endsWith(".fileBlockers");
-                  const resolutionLinks = canResolve
-                    ? (item.resolutionLinks ?? []).filter((link) => link.url.startsWith("/admin/"))
-                    : [];
-                  const resolutionUrl = canResolve &&
+                  const resolutionLinks = (item.resolutionLinks ?? [])
+                    .filter((link) => link.url.startsWith("/admin/"));
+                  const resolutionUrl =
                     item.count > resolutionLinks.length &&
                     item.resolutionUrl?.startsWith("/admin/")
                     ? item.resolutionUrl

@@ -344,19 +344,11 @@ public class QuotesController(
                 request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
             var result = await svc.DeleteAsync(id, request, userId.Value, canManage, canSeeAll, ct);
             if (result is null) return NotFound();
-            audit.Log(new AuditEvent
-            {
-                Action = "quote.delete_requested",
-                ResourceType = EntityTypes.Quote,
-                ResourceId = id.ToString(),
-                Message = $"Quote #{id} durable deletion is {result.Status}.",
-                NewValue = result,
-            });
             return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (QuoteOperationException ex)
         {
-            return LogAndBadRequest("quote.delete", ex, id).Result!;
+            return BadRequest(new { message = ex.Message });
         }
         catch (DeletionPlanChangedException ex)
         {

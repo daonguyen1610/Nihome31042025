@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -93,6 +93,7 @@ const DriveStatusBadge = ({
 
 const AdminSurveyDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const surveyId = Number(id);
   const isValidId = Number.isFinite(surveyId) && surveyId > 0;
   const { t, lang } = useI18n();
@@ -102,6 +103,7 @@ const AdminSurveyDetail = () => {
   const [survey, setSurvey] = useState<SurveyResponse | null>(null);
   const [loading, setLoading] = useState(isValidId);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("info");
   const surveyLoadedRef = useRef(false);
 
   const [timeline, setTimeline] = useState<SurveyTimelineEvent[] | null>(null);
@@ -170,6 +172,24 @@ const AdminSurveyDetail = () => {
     void fetchSurvey();
     void fetchTimeline();
   }, [fetchSurvey, fetchTimeline]);
+
+  const requestedMediaId = useMemo(() => {
+    const value = searchParams.get("mediaId");
+    if (!value || !/^[1-9]\d*$/.test(value)) return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) ? parsed : null;
+  }, [searchParams]);
+
+  const targetMediaId = useMemo(
+    () => requestedMediaId != null && survey?.media.some((media) => media.id === requestedMediaId)
+      ? requestedMediaId
+      : null,
+    [requestedMediaId, survey],
+  );
+
+  useEffect(() => {
+    if (targetMediaId != null) setActiveTab("media");
+  }, [targetMediaId]);
 
   const infoRows: [string, string][] = useMemo(() => {
     if (!survey) return [];
@@ -240,7 +260,7 @@ const AdminSurveyDetail = () => {
             </div>
 
             {/* Tabs */}
-            <Tabs defaultValue="info" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap rounded-lg bg-slate-100 p-1">
                 <TabsTrigger value="info">
                   <Info className="mr-1 h-4 w-4" />
@@ -291,6 +311,7 @@ const AdminSurveyDetail = () => {
                   canManage={canManage}
                   onRefresh={fetchSurvey}
                   formatDateTime={formatDateTime}
+                  targetMediaId={targetMediaId}
                 />
               </TabsContent>
 

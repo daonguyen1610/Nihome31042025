@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Services.GoogleDrive;
@@ -101,16 +102,31 @@ public sealed class HardDeleteOperationService(
 
         try
         {
-            await handler.AuthorizeAsync(new HardDeleteResourceContext(
-                operation.Id, operation.ResourceType, operation.ResourceId,
-                operation.PlanToken, operation.RequestedBy, string.Empty,
-                operation.HasIrreversibleStep), ct);
+            var databaseFinalized = operation.Items.Any(item =>
+                item.Kind == HardDeleteItemKind.DatabaseAggregate &&
+                item.Status == HardDeleteItemStatus.Completed);
+            if (!databaseFinalized)
+            {
+                await handler.AuthorizeAsync(new HardDeleteResourceContext(
+                    operation.Id, operation.ResourceType, operation.ResourceId,
+                    operation.PlanToken, operation.RequestedBy, string.Empty,
+                    operation.HasIrreversibleStep), ct);
+            }
             await QuarantineLocalFilesAsync(operation, ct);
             await PermanentlyDeleteDriveItemsAsync(operation, ct);
             await FinalizeDatabaseAsync(operation, handler, ct);
             await PurgeLocalFilesAsync(operation, ct);
-            HardDeleteStateMachine.Transition(operation, HardDeleteOperationStatus.Completed, DateTime.UtcNow);
-            await db.SaveChangesAsync(ct);
+            try
+            {
+                AddCompletionAuditIfMissing(operation);
+                HardDeleteStateMachine.Transition(operation, HardDeleteOperationStatus.Completed, DateTime.UtcNow);
+                await db.SaveChangesAsync(ct);
+            }
+            catch
+            {
+                ResetFailedCompletionSave(operation);
+                throw;
+            }
             return ToResult(operation);
         }
         catch (DrivePermanentDeleteRejectedException exception)
@@ -200,12 +216,13 @@ public sealed class HardDeleteOperationService(
         HardDeleteOperation operation, IHardDeleteResourceHandler handler, CancellationToken ct)
     {
         var databaseItems = operation.Items.Where(item =>
-            item.Kind == HardDeleteItemKind.DatabaseAggregate && item.Status != HardDeleteItemStatus.Completed).ToList();
+            item.Kind == HardDeleteItemKind.DatabaseAggregate).ToList();
         if (databaseItems.Count != 1)
             throw new HardDeleteOperationException("invalid_database_item_count",
                 "Tác vụ xóa phải có đúng một bước kết thúc dữ liệu.");
 
         var item = databaseItems[0];
+        if (item.Status == HardDeleteItemStatus.Completed) return;
         operation.HasIrreversibleStep = true;
         await db.SaveChangesAsync(ct);
         Touch(item);
@@ -254,13 +271,55 @@ public sealed class HardDeleteOperationService(
         return ToResult(operation);
     }
 
+    private void AddCompletionAuditIfMissing(HardDeleteOperation operation)
+    {
+        var auditId = operation.Id.ToString("N");
+        if (db.AuditLogs.Local.Any(item => item.AuditId == auditId) ||
+            db.AuditLogs.Any(item => item.AuditId == auditId)) return;
+        _ = int.TryParse(operation.RequestedBy, out var requestedBy);
+        db.AuditLogs.Add(new AuditLog
+        {
+            AuditId = auditId,
+            CreatedAt = DateTime.UtcNow,
+            ActorUserId = requestedBy == 0 ? null : requestedBy,
+            ActorType = requestedBy == 0 ? "service" : "user",
+            Action = CompletionAuditAction(operation.ResourceType),
+            ResourceType = operation.ResourceType,
+            ResourceId = operation.ResourceId,
+            Message = $"{operation.ResourceType} {operation.ResourceLabel} durable deletion completed.",
+            Channel = "job",
+            Status = "success",
+            CorrelationId = operation.Id.ToString(),
+        });
+    }
+
+    private void ResetFailedCompletionSave(HardDeleteOperation operation)
+    {
+        foreach (var entry in db.ChangeTracker.Entries<AuditLog>()
+                     .Where(entry => entry.State == EntityState.Added &&
+                         entry.Entity.AuditId == operation.Id.ToString("N"))
+                     .ToList())
+            entry.State = EntityState.Detached;
+        operation.Status = HardDeleteOperationStatus.Processing;
+        operation.CompletedAt = null;
+    }
+
+    private static string CompletionAuditAction(string resourceType) => resourceType switch
+    {
+        EntityTypes.CapabilityDocument => "capability-doc.delete",
+        EntityTypes.DesignProject => "design-project.delete",
+        EntityTypes.OperationalProject => "operational-project.delete",
+        _ => $"{resourceType.ToLowerInvariant()}.delete",
+    };
+
     private static void Validate(CreateHardDeleteOperationRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ResourceType) || string.IsNullOrWhiteSpace(request.ResourceId) ||
             string.IsNullOrWhiteSpace(request.ResourceLabel) || string.IsNullOrWhiteSpace(request.PlanToken) ||
             string.IsNullOrWhiteSpace(request.Confirmation) || string.IsNullOrWhiteSpace(request.RequestedBy) ||
             request.Items.Count == 0 || request.Items.Any(item => string.IsNullOrWhiteSpace(item.ActionIdentifier)) ||
-            request.Items.Select(item => item.Sequence).Distinct().Count() != request.Items.Count)
+            request.Items.Select(item => item.Sequence).Distinct().Count() != request.Items.Count ||
+            request.Items.Count(item => item.Kind == HardDeleteItemKind.DatabaseAggregate) != 1)
         {
             throw new HardDeleteOperationException("invalid_operation_plan", "Kế hoạch tác vụ xóa không hợp lệ.");
         }

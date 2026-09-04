@@ -165,14 +165,6 @@ public class OperationalProjectsController(
                 canSeeAll,
                 ct);
             if (result is null) return NotFound();
-            audit.Log(new AuditEvent
-            {
-                Action = result.IsComplete ? "operational-project.delete" : "operational-project.delete_requested",
-                ResourceType = EntityTypes.OperationalProject,
-                ResourceId = id.ToString(),
-                Message = $"Operational project #{id} durable deletion is {result.Status}.",
-                NewValue = result,
-            });
             return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (OperationalProjectOperationException ex)

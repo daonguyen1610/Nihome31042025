@@ -2,18 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Cloud, CloudOff, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,16 +32,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -53,6 +41,7 @@ import {
   adminApi,
   SURVEY_DRIVE_STATUSES,
   type CreateSurveyRequest,
+  type DeletionImpactResponse,
   type MasterDataOption,
   type OperationalProjectListItemResponse,
   type OpportunityResponse,
@@ -416,44 +405,46 @@ const AdminSurveys = () => {
   // -------- delete confirmation --------
   const [deleting, setDeleting] = useState<SurveyListItemResponse | null>(null);
   const [busyDelete, setBusyDelete] = useState(false);
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setBusyDelete(true);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const openDelete = async (row: SurveyListItemResponse) => {
+    setDeleting(row);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteSurvey(deleting.id);
-      toast({ title: t("surveys.deleted") });
-      setDeleting(null);
-      await fetchList();
+      const response = await adminApi.getSurveyDeletionImpact(row.id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
+    }
+  };
+  const confirmDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return null;
+    setBusyDelete(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteSurvey(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
       });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusyDelete(false);
     }
   };
-
-  // -------- bulk selection --------
-  const deletableIds = useMemo(
-    () => canManage ? rows.map((row) => row.id) : [],
-    [rows, canManage],
-  );
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds: deletableIds,
-    deleteOne: (id) => adminApi.deleteSurvey(id),
-    onAfter: fetchList,
-  });
+  const completeDelete = async () => {
+    setDeleting(null);
+    setDeleteImpact(null);
+    toast({ title: t("surveys.deleted") });
+    await fetchList();
+  };
 
   // ----------------------------- render -----------------------------
 
@@ -620,15 +611,6 @@ const AdminSurveys = () => {
           </div>
         ) : (
           <>
-            {canManage ? (
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            ) : null}
-
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => {
@@ -641,16 +623,6 @@ const AdminSurveys = () => {
                   >
                     <header className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
-                        {canManage ? (
-                          <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
-                            <Checkbox
-                              aria-label={`${t("common.selectAll")} · ${r.location}`}
-                              disabled={!canDelete}
-                              checked={selectedIds.has(r.id)}
-                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                            />
-                          </span>
-                        ) : null}
                         <div className="min-w-0">
                           <h3 className="break-words text-sm font-semibold leading-tight">{r.location}</h3>
                           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -688,7 +660,7 @@ const AdminSurveys = () => {
                             variant="ghost"
                             size="sm"
                             className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                            onClick={() => setDeleting(r)}
+                            onClick={() => void openDelete(r)}
                           >
                             <Trash2 className="mr-1 h-3.5 w-3.5" />
                             {t("common.delete")}
@@ -706,22 +678,6 @@ const AdminSurveys = () => {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    {canManage ? (
-                      <th className="w-10 px-3 py-2">
-                        <Checkbox
-                          aria-label={t("common.selectAll")}
-                          checked={
-                            allVisibleSelected
-                              ? true
-                              : someVisibleSelected
-                                ? "indeterminate"
-                                : false
-                          }
-                          disabled={deletableIds.length === 0}
-                          onCheckedChange={(v) => toggleAllVisible(v === true)}
-                        />
-                      </th>
-                    ) : null}
                     <th className="px-3 py-2">{t("surveys.field.code")}</th>
                     <th className="px-3 py-2">{t("surveys.field.location")}</th>
                     <th className="px-3 py-2">{t("surveys.field.constructionType")}</th>
@@ -741,16 +697,6 @@ const AdminSurveys = () => {
                         className="cursor-pointer border-t align-top hover:bg-slate-50/60"
                         onClick={() => openDetail(r.id)}
                       >
-                        {canManage ? (
-                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              aria-label={`${t("common.selectAll")} · ${r.location}`}
-                              disabled={!canDelete}
-                              checked={selectedIds.has(r.id)}
-                              onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                            />
-                          </td>
-                        ) : null}
                         <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{r.code}</td>
                         <td className="min-w-[220px] px-3 py-2 break-words font-medium">
                           {r.location}
@@ -778,7 +724,7 @@ const AdminSurveys = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
-                                onClick={() => setDeleting(r)}
+                                onClick={() => void openDelete(r)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -958,30 +904,22 @@ const AdminSurveys = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirmation (single-row). Bulk-delete lives on the toolbar. */}
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent className="w-[95vw] max-w-md sm:w-full">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("surveys.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription className="break-words">
-              {t("surveys.delete.confirmBody").replace("{location}", deleting?.location ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-rose-600 hover:bg-rose-700"
-              onClick={(e) => {
-                e.preventDefault();
-                void confirmDelete();
-              }}
-              disabled={busyDelete}
-            >
-              {t("surveys.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletionImpactDialog
+        open={deleting != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={busyDelete}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !busyDelete) {
+            setDeleting(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
+      />
     </AdminLayout>
   );
 };

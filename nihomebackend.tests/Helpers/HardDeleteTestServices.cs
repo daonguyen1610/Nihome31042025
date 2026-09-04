@@ -49,7 +49,7 @@ internal static class HardDeleteTestServices
             new OperationalProjectHardDeleteHandler(db, plans, projectDocuments, permissions.Object),
             new CustomerHardDeleteHandler(db, crmPlans, permissions.Object),
             new LeadHardDeleteHandler(db, crmPlans),
-            new TenderHardDeleteHandler(db, crmPlans),
+            new TenderHardDeleteHandler(db, crmPlans, permissions.Object),
             new QuoteHardDeleteHandler(db, crmPlans, permissions.Object),
         ];
         var operations = new HardDeleteOperationService(

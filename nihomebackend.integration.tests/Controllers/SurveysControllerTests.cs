@@ -136,7 +136,7 @@ public class SurveysControllerTests : IntegrationTestBase
             operationalProjectId = context.ProjectId,
         });
         updateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await Client.DeleteAsync($"/api/surveys/{context.SurveyId}"))
+        (await DeleteSurveyAsync(context.SurveyId, new string('a', 64), "HIDDEN"))
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         await WithDbAsync(async db =>
@@ -371,44 +371,72 @@ public class SurveysControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_NotSynced_Succeeds()
+    public async Task Delete_NotSynced_WithPreviewConfirmationSucceeds()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var id = await CreateSurveyAsync("Delete me", "residential");
-        (await Client.DeleteAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var impact = await GetDeletionImpactAsync(id);
+        impact.GetProperty("resourceType").GetString().Should().Be("Survey");
+        impact.GetProperty("requiredConfirmation").GetString()
+            .Should().Be((await ReadJsonAsync(await Client.GetAsync($"/api/surveys/{id}"))).GetProperty("code").GetString());
+
+        (await ConfirmDeleteAsync(id, impact)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Delete_AfterSynced_Succeeds()
+    public async Task DeletionImpact_EnforcesAuthorizationPermissionAndOwnerScope()
+    {
+        (await Client.GetAsync("/api/surveys/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync("/api/surveys/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateSurveyAsync("Manager owned", "residential");
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/surveys/{id}/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteSurveyAsync(id, new string('a', 64), "HIDDEN"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.Surveys.AnyAsync(item => item.Id == id))).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_RejectsMissingOrInvalidConfirmationAndStalePlanWithoutMutation()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        var id = await CreateSurveyAsync("Cannot delete", "residential");
-        // Simulate a synced row by touching the DB directly — the write side
-        // to flip DriveSyncStatus ships with NIH-101, so we shortcut here.
-        await WithDbAsync(async db =>
-        {
-            var row = await db.Surveys.FirstAsync(s => s.Id == id);
-            row.DriveSyncStatus = NihomeBackend.Models.SurveyDriveSyncStatus.Synced;
-            await db.SaveChangesAsync();
-        });
+        var id = await CreateSurveyAsync("Rejected delete", "residential");
+        var impact = await GetDeletionImpactAsync(id);
+        var token = impact.GetProperty("planToken").GetString()!;
+        var confirmation = impact.GetProperty("requiredConfirmation").GetString()!;
 
-        (await Client.DeleteAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
-        (await Client.GetAsync($"/api/surveys/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteSurveyAsync(id, token, null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteSurveyAsync(id, token, $"{confirmation} ")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteSurveyAsync(id, new string('a', 64), confirmation)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        (await WithDbAsync(db => db.Surveys.AnyAsync(item => item.Id == id))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "Survey" && item.ResourceId == id.ToString()))).Should().BeFalse();
     }
 
     [Fact]
     public async Task Delete_MissingSurvey_ReturnsNotFound()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        (await Client.DeleteAsync("/api/surveys/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteSurveyAsync(9999999, new string('a', 64), "SV-MISSING"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Delete_WithoutManagePermission_ReturnsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
-        (await Client.DeleteAsync("/api/surveys/9999999")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await DeleteSurveyAsync(9999999, new string('a', 64), "SV-MISSING"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     // ---------- NIH-101 timeline ----------
@@ -452,7 +480,7 @@ public class SurveysControllerTests : IntegrationTestBase
             surveyDate = DateTime.UtcNow.AddDays(-1),
             operationalProjectId,
         });
-        res.EnsureSuccessStatusCode();
+        res.StatusCode.Should().Be(HttpStatusCode.Created, await res.Content.ReadAsStringAsync());
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
 
@@ -477,6 +505,28 @@ public class SurveysControllerTests : IntegrationTestBase
         await db.SaveChangesAsync();
         return project.Id;
     });
+
+    private async Task<System.Text.Json.JsonElement> GetDeletionImpactAsync(int surveyId)
+    {
+        var response = await Client.GetAsync($"/api/surveys/{surveyId}/deletion-impact");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return await ReadJsonAsync(response);
+    }
+
+    private Task<HttpResponseMessage> ConfirmDeleteAsync(int surveyId, System.Text.Json.JsonElement impact) =>
+        DeleteSurveyAsync(
+            surveyId,
+            impact.GetProperty("planToken").GetString(),
+            impact.GetProperty("requiredConfirmation").GetString());
+
+    private async Task<HttpResponseMessage> DeleteSurveyAsync(int surveyId, string? planToken, string? confirmation)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/surveys/{surveyId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation }),
+        };
+        return await Client.SendAsync(request);
+    }
 }
 
 public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
@@ -813,9 +863,14 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
             .Select(media => media.RelativePath)
             .SingleAsync());
 
-        var guardedDelete = await Client.DeleteAsync($"/api/surveys/{surveyId}");
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/surveys/{surveyId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "survey.media" &&
+            item.GetProperty("action").GetString() == "Block");
+
+        var guardedDelete = await ConfirmSurveyDeleteAsync(surveyId, impact);
         guardedDelete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await ReadJsonAsync(guardedDelete)).GetProperty("message").GetString().Should().Contain("còn tệp");
         (await WithDbAsync(db => db.Surveys.AnyAsync(survey => survey.Id == surveyId))).Should().BeTrue();
         (await WithDbAsync(db => db.SurveyMedia.AnyAsync(media => media.Id == mediaId))).Should().BeTrue();
         File.Exists(ResolveStoredPath(storedPath)).Should().BeTrue();
@@ -823,7 +878,8 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         (await Client.DeleteAsync($"/api/surveys/{surveyId}/media/{mediaId}"))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
         File.Exists(ResolveStoredPath(storedPath)).Should().BeFalse();
-        (await Client.DeleteAsync($"/api/surveys/{surveyId}"))
+        var clearedImpact = await ReadJsonAsync(await Client.GetAsync($"/api/surveys/{surveyId}/deletion-impact"));
+        (await ConfirmSurveyDeleteAsync(surveyId, clearedImpact))
             .StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/surveys/{surveyId}"))
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -909,6 +965,21 @@ public class SurveyMediaControllerTests : IntegrationTestBase, IAsyncLifetime
         var response = await Client.PostAsync($"/api/surveys/{surveyId}/media", form);
         response.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(response)).GetProperty("id").GetInt64();
+    }
+
+    private async Task<HttpResponseMessage> ConfirmSurveyDeleteAsync(
+        int surveyId,
+        System.Text.Json.JsonElement impact)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/surveys/{surveyId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            }),
+        };
+        return await Client.SendAsync(request);
     }
 
     private async Task SetSyncFailureAsync(long mediaId, int attemptCount, string error)

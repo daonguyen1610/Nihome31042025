@@ -2,6 +2,10 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -173,14 +177,94 @@ public class CapabilityDocumentsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_RemovesDocument()
+    public async Task DeletionImpact_EnforcesAuthorizationAndManagePermission()
+    {
+        (await Client.GetAsync("/api/capability-documents/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync("/api/capability-documents/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_WithPreviewConfirmationRemovesDocumentAndManagedFile()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var docId = await UploadAndCreateAsync("to-delete.pdf", "iso");
-        var res = await Client.DeleteAsync($"/api/capability-documents/{docId}");
+        var filePath = await WithDbAsync(db => db.CapabilityDocuments.AsNoTracking()
+            .Where(item => item.Id == docId).Select(item => item.FilePath).SingleAsync());
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var fullPath = Path.Combine(environment.ContentRootPath, "wwwroot",
+            filePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        var impact = await GetDeletionImpactAsync(docId);
+        impact.GetProperty("resourceType").GetString().Should().Be("CapabilityDocument");
+        impact.GetProperty("requiredConfirmation").GetString().Should().Be($"CAPABILITY-{docId}");
+
+        var res = await ConfirmDeleteAsync(docId, impact);
         res.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/capability-documents/{docId}")).StatusCode
             .Should().Be(HttpStatusCode.NotFound);
+        File.Exists(fullPath).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_RejectsMissingOrInvalidConfirmationAndStalePlanWithoutMutation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var docId = await UploadAndCreateAsync("reject-delete.pdf", "iso");
+        var impact = await GetDeletionImpactAsync(docId);
+        var token = impact.GetProperty("planToken").GetString()!;
+        var confirmation = impact.GetProperty("requiredConfirmation").GetString()!;
+
+        (await DeleteCapabilityAsync(docId, token, null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteCapabilityAsync(docId, token, $"{confirmation} ")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteCapabilityAsync(docId, new string('a', 64), confirmation)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        (await WithDbAsync(db => db.CapabilityDocuments.AnyAsync(item => item.Id == docId))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "CapabilityDocument" && item.ResourceId == docId.ToString()))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeletionImpact_WithTenderReferenceReportsBlockerAndPreservesState()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var docId = await UploadAndCreateAsync("referenced.pdf", "iso");
+        var checklistId = await WithDbAsync(async db =>
+        {
+            var customer = new Customer
+            {
+                Name = $"Capability blocker {Guid.NewGuid():N}",
+                Type = CustomerType.Company,
+            };
+            var tender = new Tender
+            {
+                Code = UniqueSlug("TD-CAP-BLOCK"),
+                Name = "Capability reference",
+                Customer = customer,
+                SubmissionDeadline = DateTime.UtcNow.AddDays(7),
+            };
+            var checklist = new TenderChecklistItem
+            {
+                Tender = tender,
+                Title = "Referenced capability",
+                CapabilityDocumentId = docId,
+            };
+            db.Add(checklist);
+            await db.SaveChangesAsync();
+            return checklist.Id;
+        });
+
+        var impact = await GetDeletionImpactAsync(docId);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "capability.tenderReferences" &&
+            item.GetProperty("action").GetString() == "Block");
+
+        (await ConfirmDeleteAsync(docId, impact)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.CapabilityDocuments.AnyAsync(item => item.Id == docId))).Should().BeTrue();
+        (await WithDbAsync(db => db.TenderChecklistItems.AnyAsync(item => item.Id == checklistId))).Should().BeTrue();
     }
 
     [Fact]
@@ -241,7 +325,34 @@ public class CapabilityDocumentsControllerTests : IntegrationTestBase
             fileSize = uploadBody.GetProperty("fileSize").GetInt64(),
             contentType = "application/pdf",
         });
-        create.EnsureSuccessStatusCode();
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
         return (await ReadJsonAsync(create)).GetProperty("id").GetInt32();
+    }
+
+    private async Task<System.Text.Json.JsonElement> GetDeletionImpactAsync(int documentId)
+    {
+        var response = await Client.GetAsync($"/api/capability-documents/{documentId}/deletion-impact");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return await ReadJsonAsync(response);
+    }
+
+    private Task<HttpResponseMessage> ConfirmDeleteAsync(
+        int documentId,
+        System.Text.Json.JsonElement impact) =>
+        DeleteCapabilityAsync(
+            documentId,
+            impact.GetProperty("planToken").GetString(),
+            impact.GetProperty("requiredConfirmation").GetString());
+
+    private async Task<HttpResponseMessage> DeleteCapabilityAsync(
+        int documentId,
+        string? planToken,
+        string? confirmation)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/capability-documents/{documentId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation }),
+        };
+        return await Client.SendAsync(request);
     }
 }

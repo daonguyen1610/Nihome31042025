@@ -14,16 +14,15 @@ import {
   type ContractResponse,
   type ContractStatus,
   type CustomerResponse,
+  type DeletionImpactResponse,
   type PaymentMilestoneStatus,
   type UpsertContractRequest,
 } from "@/services/adminApi";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
@@ -206,6 +205,11 @@ const Contracts = () => {
   const customerIdParam = Number(searchParams.get("customerId"));
 
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
+  const [deletingContract, setDeletingContract] = useState<ContractResponse | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [hoveredContractId, setHoveredContractId] = useState<number | null>(null);
@@ -291,33 +295,6 @@ const Contracts = () => {
     valueMin !== "" ||
     valueMax !== "" ||
     search !== "";
-
-  // -------- bulk selection --------
-  const visibleIds = useMemo(() => contracts.map((c) => c.id), [contracts]);
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds,
-    deleteOne: (id) => adminApi.deleteContract(
-      id,
-      contracts.find((contract) => contract.id === id)?.rowVersion,
-    ),
-    onAfter: async () => {
-      await load();
-    },
-  });
-  useEffect(() => {
-    clearSelection();
-    // Clear the bulk selection whenever the filter set changes so a stale
-    // selection cannot silently outlive its visible row.
-  }, [statusFilter, customerFilter, signedFrom, signedTo, valueMin, valueMax, debouncedSearch, clearSelection]);
 
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -484,18 +461,44 @@ const Contracts = () => {
   };
 
   const remove = async (row: ContractResponse) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    setDeletingContract(row);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteContract(row.id, row.rowVersion);
-      toast({ title: t("form.deleted") });
-      await load();
+      const response = await adminApi.getContractDeletionImpact(row.id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: getErrorMessage(err),
-        variant: "destructive",
-      });
+      setDeleteError(getErrorMessage(err) ?? t("common.error"));
+    } finally {
+      setDeleteImpactLoading(false);
     }
+  };
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!deletingContract || !deleteImpact) return null;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteContract(deletingContract.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+        rowVersion: deletingContract.rowVersion,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(getErrorMessage(err) ?? t("common.error"));
+      throw err;
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const completeDelete = async () => {
+    setDeletingContract(null);
+    setDeleteImpact(null);
+    toast({ title: t("form.deleted") });
+    await load();
   };
 
   const exportCsv = () => {
@@ -653,15 +656,6 @@ const Contracts = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {canManage && (
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            )}
-
             {/* Mobile / tablet cards (<lg) */}
             <ul className="grid gap-3 lg:hidden">
               {contracts.map((row) => {
@@ -680,15 +674,6 @@ const Contracts = () => {
                     <div className="pointer-events-none relative z-10">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
-                        {canManage && (
-                          <span className="pointer-events-auto pt-0.5">
-                            <Checkbox
-                              checked={selectedIds.has(row.id)}
-                              onCheckedChange={(v) => toggleOne(row.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${row.contractNumber}`}
-                            />
-                          </span>
-                        )}
                         <div className="min-w-0">
                           <h3 className="break-words text-sm font-semibold leading-tight">{row.customerName ?? "—"}</h3>
                           <Link
@@ -753,21 +738,6 @@ const Contracts = () => {
               <table className="w-full min-w-[1000px] divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    {canManage && (
-                      <th className="w-10 px-3 py-3 text-left">
-                        <Checkbox
-                          checked={
-                            allVisibleSelected
-                              ? true
-                              : someVisibleSelected
-                                ? "indeterminate"
-                                : false
-                          }
-                          onCheckedChange={(v) => toggleAllVisible(v === true)}
-                          aria-label={t("common.selectAll")}
-                        />
-                      </th>
-                    )}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.number")}</th>
                     <th className="min-w-[220px] px-3 py-3 text-left font-medium">{t("contracts.field.customer")}</th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("contracts.field.signedDate")}</th>
@@ -793,15 +763,6 @@ const Contracts = () => {
                         onMouseEnter={() => setHoveredContractId(row.id)}
                         onMouseLeave={() => setHoveredContractId(null)}
                       >
-                        {canManage && (
-                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedIds.has(row.id)}
-                              onCheckedChange={(v) => toggleOne(row.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${row.contractNumber}`}
-                            />
-                          </td>
-                        )}
                         <td className="whitespace-nowrap px-3 py-3 font-mono text-xs" onClick={(event) => event.stopPropagation()}>
                           <Link to={`/admin/contracts/${row.id}`} className="inline-flex items-center gap-1 text-primary hover:underline">
                             {row.contractNumber}
@@ -1141,6 +1102,22 @@ const Contracts = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DeletionImpactDialog
+        open={deletingContract != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={deleteBusy}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) {
+            setDeletingContract(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
+      />
     </AdminLayout>
   );
 };

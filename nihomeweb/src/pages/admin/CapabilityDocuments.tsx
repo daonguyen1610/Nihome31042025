@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Download,
   FileArchive,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -34,16 +36,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -57,6 +49,7 @@ import {
   type CapabilityDocumentExpiryState,
   type CapabilityDocumentListParams,
   type CapabilityDocumentResponse,
+  type DeletionImpactResponse,
   type MasterDataOption,
   type UpsertCapabilityDocumentRequest,
 } from "@/services/adminApi";
@@ -94,6 +87,7 @@ const formatDate = (iso?: string | null, lang: string = "vi") => {
 
 const CapabilityDocuments = () => {
   const { t, lang } = useI18n();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.capabilityDocsManage);
@@ -288,7 +282,7 @@ const CapabilityDocuments = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  const openEdit = async (id: number) => {
+  const openEdit = useCallback(async (id: number) => {
     try {
       const { data } = await adminApi.getCapabilityDocument(id);
       setEditing(data);
@@ -303,7 +297,19 @@ const CapabilityDocuments = () => {
     } catch (err) {
       toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
     }
-  };
+  }, [t, toast]);
+
+  useEffect(() => {
+    const rawId = searchParams.get("documentId");
+    const documentId = rawId ? Number(rawId) : 0;
+    if (!Number.isInteger(documentId) || documentId <= 0) return;
+    void openEdit(documentId);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("documentId");
+      return next;
+    }, { replace: true });
+  }, [openEdit, searchParams, setSearchParams]);
 
   const submitEdit = async () => {
     if (!editing || !editForm) return;
@@ -356,19 +362,45 @@ const CapabilityDocuments = () => {
 
   // -------- delete --------
   const [deleting, setDeleting] = useState<CapabilityDocumentResponse | null>(null);
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setBusy(true);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const openDelete = async (row: CapabilityDocumentResponse) => {
+    setDeleting(row);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteCapabilityDocument(deleting.id);
-      toast({ title: t("capDocs.deleted") });
-      setDeleting(null);
-      await fetchList();
+      const response = await adminApi.getCapabilityDocumentDeletionImpact(row.id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
+    }
+  };
+  const confirmDelete = async (confirmation: string) => {
+    if (!deleting || !deleteImpact) return null;
+    setBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteCapabilityDocument(deleting.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusy(false);
     }
+  };
+  const completeDelete = async () => {
+    setDeleting(null);
+    setDeleteImpact(null);
+    toast({ title: t("capDocs.deleted") });
+    await fetchList();
   };
 
   // -------- quick-view preview --------
@@ -444,7 +476,7 @@ const CapabilityDocuments = () => {
             size="icon"
             variant="ghost"
             className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-            onClick={() => setDeleting(r)}
+            onClick={() => void openDelete(r)}
             title={t("capDocs.action.delete")}
             aria-label={t("capDocs.action.delete")}
           >
@@ -911,32 +943,22 @@ const CapabilityDocuments = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm (2-step per AC) */}
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
-        <AlertDialogContent className="w-[95vw] max-w-md sm:w-full">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("capDocs.delete.confirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription className="break-words">
-              {t("capDocs.delete.confirmBody").replace("{name}", deleting?.name ?? "")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col-reverse gap-2 sm:flex-row">
-            <AlertDialogCancel disabled={busy} className="w-full sm:w-auto">
-              {t("capDocs.delete.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="w-full bg-rose-600 hover:bg-rose-700 sm:w-auto"
-              onClick={(e) => {
-                e.preventDefault();
-                void confirmDelete();
-              }}
-              disabled={busy}
-            >
-              {t("capDocs.delete.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeletionImpactDialog
+        open={deleting != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={busy}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !busy) {
+            setDeleting(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
+      />
 
       {/* Quick-view preview dialog — read-only summary of the row.
           The list already contains every field the preview shows, so

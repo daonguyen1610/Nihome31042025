@@ -81,6 +81,60 @@ public class SampleCrmDataSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_HardDeletedBusinessRoots_WithTombstones_DoNotRecreateRootsOrCapabilityFile()
+    {
+        var opportunity = _db.Opportunities.First(item => item.Name.StartsWith("[SAMPLE]"));
+        var opportunityName = opportunity.Name;
+        var contract = _db.Contracts.First(item => item.ContractNumber.StartsWith("HD-SAMPLE-"));
+        var contractNumber = contract.ContractNumber;
+        var survey = _db.Surveys.First(item => item.Code.StartsWith("SV-SAMPLE-"));
+        var surveyCode = survey.Code;
+        var tender = _db.Tenders.First(item => item.Code.StartsWith("TD-SAMPLE-"));
+        var tenderCode = tender.Code;
+        var tenderChecklistIds = _db.TenderChecklistItems.Where(item => item.TenderId == tender.Id)
+            .Select(item => item.Id).ToList();
+        var capability = _db.CapabilityDocuments.First(item =>
+            item.Description != null && item.Description.StartsWith("[SAMPLE_CAP]"));
+        var capabilityPath = capability.FilePath;
+        _db.SeededRootDeletions.AddRange(
+            new SeededRootDeletion { ResourceType = EntityTypes.Opportunity, ResourceKey = opportunityName },
+            new SeededRootDeletion { ResourceType = EntityTypes.Contract, ResourceKey = contractNumber },
+            new SeededRootDeletion { ResourceType = EntityTypes.Survey, ResourceKey = surveyCode },
+            new SeededRootDeletion { ResourceType = EntityTypes.Tender, ResourceKey = tenderCode },
+            new SeededRootDeletion { ResourceType = EntityTypes.CapabilityDocument, ResourceKey = capabilityPath });
+        opportunity.Name = $"REMOVED-{opportunity.Id}";
+        contract.ContractNumber = $"REMOVED-{contract.Id}";
+        contract.Note = "Removed sample contract";
+        survey.Code = $"REMOVED-{survey.Id}";
+        survey.Note = "Removed sample survey";
+        survey.Location = $"Removed location {survey.Id}";
+        tender.Code = $"REMOVED-{tender.Id}";
+        tender.Note = "Removed sample tender";
+        _db.TenderChecklistItems.RemoveRange(_db.TenderChecklistItems.Where(item => item.TenderId == tender.Id));
+        capability.FilePath = $"/files/capability/removed-{capability.Id}.pdf";
+        capability.Description = "Removed sample capability";
+        _db.SaveChanges();
+        var webRootPath = Path.Combine(Path.GetTempPath(), $"nihome-tombstone-{Guid.NewGuid():N}");
+
+        try
+        {
+            SampleCrmDataSeeder.Seed(_db, webRootPath);
+
+            Assert.DoesNotContain(_db.Opportunities, item => item.Name == opportunityName);
+            Assert.DoesNotContain(_db.Contracts, item => item.ContractNumber == contractNumber);
+            Assert.DoesNotContain(_db.Surveys, item => item.Code == surveyCode);
+            Assert.DoesNotContain(_db.Tenders, item => item.Code == tenderCode);
+            Assert.DoesNotContain(_db.TenderChecklistItems, item => tenderChecklistIds.Contains(item.Id));
+            Assert.DoesNotContain(_db.CapabilityDocuments, item => item.FilePath == capabilityPath);
+            Assert.False(File.Exists(Path.Combine(webRootPath, capabilityPath.TrimStart('/'))));
+        }
+        finally
+        {
+            if (Directory.Exists(webRootPath)) Directory.Delete(webRootPath, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Seed_PartialDeletion_RestoresOnlyMissingCanonicalRowsAndChildren()
     {
         var contract = _db.Contracts

@@ -22,10 +22,13 @@ dependent groups classified as:
   binding to the root is removed.
 - `Block`: data that must be safely cleaned before the root can be deleted.
 
-The server recomputes the impact within a serializable transaction. A changed
-plan or stale row version returns `409 Conflict`; invalid confirmation or an
-active blocker returns `400 Bad Request`. Rejected requests must leave the root
-and all dependencies unchanged.
+The server recomputes the impact and creates the durable operation in one
+serializable transaction, commits it, and only then starts processing. For
+Opportunity, Quote, and Contract, `rowVersion` is mandatory: a missing or malformed
+token returns `400 Bad Request`, while a stale token or changed plan returns
+`409 Conflict`. Invalid confirmation or an active blocker returns
+`400 Bad Request`. Rejected requests must leave the root and all dependencies
+unchanged and must not emit a success/request audit.
 
 The deterministic plan includes every business-significant direct and nested
 dependent identifier. Adding or removing a nested child after preview therefore
@@ -95,6 +98,27 @@ that the root has been deleted until its status is `Completed`.
   permanently deletes eligible Drive replicas using verified app properties,
   then preserves and terminalizes their sidecar records. Imported, shared,
   ambiguous, incomplete, mismatched, or unstable sidecars block deletion.
+- Opportunity activities and translations are aggregate-owned. Quotes block
+  Opportunity deletion; Contracts, Surveys, converted Leads, and winning
+  Tenders are independent roots that are unlinked and preserved.
+- Contract milestones, attachments, appendices, and files under
+  `/files/contracts/` are aggregate-owned. Linked Design Projects are unlinked
+  and preserved. Deletion is blocked when a path is unsafe or shared, or when
+  the Contract is the last qualifying contract for a Won Opportunity. Exact
+  Nicon-owned CRM sidecars for `ContractAttachment` and `ContractAppendix` use
+  the same safety checks as Quote sidecars: ambiguous, conflicting, claimed,
+  pending, mismatched, imported, or duplicate Drive identities block deletion.
+  The durable operation verifies ownership metadata and permanently deletes
+  safe synced Drive replicas before the finalizer terminalizes and preserves
+  their sidecars; the finalizer never queues a background Drive delete.
+- Survey checklist results and site conditions are aggregate-owned. Survey
+  Media must be removed through its own managed-file workflow before the Survey
+  can be deleted. An external Drive folder binding is unlinked and preserved.
+  Survey management scope is `crm.surveys.manage.all`, assigned surveyor,
+  survey creator, Operational Project manager, or Operational Project creator.
+- Capability Document versions and files under `/files/capability/` are
+  aggregate-owned. Unsafe or shared paths block deletion. Tender checklist
+  references block deletion until the shared document is detached explicitly.
 - Customer contacts, activities, documents, translations, and files under the
   exact `/files/customers/{customerId}/` root are aggregate-owned. Converted
   Lead and Project Document metadata links are cleared while those records are
@@ -103,9 +127,16 @@ that the root has been deleted until its status is `Completed`.
   deletion until handled through their own authorized workflows. Undoing a
   Lead conversion always preserves its Customer; Customers can only be
   permanently removed through this preview-and-confirm contract.
-- Audit events are emitted only after a successful delete.
-- Hard-deleted seeded roots write a durable tombstone. Seed reruns respect that
-  tombstone and do not recreate records an administrator intentionally removed.
+- Exactly one success audit is written by the durable operation processor in
+  the same save that marks the operation `Completed`, after database
+  finalization and quarantine purge. Request, validation-failure, and
+  pre-completion success audits are not emitted.
+- Hard-deleted seeded roots write a durable tombstone. Opportunity uses its
+  `[SAMPLE]` name, Contract its `HD-SAMPLE-` number, Survey its `SV-SAMPLE-`
+  code, Tender its exact `TD-SAMPLE-` code, and Capability Document its managed
+  path when the description begins `[SAMPLE_CAP]`. Seed reruns filter roots and
+  dependents before insertion and skip Capability physical-file self-healing
+  for tombstoned paths.
 
 ## Durable Operation Lifecycle
 
@@ -119,8 +150,8 @@ Operations move through `Preparing`, `Ready`, `Processing`, `Completed`,
 3. After external cleanup, a resource handler registered by resource type runs
   the idempotent database finalizer. Delegate-only finalizers are not allowed
   because they cannot survive application restart.
-4. The processor purges quarantined local files and marks the operation
-  `Completed`.
+4. The processor purges quarantined local files, then atomically writes the
+  idempotent completion audit and marks the operation `Completed`.
 
 Failures before the first Drive deletion restore quarantined files and may be
 retried with conservative backoff. Once a Drive deletion or database finalizer
@@ -160,10 +191,9 @@ typed confirmation, blocker visibility, and successful UI refresh.
 
 The durable operation, local quarantine, verified Drive deletion, registry, and
 retry foundation is available for domain adoption. Design Project, Operational
-Project, Lead, Customer, and Tender use the durable backend flow, owner-scoped operation
-status/retry API, and the shared frontend polling dialog. Quote uses the same
-durable flow for direct managed files and verified Nicon-owned Drive replicas,
-while preserving terminalized project-document sidecars. Lead, Customer, Tender, and Quote
-bulk deletion is disabled until a server-side
-batch preview-and-confirm contract is available. Other root pages must still be
+Project, Lead, Customer, Tender, Quote, Opportunity, Contract, Survey, and
+Capability Document use the durable backend flow and shared frontend polling
+dialog. Owner-scoped resources also enforce scope again during finalization.
+Bulk deletion is disabled on these root pages until a server-side batch
+preview-and-confirm contract is available. Other root pages must still be
 migrated separately before the repository-wide hard-delete rollout is complete.

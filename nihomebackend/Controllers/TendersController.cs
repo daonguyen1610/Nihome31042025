@@ -118,27 +118,10 @@ public class TendersController(
         {
             var result = await svc.DeleteAsync(id, request, userId.Value, ct);
             if (result is null) return NotFound();
-            audit.Log(new AuditEvent
-            {
-                Action = result.IsComplete ? "tender.delete" : "tender.delete_requested",
-                ResourceType = EntityTypes.Tender,
-                ResourceId = id.ToString(),
-                Message = $"Tender #{id} durable deletion is {result.Status}.",
-                NewValue = result,
-            });
             return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (TenderOperationException ex)
         {
-            audit.Log(new AuditEvent
-            {
-                Action = "tender.delete",
-                ResourceType = EntityTypes.Tender,
-                ResourceId = id.ToString(),
-                Message = ex.Message,
-                Status = AuditStatus.Failure,
-                FailureReason = ex.Message,
-            });
             return BadRequest(new { message = ex.Message });
         }
         catch (DeletionPlanChangedException ex)

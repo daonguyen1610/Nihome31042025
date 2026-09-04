@@ -174,15 +174,6 @@ public class LeadsController(
             request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
             var result = await svc.DeleteAsync(id, request, userId.Value, canManage, canSeeAll, ct);
             if (result is null) return NotFound();
-
-            audit.Log(new AuditEvent
-            {
-                Action = result.IsComplete ? "lead.delete" : "lead.delete_requested",
-                ResourceType = EntityTypes.Lead,
-                ResourceId = id.ToString(),
-                Message = $"Lead #{id} durable deletion is {result.Status}.",
-                NewValue = result,
-            });
             return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (LeadOperationException ex)

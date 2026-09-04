@@ -560,7 +560,10 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
             count: 1,
             examples: ["unsafe.pdf"],
             resolutionUrl: "/admin/customers",
-            resolutionLinks: [{ label: "Unsafe file", url: "/admin/customers/456105" }],
+            resolutionLinks: [
+              { label: "Unsafe file", url: "/admin/customers/456105" },
+              { label: "External unsafe file", url: "https://example.invalid/unsafe.pdf" },
+            ],
           },
         ],
       }),
@@ -591,7 +594,12 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
     "/admin/contracts/456109",
   );
   await expect(dialog.locator(`a[href="/admin/contracts?customerId=${customer.id}"]`)).toHaveCount(0);
-  await expect(dialog.getByRole("link", { name: "Unsafe file" })).toHaveCount(0);
+  await expect(dialog.getByRole("link", { name: "Unsafe file", exact: true })).toHaveAttribute(
+    "href",
+    `/admin/customers/${customer.id}`,
+  );
+  await expect(dialog.getByRole("link", { name: "Unsafe file", exact: true })).toHaveAttribute("target", "_blank");
+  await expect(dialog.getByRole("link", { name: "External unsafe file" })).toHaveCount(0);
   await expect(dialog.locator('a[href="/admin/customers"]')).toHaveCount(0);
   await expect(dialog.getByRole("textbox")).toHaveCount(0);
   await expect(dialog.getByRole("button", {

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -31,7 +32,7 @@ public class ContractsControllerTests : IntegrationTestBase
             },
         };
         var res = await Client.PostAsJsonAsync("/api/customers", payload);
-        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        res.StatusCode.Should().Be(HttpStatusCode.Created, await res.Content.ReadAsStringAsync());
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
 
@@ -86,7 +87,7 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task FullRoundTrip_AsSalesManager_Create_Update_Delete()
+    public async Task FullRoundTrip_AsSalesManager_Create_Update_PreviewDelete()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
@@ -111,10 +112,83 @@ public class ContractsControllerTests : IntegrationTestBase
         update.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(update)).GetProperty("status").GetString().Should().Be("Signed");
 
-        (await Client.DeleteAsync($"/api/contracts/{id}")).StatusCode
-            .Should().Be(HttpStatusCode.NoContent);
-        (await Client.DeleteAsync($"/api/contracts/{id}")).StatusCode
-            .Should().Be(HttpStatusCode.NotFound);
+        var impact = await GetDeletionImpactAsync(id);
+        impact.GetProperty("resourceType").GetString().Should().Be("Contract");
+        impact.GetProperty("requiredConfirmation").GetString()
+            .Should().Be(body.GetProperty("contractNumber").GetString());
+        (await ConfirmDeleteAsync(id, impact)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await DeleteContractAsync(id, new string('a', 64), impact.GetProperty("requiredConfirmation").GetString()))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task DeletionImpact_EnforcesAuthorizationPermissionAndOwnerScope()
+    {
+        (await Client.GetAsync("/api/contracts/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.GetAsync("/api/contracts/1/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/contracts/{contractId}/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteContractAsync(contractId, new string('a', 64), "HIDDEN"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.Contracts.AnyAsync(item => item.Id == contractId))).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_RejectsMissingOrInvalidConfirmationAndStalePlanWithoutMutation()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var impact = await GetDeletionImpactAsync(contractId);
+        var token = impact.GetProperty("planToken").GetString()!;
+        var confirmation = impact.GetProperty("requiredConfirmation").GetString()!;
+        var rowVersion = await GetRowVersionAsync(contractId);
+
+        (await DeleteContractAsync(contractId, token, null, rowVersion)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteContractAsync(contractId, token, $"{confirmation} ", rowVersion)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteContractAsync(contractId, new string('a', 64), confirmation, rowVersion)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        (await WithDbAsync(db => db.Contracts.AnyAsync(item => item.Id == contractId))).Should().BeTrue();
+        (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == "Contract" && item.ResourceId == contractId.ToString()))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_RequiresWellFormedCurrentRowVersionAndEmitsOneCompletionAudit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var impact = await GetDeletionImpactAsync(contractId);
+        var planToken = impact.GetProperty("planToken").GetString();
+        var confirmation = impact.GetProperty("requiredConfirmation").GetString();
+        var staleBytes = Convert.FromBase64String(await GetRowVersionAsync(contractId));
+        staleBytes[0] ^= 0xff;
+
+        (await DeleteContractAsync(contractId, planToken, confirmation, null)).StatusCode
+            .Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteContractAsync(contractId, planToken, confirmation, "malformed")).StatusCode
+            .Should().Be(HttpStatusCode.BadRequest);
+        (await DeleteContractAsync(contractId, planToken, confirmation, Convert.ToBase64String(staleBytes)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.AuditLogs.CountAsync(item =>
+            item.ResourceType == EntityTypes.Contract && item.ResourceId == contractId.ToString() &&
+            item.Action == "contract.delete"))).Should().Be(0);
+
+        (await ConfirmDeleteAsync(contractId, impact)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.AuditLogs.CountAsync(item =>
+            item.ResourceType == EntityTypes.Contract && item.ResourceId == contractId.ToString() &&
+            item.Action == "contract.delete"))).Should().Be(1);
     }
 
     [Fact]
@@ -685,12 +759,48 @@ public class ContractsControllerTests : IntegrationTestBase
 
         (await Client.PostAsJsonAsync($"/api/contracts/{ids.ContractId}/transition", new { newStatus = "Cancelled" }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await Client.DeleteAsync($"/api/contracts/{ids.ContractId}"))
-            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var impact = await GetDeletionImpactAsync(ids.ContractId);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "contract.wonOpportunity" &&
+            item.GetProperty("action").GetString() == "Block");
+        (await ConfirmDeleteAsync(ids.ContractId, impact)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var status = await WithDbAsync(db => db.Contracts
             .Where(item => item.Id == ids.ContractId)
             .Select(item => item.Status)
             .SingleAsync());
         status.Should().Be(ContractStatus.Signed);
+        (await WithDbAsync(db => db.Opportunities.AnyAsync(item => item.Id == ids.OpportunityId))).Should().BeTrue();
+    }
+
+    private async Task<JsonElement> GetDeletionImpactAsync(int contractId)
+    {
+        var response = await Client.GetAsync($"/api/contracts/{contractId}/deletion-impact");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return await ReadJsonAsync(response);
+    }
+
+    private async Task<HttpResponseMessage> ConfirmDeleteAsync(int contractId, JsonElement impact) =>
+        await DeleteContractAsync(
+            contractId,
+            impact.GetProperty("planToken").GetString(),
+            impact.GetProperty("requiredConfirmation").GetString(),
+            await GetRowVersionAsync(contractId));
+
+    private async Task<string> GetRowVersionAsync(int contractId) =>
+        (await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contractId}")))
+            .GetProperty("rowVersion").GetString()!;
+
+    private async Task<HttpResponseMessage> DeleteContractAsync(
+        int contractId,
+        string? planToken,
+        string? confirmation,
+        string? rowVersion = null)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/contracts/{contractId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation, rowVersion }),
+        };
+        return await Client.SendAsync(request);
     }
 }
