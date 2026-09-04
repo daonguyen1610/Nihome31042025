@@ -642,7 +642,7 @@ public class CustomersControllerTests : IntegrationTestBase
             (await db.AuditLogs.AnyAsync(item => item.Action == "customer.delete" &&
                 item.ResourceId == customerId.ToString() && item.Status == "success")).Should().BeTrue();
         });
-            File.Exists(documentFullPath).Should().BeFalse();
+        File.Exists(documentFullPath).Should().BeFalse();
     }
 
     [Fact]
