@@ -141,6 +141,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICrmHardDeletePlanService, CrmHardDeletePlanService>();
         services.AddScoped<IHardDeleteResourceHandler, DesignProjectHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, OperationalProjectHardDeleteHandler>();
+        services.AddScoped<IHardDeleteResourceHandler, CustomerHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, LeadHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, TenderHardDeleteHandler>();
         services.AddScoped<IHardDeleteResourceHandler, QuoteHardDeleteHandler>();

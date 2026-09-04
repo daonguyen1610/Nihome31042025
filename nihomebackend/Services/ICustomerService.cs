@@ -1,6 +1,7 @@
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -9,12 +10,9 @@ namespace NihomeBackend.Services;
 /// persons and follow-up timeline. Enforces owner-scoped access (Sales see
 /// only their own; Sales Manager / Accountant / BOD / Admin see all via
 /// the <c>crm.customers.view.all</c> permission), duplicate detection with
-/// override + audit, and delete-guard against downstream FKs.
-///
-/// Downstream FK check is a stub for this slice (Opportunity / Contract
-/// entities land in later stories NIH-83 / NIH-87). Once those exist the
-/// service will refuse deletion when any open Opportunity or non-Closed
-/// Contract references the customer.
+/// override + audit, and durable preview-and-confirm deletion. Independent
+/// commercial and project roots block Customer deletion until they are handled
+/// through their own authorized workflows.
 /// </summary>
 public interface ICustomerService
 {
@@ -54,7 +52,11 @@ public interface ICustomerService
         bool canSeeAll,
         CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
+    Task<HardDeleteOperationResult?> DeleteAsync(
+        int id, ConfirmDeletionRequest request, int callerUserId,
+        bool canManage, bool canSeeAll, CancellationToken ct = default);
 
     // Contacts
 

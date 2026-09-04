@@ -85,6 +85,14 @@ that the root has been deleted until its status is `Completed`.
   permanently deletes eligible Drive replicas using verified app properties,
   then preserves and terminalizes their sidecar records. Imported, shared,
   ambiguous, incomplete, mismatched, or unstable sidecars block deletion.
+- Customer contacts, activities, documents, translations, and files under the
+  exact `/files/customers/{customerId}/` root are aggregate-owned. Converted
+  Lead and Project Document metadata links are cleared while those records are
+  preserved. Opportunities, Tenders, Contracts, Design Projects, and
+  Operational Projects are independent required roots and block Customer
+  deletion until handled through their own authorized workflows. Undoing a
+  Lead conversion always preserves its Customer; Customers can only be
+  permanently removed through this preview-and-confirm contract.
 - Audit events are emitted only after a successful delete.
 - Hard-deleted seeded roots write a durable tombstone. Seed reruns respect that
   tombstone and do not recreate records an administrator intentionally removed.
@@ -134,10 +142,10 @@ typed confirmation, blocker visibility, and successful UI refresh.
 
 The durable operation, local quarantine, verified Drive deletion, registry, and
 retry foundation is available for domain adoption. Design Project, Operational
-Project, Lead, and Tender use the durable backend flow, owner-scoped operation
+Project, Lead, Customer, and Tender use the durable backend flow, owner-scoped operation
 status/retry API, and the shared frontend polling dialog. Quote uses the same
 durable flow for direct managed files and verified Nicon-owned Drive replicas,
-while preserving terminalized project-document sidecars. Lead, Tender, and Quote
+while preserving terminalized project-document sidecars. Lead, Customer, Tender, and Quote
 bulk deletion is disabled until a server-side
 batch preview-and-confirm contract is available. Other root pages must still be
 migrated separately before the repository-wide hard-delete rollout is complete.

@@ -4,16 +4,15 @@ import { BriefcaseBusiness, Building2, ExternalLink, FileSignature, FileText, Pl
 import AdminLayout from "@/components/layout/AdminLayout";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { validateContact, type ContactIssue } from "@/lib/validation";
 import { PageLoading, PageError } from "@/components/PageState";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +42,7 @@ import {
   type CustomerContactResponse,
   type CustomerDocumentResponse,
   type CustomerDuplicateDetail,
+  type DeletionImpactResponse,
   type CustomerListParams,
   type CustomerRelationshipStatus,
   type CustomerResponse,
@@ -164,6 +164,11 @@ const AdminCustomers = () => {
   const [relatedTotals, setRelatedTotals] = useState({ projects: 0, opportunities: 0, quotes: 0, contracts: 0 });
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedErrors, setRelatedErrors] = useState<Partial<Record<"projects" | "opportunities" | "quotes" | "contracts", string>>>({});
+  const [deletingCustomer, setDeletingCustomer] = useState<CustomerResponse | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     const h = window.setTimeout(() => {
@@ -437,41 +442,49 @@ const AdminCustomers = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t("customers.deleteConfirm"))) return;
+    const customer = detail?.id === id ? detail : rows.find((row) => row.id === id);
+    if (!customer) return;
+    setDeletingCustomer(customer);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteCustomer(id, detail?.id === id
-        ? detail.rowVersion
-        : rows.find((row) => row.id === id)?.rowVersion);
-      toast({ title: t("customers.deleted") });
-      if (detail?.id === id) closeDetail();
-      await fetchList();
+      const response = await adminApi.getCustomerDeletionImpact(id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({ title: t("common.error"), description: extractApiError(err), variant: "destructive" });
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
     }
   };
 
-  const visibleIds = useMemo(() => rows.map((r) => r.id), [rows]);
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds,
-    deleteOne: (id) => adminApi.deleteCustomer(id, rows.find((row) => row.id === id)?.rowVersion),
-    onAfter: async ({ success }) => {
-      if (success > 0 && detail && selectedIds.has(detail.id)) closeDetail();
-      await fetchList();
-    },
-  });
+  const confirmDelete = async (confirmation: string) => {
+    if (!deletingCustomer || !deleteImpact) return null;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteCustomer(deletingCustomer.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+        rowVersion: deletingCustomer.rowVersion,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
-  useEffect(() => {
-    clearSelection();
-  }, [page, typeFilter, statusFilter, sourceFilter, search, clearSelection]);
+  const completeDelete = async () => {
+    const deletedId = deletingCustomer?.id;
+    setDeletingCustomer(null);
+    setDeleteImpact(null);
+    toast({ title: t("customers.deleted") });
+    if (detail?.id === deletedId) closeDetail();
+    await fetchList();
+  };
 
   const contactIssueMessage = (issue: Exclude<ContactIssue, null>) =>
     issue === "missing"
@@ -693,33 +706,8 @@ const AdminCustomers = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {canManage && (
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            )}
-
             {/* Mobile / tablet card view — one <article> per customer. */}
             <div className="grid gap-2 lg:hidden">
-              {canManage && rows.length > 1 && (
-                <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
-                  <Checkbox
-                    checked={
-                      allVisibleSelected
-                        ? true
-                        : someVisibleSelected
-                          ? "indeterminate"
-                          : false
-                    }
-                    onCheckedChange={(v) => toggleAllVisible(v === true)}
-                    aria-label={t("common.selectAll")}
-                  />
-                  <span>{allVisibleSelected ? t("common.deselectAll") : t("common.selectAll")}</span>
-                </label>
-              )}
               {rows.map((c) => {
                 const primary = primaryContact(c);
                 return (
@@ -729,15 +717,6 @@ const AdminCustomers = () => {
                     onClick={() => void openDetail(c.id)}
                   >
                     <header className="flex items-start gap-2">
-                      {canManage && (
-                        <div className="shrink-0 pt-0.5" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedIds.has(c.id)}
-                            onCheckedChange={(v) => toggleOne(c.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${c.name}`}
-                          />
-                        </div>
-                      )}
                       <div className="min-w-0 flex-1">
                         <h3 className="break-words text-sm font-semibold leading-tight">{c.name}</h3>
                         {c.type === "Company" && c.taxId && (
@@ -837,21 +816,6 @@ const AdminCustomers = () => {
             <table className="w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  {canManage && (
-                    <th className="w-10 px-3 py-3 text-left">
-                      <Checkbox
-                        checked={
-                          allVisibleSelected
-                            ? true
-                            : someVisibleSelected
-                              ? "indeterminate"
-                              : false
-                        }
-                        onCheckedChange={(v) => toggleAllVisible(v === true)}
-                        aria-label={t("common.selectAll")}
-                      />
-                    </th>
-                  )}
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.type")}</th>
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.name")}</th>
                   <th className="whitespace-nowrap px-3 py-3 text-left font-medium">{t("customers.field.primaryContact")}</th>
@@ -873,18 +837,6 @@ const AdminCustomers = () => {
                       className="cursor-pointer hover:bg-muted/40"
                       onClick={() => void openDetail(c.id)}
                     >
-                      {canManage && (
-                        <td
-                          className="px-3 py-3"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Checkbox
-                            checked={selectedIds.has(c.id)}
-                            onCheckedChange={(v) => toggleOne(c.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${c.name}`}
-                          />
-                        </td>
-                      )}
                       <td className="px-3 py-3">
                         <Badge
                           variant="outline"
@@ -1807,6 +1759,22 @@ const AdminCustomers = () => {
           ) : null}
         </DialogContent>
       </Dialog>
+      <DeletionImpactDialog
+        open={deletingCustomer != null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={deleteBusy}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) {
+            setDeletingCustomer(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
+      />
     </AdminLayout>
   );
 };

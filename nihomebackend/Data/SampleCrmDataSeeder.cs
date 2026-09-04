@@ -256,6 +256,11 @@ public static class SampleCrmDataSeeder
 
         foreach (var (customer, contact) in samples)
         {
+            if (db.SeededRootDeletions.Any(item =>
+                item.ResourceType == EntityTypes.Customer && item.ResourceKey == customer.Name))
+            {
+                continue;
+            }
             var existing = db.Customers.OrderBy(c => c.Id).FirstOrDefault(c => c.Name == customer.Name);
             if (existing is not null)
             {

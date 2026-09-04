@@ -4,7 +4,9 @@ using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
+using NihomeBackend.Services.HardDelete;
 using nihomebackend.tests.Helpers;
 
 namespace nihomebackend.tests.Services;
@@ -12,19 +14,20 @@ namespace nihomebackend.tests.Services;
 public class CustomerServiceTests : IDisposable
 {
     private readonly AppDbContext _db;
-    private readonly Mock<IQuoteDocumentService> _quoteDocuments;
+    private readonly ICrmHardDeletePlanService _plans;
     private readonly CustomerService _sut;
 
     public CustomerServiceTests()
     {
         _db = DbContextFactory.Create();
-        _quoteDocuments = new Mock<IQuoteDocumentService>();
+        var hardDelete = HardDeleteTestServices.Create(
+            _db, Mock.Of<IProjectDocumentStagingService>());
+        _plans = hardDelete.CrmPlans;
         _sut = new CustomerService(
             _db,
-            Mock.Of<ICustomerDocumentService>(),
-            _quoteDocuments.Object,
             NullLogger<CustomerService>.Instance,
-            Mock.Of<IProjectDocumentStagingService>());
+            hardDelete.CrmPlans,
+            hardDelete.Operations);
     }
 
     public void Dispose() => _db.Dispose();
@@ -386,14 +389,31 @@ public class CustomerServiceTests : IDisposable
     // ---------------- Delete ----------------
 
     [Fact]
-    public async Task Delete_UnconvertedCustomer_Removed()
+    public async Task Delete_CustomerWithoutDownstreamRoots_RemovesOwnedRows()
     {
         var sales = await SeedUserAsync();
         SeedSource("marketing");
         var created = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
+        var customer = await _db.Customers.SingleAsync(item => item.Id == created.Id);
+        customer.RowVersion = BitConverter.GetBytes(1L);
+        _db.CustomerActivities.Add(new CustomerActivity
+        {
+            CustomerId = customer.Id,
+            Type = CustomerActivityType.Note,
+            Content = "Owned history",
+            CreatedByUserId = sales.Id,
+        });
+        await _db.SaveChangesAsync();
 
-        Assert.True(await _sut.DeleteAsync(created.Id, sales.Id, canManage: true, canSeeAll: true));
+        var impact = await _sut.GetDeletionImpactAsync(
+            created.Id, sales.Id, canManage: true, canSeeAll: true);
+        var result = await _sut.DeleteAsync(
+            created.Id, Confirm(impact!, customer), sales.Id, canManage: true, canSeeAll: true);
+
+        Assert.True(result!.IsComplete);
         Assert.Empty(_db.Customers);
+        Assert.Empty(_db.CustomerContacts);
+        Assert.Empty(_db.CustomerActivities);
     }
 
     [Fact]
@@ -407,9 +427,10 @@ public class CustomerServiceTests : IDisposable
         SeedSource("marketing");
         var owned = await _sut.CreateAsync(BuildCreate(name: "Theirs"), other.Id, canManage: true);
 
-        var deleted = await _sut.DeleteAsync(owned.Id, sales.Id, canManage: true, canSeeAll: false);
+        var impact = await _sut.GetDeletionImpactAsync(
+            owned.Id, sales.Id, canManage: true, canSeeAll: false);
 
-        Assert.False(deleted);
+        Assert.Null(impact);
         Assert.Single(_db.Customers); // still exists
     }
 
@@ -420,12 +441,79 @@ public class CustomerServiceTests : IDisposable
         SeedSource("marketing");
         var mine = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
 
-        Assert.True(await _sut.DeleteAsync(mine.Id, sales.Id, canManage: true, canSeeAll: false));
+        var customer = await _db.Customers.SingleAsync(item => item.Id == mine.Id);
+        customer.RowVersion = BitConverter.GetBytes(2L);
+        await _db.SaveChangesAsync();
+        var impact = await _sut.GetDeletionImpactAsync(
+            mine.Id, sales.Id, canManage: true, canSeeAll: false);
+
+        Assert.True((await _sut.DeleteAsync(
+            mine.Id, Confirm(impact!, customer), sales.Id, canManage: true, canSeeAll: false))!.IsComplete);
         Assert.Empty(_db.Customers);
     }
 
     [Fact]
-    public async Task Delete_RemovesRequiredDescendantAggregatesAndPreservesSharedRows()
+    public async Task ForCustomerAsync_ManagedDocumentCreatesDurableLocalFileItem()
+    {
+        var sales = await SeedUserAsync();
+        SeedSource("marketing");
+        var created = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
+        _db.CustomerDocuments.Add(new CustomerDocument
+        {
+            CustomerId = created.Id,
+            FilePath = $"/files/customers/{created.Id}/brief.pdf",
+            OriginalFileName = "brief.pdf",
+        });
+        await _db.SaveChangesAsync();
+
+        var plan = await _plans.ForCustomerAsync(created.Id);
+
+        Assert.True(plan!.Impact.CanDelete);
+        Assert.Contains(plan.Items, item =>
+            item.Kind == HardDeleteItemKind.LocalFile &&
+            item.ActionIdentifier == $"/files/customers/{created.Id}/brief.pdf");
+    }
+
+    [Fact]
+    public async Task Delete_ConfirmationWithWhitespaceRejectsAndPreservesCustomer()
+    {
+        var sales = await SeedUserAsync();
+        SeedSource("marketing");
+        var created = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
+        var customer = await _db.Customers.SingleAsync(item => item.Id == created.Id);
+        customer.RowVersion = BitConverter.GetBytes(3L);
+        await _db.SaveChangesAsync();
+        var impact = await _sut.GetDeletionImpactAsync(
+            created.Id, sales.Id, canManage: true, canSeeAll: true);
+        var request = Confirm(impact!, customer);
+        request.Confirmation = $" {request.Confirmation} ";
+
+        await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.DeleteAsync(
+            created.Id, request, sales.Id, canManage: true, canSeeAll: true));
+
+        Assert.NotNull(await _db.Customers.FindAsync(created.Id));
+        Assert.Empty(_db.HardDeleteOperations);
+    }
+
+    [Fact]
+    public async Task ForwardRecovery_WhenManagePermissionWasRevoked_IsRejected()
+    {
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(service => service.HasAsync(
+                It.IsAny<int>(), "crm.customers.manage", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var handler = new CustomerHardDeleteHandler(
+            _db, Mock.Of<ICrmHardDeletePlanService>(), permissions.Object);
+        var context = new HardDeleteResourceContext(
+            Guid.NewGuid(), "Customer", "123", "plan", "456",
+            "delete-customer-aggregate", IsForwardRecovery: true);
+
+        await Assert.ThrowsAsync<HardDeleteAuthorizationException>(() =>
+            handler.AuthorizeAsync(context));
+    }
+
+    [Fact]
+    public async Task DeletionImpact_DownstreamRootsBlockAndPreserveCompleteGraph()
     {
         var user = await SeedUserAsync();
         SeedSource("marketing");
@@ -512,27 +600,47 @@ public class CustomerServiceTests : IDisposable
             });
         await _db.SaveChangesAsync();
 
-        Assert.True(await _sut.DeleteAsync(
-            created.Id, user.Id, canManage: true, canSeeAll: true));
+        var impact = await _plans.ForCustomerAsync(created.Id);
 
-        Assert.False(await _db.Customers.AnyAsync(row => row.Id == created.Id));
-        Assert.False(await _db.Opportunities.AnyAsync(row => row.Id == opportunity.Id));
-        Assert.False(await _db.Quotes.AnyAsync(row => row.Id == quote.Id));
-        _quoteDocuments.Verify(service => service.DeleteQuoteFiles(quote.Id), Times.Once);
-        Assert.False(await _db.Contracts.AnyAsync(row => row.Id == contract.Id));
-        Assert.False(await _db.Tenders.AnyAsync(row => row.Id == tender.Id));
-        Assert.False(await _db.TenderChecklistItems.AnyAsync(row => row.TenderId == tender.Id));
-        Assert.False(await _db.DesignProjects.AnyAsync(row => row.Id == project.Id));
-        Assert.False(await _db.EntityTranslations.AnyAsync(row =>
-            (row.EntityType == "Customer" && row.EntityId == created.Id)
-            || (row.EntityType == "DesignProject" && row.EntityId == project.Id)));
+        Assert.NotNull(impact);
+        Assert.False(impact!.Impact.CanDelete);
+        Assert.Contains(impact.Impact.Items, item =>
+            item.Key == "customer.opportunities" && item.Action == DeletionImpactActions.Block);
+        Assert.Contains(impact.Impact.Items, item =>
+            item.Key == "customer.contracts" && item.Action == DeletionImpactActions.Block);
+        Assert.Contains(impact.Impact.Items, item =>
+            item.Key == "customer.tenders" && item.Action == DeletionImpactActions.Block);
+        Assert.Contains(impact.Impact.Items, item =>
+            item.Key == "customer.designProjects" && item.Action == DeletionImpactActions.Block);
+        await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.DeleteAsync(
+            created.Id,
+            new ConfirmDeletionRequest
+            {
+                PlanToken = impact.Impact.PlanToken,
+                Confirmation = impact.Impact.RequiredConfirmation,
+                RowVersion = Convert.ToBase64String(BitConverter.GetBytes(1L)),
+            },
+            user.Id, canManage: true, canSeeAll: true));
+
+        Assert.NotNull(await _db.Customers.FindAsync(created.Id));
+        Assert.NotNull(await _db.Opportunities.FindAsync(opportunity.Id));
+        Assert.NotNull(await _db.Quotes.FindAsync(quote.Id));
+        Assert.NotNull(await _db.Contracts.FindAsync(contract.Id));
+        Assert.NotNull(await _db.Tenders.FindAsync(tender.Id));
+        Assert.NotNull(await _db.DesignProjects.FindAsync(project.Id));
         var preservedLead = await _db.Leads.FindAsync(convertedLead.Id);
-        Assert.NotNull(preservedLead);
-        Assert.Null(preservedLead!.ConvertedCustomerId);
-        Assert.Null(preservedLead.ConvertedOpportunityId);
+        Assert.Equal(created.Id, preservedLead!.ConvertedCustomerId);
+        Assert.Equal(opportunity.Id, preservedLead.ConvertedOpportunityId);
         Assert.NotNull(await _db.Customers.FindAsync(otherCustomer.Id));
         Assert.NotNull(await _db.Users.FindAsync(user.Id));
     }
+
+    private static ConfirmDeletionRequest Confirm(DeletionImpactResponse impact, Customer customer) => new()
+    {
+        PlanToken = impact.PlanToken,
+        Confirmation = impact.RequiredConfirmation,
+        RowVersion = CrmConcurrency.Encode(customer.RowVersion),
+    };
 
     // ---------------- Helpers ----------------
 

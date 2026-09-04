@@ -7,61 +7,6 @@ namespace NihomeBackend.Services;
 
 internal static class AggregateDeletionService
 {
-    public static async Task<IReadOnlyList<int>> DeleteCustomerAsync(
-        AppDbContext db,
-        Customer customer,
-        IProjectDocumentStagingService projectDocuments,
-        int? userId,
-        CancellationToken ct)
-    {
-        var customerId = customer.Id;
-        var opportunityIds = await db.Opportunities
-            .Where(opportunity => opportunity.CustomerId == customerId)
-            .Select(opportunity => opportunity.Id)
-            .ToListAsync(ct);
-        var designProjectIds = await db.DesignProjects
-            .Where(project => project.CustomerId == customerId)
-            .Select(project => project.Id)
-            .ToListAsync(ct);
-        var contractIds = await db.Contracts
-            .Where(contract => contract.CustomerId == customerId)
-            .Select(contract => contract.Id)
-            .ToListAsync(ct);
-        var tenderIds = await db.Tenders
-            .Where(tender => tender.CustomerId == customerId)
-            .Select(tender => tender.Id)
-            .ToListAsync(ct);
-
-        await DeleteDesignProjectsAsync(db, designProjectIds, projectDocuments, userId, ct);
-        var quoteIds = await DeleteOpportunitiesAsync(db, opportunityIds, projectDocuments, userId, ct);
-
-        var convertedLeads = await db.Leads
-            .Where(lead => lead.ConvertedCustomerId == customerId)
-            .ToListAsync(ct);
-        foreach (var lead in convertedLeads)
-        {
-            lead.ConvertedCustomerId = null;
-        }
-
-        var contracts = await db.Contracts
-            .Where(contract => contractIds.Contains(contract.Id))
-            .ToListAsync(ct);
-        await StageContractDocumentDeletesAsync(db, contracts, projectDocuments, userId, ct);
-        var tenders = await db.Tenders
-            .Where(tender => tenderIds.Contains(tender.Id))
-            .Include(tender => tender.ChecklistItems)
-            .ToListAsync(ct);
-
-        db.TenderChecklistItems.RemoveRange(tenders.SelectMany(tender => tender.ChecklistItems));
-        db.Tenders.RemoveRange(tenders);
-        db.Contracts.RemoveRange(contracts);
-        await RemoveTranslationsAsync(db, EntityTypes.Contract, contractIds, ct);
-        await RemoveTranslationsAsync(db, EntityTypes.Tender, tenderIds, ct);
-        await RemoveTranslationsAsync(db, EntityTypes.Customer, new[] { customerId }, ct);
-        db.Customers.Remove(customer);
-        return quoteIds;
-    }
-
     public static async Task<IReadOnlyList<int>> DeleteOpportunitiesAsync(
         AppDbContext db,
         IReadOnlyCollection<int> opportunityIds,

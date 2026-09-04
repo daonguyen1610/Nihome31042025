@@ -475,6 +475,73 @@ test("Tender deletion uses typed preview confirmation without bulk selection", a
   });
 });
 
+test("Customer deletion discloses downstream blockers without bulk selection", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  const customer = {
+    id: 456105,
+    type: "Company",
+    name: "Blocked deletion customer",
+    sourceCode: "REFERRAL",
+    relationshipStatus: "Signed",
+    ownerUserId: 1,
+    ownerName: "Admin",
+    createdAt: "2026-09-01T00:00:00Z",
+    updatedAt: "2026-09-03T00:00:00Z",
+    rowVersion: "AAAAAAAAB9Q=",
+    contacts: [],
+    activities: [],
+  };
+  let deleteRequested = false;
+  await page.route(new RegExp("/api/(?:v1/)?customers(?:\\?.*)?$"), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: 1, page: 1, pageSize: 20, items: [customer] }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?customers/${customer.id}/deletion-impact$`), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        resourceType: "Customer",
+        resourceId: customer.id,
+        resourceLabel: customer.name,
+        requiredConfirmation: `CUSTOMER-${customer.id}`,
+        planToken: "8".repeat(64),
+        canDelete: false,
+        totalAffected: 2,
+        items: [{
+          key: "customer.operationalProjects",
+          action: "Block",
+          count: 1,
+          examples: ["OP-CUSTOMER-001"],
+        }],
+      }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?customers/${customer.id}$`), async route => {
+    if (route.request().method() === "DELETE") deleteRequested = true;
+    await route.fulfill({ status: 204 });
+  });
+
+  await page.goto("/admin/customers");
+  const table = page.getByRole("table");
+  await expect(table.getByText(customer.name)).toBeVisible();
+  await expect(table.getByRole("checkbox")).toHaveCount(0);
+  const row = table.getByText(customer.name).locator("xpath=ancestor::tr");
+  await row.getByRole("button", { name: /Delete|Xóa|Xoá|删除|削除/i }).click();
+
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText("OP-CUSTOMER-001");
+  await expect(dialog.getByRole("textbox")).toHaveCount(0);
+  await expect(dialog.getByRole("button", {
+    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+  })).toBeDisabled();
+  expect(deleteRequested).toBe(false);
+});
+
 test("Quote deletion uses shared exact confirmation without bulk selection", async ({
   page,
   loginInBrowserAs,

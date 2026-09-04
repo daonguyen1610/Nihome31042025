@@ -19,7 +19,7 @@ function authed(api: APIRequestContext, token: string) {
     post: (path: string, data: unknown) => api.post(path, { headers: auth, data }),
     put: (path: string, data: unknown) => api.put(path, { headers: auth, data }),
     patch: (path: string, data: unknown) => api.patch(path, { headers: auth, data }),
-    del: (path: string) => api.delete(path, { headers: auth }),
+    del: (path: string, data?: unknown) => api.delete(path, { headers: auth, data }),
   };
 }
 
@@ -308,20 +308,28 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       expect(primaryContact.phone).toBe(`08${unique.slice(-8)}`);
       expect(primaryContact.email).toBe(`auto-${unique}@test.example`);
 
-      // Unconvert replaced revert: it reports which of three outcomes ran, and
-      // nests the lead rather than returning it directly. Nothing has touched
-      // the pair yet, so both records go.
+      // Unconvert preserves the customer and removes only the clean auto-created opportunity.
       const revertRes = await c.post(`/api/leads/${leadId}/unconvert`, {});
       expect(revertRes.status(), await revertRes.text()).toBe(200);
       const revertBody = await revertRes.json();
-      expect(revertBody.outcome).toBe("DeletedBoth");
+      expect(revertBody.outcome).toBe("DeletedOpportunity");
+      expect(revertBody.keptCustomerId).toBe(autoCreatedCustomerId);
       const revertedLead = revertBody.lead;
       expect(revertedLead.status).toBe("Interested");
       expect(revertedLead.convertedCustomerId).toBeNull();
 
-      // Customer should be deleted
-      const deletedCustomerRes = await c.get(`/api/customers/${autoCreatedCustomerId}`);
-      expect(deletedCustomerRes.status()).toBe(404);
+      const preservedCustomerRes = await c.get(`/api/customers/${autoCreatedCustomerId}`);
+      expect(preservedCustomerRes.status()).toBe(200);
+      const preservedCustomer = await preservedCustomerRes.json();
+      const deletionImpactRes = await c.get(`/api/customers/${autoCreatedCustomerId}/deletion-impact`);
+      expect(deletionImpactRes.status()).toBe(200);
+      const deletionImpact = await deletionImpactRes.json();
+      const deleteCustomerRes = await c.del(`/api/customers/${autoCreatedCustomerId}`, {
+        planToken: deletionImpact.planToken,
+        confirmation: deletionImpact.requiredConfirmation,
+        rowVersion: preservedCustomer.rowVersion,
+      });
+      expect(deleteCustomerRes.status()).toBe(204);
       autoCreatedCustomerId = 0; // Mark as already deleted
 
       console.log("✓ Auto-create customer from lead test passed!");

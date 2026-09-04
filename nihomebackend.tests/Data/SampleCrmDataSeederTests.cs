@@ -44,6 +44,24 @@ public class SampleCrmDataSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_HardDeletedSampleCustomer_WithTombstone_DoesNotRecreateRoot()
+    {
+        var customer = _db.Customers.First(item => item.Name.StartsWith("[SAMPLE]"));
+        var deletedName = customer.Name;
+        _db.SeededRootDeletions.Add(new SeededRootDeletion
+        {
+            ResourceType = EntityTypes.Customer,
+            ResourceKey = deletedName,
+        });
+        customer.Name = $"REMOVED-{customer.Id}";
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.DoesNotContain(_db.Customers, item => item.Name == deletedName);
+    }
+
+    [Fact]
     public void Seed_HardDeletedSampleOperationalProject_WithTombstones_DoesNotRecreateRoots()
     {
         var operationalProject = _db.OperationalProjects

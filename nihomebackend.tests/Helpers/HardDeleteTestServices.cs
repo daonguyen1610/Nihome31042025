@@ -45,6 +45,7 @@ internal static class HardDeleteTestServices
         [
             new DesignProjectHardDeleteHandler(db, plans, projectDocuments),
             new OperationalProjectHardDeleteHandler(db, plans, projectDocuments),
+            new CustomerHardDeleteHandler(db, crmPlans, permissions.Object),
             new LeadHardDeleteHandler(db, crmPlans),
             new TenderHardDeleteHandler(db, crmPlans),
             new QuoteHardDeleteHandler(db, crmPlans, permissions.Object),
