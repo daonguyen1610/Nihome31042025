@@ -138,6 +138,105 @@ test("hard-delete dialog shows blockers and disables deletion", async ({ page, l
   expect(deleteRequested).toBe(false);
 });
 
+test("hard-delete dialog polls pending work and completes only after retry succeeds", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  const operationId = "8df971fe-7064-4a3f-89bd-0c15d72ea108";
+  let statusRequests = 0;
+  let retryRequests = 0;
+
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async route => {
+    if (route.request().method() === "DELETE") {
+      await route.fulfill({
+        status: 202,
+        contentType: "application/json",
+        body: JSON.stringify({
+          operationId,
+          status: "Processing",
+          isComplete: false,
+          requiresManualAction: false,
+          errorCode: null,
+          errorMessage: null,
+        }),
+      });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(project) });
+  });
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        resourceType: "OperationalProject",
+        resourceId: projectId,
+        resourceLabel: `${project.code} · ${project.name}`,
+        requiredConfirmation: project.code,
+        planToken: "d".repeat(64),
+        canDelete: true,
+        totalAffected: 1,
+        items: [],
+      }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?hard-delete-operations/${operationId}/retry$`), async route => {
+    retryRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        operationId,
+        status: "Completed",
+        isComplete: true,
+        requiresManualAction: false,
+        errorCode: null,
+        errorMessage: null,
+      }),
+    });
+  });
+  await page.route(new RegExp(`/api/(?:v1/)?hard-delete-operations/${operationId}$`), async route => {
+    statusRequests += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        operationId,
+        status: "Failed",
+        isComplete: false,
+        requiresManualAction: false,
+        errorCode: "hard_delete_processing_failed",
+        errorMessage: "internal detail must not be displayed",
+      }),
+    });
+  });
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+
+  await page.goto(`/admin/operational-projects/${projectId}`);
+  await page.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("textbox").fill(project.code);
+  await dialog.getByRole("button", {
+    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+  }).click();
+
+  await expect(dialog).toContainText(operationId);
+  await expect.poll(() => statusRequests).toBeGreaterThan(0);
+  await expect(page).toHaveURL(new RegExp(`/admin/operational-projects/${projectId}$`));
+  await expect(dialog).not.toContainText("internal detail must not be displayed");
+  await dialog.getByRole("button", {
+    name: /Retry deletion|Thử tiếp tục xoá|重试删除|削除を再試行|deletionImpact\.operation\.retry/i,
+  }).click();
+
+  await expect.poll(() => retryRequests).toBe(1);
+  await expect(page).toHaveURL(/\/admin\/operational-projects$/);
+});
+
 test("Design Project deletion removes the row after confirmation", async ({ page, loginInBrowserAs }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   const designProject = {
@@ -204,4 +303,264 @@ test("Design Project deletion removes the row after confirmation", async ({ page
 
   await expect(table.getByText(designProject.name)).toHaveCount(0);
   expect(deleted).toBe(true);
+});
+
+test("Lead deletion uses preview confirmation and removes the row only after completion", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  const lead = {
+    id: 456102,
+    name: "Durable deletion lead",
+    companyName: "NICON",
+    phone: "0900000000",
+    email: null,
+    sourceCode: "marketing",
+    segmentCode: "unclassified",
+    status: "New",
+    ownerUserId: 1,
+    ownerName: "Admin",
+    note: null,
+    convertedAt: null,
+    convertedCustomerId: null,
+    convertedOpportunityId: null,
+    createdAt: "2026-09-03T00:00:00Z",
+    updatedAt: "2026-09-03T00:00:00Z",
+    rowVersion: "AAAAAAAAB9Q=",
+    activities: [],
+  };
+  let deleted = false;
+  let deleteBody: Record<string, unknown> | null = null;
+  await page.route(new RegExp("/api/(?:v1/)?leads(?:\\?.*)?$"), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: deleted ? 0 : 1, page: 1, pageSize: 20, items: deleted ? [] : [lead] }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?leads/${lead.id}/deletion-impact$`), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        resourceType: "Lead",
+        resourceId: lead.id,
+        resourceLabel: lead.name,
+        requiredConfirmation: `LEAD-${lead.id}`,
+        planToken: "e".repeat(64),
+        canDelete: true,
+        totalAffected: 1,
+        items: [],
+      }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?leads/${lead.id}$`), async route => {
+    if (route.request().method() === "DELETE") {
+      deleteBody = route.request().postDataJSON() as Record<string, unknown>;
+      deleted = true;
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(lead) });
+  });
+  await page.route(new RegExp("/api/(?:v1/)?master-data/(customer_source|lead_segment)$"), route =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+
+  await page.goto("/admin/leads");
+  const table = page.getByRole("table");
+  await expect(table.getByText(lead.name)).toBeVisible();
+  const row = table.getByText(lead.name).locator("xpath=ancestor::tr");
+  await row.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("textbox").fill(`LEAD-${lead.id}`);
+  await dialog.getByRole("button", {
+    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+  }).click();
+
+  await expect(table.getByText(lead.name)).toHaveCount(0);
+  expect(deleteBody).toMatchObject({
+    planToken: "e".repeat(64),
+    confirmation: `LEAD-${lead.id}`,
+    rowVersion: lead.rowVersion,
+  });
+});
+
+test("Tender deletion uses typed preview confirmation without bulk selection", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  const tender = {
+    id: 456103,
+    code: "TD-DELETE-001",
+    name: "Durable deletion tender",
+    customerId: 1,
+    customerName: "NICON",
+    openingDate: null,
+    submissionDeadline: "2026-10-01T00:00:00Z",
+    preparerUserId: 1,
+    preparerName: "Admin",
+    status: "Preparing",
+    checklistCompletionPercent: 0,
+    isDeadlineImminent: false,
+    updatedAt: "2026-09-03T00:00:00Z",
+  };
+  let deleted = false;
+  let deleteBody: Record<string, unknown> | null = null;
+  await page.route(new RegExp("/api/(?:v1/)?tenders(?:\\?.*)?$"), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: deleted ? 0 : 1, page: 1, pageSize: 20, items: deleted ? [] : [tender] }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?tenders/${tender.id}/deletion-impact$`), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        resourceType: "Tender",
+        resourceId: tender.id,
+        resourceLabel: tender.name,
+        requiredConfirmation: tender.code,
+        planToken: "f".repeat(64),
+        canDelete: true,
+        totalAffected: 2,
+        items: [{
+          key: "tender.checklistItems",
+          action: "Delete",
+          count: 1,
+          examples: ["123"],
+        }],
+      }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?tenders/${tender.id}$`), async route => {
+    if (route.request().method() === "DELETE") {
+      deleteBody = route.request().postDataJSON() as Record<string, unknown>;
+      deleted = true;
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route(new RegExp("/api/(?:v1/)?customers(?:\\?.*)?$"), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: 0, page: 1, pageSize: 200, items: [] }),
+    }));
+  await page.route(new RegExp("/api/(?:v1/)?users(?:\\?.*)?$"), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: 0, items: [] }),
+    }));
+
+  await page.goto("/admin/tenders");
+  const table = page.getByRole("table");
+  await expect(table.getByText(tender.name)).toBeVisible();
+  await expect(table.getByRole("checkbox")).toHaveCount(0);
+  const row = table.getByText(tender.name).locator("xpath=ancestor::tr");
+  await row.getByRole("button", { name: /Delete|Xoá|删除|削除/i }).click();
+  const dialog = page.getByRole("alertdialog");
+  const confirmButton = dialog.getByRole("button", {
+    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+  });
+  await expect(confirmButton).toBeDisabled();
+  await dialog.getByRole("textbox").fill(tender.code);
+  await confirmButton.click();
+
+  await expect(table.getByText(tender.name)).toHaveCount(0);
+  expect(deleteBody).toMatchObject({
+    planToken: "f".repeat(64),
+    confirmation: tender.code,
+  });
+});
+
+test("Quote deletion uses shared exact confirmation without bulk selection", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  const quote = {
+    id: 456104,
+    code: "QT-DELETE-001",
+    opportunityId: 1,
+    opportunityName: "Durable deletion opportunity",
+    customerName: "NICON",
+    operationalProjectId: null,
+    ownerUserId: 1,
+    ownerName: "Admin",
+    version: 1,
+    method: "UnitCost",
+    grandTotal: 1000000,
+    status: "CustomerApproved",
+    validUntil: "2026-10-01T00:00:00Z",
+    isExpiringSoon: false,
+    updatedAt: "2026-09-03T00:00:00Z",
+    rowVersion: "AAAAAAAAB9Q=",
+  };
+  let deleted = false;
+  let deleteBody: Record<string, unknown> | null = null;
+  await page.route(new RegExp("/api/(?:v1/)?quotes(?:\\?.*)?$"), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: deleted ? 0 : 1, page: 1, pageSize: 20, items: deleted ? [] : [quote] }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?quotes/${quote.id}/deletion-impact$`), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        resourceType: "Quote",
+        resourceId: quote.id,
+        resourceLabel: quote.code,
+        requiredConfirmation: quote.code,
+        planToken: "9".repeat(64),
+        canDelete: true,
+        totalAffected: 2,
+        items: [{
+          key: "quote.winningOpportunities",
+          action: "Unlink",
+          count: 1,
+          examples: ["1"],
+        }],
+      }),
+    }));
+  await page.route(new RegExp(`/api/(?:v1/)?quotes/${quote.id}$`), async route => {
+    if (route.request().method() === "DELETE") {
+      deleteBody = route.request().postDataJSON() as Record<string, unknown>;
+      deleted = true;
+      await route.fulfill({ status: 204 });
+      return;
+    }
+    await route.continue();
+  });
+  await page.route(new RegExp("/api/(?:v1/)?opportunities(?:\\?.*)?$"), route =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ total: 0, page: 1, pageSize: 100, items: [] }),
+    }));
+
+  await page.goto("/admin/quotes");
+  const table = page.getByRole("table");
+  await expect(table.getByText(quote.code)).toBeVisible();
+  await expect(table.getByRole("checkbox")).toHaveCount(0);
+  const row = table.getByText(quote.code).locator("xpath=ancestor::tr");
+  await row.getByRole("button", { name: /Delete|Xóa|Xoá|删除|削除/i }).click();
+  const dialog = page.getByRole("alertdialog");
+  const confirmButton = dialog.getByRole("button", {
+    name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
+  });
+  await dialog.getByRole("textbox").fill(`${quote.code} `);
+  await expect(confirmButton).toBeDisabled();
+  await dialog.getByRole("textbox").fill(quote.code);
+  await confirmButton.click();
+
+  await expect(table.getByText(quote.code)).toHaveCount(0);
+  expect(deleteBody).toMatchObject({
+    planToken: "9".repeat(64),
+    confirmation: quote.code,
+    rowVersion: quote.rowVersion,
+  });
 });

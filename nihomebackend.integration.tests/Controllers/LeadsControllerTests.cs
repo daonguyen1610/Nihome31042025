@@ -411,7 +411,7 @@ public class LeadsControllerTests : IntegrationTestBase
         created.EnsureSuccessStatusCode();
         var leadId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
 
-        (await Client.DeleteAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ConfirmDeleteAsync(leadId)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
@@ -454,7 +454,7 @@ public class LeadsControllerTests : IntegrationTestBase
             return (customer.Id, opportunity.Id);
         });
 
-        (await Client.DeleteAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await ConfirmDeleteAsync(leadId)).StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await Client.GetAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await Client.GetAsync($"/api/customers/{customerId}")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.GetAsync($"/api/opportunities/{opportunityId}")).StatusCode.Should().Be(HttpStatusCode.OK);
@@ -464,14 +464,16 @@ public class LeadsControllerTests : IntegrationTestBase
     public async Task Delete_MissingLead_ReturnsNotFound()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        (await Client.DeleteAsync("/api/leads/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteWithBodyAsync(9999999, new string('a', 64), "LEAD-9999999", "AAAAAAAAAAA="))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Delete_WithoutManagePermission_ReturnsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
-        (await Client.DeleteAsync("/api/leads/9999999")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await DeleteWithBodyAsync(9999999, new string('a', 64), "LEAD-9999999", "AAAAAAAAAAA="))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -495,11 +497,37 @@ public class LeadsControllerTests : IntegrationTestBase
         Client.DefaultRequestHeaders.Authorization = null;
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
 
-        (await Client.DeleteAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteWithBodyAsync(leadId, new string('a', 64), $"LEAD-{leadId}", "AAAAAAAAAAA="))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // Manager confirms lead still exists.
         Client.DefaultRequestHeaders.Authorization = null;
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         (await Client.GetAsync($"/api/leads/{leadId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    private async Task<HttpResponseMessage> ConfirmDeleteAsync(int leadId)
+    {
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/leads/{leadId}"));
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/leads/{leadId}/deletion-impact"));
+        return await DeleteWithBodyAsync(
+            leadId,
+            impact.GetProperty("planToken").GetString()!,
+            impact.GetProperty("requiredConfirmation").GetString()!,
+            detail.GetProperty("rowVersion").GetString()!);
+    }
+
+    private async Task<HttpResponseMessage> DeleteWithBodyAsync(
+        int leadId,
+        string planToken,
+        string confirmation,
+        string rowVersion)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/leads/{leadId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation, rowVersion }),
+        };
+        request.Headers.TryAddWithoutValidation("If-Match", $"\"{rowVersion}\"");
+        return await Client.SendAsync(request);
     }
 }

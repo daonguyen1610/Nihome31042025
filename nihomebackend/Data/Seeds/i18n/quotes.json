@@ -5,6 +5,7 @@
   {"key": "quotes.new", "category": "quotes", "vi": "Báo giá mới", "en": "New quote", "zh": "新建报价", "ja": "新規見積"},
   {"key": "quotes.created", "category": "quotes", "vi": "Đã tạo báo giá", "en": "Quote created", "zh": "报价已创建", "ja": "見積を作成しました"},
   {"key": "quotes.updated", "category": "quotes", "vi": "Đã cập nhật báo giá", "en": "Quote updated", "zh": "报价已更新", "ja": "見積を更新しました"},
+  {"key": "quotes.deleted", "category": "quotes", "vi": "Đã xoá báo giá", "en": "Quote deleted", "zh": "报价已删除", "ja": "見積を削除しました"},
   {"key": "quotes.empty", "category": "quotes", "vi": "Chưa có báo giá nào.", "en": "No quotes yet.", "zh": "暂无报价。", "ja": "見積がまだありません。"},
   {"key": "quotes.emptyCta", "category": "quotes", "vi": "Tạo báo giá đầu tiên", "en": "Create the first quote", "zh": "创建首个报价", "ja": "最初の見積を作成"},
   {"key": "quotes.expiringSoon", "category": "quotes", "vi": "Sắp hết hạn", "en": "Expiring soon", "zh": "即将到期", "ja": "有効期限間近"},

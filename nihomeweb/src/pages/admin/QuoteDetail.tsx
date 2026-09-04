@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
 import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
@@ -62,6 +63,7 @@ import {
   type QuoteVersionsResponse,
   type UpdateQuoteRequest,
   type MaterialRateRevisionResponse,
+  type DeletionImpactResponse,
 } from "@/services/adminApi";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
@@ -86,7 +88,7 @@ type WorkflowKind =
 
 /**
  * Set of workflow actions to expose given the current status. Delete lives
- * outside because it is destructive and only makes sense for Draft.
+ * outside because its authorization is independent of workflow status.
  */
 const WORKFLOW_BY_STATUS: Record<QuoteStatus, WorkflowKind[]> = {
   Draft: ["submit"],
@@ -178,6 +180,11 @@ const AdminQuoteDetail = () => {
   const [workflow, setWorkflow] = useState<WorkflowKind | null>(null);
   const [workflowNote, setWorkflowNote] = useState("");
   const [workflowBusy, setWorkflowBusy] = useState(false);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // ---------- data load ----------
 
@@ -409,18 +416,42 @@ const AdminQuoteDetail = () => {
 
   const handleDelete = async () => {
     if (!quote) return;
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    setDeleteOpen(true);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
     try {
-      await adminApi.deleteQuote(quote.id, quote.rowVersion);
-      toast({ title: t("quotes.updated") });
-      navigate("/admin/quotes");
+      const response = await adminApi.getQuoteDeletionImpact(quote.id);
+      setDeleteImpact(response.data);
     } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
-      });
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
     }
+  };
+
+  const confirmDelete = async (confirmation: string) => {
+    if (!quote || !deleteImpact) return null;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteQuote(quote.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+        rowVersion: quote.rowVersion,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const completeDelete = () => {
+    toast({ title: t("quotes.deleted") });
+    navigate("/admin/quotes");
   };
 
   const handleUploadDocument = async () => {
@@ -1004,6 +1035,23 @@ const AdminQuoteDetail = () => {
         open={boqPasteOpen}
         onOpenChange={setBoqPasteOpen}
         onConfirm={appendPastedBoqItems}
+      />
+
+      <DeletionImpactDialog
+        open={deleteOpen}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={deleteBusy}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) {
+            setDeleteOpen(false);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
       />
 
       <Dialog open={selectedVersion !== null} onOpenChange={(open) => !open && setSelectedVersion(null)}>

@@ -1038,12 +1038,12 @@ public class ContractServiceTests : IDisposable
             int id, CancellationToken ct = default)
             => Task.FromResult<NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse?>(null);
 
-        public Task<bool> DeleteAsync(
+        public Task<NihomeBackend.Services.HardDelete.HardDeleteOperationResult?> DeleteAsync(
             int id,
             NihomeBackend.Models.DTOs.Requests.ConfirmDeletionRequest request,
             int callerUserId,
             CancellationToken ct = default)
-            => Task.FromResult(false);
+            => Task.FromResult<NihomeBackend.Services.HardDelete.HardDeleteOperationResult?>(null);
 
         public Task<NihomeBackend.Models.DTOs.Responses.DesignProjectResponse> EnsureForContractAsync(
             NihomeBackend.Models.Contract contract, int? callerUserId, CancellationToken ct = default)

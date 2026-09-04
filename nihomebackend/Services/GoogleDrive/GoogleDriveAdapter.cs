@@ -18,7 +18,10 @@ public sealed record DriveItem(
     DateTime? ModifiedAt,
     string? Link,
     IReadOnlyDictionary<string, string> AppProperties,
-    bool IsTrashed);
+    bool IsTrashed,
+    IReadOnlyList<string>? Parents = null,
+    bool? IsOwnedByMe = null,
+    bool? CanDelete = null);
 public sealed record DriveConnection(
     string? AccountEmail,
     string FolderName,
@@ -54,6 +57,7 @@ public interface IGoogleDriveAdapter
     Task UpdateFileNameAsync(string fileId, string fileName, CancellationToken ct = default);
     Task MoveAsync(string fileId, string destinationFolderId, CancellationToken ct = default);
     Task DeleteAsync(string fileId, CancellationToken ct = default);
+    Task PermanentDeleteOwnedAsync(DrivePermanentDeleteRequest request, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -301,6 +305,29 @@ public sealed class GoogleDriveAdapter(
         }
     }
 
+    public async Task PermanentDeleteOwnedAsync(
+        DrivePermanentDeleteRequest request, CancellationToken ct = default)
+    {
+        var metadata = await GetMetadataAsync(request.FileId, ct);
+        if (metadata is null) return;
+        DrivePermanentDeletePolicy.EnsureOwned(
+            metadata, options.InstanceId, request.ExpectedAppProperties, request.ExpectedParentId);
+
+        var delete = (await GetServiceAsync(ct)).Files.Delete(request.FileId);
+        delete.SupportsAllDrives = options.SupportsAllDrives;
+        try
+        {
+            await delete.ExecuteAsync(ct);
+        }
+        catch (GoogleApiException exception) when (exception.HttpStatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return;
+        }
+
+        if (await GetMetadataAsync(request.FileId, ct) is not null)
+            throw new InvalidOperationException("Google Drive chưa xác nhận mục đã được xóa vĩnh viễn.");
+    }
+
     private async Task<string> FindOrCreateFolderAsync(string parentId, DriveFolderSegment folder, CancellationToken ct)
     {
         var identityQuery = string.Join(" and ", folder.AppProperties.OrderBy(property => property.Key).Select(property =>
@@ -333,14 +360,15 @@ public sealed class GoogleDriveAdapter(
     private static string EscapeQueryValue(string value) =>
         value.Replace("\\", "\\\\").Replace("'", "\\'");
 
-    private const string ItemFields = "id,name,mimeType,size,version,modifiedTime,webViewLink,appProperties,trashed";
+    private const string ItemFields = "id,name,mimeType,size,version,modifiedTime,webViewLink,appProperties,trashed,parents,ownedByMe,capabilities(canDelete)";
 
     private static DriveItem ToItem(GoogleFile file) => new(
         file.Id, file.Name ?? string.Empty, file.MimeType ?? "application/octet-stream", file.Size,
         file.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture), file.ModifiedTimeDateTimeOffset?.UtcDateTime,
         file.WebViewLink, file.AppProperties is null
             ? new Dictionary<string, string>()
-            : new Dictionary<string, string>(file.AppProperties), file.Trashed == true);
+            : new Dictionary<string, string>(file.AppProperties), file.Trashed == true,
+        file.Parents?.ToList() ?? [], file.OwnedByMe, file.Capabilities?.CanDelete);
 
     private static DriveUpload ToUpload(GoogleFile file) => new(
         file.Id, file.Version?.ToString(System.Globalization.CultureInfo.InvariantCulture),

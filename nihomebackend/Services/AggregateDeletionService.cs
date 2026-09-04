@@ -119,7 +119,8 @@ internal static class AggregateDeletionService
         IReadOnlyCollection<int> designProjectIds,
         IProjectDocumentStagingService projectDocuments,
         int? userId,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool stageExternalDeletes = true)
     {
         if (designProjectIds.Count == 0) return;
 
@@ -136,7 +137,8 @@ internal static class AggregateDeletionService
             ct);
 
         var foundIds = projects.Select(project => project.Id).ToList();
-        await StageDesignDocumentDeletesAsync(db, projects, projectDocuments, userId, ct);
+        if (stageExternalDeletes)
+            await StageDesignDocumentDeletesAsync(db, projects, projectDocuments, userId, ct);
         var conceptIds = await db.ConceptOptions
             .Where(option => foundIds.Contains(option.DesignProjectId))
             .Select(option => option.Id)
@@ -233,7 +235,8 @@ internal static class AggregateDeletionService
         OperationalProject project,
         IProjectDocumentStagingService projectDocuments,
         int? userId,
-        CancellationToken ct)
+        CancellationToken ct,
+        bool stageExternalDeletes = true)
     {
         var projectId = project.Id;
         if (project.Code.StartsWith("PJ-SAMPLE-", StringComparison.Ordinal))
@@ -245,7 +248,8 @@ internal static class AggregateDeletionService
             .Where(item => item.OperationalProjectId == projectId)
             .Select(item => item.Id)
             .ToListAsync(ct);
-        await DeleteDesignProjectsAsync(db, designProjectIds, projectDocuments, userId, ct);
+        await DeleteDesignProjectsAsync(
+            db, designProjectIds, projectDocuments, userId, ct, stageExternalDeletes);
 
         var opportunities = await db.Opportunities
             .Where(item => item.OperationalProjectId == projectId)

@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
     public DbSet<SeededRootDeletion> SeededRootDeletions => Set<SeededRootDeletion>();
+    public DbSet<HardDeleteOperation> HardDeleteOperations => Set<HardDeleteOperation>();
+    public DbSet<HardDeleteItem> HardDeleteItems => Set<HardDeleteItem>();
 
     // RBAC
     public DbSet<Role> Roles => Set<Role>();
@@ -206,6 +208,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<IdempotencyRecord>().HasIndex(r => r.ExpiresAt);
         modelBuilder.Entity<IdempotencyRecord>().Property(r => r.ResponseJson).HasColumnType("nvarchar(max)");
         modelBuilder.Entity<IdempotencyRecord>().Property(r => r.ResponseHeadersJson).HasColumnType("nvarchar(max)");
+
+        modelBuilder.Entity<HardDeleteOperation>(operation =>
+        {
+            operation.ToTable("hard_delete_operations");
+            operation.HasKey(item => item.Id);
+            operation.Property(item => item.ResourceType).HasMaxLength(100).IsRequired();
+            operation.Property(item => item.ResourceId).HasMaxLength(100).IsRequired();
+            operation.Property(item => item.ResourceLabel).HasMaxLength(300).IsRequired();
+            operation.Property(item => item.PlanToken).HasMaxLength(200).IsRequired();
+            operation.Property(item => item.Confirmation).HasMaxLength(200).IsRequired();
+            operation.Property(item => item.RequestedBy).HasMaxLength(150).IsRequired();
+            operation.Property(item => item.Status).HasConversion<string>().HasMaxLength(30);
+            operation.Property(item => item.LastErrorCode).HasMaxLength(100);
+            operation.Property(item => item.LastErrorMessage).HasMaxLength(1000);
+            operation.Property(item => item.RowVersion).IsRowVersion();
+            operation.HasIndex(item => new { item.ResourceType, item.ResourceId })
+                .IsUnique()
+                .HasFilter("[Status] IN ('Preparing', 'Ready', 'Processing', 'Failed', 'ManualActionRequired')")
+                .HasDatabaseName("IX_hard_delete_operations_ActiveResource");
+            operation.HasIndex(item => new { item.Status, item.NextAttemptAt });
+        });
+
+        modelBuilder.Entity<HardDeleteItem>(item =>
+        {
+            item.ToTable("hard_delete_items");
+            item.HasKey(value => value.Id);
+            item.Property(value => value.Kind).HasConversion<string>().HasMaxLength(30);
+            item.Property(value => value.Status).HasConversion<string>().HasMaxLength(30);
+            item.Property(value => value.ActionIdentifier).HasMaxLength(1000).IsRequired();
+            item.Property(value => value.ExpectedParentId).HasMaxLength(200);
+            item.Property(value => value.ExpectedAppPropertiesJson).HasMaxLength(4000);
+            item.Property(value => value.QuarantinePath).HasMaxLength(1000);
+            item.Property(value => value.LastErrorCode).HasMaxLength(100);
+            item.Property(value => value.LastErrorMessage).HasMaxLength(1000);
+            item.HasIndex(value => new { value.OperationId, value.Sequence }).IsUnique();
+            item.HasOne(value => value.Operation)
+                .WithMany(operation => operation.Items)
+                .HasForeignKey(value => value.OperationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<SiteSettings>().ToTable("site_settings");
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);

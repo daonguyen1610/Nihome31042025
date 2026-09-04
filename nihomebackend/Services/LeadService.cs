@@ -5,6 +5,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -12,7 +13,9 @@ public class LeadService(
     AppDbContext db,
     IPermissionService permissions,
     INotificationService notifications,
-    ILogger<LeadService> logger) : ILeadService
+    ILogger<LeadService> logger,
+    ICrmHardDeletePlanService hardDeletePlans,
+    IHardDeleteOperationService hardDeleteOperations) : ILeadService
 {
     private const int MaxPageSize = 100;
     private const string LeadAssignedTemplate = "lead.assigned";
@@ -279,26 +282,50 @@ public class LeadService(
         return MapLead(lead, ownerName, activities: null);
     }
 
-    public async Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
+    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct = default)
     {
-        if (!canManage)
-        {
-            throw new LeadOperationException("Caller does not have permission to delete leads.");
-        }
+        if (!canManage) throw new LeadOperationException("Caller does not have permission to delete leads.");
+        var visible = await db.Leads.AsNoTracking()
+            .AnyAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
+        return visible ? (await hardDeletePlans.ForLeadAsync(id, ct))?.Impact : null;
+    }
 
-        var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == id, ct);
-        if (lead is null) return false;
-
-        // Owner scoping — Sales users can only delete their own leads. Mirror
-        // Get/List behaviour and return false rather than throwing so the
-        // lead's existence is not leaked to unauthorised callers.
-        if (!canSeeAll && lead.OwnerUserId != callerUserId) return false;
-
-        CrmConcurrency.Apply(db, lead, rowVersion);
-
-        db.Leads.Remove(lead);
-        await CrmConcurrency.SaveChangesAsync(db, ct);
-        return true;
+    public async Task<HardDeleteOperationResult?> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        if (!canManage) throw new LeadOperationException("Caller does not have permission to delete leads.");
+        var lead = await db.Leads.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
+        if (lead is null) return null;
+        var plan = await hardDeletePlans.ForLeadAsync(id, ct);
+        if (plan is null) return null;
+        if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException(
+                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        var confirmation = request.Confirmation;
+        if (!string.Equals(confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new LeadOperationException(
+                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
+        CrmConcurrency.EnsureMatches(lead.RowVersion, request.RowVersion);
+        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.Lead,
+            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Impact.ResourceLabel,
+            plan.Impact.PlanToken,
+            confirmation!,
+            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Items), ct);
+        return await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
     }
 
     public async Task<LeadResponse?> ConvertAsync(

@@ -222,23 +222,28 @@ const OperationalProjects = () => {
   };
 
   const remove = async (confirmation: string) => {
-    if (!detail || !deleteImpact) return;
+    if (!detail || !deleteImpact) return null;
     setDeleting(true);
     setDeleteError(null);
     try {
-      await adminApi.deleteOperationalProject(detail.id, {
+      const response = await adminApi.deleteOperationalProject(detail.id, {
         planToken: deleteImpact.planToken,
         confirmation,
         rowVersion: detail.rowVersion,
       });
-      toast({ title: t("operationalProjects.deleted") });
-      setDeleteOpen(false);
-      navigate("/admin/operational-projects");
+      return response.status === 204 ? null : response.data;
     } catch (reason) {
       setDeleteError(extractApiError(reason));
+      throw reason;
     } finally {
       setDeleting(false);
     }
+  };
+
+  const completeDelete = () => {
+    toast({ title: t("operationalProjects.deleted") });
+    setDeleteOpen(false);
+    navigate("/admin/operational-projects");
   };
 
   const dateFormat = useMemo(() => new Intl.DateTimeFormat(lang), [lang]);
@@ -723,6 +728,7 @@ const OperationalProjects = () => {
           }
         }}
         onConfirm={remove}
+        onCompleted={completeDelete}
       />
     </AdminLayout>
   );

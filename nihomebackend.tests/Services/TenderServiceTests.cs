@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
+using NihomeBackend.Services.HardDelete;
 using nihomebackend.tests.Helpers;
 
 namespace nihomebackend.tests.Services;
@@ -14,6 +16,7 @@ public class TenderServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly Mock<INotificationService> _notifications;
     private readonly TenderService _sut;
+    private readonly ICrmHardDeletePlanService _hardDeletePlans;
     private readonly int _customerId;
     private readonly int _userId;
 
@@ -21,7 +24,15 @@ public class TenderServiceTests : IDisposable
     {
         _db = DbContextFactory.Create();
         _notifications = new Mock<INotificationService>();
-        _sut = new TenderService(_db, _notifications.Object, NullLogger<TenderService>.Instance);
+        var hardDelete = HardDeleteTestServices.Create(
+            _db, Mock.Of<IProjectDocumentStagingService>());
+        _hardDeletePlans = hardDelete.CrmPlans;
+        _sut = new TenderService(
+            _db,
+            _notifications.Object,
+            NullLogger<TenderService>.Instance,
+            hardDelete.CrmPlans,
+            hardDelete.Operations);
 
         // Seed a bare-minimum user + customer + master-data checklist so
         // the create-path can succeed without touching production seeders.
@@ -247,15 +258,170 @@ public class TenderServiceTests : IDisposable
     // ---------------- Delete ----------------
 
     [Fact]
-    public async Task DeleteAsync_Preparing_RemovesTenderAndChecklist()
+    public async Task DeleteAsync_Preparing_RemovesOwnedGraphAndUnlinksOpportunity()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var revision = new TenderEstimateRevision
+        {
+            TenderId = created.Id,
+            VersionNumber = 1,
+            SourceFileName = "estimate.csv",
+            SourceSha256 = new string('a', 64),
+            ImportedByUserId = _userId,
+            ImportedAt = DateTime.UtcNow,
+        };
+        revision.Lines.Add(new TenderEstimateLine
+        {
+            ItemCode = "A-1",
+            Description = "Owned line",
+            Unit = "item",
+            Quantity = 1,
+        });
+        var preservedTarget = new Opportunity
+        {
+            Name = "Tender outbound target",
+            CustomerId = _customerId,
+            OwnerUserId = _userId,
+        };
+        var unlinkedOpportunity = new Opportunity
+        {
+            Name = "Inbound tender reference",
+            CustomerId = _customerId,
+            OwnerUserId = _userId,
+            WonTenderId = created.Id,
+        };
+        _db.TenderEstimateRevisions.Add(revision);
+        _db.Opportunities.AddRange(preservedTarget, unlinkedOpportunity);
+        await _db.SaveChangesAsync();
+        var tender = await _db.Tenders.SingleAsync(item => item.Id == created.Id);
+        tender.WonOpportunityId = preservedTarget.Id;
+        await _db.SaveChangesAsync();
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
 
-        Assert.True(await _sut.DeleteAsync(created.Id));
+        var result = await _sut.DeleteAsync(created.Id, Confirm(impact!), _userId);
+
+        Assert.True(result!.IsComplete);
         Assert.False(await _db.Tenders.AnyAsync(t => t.Id == created.Id));
         Assert.False(await _db.TenderChecklistItems.AnyAsync(i => i.TenderId == created.Id));
+        Assert.False(await _db.TenderEstimateRevisions.AnyAsync(i => i.TenderId == created.Id));
+        Assert.False(await _db.TenderEstimateLines.AnyAsync(i => i.RevisionId == revision.Id));
+        Assert.Null((await _db.Opportunities.AsNoTracking()
+            .SingleAsync(item => item.Id == unlinkedOpportunity.Id)).WonTenderId);
+        Assert.True(await _db.Opportunities.AnyAsync(item => item.Id == preservedTarget.Id));
         Assert.True(await _db.Customers.AnyAsync(c => c.Id == _customerId));
         Assert.True(await _db.Users.AnyAsync(u => u.Id == _userId));
+    }
+
+    [Fact]
+    public async Task DeletionImpact_IncludesOwnedIdsLocalFileAndReferenceOnlyCapability()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var capability = new CapabilityDocument
+        {
+            Name = "Shared capability",
+            TagCode = "capability",
+            FilePath = "/files/capability/shared.pdf",
+            OriginalFileName = "shared.pdf",
+            FileSize = 100,
+            ContentType = "application/pdf",
+        };
+        _db.CapabilityDocuments.Add(capability);
+        await _db.SaveChangesAsync();
+        var checklist = await _db.TenderChecklistItems
+            .Where(item => item.TenderId == created.Id)
+            .OrderBy(item => item.Id)
+            .Take(2)
+            .ToListAsync();
+        checklist[0].FilePath = "/files/tenders/owned.pdf";
+        checklist[0].OriginalFileName = "owned.pdf";
+        checklist[1].FilePath = capability.FilePath;
+        checklist[1].OriginalFileName = capability.OriginalFileName;
+        checklist[1].CapabilityDocumentId = capability.Id;
+        await _db.SaveChangesAsync();
+
+        var plan = await _hardDeletePlans.ForTenderAsync(created.Id);
+
+        Assert.NotNull(plan);
+        Assert.Contains(plan!.Items, item => item.Kind == HardDeleteItemKind.LocalFile &&
+            item.ActionIdentifier == "/files/tenders/owned.pdf");
+        Assert.DoesNotContain(plan.Items, item => item.ActionIdentifier == capability.FilePath);
+        Assert.Contains(plan.Impact.Items, item => item.Key == "tender.capabilityDocuments" &&
+            item.Action == "Unlink" && item.Examples.Contains(capability.Id.ToString()));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnmanagedChecklistFile_BlocksAndPreservesTender()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var checklistItem = await _db.TenderChecklistItems
+            .FirstAsync(item => item.TenderId == created.Id);
+        checklistItem.FilePath = "/files/contracts/unmanaged-tender.pdf";
+        checklistItem.OriginalFileName = "unmanaged-tender.pdf";
+        await _db.SaveChangesAsync();
+
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+
+        Assert.NotNull(impact);
+        Assert.False(impact!.CanDelete);
+        Assert.Contains(impact.Items, item => item.Key == "tender.fileBlockers" &&
+            item.Action == "Block" &&
+            item.Examples.Contains($"{checklistItem.Id}:{checklistItem.FilePath}"));
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.DeleteAsync(created.Id, Confirm(impact), _userId));
+        Assert.True(await _db.Tenders.AnyAsync(item => item.Id == created.Id));
+        Assert.True(await _db.TenderChecklistItems.AnyAsync(item => item.Id == checklistItem.Id));
+        Assert.False(await _db.HardDeleteOperations.AnyAsync(item =>
+            item.ResourceType == EntityTypes.Tender && item.ResourceId == created.Id.ToString()));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenPlanChanges_RejectsAndPreservesTender()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+        _db.TenderChecklistItems.Add(new TenderChecklistItem
+        {
+            TenderId = created.Id,
+            Title = "Added after preview",
+            SortOrder = 99,
+        });
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<DeletionPlanChangedException>(() =>
+            _sut.DeleteAsync(created.Id, Confirm(impact!), _userId));
+
+        Assert.True(await _db.Tenders.AnyAsync(item => item.Id == created.Id));
+        Assert.Equal(4, await _db.TenderChecklistItems.CountAsync(item => item.TenderId == created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_InvalidConfirmation_RejectsAndPreservesTender()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+        var request = Confirm(impact!);
+        request.Confirmation = "WRONG";
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.DeleteAsync(created.Id, request, _userId));
+
+        Assert.True(await _db.Tenders.AnyAsync(item => item.Id == created.Id));
+        Assert.True(await _db.TenderChecklistItems.AnyAsync(item => item.TenderId == created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ConfirmationWithSurroundingWhitespace_RejectsAndPreservesTender()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+        var request = Confirm(impact!);
+        request.Confirmation = $" {request.Confirmation} ";
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.DeleteAsync(created.Id, request, _userId));
+
+        Assert.True(await _db.Tenders.AnyAsync(item => item.Id == created.Id));
+        Assert.True(await _db.TenderChecklistItems.AnyAsync(item => item.TenderId == created.Id));
     }
 
     [Theory]
@@ -278,7 +444,12 @@ public class TenderServiceTests : IDisposable
         _db.Opportunities.Add(opportunity);
         await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.DeleteAsync(created.Id));
+        var impact = await _sut.GetDeletionImpactAsync(created.Id);
+        Assert.False(impact!.CanDelete);
+        Assert.Contains(impact.Items, item => item.Key == "tender.status" && item.Action == "Block");
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.DeleteAsync(created.Id, Confirm(impact), _userId));
         Assert.True(await _db.Tenders.AnyAsync(t => t.Id == created.Id));
         Assert.True(await _db.TenderChecklistItems.AnyAsync(i => i.TenderId == created.Id));
         Assert.True(await _db.Opportunities.AnyAsync(item => item.Id == opportunity.Id));
@@ -288,10 +459,21 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    public async Task DeleteAsync_UnknownId_ReturnsNull()
     {
-        Assert.False(await _sut.DeleteAsync(999));
+        Assert.Null(await _sut.DeleteAsync(999, new ConfirmDeletionRequest
+        {
+            PlanToken = new string('a', 64),
+            Confirmation = "TD-404",
+        }, _userId));
     }
+
+    private static ConfirmDeletionRequest Confirm(NihomeBackend.Models.DTOs.Responses.DeletionImpactResponse impact) =>
+        new()
+        {
+            PlanToken = impact.PlanToken,
+            Confirmation = impact.RequiredConfirmation,
+        };
 
     // ---------------- List ----------------
 

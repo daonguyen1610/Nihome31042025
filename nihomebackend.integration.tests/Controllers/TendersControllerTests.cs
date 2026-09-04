@@ -146,7 +146,15 @@ public class TendersControllerTests : IntegrationTestBase
             return tender.CustomerId;
         });
 
-        (await Client.DeleteAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var impactResponse = await Client.GetAsync($"/api/tenders/{id}/deletion-impact");
+        impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await ReadJsonAsync(impactResponse);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "tender.status" &&
+            item.GetProperty("action").GetString() == "Block");
+
+        (await ConfirmDeleteAsync(id, impact)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await Client.GetAsync($"/api/tenders/{id}")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await Client.GetAsync($"/api/customers/{customerId}")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await WithDbAsync(db => db.TenderChecklistItems.AnyAsync(i => i.TenderId == id))).Should().BeTrue();
@@ -156,14 +164,246 @@ public class TendersControllerTests : IntegrationTestBase
     public async Task Delete_MissingTender_ReturnsNotFound()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        (await Client.DeleteAsync("/api/tenders/9999999")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeleteWithBodyAsync(9_999_999, new string('a', 64), "TD-404"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
     public async Task Delete_WithoutManagePermission_ReturnsForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
-        (await Client.DeleteAsync("/api/tenders/9999999")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await DeleteWithBodyAsync(9_999_999, new string('a', 64), "TD-404"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Delete_AsSaleWithManagePermission_PreviewsAndDeletesPreparingTender()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+
+        var impactResponse = await Client.GetAsync($"/api/tenders/{tenderId}/deletion-impact");
+        impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await ReadJsonAsync(impactResponse);
+
+        (await ConfirmDeleteAsync(tenderId, impact)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.Tenders.AnyAsync(item => item.Id == tenderId))).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_Preparing_PurgesOwnedFileAndGraphButPreservesCapabilityAndTargets()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/tenders/{tenderId}"));
+        var checklistIds = detail.GetProperty("checklistItems").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetInt32()).Take(2).ToList();
+        var capabilityId = await CreateCapabilityDocumentAsync();
+        var capabilityPath = await WithDbAsync(db => db.CapabilityDocuments.AsNoTracking()
+            .Where(item => item.Id == capabilityId).Select(item => item.FilePath).SingleAsync());
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var capabilityFullPath = FullPath(environment, capabilityPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(capabilityFullPath)!);
+        await File.WriteAllTextAsync(capabilityFullPath, "shared capability");
+        string? ownedPath = null;
+
+        try
+        {
+            using var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("owned tender file")), "file", "owned.pdf");
+            var upload = await Client.PostAsync(
+                $"/api/tenders/{tenderId}/checklist/{checklistIds[0]}/upload", form);
+            upload.StatusCode.Should().Be(HttpStatusCode.OK);
+            ownedPath = (await ReadJsonAsync(upload)).GetProperty("checklistItems").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetInt32() == checklistIds[0])
+                .GetProperty("filePath").GetString();
+            (await Client.PostAsJsonAsync(
+                $"/api/tenders/{tenderId}/checklist/attach-from-library",
+                new { items = new[] { new { checklistItemId = checklistIds[1], capabilityDocumentId = capabilityId } } }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var ids = await WithDbAsync(async db =>
+            {
+                var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
+                var preservedTarget = new Opportunity
+                {
+                    Name = "Preserved target",
+                    CustomerId = tender.CustomerId,
+                };
+                var inbound = new Opportunity
+                {
+                    Name = "Inbound reference",
+                    CustomerId = tender.CustomerId,
+                    WonTenderId = tenderId,
+                };
+                var revision = new TenderEstimateRevision
+                {
+                    TenderId = tenderId,
+                    VersionNumber = 1,
+                    SourceFileName = "estimate.csv",
+                    SourceSha256 = new string('b', 64),
+                    ImportedByUserId = tender.CreatedByUserId ?? 1,
+                    ImportedAt = DateTime.UtcNow,
+                    Lines =
+                    [
+                        new TenderEstimateLine
+                        {
+                            ItemCode = "ITEM-1",
+                            Description = "Owned estimate line",
+                            Unit = "item",
+                            Quantity = 1,
+                        },
+                    ],
+                };
+                db.AddRange(preservedTarget, inbound, revision);
+                await db.SaveChangesAsync();
+                tender.WonOpportunityId = preservedTarget.Id;
+                await db.SaveChangesAsync();
+                return (
+                    TargetId: preservedTarget.Id,
+                    InboundId: inbound.Id,
+                    RevisionId: revision.Id);
+            });
+
+            var impactResponse = await Client.GetAsync($"/api/tenders/{tenderId}/deletion-impact");
+            impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var impact = await ReadJsonAsync(impactResponse);
+            impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+            impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+                item.GetProperty("key").GetString() == "tender.localFiles" &&
+                item.GetProperty("examples").EnumerateArray().Any(example => example.GetString() == ownedPath));
+            impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+                item.GetProperty("key").GetString() == "tender.capabilityDocuments" &&
+                item.GetProperty("action").GetString() == "Unlink");
+
+            var delete = await ConfirmDeleteAsync(tenderId, impact);
+            delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+            File.Exists(FullPath(environment, ownedPath!)).Should().BeFalse();
+            File.Exists(capabilityFullPath).Should().BeTrue();
+            (await WithDbAsync(db => db.CapabilityDocuments.AnyAsync(item => item.Id == capabilityId))).Should().BeTrue();
+            (await WithDbAsync(db => db.Opportunities.AnyAsync(item => item.Id == ids.TargetId))).Should().BeTrue();
+            (await WithDbAsync(db => db.Opportunities.AsNoTracking()
+                .Where(item => item.Id == ids.InboundId).Select(item => item.WonTenderId).SingleAsync())).Should().BeNull();
+            (await WithDbAsync(db => db.TenderEstimateRevisions.AnyAsync(item => item.Id == ids.RevisionId))).Should().BeFalse();
+            (await WithDbAsync(db => db.TenderChecklistItems.AnyAsync(item => item.TenderId == tenderId))).Should().BeFalse();
+        }
+        finally
+        {
+            if (ownedPath is not null)
+            {
+                var ownedFullPath = FullPath(environment, ownedPath);
+                if (File.Exists(ownedFullPath)) File.Delete(ownedFullPath);
+            }
+            if (File.Exists(capabilityFullPath)) File.Delete(capabilityFullPath);
+        }
+    }
+
+    [Fact]
+    public async Task Delete_WithUnmanagedChecklistFile_IsBlockedAndPreservesGraphAndFile()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        const string unmanagedPath = "/files/contracts/unmanaged-tender.pdf";
+        var environment = Factory.Services.GetRequiredService<IWebHostEnvironment>();
+        var unmanagedFullPath = FullPath(environment, unmanagedPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(unmanagedFullPath)!);
+        await File.WriteAllTextAsync(unmanagedFullPath, "must survive blocked deletion");
+
+        try
+        {
+            var identifiers = await WithDbAsync(async db =>
+            {
+                var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
+                var checklistItem = await db.TenderChecklistItems
+                    .FirstAsync(item => item.TenderId == tenderId);
+                checklistItem.FilePath = unmanagedPath;
+                checklistItem.OriginalFileName = "unmanaged-tender.pdf";
+                var revision = new TenderEstimateRevision
+                {
+                    TenderId = tenderId,
+                    VersionNumber = 1,
+                    SourceFileName = "estimate.csv",
+                    SourceSha256 = new string('c', 64),
+                    ImportedByUserId = tender.CreatedByUserId ?? 1,
+                    ImportedAt = DateTime.UtcNow,
+                    Lines =
+                    [
+                        new TenderEstimateLine
+                        {
+                            ItemCode = "BLOCKED-1",
+                            Description = "Preserved estimate line",
+                            Unit = "item",
+                            Quantity = 1,
+                        },
+                    ],
+                };
+                db.TenderEstimateRevisions.Add(revision);
+                await db.SaveChangesAsync();
+                return (ChecklistId: checklistItem.Id, RevisionId: revision.Id, LineId: revision.Lines.Single().Id);
+            });
+
+            var impactResponse = await Client.GetAsync($"/api/tenders/{tenderId}/deletion-impact");
+            impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var impact = await ReadJsonAsync(impactResponse);
+            impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+            impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+                item.GetProperty("key").GetString() == "tender.fileBlockers" &&
+                item.GetProperty("action").GetString() == "Block");
+
+            (await ConfirmDeleteAsync(tenderId, impact)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            File.Exists(unmanagedFullPath).Should().BeTrue();
+            (await WithDbAsync(db => db.Tenders.AnyAsync(item => item.Id == tenderId))).Should().BeTrue();
+            (await WithDbAsync(db => db.TenderChecklistItems.AnyAsync(item => item.Id == identifiers.ChecklistId)))
+                .Should().BeTrue();
+            (await WithDbAsync(db => db.TenderEstimateRevisions.AnyAsync(item => item.Id == identifiers.RevisionId)))
+                .Should().BeTrue();
+            (await WithDbAsync(db => db.TenderEstimateLines.AnyAsync(item => item.Id == identifiers.LineId)))
+                .Should().BeTrue();
+            (await WithDbAsync(db => db.HardDeleteOperations.AnyAsync(item =>
+                item.ResourceType == "Tender" && item.ResourceId == tenderId.ToString()))).Should().BeFalse();
+        }
+        finally
+        {
+            if (File.Exists(unmanagedFullPath)) File.Delete(unmanagedFullPath);
+        }
+    }
+
+    [Fact]
+    public async Task Delete_WhenPlanChanges_ReturnsConflictAndPreservesTender()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/tenders/{tenderId}/deletion-impact"));
+        await WithDbAsync(async db =>
+        {
+            db.TenderChecklistItems.Add(new TenderChecklistItem
+            {
+                TenderId = tenderId,
+                Title = "Changed after preview",
+                SortOrder = 999,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        (await ConfirmDeleteAsync(tenderId, impact)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.Tenders.AnyAsync(item => item.Id == tenderId))).Should().BeTrue();
+        (await WithDbAsync(db => db.TenderChecklistItems.CountAsync(item => item.TenderId == tenderId)))
+            .Should().BeGreaterThan(1);
+    }
+
+    [Fact]
+    public async Task Delete_InvalidConfirmation_ReturnsBadRequestAndPreservesTender()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var tenderId = await CreateTenderAsync();
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/tenders/{tenderId}/deletion-impact"));
+
+        (await DeleteWithBodyAsync(
+            tenderId,
+            impact.GetProperty("planToken").GetString()!,
+            "WRONG")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Tenders.AnyAsync(item => item.Id == tenderId))).Should().BeTrue();
     }
 
     [Fact]
@@ -215,6 +455,28 @@ public class TendersControllerTests : IntegrationTestBase
         res.EnsureSuccessStatusCode();
         return (await ReadJsonAsync(res)).GetProperty("id").GetInt32();
     }
+
+    private Task<HttpResponseMessage> ConfirmDeleteAsync(int tenderId, System.Text.Json.JsonElement impact) =>
+        DeleteWithBodyAsync(
+            tenderId,
+            impact.GetProperty("planToken").GetString()!,
+            impact.GetProperty("requiredConfirmation").GetString()!);
+
+    private async Task<HttpResponseMessage> DeleteWithBodyAsync(
+        int tenderId, string planToken, string confirmation)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/tenders/{tenderId}")
+        {
+            Content = JsonContent.Create(new { planToken, confirmation }),
+        };
+        return await Client.SendAsync(request);
+    }
+
+    private static string FullPath(IWebHostEnvironment environment, string hostRelativePath) =>
+        Path.Combine(
+            environment.ContentRootPath,
+            "wwwroot",
+            hostRelativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
 
     // ---------- NIH-97 checklist inline-edit ----------
 

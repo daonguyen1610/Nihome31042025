@@ -15,14 +15,13 @@ import {
   Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import BoqPasteDialog from "@/components/admin/BoqPasteDialog";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
@@ -32,7 +31,6 @@ import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
 import { normalizeBoqSortOrder } from "@/lib/boqPaste";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -64,6 +62,7 @@ import {
   type QuoteMethod,
   type QuoteStatus,
   type MaterialRateRevisionResponse,
+  type DeletionImpactResponse,
 } from "@/services/adminApi";
 
 // -------- Static styling --------
@@ -80,8 +79,8 @@ const STATUS_STYLES: Record<QuoteStatus, string> = {
 };
 
 // Which workflow buttons make sense given the current status.
-const ACTIONS_BY_STATUS: Record<QuoteStatus, Array<"submit" | "approve" | "send" | "cancel" | "delete">> = {
-  Draft: ["submit", "delete"],
+const ACTIONS_BY_STATUS: Record<QuoteStatus, Array<"submit" | "approve" | "send" | "cancel">> = {
+  Draft: ["submit"],
   PendingApproval: ["approve", "cancel"],
   Approved: ["send", "cancel"],
   SentToCustomer: ["cancel"],
@@ -370,30 +369,55 @@ const AdminQuotes = () => {
       }),
       "quotes.updated",
     );
+  const [deletingQuote, setDeletingQuote] = useState<QuoteListItemResponse | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [deleteImpactLoading, setDeleteImpactLoading] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
-    await runAction(id, () => adminApi.deleteQuote(id, rowVersionFor(id)), "quotes.updated");
+    const quote = rows.find((row) => row.id === id);
+    if (!quote) return;
+    setDeletingQuote(quote);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    setDeleteImpactLoading(true);
+    try {
+      const response = await adminApi.getQuoteDeletionImpact(id);
+      setDeleteImpact(response.data);
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+    } finally {
+      setDeleteImpactLoading(false);
+    }
   };
 
-  // ---------- bulk selection ----------
-  const deletableIds = useMemo(
-    () => canManage ? rows.map((row) => row.id) : [],
-    [rows, canManage],
-  );
-  const {
-    selectedIds,
-    bulkDeleting,
-    allVisibleSelected,
-    someVisibleSelected,
-    toggleAllVisible,
-    toggleOne,
-    clearSelection,
-    handleBulkDelete,
-  } = useBulkSelection<number>({
-    visibleIds: deletableIds,
-    deleteOne: (id) => adminApi.deleteQuote(id, rowVersionFor(id)),
-    onAfter: fetchList,
-  });
+  const confirmDelete = async (confirmation: string) => {
+    if (!deletingQuote || !deleteImpact) return null;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      const response = await adminApi.deleteQuote(deletingQuote.id, {
+        planToken: deleteImpact.planToken,
+        confirmation,
+        rowVersion: deletingQuote.rowVersion,
+      });
+      return response.status === 204 ? null : response.data;
+    } catch (err) {
+      setDeleteError(extractApiError(err));
+      throw err;
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const completeDelete = async () => {
+    setDeletingQuote(null);
+    setDeleteImpact(null);
+    setDeleteError(null);
+    toast({ title: t("quotes.deleted") });
+    await fetchList();
+  };
 
   const totalPages = useMemo(
     () => (total > 0 ? Math.ceil(total / pageSize) : 1),
@@ -486,38 +510,12 @@ const AdminQuotes = () => {
         </div>
       ) : (
         <>
-          {canManage && (
-            <div className="mb-2">
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-            </div>
-          )}
           {/* Desktop table (xl+ only — sidebar-open laptops still cramp a
               9-col table at lg, so we defer to xl to avoid horizontal scroll). */}
           <div className="hidden overflow-x-auto rounded-lg border bg-card xl:block">
             <table className="w-full min-w-[900px] divide-y text-sm">
               <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                 <tr>
-                  {canManage && (
-                    <Th className="w-8">
-                      <Checkbox
-                        aria-label={t("common.selectAll")}
-                        disabled={deletableIds.length === 0}
-                        checked={
-                          allVisibleSelected
-                            ? true
-                            : someVisibleSelected
-                              ? "indeterminate"
-                              : false
-                        }
-                        onCheckedChange={(v) => toggleAllVisible(v === true)}
-                      />
-                    </Th>
-                  )}
                   <Th>{t("quotes.field.code")}</Th>
                   <Th>{t("quotes.field.opportunity")}</Th>
                   <Th>{t("quotes.field.customer")}</Th>
@@ -532,23 +530,12 @@ const AdminQuotes = () => {
               <tbody className="divide-y">
                 {rows.map((r) => {
                   const isPending = pendingAction === r.id;
-                  const canDelete = canManage;
                   return (
                     <tr
                       key={r.id}
                       className="cursor-pointer hover:bg-muted/20"
                       onClick={() => navigate(`/admin/quotes/${r.id}`)}
                     >
-                      {canManage && (
-                        <Td onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            aria-label={`${t("common.selectAll")} · ${r.code}`}
-                            disabled={!canDelete}
-                            checked={selectedIds.has(r.id)}
-                            onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                          />
-                        </Td>
-                      )}
                       <Td
                         className="whitespace-nowrap"
                         onClick={(e) => e.stopPropagation()}
@@ -602,7 +589,6 @@ const AdminQuotes = () => {
           <ul className="grid gap-2 sm:grid-cols-2 xl:hidden">
             {rows.map((r) => {
               const isPending = pendingAction === r.id;
-              const canDelete = canManage;
               return (
                 <li
                   key={r.id}
@@ -611,16 +597,6 @@ const AdminQuotes = () => {
                 >
                   <div className="mb-1 flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-start gap-2">
-                      {canManage && (
-                        <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
-                          <Checkbox
-                            aria-label={`${t("common.selectAll")} · ${r.code}`}
-                            disabled={!canDelete}
-                            checked={selectedIds.has(r.id)}
-                            onCheckedChange={(v) => toggleOne(r.id, v === true)}
-                          />
-                        </span>
-                      )}
                       <Link
                         to={`/admin/quotes/${r.id}`}
                         className="text-base font-semibold text-primary hover:underline"
@@ -972,6 +948,23 @@ const AdminQuotes = () => {
         open={boqPasteOpen}
         onOpenChange={setBoqPasteOpen}
         onConfirm={appendPastedBoqItems}
+      />
+
+      <DeletionImpactDialog
+        open={deletingQuote !== null}
+        impact={deleteImpact}
+        loading={deleteImpactLoading}
+        deleting={deleteBusy}
+        error={deleteError}
+        onOpenChange={(open) => {
+          if (!open && !deleteBusy) {
+            setDeletingQuote(null);
+            setDeleteImpact(null);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={confirmDelete}
+        onCompleted={completeDelete}
       />
 
     </AdminLayout>

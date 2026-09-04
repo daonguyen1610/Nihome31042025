@@ -1,18 +1,21 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
 public class OperationalProjectService(
     AppDbContext db,
     ILegacyProjectTeamSyncService projectTeamSync,
-    IProjectDocumentStagingService projectDocuments,
-    ILogger<OperationalProjectService> logger) : IOperationalProjectService
+    ILogger<OperationalProjectService> logger,
+    IProjectHardDeletePlanService hardDeletePlans,
+    IHardDeleteOperationService hardDeleteOperations) : IOperationalProjectService
 {
     private const int MaxPageSize = 100;
 
@@ -271,10 +274,10 @@ public class OperationalProjectService(
         var project = await db.OperationalProjects.AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == id, ct);
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
-        return await DeletionImpactPlanner.ForOperationalProjectAsync(db, id, ct);
+        return (await hardDeletePlans.ForOperationalProjectAsync(id, ct))?.Impact;
     }
 
-    public async Task<bool> DeleteAsync(
+    public async Task<HardDeleteOperationResult?> DeleteAsync(
         int id,
         ConfirmDeletionRequest request,
         int callerUserId,
@@ -282,48 +285,30 @@ public class OperationalProjectService(
         CancellationToken ct = default)
     {
         var project = await db.OperationalProjects.FirstOrDefaultAsync(item => item.Id == id, ct);
-        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return false;
-
-        await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
-            : null;
-        var impact = await DeletionImpactPlanner.ForOperationalProjectAsync(db, id, ct);
-        if (impact is null) return false;
-        if (!impact.CanDelete)
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
+        var plan = await hardDeletePlans.ForOperationalProjectAsync(id, ct);
+        if (plan is null) return null;
+        if (!plan.Impact.CanDelete)
             throw new OperationalProjectOperationException(
                 "Không thể xoá Dự án khi còn tệp hoặc thư mục Drive. Vui lòng dọn các mục bị chặn trước.");
-        if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
+        if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
             throw new DeletionPlanChangedException(
                 "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
-        if (!string.Equals(request.Confirmation?.Trim(), impact.RequiredConfirmation, StringComparison.Ordinal))
+        if (!string.Equals(request.Confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
             throw new OperationalProjectOperationException(
-                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");
-        if (string.IsNullOrWhiteSpace(request.RowVersion))
-            throw new CrmConcurrencyTokenException(
-                "Phiên bản dữ liệu là bắt buộc. Vui lòng tải lại Dự án trước khi xoá.");
-
-        CrmConcurrency.Apply(db, project, request.RowVersion);
-        try
-        {
-            await AggregateDeletionService.DeleteOperationalProjectAsync(
-                db, project, projectDocuments, callerUserId, ct);
-        }
-        catch (AggregateDeletionBlockedException ex)
-        {
-            throw new OperationalProjectOperationException(ex.Message);
-        }
-        try
-        {
-            await CrmConcurrency.SaveChangesAsync(db, ct);
-            if (transaction is not null) await transaction.CommitAsync(ct);
-        }
-        catch (DbUpdateException)
-        {
-            throw new CrmConcurrencyException(
-                "Dự án vừa phát sinh dữ liệu liên quan. Vui lòng tải lại danh sách ảnh hưởng.");
-        }
-        logger.LogInformation("OperationalProject {ProjectId} hard-deleted", id);
-        return true;
+                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
+        CrmConcurrency.EnsureMatches(project.RowVersion, request.RowVersion);
+        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.OperationalProject,
+            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Impact.ResourceLabel,
+            plan.Impact.PlanToken,
+            request.Confirmation!,
+            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Items), ct);
+        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
+        logger.LogInformation("OperationalProject {ProjectId} durable hard-delete is {Status}", id, result.Status);
+        return result;
     }
 
     private async Task<bool> HasDependenciesAsync(int projectId, CancellationToken ct) =>

@@ -507,7 +507,7 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_WithDriveFolder_UnlinksBindingAndPreservesExternalFolderReference()
+    public async Task Delete_WithUnverifiedDriveFolder_BlocksAndPreservesBinding()
     {
         await AuthTestHelper.AuthenticateAsync(
             Client,
@@ -536,15 +536,15 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var impact = await ReadJsonAsync(
             await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
 
-        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
-            item.GetProperty("key").GetString() == "operations.driveFolders" &&
-            item.GetProperty("action").GetString() == "Unlink" &&
+            item.GetProperty("key").GetString() == "operations.pendingDocuments" &&
+            item.GetProperty("action").GetString() == "Block" &&
             item.GetProperty("count").GetInt32() == 1);
         (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
-            .Should().Be(HttpStatusCode.NoContent);
+            .Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.ProjectDriveFolders
-            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeFalse();
+            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeTrue();
     }
 
     [Fact]
@@ -700,15 +700,15 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             item.GetProperty("count").GetInt32() == 1);
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
             item.GetProperty("key").GetString() == "operations.surveyDriveFolders" &&
-            item.GetProperty("action").GetString() == "Unlink" &&
+            item.GetProperty("action").GetString() == "Block" &&
             item.GetProperty("count").GetInt32() == 1);
         (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
-            .Should().Be(HttpStatusCode.NoContent);
-        (await WithDbAsync(db => db.Surveys.AnyAsync(item => item.Id == surveyId))).Should().BeFalse();
+            .Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Surveys.AnyAsync(item => item.Id == surveyId))).Should().BeTrue();
         (await WithDbAsync(db => db.SurveyChecklistResults.AnyAsync(item => item.SurveyId == surveyId)))
-            .Should().BeFalse();
+            .Should().BeTrue();
         (await WithDbAsync(db => db.SurveySiteConditions.AnyAsync(item => item.SurveyId == surveyId)))
-            .Should().BeFalse();
+            .Should().BeTrue();
     }
 
     [Fact]

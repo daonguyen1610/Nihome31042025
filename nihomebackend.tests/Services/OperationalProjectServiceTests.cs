@@ -7,6 +7,7 @@ using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
+using NihomeBackend.Services.HardDelete;
 using nihomebackend.tests.Helpers;
 
 namespace nihomebackend.tests.Services;
@@ -22,11 +23,13 @@ public class OperationalProjectServiceTests : IDisposable
 
     public OperationalProjectServiceTests()
     {
+        var hardDelete = HardDeleteTestServices.Create(_db, _projectDocuments.Object);
         _service = new OperationalProjectService(
             _db,
             new LegacyProjectTeamSyncService(_db),
-            _projectDocuments.Object,
-            NullLogger<OperationalProjectService>.Instance);
+            NullLogger<OperationalProjectService>.Instance,
+            hardDelete.Plans,
+            hardDelete.Operations);
         var manager = AddUser("0900100001", "Project Manager");
         var other = AddUser("0900100002", "Other Manager");
         var customer = new Customer
@@ -140,7 +143,7 @@ public class OperationalProjectServiceTests : IDisposable
         Assert.NotNull(detail);
         Assert.NotNull(timeline);
         Assert.Null(update);
-        Assert.False(delete);
+        Assert.Null(delete);
     }
 
     [Fact]
@@ -178,7 +181,7 @@ public class OperationalProjectServiceTests : IDisposable
         var removed = await _service.DeleteAsync(
             project.Id, Confirm(impact!, CrmConcurrency.Encode(project.RowVersion)), _managerId, false);
 
-        Assert.True(removed);
+        Assert.True(removed!.IsComplete);
         Assert.Null(await _db.OperationalProjects.FindAsync(project.Id));
         Assert.Empty(await _db.OperationalProjectTeamHistory
             .Where(item => item.OperationalProjectId == project.Id)
@@ -222,16 +225,20 @@ public class OperationalProjectServiceTests : IDisposable
         };
         db.OperationalProjects.Add(project);
         await db.SaveChangesAsync();
+        var hardDelete = HardDeleteTestServices.Create(db, Mock.Of<IProjectDocumentStagingService>());
         var service = new OperationalProjectService(
             db,
             new LegacyProjectTeamSyncService(db),
-            Mock.Of<IProjectDocumentStagingService>(),
-            NullLogger<OperationalProjectService>.Instance);
+            NullLogger<OperationalProjectService>.Instance,
+            hardDelete.Plans,
+            hardDelete.Operations);
         var impact = await service.GetDeletionImpactAsync(project.Id, user.Id, false);
 
-        await Assert.ThrowsAsync<CrmConcurrencyException>(() =>
-            service.DeleteAsync(
-                project.Id, Confirm(impact!, CrmConcurrency.Encode(project.RowVersion)), user.Id, false));
+        var result = await service.DeleteAsync(
+            project.Id, Confirm(impact!, CrmConcurrency.Encode(project.RowVersion)), user.Id, false);
+
+        Assert.Equal(HardDeleteOperationStatus.Failed, result!.Status);
+        Assert.NotNull(await db.OperationalProjects.FindAsync(project.Id));
     }
 
     [Fact]
@@ -276,7 +283,7 @@ public class OperationalProjectServiceTests : IDisposable
         var removed = await _service.DeleteAsync(
             created.Id, Confirm(impact!, CrmConcurrency.Encode(project.RowVersion)), _managerId, false);
 
-        Assert.True(removed);
+        Assert.True(removed!.IsComplete);
         Assert.Null(await _db.OperationalProjects.FindAsync(created.Id));
         Assert.Null((await _db.Contracts.SingleAsync()).OperationalProjectId);
     }

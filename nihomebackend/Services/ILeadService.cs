@@ -1,6 +1,7 @@
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -46,7 +47,16 @@ public interface ILeadService
         string languageCode = "vi",
         CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null);
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id, int callerUserId, bool canManage, bool canSeeAll, CancellationToken ct = default);
+
+    Task<HardDeleteOperationResult?> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        bool canManage,
+        bool canSeeAll,
+        CancellationToken ct = default);
 
     Task<LeadResponse?> ConvertAsync(
         int id,

@@ -1,6 +1,7 @@
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -32,7 +33,7 @@ public interface IDesignProjectService
 
     Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, CancellationToken ct = default);
 
-    Task<bool> DeleteAsync(
+    Task<HardDeleteOperationResult?> DeleteAsync(
         int id,
         ConfirmDeletionRequest request,
         int callerUserId,

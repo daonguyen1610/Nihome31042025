@@ -59,6 +59,26 @@ public static class CrmConcurrency
         db.Entry(entity).Property(item => item.RowVersion).OriginalValue = expectedVersion;
     }
 
+    public static void EnsureMatches(byte[] rowVersion, string? token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            throw new CrmConcurrencyTokenException(
+                "Phiên bản dữ liệu là bắt buộc. Vui lòng tải lại dữ liệu trước khi xoá.");
+        byte[] expectedVersion;
+        try
+        {
+            expectedVersion = Convert.FromBase64String(Normalize(token));
+        }
+        catch (FormatException)
+        {
+            throw new CrmConcurrencyTokenException("Phiên bản dữ liệu không hợp lệ. Vui lòng tải lại dữ liệu.");
+        }
+        if (expectedVersion.Length != 8)
+            throw new CrmConcurrencyTokenException("Phiên bản dữ liệu không hợp lệ. Vui lòng tải lại dữ liệu.");
+        if (!rowVersion.SequenceEqual(expectedVersion))
+            throw new CrmConcurrencyException("Dữ liệu đã được người khác cập nhật. Vui lòng tải lại trước khi thử lại.");
+    }
+
     public static async Task SaveChangesAsync(AppDbContext db, CancellationToken ct)
     {
         try

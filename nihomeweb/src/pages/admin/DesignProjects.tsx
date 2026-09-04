@@ -388,23 +388,28 @@ const AdminDesignProjects = () => {
   };
 
   const confirmDelete = async (confirmation: string) => {
-    if (!deleting || !deleteImpact) return;
+    if (!deleting || !deleteImpact) return null;
     setBusyDelete(true);
     setDeleteError(null);
     try {
-      await adminApi.deleteDesignProject(deleting.id, {
+      const response = await adminApi.deleteDesignProject(deleting.id, {
         planToken: deleteImpact.planToken,
         confirmation,
       });
-      toast({ title: t("designProjects.deleted") });
-      setDeleting(null);
-      setDeleteImpact(null);
-      await fetchList();
+      return response.status === 204 ? null : response.data;
     } catch (err) {
       setDeleteError(extractApiError(err));
+      throw err;
     } finally {
       setBusyDelete(false);
     }
+  };
+
+  const completeDelete = async () => {
+    toast({ title: t("designProjects.deleted") });
+    setDeleting(null);
+    setDeleteImpact(null);
+    await fetchList();
   };
 
   // ----------------------------- render -----------------------------
@@ -881,6 +886,7 @@ const AdminDesignProjects = () => {
           }
         }}
         onConfirm={confirmDelete}
+        onCompleted={completeDelete}
       />
     </AdminLayout>
   );

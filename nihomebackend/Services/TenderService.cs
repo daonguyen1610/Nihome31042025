@@ -4,6 +4,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
@@ -26,7 +27,9 @@ namespace NihomeBackend.Services;
 public class TenderService(
     AppDbContext db,
     INotificationService notifications,
-    ILogger<TenderService> logger) : ITenderService
+    ILogger<TenderService> logger,
+    ICrmHardDeletePlanService hardDeletePlans,
+    IHardDeleteOperationService hardDeleteOperations) : ITenderService
 {
     private const int MaxPageSize = 100;
     private const int DeadlineImminentDays = 3;
@@ -260,30 +263,39 @@ public class TenderService(
 
     // ------------------------------ Delete ----------------------------------
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
+        int id, CancellationToken ct = default) =>
+        (await hardDeletePlans.ForTenderAsync(id, ct))?.Impact;
+
+    public async Task<HardDeleteOperationResult?> DeleteAsync(
+        int id,
+        ConfirmDeletionRequest request,
+        int callerUserId,
+        CancellationToken ct = default)
     {
-        var entity = await db.Tenders
-            .Include(t => t.ChecklistItems)
-            .FirstOrDefaultAsync(t => t.Id == id, ct);
-        if (entity is null) return false;
-        if (entity.Status != TenderStatus.Preparing)
-        {
+        if (!await db.Tenders.AsNoTracking().AnyAsync(item => item.Id == id, ct)) return null;
+        var plan = await hardDeletePlans.ForTenderAsync(id, ct);
+        if (plan is null) return null;
+        if (!plan.Impact.CanDelete)
             throw new TenderOperationException("Chỉ gói thầu đang Chuẩn bị mới có thể bị xóa.");
-        }
-
-        var winningOpportunities = await db.Opportunities
-            .Where(opportunity => opportunity.WonTenderId == id)
-            .ToListAsync(ct);
-        foreach (var opportunity in winningOpportunities)
-        {
-            opportunity.WonTenderId = null;
-        }
-
-        db.TenderChecklistItems.RemoveRange(entity.ChecklistItems);
-        db.Tenders.Remove(entity);
-        await db.SaveChangesAsync(ct);
-        logger.LogInformation("Tender {Id} deleted", id);
-        return true;
+        if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException(
+                "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        var confirmation = request.Confirmation;
+        if (!string.Equals(confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new TenderOperationException(
+                $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");
+        var operation = await hardDeleteOperations.CreateAsync(new CreateHardDeleteOperationRequest(
+            EntityTypes.Tender,
+            id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Impact.ResourceLabel,
+            plan.Impact.PlanToken,
+            confirmation!,
+            callerUserId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            plan.Items), ct);
+        var result = await hardDeleteOperations.ProcessAsync(operation.OperationId, ct);
+        logger.LogInformation("Tender {Id} durable hard-delete is {Status}", id, result.Status);
+        return result;
     }
 
     // ------------------------------ NIH-97 Detail-page workflow ------------------------------

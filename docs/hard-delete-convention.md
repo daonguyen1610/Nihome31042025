@@ -31,6 +31,22 @@ The deterministic plan includes every business-significant direct and nested
 dependent identifier. Adding or removing a nested child after preview therefore
 invalidates the submitted token.
 
+When execution includes managed local files or Nicon-owned Google Drive items,
+the delete endpoint creates a durable hard-delete operation. The operation and
+its items are independent records identified by a GUID; they do not hold foreign
+keys to the aggregate root. Only one unresolved operation may exist for a
+resource type and resource ID.
+
+The endpoint returns:
+
+- `204 No Content` only after external cleanup, the registered database
+  finalizer, and quarantine purge have all completed.
+- `202 Accepted` with the operation ID and current status when durable work is
+  still pending, retrying, or requires manual action.
+
+Clients may safely poll the operation result. A durable operation is not proof
+that the root has been deleted until its status is `Completed`.
+
 ## Execution Rules
 
 - Controllers authorize and translate domain outcomes to HTTP responses.
@@ -38,16 +54,64 @@ invalidates the submitted token.
 - Aggregate deletion services own dependency ordering and file staging.
 - Managed files are cleaned through the project-document workflow before their
   parent project can be removed.
+- Local managed files must use host-relative paths under an explicit private
+  storage root. Execution moves them atomically to a same-volume hard-delete
+  quarantine before any irreversible step. Missing files are successful no-ops.
 - A Design Project with managed files is blocked until every file has a valid
   Operational Project cleanup sidecar; standalone projects have no cleanup
   route and are therefore blocked while managed files remain.
-- Google Drive folder bindings are unlinked while external folders are
-  preserved; the preview must disclose this behavior.
+- Existing domain flows continue to unlink external Google Drive folder
+  bindings until they are migrated to the durable operation foundation.
+- A migrated plan may permanently delete a Drive file or folder only when its
+  metadata proves current Nicon `InstanceId` ownership, every caller-supplied
+  expected app property matches, the expected parent matches when supplied,
+  and Drive reports that the connected account owns and can delete the item.
+  Imported, shared, mismatched, or unknown-origin items are blockers and must
+  never be permanently deleted. A missing Drive item is an idempotent success.
 - Independent CRM records such as opportunities, quotes, and contracts are
   unlinked rather than deleted with an Operational Project.
+- Tender checklist uploads under `/files/tenders` are aggregate-owned and are
+  quarantined and purged with the Tender. Checklist references to Capability
+  Documents are unlinked while the shared document and file survive. Any
+  non-library checklist file outside `/files/tenders` blocks deletion rather
+  than being silently orphaned.
+- Quote documents under `/files/quotes` are aggregate-owned and are quarantined
+  and purged with the Quote. Opportunities and Contracts that reference the
+  Quote are unlinked and preserved. A Quote project-document sidecar is eligible
+  only when it is an exact CRM `QuoteDocument`/`file` binding to the normalized
+  Quote path, has stable Nicon ownership with no conflict or active processing
+  lease, and is either fully synced with complete Drive ownership metadata or
+  already terminally deleted without a Drive file ID. The durable operation
+  permanently deletes eligible Drive replicas using verified app properties,
+  then preserves and terminalizes their sidecar records. Imported, shared,
+  ambiguous, incomplete, mismatched, or unstable sidecars block deletion.
 - Audit events are emitted only after a successful delete.
 - Hard-deleted seeded roots write a durable tombstone. Seed reruns respect that
   tombstone and do not recreate records an administrator intentionally removed.
+
+## Durable Operation Lifecycle
+
+Operations move through `Preparing`, `Ready`, `Processing`, `Completed`,
+`Failed`, or `ManualActionRequired`:
+
+1. A domain service validates authorization, confirmation, concurrency,
+  blockers, and the current deterministic plan before creating the operation.
+2. The processor quarantines local files, then permanently deletes only verified
+  owned Drive items.
+3. After external cleanup, a resource handler registered by resource type runs
+  the idempotent database finalizer. Delegate-only finalizers are not allowed
+  because they cannot survive application restart.
+4. The processor purges quarantined local files and marks the operation
+  `Completed`.
+
+Failures before the first Drive deletion restore quarantined files and may be
+retried with conservative backoff. Once a Drive deletion or database finalizer
+begins, rollback is no longer safe: the operation remains in forward recovery
+until remaining idempotent steps complete. Ownership mismatches and exhausted
+retries move to `ManualActionRequired`; operators must resolve the blocker and
+explicitly retry. Resource handlers must use the operation ID as an idempotency
+key because a restart can occur after the database commit but before the item is
+marked complete.
 
 ## Frontend Rules
 
@@ -68,6 +132,12 @@ typed confirmation, blocker visibility, and successful UI refresh.
 
 ## Current Rollout
 
-The shared contract is currently implemented for Design Projects and
-Operational Projects. Other root pages must be migrated separately before the
-repository-wide hard-delete rollout can be considered complete.
+The durable operation, local quarantine, verified Drive deletion, registry, and
+retry foundation is available for domain adoption. Design Project, Operational
+Project, Lead, and Tender use the durable backend flow, owner-scoped operation
+status/retry API, and the shared frontend polling dialog. Quote uses the same
+durable flow for direct managed files and verified Nicon-owned Drive replicas,
+while preserving terminalized project-document sidecars. Lead, Tender, and Quote
+bulk deletion is disabled until a server-side
+batch preview-and-confirm contract is available. Other root pages must still be
+migrated separately before the repository-wide hard-delete rollout is complete.

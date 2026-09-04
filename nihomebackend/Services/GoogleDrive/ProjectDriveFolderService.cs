@@ -34,14 +34,14 @@ public sealed class ProjectDriveFolderService(
         var projectFolder = SafeFolderName($"{project.Code}_{project.Name}");
         var segments = new List<DriveFolderSegment>
         {
-            new(projectFolder, FolderIdentity(options.InstanceId, "project", project.Id, null, 0)),
+            new(projectFolder, CreateProjectIdentity(options.InstanceId, project.Id)),
         };
         var categoryPath = new List<string>();
         foreach (var name in options.Folders.SegmentsFor(category))
         {
             categoryPath.Add(name);
             segments.Add(new DriveFolderSegment(name,
-                PathIdentity(options.InstanceId, project.Id, string.Join('/', categoryPath))));
+                CreatePathIdentity(options.InstanceId, project.Id, string.Join('/', categoryPath))));
         }
         var remote = await drive.EnsureFolderPathAsync(segments, ct);
         var now = DateTime.UtcNow;
@@ -70,27 +70,27 @@ public sealed class ProjectDriveFolderService(
         }
     }
 
-    private static Dictionary<string, string> FolderIdentity(
+    public static IReadOnlyDictionary<string, string> CreateProjectIdentity(
         string instanceId,
-        string kind,
-        int projectId,
-        ProjectDocumentCategory? category,
-        int depth) => new()
+        int projectId) => new Dictionary<string, string>
         {
             ["niconInstance"] = instanceId,
-            ["niconFolderKind"] = kind,
+            ["niconFolderKind"] = "project",
             ["niconProjectId"] = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            ["niconCategory"] = category?.ToString() ?? string.Empty,
-            ["niconFolderDepth"] = depth.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["niconCategory"] = string.Empty,
+            ["niconFolderDepth"] = "0",
         };
 
-    private static Dictionary<string, string> PathIdentity(string instanceId, int projectId, string path) => new()
-    {
-        ["niconInstance"] = instanceId,
-        ["niconFolderKind"] = "project-path",
-        ["niconProjectId"] = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        ["niconFolderPath"] = path,
-    };
+    public static IReadOnlyDictionary<string, string> CreatePathIdentity(
+        string instanceId,
+        int projectId,
+        string path) => new Dictionary<string, string>
+        {
+            ["niconInstance"] = instanceId,
+            ["niconFolderKind"] = "project-path",
+            ["niconProjectId"] = projectId.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["niconFolderPath"] = path,
+        };
 
     private static string SafeFolderName(string value) => string.Join("-", value.Split(
         Path.GetInvalidFileNameChars().Concat(['/']).ToArray(),

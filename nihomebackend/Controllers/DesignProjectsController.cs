@@ -7,6 +7,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -133,22 +134,27 @@ public class DesignProjectsController(
         if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
         try
         {
-            var removed = await svc.DeleteAsync(id, request, userId.Value, ct);
-            if (!removed) return NotFound();
+            var result = await svc.DeleteAsync(id, request, userId.Value, ct);
+            if (result is null) return NotFound();
             audit.Log(new AuditEvent
             {
-                Action = "design-project.delete",
+                Action = result.IsComplete ? "design-project.delete" : "design-project.delete_requested",
                 ResourceType = EntityTypes.DesignProject,
                 ResourceId = id.ToString(),
-                Message = $"Design project #{id} deleted.",
+                Message = $"Design project #{id} durable deletion is {result.Status}.",
+                NewValue = result,
             });
-            return NoContent();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (DesignProjectOperationException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
         catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
         {
             return Conflict(new { message = ex.Message });
         }
@@ -171,5 +177,14 @@ public class DesignProjectsController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(
+            nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations",
+            new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }

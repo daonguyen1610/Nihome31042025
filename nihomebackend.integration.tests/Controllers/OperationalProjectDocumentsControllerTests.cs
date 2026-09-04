@@ -1002,6 +1002,11 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
             return Task.CompletedTask;
         }
 
+        public Task PermanentDeleteOwnedAsync(
+            DrivePermanentDeleteRequest request,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException("This document-sync fake does not model permanent ownership checks.");
+
         private static DriveFolder Folder(IEnumerable<string> names)
         {
             var key = string.Join('/', names);

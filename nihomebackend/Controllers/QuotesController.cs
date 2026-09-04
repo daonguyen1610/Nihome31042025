@@ -8,6 +8,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Controllers;
 
@@ -328,7 +329,10 @@ public class QuotesController(
 
     [HttpDelete("{id:int}")]
     [RequirePermission("crm.quotes", "manage")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromBody] ConfirmDeletionRequest request,
+        CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
@@ -336,23 +340,44 @@ public class QuotesController(
         {
             var canManage = await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct);
             var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
-            var ok = await svc.DeleteAsync(
-                id, userId.Value, canManage, canSeeAll, ct,
-                CrmConcurrency.ResolveRequestToken(Request, null));
-            if (!ok) return NotFound();
+            if (!string.IsNullOrWhiteSpace(request.RowVersion))
+                request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
+            var result = await svc.DeleteAsync(id, request, userId.Value, canManage, canSeeAll, ct);
+            if (result is null) return NotFound();
             audit.Log(new AuditEvent
             {
-                Action = "quote.delete",
+                Action = "quote.delete_requested",
                 ResourceType = EntityTypes.Quote,
                 ResourceId = id.ToString(),
-                Message = $"Quote #{id} deleted.",
+                Message = $"Quote #{id} durable deletion is {result.Status}.",
+                NewValue = result,
             });
-            return NoContent();
+            return result.IsComplete ? NoContent() : AcceptedOperation(result);
         }
         catch (QuoteOperationException ex)
         {
             return LogAndBadRequest("quote.delete", ex, id).Result!;
         }
+        catch (DeletionPlanChangedException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (HardDeleteOperationConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("crm.quotes", "manage")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canManage = await permissions.HasAsync(userId.Value, "crm.quotes.manage", ct);
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+        var impact = await svc.GetDeletionImpactAsync(id, userId.Value, canManage, canSeeAll, ct);
+        return impact is null ? NotFound() : Ok(impact);
     }
 
     // ---------- helpers ----------
@@ -407,5 +432,14 @@ public class QuotesController(
     {
         var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
         return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    private IActionResult AcceptedOperation(HardDeleteOperationResult result)
+    {
+        Response.Headers.Location = Url.Action(
+            nameof(HardDeleteOperationsController.GetStatus),
+            "HardDeleteOperations",
+            new { operationId = result.OperationId })!;
+        return StatusCode(StatusCodes.Status202Accepted, result);
     }
 }
