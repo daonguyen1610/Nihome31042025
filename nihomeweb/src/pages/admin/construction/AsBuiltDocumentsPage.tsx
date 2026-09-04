@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   CheckCircle2,
   Download,
@@ -90,13 +91,17 @@ const formatDateTime = (iso: string | null | undefined) => {
 
 export default function AsBuiltDocumentsPage() {
   const { t, lang } = useI18n();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionAsBuiltManage);
   const canApprove = has(ADMIN_PERMS.constructionAsBuiltApprove);
 
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | undefined>();
+  const [projectId, setProjectId] = useState<number | undefined>(() => {
+    const value = Number(searchParams.get("designProjectId"));
+    return Number.isInteger(value) && value > 0 ? value : undefined;
+  });
   const [category, setCategory] = useState<AsBuiltCategory | "">("");
   const [status, setStatus] = useState<AsBuiltStatus | "">("");
   const [openOnly, setOpenOnly] = useState(false);

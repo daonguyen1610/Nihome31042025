@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AlertTriangle, Clock, Eye, FileCheck2, Filter, Pencil, Plus, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
@@ -133,6 +134,7 @@ const formFrom = (row: PermitChecklistItemResponse): PermitForm => ({
 
 const AdminPermits = () => {
   const { t, lang } = useI18n();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.permitsManage);
@@ -152,7 +154,10 @@ const AdminPermits = () => {
 
   // filters
   const [search, setSearch] = useState("");
-  const [projectId, setProjectId] = useState<number | null>(null);
+  const [projectId, setProjectId] = useState<number | null>(() => {
+    const value = Number(searchParams.get("designProjectId"));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  });
   const [permitTypeCode, setPermitTypeCode] = useState<string>("");
   const [status, setStatus] = useState<PermitStatus | "">("");
   const [ownerUserId, setOwnerUserId] = useState<number | null>(null);

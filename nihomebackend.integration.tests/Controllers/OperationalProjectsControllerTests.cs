@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 
@@ -260,15 +262,55 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         projectResponse.EnsureSuccessStatusCode();
         var project = await ReadJsonAsync(projectResponse);
         var projectId = project.GetProperty("id").GetInt32();
+        var managedPath = $"/files/contracts/{Guid.NewGuid():N}.pdf";
+        string fullPath;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            fullPath = Path.Combine(environment.ContentRootPath, "wwwroot",
+                managedPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "independent contract file");
+        var contractId = 0;
+        var attachmentId = 0;
         await WithDbAsync(async db =>
         {
-            db.Contracts.Add(new Contract
+            var contract = new Contract
             {
                 ContractNumber = $"HD-OP-{Guid.NewGuid():N}",
                 CustomerId = customerId,
                 OperationalProjectId = projectId,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            var attachment = new ContractAttachment
+            {
+                ContractId = contract.Id,
+                FilePath = managedPath,
+                OriginalFileName = "independent-contract.pdf",
+            };
+            db.ContractAttachments.Add(attachment);
+            await db.SaveChangesAsync();
+            db.ProjectDocuments.Add(new ProjectDocument
+            {
+                OperationalProjectId = projectId,
+                SourceModule = ProjectDocumentSourceModule.Crm,
+                SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+                SourceEntityType = nameof(ContractAttachment),
+                SourceSlot = "file",
+                SourceRecordId = attachment.Id,
+                ContractId = contract.Id,
+                LocalPath = managedPath,
+                OriginalFileName = attachment.OriginalFileName,
+                Sha256 = new string('a', 64),
+                Origin = ProjectDocumentOrigin.Nicon,
+                DesiredOperation = ProjectDocumentDesiredOperation.None,
+                SyncStatus = ProjectDocumentSyncStatus.Deleted,
             });
             await db.SaveChangesAsync();
+            contractId = contract.Id;
+            attachmentId = attachment.Id;
         });
         var impact = await ReadJsonAsync(
             await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
@@ -279,11 +321,17 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var delete = await ConfirmDeleteAsync(projectId, project, impact);
 
         delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        File.Exists(fullPath).Should().BeTrue();
         (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
             .Should().BeFalse();
-        (await WithDbAsync(db => db.Contracts
-            .SingleAsync(item => item.OperationalProjectId == null && item.CustomerId == customerId)))
+        (await WithDbAsync(db => db.Contracts.SingleAsync(item => item.Id == contractId)))
             .OperationalProjectId.Should().BeNull();
+        (await WithDbAsync(db => db.ContractAttachments.AnyAsync(item => item.Id == attachmentId)))
+            .Should().BeTrue();
+        (await WithDbAsync(db => db.ProjectDocuments.AnyAsync(item =>
+            item.SourceEntityType == nameof(ContractAttachment) && item.SourceRecordId == attachmentId)))
+            .Should().BeFalse();
+        File.Delete(fullPath);
     }
 
     [Fact]
@@ -466,6 +514,110 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_WithNestedDesignManagedFile_BlocksAndLinksToSource()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Nested design cleanup {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var managedPath = $"/files/business-documents/basic-design/{Guid.NewGuid():N}.pdf";
+        string fullPath;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            fullPath = Path.Combine(environment.ContentRootPath, "wwwroot",
+                managedPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "nested design file");
+        var designProjectId = await WithDbAsync<int>(async db =>
+        {
+            var designProject = new DesignProject
+            {
+                ProjectCode = $"DP-{Guid.NewGuid():N}"[..20],
+                Name = "Nested cleanup design",
+                CustomerId = customerId,
+                OperationalProjectId = projectId,
+            };
+            db.DesignProjects.Add(designProject);
+            await db.SaveChangesAsync();
+            db.BasicDesignDocs.Add(new BasicDesignDoc
+            {
+                DesignProjectId = designProject.Id,
+                DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
+                Title = "Nested managed file",
+                DisciplineCode = "ARCH",
+                FilePath = managedPath,
+            });
+            await db.SaveChangesAsync();
+            return designProject.Id;
+        });
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+
+        var delete = await ConfirmDeleteAsync(projectId, project, impact);
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        var blocker = impact.GetProperty("items").EnumerateArray().Single(item =>
+            item.GetProperty("key").GetString() == "operations.pendingDocuments");
+        blocker.GetProperty("action").GetString().Should().Be("Block");
+        blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
+            link.GetProperty("url").GetString() ==
+            $"/admin/design-projects/{designProjectId}?tab=basic");
+        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        File.Exists(fullPath).Should().BeTrue();
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(item => item.Id == designProjectId)))
+            .Should().BeTrue();
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Delete_WhenPendingDocumentAppearsAfterPreview_ReturnsConflictAndPreservesProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        var create = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Stale blocker {Guid.NewGuid():N}",
+            customerId,
+        });
+        create.EnsureSuccessStatusCode();
+        var project = await ReadJsonAsync(create);
+        var projectId = project.GetProperty("id").GetInt32();
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
+        await WithDbAsync(async db =>
+        {
+            db.ProjectDocuments.Add(new ProjectDocument
+            {
+                OperationalProjectId = projectId,
+                LocalPath = $"/files/project-documents/{Guid.NewGuid():N}.pdf",
+                OriginalFileName = "new-blocker.pdf",
+                Sha256 = new string('a', 64),
+                SyncStatus = ProjectDocumentSyncStatus.Pending,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var delete = await ConfirmDeleteAsync(projectId, project, impact);
+
+        delete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeTrue();
+    }
+
+    [Fact]
     public async Task DeletionImpact_WithPendingDocument_BlocksDelete()
     {
         await AuthTestHelper.AuthenticateAsync(
@@ -507,7 +659,7 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_WithUnverifiedDriveFolder_BlocksAndPreservesBinding()
+    public async Task Delete_WithDriveFolder_UnlinksBindingWithoutSchedulingFolderDelete()
     {
         await AuthTestHelper.AuthenticateAsync(
             Client,
@@ -536,15 +688,16 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var impact = await ReadJsonAsync(
             await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
 
-        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
-            item.GetProperty("key").GetString() == "operations.pendingDocuments" &&
-            item.GetProperty("action").GetString() == "Block" &&
+            item.GetProperty("key").GetString() == "operations.driveFolders" &&
+            item.GetProperty("action").GetString() == "Unlink" &&
             item.GetProperty("count").GetInt32() == 1);
-        (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
-            .Should().Be(HttpStatusCode.BadRequest);
+        var delete = await ConfirmDeleteAsync(projectId, project, impact);
+
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await WithDbAsync(db => db.ProjectDriveFolders
-            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeTrue();
+            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeFalse();
     }
 
     [Fact]
@@ -698,10 +851,12 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
             item.GetProperty("key").GetString() == "operations.surveySiteConditions" &&
             item.GetProperty("count").GetInt32() == 1);
-        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
-            item.GetProperty("key").GetString() == "operations.surveyDriveFolders" &&
-            item.GetProperty("action").GetString() == "Block" &&
-            item.GetProperty("count").GetInt32() == 1);
+        var folderBlocker = impact.GetProperty("items").EnumerateArray().Single(item =>
+            item.GetProperty("key").GetString() == "operations.surveyDriveFolders");
+        folderBlocker.GetProperty("action").GetString().Should().Be("Block");
+        folderBlocker.GetProperty("count").GetInt32().Should().Be(1);
+        folderBlocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
+            link.GetProperty("url").GetString() == $"/admin/surveys/{surveyId}");
         (await ConfirmDeleteAsync(projectId, project, impact)).StatusCode
             .Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.Surveys.AnyAsync(item => item.Id == surveyId))).Should().BeTrue();

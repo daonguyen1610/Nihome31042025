@@ -181,7 +181,7 @@ export default function ProjectDocumentsPanel({ projectId, canManage, onCountCha
   };
 
   const canRetry = (document: ProjectDocumentResponse) =>
-    document.syncAttemptCount < document.maxSyncAttempts &&
+    (document.desiredOperation === "Delete" || document.syncAttemptCount < document.maxSyncAttempts) &&
     (document.syncStatus === "Failed" ||
       document.syncStatus === "Pending" && Boolean(document.nextSyncAttemptAt));
 

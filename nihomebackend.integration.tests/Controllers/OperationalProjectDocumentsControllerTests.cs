@@ -503,6 +503,36 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
+    public async Task Retry_ExhaustedDelete_AsInScopeProjectManager_QueuesAgain()
+    {
+        var saleUserId = await WithDbAsync(async db =>
+            await db.Users
+                .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALE"])
+                .Select(user => user.Id)
+                .SingleAsync());
+        var projectId = await CreateProjectAsync(saleUserId);
+        var document = await AddDocumentAsync(projectId, ProjectDocumentCategory.DesignBasic,
+            syncStatus: ProjectDocumentSyncStatus.Failed,
+            syncAttemptCount: ProjectDocumentService.MaxSyncAttempts);
+        await WithDbAsync(async db =>
+        {
+            var persisted = await db.ProjectDocuments.SingleAsync(item => item.Id == document.Id);
+            persisted.SourceType = ProjectDocumentSourceType.ExistingManagedFile;
+            persisted.DesiredOperation = ProjectDocumentDesiredOperation.Delete;
+            await db.SaveChangesAsync();
+        });
+        await AuthenticateAsAsync("SALE");
+
+        var response = await Client.PostAsync(
+            $"/api/operational-projects/{projectId}/documents/{document.Id}/retry", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("syncStatus").GetString().Should().Be("Pending");
+        body.GetProperty("syncAttemptCount").GetInt32().Should().Be(0);
+    }
+
+    [Fact]
     public async Task Classify_ImportedUnclassifiedSucceeds_AndClassifiedDocumentIsUnchanged()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");

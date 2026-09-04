@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, CalendarClock, PenTool } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -64,6 +64,10 @@ const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
 const AdminDesignProjectDetail = () => {
   const { t, lang } = useI18n();
   const { id: idParam } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const initialTab = ["overview", "concept", "basic", "shop", "ifc", "team", "schedule", "docs"]
+    .includes(requestedTab ?? "") ? requestedTab! : "overview";
   const numericId = Number(idParam);
   const isValidId = Number.isFinite(numericId) && numericId > 0;
 
@@ -216,7 +220,7 @@ const AdminDesignProjectDetail = () => {
           </div>
         </header>
 
-        <Tabs defaultValue="overview">
+        <Tabs defaultValue={initialTab}>
           <TabsList className="h-auto w-full justify-start overflow-x-auto whitespace-nowrap">
             <TabsTrigger value="overview">{t("designProjects.detail.tab.overview")}</TabsTrigger>
             <TabsTrigger value="concept">{t("designProjects.detail.tab.concept")}</TabsTrigger>

@@ -39,12 +39,14 @@ internal static class HardDeleteTestServices
             It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var plans = new ProjectHardDeletePlanService(db, settings.Object, files.Object);
+        var plans = new ProjectHardDeletePlanService(db);
         var crmPlans = new CrmHardDeletePlanService(db, settings.Object, files.Object);
+        var projectAccess = new ProjectAccessService(db, permissions.Object);
         IHardDeleteResourceHandler[] handlers =
         [
-            new DesignProjectHardDeleteHandler(db, plans, projectDocuments),
-            new OperationalProjectHardDeleteHandler(db, plans, projectDocuments),
+            new DesignProjectHardDeleteHandler(
+                db, plans, projectDocuments, permissions.Object, projectAccess),
+            new OperationalProjectHardDeleteHandler(db, plans, projectDocuments, permissions.Object),
             new CustomerHardDeleteHandler(db, crmPlans, permissions.Object),
             new LeadHardDeleteHandler(db, crmPlans),
             new TenderHardDeleteHandler(db, crmPlans),

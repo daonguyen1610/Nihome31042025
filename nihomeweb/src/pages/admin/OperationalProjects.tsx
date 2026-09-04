@@ -285,7 +285,7 @@ const OperationalProjects = () => {
           {detail.note && <section className="rounded-lg border bg-card p-4"><h2 className="mb-2 font-medium">{t("operationalProjects.field.note")}</h2><p className="whitespace-pre-wrap text-sm text-muted-foreground">{detail.note}</p></section>}
 
           <Accordion type="multiple" defaultValue={["documents", "timeline", "opportunities", "quotes", "contracts"]} className="space-y-3">
-            <AccordionItem value="documents" className="rounded-lg border bg-card px-4">
+            <AccordionItem id="project-documents" value="documents" className="scroll-mt-4 rounded-lg border bg-card px-4">
               <AccordionTrigger className="py-4 hover:no-underline" data-testid="project-documents-trigger">
                 <div className="flex items-center gap-3">
                   <FileText className="h-4 w-4 text-muted-foreground" />

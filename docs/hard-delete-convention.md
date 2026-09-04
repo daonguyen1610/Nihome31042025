@@ -56,10 +56,18 @@ that the root has been deleted until its status is `Completed`.
   parent project can be removed.
 - Local managed files must use host-relative paths under an explicit private
   storage root. Execution moves them atomically to a same-volume hard-delete
-  quarantine before any irreversible step. Missing files are successful no-ops.
-- A Design Project with managed files is blocked until every file has a valid
-  Operational Project cleanup sidecar; standalone projects have no cleanup
-  route and are therefore blocked while managed files remain.
+  quarantine before any irreversible step when the parent durable operation
+  owns their deletion. Project-dependent files are the exception below and are
+  deleted only by their source module's manual cleanup workflow.
+- Design and Operational Project deletion never removes dependent local or Drive
+  files automatically. Every remaining file blocks parent deletion and includes
+  a link to its owning detail or document page. The user must delete the source
+  record or project document through that module's authorized workflow; its
+  existing synchronization service then removes the Drive replica safely. The
+  parent can be deleted only after those file dependencies are fully cleaned.
+  Failed Drive-delete sidecars remain blockers and can be manually retried by
+  an authorized Operational Project manager even after automatic retries are
+  exhausted.
 - Existing domain flows continue to unlink external Google Drive folder
   bindings until they are migrated to the durable operation foundation.
 - A migrated plan may permanently delete a Drive file or folder only when its
@@ -69,7 +77,9 @@ that the root has been deleted until its status is `Completed`.
   Imported, shared, mismatched, or unknown-origin items are blockers and must
   never be permanently deleted. A missing Drive item is an idempotent success.
 - Independent CRM records such as opportunities, quotes, and contracts are
-  unlinked rather than deleted with an Operational Project.
+  unlinked rather than deleted with an Operational Project. Their local and
+  Drive files are preserved; only project-bound synchronization metadata is
+  removed with the deleted Operational Project.
 - Tender checklist uploads under `/files/tenders` are aggregate-owned and are
   quarantined and purged with the Tender. Checklist references to Capability
   Documents are unlinked while the shared document and file survive. Any

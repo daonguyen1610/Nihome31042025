@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   CalendarDays,
   Check,
@@ -122,6 +123,7 @@ const formatDateTime = (value: string | null | undefined, fallback: string) => {
 
 export default function HandoverRecordsPage() {
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionHandoverManage);
@@ -130,7 +132,10 @@ export default function HandoverRecordsPage() {
 
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | undefined>();
+  const [projectId, setProjectId] = useState<number | undefined>(() => {
+    const value = Number(searchParams.get("designProjectId"));
+    return Number.isInteger(value) && value > 0 ? value : undefined;
+  });
   const [responsibleUserId, setResponsibleUserId] = useState<number | undefined>();
   const [status, setStatus] = useState<HandoverStatus | "">("");
   const [plannedFrom, setPlannedFrom] = useState("");
