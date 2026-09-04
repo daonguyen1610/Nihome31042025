@@ -354,9 +354,118 @@ Every response MUST include:
 * Focus on practical solutions
 * Highlight risks when needed
 
-## Git commit
+## Git Commit Rules
 
-* When a feature or bug fix is complete, commit the work.
-* Write commit messages following the 50/72 rule.
-* Only add files related to the commit — do not use `git add -A` blindly.
-* Write the commit simple, do not add too much in the git commit. And describe the changes based on the feature not based on changes in commit.
+These rules apply whenever a feature, bug fix, refactor, or other change is
+complete and ready to be recorded in Git.
+
+### Before committing
+
+1. Inspect the working tree and review the diff:
+
+   ```bash
+   git status --short
+   git diff
+   git diff --cached
+   ```
+
+2. Run the relevant tests, linters, formatters, and build checks for the
+   change. Do not commit when required checks are failing unless the user
+   explicitly asks to commit the failing state.
+
+3. Stage only files that belong to the current change. Use explicit paths:
+
+   ```bash
+   git add path/to/file1 path/to/file2
+   ```
+
+   Never use `git add -A`, `git add .`, or `git commit -a` blindly. Do not
+   include unrelated edits, generated files, secrets, credentials, local
+   configuration, or temporary files.
+
+4. Review the staged patch before committing:
+
+   ```bash
+   git diff --cached --check
+   git diff --cached
+   ```
+
+5. If unrelated changes are already present, preserve them and commit only
+   the files and hunks required for the current task.
+
+### Commit messages
+
+1. Follow the 50/72 rule:
+
+   - Keep the subject line at 50 characters or fewer when practical.
+   - Wrap body lines at 72 characters or fewer.
+   - Use imperative mood: `Add`, `Fix`, `Update`, `Remove`, or `Refactor`.
+   - Do not end the subject line with a period.
+
+2. Do not write a title-only commit. Every commit must include a body that
+   explains the purpose and behavior of the change.
+
+3. Keep the message simple and describe the feature or problem being solved,
+   not the mechanics of the Git diff.
+
+4. Use this structure:
+
+   ```text
+   <imperative summary, 50 characters or fewer>
+
+   <why the change was needed and what behavior it provides>
+   <relevant validation or important implementation constraint>
+   ```
+
+5. For a feature, list the user-visible functionalities delivered:
+
+   ```text
+   Add invoice payment workflow
+
+   Add invoice creation, payment processing, and payment-status tracking.
+   Validate payment requests and return clear errors for invalid invoices.
+   Cover the workflow with unit and integration tests.
+   ```
+
+6. For a bug fix, state both the root cause and the solution:
+
+   ```text
+   Fix duplicate payment notifications
+
+   The retry handler published the same notification more than once because
+   it did not record the event before retrying. Persist the event key and
+   make notification handling idempotent so retries produce one notification.
+   Add regression coverage for repeated delivery.
+   ```
+
+7. Do not include vague messages such as `Update code`, `Fix issue`, or
+   `Changes`.
+
+### Creating the commit
+
+Use an explicit commit command with the prepared message:
+
+```bash
+git commit -m "<subject>" -m "<body>"
+```
+
+After committing, verify the result:
+
+```bash
+git show --stat --oneline HEAD
+git status --short
+```
+
+The final status should contain no unintended staged or committed files.
+Report the commit hash, summary, validation performed, and any remaining
+working-tree changes.
+
+### Commit scope
+
+- Prefer one focused commit per feature or bug fix.
+- Keep unrelated refactors, formatting-only changes, dependency upgrades, and
+  cleanup in separate commits unless they are required for the current work.
+- Do not rewrite, squash, reset, or discard existing commits or user changes
+  unless explicitly requested.
+- Never commit secrets or sensitive values. If a secret is found, stop and
+  report it instead of staging it.
