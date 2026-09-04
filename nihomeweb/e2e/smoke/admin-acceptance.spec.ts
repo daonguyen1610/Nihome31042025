@@ -178,12 +178,14 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       .toMatchObject({ status: "Approved" });
 
     await page.getByTestId("acceptance-delete").click();
-    await Promise.all([
+    const [deleteResponse] = await Promise.all([
       page.waitForResponse(
-        (r) => /\/api\/acceptance-records\/\d+$/.test(r.url()) && r.request().method() === "DELETE" && r.status() === 204,
+        (r) => /\/api\/acceptance-records\/\d+$/.test(r.url()) && r.request().method() === "DELETE",
+        { timeout: 30_000 },
       ),
       page.getByTestId("acceptance-delete-confirm").click(),
     ]);
+    expect(deleteResponse.status(), await deleteResponse.text()).toBe(204);
   });
 
   test("Reject then revise bumps revisionCount", async ({ api, loginAs }) => {

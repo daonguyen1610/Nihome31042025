@@ -5,6 +5,7 @@ import {
   createApprovedInvestmentRate,
   retireInvestmentRate,
 } from "../fixtures/materialRate";
+import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const DOCX_CONTENT = "NIH-430 DOCX preview evidence";
 const UNSAFE_LINK_TEXT = "Unsafe DOCX link";
@@ -159,9 +160,10 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
 
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.goto("/admin/quotes", { waitUntil: "networkidle" });
+    await page.getByPlaceholder(/Tìm|Search|搜索|検索/i).fill(quoteCode);
 
     const quoteRecord = page.locator("tr:visible, li:visible").filter({ hasText: quoteCode }).first();
-    await expect(quoteRecord).toBeVisible();
+    await expect(quoteRecord).toBeVisible({ timeout: 10_000 });
     await quoteRecord.click();
     await expect(page).toHaveURL(new RegExp(`/admin/quotes/${quoteId}$`));
     await expect(page.getByRole("heading", { name: new RegExp(quoteCode) })).toBeVisible();
@@ -232,9 +234,9 @@ test("sales manager uploads, renders, persists, and deletes a DOCX quote documen
     await expect(persistedItem).toBeHidden();
     await expect(page.getByText(/Chưa có tài liệu|No documents|尚未上传|まだありません/i)).toBeVisible();
   } finally {
-    if (quoteId) await api.delete(`/api/quotes/${quoteId}`, { headers });
-    if (opportunityId) await api.delete(`/api/opportunities/${opportunityId}`, { headers });
-    if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
+    if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
+    if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
     if (investmentRate) await retireInvestmentRate(api, headers, investmentRate);
   }
 });
@@ -319,9 +321,10 @@ test("sales manager opens BOQ version history from the mobile quote list", async
     await page.setViewportSize({ width: 390, height: 844 });
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.goto("/admin/quotes", { waitUntil: "networkidle" });
+    await page.getByPlaceholder(/Tìm|Search|搜索|検索/i).fill(quoteCode);
 
     const quoteCard = page.locator("li:visible").filter({ hasText: quoteCode }).first();
-    await expect(quoteCard).toBeVisible();
+    await expect(quoteCard).toBeVisible({ timeout: 10_000 });
     await quoteCard.click();
     await expect(page).toHaveURL(new RegExp(`/admin/quotes/${quoteId}$`));
 
@@ -341,9 +344,9 @@ test("sales manager opens BOQ version history from the mobile quote list", async
     await expect(versionTwoDialog.getByText(/Hiện tại|Current|当前|現行/i)).toBeVisible();
     await expect(versionTwoDialog.locator("input, textarea, select")).toHaveCount(0);
   } finally {
-    if (quoteId) await api.delete(`/api/quotes/${quoteId}`, { headers });
-    if (opportunityId) await api.delete(`/api/opportunities/${opportunityId}`, { headers });
-    if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
+    if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
+    if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
 });
 }); // end describe.serial

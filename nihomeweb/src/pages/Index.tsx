@@ -123,7 +123,7 @@ const Index = () => {
           return (
             <div
               key={i}
-              className="absolute inset-0 overflow-hidden transition-transform duration-1000 ease-[cubic-bezier(0.7,0,0.3,1)]"
+              className="absolute inset-0 overflow-hidden transition-transform duration-1000 [transition-timing-function:cubic-bezier(0.7,0,0.3,1)]"
               style={{ transform: `translateX(${offset * 100}%)` }}
             >
               {isVideoUrl(s.imageUrl) ? (
