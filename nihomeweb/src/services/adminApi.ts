@@ -1676,6 +1676,15 @@ export interface UpsertBoqMaterialRateLineRequest {
   unitPrice: string;
 }
 
+export interface UpsertInvestmentRateLineRequest {
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  normPerSqm: string;
+  unitRate: string;
+  wastePercent: string;
+}
+
 export interface CsvImportError {
   row?: number | null;
   column?: number | null;
@@ -4123,6 +4132,12 @@ export const adminApi = {
     }),
   createMaterialRateRevision: (catalogId: number, body: CreateMaterialRateRevisionRequest) =>
     api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions`, body),
+  createInvestmentMaterialRateLine: (catalogId: number, revisionId: number, body: UpsertInvestmentRateLineRequest) =>
+    api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines`, body),
+  updateInvestmentMaterialRateLine: (catalogId: number, revisionId: number, lineId: number, body: UpsertInvestmentRateLineRequest) =>
+    api.put<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${lineId}`, body),
+  deleteInvestmentMaterialRateLine: (catalogId: number, revisionId: number, lineId: number) =>
+    api.delete<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${lineId}`),
   createBoqMaterialRateLine: (catalogId: number, revisionId: number, body: UpsertBoqMaterialRateLineRequest) =>
     api.post<MaterialRateRevisionResponse>(`/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`, body),
   updateBoqMaterialRateLine: (catalogId: number, revisionId: number, lineId: number, body: UpsertBoqMaterialRateLineRequest) =>

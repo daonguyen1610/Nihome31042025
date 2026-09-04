@@ -342,6 +342,100 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task InvestmentLines_CreateUpdateDelete_RoundTripDecimalStringsAndAudit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var catalogResponse = await Client.PostAsJsonAsync("/api/material-rate-catalogs", new
+        {
+            catalogType = "InvestmentRate",
+            code = "INV-LINES-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant(),
+            name = "Suất đầu tư nhà phố",
+            currency = "VND",
+        });
+        var catalogId = (await ReadJsonAsync(catalogResponse)).GetProperty("id").GetInt32();
+        var revisionResponse = await Client.PostAsJsonAsync($"/api/material-rate-catalogs/{catalogId}/revisions", new
+        {
+            effectiveFrom = "2027-01-01",
+        });
+        var revisionId = (await ReadJsonAsync(revisionResponse)).GetProperty("id").GetInt32();
+        var lineUrl = $"/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/investment-lines";
+
+        var createResponse = await Client.PostAsJsonAsync(lineUrl, new
+        {
+            materialCode = "VL-XM-PC40",
+            materialName = "Xi măng Portland PCB40",
+            unit = "kg",
+            normPerSqm = "2.500001",
+            unitRate = "15000.2501",
+            wastePercent = "5.1250",
+        });
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createResponse);
+        var lineId = created.GetProperty("lines")[0].GetProperty("id").GetInt32();
+        ReadDecimalString(created.GetProperty("lines")[0].GetProperty("normPerSqm")).Should().Be(2.500001m);
+        ReadDecimalString(created.GetProperty("lines")[0].GetProperty("unitRate")).Should().Be(15000.2501m);
+        ReadDecimalString(created.GetProperty("lines")[0].GetProperty("wastePercent")).Should().Be(5.125m);
+        ReadDecimalString(created.GetProperty("lines")[0].GetProperty("amountPerSqm")).Should().Be(39422.5481m);
+
+        var updateResponse = await Client.PutAsJsonAsync($"{lineUrl}/{lineId}", new
+        {
+            materialCode = "VL-XM-PC40",
+            materialName = "Xi măng PCB40 cập nhật",
+            unit = "kg",
+            normPerSqm = "3",
+            unitRate = "20000.125",
+            wastePercent = "2.5",
+        });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await ReadJsonAsync(updateResponse);
+        ReadDecimalString(updated.GetProperty("totalRatePerSqm")).Should().Be(61500.3844m);
+
+        var deleteResponse = await Client.DeleteAsync($"{lineUrl}/{lineId}");
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(deleteResponse)).GetProperty("lines").GetArrayLength().Should().Be(0);
+
+        var expectedActions = new[] { "material-rate-line.create", "material-rate-line.update", "material-rate-line.delete" };
+        IReadOnlyList<AuditLog> auditRows = [];
+        for (var attempt = 0; attempt < 20 && auditRows.Count < expectedActions.Length; attempt++)
+        {
+            await Task.Delay(250);
+            await WithDbAsync(async db =>
+            {
+                auditRows = await db.AuditLogs.AsNoTracking()
+                    .Where(item => item.ResourceId == revisionId.ToString() && expectedActions.Contains(item.Action))
+                    .ToListAsync();
+            });
+        }
+        foreach (var expectedAction in expectedActions)
+        {
+            auditRows.Should().Contain(item => item.Action == expectedAction);
+        }
+    }
+
+    [Fact]
+    public async Task InvestmentLineMutations_AsRoleWithoutManagePermission_ReturnForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+        var request = new
+        {
+            materialCode = "VL-01",
+            materialName = "Vật liệu",
+            unit = "kg",
+            normPerSqm = 1,
+            unitRate = 1,
+            wastePercent = 0,
+        };
+
+        (await Client.PostAsJsonAsync("/api/material-rate-catalogs/1/revisions/1/investment-lines", request))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.PutAsJsonAsync("/api/material-rate-catalogs/1/revisions/1/investment-lines/1", request))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.DeleteAsync("/api/material-rate-catalogs/1/revisions/1/investment-lines/1"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task BoqLineMutations_AsRoleWithoutManagePermission_ReturnForbidden()
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));

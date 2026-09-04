@@ -1,4 +1,5 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const uid = () => Math.random().toString(36).slice(2, 10).toUpperCase();
 
@@ -353,6 +354,182 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
         headers,
         data: { catalogType: "Boq", code: boqCatalogCode, name: `BOQ catalog ${suffix}`, currency: "VND", isActive: false },
       });
+    }
+  }
+});
+
+test("creates a BOQ rate catalog and applies it to a persisted Quote", async ({
+  api,
+  page,
+  loginAs,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  test.setTimeout(120_000);
+  const token = await loginAs(TEST_USERS.superAdmin);
+  const headers = { Authorization: `Bearer ${token}` };
+  const suffix = uid();
+  const catalogCode = `BOQ-QUOTE-${suffix}`;
+  const catalogName = `BOQ to Quote ${suffix}`;
+  let customerId = 0;
+  let opportunityId = 0;
+  let catalogId = 0;
+  let revisionId = 0;
+  let quoteId = 0;
+
+  try {
+    const customerResponse = await api.post("/api/customers", {
+      headers,
+      data: {
+        type: "Individual",
+        name: `BOQ quote customer ${suffix}`,
+        sourceCode: "marketing",
+        primaryContact: {
+          fullName: "BOQ Quote Contact",
+          phone: `07${Date.now().toString().slice(-8)}`,
+          email: `boq-quote-${suffix.toLowerCase()}@test.example`,
+          isPrimary: true,
+        },
+      },
+    });
+    expect(customerResponse.status(), await customerResponse.text()).toBe(201);
+    customerId = (await customerResponse.json()).id as number;
+
+    const opportunityResponse = await api.post("/api/opportunities", {
+      headers,
+      data: {
+        name: `BOQ quote opportunity ${suffix}`,
+        customerId,
+        estimatedValue: 100_000_000,
+        winProbability: 50,
+      },
+    });
+    expect(opportunityResponse.status(), await opportunityResponse.text()).toBe(201);
+    opportunityId = (await opportunityResponse.json()).id as number;
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
+    await page.goto(`${baseURL}/admin/material-rates/boq`, { waitUntil: "networkidle" });
+
+    await page.locator("header").getByRole("button", { name: /New catalog/i }).click();
+    await page.getByTestId("material-rates-catalog-code").fill(catalogCode);
+    await page.getByTestId("material-rates-catalog-name").fill(catalogName);
+    const createCatalogPromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === "/api/material-rate-catalogs"
+      && response.request().method() === "POST",
+    );
+    await page.getByTestId("material-rates-catalog-save").click();
+    const createCatalogResponse = await createCatalogPromise;
+    expect(createCatalogResponse.status(), await createCatalogResponse.text()).toBe(201);
+    catalogId = ((await createCatalogResponse.json()).id as number);
+
+    const searchInput = page.getByPlaceholder(/Search catalog code or name/i);
+    const searchResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/material-rate-catalogs"
+        && url.searchParams.get("catalogType") === "Boq"
+        && url.searchParams.get("search") === catalogName;
+    });
+    await searchInput.fill(catalogName);
+    await searchResponse;
+    await page.getByRole("button", { name: new RegExp(catalogName) }).click();
+
+    await page.getByTestId("material-rates-new-revision").click();
+    await page.getByTestId("material-rates-effective-from").fill("2041-01-01");
+    await page.getByTestId("material-rates-effective-to").fill("2041-12-31");
+    const createRevisionPromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions`
+      && response.request().method() === "POST",
+    );
+    await page.getByTestId("material-rates-revision-save").click();
+    const createRevisionResponse = await createRevisionPromise;
+    expect(createRevisionResponse.status(), await createRevisionResponse.text()).toBe(201);
+    revisionId = ((await createRevisionResponse.json()).id as number);
+
+    const addBoqLine = async (code: string, name: string, quantity: string, unitPrice: string) => {
+      await page.getByTestId("material-rates-line-add").click();
+      await page.getByTestId("material-rates-line-code").fill(code);
+      await page.getByTestId("material-rates-line-name").fill(name);
+      await page.getByTestId("material-rates-line-unit").fill("m2");
+      await page.getByTestId("material-rates-line-quantity").fill(quantity);
+      await page.getByTestId("material-rates-line-price").fill(unitPrice);
+      const responsePromise = page.waitForResponse((response) =>
+        new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`
+        && response.request().method() === "POST",
+      );
+      await page.getByTestId("material-rates-line-save").click();
+      const response = await responsePromise;
+      expect(response.status(), await response.text()).toBe(201);
+    };
+    await addBoqLine("BOQ-FOUNDATION", "Foundation work", "2.5", "100");
+    await addBoqLine("BOQ-FINISH", "Finishing work", "3", "200");
+    await expect(page.getByText("850 VND", { exact: true }).last()).toBeVisible();
+
+    await page.getByTestId("material-rates-approve").click();
+    const approvePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/approve`
+      && response.request().method() === "POST",
+    );
+    await page.getByTestId("material-rates-decision-confirm").click();
+    expect((await approvePromise).status()).toBe(200);
+    await expect(page.getByTestId("material-rates-line-add")).toHaveCount(0);
+
+    await page.goto(`${baseURL}/admin/quotes?create=1&opportunityId=${opportunityId}`, { waitUntil: "networkidle" });
+    await page.getByTestId("quote-method").click();
+    await page.getByRole("option", { name: /BOQ/i }).click();
+    await page.getByTestId("quote-boq-catalog-date").fill("2041-06-15");
+    await page.getByTestId("quote-boq-catalog").click();
+    await page.getByRole("option", { name: new RegExp(catalogCode) }).click();
+    await page.getByTestId("quote-boq-catalog-apply").click();
+    await expect(page.getByTestId("quote-create-boq-name-0")).toHaveValue("Foundation work");
+    await expect(page.getByTestId("quote-create-boq-name-1")).toHaveValue("Finishing work");
+    await expect(page.getByTestId("quote-create-boq-price-0")).toHaveValue("100");
+    await expect(page.getByTestId("quote-create-boq-price-1")).toHaveValue("200");
+    await page.getByTestId("quote-discount").fill("0");
+    await page.getByTestId("quote-vat").fill("10");
+
+    const createQuotePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === "/api/quotes"
+      && response.request().method() === "POST",
+    );
+    await page.getByTestId("quote-create-save").click();
+    const createQuoteResponse = await createQuotePromise;
+    expect(createQuoteResponse.status(), await createQuoteResponse.text()).toBe(201);
+    const quote = await createQuoteResponse.json();
+    quoteId = quote.id as number;
+    expect(quote).toEqual(expect.objectContaining({
+      materialRateCatalogId: catalogId,
+      materialRateRevisionId: revisionId,
+      pricingEffectiveDate: "2041-06-15",
+      rateSource: "CatalogReference",
+      subtotal: 850,
+      grandTotal: 935,
+    }));
+    expect(quote.items).toEqual([
+      expect.objectContaining({ itemCode: "BOQ-FOUNDATION", quantity: "2.5", unitPrice: "100", amount: "250" }),
+      expect.objectContaining({ itemCode: "BOQ-FINISH", quantity: "3", unitPrice: "200", amount: "600" }),
+    ]);
+
+    await page.goto(`${baseURL}/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.reload({ waitUntil: "networkidle" });
+    await expect(page.getByText(catalogCode)).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Foundation work", exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Finishing work", exact: true })).toBeVisible();
+    const persistedResponse = await api.get(`/api/quotes/${quoteId}`, { headers });
+    expect(persistedResponse.status(), await persistedResponse.text()).toBe(200);
+    expect(await persistedResponse.json()).toEqual(expect.objectContaining({
+      materialRateCatalogCode: catalogCode,
+      materialRateRevisionVersion: 1,
+      subtotal: 850,
+      grandTotal: 935,
+    }));
+  } finally {
+    if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
+    if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
+    if (catalogId) {
+      const deleteCatalogResponse = await api.delete(`/api/material-rate-catalogs/${catalogId}`, { headers });
+      expect([204, 404], await deleteCatalogResponse.text()).toContain(deleteCatalogResponse.status());
     }
   }
 });

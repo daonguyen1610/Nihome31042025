@@ -55,3 +55,19 @@ public sealed class UpsertBoqMaterialRateLineRequest
     [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal? UnitPrice { get; set; }
 }
+
+public sealed class UpsertInvestmentRateLineRequest
+{
+    public string? MaterialCode { get; set; }
+    public string? MaterialName { get; set; }
+    public string? Unit { get; set; }
+
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public decimal? NormPerSqm { get; set; }
+
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public decimal? UnitRate { get; set; }
+
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+    public decimal? WastePercent { get; set; }
+}

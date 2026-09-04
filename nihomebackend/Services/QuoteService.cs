@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -49,6 +50,7 @@ public class QuoteService(
     private const int ExpiringSoonDays = 3;
     private const decimal MaxMoney = 9_999_999_999_999_999.99m;
     private const decimal MaxQuantity = 99_999_999_999_999.9999m;
+    private static readonly SemaphoreSlim QuoteCodeGate = new(1, 1);
 
     // ------------------------------ List / Get ------------------------------
 
@@ -197,6 +199,18 @@ public class QuoteService(
             throw new QuoteOperationException("Hạn hiệu lực không được nhỏ hơn hôm nay.");
         }
 
+        using var codeGateLease = await AcquireQuoteCodeGateAsync(ct);
+        await using IDbContextTransaction? transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+            : null;
+        if (transaction is not null && db.Database.IsSqlServer())
+        {
+            var codeLockResource = $"QuoteCode:{now.Year}";
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"DECLARE @lockResult int; EXEC @lockResult = sp_getapplock @Resource={codeLockResource}, @LockMode='Exclusive', @LockOwner='Transaction', @LockTimeout=10000; IF @lockResult < 0 THROW 51000, 'Unable to acquire Quote code lock.', 1;",
+                ct);
+        }
+
         var quote = new Quote
         {
             Code = await GenerateCodeAsync(now, ct),
@@ -232,10 +246,6 @@ public class QuoteService(
 
         ApplyItems(quote, request.Method, request.Items);
         RecomputeTotals(quote);
-
-        await using IDbContextTransaction? transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct)
-            : null;
 
         db.Quotes.Add(quote);
         db.QuoteApprovalLogs.Add(new QuoteApprovalLog
@@ -885,6 +895,24 @@ public class QuoteService(
             next = parsed + 1;
         }
         return $"{prefix}{next:D4}";
+    }
+
+    private static async Task<IDisposable> AcquireQuoteCodeGateAsync(CancellationToken ct)
+    {
+        await QuoteCodeGate.WaitAsync(ct);
+        return new QuoteCodeGateLease();
+    }
+
+    private sealed class QuoteCodeGateLease : IDisposable
+    {
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            QuoteCodeGate.Release();
+        }
     }
 
     private sealed record ResolvedRate(

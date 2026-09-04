@@ -65,6 +65,154 @@ public class MaterialRateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task InvestmentLines_CreateUpdateDelete_RecalculateTotalsAndCompactOrder()
+    {
+        var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 9, 1));
+
+        var first = await _sut.CreateInvestmentLineAsync(
+            catalog.Id,
+            revision.Id,
+            InvestmentLine(" VL-XM-PC40 ", " Xi măng PCB40 ", 2.5m, 15_000.25m, 5m),
+            7);
+        await _sut.CreateInvestmentLineAsync(
+            catalog.Id,
+            revision.Id,
+            InvestmentLine("VL-CAT", "Cát xây tô", 1m, 100m, 0m),
+            7);
+        var firstLine = first!.Lines.Single();
+
+        var updated = await _sut.UpdateInvestmentLineAsync(
+            catalog.Id,
+            revision.Id,
+            firstLine.Id,
+            InvestmentLine("VL-XM-PC40", "Xi măng Portland PCB40", 3m, 20_000.125m, 2.5m),
+            8);
+
+        var updatedLine = updated!.Lines.Single(item => item.Id == firstLine.Id);
+        Assert.Equal("VL-XM-PC40", updatedLine.MaterialCode);
+        Assert.Equal("Xi măng Portland PCB40", updatedLine.MaterialName);
+        Assert.Equal(61_500.3844m, updatedLine.AmountPerSqm);
+        Assert.Equal(61_600.3844m, updated.TotalRatePerSqm);
+        Assert.Equal(1, updatedLine.SortOrder);
+
+        var deleted = await _sut.DeleteInvestmentLineAsync(catalog.Id, revision.Id, firstLine.Id, 9);
+
+        var remaining = Assert.Single(deleted!.Lines);
+        Assert.Equal("VL-CAT", remaining.MaterialCode);
+        Assert.Equal(1, remaining.SortOrder);
+        Assert.Equal(100m, deleted.TotalRatePerSqm);
+        Assert.Null(await _db.MaterialRateLines.FindAsync(firstLine.Id));
+        Assert.Equal(9, (await _db.MaterialRateRevisions.FindAsync(revision.Id))!.UpdatedByUserId);
+    }
+
+    [Theory]
+    [InlineData("normRequired", "materialRates.investmentLine.validation.normRequired")]
+    [InlineData("norm", "materialRates.investmentLine.validation.normPositive")]
+    [InlineData("normScale", "materialRates.investmentLine.validation.normScale")]
+    [InlineData("rateRequired", "materialRates.investmentLine.validation.rateRequired")]
+    [InlineData("rate", "materialRates.investmentLine.validation.rateNonNegative")]
+    [InlineData("rateScale", "materialRates.investmentLine.validation.rateScale")]
+    [InlineData("wasteRequired", "materialRates.investmentLine.validation.wasteRequired")]
+    [InlineData("waste", "materialRates.investmentLine.validation.wasteRange")]
+    [InlineData("wasteScale", "materialRates.investmentLine.validation.wasteScale")]
+    public async Task CreateInvestmentLineAsync_RejectsInvalidNumbersWithoutMutation(
+        string field,
+        string expectedMessageKey)
+    {
+        var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 9, 1));
+        var request = InvestmentLine("VL-01", "Vật liệu", 1m, 100m, 0m);
+        if (field == "normRequired") request.NormPerSqm = null;
+        if (field == "norm") request.NormPerSqm = 0m;
+        if (field == "normScale") request.NormPerSqm = 1.0000001m;
+        if (field == "rateRequired") request.UnitRate = null;
+        if (field == "rate") request.UnitRate = -0.0001m;
+        if (field == "rateScale") request.UnitRate = 100.00001m;
+        if (field == "wasteRequired") request.WastePercent = null;
+        if (field == "waste") request.WastePercent = 100.0001m;
+        if (field == "wasteScale") request.WastePercent = 0.00001m;
+
+        var exception = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.CreateInvestmentLineAsync(catalog.Id, revision.Id, request, 1));
+
+        Assert.Equal(expectedMessageKey, exception.MessageKey);
+        Assert.Empty(_db.MaterialRateLines);
+    }
+
+    [Fact]
+    public async Task CreateInvestmentLineAsync_RejectsDuplicateCodeCaseInsensitively()
+    {
+        var (investmentCatalog, investmentRevision) = await CreateDraftAsync(new DateOnly(2026, 9, 1));
+        await _sut.CreateInvestmentLineAsync(
+            investmentCatalog.Id,
+            investmentRevision.Id,
+            InvestmentLine("VL-01", "Vật liệu", 1m, 100m, 0m),
+            1);
+
+        var duplicate = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.CreateInvestmentLineAsync(
+                investmentCatalog.Id,
+                investmentRevision.Id,
+                InvestmentLine("vl-01", "Trùng mã", 1m, 100m, 0m),
+                1));
+        Assert.Equal("materialRates.investmentLine.validation.duplicateCode", duplicate.MessageKey);
+        Assert.Single(_db.MaterialRateLines);
+    }
+
+    [Fact]
+    public async Task InvestmentLineMutations_RejectBoqForEveryVerb()
+    {
+        var (boqCatalog, boqRevision) = await CreateDraftAsync(
+            new DateOnly(2027, 1, 1), catalogType: MaterialRateCatalogType.Boq);
+        var created = await _sut.CreateBoqLineAsync(
+            boqCatalog.Id, boqRevision.Id, BoqLine("BT-MONG", "Bê tông móng"), 1);
+        var lineId = created!.Lines.Single().Id;
+
+        var createException = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.CreateInvestmentLineAsync(
+                boqCatalog.Id, boqRevision.Id, InvestmentLine("VL-01", "Sai loại", 1m, 100m, 0m), 1));
+        var updateException = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.UpdateInvestmentLineAsync(
+                boqCatalog.Id, boqRevision.Id, lineId, InvestmentLine("VL-01", "Sai loại", 1m, 100m, 0m), 1));
+        var deleteException = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.DeleteInvestmentLineAsync(boqCatalog.Id, boqRevision.Id, lineId, 1));
+
+        Assert.All([createException, updateException, deleteException], exception =>
+            Assert.Equal("materialRates.investmentLine.investmentOnly", exception.MessageKey));
+        Assert.Single(_db.MaterialRateLines);
+    }
+
+    [Theory]
+    [InlineData(MaterialRateRevisionStatus.Approved)]
+    [InlineData(MaterialRateRevisionStatus.Rejected)]
+    [InlineData(MaterialRateRevisionStatus.Retired)]
+    public async Task InvestmentLineMutations_RejectEveryImmutableStatusForEveryVerb(
+        MaterialRateRevisionStatus status)
+    {
+        var (investmentCatalog, investmentRevision) = await CreateDraftAsync(new DateOnly(2026, 9, 1));
+        var created = await _sut.CreateInvestmentLineAsync(
+            investmentCatalog.Id,
+            investmentRevision.Id,
+            InvestmentLine("VL-01", "Vật liệu", 1m, 100m, 0m),
+            1);
+        var lineId = created!.Lines.Single().Id;
+        investmentRevision.Status = status;
+        await _db.SaveChangesAsync();
+
+        var createException = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.CreateInvestmentLineAsync(
+                investmentCatalog.Id, investmentRevision.Id, InvestmentLine("VL-02", "Vật liệu mới", 1m, 100m, 0m), 1));
+        var updateException = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.UpdateInvestmentLineAsync(
+                investmentCatalog.Id, investmentRevision.Id, lineId, InvestmentLine("VL-01", "Vật liệu sửa", 1m, 100m, 0m), 1));
+        var deleteException = await Assert.ThrowsAsync<MaterialRateOperationException>(() =>
+            _sut.DeleteInvestmentLineAsync(investmentCatalog.Id, investmentRevision.Id, lineId, 1));
+
+        Assert.All([createException, updateException, deleteException], exception =>
+            Assert.Equal("materialRates.line.draftOnly", exception.MessageKey));
+        Assert.Single(_db.MaterialRateLines);
+    }
+
+    [Fact]
     public async Task ImportAsync_BoqCsvPersistsQuantityUnitPriceAndTotalAmount()
     {
         var (catalog, revision) = await CreateDraftAsync(
@@ -573,4 +721,19 @@ public class MaterialRateServiceTests : IDisposable
         Quantity = 10m,
         UnitPrice = 100_000m,
     };
+
+    private static UpsertInvestmentRateLineRequest InvestmentLine(
+        string code,
+        string name,
+        decimal norm,
+        decimal rate,
+        decimal waste) => new()
+        {
+            MaterialCode = code,
+            MaterialName = name,
+            Unit = "kg",
+            NormPerSqm = norm,
+            UnitRate = rate,
+            WastePercent = waste,
+        };
 }

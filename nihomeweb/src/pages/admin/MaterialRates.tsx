@@ -52,6 +52,7 @@ import {
   type MaterialRateRevisionResponse,
   type MaterialRateRevisionStatus,
   type UpsertBoqMaterialRateLineRequest,
+  type UpsertInvestmentRateLineRequest,
   type UpsertMaterialRateCatalogRequest,
 } from "@/services/adminApi";
 
@@ -83,6 +84,9 @@ const toScaledInteger = (value: string, scale: number) => {
 };
 const exceedsBoqAmountMaximum = (quantity: string, unitPrice: string) =>
   toScaledInteger(quantity, 4) * toScaledInteger(unitPrice, 2) > 999_999_999_999_999_999n * 100n;
+const exceedsInvestmentAmountMaximum = (norm: string, rate: string, waste: string) =>
+  toScaledInteger(norm, 6) * toScaledInteger(rate, 4) * (1_000_000n + toScaledInteger(waste, 4))
+    > 999_999_999_999_999_999n * 1_000_000_000_000n;
 
 const IMPORT_FIELD_KEYS: Record<string, string> = {
   MaterialCode: "materialRates.field.materialCode",
@@ -103,20 +107,24 @@ interface AdminMaterialRatesProps {
   catalogType?: MaterialRateCatalogType;
 }
 
-interface BoqLineForm {
+interface LineForm {
   itemCode: string;
   itemName: string;
   unit: string;
   quantity: string;
   unitPrice: string;
+  normPerSqm: string;
+  wastePercent: string;
 }
 
-const emptyBoqLine: BoqLineForm = {
+const emptyLine: LineForm = {
   itemCode: "",
   itemName: "",
   unit: "",
   quantity: "",
   unitPrice: "",
+  normPerSqm: "",
+  wastePercent: "",
 };
 
 const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRatesProps) => {
@@ -139,7 +147,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   const [bulkDeleteFailures, setBulkDeleteFailures] = useState<Array<{ id: number; name: string; message: string }>>([]);
   const [lineOpen, setLineOpen] = useState(false);
   const [editingLine, setEditingLine] = useState<MaterialRateLineResponse | null>(null);
-  const [lineForm, setLineForm] = useState<BoqLineForm>(emptyBoqLine);
+  const [lineForm, setLineForm] = useState<LineForm>(emptyLine);
   const [lineSaving, setLineSaving] = useState(false);
   const [lineError, setLineError] = useState<string | null>(null);
   const [deletingLine, setDeletingLine] = useState<MaterialRateLineResponse | null>(null);
@@ -459,7 +467,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
 
   const openNewLine = () => {
     setEditingLine(null);
-    setLineForm(emptyBoqLine);
+    setLineForm(emptyLine);
     setLineError(null);
     setLineOpen(true);
   };
@@ -472,6 +480,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       unit: line.unit,
       quantity: line.quantity,
       unitPrice: line.unitRate,
+      normPerSqm: line.normPerSqm,
+      wastePercent: line.wastePercent,
     });
     setLineError(null);
     setLineOpen(true);
@@ -526,19 +536,99 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     };
   };
 
-  const saveBoqLine = async () => {
+  const validateInvestmentLine = (): UpsertInvestmentRateLineRequest | null => {
+    const materialCode = lineForm.itemCode.trim();
+    const materialName = lineForm.itemName.trim();
+    const unit = lineForm.unit.trim();
+    if (!materialCode || materialCode.length > 50) {
+      setLineError(t("materialRates.investmentLine.validation.code"));
+      return null;
+    }
+    if (!materialName || materialName.length > 200) {
+      setLineError(t("materialRates.investmentLine.validation.name"));
+      return null;
+    }
+    if (!unit || unit.length > 30) {
+      setLineError(t("materialRates.line.validation.unit"));
+      return null;
+    }
+    if (!lineForm.normPerSqm) {
+      setLineError(t("materialRates.investmentLine.validation.normRequired"));
+      return null;
+    }
+    if (Number(lineForm.normPerSqm) <= 0) {
+      setLineError(t("materialRates.investmentLine.validation.normPositive"));
+      return null;
+    }
+    if (!/^\d+(?:\.\d{1,6})?$/.test(lineForm.normPerSqm)) {
+      setLineError(t("materialRates.investmentLine.validation.normScale"));
+      return null;
+    }
+    if (!lineForm.unitPrice) {
+      setLineError(t("materialRates.investmentLine.validation.rateRequired"));
+      return null;
+    }
+    if (Number(lineForm.unitPrice) < 0) {
+      setLineError(t("materialRates.investmentLine.validation.rateNonNegative"));
+      return null;
+    }
+    if (!/^\d+(?:\.\d{1,4})?$/.test(lineForm.unitPrice)) {
+      setLineError(t("materialRates.investmentLine.validation.rateScale"));
+      return null;
+    }
+    if (!lineForm.wastePercent) {
+      setLineError(t("materialRates.investmentLine.validation.wasteRequired"));
+      return null;
+    }
+    if (Number(lineForm.wastePercent) < 0 || Number(lineForm.wastePercent) > 100) {
+      setLineError(t("materialRates.investmentLine.validation.wasteRange"));
+      return null;
+    }
+    if (!/^\d+(?:\.\d{1,4})?$/.test(lineForm.wastePercent)) {
+      setLineError(t("materialRates.investmentLine.validation.wasteScale"));
+      return null;
+    }
+    if (exceedsIntegerDigits(lineForm.normPerSqm, 12)) {
+      setLineError(t("materialRates.investmentLine.validation.normMaximum"));
+      return null;
+    }
+    if (exceedsIntegerDigits(lineForm.unitPrice, 14)) {
+      setLineError(t("materialRates.investmentLine.validation.rateMaximum"));
+      return null;
+    }
+    if (exceedsInvestmentAmountMaximum(lineForm.normPerSqm, lineForm.unitPrice, lineForm.wastePercent)) {
+      setLineError(t("materialRates.investmentLine.validation.amountMaximum"));
+      return null;
+    }
+    return {
+      materialCode,
+      materialName,
+      unit,
+      normPerSqm: lineForm.normPerSqm,
+      unitRate: lineForm.unitPrice,
+      wastePercent: lineForm.wastePercent,
+    };
+  };
+
+  const saveLine = async () => {
     if (!selectedCatalogId || !selectedRevision) return;
-    const request = validateBoqLine();
+    const request = catalogType === "Boq" ? validateBoqLine() : validateInvestmentLine();
     if (!request) return;
     setLineSaving(true);
     setLineError(null);
     try {
-      const { data } = editingLine
-        ? await adminApi.updateBoqMaterialRateLine(selectedCatalogId, selectedRevision.id, editingLine.id, request)
-        : await adminApi.createBoqMaterialRateLine(selectedCatalogId, selectedRevision.id, request);
+      const { data } = catalogType === "Boq"
+        ? editingLine
+          ? await adminApi.updateBoqMaterialRateLine(selectedCatalogId, selectedRevision.id, editingLine.id, request as UpsertBoqMaterialRateLineRequest)
+          : await adminApi.createBoqMaterialRateLine(selectedCatalogId, selectedRevision.id, request as UpsertBoqMaterialRateLineRequest)
+        : editingLine
+          ? await adminApi.updateInvestmentMaterialRateLine(selectedCatalogId, selectedRevision.id, editingLine.id, request as UpsertInvestmentRateLineRequest)
+          : await adminApi.createInvestmentMaterialRateLine(selectedCatalogId, selectedRevision.id, request as UpsertInvestmentRateLineRequest);
       applyRevision(data);
       setLineOpen(false);
-      toast({ title: t(editingLine ? "materialRates.line.updated" : "materialRates.line.created") });
+      toast({ title: t(catalogType === "Boq"
+        ? editingLine ? "materialRates.line.updated" : "materialRates.line.created"
+        : editingLine ? "materialRates.investmentLine.updated" : "materialRates.investmentLine.created") });
     } catch (err) {
       setLineError(apiErrorMessage(err));
     } finally {
@@ -546,15 +636,17 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     }
   };
 
-  const deleteBoqLine = async () => {
+  const deleteLine = async () => {
     if (!selectedCatalogId || !selectedRevision || !deletingLine) return;
     setLineDeleting(true);
     setLineError(null);
     try {
-      const { data } = await adminApi.deleteBoqMaterialRateLine(selectedCatalogId, selectedRevision.id, deletingLine.id);
+      const { data } = catalogType === "Boq"
+        ? await adminApi.deleteBoqMaterialRateLine(selectedCatalogId, selectedRevision.id, deletingLine.id)
+        : await adminApi.deleteInvestmentMaterialRateLine(selectedCatalogId, selectedRevision.id, deletingLine.id);
       applyRevision(data);
       setDeletingLine(null);
-      toast({ title: t("materialRates.line.deleted") });
+      toast({ title: t(catalogType === "Boq" ? "materialRates.line.deleted" : "materialRates.investmentLine.deleted") });
     } catch (err) {
       setLineError(apiErrorMessage(err));
     } finally {
@@ -562,7 +654,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     }
   };
 
-  const canEditBoqLines = catalogType === "Boq" && canManage && selectedRevision?.status === "Draft";
+  const canEditLines = canManage && selectedRevision?.status === "Draft";
 
   const completedSteps = [
     Boolean(selectedCatalog),
@@ -750,14 +842,14 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                         {selectedRevision.decisionNote && <p className="rounded bg-muted p-2 text-xs">{selectedRevision.decisionNote}</p>}
                         {isTerminalRevision && <div className="flex gap-2 rounded-md border bg-muted/40 p-3 text-sm" data-testid="material-rates-terminal-hint"><Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" /><span>{t("materialRates.revision.terminalHint")}</span></div>}
 
-                        {canEditBoqLines && (
+                        {canEditLines && (
                           <section className="flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between" data-testid="material-rates-manual-entry">
                             <div>
-                              <h4 className="text-sm font-semibold">{t("materialRates.line.manageTitle")}</h4>
+                              <h4 className="text-sm font-semibold">{t(catalogType === "Boq" ? "materialRates.line.manageTitle" : "materialRates.investmentLine.manageTitle")}</h4>
                               <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">{t("materialRates.line.manageHint")}</p>
                             </div>
                             <Button size="sm" className="shrink-0" data-testid="material-rates-line-add" onClick={openNewLine}>
-                              <Plus className="mr-1.5 h-4 w-4" />{t("materialRates.line.add")}
+                              <Plus className="mr-1.5 h-4 w-4" />{t(catalogType === "Boq" ? "materialRates.line.add" : "materialRates.investmentLine.add")}
                             </Button>
                           </section>
                         )}
@@ -807,8 +899,50 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                         {importErrors.length > 0 && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3"><p className="mb-2 text-sm font-medium text-destructive">{t("materialRates.import.errors")}</p><ul className="space-y-1 text-xs text-destructive">{importErrors.map((item, index) => <li key={`${item.row}-${item.column}-${index}`}>{item.row ? t("materialRates.import.errorLocation", { row: item.row, column: item.column ?? "—" }) : ""} {importErrorMessage(item)}</li>)}</ul></div>}
 
                         {selectedRevision.lines.length === 0 ? <p className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">{t(catalogType === "Boq" ? "materialRates.lines.emptyBoq" : "materialRates.lines.empty")}</p> : <>
-                          <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[720px] divide-y text-sm"><thead className="bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-2 py-2 text-left">{t(catalogType === "Boq" ? "materialRates.field.itemCode" : "materialRates.field.materialCode")}</th><th className="px-2 py-2 text-left">{t(catalogType === "Boq" ? "materialRates.field.itemName" : "materialRates.field.materialName")}</th><th className="px-2 py-2 text-left">{t("materialRates.field.unit")}</th>{catalogType === "Boq" ? <><th className="px-2 py-2 text-right">{t("materialRates.field.quantity")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.totalAmount")}</th>{canEditBoqLines && <th className="px-2 py-2 text-right">{t("materialRates.line.actions")}</th>}</> : <><th className="px-2 py-2 text-right">{t("materialRates.field.normPerSqm")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.wastePercent")}</th><th className="px-2 py-2 text-right">{t("materialRates.field.amountPerSqm")}</th></>}</tr></thead><tbody className="divide-y">{selectedRevision.lines.map((line) => <tr key={line.id} data-testid={`material-rates-line-${line.id}`}><td className="px-2 py-2">{line.materialCode}</td><td className="px-2 py-2 font-medium">{line.materialName}</td><td className="px-2 py-2">{line.unit}</td>{catalogType === "Boq" ? <><td className="px-2 py-2 text-right">{line.quantity}</td><td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td><td className="px-2 py-2 text-right font-medium">{formatVnd(line.amountPerSqm)}</td>{canEditBoqLines && <td className="px-2 py-2"><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" data-testid={`material-rates-line-edit-${line.id}`} aria-label={`${t("common.edit")} ${line.materialName}`} onClick={() => openEditLine(line)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" data-testid={`material-rates-line-delete-${line.id}`} aria-label={`${t("materialRates.line.delete")} ${line.materialName}`} onClick={() => { setLineError(null); setDeletingLine(line); }}><Trash2 className="h-4 w-4" /></Button></div></td>}</> : <><td className="px-2 py-2 text-right">{line.normPerSqm}</td><td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td><td className="px-2 py-2 text-right">{line.wastePercent}%</td><td className="px-2 py-2 text-right font-medium">{formatVnd(line.amountPerSqm)}</td></>}</tr>)}</tbody></table></div>
-                          <ul className="grid gap-2 md:hidden">{selectedRevision.lines.map((line) => <li key={line.id} className="rounded border p-3 text-sm" data-testid={`material-rates-line-card-${line.id}`}><div className="flex justify-between gap-2"><span className="font-medium">{line.materialName}</span><span className="font-semibold">{formatVnd(line.amountPerSqm)}</span></div><p className="text-xs text-muted-foreground">{catalogType === "Boq" ? `${line.materialCode} · ${line.quantity} ${line.unit} · ${formatVnd(line.unitRate)}` : `${line.materialCode} · ${line.normPerSqm} ${line.unit}/m² · ${formatVnd(line.unitRate)} · ${line.wastePercent}%`}</p>{canEditBoqLines && <div className="mt-3 flex justify-end gap-2 border-t pt-2"><Button size="sm" variant="outline" onClick={() => openEditLine(line)}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button><Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => { setLineError(null); setDeletingLine(line); }}><Trash2 className="mr-1 h-4 w-4" />{t("materialRates.line.delete")}</Button></div>}</li>)}</ul>
+                          <div className="hidden overflow-x-auto md:block">
+                            <table className="w-full min-w-[720px] divide-y text-sm">
+                              <thead className="bg-muted/40 text-xs text-muted-foreground">
+                                <tr>
+                                  <th className="px-2 py-2 text-left">{t(catalogType === "Boq" ? "materialRates.field.itemCode" : "materialRates.field.materialCode")}</th>
+                                  <th className="px-2 py-2 text-left">{t(catalogType === "Boq" ? "materialRates.field.itemName" : "materialRates.field.materialName")}</th>
+                                  <th className="px-2 py-2 text-left">{t("materialRates.field.unit")}</th>
+                                  {catalogType === "Boq" ? <>
+                                    <th className="px-2 py-2 text-right">{t("materialRates.field.quantity")}</th>
+                                    <th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th>
+                                    <th className="px-2 py-2 text-right">{t("materialRates.field.totalAmount")}</th>
+                                  </> : <>
+                                    <th className="px-2 py-2 text-right">{t("materialRates.field.normPerSqm")}</th>
+                                    <th className="px-2 py-2 text-right">{t("materialRates.field.unitRate")}</th>
+                                    <th className="px-2 py-2 text-right">{t("materialRates.field.wastePercent")}</th>
+                                    <th className="px-2 py-2 text-right">{t("materialRates.field.amountPerSqm")}</th>
+                                  </>}
+                                  {canEditLines && <th className="px-2 py-2 text-right">{t("materialRates.line.actions")}</th>}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {selectedRevision.lines.map((line) => <tr key={line.id} data-testid={`material-rates-line-${line.id}`}>
+                                  <td className="px-2 py-2">{line.materialCode}</td>
+                                  <td className="px-2 py-2 font-medium">{line.materialName}</td>
+                                  <td className="px-2 py-2">{line.unit}</td>
+                                  {catalogType === "Boq" ? <>
+                                    <td className="px-2 py-2 text-right">{line.quantity}</td>
+                                    <td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td>
+                                    <td className="px-2 py-2 text-right font-medium">{formatVnd(line.amountPerSqm)}</td>
+                                  </> : <>
+                                    <td className="px-2 py-2 text-right">{line.normPerSqm}</td>
+                                    <td className="px-2 py-2 text-right">{formatVnd(line.unitRate)}</td>
+                                    <td className="px-2 py-2 text-right">{line.wastePercent}%</td>
+                                    <td className="px-2 py-2 text-right font-medium">{formatVnd(line.amountPerSqm)}</td>
+                                  </>}
+                                  {canEditLines && <td className="px-2 py-2"><div className="flex justify-end gap-1">
+                                    <Button size="icon" variant="ghost" data-testid={`material-rates-line-edit-${line.id}`} aria-label={`${t("common.edit")} ${line.materialName}`} onClick={() => openEditLine(line)}><Pencil className="h-4 w-4" /></Button>
+                                    <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" data-testid={`material-rates-line-delete-${line.id}`} aria-label={`${t("materialRates.line.delete")} ${line.materialName}`} onClick={() => { setLineError(null); setDeletingLine(line); }}><Trash2 className="h-4 w-4" /></Button>
+                                  </div></td>}
+                                </tr>)}
+                              </tbody>
+                            </table>
+                          </div>
+                          <ul className="grid gap-2 md:hidden">{selectedRevision.lines.map((line) => <li key={line.id} className="rounded border p-3 text-sm" data-testid={`material-rates-line-card-${line.id}`}><div className="flex justify-between gap-2"><span className="font-medium">{line.materialName}</span><span className="font-semibold">{formatVnd(line.amountPerSqm)}</span></div><p className="text-xs text-muted-foreground">{catalogType === "Boq" ? `${line.materialCode} · ${line.quantity} ${line.unit} · ${formatVnd(line.unitRate)}` : `${line.materialCode} · ${line.normPerSqm} ${line.unit}/m² · ${formatVnd(line.unitRate)} · ${line.wastePercent}%`}</p>{canEditLines && <div className="mt-3 flex justify-end gap-2 border-t pt-2"><Button size="sm" variant="outline" onClick={() => openEditLine(line)}><Pencil className="mr-1 h-4 w-4" />{t("common.edit")}</Button><Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => { setLineError(null); setDeletingLine(line); }}><Trash2 className="mr-1 h-4 w-4" />{t("materialRates.line.delete")}</Button></div>}</li>)}</ul>
                         </>}
                       </div>
                     )}
@@ -831,37 +965,48 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       <Dialog open={lineOpen} onOpenChange={(open) => { if (!lineSaving) setLineOpen(open); }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{t(editingLine ? "materialRates.line.edit" : "materialRates.line.add")}</DialogTitle>
-            <DialogDescription>{t("materialRates.line.formHint")}</DialogDescription>
+            <DialogTitle>{t(catalogType === "Boq"
+              ? editingLine ? "materialRates.line.edit" : "materialRates.line.add"
+              : editingLine ? "materialRates.investmentLine.edit" : "materialRates.investmentLine.add")}</DialogTitle>
+            <DialogDescription>{t(catalogType === "Boq" ? "materialRates.line.formHint" : "materialRates.investmentLine.formHint")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label htmlFor="boq-item-code">{t("materialRates.field.itemCode")} *</Label>
-              <Input id="boq-item-code" data-testid="material-rates-line-code" maxLength={60} autoFocus value={lineForm.itemCode} onChange={(event) => setLineForm({ ...lineForm, itemCode: event.target.value })} placeholder="BT-MONG-M300" />
+              <Label htmlFor="material-rate-line-code">{t(catalogType === "Boq" ? "materialRates.field.itemCode" : "materialRates.field.materialCode")} *</Label>
+              <Input id="material-rate-line-code" data-testid="material-rates-line-code" maxLength={catalogType === "Boq" ? 60 : 50} autoFocus value={lineForm.itemCode} onChange={(event) => setLineForm({ ...lineForm, itemCode: event.target.value })} placeholder={catalogType === "Boq" ? "BT-MONG-M300" : "VL-XM-PC40"} />
             </div>
             <div>
-              <Label htmlFor="boq-unit">{t("materialRates.field.unit")} *</Label>
-              <Input id="boq-unit" data-testid="material-rates-line-unit" maxLength={30} value={lineForm.unit} onChange={(event) => setLineForm({ ...lineForm, unit: event.target.value })} placeholder="m3" />
+              <Label htmlFor="material-rate-line-unit">{t("materialRates.field.unit")} *</Label>
+              <Input id="material-rate-line-unit" data-testid="material-rates-line-unit" maxLength={30} value={lineForm.unit} onChange={(event) => setLineForm({ ...lineForm, unit: event.target.value })} placeholder={catalogType === "Boq" ? "m3" : "kg"} />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="boq-item-name">{t("materialRates.field.itemName")} *</Label>
-              <Input id="boq-item-name" data-testid="material-rates-line-name" maxLength={300} value={lineForm.itemName} onChange={(event) => setLineForm({ ...lineForm, itemName: event.target.value })} placeholder={t("materialRates.line.nameExample")} />
+              <Label htmlFor="material-rate-line-name">{t(catalogType === "Boq" ? "materialRates.field.itemName" : "materialRates.field.materialName")} *</Label>
+              <Input id="material-rate-line-name" data-testid="material-rates-line-name" maxLength={catalogType === "Boq" ? 300 : 200} value={lineForm.itemName} onChange={(event) => setLineForm({ ...lineForm, itemName: event.target.value })} placeholder={t(catalogType === "Boq" ? "materialRates.line.nameExample" : "materialRates.investmentLine.nameExample")} />
             </div>
-            <div>
-              <Label htmlFor="boq-quantity">{t("materialRates.field.quantity")} *</Label>
-              <Input id="boq-quantity" data-testid="material-rates-line-quantity" type="number" inputMode="decimal" min="0.0001" max="999999999999.9999" step="0.0001" value={lineForm.quantity} onChange={(event) => setLineForm({ ...lineForm, quantity: event.target.value })} placeholder="12.5000" />
+            {catalogType === "Boq" ? <div>
+              <Label htmlFor="material-rate-line-quantity">{t("materialRates.field.quantity")} *</Label>
+              <Input id="material-rate-line-quantity" data-testid="material-rates-line-quantity" type="number" inputMode="decimal" min="0.0001" max="999999999999.9999" step="0.0001" value={lineForm.quantity} onChange={(event) => setLineForm({ ...lineForm, quantity: event.target.value })} placeholder="12.5000" />
               <p className="mt-1 text-xs text-muted-foreground">{t("materialRates.line.quantityHint")}</p>
-            </div>
+            </div> : <div>
+              <Label htmlFor="material-rate-line-norm">{t("materialRates.field.normPerSqm")} *</Label>
+              <Input id="material-rate-line-norm" data-testid="material-rates-line-norm" type="number" inputMode="decimal" min="0.000001" max="999999999999.999999" step="0.000001" value={lineForm.normPerSqm} onChange={(event) => setLineForm({ ...lineForm, normPerSqm: event.target.value })} placeholder="2.500000" />
+              <p className="mt-1 text-xs text-muted-foreground">{t("materialRates.investmentLine.normHint")}</p>
+            </div>}
             <div>
-              <Label htmlFor="boq-unit-price">{t("materialRates.field.unitRate")} *</Label>
-              <Input id="boq-unit-price" data-testid="material-rates-line-price" type="number" inputMode="decimal" min="0" max="99999999999999.99" step="0.01" value={lineForm.unitPrice} onChange={(event) => setLineForm({ ...lineForm, unitPrice: event.target.value })} placeholder="1500000.25" />
-              <p className="mt-1 text-xs text-muted-foreground">{t("materialRates.line.priceHint")}</p>
+              <Label htmlFor="material-rate-line-price">{t("materialRates.field.unitRate")} *</Label>
+              <Input id="material-rate-line-price" data-testid="material-rates-line-price" type="number" inputMode="decimal" min="0" max={catalogType === "Boq" ? "99999999999999.99" : "99999999999999.9999"} step={catalogType === "Boq" ? "0.01" : "0.0001"} value={lineForm.unitPrice} onChange={(event) => setLineForm({ ...lineForm, unitPrice: event.target.value })} placeholder={catalogType === "Boq" ? "1500000.25" : "15000.2500"} />
+              <p className="mt-1 text-xs text-muted-foreground">{t(catalogType === "Boq" ? "materialRates.line.priceHint" : "materialRates.investmentLine.rateHint")}</p>
             </div>
+            {catalogType === "InvestmentRate" && <div>
+              <Label htmlFor="material-rate-line-waste">{t("materialRates.field.wastePercent")} *</Label>
+              <Input id="material-rate-line-waste" data-testid="material-rates-line-waste" type="number" inputMode="decimal" min="0" max="100" step="0.0001" value={lineForm.wastePercent} onChange={(event) => setLineForm({ ...lineForm, wastePercent: event.target.value })} placeholder="5.0000" />
+              <p className="mt-1 text-xs text-muted-foreground">{t("materialRates.investmentLine.wasteHint")}</p>
+            </div>}
           </div>
           {lineError && <p className="text-sm text-destructive" role="alert" data-testid="material-rates-line-error">{lineError}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setLineOpen(false)} disabled={lineSaving}>{t("common.cancel")}</Button>
-            <Button data-testid="material-rates-line-save" onClick={() => void saveBoqLine()} disabled={lineSaving}>{lineSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.save")}</Button>
+            <Button data-testid="material-rates-line-save" onClick={() => void saveLine()} disabled={lineSaving}>{lineSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("common.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -869,14 +1014,14 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       <Dialog open={deletingLine !== null} onOpenChange={(open) => { if (!open && !lineDeleting) setDeletingLine(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("materialRates.line.deleteTitle")}</DialogTitle>
-            <DialogDescription>{t("materialRates.line.deleteConfirm", { name: deletingLine?.materialName ?? "" })}</DialogDescription>
+            <DialogTitle>{t(catalogType === "Boq" ? "materialRates.line.deleteTitle" : "materialRates.investmentLine.deleteTitle")}</DialogTitle>
+            <DialogDescription>{t(catalogType === "Boq" ? "materialRates.line.deleteConfirm" : "materialRates.investmentLine.deleteConfirm", { name: deletingLine?.materialName ?? "" })}</DialogDescription>
           </DialogHeader>
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{t("materialRates.line.deleteWarning")}</div>
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{t(catalogType === "Boq" ? "materialRates.line.deleteWarning" : "materialRates.investmentLine.deleteWarning")}</div>
           {lineError && <p className="text-sm text-destructive" role="alert">{lineError}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeletingLine(null)} disabled={lineDeleting}>{t("common.cancel")}</Button>
-            <Button variant="destructive" data-testid="material-rates-line-delete-confirm" onClick={() => void deleteBoqLine()} disabled={lineDeleting}>{lineDeleting && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("materialRates.line.delete")}</Button>
+            <Button variant="destructive" data-testid="material-rates-line-delete-confirm" onClick={() => void deleteLine()} disabled={lineDeleting}>{lineDeleting && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t("materialRates.line.delete")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -64,6 +64,30 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_Concurrently_AssignsDistinctCodes()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var firstOpportunityId = await CreateOpportunityAsync();
+        var secondOpportunityId = await CreateOpportunityAsync();
+
+        Task<HttpResponseMessage> CreateQuote(int opportunityId) => Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId,
+            method = "Boq",
+            items = new[] { new { name = "Concurrent item", unit = "item", quantity = 1m, unitPrice = 100m } },
+            discountPercent = 0m,
+            vatPercent = 10m,
+        });
+
+        var responses = await Task.WhenAll(CreateQuote(firstOpportunityId), CreateQuote(secondOpportunityId));
+
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.Created);
+        var codes = await Task.WhenAll(responses.Select(async response =>
+            (await ReadJsonAsync(response)).GetProperty("code").GetString()));
+        codes.Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
     public async Task Create_AsSale_CannotAssignAnotherOwner()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));

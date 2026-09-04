@@ -77,6 +77,72 @@ test.describe("Material rate customer import workflow", () => {
     await searchResponse;
     await page.getByRole("button", { name: new RegExp(catalogName) }).click();
 
+    await expect(page.getByTestId("material-rates-manual-entry")).toContainText(/Add and edit material rows/i);
+    await page.getByTestId("material-rates-line-add").click();
+    await page.getByTestId("material-rates-line-code").fill("VL-MANUAL");
+    await page.getByTestId("material-rates-line-name").fill("Manually entered cement");
+    await page.getByTestId("material-rates-line-unit").fill("kg");
+    await page.getByTestId("material-rates-line-norm").fill("2.5");
+    await page.getByTestId("material-rates-line-save").click();
+    await expect(page.getByTestId("material-rates-line-error")).toContainText(/Unit rate is required/i);
+    await page.getByTestId("material-rates-line-price").fill("-1");
+    await page.getByTestId("material-rates-line-waste").fill("5");
+    await page.getByTestId("material-rates-line-save").click();
+    await expect(page.getByTestId("material-rates-line-error")).toContainText(/Unit rate cannot be negative/i);
+    await page.getByTestId("material-rates-line-price").fill("100");
+    await page.getByTestId("material-rates-line-waste").fill("-1");
+    await page.getByTestId("material-rates-line-save").click();
+    await expect(page.getByTestId("material-rates-line-error")).toContainText(/Waste must be between 0 and 100/i);
+    await page.getByTestId("material-rates-line-waste").fill("5");
+    const createLinePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines`
+      && response.request().method() === "POST",
+    );
+    await page.getByTestId("material-rates-line-save").click();
+    const createLineResponse = await createLinePromise;
+    expect(createLineResponse.status(), await createLineResponse.text()).toBe(201);
+    const createdLineRevision = await createLineResponse.json();
+    const manualLine = createdLineRevision.lines.find(
+      (line: { materialCode: string }) => line.materialCode === "VL-MANUAL",
+    );
+    expect(manualLine).toEqual(expect.objectContaining({ amountPerSqm: "262.5", sortOrder: 1 }));
+
+    await page.getByTestId(`material-rates-line-edit-${manualLine.id}`).click();
+    await page.getByTestId("material-rates-line-name").fill("Updated manually entered cement");
+    await page.getByTestId("material-rates-line-norm").fill("3");
+    await page.getByTestId("material-rates-line-price").fill("200");
+    await page.getByTestId("material-rates-line-waste").fill("10");
+    const updateLinePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${manualLine.id}`
+      && response.request().method() === "PUT",
+    );
+    await page.getByTestId("material-rates-line-save").click();
+    const updateLineResponse = await updateLinePromise;
+    expect(updateLineResponse.status(), await updateLineResponse.text()).toBe(200);
+    expect(await updateLineResponse.json()).toEqual(expect.objectContaining({ totalRatePerSqm: "660" }));
+
+    await page.reload({ waitUntil: "networkidle" });
+    const reloadSearchResponse = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/material-rate-catalogs"
+        && url.searchParams.get("search") === catalogName
+        && response.request().method() === "GET";
+    });
+    await page.getByPlaceholder(/Tìm mã hoặc tên danh mục|Search catalog code or name/i).fill(catalogName);
+    await reloadSearchResponse;
+    await page.getByRole("button", { name: new RegExp(catalogName) }).click();
+    await expect(page.locator("tbody").getByText("Updated manually entered cement", { exact: true })).toBeVisible();
+    await page.getByTestId(`material-rates-line-delete-${manualLine.id}`).click();
+    await expect(page.getByRole("dialog")).toContainText(/total rate\/m² is recalculated/i);
+    const deleteLinePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === `/api/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${manualLine.id}`
+      && response.request().method() === "DELETE",
+    );
+    await page.getByTestId("material-rates-line-delete-confirm").click();
+    const deleteLineResponse = await deleteLinePromise;
+    expect(deleteLineResponse.status(), await deleteLineResponse.text()).toBe(200);
+    expect((await deleteLineResponse.json()).lines).toHaveLength(0);
+
     await page.getByTestId("material-rates-import-file").setInputFiles({
       name: download.suggestedFilename(),
       mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

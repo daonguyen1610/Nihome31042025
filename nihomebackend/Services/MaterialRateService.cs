@@ -20,6 +20,9 @@ public interface IMaterialRateService
     Task<List<MaterialRateRevisionResponse>?> ListRevisionsAsync(int catalogId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> GetRevisionAsync(int catalogId, int revisionId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> CreateRevisionAsync(int catalogId, CreateMaterialRateRevisionRequest request, int userId, CancellationToken ct = default);
+    Task<MaterialRateRevisionResponse?> CreateInvestmentLineAsync(int catalogId, int revisionId, UpsertInvestmentRateLineRequest request, int userId, CancellationToken ct = default);
+    Task<MaterialRateRevisionResponse?> UpdateInvestmentLineAsync(int catalogId, int revisionId, int lineId, UpsertInvestmentRateLineRequest request, int userId, CancellationToken ct = default);
+    Task<MaterialRateRevisionResponse?> DeleteInvestmentLineAsync(int catalogId, int revisionId, int lineId, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> CreateBoqLineAsync(int catalogId, int revisionId, UpsertBoqMaterialRateLineRequest request, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> UpdateBoqLineAsync(int catalogId, int revisionId, int lineId, UpsertBoqMaterialRateLineRequest request, int userId, CancellationToken ct = default);
     Task<MaterialRateRevisionResponse?> DeleteBoqLineAsync(int catalogId, int revisionId, int lineId, int userId, CancellationToken ct = default);
@@ -263,6 +266,99 @@ public sealed class MaterialRateService(
         return await GetRevisionAsync(catalogId, revision.Id, ct);
     }
 
+    public async Task<MaterialRateRevisionResponse?> CreateInvestmentLineAsync(
+        int catalogId,
+        int revisionId,
+        UpsertInvestmentRateLineRequest request,
+        int userId,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
+        var revision = await GetEditableInvestmentRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return null;
+        var values = ValidateInvestmentLine(request);
+        EnsureUniqueLineCode(revision, values.Code, DuplicateInvestmentCode);
+        revision.Lines.Add(new MaterialRateLine
+        {
+            MaterialCode = values.Code,
+            MaterialName = values.Name,
+            Unit = values.Unit,
+            NormPerSqm = values.Norm,
+            UnitRate = values.Rate,
+            WastePercent = values.Waste,
+            AmountPerSqm = values.Amount,
+            SortOrder = revision.Lines.Count == 0 ? 1 : revision.Lines.Max(line => line.SortOrder) + 1,
+        });
+        TouchRevision(revision, userId);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+        {
+            throw DuplicateInvestmentCode();
+        }
+        return await GetRevisionAsync(catalogId, revisionId, ct);
+    }
+
+    public async Task<MaterialRateRevisionResponse?> UpdateInvestmentLineAsync(
+        int catalogId,
+        int revisionId,
+        int lineId,
+        UpsertInvestmentRateLineRequest request,
+        int userId,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
+        var revision = await GetEditableInvestmentRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return null;
+        var line = revision.Lines.FirstOrDefault(item => item.Id == lineId);
+        if (line is null) return null;
+        var values = ValidateInvestmentLine(request);
+        EnsureUniqueLineCode(revision, values.Code, DuplicateInvestmentCode, lineId);
+        line.MaterialCode = values.Code;
+        line.MaterialName = values.Name;
+        line.Unit = values.Unit;
+        line.NormPerSqm = values.Norm;
+        line.UnitRate = values.Rate;
+        line.WastePercent = values.Waste;
+        line.AmountPerSqm = values.Amount;
+        TouchRevision(revision, userId);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null) await transaction.CommitAsync(ct);
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraintViolation(exception))
+        {
+            throw DuplicateInvestmentCode();
+        }
+        return await GetRevisionAsync(catalogId, revisionId, ct);
+    }
+
+    public async Task<MaterialRateRevisionResponse?> DeleteInvestmentLineAsync(
+        int catalogId,
+        int revisionId,
+        int lineId,
+        int userId,
+        CancellationToken ct = default)
+    {
+        await using var transaction = await BeginRevisionMutationAsync(revisionId, ct);
+        var revision = await GetEditableInvestmentRevisionAsync(catalogId, revisionId, ct);
+        if (revision is null) return null;
+        var line = revision.Lines.FirstOrDefault(item => item.Id == lineId);
+        if (line is null) return null;
+        db.MaterialRateLines.Remove(line);
+        revision.Lines.Remove(line);
+        var remainingLines = revision.Lines.OrderBy(item => item.SortOrder).ToList();
+        for (var index = 0; index < remainingLines.Count; index++) remainingLines[index].SortOrder = index + 1;
+        TouchRevision(revision, userId);
+        await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return await GetRevisionAsync(catalogId, revisionId, ct);
+    }
+
     public async Task<MaterialRateRevisionResponse?> CreateBoqLineAsync(
         int catalogId,
         int revisionId,
@@ -274,7 +370,7 @@ public sealed class MaterialRateService(
         var revision = await GetEditableBoqRevisionAsync(catalogId, revisionId, ct);
         if (revision is null) return null;
         var values = ValidateBoqLine(request);
-        EnsureUniqueBoqCode(revision, values.Code);
+        EnsureUniqueLineCode(revision, values.Code, DuplicateBoqCode);
         revision.Lines.Add(new MaterialRateLine
         {
             MaterialCode = values.Code,
@@ -312,7 +408,7 @@ public sealed class MaterialRateService(
         var line = revision.Lines.FirstOrDefault(item => item.Id == lineId);
         if (line is null) return null;
         var values = ValidateBoqLine(request);
-        EnsureUniqueBoqCode(revision, values.Code, lineId);
+        EnsureUniqueLineCode(revision, values.Code, DuplicateBoqCode, lineId);
         line.MaterialCode = values.Code;
         line.MaterialName = values.Name;
         line.Unit = values.Unit;
@@ -650,6 +746,82 @@ public sealed class MaterialRateService(
         return revision;
     }
 
+    private async Task<MaterialRateRevision?> GetEditableInvestmentRevisionAsync(
+        int catalogId,
+        int revisionId,
+        CancellationToken ct)
+    {
+        var revision = await db.MaterialRateRevisions
+            .Include(item => item.Catalog)
+            .Include(item => item.Lines)
+            .FirstOrDefaultAsync(item => item.Id == revisionId && item.CatalogId == catalogId, ct);
+        if (revision is null) return null;
+        if (revision.Catalog.CatalogType != MaterialRateCatalogType.InvestmentRate)
+        {
+            throw new MaterialRateOperationException(
+                "Chỉ danh mục Suất đầu tư mới cho phép nhập tay các dòng vật liệu.",
+                "materialRates.investmentLine.investmentOnly");
+        }
+        if (revision.Status != MaterialRateRevisionStatus.Draft)
+        {
+            throw new MaterialRateOperationException(
+                "Chỉ phiên bản Nháp mới cho phép thêm, sửa hoặc xoá dòng đơn giá.",
+                "materialRates.line.draftOnly");
+        }
+        return revision;
+    }
+
+    private static (string Code, string Name, string Unit, decimal Norm, decimal Rate, decimal Waste, decimal Amount) ValidateInvestmentLine(
+        UpsertInvestmentRateLineRequest request)
+    {
+        var code = request.MaterialCode?.Trim() ?? string.Empty;
+        var name = request.MaterialName?.Trim() ?? string.Empty;
+        var unit = request.Unit?.Trim() ?? string.Empty;
+        if (code.Length is < 1 or > 50)
+            throw LineError("Mã vật liệu phải có từ 1 đến 50 ký tự, ví dụ: VL-XM-PC40.", "materialRates.investmentLine.validation.code");
+        if (name.Length is < 1 or > 200)
+            throw LineError("Tên vật liệu phải có từ 1 đến 200 ký tự, ví dụ: Xi măng Portland PCB40.", "materialRates.investmentLine.validation.name");
+        if (unit.Length is < 1 or > 30)
+            throw LineError("Đơn vị phải có từ 1 đến 30 ký tự, ví dụ: kg.", "materialRates.line.validation.unit");
+        if (request.NormPerSqm is null)
+            throw LineError("Vui lòng nhập định mức/m², ví dụ: 2.5.", "materialRates.investmentLine.validation.normRequired");
+        if (request.NormPerSqm <= 0)
+            throw LineError("Định mức/m² phải lớn hơn 0, ví dụ: 2.5.", "materialRates.investmentLine.validation.normPositive");
+        if (decimal.Round(request.NormPerSqm.Value, 6) != request.NormPerSqm.Value)
+            throw LineError("Định mức/m² chỉ được có tối đa 6 chữ số thập phân.", "materialRates.investmentLine.validation.normScale");
+        if (request.NormPerSqm.Value > MaxQuantity)
+            throw LineError("Định mức/m² vượt quá giới hạn lưu trữ.", "materialRates.investmentLine.validation.normMaximum");
+        if (request.UnitRate is null)
+            throw LineError("Vui lòng nhập đơn giá, ví dụ: 15000.25.", "materialRates.investmentLine.validation.rateRequired");
+        if (request.UnitRate < 0)
+            throw LineError("Đơn giá không được nhỏ hơn 0, ví dụ: 15000.25.", "materialRates.investmentLine.validation.rateNonNegative");
+        if (decimal.Round(request.UnitRate.Value, 4) != request.UnitRate.Value)
+            throw LineError("Đơn giá chỉ được có tối đa 4 chữ số thập phân.", "materialRates.investmentLine.validation.rateScale");
+        if (request.UnitRate.Value > MaxRate)
+            throw LineError("Đơn giá vượt quá giới hạn lưu trữ.", "materialRates.investmentLine.validation.rateMaximum");
+        if (request.WastePercent is null)
+            throw LineError("Vui lòng nhập hao hụt, ví dụ: 5.", "materialRates.investmentLine.validation.wasteRequired");
+        if (request.WastePercent is < 0 or > 100)
+            throw LineError("Hao hụt phải nằm trong khoảng từ 0 đến 100.", "materialRates.investmentLine.validation.wasteRange");
+        if (decimal.Round(request.WastePercent.Value, 4) != request.WastePercent.Value)
+            throw LineError("Hao hụt chỉ được có tối đa 4 chữ số thập phân.", "materialRates.investmentLine.validation.wasteScale");
+        decimal amount;
+        try
+        {
+            amount = decimal.Round(
+                request.NormPerSqm.Value * request.UnitRate.Value * (1m + request.WastePercent.Value / 100m),
+                4,
+                MidpointRounding.AwayFromZero);
+        }
+        catch (OverflowException)
+        {
+            throw LineError("Thành tiền/m² vượt quá giới hạn tính toán.", "materialRates.investmentLine.validation.amountMaximum");
+        }
+        if (amount > MaxAmount)
+            throw LineError("Thành tiền/m² vượt quá giới hạn lưu trữ.", "materialRates.investmentLine.validation.amountMaximum");
+        return (code, name, unit, request.NormPerSqm.Value, request.UnitRate.Value, request.WastePercent.Value, amount);
+    }
+
     private static (string Code, string Name, string Unit, decimal Quantity, decimal UnitPrice, decimal Amount) ValidateBoqLine(
         UpsertBoqMaterialRateLineRequest request)
     {
@@ -688,12 +860,16 @@ public sealed class MaterialRateService(
         return (code, name, unit, request.Quantity.Value, request.UnitPrice.Value, amount);
     }
 
-    private static void EnsureUniqueBoqCode(MaterialRateRevision revision, string code, int? excludedLineId = null)
+    private static void EnsureUniqueLineCode(
+        MaterialRateRevision revision,
+        string code,
+        Func<MaterialRateOperationException> duplicateError,
+        int? excludedLineId = null)
     {
         if (revision.Lines.Any(line => line.Id != excludedLineId &&
             string.Equals(line.MaterialCode, code, StringComparison.OrdinalIgnoreCase)))
         {
-            throw DuplicateBoqCode();
+            throw duplicateError();
         }
     }
 
@@ -735,6 +911,9 @@ public sealed class MaterialRateService(
 
     private static MaterialRateOperationException DuplicateBoqCode() =>
         LineError("Mã hạng mục đã tồn tại trong phiên bản BOQ này.", "materialRates.line.validation.duplicateCode");
+
+    private static MaterialRateOperationException DuplicateInvestmentCode() =>
+        LineError("Mã vật liệu đã tồn tại trong phiên bản Suất đầu tư này.", "materialRates.investmentLine.validation.duplicateCode");
 
     private static void TouchRevision(MaterialRateRevision revision, int userId)
     {
