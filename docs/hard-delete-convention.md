@@ -128,6 +128,14 @@ counts and examples, disable deletion while blockers exist, and require the
 exact typed confirmation. Refresh the relevant list/detail state after success.
 Do not implement aggregate deletion as parallel per-row API calls.
 
+Business-data blockers should include an internal resolution URL when a filtered
+ADMIN list exists and internal detail links for the displayed blocker examples.
+The shared dialog opens those destinations in a new tab so the user can resolve
+dependencies without losing the current deletion preview. The filtered list link
+is shown only when additional blockers are not represented by the detail links.
+The link is a navigation convenience only; access, record scope, and available
+actions on the destination page follow the existing RBAC matrix for that module.
+
 All display text and dependency labels are backend-seeded content translations
 with Vietnamese, English, Chinese, and Japanese values.
 

@@ -867,6 +867,32 @@ public class CustomersControllerTests : IntegrationTestBase
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
             item.GetProperty("key").GetString() == "customer.operationalProjects" &&
             item.GetProperty("action").GetString() == "Block");
+        var resolutionUrls = impact.GetProperty("items").EnumerateArray()
+            .Where(item => item.GetProperty("action").GetString() == "Block")
+            .ToDictionary(
+                item => item.GetProperty("key").GetString()!,
+                item => item.GetProperty("resolutionUrl").GetString());
+        resolutionUrls.Should().Contain(new Dictionary<string, string?>
+        {
+            ["customer.opportunities"] = $"/admin/opportunities?customerId={customerId}",
+            ["customer.tenders"] = $"/admin/tenders?customerId={customerId}",
+            ["customer.contracts"] = $"/admin/contracts?customerId={customerId}",
+            ["customer.designProjects"] = $"/admin/design-projects?customerId={customerId}",
+            ["customer.operationalProjects"] = $"/admin/operational-projects?customerId={customerId}",
+        });
+        var detailUrls = impact.GetProperty("items").EnumerateArray()
+            .Where(item => item.GetProperty("action").GetString() == "Block")
+            .ToDictionary(
+                item => item.GetProperty("key").GetString()!,
+                item => item.GetProperty("resolutionLinks")[0].GetProperty("url").GetString());
+        detailUrls.Should().Contain(new Dictionary<string, string?>
+        {
+            ["customer.opportunities"] = $"/admin/opportunities/{ids.OpportunityId}",
+            ["customer.tenders"] = $"/admin/tenders/{ids.TenderId}",
+            ["customer.contracts"] = $"/admin/contracts/{ids.ContractId}",
+            ["customer.designProjects"] = $"/admin/design-projects/{ids.ProjectId}",
+            ["customer.operationalProjects"] = $"/admin/operational-projects/{ids.OperationalProjectId}",
+        });
         var delete = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/customers/{customerId}")
         {
             Content = JsonContent.Create(new

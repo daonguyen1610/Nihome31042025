@@ -840,11 +840,18 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
 
 export type DeletionImpactAction = "Delete" | "Unlink" | "Block";
 
+export interface DeletionImpactLinkResponse {
+  label: string;
+  url: string;
+}
+
 export interface DeletionImpactItemResponse {
   key: string;
   action: DeletionImpactAction;
   count: number;
   examples: string[];
+  resolutionLinks?: DeletionImpactLinkResponse[];
+  resolutionUrl?: string | null;
 }
 
 export interface DeletionImpactResponse {

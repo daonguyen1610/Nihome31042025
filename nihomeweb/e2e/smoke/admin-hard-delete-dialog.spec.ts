@@ -512,13 +512,37 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
         requiredConfirmation: `CUSTOMER-${customer.id}`,
         planToken: "8".repeat(64),
         canDelete: false,
-        totalAffected: 2,
-        items: [{
-          key: "customer.operationalProjects",
-          action: "Block",
-          count: 1,
-          examples: ["OP-CUSTOMER-001"],
-        }],
+        totalAffected: 6,
+        items: [
+          {
+            key: "customer.operationalProjects",
+            action: "Block",
+            count: 4,
+            examples: ["456106", "456107", "456108"],
+            resolutionUrl: `/admin/operational-projects?customerId=${customer.id}`,
+            resolutionLinks: [
+              { label: "OP-001 · First project", url: "/admin/operational-projects/456106" },
+              { label: "OP-002 · Second project", url: "/admin/operational-projects/456107" },
+              { label: "OP-003 · Third project", url: "/admin/operational-projects/456108" },
+            ],
+          },
+          {
+            key: "customer.contracts",
+            action: "Block",
+            count: 1,
+            examples: ["456109"],
+            resolutionUrl: `/admin/contracts?customerId=${customer.id}`,
+            resolutionLinks: [{ label: "HD-CUSTOMER-001", url: "/admin/contracts/456109" }],
+          },
+          {
+            key: "customer.fileBlockers",
+            action: "Block",
+            count: 1,
+            examples: ["unsafe.pdf"],
+            resolutionUrl: "/admin/customers",
+            resolutionLinks: [{ label: "Unsafe file", url: "/admin/customers/456105" }],
+          },
+        ],
       }),
     }));
   await page.route(new RegExp(`/api/(?:v1/)?customers/${customer.id}$`), async route => {
@@ -534,7 +558,21 @@ test("Customer deletion discloses downstream blockers without bulk selection", a
   await row.getByRole("button", { name: /Delete|Xóa|Xoá|删除|削除/i }).click();
 
   const dialog = page.getByRole("alertdialog");
-  await expect(dialog).toContainText("OP-CUSTOMER-001");
+  const detailLink = dialog.getByRole("link", {
+    name: "OP-001 · First project",
+  });
+  await expect(detailLink).toHaveAttribute("href", "/admin/operational-projects/456106");
+  await expect(detailLink).toHaveAttribute("target", "_blank");
+  await expect(dialog.getByRole("link", {
+    name: /View all blocking records|Xem tất cả bản ghi đang chặn|查看所有阻止记录|すべてのブロック中レコードを表示/i,
+  })).toHaveAttribute("href", `/admin/operational-projects?customerId=${customer.id}`);
+  await expect(dialog.getByRole("link", { name: "HD-CUSTOMER-001" })).toHaveAttribute(
+    "href",
+    "/admin/contracts/456109",
+  );
+  await expect(dialog.locator(`a[href="/admin/contracts?customerId=${customer.id}"]`)).toHaveCount(0);
+  await expect(dialog.getByRole("link", { name: "Unsafe file" })).toHaveCount(0);
+  await expect(dialog.locator('a[href="/admin/customers"]')).toHaveCount(0);
   await expect(dialog.getByRole("textbox")).toHaveCount(0);
   await expect(dialog.getByRole("button", {
     name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
