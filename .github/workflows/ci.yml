@@ -208,12 +208,14 @@ jobs:
           attempt=0
           while (( SECONDS < deadline )); do
             attempt=$((attempt + 1))
-            if curl --fail --silent --max-time 5 http://localhost:5043/api/system/health > /dev/null; then
+            http_status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --max-time 5 http://localhost:5043/api/system/health || true)
+            if [[ "$http_status" == "200" ]]; then
               echo "Backend is up"
               exit 0
             fi
             if (( attempt % 12 == 0 )); then
-              echo "Still waiting for backend readiness (${attempt} attempts)..."
+              echo "Still waiting for backend readiness (${attempt} attempts, HTTP ${http_status:-000})..."
               docker compose ps
             fi
             sleep 5

@@ -7,6 +7,7 @@ import {
   createApprovedInvestmentRate,
   retireInvestmentRate,
 } from "../fixtures/materialRate";
+import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -235,12 +236,10 @@ test("customer related records, documents, and contract owner inheritance work i
     expect(jsErrors, `Unexpected JavaScript errors:\n${jsErrors.join("\n")}`).toHaveLength(0);
     expect(failedResponses, `Unexpected 5xx responses:\n${failedResponses.join("\n")}`).toHaveLength(0);
   } finally {
-    // Only delete customer - cascade will handle dependent records.
-    // 204 = deleted, 404 = already gone or concurrent deletion handled gracefully.
-    if (customerId) {
-      const deleteCustomerResponse = await api.delete(`/api/customers/${customerId}`, { headers });
-      expect([204, 404]).toContain(deleteCustomerResponse.status());
-    }
+    if (contractId) await hardDeleteBusinessRoot(api, headers, `/api/contracts/${contractId}`);
+    if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
+    if (opportunityId) await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
     if (investmentRate) await retireInvestmentRate(api, headers, investmentRate);
   }
 });
@@ -301,6 +300,6 @@ test("mobile customer detail keeps every tab reachable without shrinking touch t
     }));
     expect(panelSize.scrollHeight).toBeGreaterThan(panelSize.clientHeight);
   } finally {
-    if (customerId) await api.delete(`/api/customers/${customerId}`, { headers });
+    if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
 });

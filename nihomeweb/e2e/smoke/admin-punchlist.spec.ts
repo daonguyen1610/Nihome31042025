@@ -144,11 +144,13 @@ test.describe("NIH-146 — Punch list (real-user flow)", () => {
 
     // Reopen — from Verified back to Open, counter should bump.
     await page.getByTestId("punch-reopen").click();
+    const reopenDialog = page.getByRole("alertdialog", { name: /Mở lại|Reopen|重新打开|再開/i });
+    await expect(reopenDialog).toBeVisible();
     await Promise.all([
       page.waitForResponse(
         (r) => /\/api\/punch-items\/\d+\/status$/.test(r.url()) && r.status() === 200,
       ),
-      page.getByTestId("punch-action-confirm").click({ force: true }),
+      reopenDialog.getByTestId("punch-action-confirm").click(),
     ]);
 
     await expect
