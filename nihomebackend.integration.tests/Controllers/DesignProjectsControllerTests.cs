@@ -395,7 +395,8 @@ public class DesignProjectsControllerTests : IntegrationTestBase
             item.GetProperty("key").GetString() == "design.filesPendingCleanup");
         blocker.GetProperty("action").GetString().Should().Be("Block");
         blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
-            link.GetProperty("url").GetString() == $"/admin/design-projects/{id}?tab=basic");
+            link.GetProperty("url").GetString()!.StartsWith(
+                $"/admin/design-projects/{id}?tab=basic&documentId=", StringComparison.Ordinal));
         var delete = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/design-projects/{id}")
         {
             Content = JsonContent.Create(new
@@ -441,7 +442,56 @@ public class DesignProjectsControllerTests : IntegrationTestBase
             item.GetProperty("key").GetString() == "design.filesPendingCleanup");
         blocker.GetProperty("action").GetString().Should().Be("Block");
         blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
-            link.GetProperty("url").GetString() == $"/admin/design-projects/{id}?tab=basic");
+            link.GetProperty("url").GetString()!.StartsWith(
+                $"/admin/design-projects/{id}?tab=basic&documentId=", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task DeletionImpact_DesignFiles_HaveBusinessLabelsAndExactSourceLinks()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var id = await CreateAsync(customerId, "Distinct cleanup links");
+        var sourceIds = await WithDbAsync<(int BasicId, int ShopId)>(async db =>
+        {
+            var basic = new BasicDesignDoc
+            {
+                DesignProjectId = id,
+                DocumentCode = "KT-BD-CLEANUP",
+                Title = "Hồ sơ kiến trúc",
+                DisciplineCode = "ARCH",
+                FilePath = "/files/design/basic/cleanup.pdf",
+            };
+            var shop = new ShopDrawing
+            {
+                DesignProjectId = id,
+                DrawingCode = "KT-SD-CLEANUP",
+                Title = "Bản vẽ thi công",
+                DisciplineCode = "ARCH",
+                ConstructionItem = "Kiến trúc",
+                FilePath = "/files/design/shop/cleanup.pdf",
+            };
+            db.BasicDesignDocs.Add(basic);
+            db.ShopDrawings.Add(shop);
+            await db.SaveChangesAsync();
+            return (basic.Id, shop.Id);
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
+
+        var links = impact.GetProperty("items").EnumerateArray().Single(item =>
+                item.GetProperty("key").GetString() == "design.filesPendingCleanup")
+            .GetProperty("resolutionLinks").EnumerateArray().ToList();
+        links.Should().Contain(link =>
+            link.GetProperty("label").GetString() == "KT-BD-CLEANUP · Hồ sơ kiến trúc" &&
+            link.GetProperty("url").GetString() ==
+                $"/admin/design-projects/{id}?tab=basic&documentId={sourceIds.BasicId}");
+        links.Should().Contain(link =>
+            link.GetProperty("label").GetString() == "KT-SD-CLEANUP · Bản vẽ thi công" &&
+            link.GetProperty("url").GetString() ==
+                $"/admin/design-projects/{id}?tab=shop&documentId={sourceIds.ShopId}");
+        links.Select(link => link.GetProperty("url").GetString()).Should().OnlyHaveUniqueItems();
     }
 
     [Fact]
@@ -509,7 +559,8 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         var blocker = impact.GetProperty("items").EnumerateArray().Single(item =>
             item.GetProperty("key").GetString() == "design.filesPendingCleanup");
         blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
-            link.GetProperty("url").GetString() == $"/admin/design-projects/{id}?tab=basic");
+            link.GetProperty("url").GetString()!.StartsWith(
+                $"/admin/design-projects/{id}?tab=basic&documentId=", StringComparison.Ordinal));
     }
 
     [Fact]

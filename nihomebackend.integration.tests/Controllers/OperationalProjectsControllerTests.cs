@@ -570,8 +570,9 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             item.GetProperty("key").GetString() == "operations.pendingDocuments");
         blocker.GetProperty("action").GetString().Should().Be("Block");
         blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
-            link.GetProperty("url").GetString() ==
-            $"/admin/design-projects/{designProjectId}?tab=basic");
+            link.GetProperty("url").GetString()!.StartsWith(
+                $"/admin/design-projects/{designProjectId}?tab=basic&documentId=",
+                StringComparison.Ordinal));
         delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         File.Exists(fullPath).Should().BeTrue();
         (await WithDbAsync(db => db.DesignProjects.AnyAsync(item => item.Id == designProjectId)))

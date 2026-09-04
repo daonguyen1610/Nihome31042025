@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -174,6 +176,81 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             title = "should fail",
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Mutations_EnforceProjectStageWhileCleanupDeleteRemainsAvailableLater()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        var documentId = await CreateDocAsync(projectId, "architecture");
+
+        await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.Concept;
+            await db.SaveChangesAsync();
+        });
+        (await Client.DeleteAsync($"/api/basic-design-docs/{documentId}"))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.ShopDrawing;
+            await db.SaveChangesAsync();
+        });
+        (await Client.PutAsJsonAsync($"/api/basic-design-docs/{documentId}", new
+        {
+            disciplineCode = "architecture",
+            title = "Closed-stage update",
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.PostAsJsonAsync($"/api/basic-design-docs/{documentId}/status", new
+        {
+            status = "SubmittedForReview",
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.DeleteAsync($"/api/basic-design-docs/{documentId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Delete_AfterStageWithMissingSidecar_RecreatesDeleteLedgerAndRemovesLocalFile()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        var documentId = await CreateDocAsync(projectId, "architecture");
+        using var file = CreateFileForm("legacy basic", "legacy-basic.pdf", "application/pdf");
+        var upload = await Client.PostAsync($"/api/basic-design-docs/{documentId}/upload", file);
+        upload.EnsureSuccessStatusCode();
+        var localPath = (await ReadJsonAsync(upload)).GetProperty("filePath").GetString()!;
+        string fullPath;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            fullPath = Path.Combine(environment.ContentRootPath, "wwwroot",
+                localPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        }
+        File.Exists(fullPath).Should().BeTrue();
+
+        await WithDbAsync(async db =>
+        {
+            var sidecars = await db.ProjectDocuments
+                .Where(item => item.SourceEntityType == nameof(BasicDesignDoc) &&
+                    item.SourceRecordId == documentId)
+                .ToListAsync();
+            db.ProjectDocuments.RemoveRange(sidecars);
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.ShopDrawing;
+            await db.SaveChangesAsync();
+        });
+
+        (await Client.DeleteAsync($"/api/basic-design-docs/{documentId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        File.Exists(fullPath).Should().BeFalse();
+        (await WithDbAsync(db => db.ProjectDocuments.SingleAsync(item =>
+            item.SourceEntityType == nameof(BasicDesignDoc) && item.SourceRecordId == documentId)))
+            .DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.Delete);
     }
 
     [Fact]

@@ -204,8 +204,15 @@ public class BasicDesignDocService(
     public async Task<BasicDesignDocResponse?> UpdateAsync(int id, UpdateBasicDesignDocRequest request,
         int callerUserId, CancellationToken ct = default)
     {
-        var entity = await db.BasicDesignDocs.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.BasicDesignDocs
+            .Include(document => document.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return null;
+        if (entity.DesignProject.CurrentStage != DesignProjectStage.BasicDesign)
+        {
+            throw new BasicDesignDocOperationException(
+                "Chỉ chỉnh sửa hồ sơ Basic Design khi dự án đang ở giai đoạn Basic Design.");
+        }
 
         var title = (request.Title ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(title))
@@ -264,23 +271,25 @@ public class BasicDesignDocService(
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await db.BasicDesignDocs.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.BasicDesignDocs
+            .Include(document => document.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return false;
+        if (entity.DesignProject.CurrentStage == DesignProjectStage.Concept)
+        {
+            throw new BasicDesignDocOperationException(
+                "Chỉ xoá hồ sơ Basic Design từ giai đoạn Basic Design trở đi.");
+        }
 
         var revisions = await db.DrawingRevisions
             .Where(revision => revision.TargetType == DrawingRevisionTargetType.BasicDesignDoc
                 && revision.TargetId == id)
             .ToListAsync(ct);
         var managedFile = ToManagedFullPath(entity.FilePath);
-        var projectId = await db.DesignProjects.AsNoTracking()
-            .Where(project => project.Id == entity.DesignProjectId)
-            .Select(project => project.OperationalProjectId)
-            .SingleAsync(ct);
+        var projectId = entity.DesignProject.OperationalProjectId;
         if (projectId.HasValue && !string.IsNullOrWhiteSpace(entity.FilePath))
         {
-            await projectDocuments.StageExistingManagedFileDeleteAsync(
-                projectId.Value, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
-                entity.Id, entity.FilePath, entity.UpdatedByUserId, ct);
+            await RequireManagedFileDeleteStagingAsync(entity, projectId.Value, ct);
         }
         db.DrawingRevisions.RemoveRange(revisions);
         db.BasicDesignDocs.Remove(entity);
@@ -298,8 +307,15 @@ public class BasicDesignDocService(
             throw new BasicDesignDocOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
         }
 
-        var entity = await db.BasicDesignDocs.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.BasicDesignDocs
+            .Include(document => document.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return null;
+        if (entity.DesignProject.CurrentStage != DesignProjectStage.BasicDesign)
+        {
+            throw new BasicDesignDocOperationException(
+                "Chỉ cập nhật trạng thái Basic Design khi dự án đang ở giai đoạn Basic Design.");
+        }
 
         EnsureTransitionAllowed(entity.Status, next);
 
@@ -416,6 +432,38 @@ public class BasicDesignDocService(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             logger.LogWarning(ex, "Could not delete Basic Design file {Path}", fullPath);
+        }
+    }
+
+    private async Task RequireManagedFileDeleteStagingAsync(
+        BasicDesignDoc entity, int projectId, CancellationToken ct)
+    {
+        try
+        {
+            if (await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+                    entity.Id, entity.FilePath!, entity.UpdatedByUserId, ct))
+                return;
+
+            await projectDocuments.StageExistingManagedFileAsync(
+                projectId, ProjectDocumentCategory.DesignBasic, ProjectDocumentSourceModule.Design,
+                nameof(BasicDesignDoc), "file", entity.Id, entity.FilePath!,
+                entity.OriginalFileName ?? Path.GetFileName(entity.FilePath) ?? $"basic-design-{entity.Id}",
+                entity.DesignProject.CustomerId, entity.DesignProject.ContractId,
+                entity.UpdatedByUserId, ct);
+            if (!await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+                    entity.Id, entity.FilePath!, entity.UpdatedByUserId, ct))
+                throw new BasicDesignDocOperationException(
+                    "Không thể tạo hàng đợi xoá an toàn cho tệp Basic Design. Dữ liệu được giữ nguyên.");
+        }
+        catch (ProjectDocumentConflictException exception)
+        {
+            throw new BasicDesignDocOperationException(exception.Message);
+        }
+        catch (ProjectDocumentValidationException exception)
+        {
+            throw new BasicDesignDocOperationException(exception.Message);
         }
     }
 

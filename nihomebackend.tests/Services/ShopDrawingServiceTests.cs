@@ -40,6 +40,11 @@ public class ShopDrawingServiceTests : IDisposable
             NullLogger<ShopDrawingService>.Instance,
             _projectDocuments.Object,
             environment.Object);
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var user = new ApplicationUser
         {
@@ -245,6 +250,96 @@ public class ShopDrawingServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_BeforeShopStage_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.BasicDesign;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ShopDrawingOperationException>(() => _sut.DeleteAsync(created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AfterShopStage_Succeeds()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.Completed;
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_MissingSidecar_StagesFileBeforeDeleting()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var entity = await _db.ShopDrawings.FindAsync(created.Id);
+        entity!.FilePath = "/files/design/shop/legacy.pdf";
+        entity.OriginalFileName = "legacy.pdf";
+        var fullPath = ManagedPath(entity.FilePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "legacy");
+        await _db.SaveChangesAsync();
+        _projectDocuments.SetupSequence(staging => staging.StageExistingManagedFileDeleteAsync(
+                _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+                created.Id, entity.FilePath, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false)
+            .ReturnsAsync(true);
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+
+        Assert.False(File.Exists(fullPath));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _operationalProjectId, ProjectDocumentCategory.DesignShopDrawing, ProjectDocumentSourceModule.Design,
+            nameof(ShopDrawing), "file", created.Id, entity.FilePath, "legacy.pdf",
+            It.IsAny<int?>(), It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenSidecarCannotBeStaged_PreservesSourceAndFile()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var entity = await _db.ShopDrawings.FindAsync(created.Id);
+        entity!.FilePath = "/files/design/shop/unstaged.pdf";
+        entity.OriginalFileName = "unstaged.pdf";
+        var fullPath = ManagedPath(entity.FilePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "preserve");
+        await _db.SaveChangesAsync();
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
+                _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+                created.Id, entity.FilePath, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        await Assert.ThrowsAsync<ShopDrawingOperationException>(() => _sut.DeleteAsync(created.Id));
+
+        Assert.NotNull(await _db.ShopDrawings.FindAsync(created.Id));
+        Assert.True(File.Exists(fullPath));
+    }
+
+    [Fact]
+    public async Task UpdateAndTransition_AfterShopStage_Throw()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.Completed;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ShopDrawingOperationException>(() =>
+            _sut.UpdateAsync(created.Id, new UpdateShopDrawingRequest
+            {
+                DisciplineCode = created.DisciplineCode,
+                ConstructionItem = created.ConstructionItem,
+                Title = created.Title,
+            }, _userId));
+        await Assert.ThrowsAsync<ShopDrawingOperationException>(() =>
+            _sut.TransitionStatusAsync(created.Id,
+                new TransitionShopDrawingStatusRequest { Status = "InReview" }, _userId));
+    }
+
+    [Fact]
     public async Task UploadFileAsync_ReplacementAndDelete_CleanManagedFiles()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
@@ -256,6 +351,10 @@ public class ShopDrawingServiceTests : IDisposable
         var replacementPath = ManagedPath(replacement!.FilePath!);
         Assert.False(File.Exists(firstPath));
         Assert.True(File.Exists(replacementPath));
+
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.Completed;
+        await _db.SaveChangesAsync();
 
         Assert.True(await _sut.DeleteAsync(created.Id));
         Assert.False(File.Exists(replacementPath));

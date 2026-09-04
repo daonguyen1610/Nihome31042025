@@ -220,8 +220,15 @@ public class ShopDrawingService(
     public async Task<ShopDrawingResponse?> UpdateAsync(int id, UpdateShopDrawingRequest request,
         int callerUserId, CancellationToken ct = default)
     {
-        var entity = await db.ShopDrawings.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.ShopDrawings
+            .Include(drawing => drawing.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return null;
+        if (entity.DesignProject.CurrentStage != DesignProjectStage.ShopDrawing)
+        {
+            throw new ShopDrawingOperationException(
+                "Chỉ chỉnh sửa Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
+        }
 
         var title = (request.Title ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(title))
@@ -291,8 +298,15 @@ public class ShopDrawingService(
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var entity = await db.ShopDrawings.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.ShopDrawings
+            .Include(drawing => drawing.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return false;
+        if (entity.DesignProject.CurrentStage is DesignProjectStage.Concept or DesignProjectStage.BasicDesign)
+        {
+            throw new ShopDrawingOperationException(
+                "Chỉ xoá Shop Drawing từ giai đoạn Shop Drawing trở đi.");
+        }
 
         var releaseItems = await db.IfcReleaseItems
             .Where(item => item.ShopDrawingId == id)
@@ -302,15 +316,10 @@ public class ShopDrawingService(
                 && revision.TargetId == id)
             .ToListAsync(ct);
         var managedFile = ToManagedFullPath(entity.FilePath);
-        var projectId = await db.DesignProjects.AsNoTracking()
-            .Where(project => project.Id == entity.DesignProjectId)
-            .Select(project => project.OperationalProjectId)
-            .SingleAsync(ct);
+        var projectId = entity.DesignProject.OperationalProjectId;
         if (projectId.HasValue && !string.IsNullOrWhiteSpace(entity.FilePath))
         {
-            await projectDocuments.StageExistingManagedFileDeleteAsync(
-                projectId.Value, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
-                entity.Id, entity.FilePath, entity.UpdatedByUserId, ct);
+            await RequireManagedFileDeleteStagingAsync(entity, projectId.Value, ct);
         }
         db.IfcReleaseItems.RemoveRange(releaseItems);
         db.DrawingRevisions.RemoveRange(revisions);
@@ -335,8 +344,14 @@ public class ShopDrawingService(
 
         var distinctIds = ids.Distinct().ToList();
         var rows = await db.ShopDrawings
+            .Include(drawing => drawing.DesignProject)
             .Where(d => distinctIds.Contains(d.Id))
             .ToListAsync(ct);
+        if (rows.Any(row => row.DesignProject.CurrentStage is DesignProjectStage.Concept or DesignProjectStage.BasicDesign))
+        {
+            throw new ShopDrawingOperationException(
+                "Chỉ xoá Shop Drawing từ giai đoạn Shop Drawing trở đi.");
+        }
 
         var response = new ShopDrawingBulkDeleteResponse { Requested = distinctIds.Count };
         var found = rows.Select(r => r.Id).ToHashSet();
@@ -361,15 +376,10 @@ public class ShopDrawingService(
                     && drawingIds.Contains(revision.TargetId))
                 .ToListAsync(ct);
 
-            var projects = await db.DesignProjects.AsNoTracking()
-                .Where(project => rows.Select(row => row.DesignProjectId).Contains(project.Id))
-                .ToDictionaryAsync(project => project.Id, project => project.OperationalProjectId, ct);
             foreach (var row in rows.Where(row => !string.IsNullOrWhiteSpace(row.FilePath)))
             {
-                if (projects[row.DesignProjectId] is not int projectId) continue;
-                await projectDocuments.StageExistingManagedFileDeleteAsync(
-                    projectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
-                    row.Id, row.FilePath!, row.UpdatedByUserId, ct);
+                if (row.DesignProject.OperationalProjectId is not int projectId) continue;
+                await RequireManagedFileDeleteStagingAsync(row, projectId, ct);
             }
 
             db.IfcReleaseItems.RemoveRange(releaseItems);
@@ -392,8 +402,15 @@ public class ShopDrawingService(
             throw new ShopDrawingOperationException($"Trạng thái '{request.Status}' không hợp lệ.");
         }
 
-        var entity = await db.ShopDrawings.FirstOrDefaultAsync(d => d.Id == id, ct);
+        var entity = await db.ShopDrawings
+            .Include(drawing => drawing.DesignProject)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
         if (entity is null) return null;
+        if (entity.DesignProject.CurrentStage != DesignProjectStage.ShopDrawing)
+        {
+            throw new ShopDrawingOperationException(
+                "Chỉ cập nhật trạng thái Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
+        }
 
         EnsureTransitionAllowed(entity.Status, next);
 
@@ -576,6 +593,38 @@ public class ShopDrawingService(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             logger.LogWarning(ex, "Could not delete Shop Drawing file {Path}", fullPath);
+        }
+    }
+
+    private async Task RequireManagedFileDeleteStagingAsync(
+        ShopDrawing entity, int projectId, CancellationToken ct)
+    {
+        try
+        {
+            if (await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+                    entity.Id, entity.FilePath!, entity.UpdatedByUserId, ct))
+                return;
+
+            await projectDocuments.StageExistingManagedFileAsync(
+                projectId, ProjectDocumentCategory.DesignShopDrawing, ProjectDocumentSourceModule.Design,
+                nameof(ShopDrawing), "file", entity.Id, entity.FilePath!,
+                entity.OriginalFileName ?? Path.GetFileName(entity.FilePath) ?? $"shop-drawing-{entity.Id}",
+                entity.DesignProject.CustomerId, entity.DesignProject.ContractId,
+                entity.UpdatedByUserId, ct);
+            if (!await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    projectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
+                    entity.Id, entity.FilePath!, entity.UpdatedByUserId, ct))
+                throw new ShopDrawingOperationException(
+                    "Không thể tạo hàng đợi xoá an toàn cho tệp Shop Drawing. Dữ liệu được giữ nguyên.");
+        }
+        catch (ProjectDocumentConflictException exception)
+        {
+            throw new ShopDrawingOperationException(exception.Message);
+        }
+        catch (ProjectDocumentValidationException exception)
+        {
+            throw new ShopDrawingOperationException(exception.Message);
         }
     }
 

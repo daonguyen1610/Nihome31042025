@@ -187,6 +187,81 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       .toBe(true);
   });
 
+  test("cleanup link focuses the exact Shop Drawing and exposes delete", async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+    baseURL,
+  }) => {
+    test.slow();
+    const token = await loginAs(TEST_USERS.superAdmin);
+    const authHeader = { Authorization: `Bearer ${token}` };
+    const customerId = await createOwnCustomer(api, authHeader, "SD-LINK");
+    const projectId = await createDesignProject(api, {
+      headers: authHeader,
+      name: `E2E-SD-LINK ${uid()}`,
+      customerId,
+    });
+
+    const option = await api.post("/api/concept-options", {
+      headers: authHeader,
+      data: { designProjectId: projectId, name: "E2E cleanup link" },
+    });
+    expect(option.ok(), await option.text()).toBeTruthy();
+    const optionId = (await option.json()).id as number;
+    for (const status of ["PendingInternalReview", "PresentedToClient", "Finalized"]) {
+      const transition = await api.post(`/api/concept-options/${optionId}/status`, {
+        headers: authHeader,
+        data: { status },
+      });
+      expect(transition.ok(), `${status}: ${await transition.text()}`).toBeTruthy();
+    }
+    for (const disciplineCode of ["architecture", "structure", "mep"]) {
+      const document = await api.post("/api/basic-design-docs", {
+        headers: authHeader,
+        data: {
+          designProjectId: projectId,
+          disciplineCode,
+          title: `${disciplineCode} cleanup prerequisite`,
+        },
+      });
+      expect(document.ok(), await document.text()).toBeTruthy();
+      const documentId = (await document.json()).id as number;
+      for (const status of ["SubmittedForReview", "InternallyApproved"]) {
+        const transition = await api.post(`/api/basic-design-docs/${documentId}/status`, {
+          headers: authHeader,
+          data: { status },
+        });
+        expect(transition.ok(), `${disciplineCode} → ${status}: ${await transition.text()}`).toBeTruthy();
+      }
+    }
+    const unlock = await api.post(`/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`, {
+      headers: authHeader,
+    });
+    expect(unlock.ok(), await unlock.text()).toBeTruthy();
+    const drawing = await api.post("/api/shop-drawings", {
+      headers: authHeader,
+      data: {
+        designProjectId: projectId,
+        disciplineCode: "architecture",
+        constructionItem: "Kiến trúc",
+        title: `Cleanup target ${uid()}`,
+      },
+    });
+    expect(drawing.ok(), await drawing.text()).toBeTruthy();
+    const drawingId = (await drawing.json()).id as number;
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(
+      `${baseURL}/admin/design-projects/${projectId}?tab=shop&documentId=${drawingId}`,
+      { waitUntil: "networkidle" },
+    );
+
+    await expect(page.locator(`#shop-drawing-${drawingId}`)).toHaveClass(/ring-amber-200/);
+    await expect(page.getByTestId(`shop-drawing-delete-${drawingId}`)).toBeVisible();
+  });
+
   test("SALE role is blocked from Detail Design endpoints", async ({ api, loginAs }) => {
     const token = await loginAs(TEST_USERS.sale);
     const res = await api.get("/api/shop-drawings", {

@@ -90,6 +90,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     // We drive this through the API (faster + less flaky than clicking through
     // three dialogs) and then verify the UI reflects it.
     const disciplines = ["architecture", "structure", "mep"];
+    const documentIds: number[] = [];
     for (const disciplineCode of disciplines) {
       const doc = await api.post("/api/basic-design-docs", {
         headers: authHeader,
@@ -101,6 +102,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
       });
       expect(doc.ok(), await doc.text()).toBeTruthy();
       const docId = (await doc.json()).id as number;
+      documentIds.push(docId);
       for (const status of ["SubmittedForReview", "InternallyApproved"]) {
         const t = await api.post(`/api/basic-design-docs/${docId}/status`, {
           headers: authHeader,
@@ -157,5 +159,12 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
         return (await proj.json()).currentStage as string;
       }, { timeout: 5_000 })
       .toBe("ShopDrawing");
+
+    await page.goto(
+      `${baseURL}/admin/design-projects/${projectId}?tab=basic&documentId=${documentIds[0]}`,
+      { waitUntil: "networkidle" },
+    );
+    await expect(page.locator(`#basic-design-doc-${documentIds[0]}`)).toHaveClass(/ring-amber-300/);
+    await expect(page.getByTestId(`basic-design-delete-${documentIds[0]}`)).toBeVisible();
   });
 });

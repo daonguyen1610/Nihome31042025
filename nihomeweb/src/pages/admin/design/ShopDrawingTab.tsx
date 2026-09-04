@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, ChevronDown, ChevronUp, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Trash2, Undo2, XCircle } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
@@ -119,9 +120,12 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const canApprove = has(ADMIN_PERMS.designShopApprove);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = has(ADMIN_PERMS.users);
+  const [searchParams] = useSearchParams();
+  const focusedDocumentId = Number(searchParams.get("documentId"));
 
   const isShopStage = project.currentStage === "ShopDrawing";
   const isBeforeShop = project.currentStage === "Concept" || project.currentStage === "BasicDesign";
+  const canDelete = canManage && !isBeforeShop;
 
   const [rows, setRows] = useState<ShopDrawingResponse[]>([]);
   const [statusCounts, setStatusCounts] = useState<Partial<Record<ShopDrawingStatus, number>>>({});
@@ -154,6 +158,14 @@ export const ShopDrawingTab = ({ project }: Props) => {
       setLoading(false);
     }
   }, [project.id, filterDiscipline, filterStatus, search]);
+
+  useEffect(() => {
+    if (!Number.isInteger(focusedDocumentId) || focusedDocumentId <= 0 || loading) return;
+    document.getElementById(`shop-drawing-${focusedDocumentId}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [focusedDocumentId, loading, rows]);
 
   useEffect(() => {
     void fetchRows();
@@ -538,6 +550,8 @@ export const ShopDrawingTab = ({ project }: Props) => {
               canManage={canManage}
               canApprove={canApprove}
               isShopStage={isShopStage}
+              canDelete={canDelete}
+              focusedDocumentId={focusedDocumentId}
               selectedIds={selectedIds}
               draftableIds={draftableIds}
               transitioningId={transitioning}
@@ -751,6 +765,8 @@ const DisciplineSection = ({
   canApprove,
   canViewRevisions,
   isShopStage,
+  canDelete,
+  focusedDocumentId,
   selectedIds,
   draftableIds,
   transitioningId,
@@ -771,6 +787,8 @@ const DisciplineSection = ({
   canApprove: boolean;
   canViewRevisions: boolean;
   isShopStage: boolean;
+  canDelete: boolean;
+  focusedDocumentId: number;
   selectedIds: Set<number>;
   draftableIds: Set<number>;
   transitioningId: number | null;
@@ -807,7 +825,16 @@ const DisciplineSection = ({
               </p>
               <ul className="space-y-2">
                 {docs.map((row) => (
-                  <li key={row.id} className="rounded-md border border-slate-100 bg-slate-50/40 p-2">
+                  <li
+                    id={`shop-drawing-${row.id}`}
+                    key={row.id}
+                    className={cn(
+                      "rounded-md border bg-slate-50/40 p-2",
+                      focusedDocumentId === row.id
+                        ? "border-amber-400 ring-2 ring-amber-200"
+                        : "border-slate-100",
+                    )}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         {canManage && isShopStage && draftableIds.has(row.id) ? (
@@ -878,17 +905,30 @@ const DisciplineSection = ({
                         ) : null}
                       </div>
                     </div>
-                    {canManage && isShopStage ? (
+                    {canDelete ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <RowActions
-                          row={row}
-                          t={t}
-                          canApprove={canApprove}
-                          busy={transitioningId === row.id}
-                          onEdit={() => onEdit(row)}
-                          onDelete={() => onDelete(row)}
-                          onTransition={(next) => onTransition(row, next)}
-                        />
+                        {isShopStage ? (
+                          <RowActions
+                            row={row}
+                            t={t}
+                            canApprove={canApprove}
+                            busy={transitioningId === row.id}
+                            onEdit={() => onEdit(row)}
+                            onDelete={() => onDelete(row)}
+                            onTransition={(next) => onTransition(row, next)}
+                          />
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            onClick={() => onDelete(row)}
+                            data-testid={`shop-drawing-delete-${row.id}`}
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />
+                            {t("shopDrawing.action.delete")}
+                          </Button>
+                        )}
                       </div>
                     ) : null}
                   </li>
@@ -1040,7 +1080,7 @@ const RowActions = ({
         </Badge>
       )}
       <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
-        onClick={onDelete}>
+        onClick={onDelete} data-testid={`shop-drawing-delete-${row.id}`}>
         <Trash2 className="mr-1 h-3.5 w-3.5" />
         {t("shopDrawing.action.delete")}
       </Button>
