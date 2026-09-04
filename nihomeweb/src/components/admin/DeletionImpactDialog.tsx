@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Link2Off, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, ExternalLink, Link2Off, Loader2, RotateCcw, Trash2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { adminApi, type DeletionImpactAction, type DeletionImpactResponse, type HardDeleteOperationResult } from "@/services/adminApi";
 import {
@@ -187,6 +187,15 @@ export const DeletionImpactDialog = ({
               <div className="space-y-2">
                 {impact.items.map((item) => {
                   const Icon = actionIcon[item.action];
+                  const canResolve = item.action === "Block" && !item.key.endsWith(".fileBlockers");
+                  const resolutionLinks = canResolve
+                    ? (item.resolutionLinks ?? []).filter((link) => link.url.startsWith("/admin/"))
+                    : [];
+                  const resolutionUrl = canResolve &&
+                    item.count > resolutionLinks.length &&
+                    item.resolutionUrl?.startsWith("/admin/")
+                    ? item.resolutionUrl
+                    : null;
                   return (
                     <section key={item.key} className="rounded-md border p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -198,10 +207,37 @@ export const DeletionImpactDialog = ({
                           {t(`deletionImpact.action.${item.action}`)} · {item.count}
                         </Badge>
                       </div>
-                      {item.examples.length > 0 ? (
+                      {resolutionLinks.length > 0 ? (
+                        <div className="mt-2 space-y-1 text-xs">
+                          <p className="text-muted-foreground">{t("deletionImpact.relatedRecords")}</p>
+                          {resolutionLinks.map((link) => (
+                            <a
+                              key={link.url}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex w-fit items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {link.label}
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          ))}
+                        </div>
+                      ) : item.examples.length > 0 ? (
                         <p className="mt-2 break-words text-xs text-muted-foreground">
                           {t("deletionImpact.examples", { examples: item.examples.join(", ") })}
                         </p>
+                      ) : null}
+                      {resolutionUrl ? (
+                        <a
+                          href={resolutionUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {t("deletionImpact.viewAll")}
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
                       ) : null}
                     </section>
                   );

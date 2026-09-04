@@ -4,6 +4,8 @@
   {"key":"deletionImpact.loading","category":"deletionImpact","vi":"Đang kiểm tra dữ liệu liên quan...","en":"Checking related data...","zh":"正在检查相关数据...","ja":"関連データを確認中..."},
   {"key":"deletionImpact.noDependencies","category":"deletionImpact","vi":"Không có dữ liệu phụ thuộc. Chỉ mục đã chọn sẽ bị xoá.","en":"No dependencies found. Only the selected record will be deleted.","zh":"未发现依赖项。仅删除所选记录。","ja":"依存データはありません。選択したレコードのみ削除されます。"},
   {"key":"deletionImpact.examples","category":"deletionImpact","vi":"Ví dụ: {examples}","en":"Examples: {examples}","zh":"示例：{examples}","ja":"例: {examples}"},
+  {"key":"deletionImpact.relatedRecords","category":"deletionImpact","vi":"Mở trực tiếp bản ghi cần xử lý:","en":"Open a record to resolve:","zh":"直接打开需要处理的记录：","ja":"対応するレコードを直接開く："},
+  {"key":"deletionImpact.viewAll","category":"deletionImpact","vi":"Xem tất cả bản ghi đang chặn","en":"View all blocking records","zh":"查看所有阻止记录","ja":"すべてのブロック中レコードを表示"},
   {"key":"deletionImpact.action.Delete","category":"deletionImpact","vi":"Sẽ xoá","en":"Will delete","zh":"将删除","ja":"削除"},
   {"key":"deletionImpact.action.Unlink","category":"deletionImpact","vi":"Sẽ gỡ liên kết","en":"Will unlink","zh":"将解除关联","ja":"リンク解除"},
   {"key":"deletionImpact.action.Block","category":"deletionImpact","vi":"Đang chặn xoá","en":"Blocks deletion","zh":"阻止删除","ja":"削除をブロック"},

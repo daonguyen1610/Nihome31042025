@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Pencil, PenTool, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
@@ -103,6 +103,7 @@ const AdminDesignProjects = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const canManage = has(ADMIN_PERMS.designProjectsManage);
   const canPickUser = has(ADMIN_PERMS.users);
 
@@ -114,7 +115,10 @@ const AdminDesignProjects = () => {
 
   // filters
   const [search, setSearch] = useState("");
-  const [customerId, setCustomerId] = useState<number | null>(null);
+  const [customerId, setCustomerId] = useState<number | null>(() => {
+    const value = Number(searchParams.get("customerId"));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  });
   const [pmId, setPmId] = useState<number | null>(null);
   const [leadId, setLeadId] = useState<number | null>(null);
   const [stage, setStage] = useState<DesignProjectStage | "">("");

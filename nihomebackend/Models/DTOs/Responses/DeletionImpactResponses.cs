@@ -7,12 +7,20 @@ public static class DeletionImpactActions
     public const string Block = "Block";
 }
 
+public sealed class DeletionImpactLinkResponse
+{
+    public string Label { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+}
+
 public sealed class DeletionImpactItemResponse
 {
     public string Key { get; set; } = string.Empty;
     public string Action { get; set; } = string.Empty;
     public int Count { get; set; }
     public List<string> Examples { get; set; } = [];
+    public List<DeletionImpactLinkResponse> ResolutionLinks { get; set; } = [];
+    public string? ResolutionUrl { get; set; }
 }
 
 public sealed class DeletionImpactResponse

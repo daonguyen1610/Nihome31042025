@@ -54,21 +54,21 @@ public sealed class CrmHardDeletePlanService(
         var projectDocumentIds = await db.ProjectDocuments.AsNoTracking()
             .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
             .Select(item => item.Id).ToListAsync(ct);
-        var opportunityIds = await db.Opportunities.AsNoTracking()
+        var opportunityRecords = await db.Opportunities.AsNoTracking()
             .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
-            .Select(item => item.Id).ToListAsync(ct);
-        var tenderIds = await db.Tenders.AsNoTracking()
+            .Select(item => new { item.Id, item.Name }).ToListAsync(ct);
+        var tenderRecords = await db.Tenders.AsNoTracking()
             .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
-            .Select(item => item.Id).ToListAsync(ct);
-        var contractIds = await db.Contracts.AsNoTracking()
+            .Select(item => new { item.Id, item.Code, item.Name }).ToListAsync(ct);
+        var contractRecords = await db.Contracts.AsNoTracking()
             .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
-            .Select(item => item.Id).ToListAsync(ct);
-        var designProjectIds = await db.DesignProjects.AsNoTracking()
+            .Select(item => new { item.Id, item.ContractNumber }).ToListAsync(ct);
+        var designProjectRecords = await db.DesignProjects.AsNoTracking()
             .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
-            .Select(item => item.Id).ToListAsync(ct);
-        var operationalProjectIds = await db.OperationalProjects.AsNoTracking()
+            .Select(item => new { item.Id, item.ProjectCode, item.Name }).ToListAsync(ct);
+        var operationalProjectRecords = await db.OperationalProjects.AsNoTracking()
             .Where(item => item.CustomerId == customerId).OrderBy(item => item.Id)
-            .Select(item => item.Id).ToListAsync(ct);
+            .Select(item => new { item.Id, item.Code, item.Name }).ToListAsync(ct);
 
         var localDefinitions = new List<HardDeleteItemDefinition>();
         var fileBlockers = new List<string>();
@@ -122,11 +122,21 @@ public sealed class CrmHardDeletePlanService(
         var translations = translationIds.Select(Identifier).ToList();
         var leads = leadIds.Select(Identifier).ToList();
         var projectDocuments = projectDocumentIds.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToList();
-        var opportunities = opportunityIds.Select(Identifier).ToList();
-        var tenders = tenderIds.Select(Identifier).ToList();
-        var contracts = contractIds.Select(Identifier).ToList();
-        var designProjects = designProjectIds.Select(Identifier).ToList();
-        var operationalProjects = operationalProjectIds.Select(Identifier).ToList();
+        var opportunities = opportunityRecords.Select(item => Identifier(item.Id)).ToList();
+        var tenders = tenderRecords.Select(item => Identifier(item.Id)).ToList();
+        var contracts = contractRecords.Select(item => Identifier(item.Id)).ToList();
+        var designProjects = designProjectRecords.Select(item => Identifier(item.Id)).ToList();
+        var operationalProjects = operationalProjectRecords.Select(item => Identifier(item.Id)).ToList();
+        var opportunityLinks = opportunityRecords.Select(item => DetailLink(
+            item.Name, $"/admin/opportunities/{item.Id}")).ToList();
+        var tenderLinks = tenderRecords.Select(item => DetailLink(
+            $"{item.Code} · {item.Name}", $"/admin/tenders/{item.Id}")).ToList();
+        var contractLinks = contractRecords.Select(item => DetailLink(
+            item.ContractNumber, $"/admin/contracts/{item.Id}")).ToList();
+        var designProjectLinks = designProjectRecords.Select(item => DetailLink(
+            $"{item.ProjectCode} · {item.Name}", $"/admin/design-projects/{item.Id}")).ToList();
+        var operationalProjectLinks = operationalProjectRecords.Select(item => DetailLink(
+            $"{item.Code} · {item.Name}", $"/admin/operational-projects/{item.Id}")).ToList();
         var localPaths = localDefinitions.Select(item => item.ActionIdentifier).ToList();
 
         var impactItems = new List<DeletionImpactItemResponse>();
@@ -138,11 +148,16 @@ public sealed class CrmHardDeletePlanService(
         AddImpact(impactItems, "customer.translations", translations);
         AddImpact(impactItems, "customer.convertedLeads", leads, DeletionImpactActions.Unlink);
         AddImpact(impactItems, "customer.projectDocuments", projectDocuments, DeletionImpactActions.Unlink);
-        AddImpact(impactItems, "customer.opportunities", opportunities, DeletionImpactActions.Block);
-        AddImpact(impactItems, "customer.tenders", tenders, DeletionImpactActions.Block);
-        AddImpact(impactItems, "customer.contracts", contracts, DeletionImpactActions.Block);
-        AddImpact(impactItems, "customer.designProjects", designProjects, DeletionImpactActions.Block);
-        AddImpact(impactItems, "customer.operationalProjects", operationalProjects, DeletionImpactActions.Block);
+        AddImpact(impactItems, "customer.opportunities", opportunities, DeletionImpactActions.Block,
+            $"/admin/opportunities?customerId={customerId}", opportunityLinks);
+        AddImpact(impactItems, "customer.tenders", tenders, DeletionImpactActions.Block,
+            $"/admin/tenders?customerId={customerId}", tenderLinks);
+        AddImpact(impactItems, "customer.contracts", contracts, DeletionImpactActions.Block,
+            $"/admin/contracts?customerId={customerId}", contractLinks);
+        AddImpact(impactItems, "customer.designProjects", designProjects, DeletionImpactActions.Block,
+            $"/admin/design-projects?customerId={customerId}", designProjectLinks);
+        AddImpact(impactItems, "customer.operationalProjects", operationalProjects, DeletionImpactActions.Block,
+            $"/admin/operational-projects?customerId={customerId}", operationalProjectLinks);
 
         var rowVersion = CrmConcurrency.Encode(customer.RowVersion);
         var confirmation = $"CUSTOMER-{customer.Id}";
@@ -649,7 +664,9 @@ public sealed class CrmHardDeletePlanService(
         ICollection<DeletionImpactItemResponse> items,
         string key,
         IReadOnlyList<string> identifiers,
-        string action = DeletionImpactActions.Delete)
+        string action = DeletionImpactActions.Delete,
+        string? resolutionUrl = null,
+        IReadOnlyList<DeletionImpactLinkResponse>? resolutionLinks = null)
     {
         if (identifiers.Count == 0) return;
         items.Add(new DeletionImpactItemResponse
@@ -658,8 +675,16 @@ public sealed class CrmHardDeletePlanService(
             Action = action,
             Count = identifiers.Count,
             Examples = identifiers.Take(3).ToList(),
+            ResolutionLinks = resolutionLinks?.Take(3).ToList() ?? [],
+            ResolutionUrl = resolutionUrl,
         });
     }
+
+    private static DeletionImpactLinkResponse DetailLink(string label, string url) => new()
+    {
+        Label = label,
+        Url = url,
+    };
 
     private static string Identifier(int id) => id.ToString(CultureInfo.InvariantCulture);
 

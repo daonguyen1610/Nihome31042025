@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
@@ -82,6 +82,7 @@ const AdminTenders = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const canManage = has(ADMIN_PERMS.tendersManage);
   const canPickPreparer = has(ADMIN_PERMS.users);
 
@@ -99,7 +100,10 @@ const AdminTenders = () => {
   const pageSize = 20;
 
   const [statusFilter, setStatusFilter] = useState<TenderStatus | "">("");
-  const [customerFilter, setCustomerFilter] = useState<number | null>(null);
+  const [customerFilter, setCustomerFilter] = useState<number | null>(() => {
+    const customerId = Number(searchParams.get("customerId"));
+    return Number.isInteger(customerId) && customerId > 0 ? customerId : null;
+  });
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
