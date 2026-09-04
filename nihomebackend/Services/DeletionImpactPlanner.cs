@@ -183,19 +183,19 @@ internal static class DeletionImpactPlanner
 
         var basicDocuments = await db.BasicDesignDocs.AsNoTracking()
             .Where(item => projectIds.Contains(item.DesignProjectId) && item.FilePath != null)
-            .Select(item => new { item.Id, item.DesignProjectId, item.FilePath })
+            .Select(item => new { item.Id, item.DesignProjectId, item.DocumentCode, item.Title, item.FilePath })
             .ToListAsync(ct);
         references.AddRange(basicDocuments.Select(item => new DesignManagedFileReference(
             item.DesignProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc),
-            "file", item.Id, item.FilePath!, item.FilePath!)));
+            "file", item.Id, item.FilePath!, $"{item.DocumentCode} · {item.Title}")));
 
         var shopDrawings = await db.ShopDrawings.AsNoTracking()
             .Where(item => projectIds.Contains(item.DesignProjectId) && item.FilePath != null)
-            .Select(item => new { item.Id, item.DesignProjectId, item.FilePath })
+            .Select(item => new { item.Id, item.DesignProjectId, item.DrawingCode, item.Title, item.FilePath })
             .ToListAsync(ct);
         references.AddRange(shopDrawings.Select(item => new DesignManagedFileReference(
             item.DesignProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing),
-            "file", item.Id, item.FilePath!, item.FilePath!)));
+            "file", item.Id, item.FilePath!, $"{item.DrawingCode} · {item.Title}")));
 
         var permits = await db.PermitChecklistItems.AsNoTracking()
             .Where(item => projectIds.Contains(item.DesignProjectId) &&

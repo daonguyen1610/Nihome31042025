@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, ChevronsRight, Circle, FileUp, History, Loader2, Pencil, Plus, Send, ShieldCheck, Sparkles, Trash2, Undo2, XCircle } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Badge } from "@/components/ui/badge";
@@ -107,9 +108,12 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
   const canUnlock = has(ADMIN_PERMS.designProjectsManage);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = has(ADMIN_PERMS.users);
+  const [searchParams] = useSearchParams();
+  const focusedDocumentId = Number(searchParams.get("documentId"));
 
   const isConceptStage = project.currentStage === "Concept";
   const isBasicStage = project.currentStage === "BasicDesign";
+  const canDelete = canManage && !isConceptStage;
   const isLocked = !isBasicStage; // read-only when Concept (locked before) or Shop/Completed (locked after)
 
   const [rows, setRows] = useState<BasicDesignDocResponse[]>([]);
@@ -143,6 +147,14 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!Number.isInteger(focusedDocumentId) || focusedDocumentId <= 0 || loading) return;
+    document.getElementById(`basic-design-doc-${focusedDocumentId}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }, [focusedDocumentId, loading, rows]);
 
   useEffect(() => {
     let cancelled = false;
@@ -464,7 +476,14 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
               </header>
               <ul className="divide-y divide-slate-100">
                 {docs.map((row) => (
-                  <li key={row.id} className="p-3">
+                  <li
+                    id={`basic-design-doc-${row.id}`}
+                    key={row.id}
+                    className={cn(
+                      "p-3",
+                      focusedDocumentId === row.id && "bg-amber-50 ring-2 ring-inset ring-amber-300",
+                    )}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="font-mono text-xs text-slate-500">{row.documentCode}</p>
@@ -523,17 +542,30 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged }: Props) => {
                         ) : null}
                       </div>
                     </div>
-                    {canManage && isBasicStage ? (
+                    {canDelete ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <RowActions
-                          row={row}
-                          t={t}
-                          canApprove={canApprove}
-                          busy={transitioning === row.id}
-                          onEdit={() => openEdit(row)}
-                          onDelete={() => setDeleting(row)}
-                          onTransition={(next) => void transition(row, next)}
-                        />
+                        {isBasicStage ? (
+                          <RowActions
+                            row={row}
+                            t={t}
+                            canApprove={canApprove}
+                            busy={transitioning === row.id}
+                            onEdit={() => openEdit(row)}
+                            onDelete={() => setDeleting(row)}
+                            onTransition={(next) => void transition(row, next)}
+                          />
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-xs text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            onClick={() => setDeleting(row)}
+                            data-testid={`basic-design-delete-${row.id}`}
+                          >
+                            <Trash2 className="mr-1 h-3.5 w-3.5" />
+                            {t("basicDesign.action.delete")}
+                          </Button>
+                        )}
                       </div>
                     ) : null}
                   </li>
@@ -800,7 +832,7 @@ const RowActions = ({
         </Badge>
       )}
       <Button size="sm" variant="ghost" className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
-        onClick={onDelete}>
+        onClick={onDelete} data-testid={`basic-design-delete-${row.id}`}>
         <Trash2 className="mr-1 h-3.5 w-3.5" />
         {t("basicDesign.action.delete")}
       </Button>

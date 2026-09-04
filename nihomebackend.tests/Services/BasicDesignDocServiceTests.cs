@@ -38,6 +38,11 @@ public class BasicDesignDocServiceTests : IDisposable
             NullLogger<BasicDesignDocService>.Instance,
             _projectDocuments.Object,
             environment.Object);
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
+                It.IsAny<int>(), It.IsAny<ProjectDocumentSourceModule>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var user = new ApplicationUser
         {
@@ -258,6 +263,95 @@ public class BasicDesignDocServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_BeforeBasicStage_Throws()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.Concept;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() => _sut.DeleteAsync(created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AfterBasicStage_Succeeds()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.ShopDrawing;
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_MissingSidecar_StagesFileBeforeDeleting()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var entity = await _db.BasicDesignDocs.FindAsync(created.Id);
+        entity!.FilePath = "/files/design/basic/legacy.pdf";
+        entity.OriginalFileName = "legacy.pdf";
+        var fullPath = ManagedPath(entity.FilePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "legacy");
+        await _db.SaveChangesAsync();
+        _projectDocuments.SetupSequence(staging => staging.StageExistingManagedFileDeleteAsync(
+                _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+                created.Id, entity.FilePath, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false)
+            .ReturnsAsync(true);
+
+        Assert.True(await _sut.DeleteAsync(created.Id));
+
+        Assert.False(File.Exists(fullPath));
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _operationalProjectId, ProjectDocumentCategory.DesignBasic, ProjectDocumentSourceModule.Design,
+            nameof(BasicDesignDoc), "file", created.Id, entity.FilePath, "legacy.pdf",
+            It.IsAny<int?>(), It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenSidecarCannotBeStaged_PreservesSourceAndFile()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var entity = await _db.BasicDesignDocs.FindAsync(created.Id);
+        entity!.FilePath = "/files/design/basic/unstaged.pdf";
+        entity.OriginalFileName = "unstaged.pdf";
+        var fullPath = ManagedPath(entity.FilePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "preserve");
+        await _db.SaveChangesAsync();
+        _projectDocuments.Setup(staging => staging.StageExistingManagedFileDeleteAsync(
+                _operationalProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc), "file",
+                created.Id, entity.FilePath, _userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() => _sut.DeleteAsync(created.Id));
+
+        Assert.NotNull(await _db.BasicDesignDocs.FindAsync(created.Id));
+        Assert.True(File.Exists(fullPath));
+    }
+
+    [Fact]
+    public async Task UpdateAndTransition_AfterBasicStage_Throw()
+    {
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.ShopDrawing;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
+            _sut.UpdateAsync(created.Id, new UpdateBasicDesignDocRequest
+            {
+                DisciplineCode = created.DisciplineCode,
+                Title = created.Title,
+            }, _userId));
+        await Assert.ThrowsAsync<BasicDesignDocOperationException>(() =>
+            _sut.TransitionStatusAsync(created.Id,
+                new TransitionBasicDesignDocStatusRequest { Status = "SubmittedForReview" }, _userId));
+    }
+
+    [Fact]
     public async Task UploadFileAsync_ReplacementAndDelete_CleanManagedFiles()
     {
         var created = await _sut.CreateAsync(ValidCreate(), _userId);
@@ -269,6 +363,10 @@ public class BasicDesignDocServiceTests : IDisposable
         var replacementPath = ManagedPath(replacement!.FilePath!);
         Assert.False(File.Exists(firstPath));
         Assert.True(File.Exists(replacementPath));
+
+        var project = await _db.DesignProjects.FindAsync(_projectId);
+        project!.CurrentStage = DesignProjectStage.ShopDrawing;
+        await _db.SaveChangesAsync();
 
         Assert.True(await _sut.DeleteAsync(created.Id));
         Assert.False(File.Exists(replacementPath));

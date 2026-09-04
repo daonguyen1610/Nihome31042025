@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -139,6 +141,82 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
             title = "should fail",
         });
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Mutations_EnforceProjectStageWhileCleanupDeleteRemainsAvailableLater()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateShopStageProjectAsync();
+        var drawingId = await CreateDrawingAsync(projectId, "architecture");
+
+        await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.BasicDesign;
+            await db.SaveChangesAsync();
+        });
+        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.Completed;
+            await db.SaveChangesAsync();
+        });
+        (await Client.PutAsJsonAsync($"/api/shop-drawings/{drawingId}", new
+        {
+            disciplineCode = "architecture",
+            constructionItem = "Closed stage",
+            title = "Closed-stage update",
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.PostAsJsonAsync($"/api/shop-drawings/{drawingId}/status", new
+        {
+            status = "InReview",
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Delete_AfterStageWithMissingSidecar_RecreatesDeleteLedgerAndRemovesLocalFile()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateShopStageProjectAsync();
+        var drawingId = await CreateDrawingAsync(projectId, "architecture");
+        using var file = CreateFileForm("legacy shop", "legacy-shop.pdf", "application/pdf");
+        var upload = await Client.PostAsync($"/api/shop-drawings/{drawingId}/upload", file);
+        upload.EnsureSuccessStatusCode();
+        var localPath = (await ReadJsonAsync(upload)).GetProperty("filePath").GetString()!;
+        string fullPath;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            fullPath = Path.Combine(environment.ContentRootPath, "wwwroot",
+                localPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        }
+        File.Exists(fullPath).Should().BeTrue();
+
+        await WithDbAsync(async db =>
+        {
+            var sidecars = await db.ProjectDocuments
+                .Where(item => item.SourceEntityType == nameof(ShopDrawing) &&
+                    item.SourceRecordId == drawingId)
+                .ToListAsync();
+            db.ProjectDocuments.RemoveRange(sidecars);
+            var project = await db.DesignProjects.FindAsync(projectId);
+            project!.CurrentStage = DesignProjectStage.Completed;
+            await db.SaveChangesAsync();
+        });
+
+        (await Client.DeleteAsync($"/api/shop-drawings/{drawingId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        File.Exists(fullPath).Should().BeFalse();
+        (await WithDbAsync(db => db.ProjectDocuments.SingleAsync(item =>
+            item.SourceEntityType == nameof(ShopDrawing) && item.SourceRecordId == drawingId)))
+            .DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.Delete);
     }
 
     [Fact]

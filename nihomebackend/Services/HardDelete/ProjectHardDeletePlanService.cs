@@ -174,8 +174,10 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db) : IProjectHard
             Label = reference.Label,
             Url = reference.SourceEntityType switch
             {
-                nameof(BasicDesignDoc) => $"/admin/design-projects/{reference.DesignProjectId}?tab=basic",
-                nameof(ShopDrawing) => $"/admin/design-projects/{reference.DesignProjectId}?tab=shop",
+                nameof(BasicDesignDoc) =>
+                    $"/admin/design-projects/{reference.DesignProjectId}?tab=basic&documentId={reference.SourceRecordId}",
+                nameof(ShopDrawing) =>
+                    $"/admin/design-projects/{reference.DesignProjectId}?tab=shop&documentId={reference.SourceRecordId}",
                 nameof(PermitChecklistItem) => $"/admin/permits?designProjectId={reference.DesignProjectId}",
                 nameof(AcceptanceRecord) => $"/admin/construction/acceptance?designProjectId={reference.DesignProjectId}",
                 nameof(AsBuiltDocument) => $"/admin/construction/asbuilt?designProjectId={reference.DesignProjectId}",
