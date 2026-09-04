@@ -149,6 +149,23 @@ public sealed class ProjectDocumentServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RetryAsync_ExhaustedDeleteFailure_ResetsAndQueuesManualRetry()
+    {
+        var document = AddDocument(ProjectDocumentCategory.DesignBasic);
+        document.SourceType = ProjectDocumentSourceType.ExistingManagedFile;
+        document.DesiredOperation = ProjectDocumentDesiredOperation.Delete;
+        document.SyncStatus = ProjectDocumentSyncStatus.Failed;
+        document.SyncAttemptCount = ProjectDocumentService.MaxSyncAttempts;
+        await db.SaveChangesAsync();
+
+        var result = await service.RetryAsync(project.Id, document.Id, 7, false);
+
+        Assert.NotNull(result);
+        Assert.Equal("Pending", result.SyncStatus);
+        Assert.Equal(0, document.SyncAttemptCount);
+    }
+
+    [Fact]
     public async Task ClassifyAsync_DriveImport_QueuesNewGenerationInSelectedCategory()
     {
         var document = AddDocument(ProjectDocumentCategory.Unclassified);

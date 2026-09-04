@@ -246,12 +246,12 @@ public class DesignProjectService(
         DeletionImpactResponse impact,
         ConfirmDeletionRequest request)
     {
-        if (!impact.CanDelete)
-            throw new DesignProjectOperationException(
-                "Không thể xoá Dự án vì còn dữ liệu cần được dọn an toàn trước.");
         if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
             throw new DeletionPlanChangedException(
                 "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!impact.CanDelete)
+            throw new DesignProjectOperationException(
+                "Không thể xoá Dự án vì còn dữ liệu cần được dọn an toàn trước.");
         if (!string.Equals(request.Confirmation, impact.RequiredConfirmation, StringComparison.Ordinal))
             throw new DesignProjectOperationException(
                 $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");

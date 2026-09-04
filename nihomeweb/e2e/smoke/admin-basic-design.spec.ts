@@ -64,7 +64,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
 
     // ---------- 2. Open the detail page in the browser ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/design-projects/${projectId}`, {
+    await page.goto(`${baseURL}/admin/design-projects/${projectId}?tab=basic`, {
       waitUntil: "networkidle",
     });
 
@@ -82,7 +82,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     const basicTab = page.locator('button[role="tab"]').filter({
       hasText: /^(Thiết kế cơ sở|Basic design|基本设计|基本設計)$/i,
     });
-    await basicTab.click({ force: true });
+    await expect(basicTab).toHaveAttribute("aria-selected", "true");
     // The readiness card + "Tạo bản vẽ" button should be visible.
     await expect(page.getByRole("button", { name: /T\u1ea1o b\u1ea3n v\u1ebd|New document/i })).toBeVisible();
 

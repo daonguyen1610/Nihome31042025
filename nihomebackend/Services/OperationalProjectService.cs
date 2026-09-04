@@ -288,12 +288,12 @@ public class OperationalProjectService(
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
         var plan = await hardDeletePlans.ForOperationalProjectAsync(id, ct);
         if (plan is null) return null;
-        if (!plan.Impact.CanDelete)
-            throw new OperationalProjectOperationException(
-                "Không thể xoá Dự án khi còn tệp hoặc thư mục Drive. Vui lòng dọn các mục bị chặn trước.");
         if (!string.Equals(request.PlanToken?.Trim(), plan.Impact.PlanToken, StringComparison.Ordinal))
             throw new DeletionPlanChangedException(
                 "Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!plan.Impact.CanDelete)
+            throw new OperationalProjectOperationException(
+                "Không thể xoá Dự án khi còn tệp hoặc thư mục Drive. Vui lòng dọn các mục bị chặn trước.");
         if (!string.Equals(request.Confirmation, plan.Impact.RequiredConfirmation, StringComparison.Ordinal))
             throw new OperationalProjectOperationException(
                 $"Mã xác nhận không đúng. Vui lòng nhập chính xác '{plan.Impact.RequiredConfirmation}'.");

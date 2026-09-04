@@ -18,7 +18,7 @@ internal static class DeletionImpactPlanner
         IReadOnlyCollection<HardDeleteItemDefinition> definitions)
     {
         impact.Items.RemoveAll(item => item.Key is "design.filesPendingCleanup" or
-            "operations.pendingDocuments" or "operations.driveFolders");
+            "operations.pendingDocuments");
         var deleteCount = definitions.Count(item => item.Kind != HardDeleteItemKind.DatabaseAggregate);
         if (deleteCount > 0)
             impact.Items.Add(new DeletionImpactItemResponse
@@ -41,7 +41,14 @@ internal static class DeletionImpactPlanner
         impact.Items = impact.Items.OrderBy(item => item.Key, StringComparer.Ordinal).ToList();
         impact.CanDelete = impact.Items.All(item => item.Action != DeletionImpactActions.Block);
         impact.TotalAffected = 1 + impact.Items.Sum(item => item.Count);
-        var source = string.Join('|', identities.OrderBy(item => item, StringComparer.Ordinal));
+        var source = string.Join('|',
+            identities.Select(item => $"identity:{item}")
+                .Concat(blockers.Select(item => $"blocker:{item}"))
+                .Concat(definitions.Select(item =>
+                    $"definition:{item.Kind}:{item.ActionIdentifier}:{item.ExpectedParentId}:" +
+                    string.Join(',', item.ExpectedAppProperties?.OrderBy(pair => pair.Key)
+                        .Select(pair => $"{pair.Key}={pair.Value}") ?? [])))
+                .OrderBy(item => item, StringComparer.Ordinal));
         impact.PlanToken = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
             $"{impact.PlanToken}:{source}"))).ToLowerInvariant();
     }
@@ -142,7 +149,6 @@ internal static class DeletionImpactPlanner
             db.HandoverStatusHistory.Where(item => handoverRecordIds.Contains(item.HandoverRecordId)),
             item => item.Id, item => item.Note!, ct);
 
-        await AddDesignFileBlockersAsync(db, projectIds, items, ct);
         await AddTranslationsAsync(items, db, EntityTypes.DesignProject,
             db.DesignProjects.Where(item => projectIds.Contains(item.Id)).Select(item => item.Id), ct);
         await AddTranslationsAsync(items, db, EntityTypes.ConceptOption, conceptOptionIds, ct);
@@ -168,26 +174,18 @@ internal static class DeletionImpactPlanner
         await AddTranslationsAsync(items, db, EntityTypes.HandoverRecord, handoverRecordIds, ct);
     }
 
-    private static async Task AddDesignFileBlockersAsync(
+    internal static async Task<IReadOnlyList<DesignManagedFileReference>> GetDesignManagedFileReferencesAsync(
         AppDbContext db,
         IReadOnlyCollection<int> projectIds,
-        List<PlanItem> items,
         CancellationToken ct)
     {
-        var projects = await db.DesignProjects.AsNoTracking()
-            .Where(item => projectIds.Contains(item.Id))
-            .Select(item => new { item.Id, item.OperationalProjectId })
-            .ToListAsync(ct);
-        var operationalProjectByDesign = projects
-            .Where(item => item.OperationalProjectId.HasValue)
-            .ToDictionary(item => item.Id, item => item.OperationalProjectId!.Value);
-        var references = new List<ManagedFileReference>();
+        var references = new List<DesignManagedFileReference>();
 
         var basicDocuments = await db.BasicDesignDocs.AsNoTracking()
             .Where(item => projectIds.Contains(item.DesignProjectId) && item.FilePath != null)
             .Select(item => new { item.Id, item.DesignProjectId, item.FilePath })
             .ToListAsync(ct);
-        references.AddRange(basicDocuments.Select(item => new ManagedFileReference(
+        references.AddRange(basicDocuments.Select(item => new DesignManagedFileReference(
             item.DesignProjectId, ProjectDocumentSourceModule.Design, nameof(BasicDesignDoc),
             "file", item.Id, item.FilePath!, item.FilePath!)));
 
@@ -195,7 +193,7 @@ internal static class DeletionImpactPlanner
             .Where(item => projectIds.Contains(item.DesignProjectId) && item.FilePath != null)
             .Select(item => new { item.Id, item.DesignProjectId, item.FilePath })
             .ToListAsync(ct);
-        references.AddRange(shopDrawings.Select(item => new ManagedFileReference(
+        references.AddRange(shopDrawings.Select(item => new DesignManagedFileReference(
             item.DesignProjectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing),
             "file", item.Id, item.FilePath!, item.FilePath!)));
 
@@ -214,11 +212,11 @@ internal static class DeletionImpactPlanner
         foreach (var permit in permits)
         {
             if (!string.IsNullOrWhiteSpace(permit.SubmittedFilePath))
-                references.Add(new ManagedFileReference(permit.DesignProjectId,
+                references.Add(new DesignManagedFileReference(permit.DesignProjectId,
                     ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem), "submittedPackage",
                     permit.Id, permit.SubmittedFilePath, permit.PermitTypeCode));
             if (!string.IsNullOrWhiteSpace(permit.IssuedFilePath))
-                references.Add(new ManagedFileReference(permit.DesignProjectId,
+                references.Add(new DesignManagedFileReference(permit.DesignProjectId,
                     ProjectDocumentSourceModule.Design, nameof(PermitChecklistItem), "issuedPermit",
                     permit.Id, permit.IssuedFilePath, permit.PermitTypeCode));
         }
@@ -230,7 +228,7 @@ internal static class DeletionImpactPlanner
         foreach (var acceptance in acceptances)
             foreach (var path in DeserializeManagedPaths(acceptance.Documents,
                          "/files/business-documents/acceptance/"))
-                references.Add(new ManagedFileReference(acceptance.DesignProjectId,
+                references.Add(new DesignManagedFileReference(acceptance.DesignProjectId,
                     ProjectDocumentSourceModule.Acceptance, nameof(AcceptanceRecord), "documents",
                     acceptance.Id, path, acceptance.Title));
 
@@ -239,7 +237,7 @@ internal static class DeletionImpactPlanner
                 item.FileUrl.StartsWith("/files/business-documents/as-built/"))
             .Select(item => new { item.Id, item.DesignProjectId, item.Title, item.FileUrl })
             .ToListAsync(ct);
-        references.AddRange(asBuiltDocuments.Select(item => new ManagedFileReference(
+        references.AddRange(asBuiltDocuments.Select(item => new DesignManagedFileReference(
             item.DesignProjectId, ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument),
             "file", item.Id, item.FileUrl!, item.Title)));
 
@@ -250,42 +248,14 @@ internal static class DeletionImpactPlanner
         foreach (var handover in handovers)
             foreach (var path in DeserializeManagedPaths(handover.Documents,
                          "/files/business-documents/handover/"))
-                references.Add(new ManagedFileReference(handover.DesignProjectId,
+                references.Add(new DesignManagedFileReference(handover.DesignProjectId,
                     ProjectDocumentSourceModule.Handover, nameof(HandoverRecord), "documents",
                     handover.Id, path, handover.Title));
 
-        var linkedProjectIds = operationalProjectByDesign.Values.Distinct().ToList();
-        var sidecars = await db.ProjectDocuments.AsNoTracking()
-            .Where(item => linkedProjectIds.Contains(item.OperationalProjectId) &&
-                item.SourceType == ProjectDocumentSourceType.ExistingManagedFile)
-            .Select(item => new
-            {
-                item.OperationalProjectId,
-                item.SourceModule,
-                item.SourceEntityType,
-                item.SourceSlot,
-                item.SourceRecordId,
-                item.LocalPath,
-                item.SyncStatus
-            })
-            .ToListAsync(ct);
-        var sidecarStatus = sidecars.ToDictionary(
-            item => ManagedFileKey(item.OperationalProjectId, item.SourceModule, item.SourceEntityType!,
-                item.SourceSlot!, item.SourceRecordId!.Value, item.LocalPath),
-            item => item.SyncStatus,
-            StringComparer.Ordinal);
-        var blockers = references.Where(reference =>
-        {
-            if (!operationalProjectByDesign.TryGetValue(reference.DesignProjectId, out var projectId)) return true;
-            return !sidecarStatus.TryGetValue(ManagedFileKey(projectId, reference.SourceModule,
-                       reference.SourceEntityType, reference.SourceSlot, reference.SourceRecordId,
-                       reference.LocalPath), out var status) || status == ProjectDocumentSyncStatus.Processing;
-        }).ToList();
-        AddRaw(items, "design.filesPendingCleanup", DeletionImpactActions.Block,
-            blockers.Select(reference => reference.Identifier), blockers.Select(reference => reference.Label));
+        return references;
     }
 
-    private static string ManagedFileKey(
+    internal static string ManagedFileKey(
         int projectId,
         ProjectDocumentSourceModule sourceModule,
         string sourceEntityType,
@@ -482,7 +452,7 @@ internal static class DeletionImpactPlanner
 
     private sealed record PlanItem(string Key, string Action, List<string> Ids, List<string> Labels);
 
-    private sealed record ManagedFileReference(
+    internal sealed record DesignManagedFileReference(
         int DesignProjectId,
         ProjectDocumentSourceModule SourceModule,
         string SourceEntityType,

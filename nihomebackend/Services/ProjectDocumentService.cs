@@ -330,10 +330,12 @@ public sealed class ProjectDocumentService(
         if (document is null) return null;
         if (document.SyncStatus == ProjectDocumentSyncStatus.Processing)
             throw new ProjectDocumentConflictException("Tệp đang được đồng bộ. Vui lòng chờ trước khi thử lại.");
-        if (document.SyncAttemptCount >= MaxSyncAttempts || document.SyncStatus is not
+        var retryingDelete = document.DesiredOperation == ProjectDocumentDesiredOperation.Delete;
+        if ((!retryingDelete && document.SyncAttemptCount >= MaxSyncAttempts) || document.SyncStatus is not
             (ProjectDocumentSyncStatus.Failed or ProjectDocumentSyncStatus.Pending))
             throw new ProjectDocumentValidationException("Chỉ tệp đang chờ hoặc đồng bộ lỗi còn lượt thử mới có thể thử lại.");
         document.SyncStatus = ProjectDocumentSyncStatus.Pending;
+        if (retryingDelete) document.SyncAttemptCount = 0;
         document.NextSyncAttemptAt = DateTime.UtcNow;
         document.SyncError = null;
         document.ClaimToken = null;

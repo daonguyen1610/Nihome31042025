@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
 
@@ -348,10 +350,20 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task DeletionImpact_StandaloneProjectWithManagedFile_BlocksDelete()
+    public async Task Delete_StandaloneProjectWithManagedFile_BlocksAndPreservesFile()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
+        var managedPath = $"/files/business-documents/basic-design/{Guid.NewGuid():N}.pdf";
+        string fullPath;
+        using (var scope = Factory.Services.CreateScope())
+        {
+            var environment = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+            fullPath = Path.Combine(environment.ContentRootPath, "wwwroot",
+                managedPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, "standalone design file");
         var id = await WithDbAsync<int>(async db =>
         {
             var project = new DesignProject
@@ -368,7 +380,7 @@ public class DesignProjectsControllerTests : IntegrationTestBase
                 DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
                 Title = "Managed standalone file",
                 DisciplineCode = "ARCH",
-                FilePath = "/files/business-documents/basic-design/standalone.pdf",
+                FilePath = managedPath,
                 OriginalFileName = "standalone.pdf",
             });
             await db.SaveChangesAsync();
@@ -379,10 +391,11 @@ public class DesignProjectsControllerTests : IntegrationTestBase
             await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
 
         impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
-        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
-            item.GetProperty("key").GetString() == "design.filesPendingCleanup" &&
-            item.GetProperty("action").GetString() == "Block" &&
-            item.GetProperty("count").GetInt32() == 1);
+        var blocker = impact.GetProperty("items").EnumerateArray().Single(item =>
+            item.GetProperty("key").GetString() == "design.filesPendingCleanup");
+        blocker.GetProperty("action").GetString().Should().Be("Block");
+        blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
+            link.GetProperty("url").GetString() == $"/admin/design-projects/{id}?tab=basic");
         var delete = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/design-projects/{id}")
         {
             Content = JsonContent.Create(new
@@ -394,10 +407,11 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.Id == id)))
             .Should().BeTrue();
+        File.Exists(fullPath).Should().BeTrue();
     }
 
     [Fact]
-    public async Task DeletionImpact_LinkedManagedFileWithoutSidecar_BlocksDelete()
+    public async Task DeletionImpact_LinkedManagedFileWithoutSidecar_LinksToManualCleanup()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var customerId = await FirstCustomerIdAsync();
@@ -423,9 +437,146 @@ public class DesignProjectsControllerTests : IntegrationTestBase
             await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
 
         impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
-        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
-            item.GetProperty("key").GetString() == "design.filesPendingCleanup" &&
-            item.GetProperty("action").GetString() == "Block");
+        var blocker = impact.GetProperty("items").EnumerateArray().Single(item =>
+            item.GetProperty("key").GetString() == "design.filesPendingCleanup");
+        blocker.GetProperty("action").GetString().Should().Be("Block");
+        blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
+            link.GetProperty("url").GetString() == $"/admin/design-projects/{id}?tab=basic");
+    }
+
+    [Fact]
+    public async Task DeletionImpact_SyncedManagedFile_RequiresManualSourceCleanup()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
+        var id = await CreateAsync(customerId, "Synced Drive file");
+        var driveFileId = $"drive-{Guid.NewGuid():N}";
+        var managedPath = $"/files/business-documents/basic-design/{Guid.NewGuid():N}.pdf";
+        await WithDbAsync(async db =>
+        {
+            var driveSettings = await db.GoogleDriveCredentials.SingleOrDefaultAsync(item => item.Id == 1);
+            if (driveSettings is null)
+            {
+                driveSettings = new GoogleDriveCredential
+                {
+                    Id = 1,
+                    UpdatedByUserId = await db.Users.Select(item => item.Id).FirstAsync(),
+                    UpdatedAt = DateTime.UtcNow,
+                };
+                db.GoogleDriveCredentials.Add(driveSettings);
+            }
+            driveSettings.InstanceId = "integration-tests";
+            var project = await db.DesignProjects.FindAsync(id);
+            project!.OperationalProjectId = operationalProjectId;
+            var document = new BasicDesignDoc
+            {
+                DesignProjectId = id,
+                DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
+                Title = "Synced cleanup sidecar",
+                DisciplineCode = "ARCH",
+                FilePath = managedPath,
+            };
+            db.BasicDesignDocs.Add(document);
+            await db.SaveChangesAsync();
+            db.ProjectDocuments.Add(new ProjectDocument
+            {
+                OperationalProjectId = operationalProjectId,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+                SourceEntityType = nameof(BasicDesignDoc),
+                SourceSlot = "file",
+                SourceRecordId = document.Id,
+                LocalPath = managedPath,
+                OriginalFileName = "synced-sidecar.pdf",
+                Sha256 = new string('a', 64),
+                Origin = ProjectDocumentOrigin.Nicon,
+                DesiredOperation = ProjectDocumentDesiredOperation.None,
+                SyncStatus = ProjectDocumentSyncStatus.Synced,
+                Generation = 1,
+                DriveFileId = driveFileId,
+                DriveFolderId = "drive-folder",
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().NotContain(item =>
+            item.GetProperty("key").GetString() == "hardDelete.managedExternalItems");
+        var blocker = impact.GetProperty("items").EnumerateArray().Single(item =>
+            item.GetProperty("key").GetString() == "design.filesPendingCleanup");
+        blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
+            link.GetProperty("url").GetString() == $"/admin/design-projects/{id}?tab=basic");
+    }
+
+    [Fact]
+    public async Task DeletionImpact_OrphanedPendingDeleteSidecar_BlocksAndLinksToDocuments()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
+        var id = await CreateAsync(customerId, "Orphaned pending delete");
+        await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(id);
+            project!.OperationalProjectId = operationalProjectId;
+            db.ProjectDocuments.Add(new ProjectDocument
+            {
+                OperationalProjectId = operationalProjectId,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+                SourceEntityType = nameof(BasicDesignDoc),
+                SourceSlot = "file",
+                SourceRecordId = 987654321,
+                LocalPath = "/files/business-documents/basic-design/orphaned-delete.pdf",
+                OriginalFileName = "orphaned-delete.pdf",
+                Sha256 = new string('a', 64),
+                DesiredOperation = ProjectDocumentDesiredOperation.Delete,
+                SyncStatus = ProjectDocumentSyncStatus.Failed,
+                SyncAttemptCount = 3,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        var blocker = impact.GetProperty("items").EnumerateArray().Single(item =>
+            item.GetProperty("key").GetString() == "design.filesPendingCleanup");
+        blocker.GetProperty("resolutionLinks").EnumerateArray().Should().Contain(link =>
+            link.GetProperty("url").GetString() ==
+            $"/admin/operational-projects/{operationalProjectId}#project-documents");
+
+        await WithDbAsync(async db =>
+        {
+            var sidecar = await db.ProjectDocuments.SingleAsync(item =>
+                item.OperationalProjectId == operationalProjectId &&
+                item.SourceRecordId == 987654321);
+            sidecar.DesiredOperation = ProjectDocumentDesiredOperation.None;
+            sidecar.SyncStatus = ProjectDocumentSyncStatus.Deleted;
+            await db.SaveChangesAsync();
+        });
+        var clearedImpact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
+        clearedImpact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        var delete = await Client.SendAsync(new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/design-projects/{id}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = clearedImpact.GetProperty("planToken").GetString(),
+                confirmation = clearedImpact.GetProperty("requiredConfirmation").GetString(),
+            }),
+        });
+
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(item => item.Id == id)))
+            .Should().BeFalse();
     }
 
     [Fact]
@@ -472,6 +623,194 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
             item.GetProperty("key").GetString() == "design.filesPendingCleanup" &&
             item.GetProperty("action").GetString() == "Block");
+    }
+
+    [Fact]
+    public async Task DeletionImpact_SyncedSidecarWithPendingDesiredOperation_BlocksDelete()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
+        var id = await CreateAsync(customerId, "Unstable desired operation");
+        await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(id);
+            project!.OperationalProjectId = operationalProjectId;
+            var document = new BasicDesignDoc
+            {
+                DesignProjectId = id,
+                DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
+                Title = "Pending sidecar operation",
+                DisciplineCode = "ARCH",
+                FilePath = $"/files/business-documents/basic-design/{Guid.NewGuid():N}.pdf",
+            };
+            db.BasicDesignDocs.Add(document);
+            await db.SaveChangesAsync();
+            db.ProjectDocuments.Add(new ProjectDocument
+            {
+                OperationalProjectId = operationalProjectId,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceType = ProjectDocumentSourceType.ExistingManagedFile,
+                SourceEntityType = nameof(BasicDesignDoc),
+                SourceSlot = "file",
+                SourceRecordId = document.Id,
+                LocalPath = document.FilePath,
+                OriginalFileName = "pending-operation.pdf",
+                Sha256 = new string('a', 64),
+                Origin = ProjectDocumentOrigin.Nicon,
+                DesiredOperation = ProjectDocumentDesiredOperation.Upsert,
+                SyncStatus = ProjectDocumentSyncStatus.Synced,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "design.filesPendingCleanup" &&
+            item.GetProperty("action").GetString() == "Block");
+    }
+
+    [Theory]
+    [InlineData("manual-upload")]
+    [InlineData("imported")]
+    [InlineData("wrong-operational-project")]
+    [InlineData("missing-slot")]
+    public async Task DeletionImpact_WithUnsafeNearMatchSidecar_BlocksDelete(string sidecarVariant)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
+        var otherOperationalProjectId = sidecarVariant == "wrong-operational-project"
+            ? await CreateOperationalProjectAsync(customerId)
+            : operationalProjectId;
+        var id = await CreateAsync(customerId, $"Unsafe sidecar {sidecarVariant}");
+        await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(id);
+            project!.OperationalProjectId = operationalProjectId;
+            var document = new BasicDesignDoc
+            {
+                DesignProjectId = id,
+                DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
+                Title = "Unsafe cleanup sidecar",
+                DisciplineCode = "ARCH",
+                FilePath = $"/files/business-documents/basic-design/{Guid.NewGuid():N}.pdf",
+            };
+            db.BasicDesignDocs.Add(document);
+            await db.SaveChangesAsync();
+            db.ProjectDocuments.Add(new ProjectDocument
+            {
+                OperationalProjectId = otherOperationalProjectId,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceType = sidecarVariant switch
+                {
+                    "manual-upload" => ProjectDocumentSourceType.ManualUpload,
+                    "imported" => ProjectDocumentSourceType.GoogleDriveImport,
+                    _ => ProjectDocumentSourceType.ExistingManagedFile,
+                },
+                SourceEntityType = nameof(BasicDesignDoc),
+                SourceSlot = sidecarVariant == "missing-slot" ? null : "file",
+                SourceRecordId = document.Id,
+                LocalPath = document.FilePath,
+                OriginalFileName = "unsafe-sidecar.pdf",
+                Sha256 = new string('a', 64),
+                Origin = sidecarVariant == "imported"
+                    ? ProjectDocumentOrigin.GoogleDrive
+                    : ProjectDocumentOrigin.Nicon,
+                DesiredOperation = ProjectDocumentDesiredOperation.None,
+                SyncStatus = ProjectDocumentSyncStatus.Synced,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{id}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "design.filesPendingCleanup" &&
+            item.GetProperty("action").GetString() == "Block");
+    }
+
+    [Fact]
+    public async Task DeletionImpact_WhenAnotherProjectSharesManagedPath_BlocksDelete()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var firstProjectId = await CreateAsync(customerId, "Shared file owner");
+        var secondProjectId = await CreateAsync(customerId, "Shared file consumer");
+        var managedPath = $"/files/business-documents/basic-design/{Guid.NewGuid():N}.pdf";
+        await WithDbAsync(async db =>
+        {
+            db.BasicDesignDocs.AddRange(
+                new BasicDesignDoc
+                {
+                    DesignProjectId = firstProjectId,
+                    DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
+                    Title = "Original shared file",
+                    DisciplineCode = "ARCH",
+                    FilePath = managedPath,
+                },
+                new BasicDesignDoc
+                {
+                    DesignProjectId = secondProjectId,
+                    DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
+                    Title = "Other shared file",
+                    DisciplineCode = "ARCH",
+                    FilePath = managedPath,
+                });
+            await db.SaveChangesAsync();
+        });
+
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{firstProjectId}/deletion-impact"));
+
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
+            item.GetProperty("key").GetString() == "design.filesPendingCleanup" &&
+            item.GetProperty("action").GetString() == "Block");
+    }
+
+    [Fact]
+    public async Task Delete_WhenManagedFileAppearsAfterPreview_ReturnsConflictAndPreservesProject()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var firstProjectId = await CreateAsync(customerId, "Path owner before preview");
+        var managedPath = $"/files/business-documents/basic-design/{Guid.NewGuid():N}.pdf";
+        var impact = await ReadJsonAsync(
+            await Client.GetAsync($"/api/design-projects/{firstProjectId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        await WithDbAsync(async db =>
+        {
+            db.BasicDesignDocs.Add(new BasicDesignDoc
+            {
+                DesignProjectId = firstProjectId,
+                DocumentCode = $"BD-{Guid.NewGuid():N}"[..24],
+                Title = "New managed file",
+                DisciplineCode = "ARCH",
+                FilePath = managedPath,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var delete = await Client.SendAsync(new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/design-projects/{firstProjectId}")
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            }),
+        });
+
+        delete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.DesignProjects.AnyAsync(item => item.Id == firstProjectId)))
+            .Should().BeTrue();
     }
 
     [Fact]

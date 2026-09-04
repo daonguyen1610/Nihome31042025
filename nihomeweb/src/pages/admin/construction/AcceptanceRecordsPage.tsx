@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -121,6 +122,7 @@ const formatDateTime = (iso: string | null | undefined) => {
 
 export default function AcceptanceRecordsPage() {
   const { t } = useI18n();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionAcceptanceManage);
@@ -128,7 +130,10 @@ export default function AcceptanceRecordsPage() {
 
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
   const [tasks, setTasks] = useState<ConstructionTaskResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | undefined>();
+  const [projectId, setProjectId] = useState<number | undefined>(() => {
+    const value = Number(searchParams.get("designProjectId"));
+    return Number.isInteger(value) && value > 0 ? value : undefined;
+  });
   const [taskId, setTaskId] = useState<number | undefined>();
   const [responsibleUserId, setResponsibleUserId] = useState<number | undefined>();
   const [acceptanceFrom, setAcceptanceFrom] = useState("");

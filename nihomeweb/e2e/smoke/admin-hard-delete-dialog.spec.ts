@@ -95,11 +95,11 @@ test("hard-delete dialog discloses impact and requires exact typed confirmation"
 test("hard-delete dialog shows blockers and disables deletion", async ({ page, loginInBrowserAs }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   let deleteRequested = false;
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async route => {
+  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), async route => {
     if (route.request().method() === "DELETE") deleteRequested = true;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(project) });
   });
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`), route =>
+  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/deletion-impact$`), route =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -116,14 +116,18 @@ test("hard-delete dialog shows blockers and disables deletion", async ({ page, l
           action: "Block",
           count: 1,
           examples: ["pending.pdf"],
+          resolutionLinks: [{
+            label: "pending.pdf",
+            url: `/admin/operational-projects/${projectId}#project-documents`,
+          }],
         }],
       }),
     }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
+  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/timeline$`), route =>
     route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), route =>
+  await page.context().route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), route =>
     route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
-  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), route =>
+  await page.context().route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`), route =>
     route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
 
   await page.goto(`/admin/operational-projects/${projectId}`);
@@ -131,6 +135,22 @@ test("hard-delete dialog shows blockers and disables deletion", async ({ page, l
 
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText("pending.pdf");
+  const cleanupLink = dialog.getByRole("link", { name: "pending.pdf" });
+  await expect(cleanupLink).toHaveAttribute(
+    "href",
+    `/admin/operational-projects/${projectId}#project-documents`,
+  );
+  await expect(cleanupLink).toHaveAttribute("target", "_blank");
+  const [cleanupPage] = await Promise.all([
+    page.waitForEvent("popup"),
+    cleanupLink.click(),
+  ]);
+  await cleanupPage.waitForLoadState("domcontentloaded");
+  await expect(cleanupPage).toHaveURL(
+    new RegExp(`/admin/operational-projects/${projectId}#project-documents$`),
+  );
+  await expect(cleanupPage.getByTestId("project-documents-trigger")).toBeVisible();
+  await cleanupPage.close();
   await expect(dialog.getByRole("textbox")).toHaveCount(0);
   await expect(dialog.getByRole("button", {
     name: /Delete permanently|Xoá vĩnh viễn|永久删除|完全に削除/i,
