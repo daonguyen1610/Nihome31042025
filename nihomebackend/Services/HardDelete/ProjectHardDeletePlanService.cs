@@ -203,27 +203,29 @@ internal static class DesignDocumentScope
             .SingleOrDefaultAsync(ct);
         if (!operationalProjectId.HasValue) return [];
 
-        var sourceIds = new Dictionary<string, HashSet<long>>(StringComparer.Ordinal)
-        {
-            [nameof(BasicDesignDoc)] = (await db.BasicDesignDocs.AsNoTracking()
-                .Where(item => item.DesignProjectId == designProjectId).Select(item => (long)item.Id).ToListAsync(ct)).ToHashSet(),
-            [nameof(ShopDrawing)] = (await db.ShopDrawings.AsNoTracking()
-                .Where(item => item.DesignProjectId == designProjectId).Select(item => (long)item.Id).ToListAsync(ct)).ToHashSet(),
-            [nameof(PermitChecklistItem)] = (await db.PermitChecklistItems.AsNoTracking()
-                .Where(item => item.DesignProjectId == designProjectId).Select(item => (long)item.Id).ToListAsync(ct)).ToHashSet(),
-            [nameof(AcceptanceRecord)] = (await db.AcceptanceRecords.AsNoTracking()
-                .Where(item => item.DesignProjectId == designProjectId).Select(item => (long)item.Id).ToListAsync(ct)).ToHashSet(),
-            [nameof(AsBuiltDocument)] = (await db.AsBuiltDocuments.AsNoTracking()
-                .Where(item => item.DesignProjectId == designProjectId).Select(item => (long)item.Id).ToListAsync(ct)).ToHashSet(),
-            [nameof(HandoverRecord)] = (await db.HandoverRecords.AsNoTracking()
-                .Where(item => item.DesignProjectId == designProjectId).Select(item => (long)item.Id).ToListAsync(ct)).ToHashSet(),
-        };
         return await db.ProjectDocuments.AsNoTracking()
             .Where(item => item.OperationalProjectId == operationalProjectId &&
                 item.SourceType == ProjectDocumentSourceType.ExistingManagedFile &&
                 item.SourceEntityType != null && item.SourceRecordId.HasValue)
-            .Where(item => sourceIds.Keys.Contains(item.SourceEntityType!) &&
-                sourceIds[item.SourceEntityType!].Contains(item.SourceRecordId!.Value))
+            .Where(item =>
+                (item.SourceEntityType == nameof(BasicDesignDoc) &&
+                    db.BasicDesignDocs.Any(source => source.DesignProjectId == designProjectId &&
+                        (long)source.Id == item.SourceRecordId!.Value)) ||
+                (item.SourceEntityType == nameof(ShopDrawing) &&
+                    db.ShopDrawings.Any(source => source.DesignProjectId == designProjectId &&
+                        (long)source.Id == item.SourceRecordId!.Value)) ||
+                (item.SourceEntityType == nameof(PermitChecklistItem) &&
+                    db.PermitChecklistItems.Any(source => source.DesignProjectId == designProjectId &&
+                        (long)source.Id == item.SourceRecordId!.Value)) ||
+                (item.SourceEntityType == nameof(AcceptanceRecord) &&
+                    db.AcceptanceRecords.Any(source => source.DesignProjectId == designProjectId &&
+                        (long)source.Id == item.SourceRecordId!.Value)) ||
+                (item.SourceEntityType == nameof(AsBuiltDocument) &&
+                    db.AsBuiltDocuments.Any(source => source.DesignProjectId == designProjectId &&
+                        (long)source.Id == item.SourceRecordId!.Value)) ||
+                (item.SourceEntityType == nameof(HandoverRecord) &&
+                    db.HandoverRecords.Any(source => source.DesignProjectId == designProjectId &&
+                        (long)source.Id == item.SourceRecordId!.Value)))
             .Select(item => item.Id).ToListAsync(ct);
     }
 }
