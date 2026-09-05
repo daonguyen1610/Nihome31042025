@@ -230,6 +230,22 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         var plannedEnd = RequireDate(request.PlannedEnd, "Ngày kết thúc kế hoạch");
         DesignScheduleRules.ValidateDatesAndStatus(plannedStart, plannedEnd,
             request.ActualStart, request.ActualEnd, status, request.ProgressPercent, request.Weight);
+        var baseline = await db.DesignSchedulePhases.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .Select(item => new { item.Id, item.DesignProjectId, item.Code, item.Weight })
+            .ToListAsync(ct);
+        var canonicalCodes = Enum.GetValues<DesignSchedulePhaseCode>();
+        if (baseline.Count != canonicalCodes.Length ||
+            baseline.Select(item => item.Code).Distinct().Count() != canonicalCodes.Length ||
+            canonicalCodes.Any(code => baseline.All(item => item.Code != code)) ||
+            baseline.Any(item => item.DesignProjectId != phase.DesignProjectId))
+            throw new DesignScheduleOperationException(
+                "Lịch thiết kế hiện có không chứa đúng ba giai đoạn chuẩn; cần xử lý dữ liệu trước khi cập nhật.");
+        var resultingWeightTotal = request.Weight + baseline
+            .Where(item => item.Id != phaseId)
+            .Sum(item => item.Weight);
+        if (resultingWeightTotal != 100)
+            throw new DesignScheduleOperationException("Tổng trọng số ba giai đoạn phải bằng 100.");
         CrmConcurrency.Apply(db, phase, request.RowVersion);
         phase.PlannedStart = plannedStart;
         phase.PlannedEnd = plannedEnd;
@@ -482,7 +498,8 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         var filtered = allTasks.AsEnumerable();
         if (!string.IsNullOrWhiteSpace(query.Phase))
         {
-            if (!Enum.TryParse<DesignSchedulePhaseCode>(query.Phase.Trim(), true, out var phaseCode))
+            if (!Enum.TryParse<DesignSchedulePhaseCode>(query.Phase.Trim(), true, out var phaseCode) ||
+                !Enum.IsDefined(phaseCode))
                 throw new DesignScheduleOperationException("Giai đoạn không hợp lệ.");
             filtered = filtered.Where(item => item.Phase.Code == phaseCode);
         }
@@ -503,6 +520,7 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         if (query.OverdueOnly)
             filtered = filtered.Where(item => IsOverdue(item.PlannedEnd, item.Status, today));
         var ordered = filtered.OrderBy(item => item.PlannedStart).ThenBy(item => item.Id).ToList();
+        var skip = (long)(query.Page - 1) * query.PageSize;
 
         var rollupSources = phases.Select(phase =>
         {
@@ -544,8 +562,10 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
                 Page = query.Page,
                 PageSize = query.PageSize,
                 TotalCount = ordered.Count,
-                Items = ordered.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize)
-                    .Select(task => MapTask(task, today)).ToList(),
+                Items = skip >= ordered.Count
+                    ? []
+                    : ordered.Skip((int)skip).Take(query.PageSize)
+                        .Select(task => MapTask(task, today)).ToList(),
             },
         };
     }
