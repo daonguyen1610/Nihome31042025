@@ -82,6 +82,16 @@ Every user-writable field needs explicit rules for presence, format, length, ran
 
 Before finishing a form or write endpoint, identify each field's invalid-value rule and the server location that enforces it.
 
+## Core business alignment
+
+All implementation decisions that affect business behavior must comply with 'docs/Nicon-QLVH.md' and 'docs/Nicon-workflow.md'. These documents are the authoritative source for customer expectations and business workflows.
+
+- Before implementing, research the relevant documentation, existing behavior, code paths, data contracts, and tests. Do not start coding from assumptions.
+- Think through the actors, business intent, workflow states, rules, permissions, dependencies, edge cases, and expected outcomes before choosing a solution.
+- State unresolved ambiguity and request clarification when it could change business behavior or data; do not invent missing requirements.
+- Prefer the smallest solution that satisfies the confirmed business flow, avoids unnecessary work, and improves delivery efficiency without weakening correctness or validation.
+- After implementation, verify the result against the documented workflow and customer expectation before declaring the task complete.
+
 ## Hard-delete policy
 
 Hard delete is a business operation, not a direct 'DbSet.Remove' call. Every user-facing root delete must follow 'docs/hard-delete-convention.md'.
