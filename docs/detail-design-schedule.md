@@ -44,6 +44,9 @@ no actual dates. `InProgress` requires an actual start. `Completed` requires
 both actual dates and 100 percent progress. An actual end is forbidden for all
 other statuses. Planned and actual end dates cannot precede their corresponding
 start dates. Weights range from 1 through 100 and progress from 0 through 100.
+A phase update is rejected when its resulting three-phase weight total would no
+longer equal 100; weight redistribution requires an atomic contract and is not
+performed through separate phase updates.
 A milestone has `IsMilestone = true` and equal planned start and end dates.
 Overdue is derived at read time when planned end is before the current UTC date
 and status is not `Completed`; it is never persisted.

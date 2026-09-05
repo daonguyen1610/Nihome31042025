@@ -84,7 +84,7 @@ Before finishing a form or write endpoint, identify each field's invalid-value r
 
 ## Core business alignment
 
-All implementation decisions that affect business behavior must comply with 'docs/Nicon-QLVH.md' and 'docs/Nicon-workflow.md'. These documents are the authoritative source for customer expectations and business workflows.
+All implementation decisions that affect business behavior must comply with 'docs/Nicon-QLVH.md', 'docs/Nicon_BreakTask_v1.xlsx' and 'docs/Nicon-workflow.md'. These documents are the authoritative source for customer expectations and business workflows.
 
 - Before implementing, research the relevant documentation, existing behavior, code paths, data contracts, and tests. Do not start coding from assumptions.
 - Think through the actors, business intent, workflow states, rules, permissions, dependencies, edge cases, and expected outcomes before choosing a solution.
@@ -138,6 +138,8 @@ Choose the lowest test layer that can prove the behavior. Do not duplicate the s
 - Unit tests ('nihomebackend.tests'): isolated services, validation, branching, JSON handling, cache invalidation, and file-resolution helpers. Use InMemory EF and Moq where appropriate; no HTTP or Docker.
 - Integration tests ('nihomebackend.integration.tests'): the real ASP.NET pipeline through 'WebApplicationFactory', including middleware, auth, model binding, EF persistence, API contracts, CRUD, validation, and authorization.
 - E2E tests ('nihomeweb/e2e/smoke'): narrow real-browser rendering, SPA mounting, JavaScript errors, route rendering, and deployed-stack wiring such as CORS and health checks. API-only behavior belongs in integration tests.
+- Covers Happy path, Negative path testing. Ensure all test cases to cover business scenarios of the customers.
+- Use high quality data for testing with the real use cases.
 
 Use this rule: pure logic → unit; HTTP/auth/persistence contract → integration; browser or deployed-stack behavior → E2E. Tests must detect defects, not merely reproduce the implementation. Find the root cause before changing a failing test or product code.
 
