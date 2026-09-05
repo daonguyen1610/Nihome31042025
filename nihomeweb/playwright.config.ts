@@ -14,6 +14,9 @@ import { defineConfig, devices } from "@playwright/test";
  * BASE_URL points to the running stack. Locally:
  *   docker compose up -d        →  http://localhost:5043
  *   npm run dev (FE only)       →  http://localhost:8080  (with VITE_API_URL set)
+ *
+ * To watch a headed test in slow motion, set the delay per action in milliseconds:
+ *   PLAYWRIGHT_SLOW_MO=800 npm run test:e2e -- <spec> --headed --workers=1
  */
 const baseURL = process.env.BASE_URL ?? "http://localhost:5043";
 
@@ -31,6 +34,7 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   use: {
     baseURL,
+    launchOptions: { slowMo: Number(process.env.PLAYWRIGHT_SLOW_MO ?? 0) },
     trace: "retain-on-failure",
     video: "retain-on-failure",
     screenshot: "only-on-failure",
