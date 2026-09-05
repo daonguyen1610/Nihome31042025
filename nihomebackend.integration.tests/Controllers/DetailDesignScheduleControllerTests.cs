@@ -119,6 +119,228 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         history.Should().ContainEquivalentOf(new { EntityType = "Phase", Action = "Initialized" });
         history.Should().ContainEquivalentOf(new { EntityType = "Task", Action = "Created" });
         history.Should().ContainEquivalentOf(new { EntityType = "Task", Action = "Updated" });
+
+        IReadOnlyList<AuditLog> auditRows = [];
+        for (var attempt = 0; attempt < 20 && auditRows.Count < 5; attempt++)
+        {
+            await Task.Delay(250);
+            auditRows = await WithDbAsync(db => db.AuditLogs.AsNoTracking()
+                .Where(item => item.ResourceType == "DetailDesignSchedule" &&
+                    item.ResourceId != null && item.ResourceId.StartsWith($"{fixture.ProjectId}:") &&
+                    item.Action.StartsWith("design-schedule."))
+                .ToListAsync());
+        }
+        auditRows.Should().HaveCount(5);
+        auditRows.Should().ContainSingle(item => item.Action == "design-schedule.initialize");
+        auditRows.Count(item => item.Action == "design-schedule.task.create").Should().Be(3);
+        auditRows.Should().ContainSingle(item => item.Action == "design-schedule.task.update");
+        auditRows.Should().OnlyContain(item => item.ActorUserId.HasValue &&
+            !string.IsNullOrWhiteSpace(item.NewValueJson));
+    }
+
+    [Fact]
+    public async Task UpdatePhase_ValidUpdateSucceedsButInvalidWeightPreservesStateAndHistory()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phase = await GetPhaseAsync(fixture.ProjectId, "Concept");
+
+        using var valid = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phase.Id}",
+            PhasePayload(phase.RowVersion, 34, "InProgress", new DateOnly(2026, 9, 2)),
+            $"phase-valid-{Guid.NewGuid():N}");
+        valid.StatusCode.Should().Be(HttpStatusCode.OK, await valid.Content.ReadAsStringAsync());
+        valid.Headers.ETag.Should().NotBeNull();
+        var updated = await ReadJsonAsync(valid);
+        var updatedVersion = updated.GetProperty("rowVersion").GetString()!;
+        var historyCount = await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId));
+
+        using var invalidWeight = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phase.Id}",
+            PhasePayload(updatedVersion, 50, "InProgress", new DateOnly(2026, 9, 2)),
+            $"phase-invalid-weight-{Guid.NewGuid():N}");
+
+        invalidWeight.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var persisted = await GetPhaseAsync(fixture.ProjectId, "Concept");
+        persisted.RowVersion.Should().Be(updatedVersion);
+        (await WithDbAsync(db => db.DesignSchedulePhases.Where(item =>
+            item.OperationalProjectId == fixture.ProjectId).SumAsync(item => item.Weight))).Should().Be(100);
+        (await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId))).Should().Be(historyCount);
+    }
+
+    [Fact]
+    public async Task Initialize_RejectsInvalidInputsAndPartialBaselineWithoutPartialWrites()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var missingDates = await CreateFixtureAsync(useDefaultDates: false);
+        var shortRange = await CreateFixtureAsync(
+            startDate: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+            deadline: new DateTime(2026, 9, 2, 0, 0, 0, DateTimeKind.Utc));
+        var reversed = await CreateFixtureAsync(
+            startDate: new DateTime(2026, 9, 3, 0, 0, 0, DateTimeKind.Utc),
+            deadline: new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc));
+        var invalidDefinitions = await CreateFixtureAsync();
+        var partial = await CreateFixtureAsync();
+        await WithDbAsync(async db =>
+        {
+            var designProjectId = await db.DesignProjects.Where(item =>
+                    item.OperationalProjectId == partial.ProjectId)
+                .Select(item => item.Id).SingleAsync();
+            db.DesignSchedulePhases.Add(new DesignSchedulePhase
+            {
+                OperationalProjectId = partial.ProjectId,
+                DesignProjectId = designProjectId,
+                Code = DesignSchedulePhaseCode.Concept,
+                PlannedStart = new DateOnly(2026, 9, 1),
+                PlannedEnd = new DateOnly(2026, 9, 30),
+                Status = DesignScheduleStatus.NotStarted,
+                Weight = 34,
+                CreatedByUserId = 1,
+                UpdatedByUserId = 1,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        using var missingDatesResponse = await InitializeAsync(missingDates.ProjectId, InitializePayload());
+        using var shortRangeResponse = await InitializeAsync(shortRange.ProjectId, InitializePayload());
+        using var reversedResponse = await InitializeAsync(reversed.ProjectId, InitializePayload());
+        using var invalidWeightsResponse = await InitializeAsync(invalidDefinitions.ProjectId, new
+        {
+            phases = new[]
+            {
+                new { code = "Concept", weight = 34 },
+                new { code = "BasicDesign", weight = 33 },
+                new { code = "ShopDrawing", weight = 32 },
+            },
+        });
+        using var duplicateCodesResponse = await InitializeAsync(invalidDefinitions.ProjectId, new
+        {
+            phases = new[]
+            {
+                new { code = "Concept", weight = 34 },
+                new { code = "Concept", weight = 33 },
+                new { code = "ShopDrawing", weight = 33 },
+            },
+        });
+        using var partialResponse = await InitializeAsync(partial.ProjectId, InitializePayload());
+
+        new[] { missingDatesResponse, shortRangeResponse, reversedResponse, invalidWeightsResponse,
+                duplicateCodesResponse, partialResponse }
+            .Should().OnlyContain(response => response.StatusCode == HttpStatusCode.BadRequest);
+        var partialPhase = await GetPhaseAsync(partial.ProjectId, "Concept");
+        using var partialUpdateResponse = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{partial.ProjectId}/design-schedule/phases/{partialPhase.Id}",
+            PhasePayload(partialPhase.RowVersion, 100, "NotStarted"),
+            $"partial-update-{Guid.NewGuid():N}");
+        partialUpdateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DesignSchedulePhases.CountAsync(item =>
+            item.OperationalProjectId != partial.ProjectId &&
+            new[] { missingDates.ProjectId, shortRange.ProjectId, reversed.ProjectId,
+                invalidDefinitions.ProjectId }.Contains(item.OperationalProjectId)))).Should().Be(0);
+        (await WithDbAsync(db => db.DesignSchedulePhases.CountAsync(item =>
+            item.OperationalProjectId == partial.ProjectId))).Should().Be(1);
+        (await GetPhaseAsync(partial.ProjectId, "Concept")).RowVersion.Should().Be(partialPhase.RowVersion);
+        (await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == partial.ProjectId))).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task UpdateTask_CyclicDependencyPreservesExistingGraphTaskAndHistory()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phaseId = await PhaseIdAsync(fixture.ProjectId, "Concept");
+        using var createdA = await CreateTaskAsync(fixture, phaseId, TaskPayload("CHAIN-A", fixture.MemberId, 0));
+        var taskA = await GetTaskAsync(fixture.ProjectId, "CHAIN-A");
+        using var createdB = await CreateTaskAsync(fixture, phaseId,
+            TaskPayload("CHAIN-B", fixture.MemberId, 0) with { PredecessorTaskIds = [taskA.Id] });
+        var taskB = await GetTaskAsync(fixture.ProjectId, "CHAIN-B");
+        using var createdC = await CreateTaskAsync(fixture, phaseId,
+            TaskPayload("CHAIN-C", fixture.MemberId, 0) with { PredecessorTaskIds = [taskB.Id] });
+        var taskC = await GetTaskAsync(fixture.ProjectId, "CHAIN-C");
+        new[] { createdA, createdB, createdC }.Should()
+            .OnlyContain(response => response.StatusCode == HttpStatusCode.Created);
+        var historyCount = await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId));
+
+        using var cycle = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/tasks/{taskA.Id}",
+            TaskPayload("CHAIN-A", fixture.MemberId, 0, rowVersion: taskA.RowVersion) with
+            { PredecessorTaskIds = [taskC.Id], Name = "Should not persist" },
+            $"cycle-{Guid.NewGuid():N}");
+
+        cycle.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var persistedA = await GetTaskAsync(fixture.ProjectId, "CHAIN-A");
+        persistedA.Name.Should().Be("Design package");
+        persistedA.RowVersion.Should().Be(taskA.RowVersion);
+        var edges = await WithDbAsync(db => db.DesignScheduleTaskDependencies.AsNoTracking()
+            .Where(item => item.OperationalProjectId == fixture.ProjectId)
+            .Select(item => new { item.TaskId, item.PredecessorTaskId }).ToListAsync());
+        edges.Should().BeEquivalentTo(new[]
+        {
+            new { TaskId = taskB.Id, PredecessorTaskId = taskA.Id },
+            new { TaskId = taskC.Id, PredecessorTaskId = taskB.Id },
+        });
+        (await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.OperationalProjectId == fixture.ProjectId))).Should().Be(historyCount);
+    }
+
+    [Fact]
+    public async Task Get_QueryBoundariesPaginationAndOverdueKeepRollupStable()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phaseId = await PhaseIdAsync(fixture.ProjectId, "Concept");
+        using var first = await CreateTaskAsync(fixture, phaseId,
+            TaskPayload("FILTER-A", fixture.MemberId, 0) with
+            {
+                PlannedStart = new DateOnly(2026, 9, 1),
+                PlannedEnd = new DateOnly(2026, 9, 2),
+                Weight = 40,
+            });
+        using var second = await CreateTaskAsync(fixture, phaseId,
+            TaskPayload("FILTER-B", fixture.MemberId, 100, "Completed",
+                new DateOnly(2026, 9, 2)) with
+            {
+                PlannedStart = new DateOnly(2026, 9, 2),
+                PlannedEnd = new DateOnly(2026, 9, 2),
+                ActualEnd = new DateOnly(2026, 9, 2),
+                Weight = 60,
+            });
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        second.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        using var baselineResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule?page=1&pageSize=1");
+        using var boundaryResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule" +
+            $"?assigneeMemberId={fixture.MemberId}&plannedFrom=2026-09-02&plannedTo=2026-09-02&page=2&pageSize=1");
+        using var overdueResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule?overdueOnly=true&pageSize=100");
+        using var undefinedPhase = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule?phase=999");
+        using var maximumPage = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule?page={int.MaxValue}&pageSize=100");
+
+        baselineResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        boundaryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        overdueResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        undefinedPhase.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        maximumPage.StatusCode.Should().Be(HttpStatusCode.OK);
+        var baseline = await ReadJsonAsync(baselineResponse);
+        var boundary = await ReadJsonAsync(boundaryResponse);
+        var overdue = await ReadJsonAsync(overdueResponse);
+        var maximum = await ReadJsonAsync(maximumPage);
+        boundary.GetProperty("tasks").GetProperty("totalCount").GetInt32().Should().Be(2);
+        boundary.GetProperty("tasks").GetProperty("items")[0].GetProperty("code")
+            .GetString().Should().Be("FILTER-B");
+        overdue.GetProperty("tasks").GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("code").GetString()).Should().Contain("FILTER-A").And.NotContain("FILTER-B");
+        boundary.GetProperty("rollupSources").GetRawText().Should()
+            .Be(baseline.GetProperty("rollupSources").GetRawText());
+        maximum.GetProperty("tasks").GetProperty("items").GetArrayLength().Should().Be(0);
     }
 
     [Fact]
@@ -271,7 +493,11 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         return fixture;
     }
 
-    private async Task<Fixture> CreateFixtureAsync(string managerRoleCode = "PM")
+    private async Task<Fixture> CreateFixtureAsync(
+        string managerRoleCode = "PM",
+        DateTime? startDate = default,
+        DateTime? deadline = default,
+        bool useDefaultDates = true)
     {
         var managerId = await UserIdAsync(managerRoleCode);
         var memberUserId = await UserIdAsync("ARCHITECT");
@@ -300,8 +526,12 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
                 ProjectCode = $"DP-DS-{Guid.NewGuid():N}"[..30],
                 Name = "Detail design schedule",
                 CustomerId = customer.Id,
-                StartDate = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
-                Deadline = new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc),
+                StartDate = useDefaultDates
+                    ? startDate ?? new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc)
+                    : startDate,
+                Deadline = useDefaultDates
+                    ? deadline ?? new DateTime(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc)
+                    : deadline,
             };
             db.DesignProjects.Add(designProject);
             var member = new OperationalProjectMember
@@ -389,6 +619,18 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         return await Client.SendAsync(request);
     }
 
+    private Task<HttpResponseMessage> InitializeAsync(int projectId, object payload) =>
+        SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/design-schedule/initialize",
+            payload, $"initialize-{Guid.NewGuid():N}");
+
+    private Task<HttpResponseMessage> CreateTaskAsync(
+        Fixture fixture,
+        int phaseId,
+        TaskPayloadModel payload) => SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule/phases/{phaseId}/tasks",
+            payload, $"create-{Guid.NewGuid():N}");
+
     private async Task AssertMutationStatusesAsync(
         HttpStatusCode expected,
         Fixture fixture,
@@ -432,6 +674,21 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
             new { code = "ShopDrawing", weight = 33 },
         },
     };
+
+    private static object PhasePayload(
+        string rowVersion,
+        int weight,
+        string status,
+        DateOnly? actualStart = null) => new
+        {
+            plannedStart = new DateOnly(2026, 9, 1),
+            plannedEnd = new DateOnly(2026, 10, 1),
+            actualStart,
+            status,
+            progressPercent = status == "InProgress" ? 10 : 0,
+            weight,
+            rowVersion,
+        };
 
     private static TaskPayloadModel TaskPayload(
         string code,

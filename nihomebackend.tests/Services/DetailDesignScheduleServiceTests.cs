@@ -10,6 +10,29 @@ namespace nihomebackend.tests.Services;
 
 public sealed class DetailDesignScheduleRulesTests
 {
+    public static IEnumerable<object[]> TransitionCases()
+    {
+        var allowed = new Dictionary<DesignScheduleStatus, DesignScheduleStatus[]>
+        {
+            [DesignScheduleStatus.NotStarted] =
+                [DesignScheduleStatus.NotStarted, DesignScheduleStatus.InProgress,
+                    DesignScheduleStatus.OnHold, DesignScheduleStatus.WaitingForDepartment],
+            [DesignScheduleStatus.InProgress] =
+                [DesignScheduleStatus.InProgress, DesignScheduleStatus.Completed,
+                    DesignScheduleStatus.OnHold, DesignScheduleStatus.WaitingForDepartment],
+            [DesignScheduleStatus.Completed] = [DesignScheduleStatus.Completed],
+            [DesignScheduleStatus.OnHold] =
+                [DesignScheduleStatus.OnHold, DesignScheduleStatus.InProgress,
+                    DesignScheduleStatus.WaitingForDepartment],
+            [DesignScheduleStatus.WaitingForDepartment] =
+                [DesignScheduleStatus.WaitingForDepartment, DesignScheduleStatus.InProgress,
+                    DesignScheduleStatus.OnHold],
+        };
+        return from current in Enum.GetValues<DesignScheduleStatus>()
+               from next in Enum.GetValues<DesignScheduleStatus>()
+               select new object[] { current, next, allowed[current].Contains(next) };
+    }
+
     [Fact]
     public void ValidateDatesAndStatus_EnforcesDateAndStateInvariants()
     {
@@ -33,12 +56,7 @@ public sealed class DetailDesignScheduleRulesTests
     }
 
     [Theory]
-    [InlineData(DesignScheduleStatus.NotStarted, DesignScheduleStatus.InProgress, true)]
-    [InlineData(DesignScheduleStatus.NotStarted, DesignScheduleStatus.Completed, false)]
-    [InlineData(DesignScheduleStatus.InProgress, DesignScheduleStatus.Completed, true)]
-    [InlineData(DesignScheduleStatus.OnHold, DesignScheduleStatus.WaitingForDepartment, true)]
-    [InlineData(DesignScheduleStatus.WaitingForDepartment, DesignScheduleStatus.OnHold, true)]
-    [InlineData(DesignScheduleStatus.Completed, DesignScheduleStatus.InProgress, false)]
+    [MemberData(nameof(TransitionCases))]
     public void ValidateTransition_UsesApprovedMatrix(
         DesignScheduleStatus current,
         DesignScheduleStatus next,
