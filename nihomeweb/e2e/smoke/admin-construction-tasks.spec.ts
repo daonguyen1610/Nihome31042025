@@ -155,13 +155,17 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
       page.waitForResponse(
         (r) =>
           r.url().endsWith("/api/construction-tasks/bulk-delete") &&
+          r.request().method() === "POST" &&
           r.status() === 200,
+      ),
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/construction-tasks?") &&
+          r.url().includes(`designProjectId=${projectId}`) &&
+          r.request().method() === "GET",
       ),
       page.getByTestId("construction-bulk-delete-confirm").click(),
     ]);
-    await page.waitForResponse(
-      (r) => r.url().includes("/api/construction-tasks?"),
-    );
 
     // The row is gone, empty state is back.
     await expect(

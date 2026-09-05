@@ -323,7 +323,7 @@ public class MaterialRateCatalogsControllerTests : IntegrationTestBase
 
         var expectedActions = new[] { "material-rate-line.create", "material-rate-line.update", "material-rate-line.delete" };
         IReadOnlyList<AuditLog> auditRows = [];
-        for (var attempt = 0; attempt < 20 && auditRows.Count < expectedActions.Length; attempt++)
+        for (var attempt = 0; attempt < 20 && !expectedActions.All(action => auditRows.Any(item => item.Action == action)); attempt++)
         {
             await Task.Delay(250);
             await WithDbAsync(async db =>

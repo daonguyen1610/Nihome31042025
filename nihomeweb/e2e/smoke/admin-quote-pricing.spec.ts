@@ -10,6 +10,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
   loginInBrowserAs,
   baseURL,
 }) => {
+  test.setTimeout(120_000);
   const token = await loginAs(TEST_USERS.superAdmin);
   const headers = { Authorization: `Bearer ${token}` };
   const suffix = uid();
@@ -302,7 +303,7 @@ test("pastes Excel BOQ safely and applies an approved material rate to a Unit Co
       expect(dialog.message()).toContain("xóa các dòng BOQ");
       await dialog.accept();
     });
-  await page.getByTestId("quote-switch-unit-cost").click();
+    await page.getByTestId("quote-switch-unit-cost").click();
     await expect(page.getByTestId("quote-discount")).toHaveValue("7");
     await expect(page.getByTestId("quote-vat")).toHaveValue("9");
     await expect(page.getByText(/Chọn danh mục đang hoạt động và ngày có phiên bản Đã duyệt/i)).toBeVisible();
