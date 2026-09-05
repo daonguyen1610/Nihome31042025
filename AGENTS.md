@@ -157,6 +157,7 @@ docker exec <backend-container> dotnet build
 docker exec <backend-container> dotnet format --verify-no-changes
 docker exec <backend-container> dotnet test nihomebackend.tests/nihomebackend.tests.csproj
 docker exec <backend-container> dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
+docker exec <backend-container> dotnet format --no-restore --verify-no-changes
 ```
 
 Frontend:
