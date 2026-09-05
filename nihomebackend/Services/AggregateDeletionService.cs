@@ -108,6 +108,10 @@ internal static class AggregateDeletionService
             .Where(task => foundIds.Contains(task.DesignProjectId))
             .Select(task => task.Id)
             .ToListAsync(ct);
+        var scheduleTaskIds = await db.DesignScheduleTasks
+            .Where(task => foundIds.Contains(task.DesignProjectId))
+            .Select(task => task.Id)
+            .ToListAsync(ct);
         var siteDiaryIds = await db.SiteDiaries
             .Where(diary => foundIds.Contains(diary.DesignProjectId))
             .Select(diary => diary.Id)
@@ -138,6 +142,10 @@ internal static class AggregateDeletionService
             .Where(dependency => taskIds.Contains(dependency.TaskId)
                 || taskIds.Contains(dependency.PredecessorTaskId))
             .ToListAsync(ct);
+        var scheduleTaskDependencies = await db.DesignScheduleTaskDependencies
+            .Where(dependency => scheduleTaskIds.Contains(dependency.TaskId)
+                || scheduleTaskIds.Contains(dependency.PredecessorTaskId))
+            .ToListAsync(ct);
         var acceptanceRecords = await db.AcceptanceRecords
             .Where(record => foundIds.Contains(record.DesignProjectId))
             .ToListAsync(ct);
@@ -155,6 +163,7 @@ internal static class AggregateDeletionService
         db.IfcReleaseItems.RemoveRange(releaseItems);
         db.IfcReleaseRecipients.RemoveRange(releaseRecipients);
         db.ConstructionTaskDependencies.RemoveRange(taskDependencies);
+        db.DesignScheduleTaskDependencies.RemoveRange(scheduleTaskDependencies);
         db.AcceptanceRecords.RemoveRange(acceptanceRecords);
         db.HandoverStatusHistory.RemoveRange(handoverHistory);
         db.HandoverRecords.RemoveRange(handoverRecords);

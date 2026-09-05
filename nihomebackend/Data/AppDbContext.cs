@@ -91,6 +91,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
+    public DbSet<DesignSchedulePhase> DesignSchedulePhases => Set<DesignSchedulePhase>();
+    public DbSet<DesignScheduleTask> DesignScheduleTasks => Set<DesignScheduleTask>();
+    public DbSet<DesignScheduleTaskDependency> DesignScheduleTaskDependencies => Set<DesignScheduleTaskDependency>();
+    public DbSet<DesignScheduleHistory> DesignScheduleHistory => Set<DesignScheduleHistory>();
     public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
     public DbSet<ProjectDriveFolder> ProjectDriveFolders => Set<ProjectDriveFolder>();
     public DbSet<GoogleDriveCredential> GoogleDriveCredentials => Set<GoogleDriveCredential>();
@@ -1353,6 +1357,86 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(history => history.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(history => history.ChangedByUser).WithMany()
                 .HasForeignKey(history => history.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(history => new { history.OperationalProjectId, history.ChangedAt });
+        });
+
+        modelBuilder.Entity<DesignSchedulePhase>(b =>
+        {
+            b.ToTable("design_schedule_phases");
+            b.HasKey(phase => phase.Id);
+            b.Property(phase => phase.Code).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(phase => phase.Status).HasConversion<string>().HasMaxLength(40).IsRequired();
+            b.Property(phase => phase.RowVersion).IsRowVersion();
+            b.HasOne(phase => phase.OperationalProject).WithMany(project => project.DesignSchedulePhases)
+                .HasForeignKey(phase => phase.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(phase => phase.DesignProject).WithMany(project => project.SchedulePhases)
+                .HasForeignKey(phase => phase.DesignProjectId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(phase => new { phase.OperationalProjectId, phase.Code }).IsUnique();
+            b.HasIndex(phase => new { phase.DesignProjectId, phase.Code }).IsUnique();
+            b.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_design_schedule_phases_planned_dates", "[PlannedEnd] >= [PlannedStart]");
+                table.HasCheckConstraint("CK_design_schedule_phases_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
+                table.HasCheckConstraint("CK_design_schedule_phases_weight", "[Weight] >= 1 AND [Weight] <= 100");
+            });
+        });
+
+        modelBuilder.Entity<DesignScheduleTask>(b =>
+        {
+            b.ToTable("design_schedule_tasks");
+            b.HasKey(task => task.Id);
+            b.Property(task => task.Code).HasMaxLength(80).IsRequired();
+            b.Property(task => task.Name).HasMaxLength(300).IsRequired();
+            b.Property(task => task.DepartmentCode).HasMaxLength(60).IsRequired();
+            b.Property(task => task.Status).HasConversion<string>().HasMaxLength(40).IsRequired();
+            b.Property(task => task.RowVersion).IsRowVersion();
+            b.HasOne(task => task.OperationalProject).WithMany(project => project.DesignScheduleTasks)
+                .HasForeignKey(task => task.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(task => task.DesignProject).WithMany(project => project.ScheduleTasks)
+                .HasForeignKey(task => task.DesignProjectId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(task => task.Phase).WithMany(phase => phase.Tasks)
+                .HasForeignKey(task => task.PhaseId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(task => task.AssigneeMember).WithMany()
+                .HasForeignKey(task => task.AssigneeMemberId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(task => new { task.OperationalProjectId, task.Code }).IsUnique();
+            b.HasIndex(task => new { task.OperationalProjectId, task.PhaseId, task.PlannedStart, task.PlannedEnd });
+            b.HasIndex(task => new { task.OperationalProjectId, task.AssigneeMemberId });
+            b.HasIndex(task => new { task.OperationalProjectId, task.DepartmentCode });
+            b.HasIndex(task => new { task.OperationalProjectId, task.Status });
+            b.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_design_schedule_tasks_planned_dates", "[PlannedEnd] >= [PlannedStart]");
+                table.HasCheckConstraint("CK_design_schedule_tasks_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
+                table.HasCheckConstraint("CK_design_schedule_tasks_weight", "[Weight] >= 1 AND [Weight] <= 100");
+                table.HasCheckConstraint("CK_design_schedule_tasks_milestone", "[IsMilestone] = 0 OR [PlannedStart] = [PlannedEnd]");
+            });
+        });
+
+        modelBuilder.Entity<DesignScheduleTaskDependency>(b =>
+        {
+            b.ToTable("design_schedule_task_dependencies");
+            b.HasKey(dependency => dependency.Id);
+            b.HasOne(dependency => dependency.Task).WithMany(task => task.Predecessors)
+                .HasForeignKey(dependency => dependency.TaskId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(dependency => dependency.PredecessorTask).WithMany(task => task.Successors)
+                .HasForeignKey(dependency => dependency.PredecessorTaskId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(dependency => new { dependency.TaskId, dependency.PredecessorTaskId }).IsUnique();
+            b.HasIndex(dependency => dependency.OperationalProjectId);
+            b.ToTable(table => table.HasCheckConstraint(
+                "CK_design_schedule_task_dependencies_not_self", "[TaskId] <> [PredecessorTaskId]"));
+        });
+
+        modelBuilder.Entity<DesignScheduleHistory>(b =>
+        {
+            b.ToTable("design_schedule_history");
+            b.HasKey(history => history.Id);
+            b.Property(history => history.EntityType).HasMaxLength(30).IsRequired();
+            b.Property(history => history.Action).HasMaxLength(30).IsRequired();
+            b.Property(history => history.SnapshotJson).HasColumnType("nvarchar(max)").IsRequired();
+            b.HasOne<DesignProject>().WithMany().HasForeignKey(history => history.DesignProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(history => history.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(history => new { history.OperationalProjectId, history.ChangedAt });
         });
 

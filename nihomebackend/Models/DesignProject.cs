@@ -63,6 +63,9 @@ public class DesignProject
     public int? CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? UpdatedByUserId { get; set; }
+
+    public List<DesignSchedulePhase> SchedulePhases { get; set; } = new();
+    public List<DesignScheduleTask> ScheduleTasks { get; set; } = new();
 }
 
 /// <summary>
