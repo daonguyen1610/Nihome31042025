@@ -1680,6 +1680,22 @@
     "ja": "設計プロジェクトの作成・編集及び専門チームの設定を許可します。"
   },
   {
+    "key": "rbac.perm.design.schedule.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý tiến độ thiết kế chi tiết",
+    "en": "Manage detail design schedule",
+    "zh": "管理详细设计进度",
+    "ja": "詳細設計スケジュールを管理"
+  },
+  {
+    "key": "rbac.perm.design.schedule.manage.description",
+    "category": "rbac",
+    "vi": "Cho phép PM và Chủ trì thiết kế được phân công lập, cập nhật tiến độ thiết kế chi tiết của dự án.",
+    "en": "Allows assigned project managers and design leads to create and update the project's detail design schedule.",
+    "zh": "允许已分配的项目经理和设计负责人创建并更新项目的详细设计进度。",
+    "ja": "割り当てられたプロジェクトマネージャーと設計リードが詳細設計スケジュールを作成・更新できます。"
+  },
+  {
     "key": "rbac.perm.design.concepts.view.label",
     "category": "rbac",
     "vi": "Xem hồ sơ thiết kế ý tưởng",

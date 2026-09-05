@@ -27,6 +27,15 @@ public static class CrmConcurrency
         return !string.IsNullOrWhiteSpace(bodyToken) ? bodyToken : headerToken;
     }
 
+    public static string ResolveRequiredRequestToken(HttpRequest request, string? bodyToken)
+    {
+        var token = ResolveRequestToken(request, bodyToken);
+        if (string.IsNullOrWhiteSpace(token))
+            throw new CrmConcurrencyTokenException(
+                "Phiên bản dữ liệu là bắt buộc. Vui lòng tải lại dữ liệu trước khi cập nhật.");
+        return token;
+    }
+
     public static void SetResponseEntityTag(HttpResponse response, string rowVersion)
     {
         if (!string.IsNullOrWhiteSpace(rowVersion))

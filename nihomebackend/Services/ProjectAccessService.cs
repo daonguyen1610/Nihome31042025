@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -42,6 +43,60 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                       role.RoleCode == ProjectTeamRoleCode.DesignLead) &&
                      (role.Scope == ProjectRoleScope.Project ||
                       role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")))), ct);
+    }
+
+    public async Task<bool> CanManageDesignScheduleAsync(
+        int userId,
+        int projectId,
+        CancellationToken ct = default)
+    {
+        if (!await permissions.HasAsync(userId, "design.schedule.manage", ct)) return false;
+        if (await HasAdministrativeBypassAsync(userId, ct) &&
+            await IsScheduleAdministratorAsync(userId, ct))
+        {
+            return await db.OperationalProjects.AsNoTracking()
+                .AnyAsync(project => project.Id == projectId, ct);
+        }
+
+        return await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
+            project.Id == projectId &&
+            (project.ProjectManagerUserId == userId ||
+             project.DesignProject != null &&
+                 (project.DesignProject.ProjectManagerUserId == userId ||
+                  project.DesignProject.DesignLeadUserId == userId) ||
+             project.TeamMembers.Any(member =>
+                 member.UserId == userId &&
+                 member.EndedAt == null &&
+                 member.Roles.Any(role => role.EndedAt == null &&
+                     (role.RoleCode == ProjectTeamRoleCode.ProjectManager ||
+                      role.RoleCode == ProjectTeamRoleCode.DesignLead) &&
+                     (role.Scope == ProjectRoleScope.Project ||
+                      role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")))), ct);
+    }
+
+    private async Task<bool> IsScheduleAdministratorAsync(int userId, CancellationToken ct)
+    {
+        var user = await db.Users.AsNoTracking()
+            .Where(item => item.Id == userId && item.IsActive)
+            .Select(item => new
+            {
+                item.Role,
+                item.RoleEntityId,
+                RoleCode = item.RoleEntity == null ? null : item.RoleEntity.Code,
+                RoleIsSystem = item.RoleEntity != null && item.RoleEntity.IsSystem,
+                RoleIsActive = item.RoleEntity != null && item.RoleEntity.IsActive,
+            })
+            .SingleOrDefaultAsync(ct);
+        if (user is null) return false;
+
+        if (user.RoleEntityId.HasValue)
+        {
+            return user.RoleIsSystem && user.RoleIsActive &&
+                (string.Equals(user.RoleCode, SystemRoleCodes.Admin, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(user.RoleCode, SystemRoleCodes.SuperAdmin, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return user.Role is UserRole.ADMIN or UserRole.SUPER_ADMIN;
     }
 
     public async Task<bool> CanViewDesignProjectAsync(

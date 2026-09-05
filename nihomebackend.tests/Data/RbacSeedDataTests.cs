@@ -101,7 +101,7 @@ public class RbacSeedDataTests
         "crm.surveys.view", "crm.surveys.view.all", "crm.surveys.manage", "crm.surveys.manage.all",
         "crm.contracts.view", "crm.contracts.manage", "crm.contracts.activate", "crm.contracts.appendix-manage",
         // M2 Design
-        "design.projects.view", "design.projects.manage",
+        "design.projects.view", "design.projects.manage", "design.schedule.manage",
         "design.concepts.view", "design.concepts.manage", "design.concepts.finalize",
         "design.basic.view", "design.basic.manage", "design.basic.approve",
         "design.shop.view", "design.shop.manage", "design.shop.approve",
@@ -165,6 +165,7 @@ public class RbacSeedDataTests
         Assert.Contains("design.basic.approve", expanded);
         Assert.Contains("design.shop.approve", expanded);
         Assert.Contains("design.ifc.release", expanded);
+        Assert.Contains("design.schedule.manage", expanded);
     }
 
     [Fact]
@@ -210,6 +211,7 @@ public class RbacSeedDataTests
         Assert.Contains("permit.checklists.manage", expanded);
         Assert.Contains("design.ifc.release", expanded);
         Assert.Contains("crm.contracts.view", expanded);
+        Assert.Contains("design.schedule.manage", expanded);
         Assert.DoesNotContain("design.basic.manage", expanded);
         Assert.DoesNotContain("design.shop.manage", expanded);
         Assert.DoesNotContain("crm.customers.manage", expanded);

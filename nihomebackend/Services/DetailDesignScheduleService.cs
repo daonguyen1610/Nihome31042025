@@ -551,7 +551,7 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
         {
             OperationalProjectId = projectId,
             DesignProjectId = designProjectId,
-            CanManage = await access.CanManageTeamAsync(callerUserId, projectId, ct),
+            CanManage = await access.CanManageDesignScheduleAsync(callerUserId, projectId, ct),
             BaselineReady = projectReady,
             ProgressPercent = projectReady ? rollupSources.Sum(item => item.WeightedValue!.Value) : null,
             Phases = phases.Select(phase => MapPhase(phase, rollupSources.Single(item =>
@@ -661,7 +661,7 @@ public sealed class DetailDesignScheduleService(AppDbContext db, IProjectAccessS
 
     private async Task EnsureCanManageAsync(int projectId, int callerUserId, CancellationToken ct)
     {
-        if (!await access.CanManageTeamAsync(callerUserId, projectId, ct))
+        if (!await access.CanManageDesignScheduleAsync(callerUserId, projectId, ct))
             throw new DesignScheduleOperationException(
                 "Không tìm thấy Dự án hoặc bạn không có quyền quản lý lịch thiết kế.");
     }

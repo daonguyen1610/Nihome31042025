@@ -1,6 +1,7 @@
 using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 
@@ -42,6 +43,180 @@ public sealed class ProjectAccessServiceTests : IDisposable
         var service = new ProjectAccessService(_db, _permissions.Object);
 
         var allowed = await service.CanManageTeamAsync(userId, projectId);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task CanManageDesignScheduleAsync_ProjectScopedDesignLeadWithPermission_IsAllowed()
+    {
+        var (userId, projectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.DesignLead,
+            ProjectRoleScope.Project);
+        Grant(userId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var allowed = await service.CanManageDesignScheduleAsync(userId, projectId);
+
+        Assert.True(allowed);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CanManageDesignScheduleAsync_DirectDesignLeadership_IsAllowed(bool isProjectManager)
+    {
+        var (userId, projectId, designProjectId) = AddProjectMember(
+            ProjectTeamRoleCode.Architect,
+            ProjectRoleScope.Discipline,
+            "architecture");
+        var designProject = _db.DesignProjects.Single(item => item.Id == designProjectId);
+        if (isProjectManager) designProject.ProjectManagerUserId = userId;
+        else designProject.DesignLeadUserId = userId;
+        _db.SaveChanges();
+        Grant(userId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var allowed = await service.CanManageDesignScheduleAsync(userId, projectId);
+
+        Assert.True(allowed);
+    }
+
+    [Fact]
+    public async Task CanManageDesignScheduleAsync_DesignModuleLeadership_IsAllowed()
+    {
+        var (userId, projectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.DesignLead,
+            ProjectRoleScope.Module,
+            "Design");
+        Grant(userId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var allowed = await service.CanManageDesignScheduleAsync(userId, projectId);
+
+        Assert.True(allowed);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CanManageDesignScheduleAsync_ExpiredLeadership_IsDenied(bool expireMember)
+    {
+        var (userId, projectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.DesignLead,
+            ProjectRoleScope.Project);
+        var member = _db.OperationalProjectMembers.Single(item =>
+            item.OperationalProjectId == projectId && item.UserId == userId);
+        if (expireMember) member.EndedAt = DateTime.UtcNow.AddMinutes(-1);
+        else member.Roles.Single().EndedAt = DateTime.UtcNow.AddMinutes(-1);
+        _db.SaveChanges();
+        Grant(userId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var allowed = await service.CanManageDesignScheduleAsync(userId, projectId);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task CanManageDesignScheduleAsync_DeniesMissingPermissionAndDisciplineScope()
+    {
+        var (withoutPermissionUserId, withoutPermissionProjectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.DesignLead,
+            ProjectRoleScope.Project);
+        var (disciplineUserId, disciplineProjectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.DesignLead,
+            ProjectRoleScope.Discipline,
+            "architecture");
+        Grant(disciplineUserId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var withoutPermission = await service.CanManageDesignScheduleAsync(
+            withoutPermissionUserId, withoutPermissionProjectId);
+        var disciplineScoped = await service.CanManageDesignScheduleAsync(
+            disciplineUserId, disciplineProjectId);
+
+        Assert.False(withoutPermission);
+        Assert.False(disciplineScoped);
+    }
+
+    [Fact]
+    public async Task CanManageDesignScheduleAsync_PortfolioViewDoesNotReplaceManagePermission()
+    {
+        var (userId, projectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.DesignLead,
+            ProjectRoleScope.Project);
+        Grant(userId, "operations.projects.view.all");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var allowed = await service.CanManageDesignScheduleAsync(userId, projectId);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task CanManageDesignScheduleAsync_CustomRoleCannotUseAdministrativeBypass()
+    {
+        var (userId, projectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.Architect,
+            ProjectRoleScope.Discipline,
+            "architecture");
+        var customRole = new Role
+        {
+            Code = "SCHEDULE_AUDITOR",
+            Name = "Schedule auditor",
+            IsActive = true,
+        };
+        _db.Roles.Add(customRole);
+        _db.SaveChanges();
+        var user = _db.Users.Single(item => item.Id == userId);
+        user.RoleEntityId = customRole.Id;
+        _db.SaveChanges();
+        Grant(userId, "operations.projects.view.all");
+        Grant(userId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var allowed = await service.CanManageDesignScheduleAsync(userId, projectId);
+
+        Assert.False(allowed);
+    }
+
+    [Fact]
+    public async Task CanManageDesignScheduleAsync_LegacyAdminBypassRequiresExistingProject()
+    {
+        var (userId, projectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.Architect,
+            ProjectRoleScope.Discipline,
+            "architecture");
+        _db.Users.Single(item => item.Id == userId).Role = UserRole.ADMIN;
+        _db.SaveChanges();
+        Grant(userId, "operations.projects.view.all");
+        Grant(userId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var existing = await service.CanManageDesignScheduleAsync(userId, projectId);
+        var missing = await service.CanManageDesignScheduleAsync(userId, int.MaxValue);
+
+        Assert.True(existing);
+        Assert.False(missing);
+    }
+
+    [Fact]
+    public async Task CanManageDesignScheduleAsync_InactiveAdminCannotBypassAssignment()
+    {
+        var (userId, projectId, _) = AddProjectMember(
+            ProjectTeamRoleCode.Architect,
+            ProjectRoleScope.Discipline,
+            "architecture");
+        var user = _db.Users.Single(item => item.Id == userId);
+        user.Role = UserRole.ADMIN;
+        user.IsActive = false;
+        _db.SaveChanges();
+        Grant(userId, "operations.projects.view.all");
+        Grant(userId, "design.schedule.manage");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var allowed = await service.CanManageDesignScheduleAsync(userId, projectId);
 
         Assert.False(allowed);
     }

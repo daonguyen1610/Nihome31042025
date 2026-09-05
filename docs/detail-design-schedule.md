@@ -12,8 +12,15 @@ progress for each phase and the complete design schedule.
 
 - A caller with `operations.projects.view` may read only an Operational Project
   visible through `IProjectAccessService.CanViewOperationalProjectAsync`.
-- A caller with `operations.projects.manage` may initialize or mutate a schedule
-  only when `IProjectAccessService.CanManageTeamAsync` allows that project.
+- A caller with `design.schedule.manage` may initialize or mutate a schedule
+  only when `IProjectAccessService.CanManageDesignScheduleAsync` confirms that
+  the caller is the Operational or Design Project Manager, the Design Lead, or
+  has an active Project-wide or Design-module Project Manager/Design Lead team
+  assignment for that project. Discipline-only assignments remain read-only.
+- Administrative roles that hold both `design.schedule.manage` and
+  `operations.projects.view.all` may manage any existing project only when the
+  active system role is `ADMIN` or `SUPER_ADMIN`. Custom roles and portfolio
+  visibility by itself never enable schedule mutation or mutation controls.
 - Inaccessible projects, phases, and tasks return `404` to avoid disclosing
   project existence. Missing authentication returns `401`; missing global
   permission returns `403`.
@@ -89,17 +96,18 @@ alias expose the same controller.
 | Method | Relative route | Permission | Purpose |
 |---|---|---|---|
 | `GET` | `/` | `operations.projects.view` | Read phases, roll-up sources, and paged tasks |
-| `POST` | `/initialize` | `operations.projects.manage` | Create the canonical phase baseline |
-| `PUT` | `/phases/{phaseId}` | `operations.projects.manage` | Update phase dates, status, progress, and weight |
-| `POST` | `/phases/{phaseId}/tasks` | `operations.projects.manage` | Create a task or milestone in a phase |
-| `PUT` | `/tasks/{taskId}` | `operations.projects.manage` | Update a task and replace predecessor links |
+| `POST` | `/initialize` | `design.schedule.manage` plus project leadership | Create the canonical phase baseline |
+| `PUT` | `/phases/{phaseId}` | `design.schedule.manage` plus project leadership | Update phase dates, status, progress, and weight |
+| `POST` | `/phases/{phaseId}/tasks` | `design.schedule.manage` plus project leadership | Create a task or milestone in a phase |
+| `PUT` | `/tasks/{taskId}` | `design.schedule.manage` plus project leadership | Update a task and replace predecessor links |
 
 Mutations require an `Idempotency-Key` containing 1 through 120 characters.
 Missing, blank, or oversized keys return `400`. Reusing a key with the same
 request replays the stored response; reusing it with a different request returns
 `409`.
-Updates accept row version through the existing request/`If-Match` convention
-and emit an ETag. A stale write returns `409` and may be retried with the same
+Updates require row version through the request body or `If-Match` header and
+emit an ETag. Missing or malformed tokens return `400`; conflicting body and
+header tokens return `400`. A stale write returns `409` and may be retried with the same
 idempotency key after obtaining the current row version. Successful mutations
 write both the standard audit event and a scalar schedule-history snapshot.
 
